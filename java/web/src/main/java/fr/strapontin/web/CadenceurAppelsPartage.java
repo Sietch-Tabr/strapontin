@@ -37,7 +37,7 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
    * @param cle identifiant du service externe cadencé (ex. {@code "ticketmaster"})
    * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
    */
-  public CadenceurAppelsPartage(NamedParameterJdbcTemplate jdbc, String cle, long delaiMinMs) {
+  public CadenceurAppelsPartage(final NamedParameterJdbcTemplate jdbc, final String cle, final long delaiMinMs) {
     this.jdbc = jdbc;
     this.cle = cle;
     this.delaiMinMs = delaiMinMs;
@@ -45,18 +45,18 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
 
   @Override
   public void attendre() {
-    Timestamp prochainAppelAutorise =
+    final Timestamp prochainAppelAutorise =
         jdbc.queryForObject(
             """
-            UPDATE cadences_appels_externes
-            SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, now())
-                + (:delaiMs || ' milliseconds')::interval
-            WHERE cle = :cle
-            RETURNING prochain_appel_autorise
-            """,
+                UPDATE cadences_appels_externes
+                SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, now())
+                    + (:delaiMs || ' milliseconds')::interval
+                WHERE cle = :cle
+                RETURNING prochain_appel_autorise
+                """,
             Map.of("cle", cle, "delaiMs", delaiMinMs),
             Timestamp.class);
-    long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
+    final long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
     if (attenteMs <= 0) return;
     try {
       Thread.sleep(attenteMs);

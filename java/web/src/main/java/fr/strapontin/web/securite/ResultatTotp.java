@@ -45,7 +45,7 @@ public record ResultatTotp(Statut statut, int essaisRestants) {
     return new ResultatTotp(Statut.SUCCES, 0);
   }
 
-  static ResultatTotp echec(int essaisRestants) {
+  static ResultatTotp echec(final int essaisRestants) {
     return new ResultatTotp(Statut.ECHEC, essaisRestants);
   }
 

@@ -28,7 +28,7 @@ class ConventionTestcontainersTest {
 
   @Test
   void aucuneClasse_neDeclareSonPropreConteneurPostgres_horsBasePartagee() throws IOException {
-    Path racineTests = Path.of("src/test/java");
+    final Path racineTests = Path.of("src/test/java");
     List<Path> contrevenants;
     try (Stream<Path> fichiers = Files.walk(racineTests)) {
       contrevenants =
@@ -51,7 +51,7 @@ class ConventionTestcontainersTest {
             + contrevenants);
   }
 
-  private static boolean declareSonPropreConteneur(Path fichier) {
+  private static boolean declareSonPropreConteneur(final Path fichier) {
     try {
       return Files.readString(fichier).contains("new PostgreSQLContainer(");
     } catch (IOException e) {

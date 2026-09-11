@@ -63,25 +63,25 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
           .maximumSize(10_000)
           .build();
 
-  public RateLimitingLoginFilter(LogAdminService logAdminService) {
+  public RateLimitingLoginFilter(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)
       throws ServletException, IOException {
-    String chemin = request.getServletPath();
+    final String chemin = request.getServletPath();
     if (!HttpMethod.POST.matches(request.getMethod())
         || (!URLS_LOGIN.contains(chemin) && !URL_RESET_PASSWORD.equals(chemin))) {
       chain.doFilter(request, response);
       return;
     }
 
-    String ip = request.getRemoteAddr();
-    String cleBucket = ip + ":" + chemin;
-    boolean estReset = URL_RESET_PASSWORD.equals(chemin);
-    Bucket bucket = buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
+    final String ip = request.getRemoteAddr();
+    final String cleBucket = ip + ":" + chemin;
+    final boolean estReset = URL_RESET_PASSWORD.equals(chemin);
+    final Bucket bucket = buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
 
     if (bucket.tryConsume(1)) {
       chain.doFilter(request, response);
@@ -101,7 +101,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   }
 
   private Bucket creerBucketLogin() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_TENTATIVES_LOGIN)
             .refillIntervally(MAX_TENTATIVES_LOGIN, FENETRE_LOGIN)
@@ -110,7 +110,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   }
 
   private Bucket creerBucketReset() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_TENTATIVES_RESET)
             .refillIntervally(MAX_TENTATIVES_RESET, FENETRE_RESET)

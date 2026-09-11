@@ -115,7 +115,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    *
    * @param restClient client HTTP Spring à utiliser
    */
-  public EventimSource(RestClient restClient) {
+  public EventimSource(final RestClient restClient) {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
   }
 
@@ -146,7 +146,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   public List<String> preleverContainmentsAcceptes() {
     synchronized (containmentsAcceptes) {
-      List<String> copie = List.copyOf(containmentsAcceptes);
+      final List<String> copie = List.copyOf(containmentsAcceptes);
       containmentsAcceptes.clear();
       return copie;
     }
@@ -169,7 +169,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
    *   incohérence détectée sans correction possible
    */
-  public static String corrigerVilleEventim(String ville, String dept, String salle) {
+  public static String corrigerVilleEventim(final String ville, final String dept, final String salle) {
     return MapeurProduitEventim.corrigerVilleEventim(ville, dept, salle);
   }
 
@@ -179,7 +179,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param dateStr chaîne de date ISO 8601
    * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
    */
-  public static String[] parseDateEventim(String dateStr) {
+  public static String[] parseDateEventim(final String dateStr) {
     return MapeurProduitEventim.parseDateEventim(dateStr);
   }
 
@@ -189,7 +189,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param titre titre de l'événement Eventim
    * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
    */
-  public static String extraireNomArtiste(String titre) {
+  public static String extraireNomArtiste(final String titre) {
     return MapeurProduitEventim.extraireNomArtiste(titre);
   }
 
@@ -200,7 +200,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
    * @return concert extrait, ou null si le produit est invalide
    */
-  public static ConcertBrut mapProduit(Map<String, Object> produit, String artisteFallback) {
+  public static ConcertBrut mapProduit(final Map<String, Object> produit, final String artisteFallback) {
     return MapeurProduitEventim.mapper(produit, artisteFallback, null);
   }
 
@@ -214,7 +214,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return concert extrait, ou null si le produit est invalide
    */
   public static ConcertBrut mapProduit(
-      Map<String, Object> produit, String artisteFallback, String artisteSourceId) {
+      final Map<String, Object> produit, final String artisteFallback, final String artisteSourceId) {
     return MapeurProduitEventim.mapper(produit, artisteFallback, artisteSourceId);
   }
 
@@ -244,10 +244,10 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   @SuppressWarnings("unchecked")
   private ResultatPageEventim chargerPageProduits(
-      java.net.URI uri, String artisteFallback, String deptFiltre, String artisteSourceId) {
+      final java.net.URI uri, final String artisteFallback, final String deptFiltre, final String artisteSourceId) {
     compteurBilan.enregistrerAppel();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
@@ -258,17 +258,17 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   @SuppressWarnings("unchecked")
   private ResultatPageEventim parserReponseProduits(
-      Map<String, Object> data, String artisteFallback, String deptFiltre, String artisteSourceId) {
+      final Map<String, Object> data, final String artisteFallback, final String deptFiltre, final String artisteSourceId) {
     if (data == null) return ResultatPageEventim.VIDE;
-    var produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
+    final var produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
     if (produits == null || produits.isEmpty()) return ResultatPageEventim.VIDE;
 
-    List<ConcertBrut> concerts = new ArrayList<>();
+    final List<ConcertBrut> concerts = new ArrayList<>();
     for (var p : produits) {
-      ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
+      final ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
       if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) concerts.add(c);
     }
-    int total =
+    final int total =
         data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
     return new ResultatPageEventim(concerts, total, true);
   }
@@ -283,8 +283,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return attractionId trouvé, ou {@code null} si aucune correspondance acceptable
    */
   @SuppressWarnings("unchecked")
-  private String rechercherAttractionId(String terme, boolean identiteConfirmee) {
-    String uri =
+  private String rechercherAttractionId(final String terme, final boolean identiteConfirmee) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
             .queryParam(PARAM_WEB_ID, WEB_ID)
             .queryParam(PARAM_LANGUE, "fr")
@@ -295,16 +295,16 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
     compteurBilan.enregistrerAppel();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
-      var attractions = (List<Map<String, Object>>) data.get("attractions");
+      final var attractions = (List<Map<String, Object>>) data.get("attractions");
       if (attractions == null || attractions.isEmpty()) return null;
 
-      String termeNorm = Normalisation.normaliserTexte(terme);
+      final String termeNorm = Normalisation.normaliserTexte(terme);
       Map<String, Object> exact = null;
       Map<String, Object> parContainment = null;
       for (var a : attractions) {
-        String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
+        final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
         // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
         // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
         if (nomNorm.equals(termeNorm)
@@ -326,7 +326,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         }
       }
       if (exact == null && parContainment != null) {
-        String nomRetourne = (String) parContainment.getOrDefault("name", "");
+        final String nomRetourne = (String) parContainment.getOrDefault("name", "");
         log.info(
             "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
             terme,
@@ -335,7 +335,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         exact = parContainment;
       }
       if (exact == null) {
-        String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
+        final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
         log.warn(
             "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
             terme,
@@ -358,19 +358,19 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
 
   private ResultatArtisteEventim fetchProduitsParAttraction(
-      String attractionId, String artisteFallback) {
-    LocalDate dateDebut = LocalDate.now();
-    LocalDate dateFin = dateDebut.plusMonths(24);
-    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    List<ConcertBrut> concerts = new ArrayList<>();
+      final String attractionId, final String artisteFallback) {
+    final LocalDate dateDebut = LocalDate.now();
+    final LocalDate dateFin = dateDebut.plusMonths(24);
+    final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    final List<ConcertBrut> concerts = new ArrayList<>();
     boolean continuer = true;
     boolean succes = true;
-    String artisteSourceId = "eventim:" + attractionId;
+    final String artisteSourceId = "eventim:" + attractionId;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
       if (page > 1) continuer = attendreEntrePagesEventim();
       if (continuer) {
-        String uri =
+        final String uri =
             UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
                 .queryParam(PARAM_WEB_ID, WEB_ID)
                 .queryParam(PARAM_LANGUE, "fr")
@@ -382,7 +382,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .queryParam("page", page)
                 .build()
                 .toUriString();
-        ResultatPageEventim resultat =
+        final ResultatPageEventim resultat =
             chargerPageProduits(java.net.URI.create(uri), artisteFallback, null, artisteSourceId);
         if (!resultat.succes()) succes = false;
         concerts.addAll(resultat.concerts());
@@ -393,10 +393,10 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return new ResultatArtisteEventim(concerts, succes);
   }
 
-  private List<ConcertBrut> fetchProduitsParRegion(String dept, List<String> classifications) {
-    LocalDate dateDebut = LocalDate.now();
-    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    List<ConcertBrut> concerts = new ArrayList<>();
+  private List<ConcertBrut> fetchProduitsParRegion(final String dept, final List<String> classifications) {
+    final LocalDate dateDebut = LocalDate.now();
+    final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    final List<ConcertBrut> concerts = new ArrayList<>();
     boolean continuer = true;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
@@ -414,8 +414,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .queryParam("top", TAILLE_PAGE)
                 .queryParam("page", page);
         for (String c : classifications) uriBuilder = uriBuilder.queryParam("categories", c);
-        java.net.URI uri = uriBuilder.build().encode().toUri();
-        ResultatPageEventim resultat = chargerPageProduits(uri, null, dept, null);
+        final java.net.URI uri = uriBuilder.build().encode().toUri();
+        final ResultatPageEventim resultat = chargerPageProduits(uri, null, dept, null);
         concerts.addAll(resultat.concerts());
         continuer = !resultat.estVide() && concerts.size() < resultat.total();
       }
@@ -434,7 +434,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
    */
   @Override
-  public List<ConcertBrut> fetchArtiste(String nom) {
+  public List<ConcertBrut> fetchArtiste(final String nom) {
     return fetchArtiste(nom, null, null);
   }
 
@@ -458,14 +458,14 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
    */
   @Override
-  public List<ConcertBrut> fetchArtiste(String nom, String deezerId, String wikidataId) {
-    boolean identiteConfirmee = deezerId != null || wikidataId != null;
-    String attractionId = rechercherAttractionId(nom, identiteConfirmee);
+  public List<ConcertBrut> fetchArtiste(final String nom, final String deezerId, final String wikidataId) {
+    final boolean identiteConfirmee = deezerId != null || wikidataId != null;
+    final String attractionId = rechercherAttractionId(nom, identiteConfirmee);
     if (attractionId == null) {
       log.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
     }
-    ResultatArtisteEventim resultat = fetchProduitsParAttraction(attractionId, nom);
+    final ResultatArtisteEventim resultat = fetchProduitsParAttraction(attractionId, nom);
     if (resultat.succes()) {
       log.info("Eventim fetchArtiste artiste={} total={}", nom, resultat.concerts().size());
     } else {
@@ -485,12 +485,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return liste des concerts trouvés pour tous les départements
    */
   @Override
-  public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
-    List<String> categories = CATEGORIES_REGION;
-    List<ConcertBrut> tous = new ArrayList<>();
+  public List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
+    final List<String> categories = CATEGORIES_REGION;
+    final List<ConcertBrut> tous = new ArrayList<>();
 
     for (String dept : depts) {
-      List<ConcertBrut> concerts = fetchProduitsParRegion(dept, categories);
+      final List<ConcertBrut> concerts = fetchProduitsParRegion(dept, categories);
       tous.addAll(concerts);
       if (!attendreEntrePagesEventim()) break;
     }

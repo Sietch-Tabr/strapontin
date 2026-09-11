@@ -61,7 +61,7 @@ public final class Normalisation {
    * @param texte le texte à normaliser
    * @return le texte normalisé, éventuellement vide
    */
-  public static String normaliserTexte(String texte) {
+  public static String normaliserTexte(final String texte) {
     String s = texte.toLowerCase();
     for (Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
       s = s.replace(String.valueOf(e.getKey()), e.getValue());
@@ -82,8 +82,8 @@ public final class Normalisation {
    * @param nom le nom de la salle
    * @return clé alphanumérique (peut être vide si le nom ne contient aucun caractère valide)
    */
-  public static String normaliserSalleCle(String nom) {
-    String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
+  public static String normaliserSalleCle(final String nom) {
+    final String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
     return NON_ALPHANUM_STRICT.matcher(ACCENTS.matcher(nfd).replaceAll("")).replaceAll("");
   }
 
@@ -94,7 +94,7 @@ public final class Normalisation {
    * @param ville le nom de la ville
    * @return la ville normalisée, éventuellement vide
    */
-  public static String normaliserVille(String ville) {
+  public static String normaliserVille(final String ville) {
     return normaliserTexte(ville).replaceAll("\\bsaint\\b", "st").replaceAll("\\bsainte\\b", "ste");
   }
 
@@ -109,17 +109,17 @@ public final class Normalisation {
    * @param b deuxième chaîne
    * @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
-  public static double jaro(String a, String b) {
+  public static double jaro(final String a, final String b) {
     if (a.equals(b)) return 1.0;
-    int m = a.length();
-    int n = b.length();
+    final int m = a.length();
+    final int n = b.length();
     if (m == 0 || n == 0) return 0.0;
-    int fenetre = Math.max(0, Math.max(m, n) / 2 - 1);
-    boolean[] matchA = new boolean[m];
-    boolean[] matchB = new boolean[n];
-    int matchs = rechercherCorrespondances(a, b, fenetre, matchA, matchB);
+    final int fenetre = Math.max(0, Math.max(m, n) / 2 - 1);
+    final boolean[] matchA = new boolean[m];
+    final boolean[] matchB = new boolean[n];
+    final int matchs = rechercherCorrespondances(a, b, fenetre, matchA, matchB);
     if (matchs == 0) return 0.0;
-    int transpositions = compterTranspositions(a, b, matchA, matchB);
+    final int transpositions = compterTranspositions(a, b, matchA, matchB);
     return ((double) matchs / m + (double) matchs / n + (matchs - transpositions / 2.0) / matchs)
         / 3.0;
   }
@@ -127,13 +127,13 @@ public final class Normalisation {
   // Marque dans matchA/matchB les caractères de a et b qui se correspondent dans la fenêtre
   // Jaro, et retourne leur nombre.
   private static int rechercherCorrespondances(
-      String a, String b, int fenetre, boolean[] matchA, boolean[] matchB) {
-    int m = a.length();
-    int n = b.length();
+      final String a, final String b, final int fenetre, final boolean[] matchA, final boolean[] matchB) {
+    final int m = a.length();
+    final int n = b.length();
     int matchs = 0;
     for (int i = 0; i < m; i++) {
-      int debut = Math.max(0, i - fenetre);
-      int fin = Math.min(n - 1, i + fenetre);
+      final int debut = Math.max(0, i - fenetre);
+      final int fin = Math.min(n - 1, i + fenetre);
       for (int j = debut; j <= fin; j++) {
         if (!matchB[j] && a.charAt(i) == b.charAt(j)) {
           matchA[i] = true;
@@ -148,7 +148,7 @@ public final class Normalisation {
 
   // Compte, parmi les caractères déjà marqués correspondants, ceux dont l'ordre relatif diffère
   // entre a et b.
-  private static int compterTranspositions(String a, String b, boolean[] matchA, boolean[] matchB) {
+  private static int compterTranspositions(final String a, final String b, final boolean[] matchA, final boolean[] matchB) {
     int transpositions = 0;
     int k = 0;
     for (int i = 0; i < a.length(); i++) {
@@ -168,10 +168,10 @@ public final class Normalisation {
    * @param b deuxième chaîne
    * @return score entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
-  public static double similarite(String a, String b) {
+  public static double similarite(final String a, final String b) {
     if (a.equals(b)) return 1.0;
     if (a.isEmpty() || b.isEmpty()) return 0.0;
-    int longueur = Math.max(a.length(), b.length());
+    final int longueur = Math.max(a.length(), b.length());
     return 1.0 - (double) levenshtein(a, b) / longueur;
   }
 
@@ -184,11 +184,11 @@ public final class Normalisation {
    * @param codePostal code postal (peut être null, vide, ou contenir des espaces superflus)
    * @return code département à 2 ou 3 chiffres, ou null si absent/invalide
    */
-  public static String extraireDeptFrancais(String codePostal) {
+  public static String extraireDeptFrancais(final String codePostal) {
     if (codePostal == null || codePostal.isBlank()) return null;
-    String cp = codePostal.trim();
+    final String cp = codePostal.trim();
     if (cp.startsWith("97")) return cp.substring(0, 3);
-    String dept = cp.substring(0, Math.min(2, cp.length()));
+    final String dept = cp.substring(0, Math.min(2, cp.length()));
     return dept.isEmpty() ? null : dept;
   }
 
@@ -201,30 +201,30 @@ public final class Normalisation {
    * @param nom nom à normaliser
    * @return nom en title case ou nom inchangé
    */
-  public static String normaliserCasse(String nom) {
+  public static String normaliserCasse(final String nom) {
     if (!nom.equals(nom.toUpperCase())) return nom;
-    Matcher m = SEP_NORMALISER_CASSE.matcher(nom);
-    StringBuilder sb = new StringBuilder();
+    final Matcher m = SEP_NORMALISER_CASSE.matcher(nom);
+    final StringBuilder sb = new StringBuilder();
     boolean debutPhrase = true;
     int dernier = 0;
     while (m.find()) {
-      String mot = nom.substring(dernier, m.start());
+      final String mot = nom.substring(dernier, m.start());
       if (!mot.isEmpty()) {
-        String bas = mot.toLowerCase();
+        final String bas = mot.toLowerCase();
         if (!debutPhrase && ARTICLES_FR.contains(bas)) {
           sb.append(bas);
         } else {
           sb.append(capitaliserAvecApostrophe(bas));
         }
       }
-      String sep = m.group();
+      final String sep = m.group();
       sb.append(sep);
       debutPhrase = sep.equals("-");
       dernier = m.end();
     }
-    String fin = nom.substring(dernier);
+    final String fin = nom.substring(dernier);
     if (!fin.isEmpty()) {
-      String bas = fin.toLowerCase();
+      final String bas = fin.toLowerCase();
       if (!debutPhrase && ARTICLES_FR.contains(bas)) {
         sb.append(bas);
       } else {
@@ -234,12 +234,12 @@ public final class Normalisation {
     return sb.toString();
   }
 
-  private static String capitaliserAvecApostrophe(String mot) {
+  private static String capitaliserAvecApostrophe(final String mot) {
     if (mot.isEmpty()) return mot;
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     boolean majSuivante = true;
     for (int i = 0; i < mot.length(); i++) {
-      char c = mot.charAt(i);
+      final char c = mot.charAt(i);
       if (c == '\'' || c == '’') {
         sb.append(c);
         majSuivante = true;
@@ -253,10 +253,10 @@ public final class Normalisation {
     return sb.toString();
   }
 
-  static int levenshtein(String a, String b) {
-    int m = a.length();
-    int n = b.length();
-    int[][] dp = new int[m + 1][n + 1];
+  static int levenshtein(final String a, final String b) {
+    final int m = a.length();
+    final int n = b.length();
+    final int[][] dp = new int[m + 1][n + 1];
     for (int i = 0; i <= m; i++) dp[i][0] = i;
     for (int j = 0; j <= n; j++) dp[0][j] = j;
     for (int i = 1; i <= m; i++) {

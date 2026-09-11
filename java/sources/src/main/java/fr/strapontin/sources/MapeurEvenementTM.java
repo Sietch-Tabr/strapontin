@@ -44,15 +44,15 @@ final class MapeurEvenementTM {
    * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
    * @return tableau à deux éléments : [date, heure] où heure peut être null
    */
-  static String[] parseDateTM(String dateStr, String heureStr) {
+  static String[] parseDateTM(final String dateStr, final String heureStr) {
     Objects.requireNonNull(dateStr, "dateStr");
-    String date = dateStr.substring(0, 10);
+    final String date = dateStr.substring(0, 10);
     if (heureStr == null) return new String[] {date, null};
-    String heure = heureStr.substring(0, 5);
+    final String heure = heureStr.substring(0, 5);
     return new String[] {date, "00:00".equals(heure) ? null : heure};
   }
 
-  private static String normaliserClassification(String nom) {
+  private static String normaliserClassification(final String nom) {
     if (nom == null) return null;
     return CLASSIFICATION_MAP.getOrDefault(nom, nom);
   }
@@ -65,7 +65,7 @@ final class MapeurEvenementTM {
    *   null
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
-  static ConcertBrut mapper(Map<String, Object> evt, String artisteFallback) {
+  static ConcertBrut mapper(final Map<String, Object> evt, final String artisteFallback) {
     try {
       return parseEvenementTM(evt, artisteFallback);
     } catch (Exception e) {
@@ -80,7 +80,7 @@ final class MapeurEvenementTM {
    * @param iso horodatage à analyser
    * @return {@code true} si postérieur à maintenant, {@code false} si passé ou illisible
    */
-  private static boolean estDansLeFutur(String iso) {
+  private static boolean estDansLeFutur(final String iso) {
     try {
       return java.time.OffsetDateTime.parse(iso).toInstant().isAfter(java.time.Instant.now());
     } catch (Exception e) {
@@ -90,10 +90,10 @@ final class MapeurEvenementTM {
 
   @SuppressWarnings("unchecked")
   private static String extraireArtisteTM(
-      Map<String, Object> evt, Map<String, Object> embedded, String artisteFallback) {
-    List<Map<String, Object>> attractions =
+      final Map<String, Object> evt, final Map<String, Object> embedded, final String artisteFallback) {
+    final List<Map<String, Object>> attractions =
         embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-    String nomAttraction =
+    final String nomAttraction =
         attractions != null && !attractions.isEmpty()
             ? (String) attractions.get(0).get("name")
             : null;
@@ -108,7 +108,7 @@ final class MapeurEvenementTM {
       return Normalisation.normaliserCasse(nomAttraction);
     }
     if (artisteFallback == null) return null;
-    String nomEvenement = (String) evt.get("name");
+    final String nomEvenement = (String) evt.get("name");
     if (nomEvenement != null
         && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
       return artisteFallback;
@@ -117,52 +117,52 @@ final class MapeurEvenementTM {
   }
 
   @SuppressWarnings("unchecked")
-  private static String extraireAttractionIdTM(Map<String, Object> embedded) {
-    List<Map<String, Object>> attractions =
+  private static String extraireAttractionIdTM(final Map<String, Object> embedded) {
+    final List<Map<String, Object>> attractions =
         embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
     if (attractions == null || attractions.isEmpty()) return null;
-    Object id = attractions.get(0).get("id");
+    final Object id = attractions.get(0).get("id");
     return id != null ? "ticketmaster:" + id : null;
   }
 
   @SuppressWarnings("unchecked")
-  private static String[] extraireClassificationTM(List<Map<String, Object>> classificationsData) {
+  private static String[] extraireClassificationTM(final List<Map<String, Object>> classificationsData) {
     if (classificationsData == null || classificationsData.isEmpty()) {
       return new String[] {null, null};
     }
-    var segment = (Map<String, String>) classificationsData.get(0).get("segment");
-    String segmentNom =
+    final var segment = (Map<String, String>) classificationsData.get(0).get("segment");
+    final String segmentNom =
         segment != null && segment.get("name") != null ? segment.get("name").toLowerCase() : null;
-    var genreMap = (Map<String, String>) classificationsData.get(0).get("genre");
-    String genre = genreMap != null ? genreMap.get("name") : null;
+    final var genreMap = (Map<String, String>) classificationsData.get(0).get("genre");
+    final String genre = genreMap != null ? genreMap.get("name") : null;
     return new String[] {segmentNom, genre};
   }
 
   private record InfosVenueTM(String salle, String ville, String dept, String salleSourceId) {}
 
   @SuppressWarnings("unchecked")
-  private static InfosVenueTM extraireInfosVenueTM(Map<String, Object> venue) {
-    String salle =
+  private static InfosVenueTM extraireInfosVenueTM(final Map<String, Object> venue) {
+    final String salle =
         Normalisation.normaliserCasse(
             venue != null && venue.get("name") != null
                 ? (String) venue.get("name")
                 : "Salle inconnue");
-    Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
-    String ville = cityMap != null ? cityMap.get("name") : null;
+    final Map<String, String> cityMap = venue != null ? (Map<String, String>) venue.get("city") : null;
+    final String ville = cityMap != null ? cityMap.get("name") : null;
     // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
     // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
     // plausible mais faux — countryCode absent traité comme française par défaut (comportement
     // historique, aucun cas contraire connu).
-    Map<String, String> countryMap =
+    final Map<String, String> countryMap =
         venue != null ? (Map<String, String>) venue.get("country") : null;
-    String countryCode = countryMap != null ? countryMap.get("countryCode") : null;
-    String dept =
+    final String countryCode = countryMap != null ? countryMap.get("countryCode") : null;
+    final String dept =
         countryCode == null || "FR".equals(countryCode)
             ? Normalisation.extraireDeptFrancais(
-                venue != null ? (String) venue.get("postalCode") : null)
+            venue != null ? (String) venue.get("postalCode") : null)
             : null;
-    Object venueIdObj = venue != null ? venue.get("id") : null;
-    String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
+    final Object venueIdObj = venue != null ? venue.get("id") : null;
+    final String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
     return new InfosVenueTM(salle, ville, dept, salleSourceId);
   }
 
@@ -175,7 +175,7 @@ final class MapeurEvenementTM {
   private static final java.util.regex.Pattern URL_PACKAGE_TM =
       java.util.regex.Pattern.compile("(?i)/pack/");
 
-  private static boolean estEvenementPackage(String url) {
+  private static boolean estEvenementPackage(final String url) {
     return url != null && URL_PACKAGE_TM.matcher(url).find();
   }
 
@@ -184,19 +184,19 @@ final class MapeurEvenementTM {
   // seule la seconde doit être requalifiée en "presale" plutôt que rester "offsale" à tort.
   @SuppressWarnings("unchecked")
   private static InfosVenteTM extraireInfosVenteTM(
-      Map<String, Object> dates, Map<String, Object> evt) {
-    Map<String, String> statusMap = (Map<String, String>) dates.get("status");
+      final Map<String, Object> dates, final Map<String, Object> evt) {
+    final Map<String, String> statusMap = (Map<String, String>) dates.get("status");
     String statut = statusMap != null ? statusMap.get("code") : null;
 
-    var sales = (Map<String, Object>) evt.get("sales");
-    var presales = sales != null ? (List<Map<String, Object>>) sales.get("presales") : null;
-    var presale = presales != null && !presales.isEmpty() ? presales.get(0) : null;
+    final var sales = (Map<String, Object>) evt.get("sales");
+    final var presales = sales != null ? (List<Map<String, Object>>) sales.get("presales") : null;
+    final var presale = presales != null && !presales.isEmpty() ? presales.get(0) : null;
     String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
-    String presaleNom = presale != null ? (String) presale.get("name") : null;
+    final String presaleNom = presale != null ? (String) presale.get("name") : null;
 
     if ("offsale".equals(statut)) {
-      var ventePublique = sales != null ? (Map<String, Object>) sales.get("public") : null;
-      String ouverturePublique =
+      final var ventePublique = sales != null ? (Map<String, Object>) sales.get("public") : null;
+      final String ouverturePublique =
           ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
       if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
         statut = "presale";
@@ -209,33 +209,33 @@ final class MapeurEvenementTM {
   }
 
   @SuppressWarnings("unchecked")
-  private static ConcertBrut parseEvenementTM(Map<String, Object> evt, String artisteFallback) {
-    var dates = (Map<String, Object>) evt.get("dates");
-    var start = dates != null ? (Map<String, Object>) dates.get("start") : null;
-    String dateStr = start != null ? (String) start.get("localDate") : null;
+  private static ConcertBrut parseEvenementTM(final Map<String, Object> evt, final String artisteFallback) {
+    final var dates = (Map<String, Object>) evt.get("dates");
+    final var start = dates != null ? (Map<String, Object>) dates.get("start") : null;
+    final String dateStr = start != null ? (String) start.get("localDate") : null;
     if (dateStr == null) return null;
 
-    String[] datHeure = parseDateTM(dateStr, (String) start.get("localTime"));
+    final String[] datHeure = parseDateTM(dateStr, (String) start.get("localTime"));
 
-    var embedded = (Map<String, Object>) evt.get(CLE_EMBEDDED);
-    String artiste = extraireArtisteTM(evt, embedded, artisteFallback);
+    final var embedded = (Map<String, Object>) evt.get(CLE_EMBEDDED);
+    final String artiste = extraireArtisteTM(evt, embedded, artisteFallback);
     if (artiste == null) return null;
 
-    List<Map<String, Object>> venues =
+    final List<Map<String, Object>> venues =
         embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
-    Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
-    InfosVenueTM infosVenue = extraireInfosVenueTM(venue);
-    String artisteSourceId = extraireAttractionIdTM(embedded);
+    final Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
+    final InfosVenueTM infosVenue = extraireInfosVenueTM(venue);
+    final String artisteSourceId = extraireAttractionIdTM(embedded);
 
-    String url = (String) evt.get("url");
-    InfosVenteTM infosVente =
+    final String url = (String) evt.get("url");
+    final InfosVenteTM infosVente =
         estEvenementPackage(url)
             ? new InfosVenteTM(null, null, null)
             : extraireInfosVenteTM(dates, evt);
 
-    List<Map<String, Object>> classificationsData =
+    final List<Map<String, Object>> classificationsData =
         (List<Map<String, Object>>) evt.get("classifications");
-    String[] segmentGenre = extraireClassificationTM(classificationsData);
+    final String[] segmentGenre = extraireClassificationTM(classificationsData);
 
     return new ConcertBrut(
         artiste,

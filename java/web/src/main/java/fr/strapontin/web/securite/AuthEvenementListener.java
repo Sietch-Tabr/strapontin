@@ -27,7 +27,7 @@ public class AuthEvenementListener {
 
   private final LogAdminService logAdminService;
 
-  public AuthEvenementListener(LogAdminService logAdminService) {
+  public AuthEvenementListener(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }
 
@@ -37,10 +37,10 @@ public class AuthEvenementListener {
    * @param event l'événement Spring Security
    */
   @EventListener
-  public void surSuccesAuthentification(AuthenticationSuccessEvent event) {
-    String identifiant = event.getAuthentication().getName();
-    String ip = obtenirIp(event.getAuthentication());
-    Map<String, Object> meta = new HashMap<>();
+  public void surSuccesAuthentification(final AuthenticationSuccessEvent event) {
+    final String identifiant = event.getAuthentication().getName();
+    final String ip = obtenirIp(event.getAuthentication());
+    final Map<String, Object> meta = new HashMap<>();
     meta.put("identifiant", identifiant);
     meta.put("ip", ip != null ? ip : "?");
     if (event.getAuthentication().getPrincipal() instanceof UtilisateurDetails ud) {
@@ -55,19 +55,19 @@ public class AuthEvenementListener {
    * @param event l'événement Spring Security
    */
   @EventListener
-  public void surEchecAuthentification(AbstractAuthenticationFailureEvent event) {
-    String identifiant = event.getAuthentication().getName();
-    String ip = obtenirIp(event.getAuthentication());
-    String raison =
+  public void surEchecAuthentification(final AbstractAuthenticationFailureEvent event) {
+    final String identifiant = event.getAuthentication().getName();
+    final String ip = obtenirIp(event.getAuthentication());
+    final String raison =
         event.getException().getClass().getSimpleName().replace("Exception", "").toLowerCase();
-    Map<String, Object> meta = new HashMap<>();
+    final Map<String, Object> meta = new HashMap<>();
     meta.put("identifiant", identifiant);
     meta.put("ip", ip != null ? ip : "?");
     meta.put("raison", raison);
     logAdminService.logAdmin("warn", "auth", "Échec connexion : " + identifiant, meta);
   }
 
-  private String obtenirIp(org.springframework.security.core.Authentication auth) {
+  private String obtenirIp(final org.springframework.security.core.Authentication auth) {
     if (auth.getDetails() instanceof WebAuthenticationDetails details) {
       return details.getRemoteAddress();
     }

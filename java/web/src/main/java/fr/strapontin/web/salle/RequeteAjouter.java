@@ -34,7 +34,7 @@ public record RequeteAjouter(
    * @param nom nom de la salle
    * @param tmVenueId identifiant Ticketmaster optionnel
    */
-  public RequeteAjouter(String nom, String tmVenueId) {
+  public RequeteAjouter(final String nom, final String tmVenueId) {
     this(nom, tmVenueId, null, null);
   }
 }

@@ -39,7 +39,7 @@ class PreferencesControllerTest {
   @BeforeEach
   void setUp() {
     controller = new PreferencesController(preferencesService);
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
@@ -47,10 +47,10 @@ class PreferencesControllerTest {
 
   @Test
   void importer_contentTypeInvalide_retourne400() throws Exception {
-    MockMultipartFile fichier =
+    final MockMultipartFile fichier =
         new MockMultipartFile("fichier", "prefs.txt", "text/plain", "{}".getBytes());
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.importer(fichier, "fusionner", false, auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -61,20 +61,20 @@ class PreferencesControllerTest {
 
   @Test
   void importer_versionInconnue_retourne422() throws Exception {
-    String json =
+    final String json =
         """
-        {"version":2,"exporteAt":"2026-01-01T00:00:00Z",
-         "artistes":[],"salles":[],"config":null}
-        """;
-    MockMultipartFile fichier =
+            {"version":2,"exporteAt":"2026-01-01T00:00:00Z",
+             "artistes":[],"salles":[],"config":null}
+            """;
+    final MockMultipartFile fichier =
         new MockMultipartFile(
             "fichier", "prefs.json", "application/json", json.getBytes(StandardCharsets.UTF_8));
 
-    ExportComplet exportVersion2 =
+    final ExportComplet exportVersion2 =
         new ExportComplet(2, "2026-01-01T00:00:00Z", List.of(), List.of(), null);
     when(preferencesService.deserialiserExport(any(byte[].class))).thenReturn(exportVersion2);
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.importer(fichier, "fusionner", false, auth);
 
     assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, rep.getStatusCode());
@@ -84,19 +84,19 @@ class PreferencesControllerTest {
 
   @Test
   void importer_artistesValides_retourneStats() throws Exception {
-    String json =
+    final String json =
         """
-        {"version":1,"exporteAt":"2026-01-01T00:00:00Z",
-         "artistes":[
-           {"nom":"Daft Punk","normalise":"daft punk"},
-           {"nom":"Radiohead","normalise":"radiohead"}
-         ],"salles":[],"config":null}
-        """;
-    MockMultipartFile fichier =
+            {"version":1,"exporteAt":"2026-01-01T00:00:00Z",
+             "artistes":[
+               {"nom":"Daft Punk","normalise":"daft punk"},
+               {"nom":"Radiohead","normalise":"radiohead"}
+             ],"salles":[],"config":null}
+            """;
+    final MockMultipartFile fichier =
         new MockMultipartFile(
             "fichier", "prefs.json", "application/json", json.getBytes(StandardCharsets.UTF_8));
 
-    ExportComplet exportV1 =
+    final ExportComplet exportV1 =
         new ExportComplet(
             1,
             "2026-01-01T00:00:00Z",
@@ -109,7 +109,7 @@ class PreferencesControllerTest {
     when(preferencesService.importer(eq("user-1"), any(ExportComplet.class), eq(false), eq(false)))
         .thenReturn(new PreferencesService.ResultatImportComplet(2, 0, 0));
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.importer(fichier, "fusionner", false, auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());

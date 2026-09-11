@@ -39,7 +39,7 @@ public class ResendWebhooksAdminService {
   private final Function<String, Resend> fabriqueResend;
 
   @Autowired
-  public ResendWebhooksAdminService(ConfigService configService) {
+  public ResendWebhooksAdminService(final ConfigService configService) {
     this(configService, Resend::new);
   }
 
@@ -48,7 +48,7 @@ public class ResendWebhooksAdminService {
    * d'injection HTTP public (contrairement à {@code RestClient} pour les autres sources), la
    * fabrique est le seul moyen de substituer un client {@link Resend} mocké en test.
    */
-  ResendWebhooksAdminService(ConfigService configService, Function<String, Resend> fabriqueResend) {
+  ResendWebhooksAdminService(final ConfigService configService, final Function<String, Resend> fabriqueResend) {
     this.configService = configService;
     this.fabriqueResend = fabriqueResend;
   }
@@ -71,26 +71,26 @@ public class ResendWebhooksAdminService {
    *   webhook ne correspond, ou en cas d'erreur API (journalisée, jamais propagée)
    */
   public List<EvenementWebhook> listerEvenements() {
-    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) return List.of();
-    Resend client = fabriqueResend.apply(cle.get());
+    final Resend client = fabriqueResend.apply(cle.get());
 
-    String webhookId = resoudreWebhookId(client);
+    final String webhookId = resoudreWebhookId(client);
     if (webhookId == null) return List.of();
 
     try {
-      ListWebhookEventsResponseSuccess reponse = client.webhooks().listEvents(webhookId);
-      List<EvenementWebhook> evenements =
+      final ListWebhookEventsResponseSuccess reponse = client.webhooks().listEvents(webhookId);
+      final List<EvenementWebhook> evenements =
           reponse.getData() != null
               ? reponse.getData().stream()
-                  .map(
-                      e ->
-                          new EvenementWebhook(
-                              e.getId(),
-                              e.getType(),
-                              e.getStatus() != null ? e.getStatus().getValue() : null,
-                              e.getCreatedAt()))
-                  .toList()
+              .map(
+                  e ->
+                      new EvenementWebhook(
+                          e.getId(),
+                          e.getType(),
+                          e.getStatus() != null ? e.getStatus().getValue() : null,
+                          e.getCreatedAt()))
+              .toList()
               : List.of();
       return evenements;
     } catch (ResendException e) {
@@ -106,12 +106,12 @@ public class ResendWebhooksAdminService {
    * @return {@code true} si le rejeu a été accepté par Resend, {@code false} sinon (configuration
    *   absente, webhook introuvable, erreur API)
    */
-  public boolean rejouerEvenement(String eventId) {
-    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+  public boolean rejouerEvenement(final String eventId) {
+    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) return false;
-    Resend client = fabriqueResend.apply(cle.get());
+    final Resend client = fabriqueResend.apply(cle.get());
 
-    String webhookId = resoudreWebhookId(client);
+    final String webhookId = resoudreWebhookId(client);
     if (webhookId == null) return false;
 
     try {
@@ -124,13 +124,13 @@ public class ResendWebhooksAdminService {
     }
   }
 
-  private String resoudreWebhookId(Resend client) {
-    Optional<String> baseUrl = configService.lireConfig("PUBLIC_BASE_URL");
+  private String resoudreWebhookId(final Resend client) {
+    final Optional<String> baseUrl = configService.lireConfig("PUBLIC_BASE_URL");
     if (baseUrl.isEmpty()) return null;
-    String endpointAttendu = baseUrl.get() + "/api/webhooks/resend";
+    final String endpointAttendu = baseUrl.get() + "/api/webhooks/resend";
 
     try {
-      ListWebhooksResponseSuccess reponse = client.webhooks().list();
+      final ListWebhooksResponseSuccess reponse = client.webhooks().list();
       if (reponse.getData() == null) return null;
       return reponse.getData().stream()
           .filter(w -> endpointAttendu.equals(w.getEndpoint()))

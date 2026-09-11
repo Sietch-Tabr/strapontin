@@ -47,7 +47,7 @@ public final class ConfigCipher {
    *
    * @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
    */
-  public ConfigCipher(String secret) {
+  public ConfigCipher(final String secret) {
     Objects.requireNonNull(secret, "secret");
     this.cleChiffrement =
         SCrypt.generate(
@@ -67,22 +67,22 @@ public final class ConfigCipher {
    * @param valeur valeur en clair
    * @return valeur chiffrée encodée en base64
    */
-  public String chiffrer(String valeur) {
+  public String chiffrer(final String valeur) {
     try {
-      byte[] iv = new byte[12];
+      final byte[] iv = new byte[12];
       rng.nextBytes(iv);
 
-      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
       cipher.init(
           Cipher.ENCRYPT_MODE,
           new SecretKeySpec(cleChiffrement, "AES"),
           new GCMParameterSpec(128, iv));
       // doFinal retourne : données_chiffrées || TAG(16)
-      byte[] resultat = cipher.doFinal(valeur.getBytes(StandardCharsets.UTF_8));
-      int donneesLen = resultat.length - 16;
+      final byte[] resultat = cipher.doFinal(valeur.getBytes(StandardCharsets.UTF_8));
+      final int donneesLen = resultat.length - 16;
 
       // Réordonne en IV(12) || TAG(16) || données_chiffrées pour correspondre au format Node.js
-      byte[] stocke = new byte[12 + 16 + donneesLen];
+      final byte[] stocke = new byte[12 + 16 + donneesLen];
       System.arraycopy(iv, 0, stocke, 0, 12);
       System.arraycopy(resultat, donneesLen, stocke, 12, 16);
       System.arraycopy(resultat, 0, stocke, 28, donneesLen);
@@ -101,19 +101,19 @@ public final class ConfigCipher {
    * @param chiffre valeur chiffrée encodée en base64
    * @return valeur en clair
    */
-  public String dechiffrer(String chiffre) {
+  public String dechiffrer(final String chiffre) {
     try {
-      byte[] buf = Base64.getDecoder().decode(chiffre);
-      byte[] iv = Arrays.copyOf(buf, 12);
-      byte[] tag = Arrays.copyOfRange(buf, 12, 28);
-      byte[] donnees = Arrays.copyOfRange(buf, 28, buf.length);
+      final byte[] buf = Base64.getDecoder().decode(chiffre);
+      final byte[] iv = Arrays.copyOf(buf, 12);
+      final byte[] tag = Arrays.copyOfRange(buf, 12, 28);
+      final byte[] donnees = Arrays.copyOfRange(buf, 28, buf.length);
 
       // AES/GCM attend données_chiffrées || TAG
-      byte[] donneesAvecTag = new byte[donnees.length + 16];
+      final byte[] donneesAvecTag = new byte[donnees.length + 16];
       System.arraycopy(donnees, 0, donneesAvecTag, 0, donnees.length);
       System.arraycopy(tag, 0, donneesAvecTag, donnees.length, 16);
 
-      Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+      final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
       cipher.init(
           Cipher.DECRYPT_MODE,
           new SecretKeySpec(cleChiffrement, "AES"),

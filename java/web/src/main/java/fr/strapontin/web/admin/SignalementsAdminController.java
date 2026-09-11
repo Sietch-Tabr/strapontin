@@ -31,7 +31,7 @@ public class SignalementsAdminController {
 
   private final SignalementsAdminService service;
 
-  public SignalementsAdminController(SignalementsAdminService service) {
+  public SignalementsAdminController(final SignalementsAdminService service) {
     this.service = service;
   }
 
@@ -42,7 +42,7 @@ public class SignalementsAdminController {
    * @return 200 avec la page de résultats
    */
   @GetMapping
-  public ResponseEntity<ReponseSignalements> lister(@RequestParam(defaultValue = "0") int page) {
+  public ResponseEntity<ReponseSignalements> lister(@RequestParam(defaultValue = "0") final int page) {
     return ResponseEntity.ok(service.lister(page));
   }
 
@@ -53,8 +53,8 @@ public class SignalementsAdminController {
    * @return 200 si résolu, 404 si signalement inconnu ou déjà résolu
    */
   @PostMapping("/{id}/resoudre")
-  public ResponseEntity<Map<String, Object>> resoudre(@PathVariable long id) {
-    boolean resolu = service.resoudre(id);
+  public ResponseEntity<Map<String, Object>> resoudre(@PathVariable final long id) {
+    final boolean resolu = service.resoudre(id);
     if (!resolu) return erreur(404, "Signalement inconnu ou déjà résolu.");
     return ResponseEntity.ok(Map.of("succes", true));
   }

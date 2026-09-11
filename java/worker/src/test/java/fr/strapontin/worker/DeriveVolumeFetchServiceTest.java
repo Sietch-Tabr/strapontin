@@ -37,7 +37,7 @@ class DeriveVolumeFetchServiceTest {
     service = new DeriveVolumeFetchService(jdbc, logsAdminWorker);
   }
 
-  private void stubHistorique(List<Integer> volumes) {
+  private void stubHistorique(final List<Integer> volumes) {
     when(jdbc.query(
             contains("fetch_jobs_historique"),
             anyMap(),

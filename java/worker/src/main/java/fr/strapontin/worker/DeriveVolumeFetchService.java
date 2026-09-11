@@ -49,7 +49,7 @@ public class DeriveVolumeFetchService {
   private final LogsAdminWorker logsAdminWorker;
 
   public DeriveVolumeFetchService(
-      NamedParameterJdbcTemplate jdbc, LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
   }
@@ -63,11 +63,11 @@ public class DeriveVolumeFetchService {
    * @param avant horodatage du cycle courant — exclut structurellement sa propre ligne
    *   d'historique de la moyenne, que celle-ci ait déjà été insérée ou non au moment de l'appel
    */
-  public void verifier(String typeJob, int volumeCourant, Timestamp avant) {
-    List<Integer> historique = lireVolumesRecents(typeJob, avant);
+  public void verifier(final String typeJob, final int volumeCourant, final Timestamp avant) {
+    final List<Integer> historique = lireVolumesRecents(typeJob, avant);
     if (historique.size() < NB_EXECUTIONS_MOYENNE) return;
 
-    double moyenne = historique.stream().mapToInt(Integer::intValue).average().orElse(0);
+    final double moyenne = historique.stream().mapToInt(Integer::intValue).average().orElse(0);
     if (moyenne < VOLUME_MOYEN_MIN_SIGNIFICATIF) return;
     if (volumeCourant >= moyenne * (1 - SEUIL_DERIVE)) return;
 
@@ -91,7 +91,7 @@ public class DeriveVolumeFetchService {
         Map.of("typeJob", typeJob, "volume", volumeCourant, "moyenneRecente", moyenne));
   }
 
-  private List<Integer> lireVolumesRecents(String typeJob, Timestamp avant) {
+  private List<Integer> lireVolumesRecents(final String typeJob, final Timestamp avant) {
     return jdbc.query(
         """
         SELECT nb_inseres + nb_mis_a_jour AS volume

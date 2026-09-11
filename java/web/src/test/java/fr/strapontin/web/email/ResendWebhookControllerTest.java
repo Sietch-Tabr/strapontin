@@ -49,7 +49,7 @@ class ResendWebhookControllerTest {
   void recevoirEvenement_secretAbsent_retourne400() {
     when(configService.lireConfig("RESEND_WEBHOOK_SECRET")).thenReturn(Optional.empty());
 
-    ResponseEntity<Void> reponse = controller.recevoirEvenement("id-1", "1700000000", "sig", "{}");
+    final ResponseEntity<Void> reponse = controller.recevoirEvenement("id-1", "1700000000", "sig", "{}");
 
     assertEquals(HttpStatus.BAD_REQUEST, reponse.getStatusCode());
   }
@@ -63,7 +63,7 @@ class ResendWebhookControllerTest {
     when(configService.lireConfig("RESEND_WEBHOOK_SECRET"))
         .thenReturn(Optional.of("whsec_test1234567890"));
 
-    ResponseEntity<Void> reponse =
+    final ResponseEntity<Void> reponse =
         controller.recevoirEvenement("id-1", "abc-non-numerique", "v1,signature", "{}");
 
     assertEquals(HttpStatus.UNAUTHORIZED, reponse.getStatusCode());
@@ -74,7 +74,7 @@ class ResendWebhookControllerTest {
     when(configService.lireConfig("RESEND_WEBHOOK_SECRET"))
         .thenReturn(Optional.of("whsec_test1234567890"));
 
-    ResponseEntity<Void> reponse =
+    final ResponseEntity<Void> reponse =
         controller.recevoirEvenement("id-1", "1700000000", "v1,signature-invalide", "{}");
 
     assertEquals(HttpStatus.UNAUTHORIZED, reponse.getStatusCode());
@@ -85,14 +85,14 @@ class ResendWebhookControllerTest {
   @Test
   @SuppressWarnings("unchecked")
   void traiterEvenement_bounce_journaliseEmailHacheEtNotifieAdmin() {
-    String corps =
+    final String corps =
         """
-        {"type":"email.bounced","data":{"to":["victime@exemple.fr"]}}
-        """;
+            {"type":"email.bounced","data":{"to":["victime@exemple.fr"]}}
+            """;
 
     controller.traiterEvenement(corps, "svix-id-bounce-1");
 
-    ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
     assertEquals(String.valueOf("victime@exemple.fr".hashCode()), details.getValue().get("email"));
     assertEquals("svix-id-bounce-1", details.getValue().get("svixId"));
@@ -104,14 +104,14 @@ class ResendWebhookControllerTest {
   @Test
   @SuppressWarnings("unchecked")
   void traiterEvenement_complained_journaliseEtNotifieAdminCommeUnBounce() {
-    String corps =
+    final String corps =
         """
-        {"type":"email.complained","data":{"to":["plaignant@exemple.fr"]}}
-        """;
+            {"type":"email.complained","data":{"to":["plaignant@exemple.fr"]}}
+            """;
 
     controller.traiterEvenement(corps, "svix-id-complained-1");
 
-    ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), details.capture());
     assertEquals(
         String.valueOf("plaignant@exemple.fr".hashCode()), details.getValue().get("email"));

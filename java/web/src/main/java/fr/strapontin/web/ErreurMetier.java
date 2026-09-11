@@ -24,7 +24,7 @@ public class ErreurMetier extends RuntimeException {
    *
    * @param message message retourné dans la réponse JSON
    */
-  public ErreurMetier(String message) {
+  public ErreurMetier(final String message) {
     this(message, 400);
   }
 
@@ -34,7 +34,7 @@ public class ErreurMetier extends RuntimeException {
    * @param message message retourné dans la réponse JSON
    * @param status code HTTP (ex. 400, 422, 429)
    */
-  public ErreurMetier(String message, int status) {
+  public ErreurMetier(final String message, final int status) {
     super(message);
     this.status = status;
   }

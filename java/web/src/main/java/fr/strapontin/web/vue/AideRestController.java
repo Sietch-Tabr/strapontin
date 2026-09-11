@@ -52,7 +52,7 @@ public class AideRestController {
    * @param emailService service d'envoi d'emails
    * @param configService service de configuration applicative
    */
-  public AideRestController(EmailService emailService, ConfigService configService) {
+  public AideRestController(final EmailService emailService, final ConfigService configService) {
     this.emailService = emailService;
     this.configService = configService;
   }
@@ -64,7 +64,7 @@ public class AideRestController {
    */
   @GetMapping("/config")
   public ResponseEntity<Map<String, Object>> config() {
-    Map<String, Object> corps = new HashMap<>();
+    final Map<String, Object> corps = new HashMap<>();
     corps.put("resendDisponible", emailService.estDisponible());
     corps.put("contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(""));
     corps.put("signalLien", configService.lireConfig("SIGNAL_LIEN").orElse(""));
@@ -81,21 +81,21 @@ public class AideRestController {
    */
   @PostMapping("/signalement")
   public ResponseEntity<Map<String, Object>> signaler(
-      @Valid @RequestBody RequeteSignalement requete,
-      Authentication auth,
-      HttpServletRequest request) {
+      @Valid @RequestBody final RequeteSignalement requete,
+      final Authentication auth,
+      final HttpServletRequest request) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails utilisateur)) {
       return erreur(401, "Non authentifié.");
     }
 
-    String ip = request.getRemoteAddr();
-    Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
+    final String ip = request.getRemoteAddr();
+    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
     if (!bucket.tryConsume(1)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
-    String msg = requete.message().strip();
-    String typeValide =
+    final String msg = requete.message().strip();
+    final String typeValide =
         Set.of("bug", "suggestion", "question").contains(requete.type())
             ? requete.type()
             : "question";
@@ -104,7 +104,7 @@ public class AideRestController {
   }
 
   private Bucket creerBucketSignalement() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
             .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))

@@ -49,10 +49,10 @@ class WorkerServiceTest {
     notificationDigestService = mock(NotificationDigestService.class);
     reconciliationNocturneService = mock(ReconciliationNocturneService.class);
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
-    LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
-    WorkerStatsService workerStatsService =
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
+    final LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
+    final WorkerStatsService workerStatsService =
         new WorkerStatsService(
             List.<SourceConcerts>of(),
             tm,

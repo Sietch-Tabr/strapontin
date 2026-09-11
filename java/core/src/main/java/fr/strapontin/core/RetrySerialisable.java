@@ -37,7 +37,7 @@ public final class RetrySerialisable {
    *   tentatives
    */
   public static <T> T executer(
-      int maxTentatives, Logger log, String contexte, Supplier<T> operation) {
+      final int maxTentatives, final Logger log, final String contexte, final Supplier<T> operation) {
     for (int tentative = 1; ; tentative++) {
       try {
         return operation.get();
@@ -60,7 +60,7 @@ public final class RetrySerialisable {
    * @param contexte description de l'opération, utilisée dans le message de log de retry
    * @param operation opération transactionnelle à exécuter
    */
-  public static void executer(int maxTentatives, Logger log, String contexte, Runnable operation) {
+  public static void executer(final int maxTentatives, final Logger log, final String contexte, final Runnable operation) {
     executer(
         maxTentatives,
         log,

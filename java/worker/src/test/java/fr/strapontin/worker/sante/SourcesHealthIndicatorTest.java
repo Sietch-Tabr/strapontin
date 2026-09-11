@@ -46,7 +46,7 @@ class SourcesHealthIndicatorTest {
         .thenReturn(Optional.of(new QuotaTM(4000, 5000, 0L, "2026-07-17T00:00:00Z")));
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    Health health = indicator.health();
+    final Health health = indicator.health();
 
     assertEquals(Health.up().build().getStatus(), health.getStatus());
     assertEquals(4000, health.getDetails().get("quotaTmDispo"));
@@ -58,7 +58,7 @@ class SourcesHealthIndicatorTest {
         .thenReturn(Optional.of(new QuotaTM(10, 5000, 0L, "2026-07-17T00:00:00Z")));
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    Health health = indicator.health();
+    final Health health = indicator.health();
 
     assertEquals(Health.down().build().getStatus(), health.getStatus());
     assertEquals("épuisé", health.getDetails().get("quotaTm"));
@@ -69,15 +69,15 @@ class SourcesHealthIndicatorTest {
   void health_sourceEnErreur_retourneDownAvecDetail() {
     when(gestionQuotaTM.lireQuota())
         .thenReturn(Optional.of(new QuotaTM(4000, 5000, 0L, "2026-07-17T00:00:00Z")));
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("type_job", "fetch:region");
     ligne.put("erreur", "Worker inaccessible");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
 
-    Health health = indicator.health();
+    final Health health = indicator.health();
 
     assertEquals(Health.down().build().getStatus(), health.getStatus());
-    Map<String, Object> sourcesEnErreur =
+    final Map<String, Object> sourcesEnErreur =
         (Map<String, Object>) health.getDetails().get("sourcesEnErreur");
     assertEquals("Worker inaccessible", sourcesEnErreur.get("fetch:region"));
   }
@@ -87,7 +87,7 @@ class SourcesHealthIndicatorTest {
     when(gestionQuotaTM.lireQuota()).thenReturn(Optional.empty());
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    Health health = indicator.health();
+    final Health health = indicator.health();
 
     assertEquals(Health.up().build().getStatus(), health.getStatus());
     assertEquals(null, health.getDetails().get("quotaTmDispo"));

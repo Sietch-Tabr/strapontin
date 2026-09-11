@@ -35,7 +35,7 @@ public final class EligibiliteResolutionDeezer {
    * @param source source du concert ({@code ticketmaster}, {@code eventim}, {@code digitick})
    * @return {@code true} si le concert est éligible à la résolution de nom canonique via Deezer
    */
-  public static boolean estEligible(String classification, String source) {
+  public static boolean estEligible(final String classification, final String source) {
     if (classification != null && CLASSIFICATIONS_NON_MUSICALES.contains(classification)) {
       return false;
     }

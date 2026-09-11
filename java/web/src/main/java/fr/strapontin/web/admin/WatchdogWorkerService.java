@@ -41,7 +41,7 @@ public class WatchdogWorkerService {
   private volatile Instant derniereAlerte;
 
   public WatchdogWorkerService(
-      NamedParameterJdbcTemplate jdbc, EmailAlerteService emailAlerteService) {
+      final NamedParameterJdbcTemplate jdbc, final EmailAlerteService emailAlerteService) {
     this.jdbc = jdbc;
     this.emailAlerteService = emailAlerteService;
   }
@@ -51,8 +51,8 @@ public class WatchdogWorkerService {
    */
   @Scheduled(cron = "0 0 * * * *")
   public void verifier() {
-    Instant derniereExec = lireDerniereExecReussie();
-    boolean inactif =
+    final Instant derniereExec = lireDerniereExecReussie();
+    final boolean inactif =
         derniereExec == null
             || Duration.between(derniereExec, Instant.now()).compareTo(SEUIL_INACTIVITE) > 0;
 
@@ -63,7 +63,7 @@ public class WatchdogWorkerService {
       return;
     }
 
-    String detailIso = derniereExec != null ? derniereExec.toString() : null;
+    final String detailIso = derniereExec != null ? derniereExec.toString() : null;
     log.warn("watchdog: worker inactif depuis {} — envoi alerte", detailIso);
 
     emailAlerteService
@@ -79,7 +79,7 @@ public class WatchdogWorkerService {
 
   private Instant lireDerniereExecReussie() {
     try {
-      Timestamp ts =
+      final Timestamp ts =
           jdbc.queryForObject(
               "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL OR erreur = ''",
               Map.of(),

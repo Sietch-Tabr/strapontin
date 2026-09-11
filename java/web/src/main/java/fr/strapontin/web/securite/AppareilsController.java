@@ -30,7 +30,7 @@ public class AppareilsController {
   /**
    * @param appareilsService service de gestion des appareils
    */
-  public AppareilsController(AppareilsService appareilsService) {
+  public AppareilsController(final AppareilsService appareilsService) {
     this.appareilsService = appareilsService;
   }
 
@@ -43,9 +43,9 @@ public class AppareilsController {
    */
   @GetMapping
   public List<AppareilsService.AppareilDto> lister(
-      Authentication auth, HttpServletRequest httpRequest) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    var session = httpRequest.getSession(false);
+      final Authentication auth, final HttpServletRequest httpRequest) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    final var session = httpRequest.getSession(false);
     return appareilsService.listerAppareils(userId, session != null ? session.getId() : null);
   }
 
@@ -57,8 +57,8 @@ public class AppareilsController {
    * @return 204 si révoqué, 404 si l'appareil n'existe pas ou n'appartient pas à l'utilisateur
    */
   @DeleteMapping("/{appareilId}")
-  public ResponseEntity<Void> revoquer(@PathVariable String appareilId, Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+  public ResponseEntity<Void> revoquer(@PathVariable final String appareilId, final Authentication auth) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     if (!appareilsService.revoquerAppareil(userId, appareilId)) {
       throw new ErreurMetier("Appareil introuvable.", 404);
     }

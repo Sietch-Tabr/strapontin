@@ -41,9 +41,9 @@ public class NotificationPushService {
   private final LogAdminService logAdminService;
 
   public NotificationPushService(
-      ConfigService configService,
-      NamedParameterJdbcTemplate jdbc,
-      LogAdminService logAdminService) {
+      final ConfigService configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final LogAdminService logAdminService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
@@ -61,20 +61,20 @@ public class NotificationPushService {
   private int envoyerAUnAbonnement(
       Map<String, Object> ab, PushService pushService, String userId, String payload) {
     try {
-      String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
-      String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
-      Subscription subscription =
+      final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
+      final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
+      final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      Notification notification = new Notification(subscription, payload);
-      HttpResponse response = pushService.send(notification);
-      int status = response.getStatusLine().getStatusCode();
+      final Notification notification = new Notification(subscription, payload);
+      final HttpResponse response = pushService.send(notification);
+      final int status = response.getStatusLine().getStatusCode();
       if (status == 404 || status == 410) {
         supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
         return 0;
       }
       return 1;
     } catch (Exception e) {
-      int status = extraireCodeHttp(e);
+      final int status = extraireCodeHttp(e);
       if (status == 404 || status == 410) {
         supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
       } else {
@@ -98,37 +98,37 @@ public class NotificationPushService {
    * @param endpoint l'endpoint de l'abonnement de l'appareil demandeur, ou {@code null}
    * @return {@code true} si la notification a été envoyée
    */
-  public boolean envoyerNotificationTest(String userId, String endpoint) {
-    Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
-    Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
+  public boolean envoyerNotificationTest(final String userId, final String endpoint) {
+    final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
+    final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) return false;
 
-    List<Map<String, Object>> abonnements =
+    final List<Map<String, Object>> abonnements =
         endpoint != null && !endpoint.isBlank()
             ? jdbc.queryForList(
-                """
+            """
                 SELECT id, endpoint, p256dh, auth
                 FROM push_abonnements
                 WHERE user_id = :userId AND endpoint = :endpoint
                 """,
-                Map.of("userId", userId, CLE_ENDPOINT, endpoint))
+            Map.of("userId", userId, CLE_ENDPOINT, endpoint))
             : jdbc.queryForList(
-                """
+            """
                 SELECT id, endpoint, p256dh, auth
                 FROM push_abonnements
                 WHERE user_id = :userId
                 ORDER BY id DESC
                 LIMIT 1
                 """,
-                Map.of("userId", userId));
+            Map.of("userId", userId));
     if (abonnements.isEmpty()) return false;
 
-    String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-    String payload =
+    final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
+    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    final String payload =
         """
-        {"title":"Strapontin","body":"Notification de test","icon":"%s/images/icon-192.png"}\
-        """
+            {"title":"Strapontin","body":"Notification de test","icon":"%s/images/icon-192.png"}\
+            """
             .formatted(baseUrl);
 
     PushService pushService;
@@ -142,20 +142,20 @@ public class NotificationPushService {
     return envoyerAUnAbonnement(abonnements.get(0), pushService, userId, payload) > 0;
   }
 
-  private void supprimerAbonnement(UUID id, String userId, String endpoint) {
+  private void supprimerAbonnement(final UUID id, final String userId, final String endpoint) {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
     log.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
     logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
   }
 
-  private static int extraireCodeHttp(Exception e) {
-    String msg = e.getMessage();
+  private static int extraireCodeHttp(final Exception e) {
+    final String msg = e.getMessage();
     if (msg == null) return -1;
     // webpush-java peut lancer une exception avec le code HTTP dans le message
     try {
-      String[] parties = msg.split("\\s+");
+      final String[] parties = msg.split("\\s+");
       for (String p : parties) {
-        int code = Integer.parseInt(p);
+        final int code = Integer.parseInt(p);
         if (code >= 400 && code < 600) return code;
       }
     } catch (NumberFormatException _) {

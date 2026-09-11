@@ -56,9 +56,9 @@ public class WorkerSuiviCyclesService {
   private final WorkerStatsService workerStatsService;
 
   public WorkerSuiviCyclesService(
-      NamedParameterJdbcTemplate jdbc,
-      LogsAdminWorker logsAdminWorker,
-      WorkerStatsService workerStatsService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final WorkerStatsService workerStatsService) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.workerStatsService = workerStatsService;
@@ -74,7 +74,7 @@ public class WorkerSuiviCyclesService {
         log,
         "suivi:cycles-jobs",
         () -> {
-          int enRetard = verifier();
+          final int enRetard = verifier();
           log.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
           return new ResultatPersistance(0, enRetard);
         });
@@ -84,16 +84,16 @@ public class WorkerSuiviCyclesService {
    * @return nombre de types de job détectés en retard
    */
   int verifier() {
-    Map<String, Instant> dernieresExecs = lireDernieresExecs();
+    final Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;
     for (var entree : FRAICHEUR_ATTENDUE.entrySet()) {
-      String typeJob = entree.getKey();
-      Duration fraicheurMax = entree.getValue();
-      Instant derniereExec = dernieresExecs.get(typeJob);
+      final String typeJob = entree.getKey();
+      final Duration fraicheurMax = entree.getValue();
+      final Instant derniereExec = dernieresExecs.get(typeJob);
       // Jamais exécuté depuis le démarrage (déploiement récent) — hors périmètre, aucune
       // référence pour juger d'un retard.
       if (derniereExec == null) continue;
-      Duration ecart = Duration.between(derniereExec, Instant.now());
+      final Duration ecart = Duration.between(derniereExec, Instant.now());
       if (ecart.compareTo(fraicheurMax) > 0) {
         enRetard++;
         signalerRetard(typeJob, derniereExec, ecart, fraicheurMax);
@@ -112,7 +112,7 @@ public class WorkerSuiviCyclesService {
   }
 
   private void signalerRetard(
-      String typeJob, Instant derniereExec, Duration ecart, Duration fraicheurMax) {
+      final String typeJob, final Instant derniereExec, final Duration ecart, final Duration fraicheurMax) {
     logsAdminWorker.inserer(
         "warn",
         "worker",

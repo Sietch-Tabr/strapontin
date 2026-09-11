@@ -24,7 +24,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class SuiviSanteSourcesServiceTest {
 
-  private static ConcertBrut concertAvecArtisteSourceId(String artisteSourceId) {
+  private static ConcertBrut concertAvecArtisteSourceId(final String artisteSourceId) {
     return new ConcertBrut(
         "Artiste",
         "2026-08-01",
@@ -45,9 +45,9 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatSalle_identifiantSansPrefixe_neFaitRien() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatSalle("sans-prefixe", 1);
 
@@ -57,9 +57,9 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatSalle_succes_metAJourAvecSuccesTrue() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatSalle("ticketmaster:rZFSnyZdFvA", 3);
 
@@ -75,9 +75,9 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatSalle_prefixeAbregeTm_normaliseVersTicketmaster() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatSalle("tm:rZFSnyZdFvA", 0);
 
@@ -92,9 +92,9 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatSalle_digitick_prefixePreserve() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatSalle("digitick:lempreinte", 1);
 
@@ -109,12 +109,12 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatArtistesLot_unSurDeuxAvecConcert_succesEtEchecCorrects() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
-    List<String> attractionIds = List.of("K1", "K2", "K3");
-    List<ConcertBrut> concertsLot = List.of(concertAvecArtisteSourceId("ticketmaster:K2"));
+    final List<String> attractionIds = List.of("K1", "K2", "K3");
+    final List<ConcertBrut> concertsLot = List.of(concertAvecArtisteSourceId("ticketmaster:K2"));
 
     service.enregistrerResultatArtistesLot(attractionIds, concertsLot);
 
@@ -137,9 +137,9 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatArtistesLot_succes_effaceNecessiteInterventionArtisteSources() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatArtistesLot(
         List.of("K1"), List.of(concertAvecArtisteSourceId("ticketmaster:K1")));
@@ -152,9 +152,9 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatSalle_succes_neReferencePasNecessiteInterventionSalleSources() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatSalle("ticketmaster:rZFSnyZdFvA", 1);
 
@@ -166,11 +166,11 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatSalle_exceptionJdbc_neRelancePasException() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.update(anyString(), org.mockito.ArgumentMatchers.anyMap()))
         .thenThrow(new RuntimeException("DB down"));
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(
         () -> service.enregistrerResultatSalle("ticketmaster:x", 1));
@@ -178,14 +178,14 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatArtistesLot_flagPoseEtNomCoherent_effaceInterventionEtAppelleTm() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
         .thenReturn(
             List.of(
                 Map.of("necessite_intervention_le", java.time.Instant.now(), "nom", "Calogero")));
     when(tm.recupererNomAttraction("K1")).thenReturn("Calogero");
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatArtistesLot(
         List.of("K1"), List.of(concertAvecArtisteSourceId("ticketmaster:K1")));
@@ -200,13 +200,13 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatArtistesLot_flagPoseEtNomIncoherent_neEffacePasIntervention() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
         .thenReturn(
             List.of(Map.of("necessite_intervention_le", java.time.Instant.now(), "nom", "Furies")));
     when(tm.recupererNomAttraction("K1")).thenReturn("Love & Furies");
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatArtistesLot(
         List.of("K1"), List.of(concertAvecArtisteSourceId("ticketmaster:K1")));
@@ -220,14 +220,14 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatArtistesLot_flagPoseEtTmInjoignable_neEffacePasIntervention() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
         .thenReturn(
             List.of(
                 Map.of("necessite_intervention_le", java.time.Instant.now(), "nom", "Calogero")));
     when(tm.recupererNomAttraction("K1")).thenReturn(null);
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatArtistesLot(
         List.of("K1"), List.of(concertAvecArtisteSourceId("ticketmaster:K1")));
@@ -241,11 +241,11 @@ class SuiviSanteSourcesServiceTest {
 
   @Test
   void enregistrerResultatArtistesLot_flagNonPose_effaceSansAppelerTm() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
     when(jdbc.queryForList(anyString(), org.mockito.ArgumentMatchers.anyMap()))
         .thenReturn(List.of(Map.of("nom", "Calogero")));
-    SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
+    final SuiviSanteSourcesService service = new SuiviSanteSourcesService(jdbc, tm);
 
     service.enregistrerResultatArtistesLot(
         List.of("K1"), List.of(concertAvecArtisteSourceId("ticketmaster:K1")));

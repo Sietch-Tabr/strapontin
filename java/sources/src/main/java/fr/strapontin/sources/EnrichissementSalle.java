@@ -33,7 +33,7 @@ public record EnrichissementSalle(
    * Constructeur pour une source ne fournissant pas de coordonnées.
    */
   public EnrichissementSalle(
-      String wikidataId, String nomAffiche, String ville, String website, Integer capacite) {
+      final String wikidataId, final String nomAffiche, final String ville, final String website, final Integer capacite) {
     this(wikidataId, nomAffiche, ville, website, capacite, null, null);
   }
 }

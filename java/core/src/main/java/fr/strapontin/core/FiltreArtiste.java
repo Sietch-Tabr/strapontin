@@ -33,7 +33,7 @@ public final class FiltreArtiste {
    * @param nom nom affiché tel que saisi ou reçu d'une source externe
    * @return {@code true} si le nom matche un motif tribute/hommage
    */
-  public static boolean estTribute(String nom) {
+  public static boolean estTribute(final String nom) {
     return nom != null && MOTIF_TRIBUTE.matcher(nom).find();
   }
 }

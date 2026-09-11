@@ -38,9 +38,9 @@ public class ParametresService {
    * @param utilisateurRepository accès aux données utilisateur
    */
   public ParametresService(
-      NamedParameterJdbcTemplate jdbc,
-      EmailService emailService,
-      UtilisateurRepository utilisateurRepository) {
+      final NamedParameterJdbcTemplate jdbc,
+      final EmailService emailService,
+      final UtilisateurRepository utilisateurRepository) {
     this.jdbc = jdbc;
     this.emailService = emailService;
     this.utilisateurRepository = utilisateurRepository;
@@ -52,7 +52,7 @@ public class ParametresService {
    * @param userId identifiant de l'utilisateur
    * @return nombre de concerts non vus pour les artistes suivis
    */
-  public int compterNouveauxMatchesArtistes(String userId) {
+  public int compterNouveauxMatchesArtistes(final String userId) {
     return utilisateurRepository.compterNouveauxMatchesArtistes(userId);
   }
 
@@ -62,13 +62,13 @@ public class ParametresService {
    * @param userId identifiant de l'utilisateur
    * @return map avec les clés {@code nbArtistes} et {@code nbSalles}
    */
-  public Map<String, Object> stats(String userId) {
-    Integer nbArtistes =
+  public Map<String, Object> stats(final String userId) {
+    final Integer nbArtistes =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
             Map.of("userId", userId),
             Integer.class);
-    Integer nbSalles =
+    final Integer nbSalles =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
             Map.of("userId", userId),
@@ -85,7 +85,7 @@ public class ParametresService {
    * @param userId identifiant de l'utilisateur courant (exclu de la vérification)
    * @return {@code true} si l'email est déjà pris
    */
-  public boolean emailDejaUtilise(String email, String userId) {
+  public boolean emailDejaUtilise(final String email, final String userId) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE email = :email AND id != :id",
             Map.of("email", email, "id", userId),
@@ -114,9 +114,9 @@ public class ParametresService {
    */
   @Transactional
   public void demanderChangementEmail(
-      UtilisateurDetails details, String emailNorm, String baseUrl) {
-    String token = GenerateurSecrets.genererHex(32);
-    String prefixe = "email-change:" + details.id();
+      final UtilisateurDetails details, final String emailNorm, final String baseUrl) {
+    final String token = GenerateurSecrets.genererHex(32);
+    final String prefixe = "email-change:" + details.id();
     jdbc.update("DELETE FROM verifications WHERE identifier = :p", Map.of("p", prefixe));
     jdbc.update(
         """
@@ -131,7 +131,7 @@ public class ParametresService {
     jdbc.update(
         "UPDATE users SET pending_email = :email WHERE id = :id",
         Map.of("email", emailNorm, "id", details.id()));
-    String lien = baseUrl + "/api/parametres/confirmer-email?token=" + token;
+    final String lien = baseUrl + "/api/parametres/confirmer-email?token=" + token;
     emailService.envoyerConfirmationEmail(emailNorm, lien);
   }
 
@@ -181,25 +181,25 @@ public class ParametresService {
    * @return résultat indiquant le statut et l'identifiant utilisateur cible
    */
   @Transactional
-  public ResultatConfirmation confirmerEmail(String token, String userIdAuthentifie) {
+  public ResultatConfirmation confirmerEmail(final String token, final String userIdAuthentifie) {
     if (token == null || token.isBlank()) {
       return new ResultatConfirmation(ResultatConfirmation.Statut.LIEN_INVALIDE, null);
     }
 
-    List<Map<String, Object>> verifs =
+    final List<Map<String, Object>> verifs =
         jdbc.queryForList(
             """
-            SELECT identifier FROM verifications
-            WHERE value = :hash AND expires_at > NOW()
-            """,
+                SELECT identifier FROM verifications
+                WHERE value = :hash AND expires_at > NOW()
+                """,
             Map.of("hash", GenerateurSecrets.sha256Hex(token)));
 
     if (verifs.isEmpty()) {
       return new ResultatConfirmation(ResultatConfirmation.Statut.LIEN_EXPIRE, null);
     }
 
-    String identifier = (String) verifs.get(0).get("identifier");
-    String userId = identifier.contains(":") ? identifier.split(":", 2)[1] : null;
+    final String identifier = (String) verifs.get(0).get("identifier");
+    final String userId = identifier.contains(":") ? identifier.split(":", 2)[1] : null;
     if (userId == null) {
       return new ResultatConfirmation(ResultatConfirmation.Statut.LIEN_INVALIDE, null);
     }
@@ -208,14 +208,14 @@ public class ParametresService {
       return new ResultatConfirmation(ResultatConfirmation.Statut.MAUVAIS_UTILISATEUR, userId);
     }
 
-    List<String> pendingEmails =
+    final List<String> pendingEmails =
         jdbc.queryForList(
             "SELECT pending_email FROM users WHERE id = :id", Map.of("id", userId), String.class);
 
     if (pendingEmails.isEmpty() || pendingEmails.get(0) == null) {
       return new ResultatConfirmation(ResultatConfirmation.Statut.AUCUN_CHANGEMENT, userId);
     }
-    String nouvelEmail = pendingEmails.get(0);
+    final String nouvelEmail = pendingEmails.get(0);
 
     if (emailDejaUtilise(nouvelEmail, userId)) {
       jdbc.update("UPDATE users SET pending_email = NULL WHERE id = :id", Map.of("id", userId));

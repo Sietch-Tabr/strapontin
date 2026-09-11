@@ -27,8 +27,8 @@ class TicketmasterSourceTest {
     return evenementTMRaw(Map.of());
   }
 
-  private static Map<String, Object> evenementTMRaw(Map<String, Object> surcharge) {
-    Map<String, Object> base = new HashMap<>();
+  private static Map<String, Object> evenementTMRaw(final Map<String, Object> surcharge) {
+    final Map<String, Object> base = new HashMap<>();
     base.put("name", "Julien Clerc — Tournée 2025");
     base.put(
         "dates",
@@ -57,8 +57,8 @@ class TicketmasterSourceTest {
     return base;
   }
 
-  private static String reponsePageTMJson(int totalElements, boolean avecEvents) {
-    String events =
+  private static String reponsePageTMJson(final int totalElements, final boolean avecEvents) {
+    final String events =
         avecEvents
             ? """
             [{"name":"Julien Clerc — Tournée 2025",
@@ -70,7 +70,7 @@ class TicketmasterSourceTest {
               "url":"https://example.com"}]
             """
             : "[]";
-    int totalPages = (int) Math.ceil((double) totalElements / 200);
+    final int totalPages = (int) Math.ceil((double) totalElements / 200);
     return """
     {"_embedded":{"events":%s},"page":{"totalElements":%d,"totalPages":%d}}
     """
@@ -81,27 +81,27 @@ class TicketmasterSourceTest {
 
   @Test
   void parseDateTM_dateEtHeureValides_retourneDateEtHeure() {
-    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "20:30:00");
+    final String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "20:30:00");
     assertEquals("2025-09-15", resultat[0]);
     assertEquals("20:30", resultat[1]);
   }
 
   @Test
   void parseDateTM_heureAbsente_retourneHeureNull() {
-    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", null);
+    final String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", null);
     assertEquals("2025-09-15", resultat[0]);
     assertNull(resultat[1]);
   }
 
   @Test
   void parseDateTM_heure0000_retourneHeureNull() {
-    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "00:00:00");
+    final String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "00:00:00");
     assertNull(resultat[1]);
   }
 
   @Test
   void parseDateTM_dateAvecHeure_tronqueA10Caracteres() {
-    String[] resultat = TicketmasterSource.parseDateTM("2025-09-15T20:30:00Z", "20:30:00");
+    final String[] resultat = TicketmasterSource.parseDateTM("2025-09-15T20:30:00Z", "20:30:00");
     assertEquals("2025-09-15", resultat[0]);
     assertEquals("20:30", resultat[1]);
   }
@@ -110,7 +110,7 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_evenementComplet_parseTousLesChamps() {
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
     assertEquals("2025-09-15", resultat.date());
@@ -127,26 +127,26 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_attractionsAbsentes_utiliseFallback() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Zénith Paris",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75019")))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
+                    List.of(
+                        Map.of(
+                            "name", "Zénith Paris",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75019")))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
 
   @Test
   void mapEvenement_sansAttractionNiFallback_retourneNull() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "name",
@@ -155,43 +155,43 @@ class TicketmasterSourceTest {
                 Map.of(
                     "attractions", List.of(),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Zénith Paris",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75019")))));
+                    List.of(
+                        Map.of(
+                            "name", "Zénith Paris",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75019")))));
     assertNull(TicketmasterSource.mapEvenement(evt, null));
   }
 
   @Test
   void mapEvenement_salleToutMajuscule_normaliseEnTitleCase() {
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
     assertNotNull(resultat);
     assertEquals("Accor Arena", resultat.salle());
   }
 
   @Test
   void mapEvenement_salleAvecApostrophe_capitaliseApresApostrophe() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(Map.of("name", "Julien Clerc")),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "L'OLYMPIA",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75009")))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+                    List.of(
+                        Map.of(
+                            "name", "L'OLYMPIA",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75009")))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("L'Olympia", resultat.salle());
   }
 
   @Test
   void mapEvenement_fauxPositifFallback_rejetteEvenementSansRapport() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "name",
@@ -200,17 +200,17 @@ class TicketmasterSourceTest {
                 Map.of(
                     "attractions", List.of(),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Madame Brasserie",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75007")))));
+                    List.of(
+                        Map.of(
+                            "name", "Madame Brasserie",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75007")))));
     assertNull(TicketmasterSource.mapEvenement(evt, "2 Unlimited"));
   }
 
   @Test
   void mapEvenement_fallbackTitreContientArtiste_accepteEvenement() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "name",
@@ -219,26 +219,26 @@ class TicketmasterSourceTest {
                 Map.of(
                     "attractions", List.of(),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Zénith Paris",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75019")))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "2 Unlimited");
+                    List.of(
+                        Map.of(
+                            "name", "Zénith Paris",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75019")))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "2 Unlimited");
     assertNotNull(resultat);
     assertEquals("2 Unlimited", resultat.artiste());
   }
 
   @Test
   void mapEvenement_dateAbsente_retourneNull() {
-    Map<String, Object> evt = new HashMap<>(evenementTMRaw());
+    final Map<String, Object> evt = new HashMap<>(evenementTMRaw());
     evt.put("dates", Map.of("start", Map.of()));
     assertNull(TicketmasterSource.mapEvenement(evt, null));
   }
 
   @Test
   void mapEvenement_classificationArtsTheatre_retourneTheatre() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "classifications",
@@ -246,35 +246,35 @@ class TicketmasterSourceTest {
                     Map.of(
                         "segment", Map.of("name", "Arts et théâtre"),
                         "genre", Map.of("name", "Théâtre")))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("theatre", resultat.classification());
   }
 
   @Test
   void mapEvenement_urlAbsente_retourneNullPourUrl() {
-    Map<String, Object> evt = new HashMap<>(evenementTMRaw());
+    final Map<String, Object> evt = new HashMap<>(evenementTMRaw());
     evt.remove("url");
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertNull(resultat.url());
   }
 
   @Test
   void mapEvenement_DOMGuadeloupe_retourneDept971() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(Map.of("name", "Artiste")),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Salle",
-                                "city", Map.of("name", "Pointe-à-Pitre"),
-                                "postalCode", "97100")))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+                    List.of(
+                        Map.of(
+                            "name", "Salle",
+                            "city", Map.of("name", "Pointe-à-Pitre"),
+                            "postalCode", "97100")))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("971", resultat.dept());
   }
@@ -283,24 +283,24 @@ class TicketmasterSourceTest {
   void mapEvenement_venueEtrangerCodePostalCollisionnantAvecDeptFrancais_neposePasDeDept() {
     // Rockhal (Esch-sur-Alzette, Luxembourg) — code postal "4351" collisionne par troncature
     // avec le département français 43 (Haute-Loire).
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(Map.of("name", "Artiste")),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name",
-                                "Rockhal",
-                                "city",
-                                Map.of("name", "Esch-sur-Alzette"),
-                                "postalCode",
-                                "4351",
-                                "country",
-                                Map.of("countryCode", "LU"))))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+                    List.of(
+                        Map.of(
+                            "name",
+                            "Rockhal",
+                            "city",
+                            Map.of("name", "Esch-sur-Alzette"),
+                            "postalCode",
+                            "4351",
+                            "country",
+                            Map.of("countryCode", "LU"))))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertNull(
         resultat.dept(), "Une salle hors de France ne doit jamais recevoir de dept français");
@@ -308,24 +308,24 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_venueFrancaiseCountryCodeExplicite_poseNormalementLeDept() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(Map.of("name", "Artiste")),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name",
-                                "Zénith Paris",
-                                "city",
-                                Map.of("name", "Paris"),
-                                "postalCode",
-                                "75019",
-                                "country",
-                                Map.of("countryCode", "FR"))))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+                    List.of(
+                        Map.of(
+                            "name",
+                            "Zénith Paris",
+                            "city",
+                            Map.of("name", "Paris"),
+                            "postalCode",
+                            "75019",
+                            "country",
+                            Map.of("countryCode", "FR"))))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
     assertNotNull(resultat);
     assertEquals("75", resultat.dept());
   }
@@ -334,9 +334,9 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchArtiste_reponseValide_retourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -346,8 +346,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
 
     assertEquals(1, resultats.size());
     assertEquals("Julien Clerc", resultats.get(0).artiste());
@@ -356,9 +356,9 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchArtiste_embeddedAbsent_retourneListeVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -372,8 +372,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "0"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -381,9 +381,9 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchArtiste_metsAJourLeQuota() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -393,10 +393,10 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchArtiste("Radiohead");
 
-    QuotaTM quota = source.obtenirQuota();
+    final QuotaTM quota = source.obtenirQuota();
     assertNotNull(quota);
     assertEquals(9800, quota.dispo());
     assertEquals(10000, quota.total());
@@ -405,15 +405,15 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchArtistesLot_listeVide_retourneListeVide() {
-    TicketmasterSource source = new TicketmasterSource("fake-key");
+    final TicketmasterSource source = new TicketmasterSource("fake-key");
     assertTrue(source.fetchArtistesLot(List.of()).isEmpty());
   }
 
   @Test
   void fetchArtistesLot_avecIds_retourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -423,8 +423,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchArtistesLot(List.of("tm-123", "tm-456"));
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchArtistesLot(List.of("tm-123", "tm-456"));
 
     assertEquals(1, resultats.size());
     serveur.verify();
@@ -432,7 +432,7 @@ class TicketmasterSourceTest {
 
   @Test
   void accepteIdentifiantSalle_prefixeTm_retourneVrai() {
-    TicketmasterSource source = new TicketmasterSource("fake-key");
+    final TicketmasterSource source = new TicketmasterSource("fake-key");
     assertTrue(source.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
     assertFalse(source.accepteIdentifiantSalle("digitick:lempreinte"));
     assertFalse(source.accepteIdentifiantSalle("rZFSnyZdFvA"));
@@ -441,9 +441,9 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchSalle_identifiantPrefixe_stripPrefixeEtRetourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -453,8 +453,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-123");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchSalle("tm:venue-123");
 
     assertEquals(1, resultats.size());
     serveur.verify();
@@ -462,9 +462,9 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchSalle_identifiantBrut_retourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -474,8 +474,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchSalle("venue-123");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchSalle("venue-123");
 
     assertEquals(1, resultats.size());
     serveur.verify();
@@ -483,9 +483,9 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchSalle_aucunEvent_retourneListeVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -495,8 +495,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-vide");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchSalle("tm:venue-vide");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -506,16 +506,16 @@ class TicketmasterSourceTest {
   // rester distinguable après coup — voir ResultatPage#succes, propagé jusqu'au log de fetchSalle.
   @Test
   void fetchSalle_erreurHttp_retourneListeVideSansLeverDException() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
         .andRespond(withServerError());
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchSalle("tm:venue-en-echec");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchSalle("tm:venue-en-echec");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -523,9 +523,9 @@ class TicketmasterSourceTest {
 
   @Test
   void rechercherAttractionId_nomTrouve_retourneId() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
@@ -536,8 +536,8 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    String id = source.rechercherAttractionId("Julien Clerc");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final String id = source.rechercherAttractionId("Julien Clerc");
 
     assertEquals("tm-456", id);
     serveur.verify();
@@ -546,9 +546,9 @@ class TicketmasterSourceTest {
   @Test
   void rechercherAttractionId_aucuneCorrespondanceExacteParmis10_retourneNull() {
     // non-régression : TM retourne "Anuv Jain" sans "Jain" parmi 10 résultats → null
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
@@ -562,8 +562,8 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    String id = source.rechercherAttractionId("Jain");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final String id = source.rechercherAttractionId("Jain");
 
     assertNull(id);
     serveur.verify();
@@ -573,9 +573,9 @@ class TicketmasterSourceTest {
   // appel : le cache de throttle retient le nom déjà signalé.
   @Test
   void rechercherAttractionId_aucuneCorrespondance_memoriseNomDansLeCacheDeThrottle() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
         .andRespond(
@@ -585,10 +585,10 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    com.github.benmanes.caffeine.cache.Cache<String, Boolean> cache =
+    final com.github.benmanes.caffeine.cache.Cache<String, Boolean> cache =
         com.github.benmanes.caffeine.cache.Caffeine.newBuilder().build();
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient, cache);
-    String id = source.rechercherAttractionId("Furies");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient, cache);
+    final String id = source.rechercherAttractionId("Furies");
 
     assertNull(id);
     assertEquals(Boolean.TRUE, cache.getIfPresent("furies"));
@@ -597,9 +597,9 @@ class TicketmasterSourceTest {
   @Test
   void rechercherAttractionId_correspondanceExacteApresDecalage_retourneId() {
     // non-régression : TM retourne "Shy" avant "Shy'm" (tri popularité) → doit trouver Shy'm
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
@@ -613,8 +613,8 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    String id = source.rechercherAttractionId("Shy'm");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final String id = source.rechercherAttractionId("Shy'm");
 
     assertEquals("K8vZ917shym", id);
     serveur.verify();
@@ -622,16 +622,16 @@ class TicketmasterSourceTest {
 
   @Test
   void rechercherAttractionId_nomNonTrouve_retourneNull() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
         .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    String id = source.rechercherAttractionId("Artiste Inconnu");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final String id = source.rechercherAttractionId("Artiste Inconnu");
 
     assertNull(id);
     serveur.verify();
@@ -639,16 +639,16 @@ class TicketmasterSourceTest {
 
   @Test
   void fetchRegion_deptInconnu_retourneListeVide() {
-    TicketmasterSource source = new TicketmasterSource("fake-key");
-    List<ConcertBrut> resultats = source.fetchRegion(List.of("ZZ"), null);
+    final TicketmasterSource source = new TicketmasterSource("fake-key");
+    final List<ConcertBrut> resultats = source.fetchRegion(List.of("ZZ"), null);
     assertTrue(resultats.isEmpty());
   }
 
   @Test
   void fetchRegion_deptConnu_retourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -658,8 +658,8 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "1726420000000"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), null);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), null);
 
     assertEquals(1, resultats.size());
     serveur.verify();
@@ -667,16 +667,16 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_offsaleAvecVentePubliqueFuture_retourneStatutPresale() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "dates",
-                    Map.of(
-                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
-                        "status", Map.of("code", "offsale")),
+                Map.of(
+                    "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                    "status", Map.of("code", "offsale")),
                 "sales", Map.of("public", Map.of("startDateTime", "2099-01-01T12:00:00Z"))));
 
-    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
     assertEquals("presale", concert.statut());
     assertEquals("2099-01-01T12:00:00Z", concert.presaleDebut());
@@ -684,16 +684,16 @@ class TicketmasterSourceTest {
 
   @Test
   void rechercherAttractionId_erreurHttp_retourneNull() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions.json")))
         .andRespond(withServerError());
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    String id = source.rechercherAttractionId("Artiste");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final String id = source.rechercherAttractionId("Artiste");
 
     assertNull(id);
     serveur.verify();
@@ -701,38 +701,38 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_offsaleAvecVentePubliquePassee_resteOffsale() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "dates",
-                    Map.of(
-                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
-                        "status", Map.of("code", "offsale")),
+                Map.of(
+                    "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                    "status", Map.of("code", "offsale")),
                 "sales", Map.of("public", Map.of("startDateTime", "2020-01-01T12:00:00Z"))));
 
-    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
     assertEquals("offsale", concert.statut());
   }
 
   @Test
   void mapEvenement_offsaleAvecPresaleFuture_retourneStatutPresale() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "dates",
-                    Map.of(
-                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
-                        "status", Map.of("code", "offsale")),
+                Map.of(
+                    "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                    "status", Map.of("code", "offsale")),
                 "sales",
-                    Map.of(
-                        "presales",
-                        List.of(
-                            Map.of(
-                                "startDateTime", "2099-01-01T12:00:00Z",
-                                "name", "Prévente carte bancaire")))));
+                Map.of(
+                    "presales",
+                    List.of(
+                        Map.of(
+                            "startDateTime", "2099-01-01T12:00:00Z",
+                            "name", "Prévente carte bancaire")))));
 
-    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
     assertEquals("presale", concert.statut());
     assertEquals("2099-01-01T12:00:00Z", concert.presaleDebut());
@@ -740,29 +740,29 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_offsaleAvecPresalePassee_resteOffsale() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "dates",
-                    Map.of(
-                        "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
-                        "status", Map.of("code", "offsale")),
+                Map.of(
+                    "start", Map.of("localDate", "2026-11-03", "localTime", "20:00:00"),
+                    "status", Map.of("code", "offsale")),
                 "sales",
-                    Map.of(
-                        "presales",
-                        List.of(
-                            Map.of(
-                                "startDateTime", "2020-01-01T12:00:00Z",
-                                "name", "Prévente carte bancaire")))));
+                Map.of(
+                    "presales",
+                    List.of(
+                        Map.of(
+                            "startDateTime", "2020-01-01T12:00:00Z",
+                            "name", "Prévente carte bancaire")))));
 
-    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
     assertEquals("offsale", concert.statut());
   }
 
   @Test
   void mapEvenement_urlEventPackage_neutraliseStatutEtPresale() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "url",
@@ -772,7 +772,7 @@ class TicketmasterSourceTest {
                     "presales",
                     List.of(Map.of("startDateTime", "2099-01-01T12:00:00Z", "name", "VIP")))));
 
-    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
     assertNotNull(concert);
     assertNull(concert.statut());
@@ -782,11 +782,11 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_urlEventStandard_neNeutralisePasLeStatut() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of("url", "https://www.ticketmaster.fr/fr/billet/angele-08-mars/event/456"));
 
-    ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
 
     assertNotNull(concert);
     assertEquals("onsale", concert.statut());
@@ -796,18 +796,18 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_fallbackEtAttractionNomDifferent_retourneNull() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(Map.of("name", "Anuv Jain")),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Zénith Paris",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75019")))));
+                    List.of(
+                        Map.of(
+                            "name", "Zénith Paris",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75019")))));
     assertNull(
         TicketmasterSource.mapEvenement(evt, "Jain"),
         "Un concert d'Anuv Jain ne doit pas être retourné lors d'un fetch de Jain");
@@ -815,19 +815,19 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_fallbackEtAttractionNomIdentique_accepteEvenement() {
-    Map<String, Object> evt =
+    final Map<String, Object> evt =
         evenementTMRaw(
             Map.of(
                 "_embedded",
                 Map.of(
                     "attractions", List.of(Map.of("name", "Julien Clerc")),
                     "venues",
-                        List.of(
-                            Map.of(
-                                "name", "Zénith Paris",
-                                "city", Map.of("name", "Paris"),
-                                "postalCode", "75019")))));
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
+                    List.of(
+                        Map.of(
+                            "name", "Zénith Paris",
+                            "city", Map.of("name", "Paris"),
+                            "postalCode", "75019")))));
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
@@ -835,7 +835,7 @@ class TicketmasterSourceTest {
   @Test
   void mapEvenement_fallbackNullAttractionPresente_accepteEvenementSansVerification() {
     // fetchSalle passe null comme fallback — pas de filtrage par nom attendu
-    ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
@@ -844,55 +844,55 @@ class TicketmasterSourceTest {
 
   @Test
   void verifierVenue_reponse200_retourneVivant() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/venues/rZFSnyZdFvA.json")))
         .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(TicketmasterSource.StatutIdTM.VIVANT, source.verifierVenue("rZFSnyZdFvA"));
     serveur.verify();
   }
 
   @Test
   void verifierVenue_reponse404_retourneMort() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/venues/venueMort.json")))
         .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(TicketmasterSource.StatutIdTM.MORT, source.verifierVenue("venueMort"));
     serveur.verify();
   }
 
   @Test
   void verifierAttraction_reponse404_retourneMort() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(
             requestTo(org.hamcrest.Matchers.containsString("/attractions/attractionMorte.json")))
         .andRespond(withStatus(org.springframework.http.HttpStatus.NOT_FOUND));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(TicketmasterSource.StatutIdTM.MORT, source.verifierAttraction("attractionMorte"));
     serveur.verify();
   }
 
   @Test
   void rechercherVenuesParNom_reponseValide_retourneCandidats() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/venues.json")))
@@ -903,8 +903,8 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<TicketmasterSource.CandidatVenueTM> candidats =
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<TicketmasterSource.CandidatVenueTM> candidats =
         source.rechercherVenuesParNom("Zenith Nantes");
 
     assertEquals(1, candidats.size());
@@ -914,24 +914,24 @@ class TicketmasterSourceTest {
 
   @Test
   void rechercherVenuesParNom_embeddedAbsent_retourneListeVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/venues.json")))
         .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertTrue(source.rechercherVenuesParNom("Inconnue").isEmpty());
     serveur.verify();
   }
 
   @Test
   void compterEventsVenue_reponseValide_retourneTotal() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -942,22 +942,22 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(3, source.compterEventsVenue("rZ7abc"));
     serveur.verify();
   }
 
   @Test
   void compterEventsVenue_erreurReseau_retourneZero() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
         .andRespond(withServerError());
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     assertEquals(0, source.compterEventsVenue("rZ7abc"));
     serveur.verify();
   }
@@ -966,9 +966,9 @@ class TicketmasterSourceTest {
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -978,28 +978,28 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "0"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchArtiste("Julien Clerc");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(0, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_erreurHttp_compteUneErreur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
         .andRespond(withServerError());
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchArtiste("Julien Clerc");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
   }
@@ -1009,38 +1009,38 @@ class TicketmasterSourceTest {
   // changer le comportement fonctionnel observable ici.
   @Test
   void preleverBilan_reponse429_compteUneErreurCommeToutAutreEchec() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
         .andRespond(withStatus(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
 
     assertTrue(resultats.isEmpty());
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
         .andRespond(withServerError());
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchArtiste("Julien Clerc");
     source.preleverBilan();
 
-    BilanFetch second = source.preleverBilan();
+    final BilanFetch second = source.preleverBilan();
     assertEquals(0, second.appels());
     assertEquals(0, second.erreursHttp());
   }
@@ -1051,9 +1051,9 @@ class TicketmasterSourceTest {
   // récupérés (6 pages fetchées, 1 événement par page dans la fixture).
   @Test
   void preleverConcertsManques_paginationPlafonnee_compteLesConcertsNonRecuperes() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     for (int i = 0; i < 6; i++) {
       serveur
@@ -1065,7 +1065,7 @@ class TicketmasterSourceTest {
                   .header("Rate-Limit-Reset", "0"));
     }
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchSalle("tm:venue-123");
 
     assertEquals(1294, source.preleverConcertsManques());
@@ -1074,9 +1074,9 @@ class TicketmasterSourceTest {
 
   @Test
   void preleverConcertsManques_aucunePaginationPlafonnee_retourneZero() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
@@ -1086,7 +1086,7 @@ class TicketmasterSourceTest {
                 .header("Rate-Limit", "10000")
                 .header("Rate-Limit-Reset", "0"));
 
-    TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
     source.fetchSalle("tm:venue-123");
 
     assertEquals(0, source.preleverConcertsManques());
@@ -1094,11 +1094,11 @@ class TicketmasterSourceTest {
 
   @Test
   void redigerApiKey_messageAvecCle_masqueLaCle() {
-    String message =
+    final String message =
         "connect timed out:"
             + " https://app.ticketmaster.com/discovery/v2/events.json?apikey=abcd1234&size=200";
 
-    String resultat = TicketmasterSource.redigerApiKey(message);
+    final String resultat = TicketmasterSource.redigerApiKey(message);
 
     assertFalse(resultat.contains("abcd1234"));
     assertTrue(resultat.contains("apikey=***"));
@@ -1107,7 +1107,7 @@ class TicketmasterSourceTest {
 
   @Test
   void redigerApiKey_messageSansCle_inchange() {
-    String message = "connect timed out";
+    final String message = "connect timed out";
 
     assertEquals(message, TicketmasterSource.redigerApiKey(message));
   }

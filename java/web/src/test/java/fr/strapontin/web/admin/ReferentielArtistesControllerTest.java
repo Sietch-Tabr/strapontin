@@ -41,7 +41,7 @@ class ReferentielArtistesControllerTest {
     when(service.lister(0, "Jain", null, false))
         .thenReturn(new ReponseReferentielArtistes(List.of(), 0, 1, 0));
 
-    ResponseEntity<ReponseReferentielArtistes> reponse = controller.lister(0, "Jain", null, false);
+    final ResponseEntity<ReponseReferentielArtistes> reponse = controller.lister(0, "Jain", null, false);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service).lister(0, "Jain", null, false);
@@ -49,7 +49,7 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void modifierNomAffiche_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.modifierNomAffiche("pas-un-uuid", new RequeteNomAffiche(null));
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -58,10 +58,10 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void modifierNomAffiche_artisteInconnu_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.modifierNomAffiche(eq(id), any())).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.modifierNomAffiche(id.toString(), new RequeteNomAffiche("Nouveau"));
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -69,7 +69,7 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void reinitialiserEnrichissement_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserEnrichissement("pas-un-uuid");
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -78,10 +78,10 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void reinitialiserEnrichissement_artisteInconnu_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.reinitialiserEnrichissement(id)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserEnrichissement(id.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -89,10 +89,10 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void reinitialiserEnrichissement_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.reinitialiserEnrichissement(id)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserEnrichissement(id.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -100,7 +100,7 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void ignorerIntervention_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention("pas-un-uuid");
+    final ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention("pas-un-uuid");
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).ignorerIntervention(any());
@@ -108,27 +108,27 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void ignorerIntervention_artisteInconnu_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.ignorerIntervention(id)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
   }
 
   @Test
   void ignorerIntervention_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.ignorerIntervention(id)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse = controller.ignorerIntervention(id.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
   }
 
   @Test
   void corrigerIdentifiantTm_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.corrigerIdentifiantTm("pas-un-uuid", new RequeteIdentifiantTm("K8vZ917G1B7"));
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -140,10 +140,10 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void corrigerIdentifiantTm_artisteSansSourceTicketmaster_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.corrigerIdentifiantTm(eq(id), any())).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.corrigerIdentifiantTm(id.toString(), new RequeteIdentifiantTm("K8vZ917G1B7"));
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -151,10 +151,10 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void corrigerIdentifiantTm_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.corrigerIdentifiantTm(id, "K8vZ917G1B7")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.corrigerIdentifiantTm(id.toString(), new RequeteIdentifiantTm("K8vZ917G1B7"));
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -162,9 +162,9 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void fusionner_uuidIdentiques_retourne400() {
-    String id = UUID.randomUUID().toString();
+    final String id = UUID.randomUUID().toString();
 
-    ResponseEntity<Map<String, Object>> reponse = controller.fusionner(id, id);
+    final ResponseEntity<Map<String, Object>> reponse = controller.fusionner(id, id);
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).fusionner(any(), any());
@@ -172,11 +172,11 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void fusionner_artisteInconnu_retourne404() {
-    UUID source = UUID.randomUUID();
-    UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
     when(service.fusionner(cible, source)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.fusionner(source.toString(), cible.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -184,11 +184,11 @@ class ReferentielArtistesControllerTest {
 
   @Test
   void fusionner_nominal_retourne200() {
-    UUID source = UUID.randomUUID();
-    UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
     when(service.fusionner(cible, source)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.fusionner(source.toString(), cible.toString());
 
     assertEquals(200, reponse.getStatusCode().value());

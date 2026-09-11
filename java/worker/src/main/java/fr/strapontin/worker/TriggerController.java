@@ -44,7 +44,7 @@ public class TriggerController {
 
   private final Scheduler scheduler;
 
-  public TriggerController(Scheduler scheduler) {
+  public TriggerController(final Scheduler scheduler) {
     this.scheduler = scheduler;
   }
 
@@ -55,7 +55,7 @@ public class TriggerController {
    */
   @GetMapping("/prochaines-exec")
   public ResponseEntity<Map<String, Long>> prochainesExec() {
-    Map<String, Long> resultat = new HashMap<>();
+    final Map<String, Long> resultat = new HashMap<>();
     for (Map.Entry<String, String> entree : NomsJobs.PAR_CLE_QUARTZ.entrySet()) {
       try {
         scheduler.getTriggersOfJob(JobKey.jobKey(entree.getKey())).stream()
@@ -79,7 +79,7 @@ public class TriggerController {
   @GetMapping("/actif")
   public ResponseEntity<Map<String, Object>> jobsActifs() {
     try {
-      List<String> actifs =
+      final List<String> actifs =
           scheduler.getCurrentlyExecutingJobs().stream()
               .map(
                   ctx ->
@@ -152,8 +152,8 @@ public class TriggerController {
    * @return 200 si déclenché ou déjà en cours, 400 si job inconnu, 500 en cas d'erreur Quartz
    */
   @PostMapping("/job")
-  public ResponseEntity<Map<String, String>> relancerJob(@RequestParam String typeJob) {
-    String cle = NomsJobs.CLE_QUARTZ_PAR_TYPE_JOB.get(typeJob);
+  public ResponseEntity<Map<String, String>> relancerJob(@RequestParam final String typeJob) {
+    final String cle = NomsJobs.CLE_QUARTZ_PAR_TYPE_JOB.get(typeJob);
     if (cle == null) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Job inconnu : " + typeJob));
     }
@@ -172,7 +172,7 @@ public class TriggerController {
     }
   }
 
-  private boolean jobEnCours(String nomJob) throws SchedulerException {
+  private boolean jobEnCours(final String nomJob) throws SchedulerException {
     return scheduler.getCurrentlyExecutingJobs().stream()
         .map(JobExecutionContext::getJobDetail)
         .anyMatch(jd -> nomJob.equals(jd.getKey().getName()));
@@ -188,14 +188,14 @@ public class TriggerController {
    * @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
    */
   @PostMapping("/salle")
-  public ResponseEntity<Map<String, String>> relancerSalle(@RequestParam String identifiants) {
+  public ResponseEntity<Map<String, String>> relancerSalle(@RequestParam final String identifiants) {
     try {
-      String cleJob = "fetchSalle-" + identifiants;
+      final String cleJob = "fetchSalle-" + identifiants;
       if (jobEnCours(cleJob)) {
         log.debug("fetchSalle {} déjà en cours — ignoré", identifiants);
         return ResponseEntity.ok(Map.of("statut", "déjà en cours"));
       }
-      JobDetail jobDetail =
+      final JobDetail jobDetail =
           JobBuilder.newJob(FetchSalleJob.class)
               .withIdentity(cleJob, "on-demand")
               .usingJobData(FetchSalleJob.CLE_IDENTIFIANTS, identifiants)

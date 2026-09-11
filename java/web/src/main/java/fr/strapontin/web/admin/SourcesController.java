@@ -42,7 +42,7 @@ public class SourcesController {
    * @param sourcesService service de gestion des sources
    * @param workerProxyService proxy HTTP vers le worker
    */
-  public SourcesController(SourcesService sourcesService, WorkerProxyService workerProxyService) {
+  public SourcesController(final SourcesService sourcesService, final WorkerProxyService workerProxyService) {
     this.sourcesService = sourcesService;
     this.workerProxyService = workerProxyService;
   }
@@ -68,9 +68,9 @@ public class SourcesController {
    */
   @GetMapping("/sources/salles")
   public ResponseEntity<ReponseSallesSources> listerSalles(
-      @RequestParam(defaultValue = "false") boolean digitick,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(required = false) String nom) {
+      @RequestParam(defaultValue = "false") final boolean digitick,
+      @RequestParam(defaultValue = "0") final int page,
+      @RequestParam(required = false) final String nom) {
     return ResponseEntity.ok(sourcesService.listerSalles(digitick, page, nom));
   }
 
@@ -83,8 +83,8 @@ public class SourcesController {
    */
   @PutMapping("/salles/{salleId}/digitick-slug")
   public ResponseEntity<Map<String, Object>> mettreAJourDigitickSlug(
-      @PathVariable String salleId, @Valid @RequestBody RequeteSlug corps) {
-    UUID uuid = parseUuid(salleId);
+      @PathVariable final String salleId, @Valid @RequestBody final RequeteSlug corps) {
+    final UUID uuid = parseUuid(salleId);
     if (uuid == null) return erreur(400, "UUID de salle invalide.");
     sourcesService.mettreAJourDigitickSlug(uuid, corps.slug() == null ? "" : corps.slug());
     return ResponseEntity.ok(Map.of("succes", true));
@@ -99,8 +99,8 @@ public class SourcesController {
    */
   @PostMapping("/salles/{salleId}/tester-digitick")
   public ResponseEntity<Map<String, Object>> testerDigitickSlug(
-      @PathVariable String salleId, @Valid @RequestBody RequeteSlug corps) {
-    int nbConcerts = sourcesService.testerDigitickSlug(corps.slug() == null ? "" : corps.slug());
+      @PathVariable final String salleId, @Valid @RequestBody final RequeteSlug corps) {
+    final int nbConcerts = sourcesService.testerDigitickSlug(corps.slug() == null ? "" : corps.slug());
     return nbConcerts >= 0
         ? ResponseEntity.ok(Map.of("accessible", true, "nbConcerts", nbConcerts))
         : ResponseEntity.status(404).body(Map.of("accessible", false, "nbConcerts", 0));
@@ -113,14 +113,14 @@ public class SourcesController {
    * @return 200 si planifié, 404 si aucun identifiant connu, 503 si worker inaccessible
    */
   @PostMapping("/salles/{salleId}/fetch")
-  public ResponseEntity<Map<String, Object>> fetchSalle(@PathVariable String salleId) {
-    UUID uuid = parseUuid(salleId);
+  public ResponseEntity<Map<String, Object>> fetchSalle(@PathVariable final String salleId) {
+    final UUID uuid = parseUuid(salleId);
     if (uuid == null) return erreur(400, "UUID de salle invalide.");
-    String identifiants = sourcesService.obtenirIdentifiantsSalle(uuid);
+    final String identifiants = sourcesService.obtenirIdentifiantsSalle(uuid);
     if (identifiants == null) {
       return erreur(404, "Aucun identifiant source connu pour cette salle.");
     }
-    boolean ok = workerProxyService.relancerSalle(identifiants);
+    final boolean ok = workerProxyService.relancerSalle(identifiants);
     return ok
         ? ResponseEntity.ok(Map.of("statut", "déclenché"))
         : ResponseEntity.status(503).body(Map.of("erreur", "Worker inaccessible."));
@@ -135,16 +135,16 @@ public class SourcesController {
    */
   @PostMapping("/digitick-salles")
   public ResponseEntity<Map<String, Object>> creerSalleDigitick(
-      @Valid @RequestBody RequeteDigitickSalle requete) {
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
-    String slug = requete.slug() == null ? "" : requete.slug().strip();
+      @Valid @RequestBody final RequeteDigitickSalle requete) {
+    final String nom = requete.nom() == null ? "" : requete.nom().strip();
+    final String slug = requete.slug() == null ? "" : requete.slug().strip();
     if (nom.isEmpty() || nom.length() > 200) return erreur(400, "Nom de salle invalide.");
     if (slug.isEmpty() || slug.length() > 100) return erreur(400, "Slug Digitick invalide.");
-    String ville =
+    final String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    String dept =
+    final String dept =
         requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
-    UUID salleId = sourcesService.creerSalleDigitick(nom, slug, ville, dept);
+    final UUID salleId = sourcesService.creerSalleDigitick(nom, slug, ville, dept);
     return ResponseEntity.status(201).body(Map.of("salleId", salleId.toString()));
   }
 
@@ -157,13 +157,13 @@ public class SourcesController {
    */
   @PatchMapping("/digitick-salles/{salleId}")
   public ResponseEntity<Map<String, Object>> modifierSalleDigitick(
-      @PathVariable String salleId, @Valid @RequestBody RequeteDigitickSalle requete) {
-    UUID uuid = parseUuid(salleId);
+      @PathVariable final String salleId, @Valid @RequestBody final RequeteDigitickSalle requete) {
+    final UUID uuid = parseUuid(salleId);
     if (uuid == null) return erreur(400, "UUID de salle invalide.");
-    String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
-    String ville =
+    final String nom = requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
+    final String ville =
         requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    String dept =
+    final String dept =
         requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
     sourcesService.modifierSalleDigitick(uuid, nom, ville, dept);
     return ResponseEntity.ok(Map.of("succes", true));
@@ -177,10 +177,10 @@ public class SourcesController {
    *   invalide
    */
   @DeleteMapping("/digitick-salles/{salleId}")
-  public ResponseEntity<?> supprimerSalleDigitick(@PathVariable String salleId) {
-    UUID uuid = parseUuid(salleId);
+  public ResponseEntity<?> supprimerSalleDigitick(@PathVariable final String salleId) {
+    final UUID uuid = parseUuid(salleId);
     if (uuid == null) return erreur(400, "UUID de salle invalide.");
-    boolean supprimee = sourcesService.supprimerSalleDigitick(uuid);
+    final boolean supprimee = sourcesService.supprimerSalleDigitick(uuid);
     if (!supprimee) {
       return erreur(409, "Cette salle est suivie par des utilisateurs ou possède des concerts.");
     }

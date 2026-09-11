@@ -31,7 +31,7 @@ public final class WorkerTriggerUtils {
    * @param messageEchec message de log en cas d'échec (l'exception y est jointe)
    */
   public static void declencherWorkerAsync(
-      RestClient restClient, Logger log, String url, String messageEchec) {
+      final RestClient restClient, final Logger log, final String url, final String messageEchec) {
     Thread.startVirtualThread(
         () -> {
           try {

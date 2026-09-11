@@ -46,7 +46,7 @@ public class DecouverteService {
    * @param jdbc accès JDBC
    * @param restClient client HTTP partagé (module web), pour déclencher le worker
    */
-  public DecouverteService(NamedParameterJdbcTemplate jdbc, RestClient restClient) {
+  public DecouverteService(final NamedParameterJdbcTemplate jdbc, final RestClient restClient) {
     this.jdbc = jdbc;
     this.restClient = restClient;
   }
@@ -61,20 +61,20 @@ public class DecouverteService {
    * @param filtre critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
    * @return réponse paginée avec filtres disponibles
    */
-  public ReponseDecouverte decouvrir(String userId, FiltreConcerts filtre) {
-    LocalDate aujourd8 = LocalDate.now();
-    int pageNum = Math.max(0, filtre.page());
+  public ReponseDecouverte decouvrir(final String userId, final FiltreConcerts filtre) {
+    final LocalDate aujourd8 = LocalDate.now();
+    final int pageNum = Math.max(0, filtre.page());
 
-    List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
-    List<String> deptsActifs =
+    final List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
+    final List<String> deptsActifs =
         (filtre.depts() == null || filtre.depts().isEmpty()) ? deptsUtilisateur : filtre.depts();
 
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
-    String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
-    String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
-    StringBuilder where =
+    final String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
+    final String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
+    final StringBuilder where =
         construireFiltresWhere(
             deptsActifs,
             rechercheNorm,
@@ -84,38 +84,38 @@ public class DecouverteService {
             aujourd8,
             params);
 
-    String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
+    final String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
 
-    Map<String, Object> baseParams = new HashMap<>();
+    final Map<String, Object> baseParams = new HashMap<>();
     baseParams.put("aujourd8", aujourd8);
-    StringBuilder whereBase = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+    final StringBuilder whereBase = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
     if (!deptsActifs.isEmpty()) {
       whereBase.append(" AND c.dept = ANY(:depts)");
       baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
     }
 
-    Map<String, Object> countParams = new HashMap<>(params);
+    final Map<String, Object> countParams = new HashMap<>(params);
     countParams.remove("limit");
     countParams.remove("offset");
 
     // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
-    var futureTotal = CompletableFuture.supplyAsync(() -> compterTotal(where, countParams));
-    var futureFiltres =
+    final var futureTotal = CompletableFuture.supplyAsync(() -> compterTotal(where, countParams));
+    final var futureFiltres =
         CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams));
-    var futureSyncTs = CompletableFuture.supplyAsync(this::lireDerniereSync);
-    var futureSyncParDept = CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
+    final var futureSyncTs = CompletableFuture.supplyAsync(this::lireDerniereSync);
+    final var futureSyncParDept = CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
 
-    List<ConcertDecouverte> concerts =
+    final List<ConcertDecouverte> concerts =
         jdbc.query(
             """
-            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
-                   c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
-            FROM concerts c
-            LEFT JOIN artistes a ON a.id = c.artiste_id
-            WHERE %s
-            ORDER BY %s
-            LIMIT :limit OFFSET :offset
-            """
+                SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+                       c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
+                FROM concerts c
+                LEFT JOIN artistes a ON a.id = c.artiste_id
+                WHERE %s
+                ORDER BY %s
+                LIMIT :limit OFFSET :offset
+                """
                 .formatted(where, orderBy),
             params,
             (rs, _) ->
@@ -135,10 +135,10 @@ public class DecouverteService {
                         ? rs.getTimestamp("first_seen").toInstant()
                         : null));
 
-    int total = futureTotal.join();
-    FiltresDisponibles filtres = futureFiltres.join();
-    java.sql.Timestamp syncTs = futureSyncTs.join();
-    List<SyncDept> syncParDept = futureSyncParDept.join();
+    final int total = futureTotal.join();
+    final FiltresDisponibles filtres = futureFiltres.join();
+    final java.sql.Timestamp syncTs = futureSyncTs.join();
+    final List<SyncDept> syncParDept = futureSyncParDept.join();
 
     return new ReponseDecouverte(
         concerts,
@@ -163,18 +163,18 @@ public class DecouverteService {
       restClient.post().uri("http://localhost:8081/trigger/tout").retrieve().toBodilessEntity();
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (RestClientResponseException e) {
-      Map<String, Object> erreur = new HashMap<>();
+      final Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Worker inaccessible (statut " + e.getStatusCode().value() + ").");
       return ResponseEntity.status(503).body(erreur);
     } catch (Exception e) {
       log.warn("Erreur appel worker trigger (découverte)", e);
-      Map<String, Object> erreur = new HashMap<>();
+      final Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Worker inaccessible.");
       return ResponseEntity.status(503).body(erreur);
     }
   }
 
-  private int compterTotal(StringBuilder where, Map<String, Object> params) {
+  private int compterTotal(final StringBuilder where, final Map<String, Object> params) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM concerts c WHERE " + where, new HashMap<>(params), Integer.class),
@@ -182,29 +182,29 @@ public class DecouverteService {
   }
 
   private FiltresDisponibles chargerFiltresDisponibles(
-      StringBuilder whereBase, Map<String, Object> baseParams) {
-    String sql =
+      final StringBuilder whereBase, final Map<String, Object> baseParams) {
+    final String sql =
         """
-        WITH base AS (
-          SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
-          FROM concerts c
-          WHERE %s
-        )
-        SELECT 'genre'          AS type, genre          AS valeur
-          FROM (SELECT DISTINCT genre FROM base WHERE genre IS NOT NULL) g
-        UNION ALL
-        SELECT 'mois'           AS type, mois           AS valeur
-          FROM (SELECT DISTINCT mois FROM base) m
-        UNION ALL
-        SELECT 'classification' AS type, classification AS valeur
-          FROM (SELECT DISTINCT classification FROM base WHERE classification IS NOT NULL) cl
-        ORDER BY type, valeur
-        """
+            WITH base AS (
+              SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
+              FROM concerts c
+              WHERE %s
+            )
+            SELECT 'genre'          AS type, genre          AS valeur
+              FROM (SELECT DISTINCT genre FROM base WHERE genre IS NOT NULL) g
+            UNION ALL
+            SELECT 'mois'           AS type, mois           AS valeur
+              FROM (SELECT DISTINCT mois FROM base) m
+            UNION ALL
+            SELECT 'classification' AS type, classification AS valeur
+              FROM (SELECT DISTINCT classification FROM base WHERE classification IS NOT NULL) cl
+            ORDER BY type, valeur
+            """
             .formatted(whereBase);
 
-    List<String> genres = new ArrayList<>();
-    List<String> mois = new ArrayList<>();
-    List<String> classifications = new ArrayList<>();
+    final List<String> genres = new ArrayList<>();
+    final List<String> mois = new ArrayList<>();
+    final List<String> classifications = new ArrayList<>();
     jdbc.query(
         sql,
         new HashMap<>(baseParams),
@@ -226,27 +226,27 @@ public class DecouverteService {
         java.sql.Timestamp.class);
   }
 
-  private List<SyncDept> lireSyncParDept(List<String> deptsActifs) {
+  private List<SyncDept> lireSyncParDept(final List<String> deptsActifs) {
     if (deptsActifs.isEmpty()) return List.of();
     return jdbc.query(
         "SELECT dept, MAX(updated_at) AS derniere_sync FROM concerts"
             + " WHERE dept = ANY(:depts) GROUP BY dept",
         Map.of(CLE_DEPTS, deptsActifs.toArray(String[]::new)),
         (rs, _) -> {
-          java.sql.Timestamp ts = rs.getTimestamp("derniere_sync");
+          final java.sql.Timestamp ts = rs.getTimestamp("derniere_sync");
           return new SyncDept(rs.getString("dept"), ts != null ? ts.toInstant() : null);
         });
   }
 
   private StringBuilder construireFiltresWhere(
-      List<String> deptsActifs,
-      String rechercheNorm,
-      String mois,
-      String genreStr,
-      String classification,
-      LocalDate aujourd8,
-      Map<String, Object> params) {
-    StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+      final List<String> deptsActifs,
+      final String rechercheNorm,
+      final String mois,
+      final String genreStr,
+      final String classification,
+      final LocalDate aujourd8,
+      final Map<String, Object> params) {
+    final StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
     params.put("aujourd8", aujourd8);
     if (!deptsActifs.isEmpty()) {
       where.append(" AND c.dept = ANY(:depts)");
@@ -262,8 +262,8 @@ public class DecouverteService {
     return where;
   }
 
-  private List<String> lireDeptsUtilisateur(String userId) {
-    List<String[]> lignes =
+  private List<String> lireDeptsUtilisateur(final String userId) {
+    final List<String[]> lignes =
         jdbc.query(
             "SELECT departements FROM user_config WHERE user_id = :userId",
             Map.of("userId", userId),

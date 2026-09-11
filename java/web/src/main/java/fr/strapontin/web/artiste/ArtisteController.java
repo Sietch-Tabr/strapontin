@@ -36,7 +36,7 @@ public class ArtisteController {
   /**
    * @param artisteService service de gestion des artistes
    */
-  public ArtisteController(ArtisteService artisteService) {
+  public ArtisteController(final ArtisteService artisteService) {
     this.artisteService = artisteService;
   }
 
@@ -49,8 +49,8 @@ public class ArtisteController {
    */
   @GetMapping
   public ResponseEntity<ReponseArtistes> listerArtistes(
-      @RequestParam(required = false, defaultValue = "") String q, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @RequestParam(required = false, defaultValue = "") final String q, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(artisteService.lister(userId, q));
   }
 
@@ -63,8 +63,8 @@ public class ArtisteController {
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterArtiste(
-      @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @Valid @RequestBody final RequeteAjouter requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     artisteService.ajouter(userId, requete.nom().strip(), requete.wikidataId());
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
@@ -77,13 +77,13 @@ public class ArtisteController {
    * @return 204 si supprimé
    */
   @DeleteMapping("/{artisteId}")
-  public ResponseEntity<Void> supprimerArtiste(@PathVariable UUID artisteId, Authentication auth) {
-    String userId = utilisateur(auth).id();
+  public ResponseEntity<Void> supprimerArtiste(@PathVariable final UUID artisteId, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     artisteService.supprimer(userId, artisteId);
     return ResponseEntity.noContent().build();
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }

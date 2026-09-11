@@ -22,7 +22,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class WorkerApplication {
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     Security.addProvider(new BouncyCastleProvider());
     SpringApplication.run(WorkerApplication.class, args);
   }

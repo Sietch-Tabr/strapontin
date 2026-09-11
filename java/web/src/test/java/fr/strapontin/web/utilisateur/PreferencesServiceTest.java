@@ -63,16 +63,16 @@ class PreferencesServiceTest {
   // second artiste distinct.
   @Test
   void importerArtistes_doublonFlou_reutiliseUuidResoluParArtisteService() {
-    UUID artisteExistant = UUID.randomUUID();
+    final UUID artisteExistant = UUID.randomUUID();
     when(artisteService.resoudreArtisteId(eq("The Rolling Stones"), anyString()))
         .thenReturn(artisteExistant);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    ExportComplet export =
+    final ExportComplet export =
         new ExportComplet(
             1, "2026-07-04", List.of(new ArtisteExport("The Rolling Stones", null)), null, null);
 
-    PreferencesService.ResultatImportComplet resultat =
+    final PreferencesService.ResultatImportComplet resultat =
         service.importer("u1", export, false, false);
 
     assertEquals(1, resultat.artistes());
@@ -92,15 +92,15 @@ class PreferencesServiceTest {
   // exact sur salle_cle.
   @Test
   void importerSalles_doublonFlou_reutiliseUuidResoluParSalleService() {
-    UUID salleExistante = UUID.randomUUID();
+    final UUID salleExistante = UUID.randomUUID();
     when(salleService.resoudreSalleId(eq("Zenith Paris"), anyString())).thenReturn(salleExistante);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    ExportComplet export =
+    final ExportComplet export =
         new ExportComplet(
             1, "2026-07-04", null, List.of(new SalleExport(null, null, "Zenith Paris")), null);
 
-    PreferencesService.ResultatImportComplet resultat =
+    final PreferencesService.ResultatImportComplet resultat =
         service.importer("u1", export, false, false);
 
     assertEquals(1, resultat.salles());
@@ -117,7 +117,7 @@ class PreferencesServiceTest {
     when(artisteService.resoudreArtisteId(anyString(), anyString())).thenReturn(UUID.randomUUID());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    ExportComplet export =
+    final ExportComplet export =
         new ExportComplet(
             1,
             "2026-07-04",
@@ -128,7 +128,7 @@ class PreferencesServiceTest {
             null,
             null);
 
-    PreferencesService.ResultatImportComplet resultat =
+    final PreferencesService.ResultatImportComplet resultat =
         service.importer("u1", export, false, false);
 
     assertEquals(2, resultat.artistes(), "seuls 2 artistes doivent passer avant le cap de 500");
@@ -143,7 +143,7 @@ class PreferencesServiceTest {
     when(salleService.resoudreSalleId(anyString(), anyString())).thenReturn(UUID.randomUUID());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    ExportComplet export =
+    final ExportComplet export =
         new ExportComplet(
             1,
             "2026-07-04",
@@ -151,7 +151,7 @@ class PreferencesServiceTest {
             List.of(new SalleExport(null, null, "Salle 1"), new SalleExport(null, null, "Salle 2")),
             null);
 
-    PreferencesService.ResultatImportComplet resultat =
+    final PreferencesService.ResultatImportComplet resultat =
         service.importer("u1", export, false, false);
 
     assertEquals(1, resultat.salles(), "seule 1 salle doit passer avant le cap de 200");
@@ -160,10 +160,10 @@ class PreferencesServiceTest {
 
   @Test
   void importerSalles_nomEtSalleCleVides_estRejetee() {
-    ExportComplet export =
+    final ExportComplet export =
         new ExportComplet(1, "2026-07-04", null, List.of(new SalleExport(null, null, "   ")), null);
 
-    PreferencesService.ResultatImportComplet resultat =
+    final PreferencesService.ResultatImportComplet resultat =
         service.importer("u1", export, false, false);
 
     assertEquals(0, resultat.salles());
@@ -178,7 +178,7 @@ class PreferencesServiceTest {
     when(jdbc.update(org.mockito.ArgumentMatchers.contains("DELETE FROM user_salles"), anyMap()))
         .thenReturn(2);
 
-    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, null);
+    final ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, null);
 
     service.importer("u1", export, true, false);
 
@@ -189,7 +189,7 @@ class PreferencesServiceTest {
 
   @Test
   void importer_ecraserFaux_neSupprimeRien() {
-    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, null);
+    final ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, null);
 
     service.importer("u1", export, false, false);
 
@@ -202,13 +202,13 @@ class PreferencesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void importer_fusionDepartements_sansEcraserNiImporterConfig() {
-    ConfigExport config =
+    final ConfigExport config =
         new ConfigExport(List.of("75", "92"), true, "jamais", false, false, false, false, "auto");
-    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
+    final ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
 
     service.importer("u1", export, false, false);
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc)
         .update(org.mockito.ArgumentMatchers.contains("SELECT DISTINCT unnest"), captor.capture());
     assertEquals("u1", captor.getValue().get("userId"));
@@ -218,9 +218,9 @@ class PreferencesServiceTest {
 
   @Test
   void importer_importerConfigVrai_remplaceToute_neFusionnePas() {
-    ConfigExport config =
+    final ConfigExport config =
         new ConfigExport(List.of("75"), true, "quotidien", true, false, false, false, "sombre");
-    ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
+    final ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
 
     service.importer("u1", export, false, true);
 
@@ -250,7 +250,7 @@ class PreferencesServiceTest {
                 .<org.springframework.jdbc.core.RowMapper<ConfigExport>>any()))
         .thenReturn(List.of());
 
-    ExportComplet export = service.exporter("u1");
+    final ExportComplet export = service.exporter("u1");
 
     when(artisteService.resoudreArtisteId(eq("Radiohead"), anyString()))
         .thenReturn(UUID.randomUUID());
@@ -258,7 +258,7 @@ class PreferencesServiceTest {
         .thenReturn(UUID.randomUUID());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    PreferencesService.ResultatImportComplet resultat =
+    final PreferencesService.ResultatImportComplet resultat =
         service.importer("u2", export, false, false);
 
     assertEquals(1, resultat.artistes());

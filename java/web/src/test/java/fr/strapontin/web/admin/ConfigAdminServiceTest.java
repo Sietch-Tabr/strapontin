@@ -91,14 +91,14 @@ class ConfigAdminServiceTest {
 
   @Test
   void sauvegarderConfig_formatVapidPublicValide_sauvegarde() {
-    String clePublique = "A".repeat(87);
+    final String clePublique = "A".repeat(87);
     service.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique, "admin-1");
     verify(configService).sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
   }
 
   @Test
   void sauvegarderConfig_formatVapidPrivateValide_sauvegarde() {
-    String clePrivee = "A".repeat(43);
+    final String clePrivee = "A".repeat(43);
     service.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee, "admin-1");
     verify(configService).sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
   }
@@ -110,13 +110,13 @@ class ConfigAdminServiceTest {
   void testerApiTm_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
     when(configService.lireConfig("TICKETMASTER_API_KEY"))
         .thenReturn(java.util.Optional.of("fake-key"));
-    fr.strapontin.sources.CadenceurAppels cadenceur =
+    final fr.strapontin.sources.CadenceurAppels cadenceur =
         mock(fr.strapontin.sources.CadenceurAppels.class);
 
-    RestClient.Builder builder = RestClient.builder();
-    org.springframework.test.web.client.MockRestServiceServer serveur =
+    final RestClient.Builder builder = RestClient.builder();
+    final org.springframework.test.web.client.MockRestServiceServer serveur =
         org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient restClient = builder.build();
     serveur
         .expect(
             org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
@@ -124,10 +124,10 @@ class ConfigAdminServiceTest {
         .andRespond(
             org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess());
 
-    ConfigAdminService serviceCadence =
+    final ConfigAdminService serviceCadence =
         new ConfigAdminService(configService, logAdminService, restClient, cadenceur);
 
-    boolean resultat = serviceCadence.testerApiTm();
+    final boolean resultat = serviceCadence.testerApiTm();
 
     assertTrue(resultat);
     verify(cadenceur).attendre();

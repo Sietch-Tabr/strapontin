@@ -45,7 +45,7 @@ public class TotpEnrollmentController {
    * @param logAdminService journal d'administration
    */
   public TotpEnrollmentController(
-      TotpService totpService, UserController userController, LogAdminService logAdminService) {
+      final TotpService totpService, final UserController userController, final LogAdminService logAdminService) {
     this.totpService = totpService;
     this.userController = userController;
     this.logAdminService = logAdminService;
@@ -59,8 +59,8 @@ public class TotpEnrollmentController {
    * @return {@code {otpUri, totpSecret, qrCodeSvg}}
    */
   @GetMapping("/setup")
-  public ResponseEntity<Map<String, Object>> setup(HttpSession session, Authentication auth) {
-    UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
+  public ResponseEntity<Map<String, Object>> setup(final HttpSession session, final Authentication auth) {
+    final UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     // Réutilise le secret déjà en session tant que l'enrollment n'est pas confirmé : éviter de
     // générer un nouveau secret à chaque appel (rechargement de page), ce qui laisserait des clés
     // périmées dans l'application TOTP de l'utilisateur. `confirmer`/`desactiver` purgent la
@@ -70,10 +70,10 @@ public class TotpEnrollmentController {
       secret = totpService.genererSecret();
       session.setAttribute(SESSION_TOTP_SETUP, secret);
     }
-    String otpUri = totpService.genererUriOtpAuth(secret, details.identifiant());
-    String qrCodeSvg = totpService.genererQrCodeSvg(otpUri);
+    final String otpUri = totpService.genererUriOtpAuth(secret, details.identifiant());
+    final String qrCodeSvg = totpService.genererQrCodeSvg(otpUri);
 
-    Map<String, Object> rep = new HashMap<>();
+    final Map<String, Object> rep = new HashMap<>();
     rep.put("otpUri", otpUri);
     rep.put("totpSecret", secret);
     rep.put("qrCodeSvg", qrCodeSvg);
@@ -90,8 +90,8 @@ public class TotpEnrollmentController {
    */
   @PostMapping("/confirmer")
   public ResponseEntity<Map<String, Object>> confirmer(
-      @Valid @RequestBody TotpChallengeRequest corps, HttpSession session, Authentication auth) {
-    String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
+      @Valid @RequestBody final TotpChallengeRequest corps, final HttpSession session, final Authentication auth) {
+    final String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
     if (secret == null) {
       return erreur(400, "Session expirée. Recommencez la configuration.");
     }
@@ -100,7 +100,7 @@ public class TotpEnrollmentController {
       return erreur(400, "Code incorrect. Recommencez la configuration.");
     }
 
-    UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
+    final UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
     userController.activerTotp(details.id(), secret);
     session.removeAttribute(SESSION_TOTP_SETUP);
     logAdminService.logAdmin(
@@ -121,9 +121,9 @@ public class TotpEnrollmentController {
    */
   @PostMapping("/desactiver")
   public ResponseEntity<Map<String, Object>> desactiver(
-      @Valid @RequestBody TotpChallengeRequest corps, Authentication auth) {
-    UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
-    String secret = userController.lireSecretTotp(details.id());
+      @Valid @RequestBody final TotpChallengeRequest corps, final Authentication auth) {
+    final UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
+    final String secret = userController.lireSecretTotp(details.id());
 
     if (!totpService.verifierCode(secret, corps.code())) {
       return erreur(400, "Code TOTP incorrect.");

@@ -53,7 +53,7 @@ public class DecouverteController {
   /**
    * @param decouverteService service de découverte
    */
-  public DecouverteController(DecouverteService decouverteService) {
+  public DecouverteController(final DecouverteService decouverteService) {
     this.decouverteService = decouverteService;
   }
 
@@ -65,16 +65,16 @@ public class DecouverteController {
    */
   @GetMapping
   public ResponseEntity<ReponseDecouverte> decouvrir(
-      @RequestParam(name = "dept", required = false) List<String> depts,
-      @RequestParam(required = false, defaultValue = "") String q,
-      @RequestParam(required = false, defaultValue = "") String mois,
-      @RequestParam(required = false, defaultValue = "") String genre,
-      @RequestParam(required = false, defaultValue = "") String classification,
-      @RequestParam(required = false, defaultValue = "date") String tri,
-      @RequestParam(required = false, defaultValue = "0") int page,
-      Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    FiltreConcerts filtre =
+      @RequestParam(name = "dept", required = false) final List<String> depts,
+      @RequestParam(required = false, defaultValue = "") final String q,
+      @RequestParam(required = false, defaultValue = "") final String mois,
+      @RequestParam(required = false, defaultValue = "") final String genre,
+      @RequestParam(required = false, defaultValue = "") final String classification,
+      @RequestParam(required = false, defaultValue = "date") final String tri,
+      @RequestParam(required = false, defaultValue = "0") final int page,
+      final Authentication auth) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    final FiltreConcerts filtre =
         new FiltreConcerts(
             q, mois, genre, classification, tri, page, false, false, null, null, depts);
     return ResponseEntity.ok(decouverteService.decouvrir(userId, filtre));
@@ -90,7 +90,7 @@ public class DecouverteController {
    * @return 200 si déclenché, 429 si trop de relances récentes, 503 si le worker est inaccessible
    */
   @PostMapping("/fetcher")
-  public ResponseEntity<Map<String, Object>> fetcher(@Valid @RequestBody RequeteFetch requete) {
+  public ResponseEntity<Map<String, Object>> fetcher(@Valid @RequestBody final RequeteFetch requete) {
     if (!bucketFetcher.tryConsume(1)) {
       return ResponseEntity.status(429)
           .body(Map.of("erreur", "Trop de relances récentes. Réessayez dans quelques minutes."));

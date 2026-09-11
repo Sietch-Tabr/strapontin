@@ -31,7 +31,7 @@ public class SetupController {
   /**
    * @param setupService service d'initialisation de l'application
    */
-  public SetupController(SetupService setupService) {
+  public SetupController(final SetupService setupService) {
     this.setupService = setupService;
   }
 
@@ -52,7 +52,7 @@ public class SetupController {
    * @return 201 si créé — 409 si déjà configuré, 400 si invalide (via {@link GlobalExceptionHandler})
    */
   @PostMapping
-  public ResponseEntity<Map<String, Object>> initialiser(@Valid @RequestBody RequeteSetup requete) {
+  public ResponseEntity<Map<String, Object>> initialiser(@Valid @RequestBody final RequeteSetup requete) {
     setupService.initialiser(requete);
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }

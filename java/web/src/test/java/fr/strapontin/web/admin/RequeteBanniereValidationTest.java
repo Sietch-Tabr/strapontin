@@ -26,21 +26,21 @@ class RequeteBanniereValidationTest {
 
   @Test
   void message_vide_estRejete() {
-    Set<ConstraintViolation<RequeteBanniere>> violations =
+    final Set<ConstraintViolation<RequeteBanniere>> violations =
         VALIDATOR.validate(new RequeteBanniere("", "info"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void message_longueurExactement500_estValide() {
-    Set<ConstraintViolation<RequeteBanniere>> violations =
+    final Set<ConstraintViolation<RequeteBanniere>> violations =
         VALIDATOR.validate(new RequeteBanniere("a".repeat(500), "info"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void message_longueur501_estRejete() {
-    Set<ConstraintViolation<RequeteBanniere>> violations =
+    final Set<ConstraintViolation<RequeteBanniere>> violations =
         VALIDATOR.validate(new RequeteBanniere("a".repeat(501), "info"));
     assertFalse(violations.isEmpty());
   }

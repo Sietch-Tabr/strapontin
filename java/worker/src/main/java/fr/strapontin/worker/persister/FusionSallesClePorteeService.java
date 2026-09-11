@@ -51,7 +51,7 @@ public class FusionSallesClePorteeService {
   private final LogsAdminWorker logsAdminWorker;
 
   public FusionSallesClePorteeService(
-      NamedParameterJdbcTemplate jdbc, LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
   }
@@ -67,12 +67,12 @@ public class FusionSallesClePorteeService {
    * @return nombre de fusions effectuées
    */
   public int fusionner() {
-    List<PaireSalles> paires = detecterPaires();
-    Set<UUID> dejaAbsorbees = new HashSet<>();
+    final List<PaireSalles> paires = detecterPaires();
+    final Set<UUID> dejaAbsorbees = new HashSet<>();
     int fusions = 0;
     for (PaireSalles paire : paires) {
       if (dejaAbsorbees.contains(paire.a()) || dejaAbsorbees.contains(paire.b())) continue;
-      UUID[] cibleSource = choisirCibleEtSource(paire.a(), paire.b());
+      final UUID[] cibleSource = choisirCibleEtSource(paire.a(), paire.b());
       if (cibleSource == null) continue;
       fusionnerUnePaire(cibleSource[0], cibleSource[1]);
       dejaAbsorbees.add(cibleSource[1]);
@@ -91,31 +91,31 @@ public class FusionSallesClePorteeService {
    * réel (voir le rationale de classe).
    */
   private List<PaireSalles> detecterPaires() {
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
-                   sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
-                   sa.latitude AS lat_a, sa.longitude AS lon_a,
-                   sb.latitude AS lat_b, sb.longitude AS lon_b
-            FROM concerts c1
-            JOIN concerts c2
-              ON c1.artiste_norm = c2.artiste_norm
-             AND c1.date = c2.date
-             AND c1.heure = c2.heure
-             AND c1.dept = c2.dept
-             AND c1.salle_id < c2.salle_id
-            JOIN salles sa ON sa.id = c1.salle_id
-            JOIN salles sb ON sb.id = c2.salle_id
-            WHERE c1.salle_id IS NOT NULL AND c2.salle_id IS NOT NULL
-              AND c1.heure IS NOT NULL AND c1.dept IS NOT NULL
-              AND c1.date >= CURRENT_DATE
-            """,
+                SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
+                       sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
+                       sa.latitude AS lat_a, sa.longitude AS lon_a,
+                       sb.latitude AS lat_b, sb.longitude AS lon_b
+                FROM concerts c1
+                JOIN concerts c2
+                  ON c1.artiste_norm = c2.artiste_norm
+                 AND c1.date = c2.date
+                 AND c1.heure = c2.heure
+                 AND c1.dept = c2.dept
+                 AND c1.salle_id < c2.salle_id
+                JOIN salles sa ON sa.id = c1.salle_id
+                JOIN salles sb ON sb.id = c2.salle_id
+                WHERE c1.salle_id IS NOT NULL AND c2.salle_id IS NOT NULL
+                  AND c1.heure IS NOT NULL AND c1.dept IS NOT NULL
+                  AND c1.date >= CURRENT_DATE
+                """,
             Map.of());
-    List<PaireSalles> paires = new ArrayList<>();
+    final List<PaireSalles> paires = new ArrayList<>();
     for (var ligne : lignes) {
-      String nomA = (String) ligne.get("nom_a");
-      String nomB = (String) ligne.get("nom_b");
+      final String nomA = (String) ligne.get("nom_a");
+      final String nomB = (String) ligne.get("nom_b");
       if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) continue;
       if (distanceExcessive(ligne)) continue;
       paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
@@ -134,11 +134,11 @@ public class FusionSallesClePorteeService {
    *   distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
    *   coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
    */
-  private static boolean distanceExcessive(Map<String, Object> ligne) {
-    Double latA = (Double) ligne.get("lat_a");
-    Double lonA = (Double) ligne.get("lon_a");
-    Double latB = (Double) ligne.get("lat_b");
-    Double lonB = (Double) ligne.get("lon_b");
+  private static boolean distanceExcessive(final Map<String, Object> ligne) {
+    final Double latA = (Double) ligne.get("lat_a");
+    final Double lonA = (Double) ligne.get("lon_a");
+    final Double latB = (Double) ligne.get("lat_b");
+    final Double lonB = (Double) ligne.get("lon_b");
     if (latA == null || lonA == null || latB == null || lonB == null) return false;
     return distanceHaversineMetres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
   }
@@ -155,7 +155,7 @@ public class FusionSallesClePorteeService {
    *   #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
    */
   public static boolean coordonneesConnuesEtProches(
-      Double latA, Double lonA, Double latB, Double lonB) {
+      final Double latA, final Double lonA, final Double latB, final Double lonB) {
     if (latA == null || lonA == null || latB == null || lonB == null) return false;
     return distanceHaversineMetres(latA, lonA, latB, lonB) <= DISTANCE_MAX_FUSION_METRES;
   }
@@ -163,18 +163,18 @@ public class FusionSallesClePorteeService {
   private static final double RAYON_TERRE_METRES = 6_371_000;
 
   private static double distanceHaversineMetres(
-      double lat1, double lon1, double lat2, double lon2) {
-    double phi1 = Math.toRadians(lat1);
-    double phi2 = Math.toRadians(lat2);
-    double deltaPhi = Math.toRadians(lat2 - lat1);
-    double deltaLambda = Math.toRadians(lon2 - lon1);
-    double a =
+      final double lat1, final double lon1, final double lat2, final double lon2) {
+    final double phi1 = Math.toRadians(lat1);
+    final double phi2 = Math.toRadians(lat2);
+    final double deltaPhi = Math.toRadians(lat2 - lat1);
+    final double deltaLambda = Math.toRadians(lon2 - lon1);
+    final double a =
         Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2)
             + Math.cos(phi1)
-                * Math.cos(phi2)
-                * Math.sin(deltaLambda / 2)
-                * Math.sin(deltaLambda / 2);
-    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            * Math.cos(phi2)
+            * Math.sin(deltaLambda / 2)
+            * Math.sin(deltaLambda / 2);
+    final double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return RAYON_TERRE_METRES * c;
   }
 
@@ -186,26 +186,26 @@ public class FusionSallesClePorteeService {
    *
    * @return {@code [cible, source]}, ou {@code null} si l'une des deux salles n'existe plus
    */
-  private UUID[] choisirCibleEtSource(UUID a, UUID b) {
-    List<Map<String, Object>> lignes =
+  private UUID[] choisirCibleEtSource(final UUID a, final UUID b) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT s.id AS id, s.wikidata_id AS wikidata_id,
-                   (SELECT COUNT(*) FROM concerts c WHERE c.salle_id = s.id) AS nb_concerts
-            FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
-            """,
+                SELECT s.id AS id, s.wikidata_id AS wikidata_id,
+                       (SELECT COUNT(*) FROM concerts c WHERE c.salle_id = s.id) AS nb_concerts
+                FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
+                """,
             Map.of("a", a.toString(), "b", b.toString()));
     if (lignes.size() < 2) return null;
 
-    Map<String, Object> la = lignes.get(0).get("id").equals(a) ? lignes.get(0) : lignes.get(1);
-    Map<String, Object> lb = lignes.get(0).get("id").equals(a) ? lignes.get(1) : lignes.get(0);
+    final Map<String, Object> la = lignes.get(0).get("id").equals(a) ? lignes.get(0) : lignes.get(1);
+    final Map<String, Object> lb = lignes.get(0).get("id").equals(a) ? lignes.get(1) : lignes.get(0);
 
-    boolean aWikidata = la.get("wikidata_id") != null;
-    boolean bWikidata = lb.get("wikidata_id") != null;
+    final boolean aWikidata = la.get("wikidata_id") != null;
+    final boolean bWikidata = lb.get("wikidata_id") != null;
     if (aWikidata != bWikidata) return aWikidata ? new UUID[] {a, b} : new UUID[] {b, a};
 
-    long nbA = ((Number) la.get("nb_concerts")).longValue();
-    long nbB = ((Number) lb.get("nb_concerts")).longValue();
+    final long nbA = ((Number) la.get("nb_concerts")).longValue();
+    final long nbB = ((Number) lb.get("nb_concerts")).longValue();
     if (nbA != nbB) return nbA > nbB ? new UUID[] {a, b} : new UUID[] {b, a};
 
     return a.compareTo(b) <= 0 ? new UUID[] {a, b} : new UUID[] {b, a};
@@ -221,8 +221,8 @@ public class FusionSallesClePorteeService {
    * @param sourceId salle à absorber puis supprimer
    */
   @Transactional
-  public void fusionnerUnePaire(UUID cibleId, UUID sourceId) {
-    Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+  public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
+    final Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
     // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
     // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
@@ -335,8 +335,8 @@ public class FusionSallesClePorteeService {
    * revue manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct
    * déjà géré à l'étape 6.
    */
-  private void reassignerSousSallesSansCycle(UUID cibleId, UUID sourceId) {
-    List<UUID> enfants =
+  private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
+    final List<UUID> enfants =
         jdbc.query(
             "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
                 + " CAST(:cible AS uuid)",
@@ -368,8 +368,8 @@ public class FusionSallesClePorteeService {
   // findFirst() sur un flux contenant un unique élément null lève une NullPointerException
   // (Optional.of appelé en interne) — un accès direct à la liste évite ce piège pour une salle
   // racine sans parent.
-  private UUID lireSalleParentId(UUID salleId) {
-    List<UUID> resultat =
+  private UUID lireSalleParentId(final UUID salleId) {
+    final List<UUID> resultat =
         jdbc.query(
             "SELECT salle_parent_id FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()),
@@ -377,26 +377,26 @@ public class FusionSallesClePorteeService {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
-  private void dedupliquerSallesSourcesAvantFusion(UUID cibleId, UUID sourceId) {
-    List<Map<String, Object>> conflits =
+  private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
+    final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
-            SELECT src.source AS source,
-                   src.identifiant_externe AS id_source,
-                   dst.identifiant_externe AS id_cible,
-                   src.nb_zero_consecutifs AS sante_source,
-                   dst.nb_zero_consecutifs AS sante_cible,
-                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-            FROM salle_sources src
-            JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
-            WHERE src.salle_id = CAST(:source AS uuid)
-            """,
+                SELECT src.source AS source,
+                       src.identifiant_externe AS id_source,
+                       dst.identifiant_externe AS id_cible,
+                       src.nb_zero_consecutifs AS sante_source,
+                       dst.nb_zero_consecutifs AS sante_cible,
+                       (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                       (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+                FROM salle_sources src
+                JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
+                WHERE src.salle_id = CAST(:source AS uuid)
+                """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (Map<String, Object> conflit : conflits) {
-      boolean garderSource = laSourceEstPlusSaine(conflit);
-      Map<String, Object> paramsSuppression = new HashMap<>();
+      final boolean garderSource = laSourceEstPlusSaine(conflit);
+      final Map<String, Object> paramsSuppression = new HashMap<>();
       paramsSuppression.put("source", conflit.get("source"));
       paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
       paramsSuppression.put(
@@ -415,12 +415,12 @@ public class FusionSallesClePorteeService {
    *
    * @return {@code true} si la ligne côté source doit être conservée
    */
-  private static boolean laSourceEstPlusSaine(Map<String, Object> conflit) {
-    boolean suspectSource = Boolean.TRUE.equals(conflit.get("suspect_source"));
-    boolean suspectCible = Boolean.TRUE.equals(conflit.get("suspect_cible"));
+  private static boolean laSourceEstPlusSaine(final Map<String, Object> conflit) {
+    final boolean suspectSource = Boolean.TRUE.equals(conflit.get("suspect_source"));
+    final boolean suspectCible = Boolean.TRUE.equals(conflit.get("suspect_cible"));
     if (suspectSource != suspectCible) return !suspectSource;
-    long santeSource = ((Number) conflit.get("sante_source")).longValue();
-    long santeCible = ((Number) conflit.get("sante_cible")).longValue();
+    final long santeSource = ((Number) conflit.get("sante_source")).longValue();
+    final long santeCible = ((Number) conflit.get("sante_cible")).longValue();
     return santeSource <= santeCible;
   }
 }

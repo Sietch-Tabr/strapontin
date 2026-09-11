@@ -33,10 +33,10 @@ public final class GenerateurSecrets {
    * @param nbOctets nombre d'octets aléatoires (la chaîne fait {@code 2 * nbOctets} caractères)
    * @return la chaîne hexadécimale
    */
-  public static String genererHex(int nbOctets) {
-    byte[] octets = new byte[nbOctets];
+  public static String genererHex(final int nbOctets) {
+    final byte[] octets = new byte[nbOctets];
     RNG.nextBytes(octets);
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     for (byte b : octets) sb.append(String.format("%02x", b));
     return sb.toString();
   }
@@ -47,8 +47,8 @@ public final class GenerateurSecrets {
    * @param nbOctets nombre d'octets aléatoires
    * @return le token encodé
    */
-  public static String genererToken(int nbOctets) {
-    byte[] octets = new byte[nbOctets];
+  public static String genererToken(final int nbOctets) {
+    final byte[] octets = new byte[nbOctets];
     RNG.nextBytes(octets);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(octets);
   }
@@ -60,11 +60,11 @@ public final class GenerateurSecrets {
    * @return l'empreinte hexadécimale
    * @throws IllegalStateException si l'algorithme SHA-256 est indisponible
    */
-  public static String sha256Hex(String entree) {
+  public static String sha256Hex(final String entree) {
     try {
-      MessageDigest md = MessageDigest.getInstance("SHA-256");
-      byte[] hash = md.digest(entree.getBytes(StandardCharsets.UTF_8));
-      StringBuilder sb = new StringBuilder();
+      final MessageDigest md = MessageDigest.getInstance("SHA-256");
+      final byte[] hash = md.digest(entree.getBytes(StandardCharsets.UTF_8));
+      final StringBuilder sb = new StringBuilder();
       for (byte b : hash) sb.append(String.format("%02x", b));
       return sb.toString();
     } catch (NoSuchAlgorithmException e) {

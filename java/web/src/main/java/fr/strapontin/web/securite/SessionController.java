@@ -20,7 +20,7 @@ public class SessionController {
 
   private final ParametresService parametresService;
 
-  public SessionController(ParametresService parametresService) {
+  public SessionController(final ParametresService parametresService) {
     this.parametresService = parametresService;
   }
 
@@ -31,7 +31,7 @@ public class SessionController {
    * @return les données de session : rôle, nbNouveau
    */
   @GetMapping("/api/session")
-  public SessionDto session(Authentication auth) {
+  public SessionDto session(final Authentication auth) {
     if (auth == null
         || !auth.isAuthenticated()
         || !(auth.getPrincipal() instanceof UtilisateurDetails ud)) {

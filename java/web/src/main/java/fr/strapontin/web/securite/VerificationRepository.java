@@ -29,7 +29,7 @@ public class VerificationRepository {
   /**
    * @param jdbc accès JDBC
    */
-  public VerificationRepository(NamedParameterJdbcTemplate jdbc) {
+  public VerificationRepository(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -39,7 +39,7 @@ public class VerificationRepository {
    * @param email adresse email (normalisée)
    * @return {@code true} si un utilisateur existe avec cet email
    */
-  public boolean utilisateurExistePourEmail(String email) {
+  public boolean utilisateurExistePourEmail(final String email) {
     return !jdbc.queryForList(
             "SELECT id FROM users WHERE email = :email", Map.of("email", email), String.class)
         .isEmpty();
@@ -51,7 +51,7 @@ public class VerificationRepository {
    * @param identifiant préfixe/identifiant de la vérification (ex. {@code
    * "reset:user@example.com"})
    */
-  public void supprimerParIdentifiant(String identifiant) {
+  public void supprimerParIdentifiant(final String identifiant) {
     jdbc.update(
         "DELETE FROM verifications WHERE identifier = :prefixe", Map.of("prefixe", identifiant));
   }
@@ -64,7 +64,7 @@ public class VerificationRepository {
    * @param tokenHash  hash SHA-256 du token
    * @param expiresAt  date d'expiration
    */
-  public void inserer(String id, String identifiant, String tokenHash, Instant expiresAt) {
+  public void inserer(final String id, final String identifiant, final String tokenHash, final Instant expiresAt) {
     jdbc.update(
         """
         INSERT INTO verifications (id, identifier, value, expires_at, created_at, updated_at)
@@ -84,8 +84,8 @@ public class VerificationRepository {
    * @return l'identifiant (ex. {@code "reset:email"}), ou {@link Optional#empty()} si
    * invalide/expiré
    */
-  public Optional<String> lireIdentifiantParTokenHash(String tokenHash) {
-    List<String> lignes =
+  public Optional<String> lireIdentifiantParTokenHash(final String tokenHash) {
+    final List<String> lignes =
         jdbc.queryForList(
             "SELECT identifier FROM verifications WHERE value = :tokenHash AND expires_at > NOW()",
             Map.of("tokenHash", tokenHash),
@@ -98,7 +98,7 @@ public class VerificationRepository {
    *
    * @param tokenHash hash SHA-256 du token
    */
-  public void supprimerParTokenHash(String tokenHash) {
+  public void supprimerParTokenHash(final String tokenHash) {
     jdbc.update(
         "DELETE FROM verifications WHERE value = :tokenHash", Map.of("tokenHash", tokenHash));
   }
@@ -109,7 +109,7 @@ public class VerificationRepository {
    * @param email email de l'utilisateur
    * @param hash  nouveau hash bcrypt
    */
-  public void majMotDePasseParEmail(String email, String hash) {
+  public void majMotDePasseParEmail(final String email, final String hash) {
     jdbc.update(
         """
         UPDATE accounts SET password = :hash, updated_at = NOW()
@@ -123,7 +123,7 @@ public class VerificationRepository {
    *
    * @param email email de l'utilisateur
    */
-  public void majMustChangeFalseParEmail(String email) {
+  public void majMustChangeFalseParEmail(final String email) {
     jdbc.update(
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
         Map.of("email", email));
@@ -139,7 +139,7 @@ public class VerificationRepository {
    * @param email      email de l'utilisateur
    * @param identifiant nouvel identifiant (déjà normalisé en minuscules)
    */
-  public void majUsernameEtActiverParEmail(String email, String identifiant) {
+  public void majUsernameEtActiverParEmail(final String email, final String identifiant) {
     jdbc.update(
         """
         UPDATE users
@@ -159,8 +159,8 @@ public class VerificationRepository {
    * @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe pas ou n'a
    * pas de username
    */
-  public Optional<String> lireUsernameParEmail(String email) {
-    List<String> lignes =
+  public Optional<String> lireUsernameParEmail(final String email) {
+    final List<String> lignes =
         jdbc.queryForList(
             "SELECT username FROM users WHERE lower(email) = lower(:email)",
             Map.of("email", email),
@@ -177,7 +177,7 @@ public class VerificationRepository {
    * @param email       email de l'utilisateur courant (exclu)
    * @return {@code true} si l'identifiant est pris
    */
-  public boolean identifiantDejaUtiliseParEmail(String identifiant, String email) {
+  public boolean identifiantDejaUtiliseParEmail(final String identifiant, final String email) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE lower(username) = :ident AND lower(email) != lower(:email)",
             Map.of("ident", identifiant, "email", email),

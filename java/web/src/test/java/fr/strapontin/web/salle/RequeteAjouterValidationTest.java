@@ -30,14 +30,14 @@ class RequeteAjouterValidationTest {
 
   @Test
   void wikidataId_null_estValide() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("Zénith Paris", "tm:venue-1", null, null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void wikidataId_formatQIdValide_estValide() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("Zénith Paris", null, null, "Q3438008"));
     assertTrue(violations.isEmpty());
   }
@@ -46,7 +46,7 @@ class RequeteAjouterValidationTest {
   // (WikidataSalleSource.java:154-168) — doit être rejetée avant persistance.
   @Test
   void wikidataId_formatInvalide_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(
             new RequeteAjouter("Zénith Paris", null, null, "Q1 . } SELECT ?x WHERE"));
     assertFalse(violations.isEmpty());
@@ -54,14 +54,14 @@ class RequeteAjouterValidationTest {
 
   @Test
   void nom_vide_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("", "tm:venue-1"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void nom_null_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter(null, "tm:venue-1", null, null));
     assertFalse(violations.isEmpty());
   }
@@ -70,14 +70,14 @@ class RequeteAjouterValidationTest {
   // CorrespondanceSalle.estDoublonSalle — risque de OutOfMemoryError sans cette borne.
   @Test
   void nom_troplong_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("A".repeat(201), "tm:venue-1"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void nom_tailleLimite_estValide() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("A".repeat(200), "tm:venue-1"));
     assertTrue(violations.isEmpty());
   }

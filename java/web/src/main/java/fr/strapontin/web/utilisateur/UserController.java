@@ -53,9 +53,9 @@ public class UserController {
    * @param sessionRepository dépôt de sessions JDBC (révocation multi-appareils)
    */
   public UserController(
-      UtilisateurRepository utilisateurRepository,
-      PasswordEncoder passwordEncoder,
-      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+      final UtilisateurRepository utilisateurRepository,
+      final PasswordEncoder passwordEncoder,
+      final FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     this.utilisateurRepository = utilisateurRepository;
     this.passwordEncoder = passwordEncoder;
     this.sessionRepository = sessionRepository;
@@ -68,8 +68,8 @@ public class UserController {
    * @return le profil (id, email, identifiant, pendingEmail)
    */
   @GetMapping("/profile")
-  public ResponseEntity<ProfilUtilisateur> lireProfil(Authentication auth) {
-    UtilisateurDetails details = utilisateur(auth);
+  public ResponseEntity<ProfilUtilisateur> lireProfil(final Authentication auth) {
+    final UtilisateurDetails details = utilisateur(auth);
     return utilisateurRepository
         .lireEmails(details.id())
         .map(
@@ -93,9 +93,9 @@ public class UserController {
    */
   @PatchMapping("/identifiant")
   public ResponseEntity<Map<String, Object>> majIdentifiant(
-      @Valid @RequestBody RequeteIdentifiant requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
-    String identifiant = requete.identifiant().strip().toLowerCase();
+      @Valid @RequestBody final RequeteIdentifiant requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
+    final String identifiant = requete.identifiant().strip().toLowerCase();
 
     if (utilisateurRepository.identifiantDejaUtilise(identifiant, userId)) {
       return erreur(400, "Cet identifiant est déjà utilisé.");
@@ -118,8 +118,8 @@ public class UserController {
    */
   @PostMapping("/password")
   public ResponseEntity<Map<String, Object>> changerMotDePasse(
-      @Valid @RequestBody RequeteMotDePasse requete, Authentication auth) {
-    UtilisateurDetails details = utilisateur(auth);
+      @Valid @RequestBody final RequeteMotDePasse requete, final Authentication auth) {
+    final UtilisateurDetails details = utilisateur(auth);
 
     if (requete.motDePasseActuel() == null || requete.motDePasseNouveau() == null) {
       return erreur(400, "Tous les champs sont obligatoires.");
@@ -149,7 +149,7 @@ public class UserController {
    * @param userId identifiant de l'utilisateur
    * @param secret le secret Base32 à persister
    */
-  public void activerTotp(String userId, String secret) {
+  public void activerTotp(final String userId, final String secret) {
     utilisateurRepository.activerTotp(userId, secret);
   }
 
@@ -159,7 +159,7 @@ public class UserController {
    * @param userId identifiant de l'utilisateur
    * @return le secret Base32, ou {@code null} si absent
    */
-  public String lireSecretTotp(String userId) {
+  public String lireSecretTotp(final String userId) {
     return utilisateurRepository.lireSecretTotp(userId);
   }
 
@@ -168,7 +168,7 @@ public class UserController {
    *
    * @param userId identifiant de l'utilisateur
    */
-  public void desactiverTotp(String userId) {
+  public void desactiverTotp(final String userId) {
     utilisateurRepository.desactiverTotp(userId);
   }
 
@@ -178,7 +178,7 @@ public class UserController {
    * @param userId identifiant de l'utilisateur
    * @return nombre d'échecs
    */
-  public int lireEchecsTotp(String userId) {
+  public int lireEchecsTotp(final String userId) {
     return utilisateurRepository.lireEchecsTotp(userId);
   }
 
@@ -192,19 +192,19 @@ public class UserController {
    * @return 204 si supprimé, 409 si dernier admin
    */
   @DeleteMapping
-  public ResponseEntity<?> supprimerCompte(Authentication auth, HttpServletRequest httpRequest) {
-    UtilisateurDetails details = utilisateur(auth);
+  public ResponseEntity<?> supprimerCompte(final Authentication auth, final HttpServletRequest httpRequest) {
+    final UtilisateurDetails details = utilisateur(auth);
     if ("admin".equals(details.role()) && utilisateurRepository.compterAdmins() == 1) {
       return erreur(409, "Impossible de supprimer le seul compte administrateur de l'instance.");
     }
     utilisateurRepository.supprimer(details.id());
-    HttpSession session = httpRequest.getSession(false);
+    final HttpSession session = httpRequest.getSession(false);
     if (session != null) session.invalidate();
     SecurityContextHolder.clearContext();
     return ResponseEntity.noContent().build();
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
 }

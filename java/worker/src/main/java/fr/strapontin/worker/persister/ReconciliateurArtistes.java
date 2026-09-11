@@ -46,7 +46,7 @@ public class ReconciliateurArtistes {
   /**
    * @param jdbc template JDBC injecté par Spring
    */
-  public ReconciliateurArtistes(NamedParameterJdbcTemplate jdbc) {
+  public ReconciliateurArtistes(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -58,7 +58,7 @@ public class ReconciliateurArtistes {
    * @return {@code true} si les artistes sont considérés identiques
    * @see CorrespondanceArtiste#estDoublonArtiste
    */
-  public static boolean estDoublonArtiste(String a, String b) {
+  public static boolean estDoublonArtiste(final String a, final String b) {
     return CorrespondanceArtiste.estDoublonArtiste(a, b);
   }
 
@@ -67,7 +67,7 @@ public class ReconciliateurArtistes {
    *
    * @param remplacements table de remplacement à résoudre sur place
    */
-  private static void resoudreChaines(Map<String, String> remplacements) {
+  private static void resoudreChaines(final Map<String, String> remplacements) {
     for (String cle : new ArrayList<>(remplacements.keySet())) {
       String valeur = cle;
       while (remplacements.containsKey(valeur) && !remplacements.get(valeur).equals(valeur)) {
@@ -90,29 +90,29 @@ public class ReconciliateurArtistes {
    * @param lot valeurs de concerts après réconciliation des salles
    * @return lot avec {@code artisteNorm} réconcilié
    */
-  List<ValeurConcert> reconcilierArtistes(List<ValeurConcert> lot) {
-    Map<String, String> remplacementsIntraLot = construireRemplacementsArtisteIntraLot(lot);
-    List<ValeurConcert> lotApresIntraLot =
+  List<ValeurConcert> reconcilierArtistes(final List<ValeurConcert> lot) {
+    final Map<String, String> remplacementsIntraLot = construireRemplacementsArtisteIntraLot(lot);
+    final List<ValeurConcert> lotApresIntraLot =
         remplacementsIntraLot.isEmpty()
             ? lot
             : lot.stream()
-                .map(c -> appliquerRemplacementArtiste(c, remplacementsIntraLot))
-                .toList();
+            .map(c -> appliquerRemplacementArtiste(c, remplacementsIntraLot))
+            .toList();
 
-    Set<String> sallesNorms =
+    final Set<String> sallesNorms =
         new HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::salleNorm).toList());
     if (sallesNorms.isEmpty()) return lotApresIntraLot;
 
-    List<Map<String, Object>> existants =
+    final List<Map<String, Object>> existants =
         jdbc.queryForList(
             "SELECT artiste_norm, artiste_id, date::text AS date, salle_norm FROM concerts"
                 + " WHERE salle_norm IN (:sallesNorms)"
                 + " AND date >= (CURRENT_DATE - INTERVAL '7 days')",
             Map.of("sallesNorms", sallesNorms));
 
-    Map<String, List<ArtisteExistant>> indexExistants = new HashMap<>();
+    final Map<String, List<ArtisteExistant>> indexExistants = new HashMap<>();
     for (Map<String, Object> e : existants) {
-      String cle = e.get("date") + "|" + e.get("salle_norm");
+      final String cle = e.get("date") + "|" + e.get("salle_norm");
       indexExistants
           .computeIfAbsent(cle, _ -> new ArrayList<>())
           .add(new ArtisteExistant((String) e.get("artiste_norm"), (UUID) e.get("artiste_id")));
@@ -137,8 +137,8 @@ public class ReconciliateurArtistes {
    *
    * @param lot concerts après résolution des identités sources
    */
-  void corrigerParUrl(List<ValeurConcert> lot) {
-    List<ValeurConcert> candidats =
+  void corrigerParUrl(final List<ValeurConcert> lot) {
+    final List<ValeurConcert> candidats =
         lot.stream()
             .filter(
                 c ->
@@ -147,21 +147,21 @@ public class ReconciliateurArtistes {
             .toList();
     if (candidats.isEmpty()) return;
 
-    List<String> urls = candidats.stream().map(ValeurConcert::url).distinct().toList();
-    List<Map<String, Object>> existants =
+    final List<String> urls = candidats.stream().map(ValeurConcert::url).distinct().toList();
+    final List<Map<String, Object>> existants =
         jdbc.queryForList(
             "SELECT DISTINCT o.url AS url, e.artiste_norm AS artiste_norm"
                 + " FROM observations o JOIN evenements e ON e.id = o.evenement_id"
                 + " WHERE o.url IN (:urls)",
             Map.of("urls", urls));
 
-    Map<String, String> artisteNormParUrl = new HashMap<>();
+    final Map<String, String> artisteNormParUrl = new HashMap<>();
     for (Map<String, Object> ligne : existants) {
       artisteNormParUrl.put((String) ligne.get("url"), (String) ligne.get("artiste_norm"));
     }
 
     for (ValeurConcert c : candidats) {
-      String artisteNormExistant = artisteNormParUrl.get(c.url());
+      final String artisteNormExistant = artisteNormParUrl.get(c.url());
       if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) continue;
       corrigerArtisteParUrl(c);
     }
@@ -171,8 +171,8 @@ public class ReconciliateurArtistes {
   // corrigerArtisteExistantEnBase — deux fiches partageant la même url désignent nécessairement le
   // même événement réel, quels que soient l'ancien nom corrompu et sa date/salle éventuellement
   // elles-mêmes faussées par le même mauvais rapprochement.
-  private void corrigerArtisteParUrl(ValeurConcert concert) {
-    MapSqlParameterSource params =
+  private void corrigerArtisteParUrl(final ValeurConcert concert) {
+    final MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("nouvelArtiste", concert.artiste())
             .addValue("nouvelArtisteNorm", concert.artisteNorm())
@@ -180,7 +180,7 @@ public class ReconciliateurArtistes {
     // Identité (evenements.artiste_norm) et affichage de l'observation concernée
     // (observations.artiste_brut) vivent désormais sur deux tables distinctes (#1192) — les deux
     // doivent être corrigés, la seconde ne portant que sur l'observation partageant cette url.
-    int nbCorrigees =
+    final int nbCorrigees =
         jdbc.update(
             "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"
                 + " WHERE id = (SELECT evenement_id FROM observations WHERE url = :url LIMIT 1)"
@@ -199,13 +199,13 @@ public class ReconciliateurArtistes {
     }
   }
 
-  private Map<String, String> construireRemplacementsArtisteIntraLot(List<ValeurConcert> lot) {
-    Map<String, String> remplacements = new HashMap<>();
-    Map<String, List<String>> parGroupe = new LinkedHashMap<>();
+  private Map<String, String> construireRemplacementsArtisteIntraLot(final List<ValeurConcert> lot) {
+    final Map<String, String> remplacements = new HashMap<>();
+    final Map<String, List<String>> parGroupe = new LinkedHashMap<>();
     for (ValeurConcert concert : lot) {
-      String cle = concert.date() + "|" + concert.salleNorm();
+      final String cle = concert.date() + "|" + concert.salleNorm();
       parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
-      List<String> groupe = parGroupe.get(cle);
+      final List<String> groupe = parGroupe.get(cle);
       if (!groupe.contains(concert.artisteNorm())) groupe.add(concert.artisteNorm());
     }
     for (List<String> artistesNorm : parGroupe.values()) {
@@ -216,13 +216,13 @@ public class ReconciliateurArtistes {
   }
 
   private void ajouterDoublonsArtiste(
-      List<String> artistesNorm, Map<String, String> remplacements) {
+      final List<String> artistesNorm, final Map<String, String> remplacements) {
     for (int i = 0; i < artistesNorm.size(); i++) {
       for (int j = i + 1; j < artistesNorm.size(); j++) {
-        String a = artistesNorm.get(i);
-        String b = artistesNorm.get(j);
+        final String a = artistesNorm.get(i);
+        final String b = artistesNorm.get(j);
         if (estDoublonArtiste(a, b)) {
-          String canonique = a.length() >= b.length() ? a : b;
+          final String canonique = a.length() >= b.length() ? a : b;
           remplacements.put(a, canonique);
           remplacements.put(b, canonique);
         }
@@ -231,8 +231,8 @@ public class ReconciliateurArtistes {
   }
 
   private ValeurConcert appliquerRemplacementArtiste(
-      ValeurConcert c, Map<String, String> remplacements) {
-    String canonique = remplacements.get(c.artisteNorm());
+      final ValeurConcert c, final Map<String, String> remplacements) {
+    final String canonique = remplacements.get(c.artisteNorm());
     if (canonique == null || canonique.equals(c.artisteNorm())) return c;
     log.debug(
         "doublon artiste intra-lot réconcilié entrant={} canonique={}", c.artisteNorm(), canonique);
@@ -253,9 +253,9 @@ public class ReconciliateurArtistes {
    * @return concert réconcilié (artisteNorm/artisteId propagés si un candidat correspond)
    */
   private ValeurConcert reconcilierUnArtiste(
-      ValeurConcert concert, Map<String, List<ArtisteExistant>> indexExistants) {
-    String cle = concert.date() + "|" + concert.salleNorm();
-    List<ArtisteExistant> artistesExistants = indexExistants.get(cle);
+      final ValeurConcert concert, final Map<String, List<ArtisteExistant>> indexExistants) {
+    final String cle = concert.date() + "|" + concert.salleNorm();
+    final List<ArtisteExistant> artistesExistants = indexExistants.get(cle);
     if (artistesExistants == null) return concert;
 
     for (ArtisteExistant existant : artistesExistants) {
@@ -269,7 +269,7 @@ public class ReconciliateurArtistes {
     for (ArtisteExistant existant : artistesExistants) {
       if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) continue;
 
-      UUID artisteIdPropague =
+      final UUID artisteIdPropague =
           concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
 
       // Un concert inéligible à la résolution Deezer (théâtre, spectacle "divers", sport — voir
@@ -304,8 +304,8 @@ public class ReconciliateurArtistes {
    * @param existant ancienne identité (erronée) à corriger
    * @param concert concert entrant portant l'identité corrigée
    */
-  private void corrigerArtisteExistantEnBase(ArtisteExistant existant, ValeurConcert concert) {
-    MapSqlParameterSource params =
+  private void corrigerArtisteExistantEnBase(final ArtisteExistant existant, final ValeurConcert concert) {
+    final MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("nouvelArtiste", concert.artiste())
             .addValue("nouvelArtisteNorm", concert.artisteNorm())
@@ -314,7 +314,7 @@ public class ReconciliateurArtistes {
             .addValue("salleNorm", concert.salleNorm());
     // Identité (evenements.artiste_norm) et affichage par source (observations.artiste_brut)
     // vivent désormais sur deux tables distinctes (#1192).
-    int nbCorrigees =
+    final int nbCorrigees =
         jdbc.update(
             "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"
                 + " WHERE artiste_norm = :ancienArtisteNorm AND date = CAST(:date AS date)"
@@ -346,8 +346,8 @@ public class ReconciliateurArtistes {
    * @param concerts concerts après résolution par source
    * @return liste enrichie avec les {@code artiste_id} résolus par nom
    */
-  List<ValeurConcert> resoudreArtisteParNomNorm(List<ValeurConcert> concerts) {
-    List<String> nomsNormSansId =
+  List<ValeurConcert> resoudreArtisteParNomNorm(final List<ValeurConcert> concerts) {
+    final List<String> nomsNormSansId =
         concerts.stream()
             .filter(c -> c.artisteId() == null)
             .map(ValeurConcert::artisteNorm)
@@ -355,23 +355,23 @@ public class ReconciliateurArtistes {
             .toList();
     if (nomsNormSansId.isEmpty()) return concerts;
 
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT id, nom_norm FROM artistes WHERE nom_norm IN (:nomsNorm)",
             Map.of("nomsNorm", nomsNormSansId));
 
-    Map<String, UUID> parNomNorm = new HashMap<>();
+    final Map<String, UUID> parNomNorm = new HashMap<>();
     for (Map<String, Object> ligne : lignes) {
       parNomNorm.put((String) ligne.get("nom_norm"), (UUID) ligne.get("id"));
     }
     if (parNomNorm.isEmpty()) return concerts;
 
-    List<ValeurConcert> enrichis =
+    final List<ValeurConcert> enrichis =
         concerts.stream()
             .map(
                 c -> {
                   if (c.artisteId() != null) return c;
-                  UUID artisteId = parNomNorm.get(c.artisteNorm());
+                  final UUID artisteId = parNomNorm.get(c.artisteNorm());
                   return artisteId != null ? c.avecArtisteId(artisteId) : c;
                 })
             .toList();
@@ -391,16 +391,16 @@ public class ReconciliateurArtistes {
    * @param nomNormsResolus noms normalisés effectivement résolus par le lookup
    */
   private void persistersArtistesSources(
-      List<ValeurConcert> concerts, java.util.Set<String> nomNormsResolus) {
-    List<SqlParameterSource> params = new ArrayList<>();
+      final List<ValeurConcert> concerts, final java.util.Set<String> nomNormsResolus) {
+    final List<SqlParameterSource> params = new ArrayList<>();
     for (ValeurConcert c : concerts) {
       if (c.artisteId() == null
           || c.artisteSourceId() == null
           || !nomNormsResolus.contains(c.artisteNorm())) continue;
-      int sep = c.artisteSourceId().indexOf(':');
+      final int sep = c.artisteSourceId().indexOf(':');
       if (sep <= 0) continue;
-      String source = c.artisteSourceId().substring(0, sep);
-      String identifiant = c.artisteSourceId().substring(sep + 1);
+      final String source = c.artisteSourceId().substring(0, sep);
+      final String identifiant = c.artisteSourceId().substring(sep + 1);
       params.add(
           new MapSqlParameterSource()
               .addValue("artisteId", c.artisteId().toString())

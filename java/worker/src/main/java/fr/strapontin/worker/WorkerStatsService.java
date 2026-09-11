@@ -57,14 +57,14 @@ public class WorkerStatsService {
    *   l'historique récent
    */
   public WorkerStatsService(
-      List<SourceConcerts> sources,
-      TicketmasterSource tm,
-      ResolveurNomCanonique resolveur,
-      NamedParameterJdbcTemplate jdbc,
-      LogsAdminWorker logsAdminWorker,
-      MeterRegistry meterRegistry,
-      SuiviChroniciteService suiviChronicite,
-      DeriveVolumeFetchService deriveVolumeFetchService) {
+      final List<SourceConcerts> sources,
+      final TicketmasterSource tm,
+      final ResolveurNomCanonique resolveur,
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final MeterRegistry meterRegistry,
+      final SuiviChroniciteService suiviChronicite,
+      final DeriveVolumeFetchService deriveVolumeFetchService) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
@@ -85,15 +85,15 @@ public class WorkerStatsService {
    * @param erreur message d'erreur, ou {@code null} si le job s'est terminé sans exception
    */
   public void enregistrerStatJob(
-      String typeJob, long dureeMs, ResultatPersistance resultat, String erreur) {
-    Timestamp maintenant = Timestamp.from(Instant.now());
+      final String typeJob, final long dureeMs, final ResultatPersistance resultat, final String erreur) {
+    final Timestamp maintenant = Timestamp.from(Instant.now());
     Timer.builder("strapontin.worker.job.duration")
         .description("Durée d'exécution d'un job worker (fetch/purge/révocation/réconciliation)")
         .tag("type_job", typeJob)
         .register(meterRegistry)
         .record(dureeMs, TimeUnit.MILLISECONDS);
     try {
-      Map<String, Object> params = new LinkedHashMap<>();
+      final Map<String, Object> params = new LinkedHashMap<>();
       params.put("typeJob", typeJob);
       params.put("now", maintenant);
       params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
@@ -159,12 +159,12 @@ public class WorkerStatsService {
    * @param travail travail à exécuter, retournant le bilan de persistance en cas de succès
    */
   public void executerAvecStats(
-      org.slf4j.Logger callerLog,
-      String typeJob,
-      java.util.function.Supplier<ResultatPersistance> travail) {
-    long debut = System.currentTimeMillis();
+      final org.slf4j.Logger callerLog,
+      final String typeJob,
+      final java.util.function.Supplier<ResultatPersistance> travail) {
+    final long debut = System.currentTimeMillis();
     try {
-      ResultatPersistance resultat = travail.get();
+      final ResultatPersistance resultat = travail.get();
       enregistrerStatJob(typeJob, System.currentTimeMillis() - debut, resultat, null);
     } catch (Exception e) {
       callerLog.error("{} échoué", typeJob, e);
@@ -188,7 +188,7 @@ public class WorkerStatsService {
      * @param resultat bilan de persistance d'un job réellement réussi
      * @return un résultat sans erreur
      */
-    public static ResultatJob succes(ResultatPersistance resultat) {
+    public static ResultatJob succes(final ResultatPersistance resultat) {
       return new ResultatJob(resultat, null);
     }
   }
@@ -205,12 +205,12 @@ public class WorkerStatsService {
    * @param travail travail à exécuter, retournant le bilan et un message d'erreur optionnel
    */
   public void executerAvecStatsToleretErreur(
-      org.slf4j.Logger callerLog,
-      String typeJob,
-      java.util.function.Supplier<ResultatJob> travail) {
-    long debut = System.currentTimeMillis();
+      final org.slf4j.Logger callerLog,
+      final String typeJob,
+      final java.util.function.Supplier<ResultatJob> travail) {
+    final long debut = System.currentTimeMillis();
     try {
-      ResultatJob rj = travail.get();
+      final ResultatJob rj = travail.get();
       enregistrerStatJob(typeJob, System.currentTimeMillis() - debut, rj.resultat(), rj.erreur());
     } catch (Exception e) {
       callerLog.error("{} échoué", typeJob, e);
@@ -235,27 +235,27 @@ public class WorkerStatsService {
    * @param bilan bilan prélevé pour cette source depuis le dernier cycle
    * @return {@code true} si une entrée a été insérée dans {@code logs_admin}
    */
-  private boolean remonterBilan(String typeJob, String nomSource, BilanFetch bilan) {
+  private boolean remonterBilan(final String typeJob, final String nomSource, final BilanFetch bilan) {
     if (bilan == null || bilan.appels() == 0) return false;
     if (bilan.erreursHttp() > 0) {
       meterRegistry
           .counter("strapontin.worker.source.erreurs", "source", nomSource)
           .increment(bilan.erreursHttp());
     }
-    int streak =
+    final int streak =
         suiviChronicite.enregistrerCycle(typeJob + "|" + nomSource, bilan.erreursHttp() > 0);
     return bilan
         .evaluer(typeJob, capitaliser(nomSource), BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
         .map(
             entree -> {
-              String message = suiviChronicite.enrichirSiChronique(entree.message(), streak);
+              final String message = suiviChronicite.enrichirSiChronique(entree.message(), streak);
               logsAdminWorker.inserer(entree.niveau(), "worker", message, entree.meta());
               return true;
             })
         .orElse(false);
   }
 
-  private static String capitaliser(String nom) {
+  private static String capitaliser(final String nom) {
     return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
   }
 
@@ -267,8 +267,8 @@ public class WorkerStatsService {
    * @param typeJob le type de job de fetch (préfixe {@code fetch:})
    * @return {@code true} si un warn a été inséré dans {@code logs_admin}
    */
-  private boolean remonterBilanConcertsManquesTm(String typeJob) {
-    int concertsManques = tm.preleverConcertsManques();
+  private boolean remonterBilanConcertsManquesTm(final String typeJob) {
+    final int concertsManques = tm.preleverConcertsManques();
     if (concertsManques == 0) return false;
     logsAdminWorker.inserer(
         "warn",
@@ -289,8 +289,8 @@ public class WorkerStatsService {
    * @param eventim la source Eventim dont on prélève les containments acceptés
    * @return {@code true} si un warn a été inséré dans {@code logs_admin}
    */
-  private boolean remonterContainmentsEventim(String typeJob, EventimSource eventim) {
-    List<String> containments = eventim.preleverContainmentsAcceptes();
+  private boolean remonterContainmentsEventim(final String typeJob, final EventimSource eventim) {
+    final List<String> containments = eventim.preleverContainmentsAcceptes();
     if (containments.isEmpty()) return false;
     logsAdminWorker.inserer(
         "warn",
@@ -311,9 +311,9 @@ public class WorkerStatsService {
    * @param typeJob le type de job de fetch
    * @param execLe l'horodatage de l'exécution
    */
-  private void remonterResultatVide(String typeJob, Timestamp execLe) {
+  private void remonterResultatVide(final String typeJob, final Timestamp execLe) {
     try {
-      Map<String, Object> params = new LinkedHashMap<>();
+      final Map<String, Object> params = new LinkedHashMap<>();
       params.put("ts", execLe.getTime());
       params.put("niveau", "warn");
       params.put("source", "worker");

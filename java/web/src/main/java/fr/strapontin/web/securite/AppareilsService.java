@@ -36,7 +36,7 @@ public class AppareilsService {
   /**
    * @param jdbc accès JDBC
    */
-  public AppareilsService(NamedParameterJdbcTemplate jdbc) {
+  public AppareilsService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -53,7 +53,7 @@ public class AppareilsService {
    * @param userId identifiant de l'utilisateur
    * @param userAgent en-tête {@code User-Agent} de la requête de connexion, peut être {@code null}
    */
-  public void enregistrerAppareil(String sessionId, String userId, String userAgent) {
+  public void enregistrerAppareil(final String sessionId, final String userId, final String userAgent) {
     try {
       jdbc.update(
           "INSERT INTO session_appareils (session_id, user_id, user_agent)"
@@ -79,7 +79,7 @@ public class AppareilsService {
    *   quel), pour marquer l'appareil actuellement utilisé
    * @return les appareils actifs
    */
-  public List<AppareilDto> listerAppareils(String userId, String sessionIdCourante) {
+  public List<AppareilDto> listerAppareils(final String userId, final String sessionIdCourante) {
     return jdbc.query(
         "SELECT sa.appareil_id AS appareil_id, sa.session_id AS session_id,"
             + "   s.CREATION_TIME AS creation_time, s.LAST_ACCESS_TIME AS last_access_time,"
@@ -107,8 +107,8 @@ public class AppareilsService {
    * @param appareilId identifiant opaque de l'appareil à révoquer
    * @return {@code true} si une session a effectivement été supprimée
    */
-  public boolean revoquerAppareil(String userId, String appareilId) {
-    int supprimees =
+  public boolean revoquerAppareil(final String userId, final String appareilId) {
+    final int supprimees =
         jdbc.update(
             "DELETE FROM SPRING_SESSION WHERE SESSION_ID IN"
                 + " (SELECT session_id FROM session_appareils"

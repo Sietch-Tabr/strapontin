@@ -39,10 +39,10 @@ public class TotpChallengeService {
    * @param logAdminService journalisation des succès/échecs dans {@code logs_admin}
    */
   public TotpChallengeService(
-      NamedParameterJdbcTemplate jdbc,
-      UserController userController,
-      TotpService totpService,
-      LogAdminService logAdminService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final UserController userController,
+      final TotpService totpService,
+      final LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.userController = userController;
     this.totpService = totpService;
@@ -58,13 +58,13 @@ public class TotpChallengeService {
    * @param ip adresse IP de la requête (pour les logs)
    * @return le résultat du challenge
    */
-  public ResultatTotp verifier(String userId, String identifiant, String code, String ip) {
-    int echecsCourants = userController.lireEchecsTotp(userId);
+  public ResultatTotp verifier(final String userId, final String identifiant, final String code, final String ip) {
+    final int echecsCourants = userController.lireEchecsTotp(userId);
     if (echecsCourants >= MAX_ECHECS_TOTP) {
       return ResultatTotp.dejaVerrouille();
     }
 
-    String secret = userController.lireSecretTotp(userId);
+    final String secret = userController.lireSecretTotp(userId);
     if (totpService.verifierCode(secret, code)) {
       jdbc.update("UPDATE users SET totp_failure_count = 0 WHERE id = :id", Map.of("id", userId));
       logAdminService.logAdmin(
@@ -75,7 +75,7 @@ public class TotpChallengeService {
       return ResultatTotp.succes();
     }
 
-    int nouveauxEchecs = echecsCourants + 1;
+    final int nouveauxEchecs = echecsCourants + 1;
     jdbc.update(
         "UPDATE users SET totp_failure_count = totp_failure_count + 1 WHERE id = :id",
         Map.of("id", userId));

@@ -29,28 +29,28 @@ class RequeteDigitickSalleValidationTest {
 
   @Test
   void tousLesChampsNull_estValide() {
-    Set<ConstraintViolation<RequeteDigitickSalle>> violations =
+    final Set<ConstraintViolation<RequeteDigitickSalle>> violations =
         VALIDATOR.validate(new RequeteDigitickSalle(null, null, null, null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void tousLesChampsRenseignes_estValide() {
-    Set<ConstraintViolation<RequeteDigitickSalle>> violations =
+    final Set<ConstraintViolation<RequeteDigitickSalle>> violations =
         VALIDATOR.validate(new RequeteDigitickSalle("Salle X", "salle-x", "Nancy", "54"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void nom_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteDigitickSalle>> violations =
+    final Set<ConstraintViolation<RequeteDigitickSalle>> violations =
         VALIDATOR.validate(new RequeteDigitickSalle("a".repeat(201), null, null, null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void dept_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteDigitickSalle>> violations =
+    final Set<ConstraintViolation<RequeteDigitickSalle>> violations =
         VALIDATOR.validate(new RequeteDigitickSalle(null, null, null, "9999"));
     assertFalse(violations.isEmpty());
   }

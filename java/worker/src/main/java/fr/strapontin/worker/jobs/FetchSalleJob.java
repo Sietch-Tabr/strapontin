@@ -29,13 +29,13 @@ public class FetchSalleJob extends QuartzJobBean {
   private WorkerFetchService workerFetchService;
 
   @Autowired
-  public void setWorkerFetchService(WorkerFetchService workerFetchService) {
+  public void setWorkerFetchService(final WorkerFetchService workerFetchService) {
     this.workerFetchService = workerFetchService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
-    String identifiants = context.getMergedJobDataMap().getString(CLE_IDENTIFIANTS);
+  protected void executeInternal(final JobExecutionContext context) {
+    final String identifiants = context.getMergedJobDataMap().getString(CLE_IDENTIFIANTS);
     if (identifiants == null || identifiants.isBlank()) {
       log.warn("fetch:salle — identifiants absents dans la JobDataMap");
       return;

@@ -67,10 +67,10 @@ public class PersisterConcerts {
    * @param logsAdminWorker journalisation admin
    */
   public PersisterConcerts(
-      PersisteurConcertsDb db,
-      ReconciliateurSalles reconciliateurSalles,
-      ReconciliateurArtistes reconciliateurArtistes,
-      LogsAdminWorker logsAdminWorker) {
+      final PersisteurConcertsDb db,
+      final ReconciliateurSalles reconciliateurSalles,
+      final ReconciliateurArtistes reconciliateurArtistes,
+      final LogsAdminWorker logsAdminWorker) {
     this.db = db;
     this.reconciliateurSalles = reconciliateurSalles;
     this.reconciliateurArtistes = reconciliateurArtistes;
@@ -88,7 +88,7 @@ public class PersisterConcerts {
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
-  public void setSelf(@Lazy PersisterConcerts self) {
+  public void setSelf(@Lazy final PersisterConcerts self) {
     this.self = self;
   }
 
@@ -100,7 +100,7 @@ public class PersisterConcerts {
    * @return {@code true} si les salles sont considérées identiques
    * @see ReconciliateurSalles#estDoublonSalle
    */
-  public static boolean estDoublonSalle(String a, String b) {
+  public static boolean estDoublonSalle(final String a, final String b) {
     return ReconciliateurSalles.estDoublonSalle(a, b);
   }
 
@@ -112,7 +112,7 @@ public class PersisterConcerts {
    * @return {@code true} si les artistes sont considérés identiques
    * @see ReconciliateurArtistes#estDoublonArtiste
    */
-  public static boolean estDoublonArtiste(String a, String b) {
+  public static boolean estDoublonArtiste(final String a, final String b) {
     return ReconciliateurArtistes.estDoublonArtiste(a, b);
   }
 
@@ -124,16 +124,16 @@ public class PersisterConcerts {
    * @return coefficient de Jaccard entre 0.0 et 1.0
    * @see ReconciliateurSalles#jaccardTokens
    */
-  public static double jaccardTokens(String a, String b) {
+  public static double jaccardTokens(final String a, final String b) {
     return ReconciliateurSalles.jaccardTokens(a, b);
   }
 
-  private static int scoreArtisteSalle(String artiste, String salle) {
-    int artisteDiacr =
+  private static int scoreArtisteSalle(final String artiste, final String salle) {
+    final int artisteDiacr =
         Normalizer.normalize(artiste, Normalizer.Form.NFD).length() - artiste.length();
-    int salleDiacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
-    int artisteCasseMixte = !artiste.equals(artiste.toUpperCase()) ? 5 : 0;
-    int salleCasseMixte = !salle.equals(salle.toUpperCase()) ? 1 : 0;
+    final int salleDiacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
+    final int artisteCasseMixte = artiste.equals(artiste.toUpperCase()) ? 0 : 5;
+    final int salleCasseMixte = salle.equals(salle.toUpperCase()) ? 0 : 1;
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
   }
 
@@ -148,10 +148,10 @@ public class PersisterConcerts {
    * @param liste concerts bruts à dédoublonner
    * @return liste sans doublons
    */
-  public static List<ConcertBrut> deduplicerParCleConflit(List<ConcertBrut> liste) {
-    Map<String, ConcertBrut> parCle = new LinkedHashMap<>();
+  public static List<ConcertBrut> deduplicerParCleConflit(final List<ConcertBrut> liste) {
+    final Map<String, ConcertBrut> parCle = new LinkedHashMap<>();
     for (ConcertBrut c : liste) {
-      String cle =
+      final String cle =
           Normalisation.normaliserTexte(c.artiste())
               + "|"
               + c.date()
@@ -159,7 +159,7 @@ public class PersisterConcerts {
               + (c.heure() != null ? c.heure() : "")
               + "|"
               + Normalisation.normaliserTexte(c.salle());
-      ConcertBrut existant = parCle.get(cle);
+      final ConcertBrut existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(c.artiste(), c.salle())
               > scoreArtisteSalle(existant.artiste(), existant.salle())) {
@@ -183,11 +183,11 @@ public class PersisterConcerts {
    * @param lot valeurs de concerts après réconciliation complète des salles
    * @return lot sans doublons
    */
-  public static List<ValeurConcert> deduplicerLotReconcilie(List<ValeurConcert> lot) {
-    Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
+  public static List<ValeurConcert> deduplicerLotReconcilie(final List<ValeurConcert> lot) {
+    final Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
     for (ValeurConcert v : lot) {
-      String salleId = v.salleId() != null ? v.salleId().toString() : v.salleNorm();
-      String cle =
+      final String salleId = v.salleId() != null ? v.salleId().toString() : v.salleNorm();
+      final String cle =
           v.artisteNorm()
               + "|"
               + v.date()
@@ -195,7 +195,7 @@ public class PersisterConcerts {
               + (v.heure() != null ? v.heure() : "")
               + "|"
               + salleId;
-      ValeurConcert existant = parCle.get(cle);
+      final ValeurConcert existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(v.artiste(), v.salle())
               > scoreArtisteSalle(existant.artiste(), existant.salle())) {
@@ -228,31 +228,31 @@ public class PersisterConcerts {
    * @param concerts valeurs normalisées avant upsert
    * @return liste enrichie avec les UUIDs résolus
    */
-  private List<ValeurConcert> resoudreIdentitesSources(List<ValeurConcert> concerts) {
-    Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
-    Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
+  private List<ValeurConcert> resoudreIdentitesSources(final List<ValeurConcert> concerts) {
+    final Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
+    final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
     reconciliateurSalles.absorberRenommagesSalles(concerts, cachesSalles);
 
     for (ValeurConcert c : concerts) {
       if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
-        UUID uuid = reconciliateurSalles.upsertSalleSource(c);
+        final UUID uuid = reconciliateurSalles.upsertSalleSource(c);
         if (uuid != null) cachesSalles.put(c.salleSourceId(), uuid);
       }
     }
 
     // Un mapping salle_sources réutilisé contourne les garde-fous géographiques appliqués à la
     // création d'un nouveau mapping — à valider avant de lui faire confiance.
-    Set<UUID> sallesMappees =
+    final Set<UUID> sallesMappees =
         concerts.stream()
             .filter(c -> c.salleSourceId() != null)
             .map(c -> cachesSalles.get(c.salleSourceId()))
             .filter(java.util.Objects::nonNull)
             .collect(Collectors.toSet());
-    Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
+    final Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
 
-    Map<String, UUID> cachesSallesParNom = new HashMap<>();
+    final Map<String, UUID> cachesSallesParNom = new HashMap<>();
     for (ValeurConcert c : concerts) {
-      UUID salleMappee = c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+      final UUID salleMappee = c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
       if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
         logsAdminWorker.inserer(
             "warn",
@@ -267,7 +267,7 @@ public class PersisterConcerts {
                 + c.artisteNorm(),
             Map.of("salleId", salleMappee.toString(), "artiste", c.artisteNorm()));
       }
-      boolean besoinFallback =
+      final boolean besoinFallback =
           c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
       if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
         UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
@@ -276,18 +276,18 @@ public class PersisterConcerts {
       }
     }
 
-    List<ValeurConcert> resolus =
+    final List<ValeurConcert> resolus =
         concerts.stream()
             .map(
                 c -> {
-                  UUID salleMappee =
+                  final UUID salleMappee =
                       c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-                  UUID salleId =
+                  final UUID salleId =
                       c.salleSourceId() != null
-                              && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
+                          && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
                           ? salleMappee
                           : cachesSallesParNom.get(c.salleNorm());
-                  UUID artisteId =
+                  final UUID artisteId =
                       c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
                   if (salleId == null && artisteId == null) return c;
                   return c.avecUuids(
@@ -310,9 +310,9 @@ public class PersisterConcerts {
    * @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
    */
   private static boolean mappingSalleIncoherent(
-      UUID salleMappee, String deptEntrant, Map<UUID, String> deptsConnus) {
+      final UUID salleMappee, final String deptEntrant, final Map<UUID, String> deptsConnus) {
     if (salleMappee == null || deptEntrant == null) return false;
-    String deptConnu = deptsConnus.get(salleMappee);
+    final String deptConnu = deptsConnus.get(salleMappee);
     return deptConnu != null && !deptConnu.equals(deptEntrant);
   }
 
@@ -336,11 +336,11 @@ public class PersisterConcerts {
    * @param liste concerts à persister
    * @return résultat avec nombre d'insertions et de mises à jour
    */
-  public ResultatPersistance persisterConcerts(List<ConcertBrut> liste) {
+  public ResultatPersistance persisterConcerts(final List<ConcertBrut> liste) {
     if (liste.isEmpty()) return new ResultatPersistance(0, 0);
 
-    List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
-    List<ConcertBrut> listeFiltree =
+    final List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
+    final List<ConcertBrut> listeFiltree =
         apresDedup.stream()
             .filter(
                 c -> {
@@ -360,9 +360,9 @@ public class PersisterConcerts {
     int totalUpdates = 0;
 
     for (int debut = 0; debut < listeFiltree.size(); debut += TAILLE_LOT) {
-      List<ConcertBrut> lot =
+      final List<ConcertBrut> lot =
           listeFiltree.subList(debut, Math.min(debut + TAILLE_LOT, listeFiltree.size()));
-      ResultatPersistance resultatLot = self.persisterLotTransactionnel(lot);
+      final ResultatPersistance resultatLot = self.persisterLotTransactionnel(lot);
       totalInserts += resultatLot.nbInseres();
       totalUpdates += resultatLot.nbMisAJour();
     }
@@ -382,8 +382,8 @@ public class PersisterConcerts {
    * @return résultat du sous-lot
    */
   @Transactional
-  ResultatPersistance persisterLotTransactionnel(List<ConcertBrut> lot) {
-    List<ValeurConcert> valeursBrutes =
+  ResultatPersistance persisterLotTransactionnel(final List<ConcertBrut> lot) {
+    final List<ValeurConcert> valeursBrutes =
         lot.stream()
             .map(
                 c ->

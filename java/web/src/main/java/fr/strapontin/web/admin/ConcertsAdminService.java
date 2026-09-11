@@ -29,7 +29,7 @@ public class ConcertsAdminService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
-  public ConcertsAdminService(NamedParameterJdbcTemplate jdbc, LogAdminService logAdminService) {
+  public ConcertsAdminService(final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
   }
@@ -40,21 +40,21 @@ public class ConcertsAdminService {
    * @param page numéro de page (0-indexé)
    * @return page de concerts en attente de revue
    */
-  public ReponseConcertsAConfirmer lister(int page) {
-    int pageNum = Math.max(0, page);
-    Map<String, Object> paramsPage =
+  public ReponseConcertsAConfirmer lister(final int page) {
+    final int pageNum = Math.max(0, page);
+    final Map<String, Object> paramsPage =
         Map.of("taille", TAILLE_PAGE_DEFAUT, "offset", pageNum * TAILLE_PAGE_DEFAUT);
-    long[] total = {0};
-    List<ConcertSuppressionSuggeree> concerts =
+    final long[] total = {0};
+    final List<ConcertSuppressionSuggeree> concerts =
         jdbc.query(
             """
-            SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
-                   c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre
-            FROM concerts c
-            WHERE c.suppression_suggeree_le IS NOT NULL
-            ORDER BY c.suppression_suggeree_le DESC
-            LIMIT :taille OFFSET :offset
-            """,
+                SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
+                       c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre
+                FROM concerts c
+                WHERE c.suppression_suggeree_le IS NOT NULL
+                ORDER BY c.suppression_suggeree_le DESC
+                LIMIT :taille OFFSET :offset
+                """,
             paramsPage,
             (rs, _) -> {
               total[0] = rs.getLong("total_filtre");
@@ -72,7 +72,7 @@ public class ConcertsAdminService {
     // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
     // second aller-retour reste alors nécessaire pour connaître le total réel.
     if (concerts.isEmpty() && pageNum > 0) {
-      Long totalVide =
+      final Long totalVide =
           jdbc.queryForObject(
               "SELECT COUNT(*) FROM concerts WHERE suppression_suggeree_le IS NOT NULL",
               Map.of(),
@@ -80,7 +80,7 @@ public class ConcertsAdminService {
       total[0] = totalVide != null ? totalVide : 0;
     }
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
     return new ReponseConcertsAConfirmer(concerts, pageNum, totalPages, total[0]);
   }
 
@@ -90,8 +90,8 @@ public class ConcertsAdminService {
    * @param id UUID du concert
    * @return {@code true} si un concert flagué correspondant a été supprimé
    */
-  public boolean confirmerSuppression(UUID id) {
-    int lignes =
+  public boolean confirmerSuppression(final UUID id) {
+    final int lignes =
         jdbc.update(
             "DELETE FROM evenements WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT"
                 + " NULL",
@@ -113,14 +113,14 @@ public class ConcertsAdminService {
    * @param id UUID du concert
    * @return {@code true} si un concert flagué correspondant a été restauré
    */
-  public boolean annulerSuppression(UUID id) {
-    int lignes =
+  public boolean annulerSuppression(final UUID id) {
+    final int lignes =
         jdbc.update(
             """
-            UPDATE evenements
-            SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL
-            WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT NULL
-            """,
+                UPDATE evenements
+                SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL
+                WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT NULL
+                """,
             Map.of("id", id.toString()));
     if (lignes > 0) {
       logAdminService.logAdmin(

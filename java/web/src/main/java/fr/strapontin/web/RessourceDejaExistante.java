@@ -21,7 +21,7 @@ public class RessourceDejaExistante extends RuntimeException {
   /**
    * @param message message retourné dans la réponse JSON
    */
-  public RessourceDejaExistante(String message) {
+  public RessourceDejaExistante(final String message) {
     super(message);
   }
 }

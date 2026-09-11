@@ -66,7 +66,7 @@ class WatchdogWorkerServiceTest {
 
   @Test
   void verifier_workerActifRecemment_neConsultePasLeDestinataire() {
-    Timestamp recent = Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS));
+    final Timestamp recent = Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(recent);
 
     service.verifier();

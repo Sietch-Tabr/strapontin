@@ -50,7 +50,7 @@ public final class ClientNominatim {
    * @param restClient client HTTP à utiliser
    * @param cadenceur limiteur de débit à utiliser
    */
-  ClientNominatim(RestClient restClient, CadenceurAppels cadenceur) {
+  ClientNominatim(final RestClient restClient, final CadenceurAppels cadenceur) {
     this.restClient = restClient;
     this.cadenceur = cadenceur;
   }
@@ -74,16 +74,16 @@ public final class ClientNominatim {
    * @return les coordonnées du meilleur résultat, vide si aucun résultat ou en cas d'erreur
    *   (journalisée, jamais propagée)
    */
-  public Optional<Coordonnees> geocoder(String nom) {
+  public Optional<Coordonnees> geocoder(final String nom) {
     cadenceur.attendre();
     try {
-      String url =
+      final String url =
           BASE_URL
               + "?q="
               + URLEncoder.encode(nom, StandardCharsets.UTF_8)
               + "&format=json&limit=1&countrycodes=fr";
-      @SuppressWarnings("unchecked")
-      List<Map<String, Object>> resultats =
+      @SuppressWarnings("unchecked") final
+          List<Map<String, Object>> resultats =
           restClient.get().uri(url).header("User-Agent", USER_AGENT).retrieve().body(List.class);
       return extraireCoordonnees(resultats);
     } catch (Exception e) {
@@ -92,11 +92,11 @@ public final class ClientNominatim {
     }
   }
 
-  private static Optional<Coordonnees> extraireCoordonnees(List<Map<String, Object>> resultats) {
+  private static Optional<Coordonnees> extraireCoordonnees(final List<Map<String, Object>> resultats) {
     if (resultats == null || resultats.isEmpty()) return Optional.empty();
-    Map<String, Object> premier = resultats.get(0);
-    Object latBrut = premier.get("lat");
-    Object lonBrut = premier.get("lon");
+    final Map<String, Object> premier = resultats.get(0);
+    final Object latBrut = premier.get("lat");
+    final Object lonBrut = premier.get("lon");
     if (latBrut == null || lonBrut == null) return Optional.empty();
     try {
       return Optional.of(

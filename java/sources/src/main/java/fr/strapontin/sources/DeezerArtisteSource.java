@@ -79,7 +79,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
    *
    * @param restClient client HTTP à utiliser
    */
-  public DeezerArtisteSource(RestClient restClient) {
+  public DeezerArtisteSource(final RestClient restClient) {
     this.restClient = restClient;
   }
 
@@ -89,10 +89,10 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   }
 
   @Override
-  public Map<UUID, EnrichissementArtiste> enrichirLot(List<ArtisteAEnrichir> artistes) {
-    Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
+  public Map<UUID, EnrichissementArtiste> enrichirLot(final List<ArtisteAEnrichir> artistes) {
+    final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
     for (ArtisteAEnrichir artiste : artistes) {
-      Optional<EnrichissementArtiste> enrichissement =
+      final Optional<EnrichissementArtiste> enrichissement =
           artiste.deezerId() != null ? confirmerNom(artiste) : decouvrirParNom(artiste);
       enrichissement.ifPresent(e -> resultats.put(artiste.id(), e));
     }
@@ -100,22 +100,22 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   }
 
   @SuppressWarnings("unchecked")
-  private Optional<EnrichissementArtiste> decouvrirParNom(ArtisteAEnrichir artiste) {
+  private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return Optional.empty();
-      var dataList = (List<Map<String, Object>>) data.get("data");
+      final var dataList = (List<Map<String, Object>>) data.get("data");
       if (dataList == null) return Optional.empty();
 
       for (var candidat : dataList) {
-        String nomCandidat = (String) candidat.get("name");
+        final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null
             || !Normalisation.normaliserTexte(nomCandidat).equals(artiste.nomNorm())) {
           continue;
         }
-        Object idCandidat = candidat.get("id");
+        final Object idCandidat = candidat.get("id");
         if (idCandidat == null) continue;
         return Optional.of(
             new EnrichissementArtiste(
@@ -129,15 +129,15 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     }
   }
 
-  private static String encode(String s) {
+  private static String encode(final String s) {
     return URLEncoder.encode(s, StandardCharsets.UTF_8);
   }
 
   @SuppressWarnings("unchecked")
-  private Optional<EnrichissementArtiste> confirmerNom(ArtisteAEnrichir artiste) {
+  private Optional<EnrichissementArtiste> confirmerNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      Map<String, Object> data =
+      final Map<String, Object> data =
           restClient
               .get()
               .uri(DEEZER_BASE + "/artist/" + artiste.deezerId())
@@ -146,7 +146,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       if (data == null || data.get("name") == null || data.containsKey("error")) {
         return Optional.empty();
       }
-      String nomCanonique = (String) data.get("name");
+      final String nomCanonique = (String) data.get("name");
       return Optional.of(
           new EnrichissementArtiste(
               artiste.wikidataId(), nomCanonique, artiste.deezerId(), null, null));

@@ -35,10 +35,10 @@ public class WorkerService {
   private final WorkerStatsService workerStatsService;
 
   public WorkerService(
-      RecalculerMatchesService recalculerMatchesService,
-      NotificationDigestService notificationDigestService,
-      ReconciliationNocturneService reconciliationNocturneService,
-      WorkerStatsService workerStatsService) {
+      final RecalculerMatchesService recalculerMatchesService,
+      final NotificationDigestService notificationDigestService,
+      final ReconciliationNocturneService reconciliationNocturneService,
+      final WorkerStatsService workerStatsService) {
     this.recalculerMatchesService = recalculerMatchesService;
     this.notificationDigestService = notificationDigestService;
     this.reconciliationNocturneService = reconciliationNocturneService;
@@ -50,13 +50,13 @@ public class WorkerService {
    *
    * @param userIds IDs à recalculer, ou {@code null} pour tous
    */
-  public void executerRecalculerMatches(List<String> userIds) {
+  public void executerRecalculerMatches(final List<String> userIds) {
     log.info("recalculer:matches démarré userIds={}", userIds);
     workerStatsService.executerAvecStats(
         log,
         "recalculer:matches",
         () -> {
-          int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
+          final int nbUsers = recalculerMatchesService.recalculerMatches(userIds);
           notificationDigestService.executerDigest("temps_reel");
           log.info("recalculer:matches terminé users={}", nbUsers);
           return new ResultatPersistance(0, 0);
@@ -73,7 +73,7 @@ public class WorkerService {
         log,
         "reconciliation:nocturne",
         () -> {
-          var bilan = reconciliationNocturneService.executer();
+          final var bilan = reconciliationNocturneService.executer();
           log.info(
               "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
                   + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"

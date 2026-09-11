@@ -45,10 +45,10 @@ public class ResendWebhookController {
   private final LogAdminService logAdminService;
 
   public ResendWebhookController(
-      ConfigService configService,
-      EmailAlerteService emailAlerteService,
-      ObjectMapper objectMapper,
-      LogAdminService logAdminService) {
+      final ConfigService configService,
+      final EmailAlerteService emailAlerteService,
+      final ObjectMapper objectMapper,
+      final LogAdminService logAdminService) {
     this.configService = configService;
     this.emailAlerteService = emailAlerteService;
     this.objectMapper = objectMapper;
@@ -69,12 +69,12 @@ public class ResendWebhookController {
    */
   @PostMapping(value = "/api/webhooks/resend", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Void> recevoirEvenement(
-      @RequestHeader(value = "svix-id", required = false) String svixId,
-      @RequestHeader(value = "svix-timestamp", required = false) String svixTimestamp,
-      @RequestHeader(value = "svix-signature", required = false) String svixSignature,
-      @RequestBody String corpsRaw) {
+      @RequestHeader(value = "svix-id", required = false) final String svixId,
+      @RequestHeader(value = "svix-timestamp", required = false) final String svixTimestamp,
+      @RequestHeader(value = "svix-signature", required = false) final String svixSignature,
+      @RequestBody final String corpsRaw) {
 
-    Optional<String> secret = configService.lireConfig("RESEND_WEBHOOK_SECRET");
+    final Optional<String> secret = configService.lireConfig("RESEND_WEBHOOK_SECRET");
     if (secret.isEmpty()) {
       log.warn("RESEND_WEBHOOK_SECRET absent — webhook Resend rejeté");
       return ResponseEntity.badRequest().build();
@@ -116,11 +116,11 @@ public class ResendWebhookController {
    * @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta
    *   {@code logs_admin} pour permettre un rejeu ciblé depuis l'admin
    */
-  void traiterEvenement(String corpsRaw, String svixId) {
+  void traiterEvenement(final String corpsRaw, final String svixId) {
     try {
-      JsonNode racine = objectMapper.readTree(corpsRaw);
-      String type = racine.path("type").asText("");
-      String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
+      final JsonNode racine = objectMapper.readTree(corpsRaw);
+      final String type = racine.path("type").asText("");
+      final String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
 
       // email.bounced et email.complained (plainte spam) reçoivent le même traitement :
       // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
@@ -143,14 +143,14 @@ public class ResendWebhookController {
    * via l'API Resend (cf. {@code ResendWebhooksAdminService}).
    */
   private void traiterIncidentEmail(
-      String libelle, String messageLogAdmin, String email, String svixId) {
-    String emailHash = String.valueOf(email.hashCode());
+      final String libelle, final String messageLogAdmin, final String email, final String svixId) {
+    final String emailHash = String.valueOf(email.hashCode());
     log.warn("{} email Resend : emailHash={}", libelle, emailHash);
     logAdminService.logAdmin(
         "warn", "web", messageLogAdmin, Map.of("email", emailHash, "svixId", nvl(svixId)));
   }
 
-  private static String nvl(String valeur) {
+  private static String nvl(final String valeur) {
     return valeur != null ? valeur : "";
   }
 }

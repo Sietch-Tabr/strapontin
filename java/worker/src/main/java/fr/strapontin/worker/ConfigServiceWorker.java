@@ -42,7 +42,7 @@ public class ConfigServiceWorker {
    * @param jdbc   template JDBC Spring
    */
   public ConfigServiceWorker(
-      @Value("${app.config.secret}") String secret, NamedParameterJdbcTemplate jdbc) {
+      @Value("${app.config.secret}") final String secret, final NamedParameterJdbcTemplate jdbc) {
     this.cipher = new ConfigCipher(secret);
     this.jdbc = jdbc;
   }
@@ -53,9 +53,9 @@ public class ConfigServiceWorker {
    * @param cle la clé de configuration
    * @return la valeur déchiffrée, ou vide si la clé n'existe pas
    */
-  public Optional<String> lireConfig(String cle) {
+  public Optional<String> lireConfig(final String cle) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
-    List<String> lignes =
+    final List<String> lignes =
         jdbc.query(
             "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
             Map.of("cle", cle),

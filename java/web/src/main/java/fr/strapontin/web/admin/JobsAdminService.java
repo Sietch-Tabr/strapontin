@@ -43,9 +43,9 @@ public class JobsAdminService {
    * @param workerProxyService proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
    */
   public JobsAdminService(
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper objectMapper,
-      WorkerProxyService workerProxyService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final WorkerProxyService workerProxyService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.workerProxyService = workerProxyService;
@@ -57,13 +57,13 @@ public class JobsAdminService {
    * @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
    */
   public Map<String, Object> lireJobs() {
-    List<StatJob> statsJobs =
+    final List<StatJob> statsJobs =
         jdbc.query(
             """
-            SELECT type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur
-            FROM fetch_jobs
-            ORDER BY type_job
-            """,
+                SELECT type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur
+                FROM fetch_jobs
+                ORDER BY type_job
+                """,
             Map.of(),
             (rs, _) ->
                 new StatJob(
@@ -78,7 +78,7 @@ public class JobsAdminService {
                     null));
 
     QuotaTM quotaTM = null;
-    List<String> quotaJson =
+    final List<String> quotaJson =
         jdbc.queryForList(
             "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
             Map.of(),
@@ -93,7 +93,7 @@ public class JobsAdminService {
 
     Instant workerLastSuccess = null;
     try {
-      java.sql.Timestamp ts =
+      final java.sql.Timestamp ts =
           jdbc.queryForObject(
               "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
               Map.of(),
@@ -103,11 +103,11 @@ public class JobsAdminService {
       log.debug("Impossible de lire le dernier job réussi");
     }
 
-    List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();
-    Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
+    final List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();
+    final Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
 
-    QuotaTM quotaFinal = quotaTM;
-    List<StatJob> statsConnus =
+    final QuotaTM quotaFinal = quotaTM;
+    final List<StatJob> statsConnus =
         statsJobs.stream()
             .map(
                 j ->
@@ -121,15 +121,15 @@ public class JobsAdminService {
                         prochainesExec.get(j.typeJob())))
             .toList();
 
-    List<StatJob> statsComplets = completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
+    final List<StatJob> statsComplets = completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
 
     String etatQuota = "ok";
     if (quotaFinal != null && quotaFinal.total() > 0) {
-      int pct = quotaFinal.dispo() * 100 / quotaFinal.total();
+      final int pct = quotaFinal.dispo() * 100 / quotaFinal.total();
       etatQuota = pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
     }
 
-    Map<String, Object> reponse = new HashMap<>();
+    final Map<String, Object> reponse = new HashMap<>();
     reponse.put("statsJobs", statsComplets);
     reponse.put("quotaTM", quotaFinal);
     reponse.put("etatQuota", etatQuota);
@@ -152,10 +152,10 @@ public class JobsAdminService {
    * @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
    */
   static List<StatJob> completerAvecJobsJamaisExecutes(
-      List<StatJob> statsConnus, Map<String, Instant> prochainesExec) {
-    Set<String> typesConnus =
+      final List<StatJob> statsConnus, final Map<String, Instant> prochainesExec) {
+    final Set<String> typesConnus =
         statsConnus.stream().map(StatJob::typeJob).collect(Collectors.toSet());
-    List<StatJob> statsJamaisExecutes =
+    final List<StatJob> statsJamaisExecutes =
         prochainesExec.keySet().stream()
             .filter(typeJob -> !typesConnus.contains(typeJob))
             .map(
@@ -163,7 +163,7 @@ public class JobsAdminService {
                     new StatJob(typeJob, null, null, null, null, null, prochainesExec.get(typeJob)))
             .toList();
 
-    List<StatJob> statsComplets = new ArrayList<>(statsConnus);
+    final List<StatJob> statsComplets = new ArrayList<>(statsConnus);
     statsComplets.addAll(statsJamaisExecutes);
     statsComplets.sort(Comparator.comparing(StatJob::typeJob));
     return statsComplets;

@@ -26,28 +26,28 @@ class RequeteSignalementValidationTest {
 
   @Test
   void messageValide_estValide() {
-    Set<ConstraintViolation<RequeteSignalement>> violations =
+    final Set<ConstraintViolation<RequeteSignalement>> violations =
         VALIDATOR.validate(new RequeteSignalement("bug", "message test"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void message_null_estRejete() {
-    Set<ConstraintViolation<RequeteSignalement>> violations =
+    final Set<ConstraintViolation<RequeteSignalement>> violations =
         VALIDATOR.validate(new RequeteSignalement("bug", null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void message_blanc_estRejete() {
-    Set<ConstraintViolation<RequeteSignalement>> violations =
+    final Set<ConstraintViolation<RequeteSignalement>> violations =
         VALIDATOR.validate(new RequeteSignalement("bug", "   "));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void message_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteSignalement>> violations =
+    final Set<ConstraintViolation<RequeteSignalement>> violations =
         VALIDATOR.validate(new RequeteSignalement("bug", "a".repeat(2001)));
     assertFalse(violations.isEmpty());
   }
@@ -56,7 +56,7 @@ class RequeteSignalementValidationTest {
   void type_inconnu_nEstPasRejeteParBeanValidation() {
     // Le repli sur "question" pour un type inconnu est une décision métier du contrôleur, pas
     // une contrainte structurelle — voir AideRestController#signaler.
-    Set<ConstraintViolation<RequeteSignalement>> violations =
+    final Set<ConstraintViolation<RequeteSignalement>> violations =
         VALIDATOR.validate(new RequeteSignalement("pas-un-type", "message"));
     assertTrue(violations.isEmpty());
   }

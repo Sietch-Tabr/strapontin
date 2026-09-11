@@ -19,7 +19,7 @@ public class BanniereController {
 
   private final ConfigService configService;
 
-  public BanniereController(ConfigService configService) {
+  public BanniereController(final ConfigService configService) {
     this.configService = configService;
   }
 

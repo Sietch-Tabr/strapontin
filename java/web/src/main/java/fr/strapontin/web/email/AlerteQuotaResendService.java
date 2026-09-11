@@ -33,7 +33,7 @@ class AlerteQuotaResendService {
   private final EmailAlerteService emailAlerteService;
 
   AlerteQuotaResendService(
-      GestionQuotaResend gestionQuotaResend, EmailAlerteService emailAlerteService) {
+      final GestionQuotaResend gestionQuotaResend, final EmailAlerteService emailAlerteService) {
     this.gestionQuotaResend = gestionQuotaResend;
     this.emailAlerteService = emailAlerteService;
   }
@@ -44,16 +44,16 @@ class AlerteQuotaResendService {
    */
   @Scheduled(cron = "0 */15 * * * *")
   void verifier() {
-    CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
+    final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
     if (!gestionQuotaResend.seuilFranchiNonSignale(compteur)) return;
 
-    Optional<String> destinataire = emailAlerteService.obtenirDestinataireAlerte();
+    final Optional<String> destinataire = emailAlerteService.obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
       log.warn("alerteQuotaResend: aucun destinataire d'alerte disponible");
       return;
     }
 
-    boolean envoye = emailAlerteService.envoyerAlerteQuotaResend(destinataire.get(), compteur);
+    final boolean envoye = emailAlerteService.envoyerAlerteQuotaResend(destinataire.get(), compteur);
     if (envoye) {
       gestionQuotaResend.marquerAlerteEnvoyee(compteur);
     } else {

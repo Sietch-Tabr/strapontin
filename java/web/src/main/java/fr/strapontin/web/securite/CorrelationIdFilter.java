@@ -34,10 +34,10 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)
       throws ServletException, IOException {
-    String entrant = request.getHeader(HEADER);
-    String id =
+    final String entrant = request.getHeader(HEADER);
+    final String id =
         (entrant != null && CORRELATION_ID_PATTERN.matcher(entrant).matches())
             ? entrant
             : UUID.randomUUID().toString();

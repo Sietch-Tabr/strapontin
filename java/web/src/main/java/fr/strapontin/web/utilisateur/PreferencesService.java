@@ -57,12 +57,12 @@ public class PreferencesService {
    * @param salleService résolution d'UUID salle avec dédup floue
    */
   public PreferencesService(
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper objectMapper,
-      RestClient restClient,
-      LogAdminService logAdminService,
-      ArtisteService artisteService,
-      SalleService salleService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final RestClient restClient,
+      final LogAdminService logAdminService,
+      final ArtisteService artisteService,
+      final SalleService salleService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
@@ -77,7 +77,7 @@ public class PreferencesService {
    * @param contenu octets du fichier JSON
    * @return l'export désérialisé, ou {@code null} si invalide
    */
-  public ExportComplet deserialiserExport(byte[] contenu) {
+  public ExportComplet deserialiserExport(final byte[] contenu) {
     try {
       return objectMapper.readValue(contenu, ExportComplet.class);
     } catch (Exception e) {
@@ -97,7 +97,7 @@ public class PreferencesService {
    */
   @Transactional
   public ResultatImportComplet importer(
-      String userId, ExportComplet export, boolean ecraser, boolean importerConfig) {
+      final String userId, final ExportComplet export, final boolean ecraser, final boolean importerConfig) {
     int nbSupprimesArtistes = 0;
     int nbSupprimesSalles = 0;
     if (ecraser) {
@@ -118,11 +118,11 @@ public class PreferencesService {
     int[] salles = {0, 0};
 
     if (export.artistes() != null) {
-      int[] res = importerArtistes(userId, export.artistes());
+      final int[] res = importerArtistes(userId, export.artistes());
       artistes = res;
     }
     if (export.salles() != null) {
-      int[] res = importerSalles(userId, export.salles());
+      final int[] res = importerSalles(userId, export.salles());
       salles = res;
     }
 
@@ -133,7 +133,7 @@ public class PreferencesService {
     }
 
     declencherWorkerApresImport(export.salles());
-    ResultatImportComplet resultat =
+    final ResultatImportComplet resultat =
         new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
     log.info(
         "import préférences userId={} artistes={} salles={} rejetes={} mode={}",
@@ -142,8 +142,8 @@ public class PreferencesService {
         resultat.salles(),
         resultat.rejetes(),
         ecraser ? "ecraser" : "fusionner");
-    String niveauLog = ecraser ? "warn" : "info";
-    Map<String, Object> metaImport = new java.util.LinkedHashMap<>();
+    final String niveauLog = ecraser ? "warn" : "info";
+    final Map<String, Object> metaImport = new java.util.LinkedHashMap<>();
     metaImport.put("userId", userId);
     metaImport.put("artistes", resultat.artistes());
     metaImport.put("salles", resultat.salles());
@@ -163,40 +163,40 @@ public class PreferencesService {
    * @param userId identifiant de l'utilisateur
    * @return l'export complet
    */
-  public ExportComplet exporter(String userId) {
-    List<ArtisteExport> artistes =
+  public ExportComplet exporter(final String userId) {
+    final List<ArtisteExport> artistes =
         jdbc.query(
             """
-            SELECT artiste_affiche FROM user_artistes
-            WHERE user_id = :userId ORDER BY artiste_affiche
-            """,
+                SELECT artiste_affiche FROM user_artistes
+                WHERE user_id = :userId ORDER BY artiste_affiche
+                """,
             Map.of(CLE_USER_ID, userId),
             (rs, _) -> {
-              String affiche = rs.getString("artiste_affiche");
+              final String affiche = rs.getString("artiste_affiche");
               return new ArtisteExport(affiche, Normalisation.normaliserTexte(affiche));
             });
 
-    List<SalleExport> salles =
+    final List<SalleExport> salles =
         jdbc.query(
             """
-            SELECT s.salle_cle AS salle_id, s.nom
-            FROM user_salles us
-            JOIN salles s ON s.id = us.salle_id
-            WHERE us.user_id = :userId ORDER BY s.salle_cle
-            """,
+                SELECT s.salle_cle AS salle_id, s.nom
+                FROM user_salles us
+                JOIN salles s ON s.id = us.salle_id
+                WHERE us.user_id = :userId ORDER BY s.salle_cle
+                """,
             Map.of(CLE_USER_ID, userId),
             (rs, _) -> new SalleExport(rs.getString("salle_id"), null, rs.getString("nom")));
 
-    List<ConfigExport> configRows =
+    final List<ConfigExport> configRows =
         jdbc.query(
             """
-            SELECT departements, filtre_disponibles, frequence_notifications,
-                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
-            FROM user_config WHERE user_id = :userId
-            """,
+                SELECT departements, filtre_disponibles, frequence_notifications,
+                       notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
+                FROM user_config WHERE user_id = :userId
+                """,
             Map.of(CLE_USER_ID, userId),
             (rs, _) -> {
-              String[] depts =
+              final String[] depts =
                   rs.getArray("departements") != null
                       ? (String[]) rs.getArray("departements").getArray()
                       : new String[0];
@@ -224,12 +224,12 @@ public class PreferencesService {
   // exact sur nom_norm qui créait un doublon de référentiel pour une variante orthographique
   // mineure (ex. "The Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
   private int[] importerArtistes(String userId, List<ArtisteExport> artistes) {
-    Integer nbExistants =
+    final Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
             Map.of(CLE_USER_ID, userId),
             Integer.class);
-    int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
+    final int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
     int traites = 0, rejetes = 0;
     for (ArtisteExport a : artistes) {
       if (a.nom() == null || a.nom().isBlank()) {
@@ -244,9 +244,9 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      String nomSaisi = a.nom().strip();
-      String normalise = Normalisation.normaliserTexte(nomSaisi);
-      UUID artisteId = artisteService.resoudreArtisteId(nomSaisi, normalise);
+      final String nomSaisi = a.nom().strip();
+      final String normalise = Normalisation.normaliserTexte(nomSaisi);
+      final UUID artisteId = artisteService.resoudreArtisteId(nomSaisi, normalise);
       jdbc.update(
           """
           INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
@@ -264,20 +264,20 @@ public class PreferencesService {
   // sur salle_cle. Le salleId de l'export JSON n'est volontairement pas utilisé pour retrouver
   // une salle existante (comportement inchangé) — le nom est toujours re-normalisé.
   private int[] importerSalles(String userId, List<SalleExport> salles) {
-    Integer nbExistants =
+    final Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
             Map.of(CLE_USER_ID, userId),
             Integer.class);
-    int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
+    final int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
     int traites = 0, rejetes = 0;
     for (SalleExport s : salles) {
-      String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
+      final String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
       if (nomSalle == null || nomSalle.isBlank()) {
         rejetes++;
         continue;
       }
-      String salleCle = SalleService.normaliserSalleCle(nomSalle);
+      final String salleCle = SalleService.normaliserSalleCle(nomSalle);
       if (salleCle.isEmpty()) {
         rejetes++;
         continue;
@@ -286,7 +286,7 @@ public class PreferencesService {
         rejetes++;
         continue;
       }
-      UUID salleId = salleService.resoudreSalleId(nomSalle, salleCle);
+      final UUID salleId = salleService.resoudreSalleId(nomSalle, salleCle);
       jdbc.update(
           """
           INSERT INTO user_salles (user_id, salle_id)
@@ -299,8 +299,8 @@ public class PreferencesService {
     return new int[] {traites, rejetes};
   }
 
-  private void importerConfig(String userId, ConfigExport c) {
-    String[] depts =
+  private void importerConfig(final String userId, final ConfigExport c) {
+    final String[] depts =
         c.departements() != null ? c.departements().toArray(String[]::new) : new String[0];
     jdbc.update(
         """
@@ -343,7 +343,7 @@ public class PreferencesService {
             c.theme() != null ? c.theme() : "auto"));
   }
 
-  private void fusionnerDepartements(String userId, String[] nouveauxDepts) {
+  private void fusionnerDepartements(final String userId, final String[] nouveauxDepts) {
     jdbc.update(
         """
         UPDATE user_config
@@ -373,7 +373,7 @@ public class PreferencesService {
    * @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
    */
   private void declencherWorkerApresImport(List<SalleExport> salles) {
-    Runnable action =
+    final Runnable action =
         () -> {
           envoyerPostWorker(WORKER_URL + "/artiste");
           if (salles == null) return;
@@ -397,7 +397,7 @@ public class PreferencesService {
     }
   }
 
-  private void envoyerPostWorker(String url) {
+  private void envoyerPostWorker(final String url) {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient, log, url, "Déclenchement worker impossible : " + url);
   }

@@ -50,7 +50,7 @@ public class SetupService {
    * @param jdbc accès JDBC
    * @param configService lecture/écriture de la configuration applicative
    */
-  public SetupService(NamedParameterJdbcTemplate jdbc, ConfigService configService) {
+  public SetupService(final NamedParameterJdbcTemplate jdbc, final ConfigService configService) {
     this.jdbc = jdbc;
     this.configService = configService;
   }
@@ -65,7 +65,7 @@ public class SetupService {
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
-  public void setSelf(@Lazy SetupService self) {
+  public void setSelf(@Lazy final SetupService self) {
     this.self = self;
   }
 
@@ -75,7 +75,7 @@ public class SetupService {
    * @return {@code true} si au moins un utilisateur existe
    */
   public boolean estDejaConfiguree() {
-    Integer nb = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Integer.class);
+    final Integer nb = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Integer.class);
     return nb != null && nb > 0;
   }
 
@@ -90,7 +90,7 @@ public class SetupService {
    * @throws RessourceDejaExistante si l'application est déjà configurée
    * @throws ErreurMetier si les données sont invalides
    */
-  public void initialiser(RequeteSetup requete) {
+  public void initialiser(final RequeteSetup requete) {
     for (int tentative = 1; ; tentative++) {
       try {
         self.initialiserTransactionnel(requete);
@@ -113,15 +113,15 @@ public class SetupService {
    * @throws ErreurMetier si les données sont invalides
    */
   @Transactional(isolation = Isolation.SERIALIZABLE)
-  void initialiserTransactionnel(RequeteSetup requete) {
+  void initialiserTransactionnel(final RequeteSetup requete) {
     if (estDejaConfiguree()) {
       throw new RessourceDejaExistante("L'application est déjà configurée.");
     }
 
-    String identifiant =
+    final String identifiant =
         requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
-    String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
-    String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
+    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
+    final String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
 
     if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9._-]+")) {
       throw new ErreurMetier(
@@ -133,10 +133,10 @@ public class SetupService {
     if (motDePasse.length() < 12)
       throw new ErreurMetier("Le mot de passe doit contenir au moins 12 caractères.");
 
-    String userId = UUID.randomUUID().toString();
-    String hashMdp = bcrypt.encode(motDePasse);
+    final String userId = UUID.randomUUID().toString();
+    final String hashMdp = bcrypt.encode(motDePasse);
 
-    Map<String, Object> paramsUser = new HashMap<>();
+    final Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
     paramsUser.put("email", email);
     paramsUser.put("username", identifiant);
@@ -154,7 +154,7 @@ public class SetupService {
       throw new RessourceDejaExistante("L'application est déjà configurée.");
     }
 
-    String accountId = UUID.randomUUID().toString();
+    final String accountId = UUID.randomUUID().toString();
     jdbc.update(
         """
         INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
@@ -162,7 +162,7 @@ public class SetupService {
         """,
         Map.of("id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
 
-    String baseUrl = requete.baseUrl() == null ? "" : requete.baseUrl().strip();
+    final String baseUrl = requete.baseUrl() == null ? "" : requete.baseUrl().strip();
     String contactEmail = requete.contactEmail() == null ? "" : requete.contactEmail().strip();
     if (contactEmail.isEmpty()) contactEmail = email;
     if (!baseUrl.isEmpty()) configService.sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
@@ -174,7 +174,7 @@ public class SetupService {
 
   private void genererVapid() {
     try {
-      VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
+      final VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
       configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());
       configService.sauvegarderConfig("VAPID_PRIVATE_KEY", paire.clePrivee());
     } catch (Exception e) {

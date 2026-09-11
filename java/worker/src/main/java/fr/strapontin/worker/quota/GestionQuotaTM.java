@@ -47,7 +47,7 @@ public class GestionQuotaTM {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public GestionQuotaTM(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+  public GestionQuotaTM(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
@@ -63,15 +63,15 @@ public class GestionQuotaTM {
    */
   public Optional<QuotaTM> lireQuota() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_QUOTA),
               String.class);
       if (json == null) return Optional.empty();
-      QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
+      final QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
       if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
-        QuotaTM renouvele = new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
+        final QuotaTM renouvele = new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
         ecrireQuota(renouvele);
         log.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
         return Optional.of(renouvele);
@@ -90,9 +90,9 @@ public class GestionQuotaTM {
    *
    * @param quota quota à sauvegarder
    */
-  public void ecrireQuota(QuotaTM quota) {
+  public void ecrireQuota(final QuotaTM quota) {
     try {
-      String json = objectMapper.writeValueAsString(quota);
+      final String json = objectMapper.writeValueAsString(quota);
       jdbc.update(
           """
           INSERT INTO app_config (cle, valeur_chiffree)
@@ -111,11 +111,11 @@ public class GestionQuotaTM {
    * @param nomJob nom du job pour les logs
    * @return {@code true} si le job peut continuer
    */
-  public boolean verifier(String nomJob) {
-    Optional<QuotaTM> quotaOpt = lireQuota();
+  public boolean verifier(final String nomJob) {
+    final Optional<QuotaTM> quotaOpt = lireQuota();
     if (quotaOpt.isEmpty()) return true;
 
-    QuotaTM quota = quotaOpt.get();
+    final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_ABORT) {
       log.error(
           "quota TM épuisé — job annulé dispo={} total={} job={}",
@@ -144,9 +144,9 @@ public class GestionQuotaTM {
    * @return {@code true} si le cron peut s'exécuter
    */
   public boolean cronAutorise() {
-    Optional<QuotaTM> quotaOpt = lireQuota();
+    final Optional<QuotaTM> quotaOpt = lireQuota();
     if (quotaOpt.isEmpty()) return true;
-    QuotaTM quota = quotaOpt.get();
+    final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_CRON) {
       log.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
       logAdmin(
@@ -158,10 +158,10 @@ public class GestionQuotaTM {
     return true;
   }
 
-  private void logAdmin(String niveau, String message, Map<String, Object> meta) {
+  private void logAdmin(final String niveau, final String message, final Map<String, Object> meta) {
     try {
-      String metaJson = objectMapper.writeValueAsString(meta);
-      Map<String, Object> params = new HashMap<>();
+      final String metaJson = objectMapper.writeValueAsString(meta);
+      final Map<String, Object> params = new HashMap<>();
       params.put("ts", Instant.now().toEpochMilli());
       params.put("niveau", niveau);
       params.put("source", "worker");

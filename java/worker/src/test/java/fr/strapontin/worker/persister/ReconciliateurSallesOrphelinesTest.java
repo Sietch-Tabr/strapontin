@@ -35,12 +35,12 @@ class ReconciliateurSallesOrphelinesTest {
   @Test
   @SuppressWarnings("unchecked")
   void retenterSallesOrphelines_salleApparueEntreTemps_resoutLeConcert() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliateurSallesOrphelines reconciliateur = new ReconciliateurSallesOrphelines(jdbc);
-    UUID concertId = UUID.randomUUID();
-    UUID salleId = UUID.randomUUID();
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurSallesOrphelines reconciliateur = new ReconciliateurSallesOrphelines(jdbc);
+    final UUID concertId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
 
-    Map<String, Object> orphelin = new HashMap<>();
+    final Map<String, Object> orphelin = new HashMap<>();
     orphelin.put("id", concertId);
     orphelin.put("salle", "Le Zenith Toulouse Metropole");
     orphelin.put("dept", "31");
@@ -50,15 +50,15 @@ class ReconciliateurSallesOrphelinesTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              RowMapper<Object> mapper = invocation.getArgument(2);
-              ResultSet rs = mock(ResultSet.class);
+              final RowMapper<Object> mapper = invocation.getArgument(2);
+              final ResultSet rs = mock(ResultSet.class);
               when(rs.getObject("id", UUID.class)).thenReturn(salleId);
               when(rs.getString("nom_norm")).thenReturn("zenith toulouse metropole");
               when(rs.getString("dept_effectif")).thenReturn("31");
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    int resolus = reconciliateur.retenterSallesOrphelines();
+    final int resolus = reconciliateur.retenterSallesOrphelines();
 
     assertEquals(1, resolus);
     verify(jdbc)
@@ -72,11 +72,11 @@ class ReconciliateurSallesOrphelinesTest {
 
   @Test
   void retenterSallesOrphelines_aucunOrphelin_neQueryPasLesCandidats() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliateurSallesOrphelines reconciliateur = new ReconciliateurSallesOrphelines(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurSallesOrphelines reconciliateur = new ReconciliateurSallesOrphelines(jdbc);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    int resolus = reconciliateur.retenterSallesOrphelines();
+    final int resolus = reconciliateur.retenterSallesOrphelines();
 
     assertEquals(0, resolus);
   }

@@ -54,10 +54,10 @@ class AdminControllerCreerUtilisateurTest {
             configService);
   }
 
-  private static Authentication authPour(String userId) {
-    UtilisateurDetails ud =
+  private static Authentication authPour(final String userId) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", "admin", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
@@ -70,7 +70,7 @@ class AdminControllerCreerUtilisateurTest {
     when(adminService.creerUtilisateur(eq("alice@exemple.fr"), eq("admin-1"), anyString()))
         .thenReturn(Optional.of(new ResultatCreation("alice@exemple.fr", "alice123", null)));
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.creerUtilisateur(
             new RequeteCreerUtilisateur("alice@exemple.fr"), authPour("admin-1"));
 
@@ -82,7 +82,7 @@ class AdminControllerCreerUtilisateurTest {
   void creerUtilisateur_publicBaseUrlAbsente_retourne503SansAppelerLeService() {
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.empty());
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.creerUtilisateur(
             new RequeteCreerUtilisateur("alice@exemple.fr"), authPour("admin-1"));
 

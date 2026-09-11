@@ -90,8 +90,8 @@ class ReconciliationNocturneServiceTest {
             controleIntegrite);
   }
 
-  private static Map<String, Object> ligneSalleSuspecte(UUID salleId, String venueId, String nom) {
-    Map<String, Object> ligne = new HashMap<>();
+  private static Map<String, Object> ligneSalleSuspecte(final UUID salleId, final String venueId, final String nom) {
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("salle_id", salleId);
     ligne.put("identifiant_externe", venueId);
     ligne.put("nom", nom);
@@ -100,7 +100,7 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_aucunSuspect_appelleQuandMemeLesPhasesEnrichissement() {
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.sallesVerifiees());
     verify(enrichissementSalles).enrichir();
@@ -112,7 +112,7 @@ class ReconciliationNocturneServiceTest {
   void executer_incoherencesWikidataDetectees_propageLeCompteDansLeResultat() {
     when(coherenceWikidataSalle.verifier()).thenReturn(3);
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(3, resultat.incoherencesWikidata());
   }
@@ -121,7 +121,7 @@ class ReconciliationNocturneServiceTest {
   void executer_typesWikidataInvalidesDetectes_propageLeCompteDansLeResultat() {
     when(coherenceWikidataSalle.revaliderTypes()).thenReturn(2);
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(2, resultat.typesWikidataInvalides());
     verify(coherenceWikidataSalle).revaliderTypes();
@@ -129,12 +129,12 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_salleVivante_reinitialiseSuspectSansRedecouverte() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(contains("ss.source = 'ticketmaster'"), anyMap()))
         .thenReturn(List.of(ligneSalleSuspecte(salleId, "rZ123", "Zenith")));
     when(tm.verifierVenue("rZ123")).thenReturn(StatutIdTM.VIVANT);
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(1, resultat.sallesVerifiees());
     assertEquals(0, resultat.sallesRedecouvertes());
@@ -149,7 +149,7 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_salleMorteUnCandidatValide_redecouvreAutomatiquement() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(contains("ss.source = 'ticketmaster'"), anyMap()))
         .thenReturn(List.of(ligneSalleSuspecte(salleId, "ancienId", "Zenith Nantes")));
     when(tm.verifierVenue("ancienId")).thenReturn(StatutIdTM.MORT);
@@ -158,7 +158,7 @@ class ReconciliationNocturneServiceTest {
     when(tm.compterEventsVenue("nouveauId")).thenReturn(5);
     when(jdbc.queryForList(contains("FROM salle_sources WHERE"), anyMap())).thenReturn(List.of());
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(1, resultat.sallesRedecouvertes());
     assertEquals(0, resultat.ambigues());
@@ -171,13 +171,13 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_salleMorteAucunCandidatValide_loggeAmbigu() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(contains("ss.source = 'ticketmaster'"), anyMap()))
         .thenReturn(List.of(ligneSalleSuspecte(salleId, "ancienId", "Zenith Nantes")));
     when(tm.verifierVenue("ancienId")).thenReturn(StatutIdTM.MORT);
     when(tm.rechercherVenuesParNom("Zenith Nantes")).thenReturn(List.of());
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.sallesRedecouvertes());
     assertEquals(1, resultat.ambigues());
@@ -186,7 +186,7 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_salleMorteDeuxCandidatsValides_loggeAmbigu() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(contains("ss.source = 'ticketmaster'"), anyMap()))
         .thenReturn(List.of(ligneSalleSuspecte(salleId, "ancienId", "Zenith Nantes")));
     when(tm.verifierVenue("ancienId")).thenReturn(StatutIdTM.MORT);
@@ -198,7 +198,7 @@ class ReconciliationNocturneServiceTest {
     when(tm.compterEventsVenue(any())).thenReturn(2);
     when(jdbc.queryForList(contains("FROM salle_sources WHERE"), anyMap())).thenReturn(List.of());
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.sallesRedecouvertes());
     assertEquals(1, resultat.ambigues());
@@ -206,7 +206,7 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_digitickSuspect_loggeUneSeuleAlerteAgregee() {
-    Map<String, Object> ligneDigitick = new HashMap<>();
+    final Map<String, Object> ligneDigitick = new HashMap<>();
     ligneDigitick.put("identifiant_externe", "lempreinte");
     ligneDigitick.put("nom", "L'Empreinte");
     when(jdbc.queryForList(contains("source = 'digitick'"), anyMap()))
@@ -220,8 +220,8 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_artisteMortRedecouvertParNom_metAJourAutomatiquement() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligneArtiste = new HashMap<>();
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligneArtiste = new HashMap<>();
     ligneArtiste.put("artiste_id", artisteId);
     ligneArtiste.put("identifiant_externe", "ancienAttractionId");
     ligneArtiste.put("nom", "Jain");
@@ -242,8 +242,8 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_artisteMortAucunCandidat_poseNecessiteInterventionLe() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligneArtiste = new HashMap<>();
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligneArtiste = new HashMap<>();
     ligneArtiste.put("artiste_id", artisteId);
     ligneArtiste.put("identifiant_externe", "ancienAttractionId");
     ligneArtiste.put("nom", "Jain");
@@ -267,8 +267,8 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_artisteVivant_reinitialiseSuspectSansRedecouverte() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligneArtiste = new HashMap<>();
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligneArtiste = new HashMap<>();
     ligneArtiste.put("artiste_id", artisteId);
     ligneArtiste.put("identifiant_externe", "attractionIdVivant");
     ligneArtiste.put("nom", "Yelle");
@@ -288,8 +288,8 @@ class ReconciliationNocturneServiceTest {
   }
 
   private static Map<String, Object> ligneArtisteLieTM(
-      UUID artisteId, String attractionId, String nom) {
-    Map<String, Object> ligne = new HashMap<>();
+      final UUID artisteId, final String attractionId, final String nom) {
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("artiste_id", artisteId);
     ligne.put("identifiant_externe", attractionId);
     ligne.put("nom", nom);
@@ -300,12 +300,12 @@ class ReconciliationNocturneServiceTest {
   // l'identifiant soit jamais marqué "suspect" (le tribute a des événements à venir).
   @Test
   void executer_nomTMDivergeDeLArtisteSuivi_poseNecessiteInterventionLeEtJournalise() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligneArtisteLieTM(artisteId, "K8vZ9174y30", "U2")));
     when(tm.recupererNomAttraction("K8vZ9174y30")).thenReturn("U2 Experience");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(1, resultat.nomsIncoherentsTM());
     verify(jdbc)
@@ -323,14 +323,14 @@ class ReconciliationNocturneServiceTest {
   // regénérer indéfiniment le même WARN à chaque cycle.
   @Test
   void executer_nomTMDivergeDejaSignale_neJournalieQuUneFois() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "K8vZ9174y30", "U2");
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "K8vZ9174y30", "U2");
     ligne.put("necessite_intervention_le", java.time.Instant.now());
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligne));
     when(tm.recupererNomAttraction("K8vZ9174y30")).thenReturn("U2 Experience");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(1, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker, never())
@@ -339,12 +339,12 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_nomTMCoherentAvecLArtisteSuivi_neJournalieRien() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionOk", "Angele")));
     when(tm.recupererNomAttraction("attractionOk")).thenReturn("Angèle");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker, never())
@@ -353,12 +353,12 @@ class ReconciliationNocturneServiceTest {
 
   @Test
   void executer_nomAttractionIntrouvable_ignoreSansErreur() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligneArtisteLieTM(artisteId, "idMort", "Furies")));
     when(tm.recupererNomAttraction("idMort")).thenReturn(null);
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.nomsIncoherentsTM());
   }
@@ -367,12 +367,12 @@ class ReconciliationNocturneServiceTest {
   // jamais signalé.
   @Test
   void executer_nomTMDiffereParEspaceSeulement_neSignalePas() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionKK", "KrashKarma")));
     when(tm.recupererNomAttraction("attractionKK")).thenReturn("Krash Karma");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker, never())
@@ -382,12 +382,12 @@ class ReconciliationNocturneServiceTest {
   // écart purement cosmétique (article) — absorbé par containment ratio, jamais signalé.
   @Test
   void executer_nomTMDiffereParArticleSeulement_neSignalePas() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionCB", "Chemical Brothers")));
     when(tm.recupererNomAttraction("attractionCB")).thenReturn("The Chemical Brothers");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.nomsIncoherentsTM());
   }
@@ -396,14 +396,14 @@ class ReconciliationNocturneServiceTest {
   // valeur de nom TM — ne doit ni reposer le flag ni rejournaliser.
   @Test
   void executer_nomTMDejaIgnoreParAdmin_neResignalePas() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
     ligne.put("nom_tm_ignore", "-M-");
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligne));
     when(tm.recupererNomAttraction("attractionM")).thenReturn("-M-");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker, never())
@@ -415,7 +415,7 @@ class ReconciliationNocturneServiceTest {
   // ni journaliser de warn — équivalent à une acceptation manuelle admin déjà faite.
   @Test
   void executer_nomTMCorrespondAUnAliasWikidataConnu_preAcceptesSansSignalement() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid")));
     when(tm.recupererNomAttraction("attractionM")).thenReturn("-M-");
@@ -425,7 +425,7 @@ class ReconciliationNocturneServiceTest {
             org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(new String[] {"-M-"}));
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(0, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker, never())
@@ -441,14 +441,14 @@ class ReconciliationNocturneServiceTest {
   // resignaler, même si une ancienne divergence avait été acceptée.
   @Test
   void executer_nomTMChangeApresAccordAdmin_resignale() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligne = ligneArtisteLieTM(artisteId, "attractionM", "Matthieu Chedid");
     ligne.put("nom_tm_ignore", "-M-");
     when(jdbc.queryForList(contains("FROM artistes a JOIN artiste_sources asrc"), anyMap()))
         .thenReturn(List.of(ligne));
     when(tm.recupererNomAttraction("attractionM")).thenReturn("M. Chedid Tribute");
 
-    ResultatReconciliation resultat = service.executer();
+    final ResultatReconciliation resultat = service.executer();
 
     assertEquals(1, resultat.nomsIncoherentsTM());
     verify(logsAdminWorker)

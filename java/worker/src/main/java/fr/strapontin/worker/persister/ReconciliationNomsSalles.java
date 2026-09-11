@@ -41,7 +41,7 @@ class ReconciliationNomsSalles {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  ReconciliationNomsSalles(NamedParameterJdbcTemplate jdbc) {
+  ReconciliationNomsSalles(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -51,9 +51,9 @@ class ReconciliationNomsSalles {
    * @param salle nom brut de la salle
    * @return score (diacritiques favorisés, casse mixte favorisée)
    */
-  private static int scoreSalle(String salle) {
-    int diacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
-    int casseMixte = !salle.equals(salle.toUpperCase()) ? 1 : 0;
+  private static int scoreSalle(final String salle) {
+    final int diacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
+    final int casseMixte = salle.equals(salle.toUpperCase()) ? 0 : 1;
     return diacr + casseMixte;
   }
 
@@ -62,7 +62,7 @@ class ReconciliationNomsSalles {
    *
    * @param remplacements table de remplacement à résoudre sur place
    */
-  private static void resoudreChaines(Map<String, String> remplacements) {
+  private static void resoudreChaines(final Map<String, String> remplacements) {
     for (String cle : new ArrayList<>(remplacements.keySet())) {
       String valeur = cle;
       while (remplacements.containsKey(valeur) && !remplacements.get(valeur).equals(valeur)) {
@@ -81,18 +81,18 @@ class ReconciliationNomsSalles {
    * @param lot valeurs de concerts à réconcilier
    * @return lot avec {@code salleNorm} canoniques
    */
-  List<ValeurConcert> reconcilierSalles(List<ValeurConcert> lot) {
-    Map<String, String> remplacementsIntraLot = construireRemplacementsIntraLot(lot);
-    List<ValeurConcert> lotApresIntraLot =
+  List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
+    final Map<String, String> remplacementsIntraLot = construireRemplacementsIntraLot(lot);
+    final List<ValeurConcert> lotApresIntraLot =
         remplacementsIntraLot.isEmpty()
             ? lot
             : lot.stream().map(c -> appliquerRemplacementSalle(c, remplacementsIntraLot)).toList();
 
-    Set<String> artistesNorms =
+    final Set<String> artistesNorms =
         new HashSet<>(lotApresIntraLot.stream().map(ValeurConcert::artisteNorm).toList());
     if (artistesNorms.isEmpty()) return lotApresIntraLot;
 
-    List<Map<String, Object>> existants =
+    final List<Map<String, Object>> existants =
         jdbc.queryForList(
             "SELECT artiste_norm, date::text AS date, to_char(heure, 'HH24:MI') AS heure, dept,"
                 + " salle_norm"
@@ -101,9 +101,9 @@ class ReconciliationNomsSalles {
                 + " AND date >= (CURRENT_DATE - INTERVAL '7 days')",
             Map.of("artistesNorms", artistesNorms));
 
-    Map<String, List<String>> indexExistants = new HashMap<>();
+    final Map<String, List<String>> indexExistants = new HashMap<>();
     for (Map<String, Object> e : existants) {
-      String cle =
+      final String cle =
           cleReconciliation(e.get("artiste_norm"), e.get("date"), e.get("heure"), e.get("dept"));
       indexExistants.computeIfAbsent(cle, _ -> new ArrayList<>()).add((String) e.get("salle_norm"));
     }
@@ -128,7 +128,7 @@ class ReconciliationNomsSalles {
    * @return clé de regroupement
    */
   private static String cleReconciliation(
-      Object artisteNorm, Object date, Object heure, Object dept) {
+      final Object artisteNorm, final Object date, final Object heure, final Object dept) {
     return artisteNorm + "|" + date + "|" + heure + "|" + dept;
   }
 
@@ -140,22 +140,22 @@ class ReconciliationNomsSalles {
    * @param heure heure du concert, peut être {@code null}
    * @return heure au format {@code HH:mm}, ou {@code null}
    */
-  private static String formaterHeure(LocalTime heure) {
+  private static String formaterHeure(final LocalTime heure) {
     return heure == null ? null : heure.format(DateTimeFormatter.ofPattern("HH:mm"));
   }
 
-  private Map<String, String> construireRemplacementsIntraLot(List<ValeurConcert> lot) {
-    Map<String, String> remplacements = new HashMap<>();
-    Map<String, List<String>> parGroupe = new LinkedHashMap<>();
+  private Map<String, String> construireRemplacementsIntraLot(final List<ValeurConcert> lot) {
+    final Map<String, String> remplacements = new HashMap<>();
+    final Map<String, List<String>> parGroupe = new LinkedHashMap<>();
     for (ValeurConcert concert : lot) {
-      String cle =
+      final String cle =
           cleReconciliation(
               concert.artisteNorm(),
               concert.date(),
               formaterHeure(concert.heure()),
               concert.dept());
       parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
-      List<String> groupe = parGroupe.get(cle);
+      final List<String> groupe = parGroupe.get(cle);
       if (!groupe.contains(concert.salleNorm())) groupe.add(concert.salleNorm());
     }
     for (List<String> sallesNorm : parGroupe.values()) {
@@ -165,13 +165,13 @@ class ReconciliationNomsSalles {
     return remplacements;
   }
 
-  private void ajouterDoublonsSalle(List<String> sallesNorm, Map<String, String> remplacements) {
+  private void ajouterDoublonsSalle(final List<String> sallesNorm, final Map<String, String> remplacements) {
     for (int i = 0; i < sallesNorm.size(); i++) {
       for (int j = i + 1; j < sallesNorm.size(); j++) {
-        String a = sallesNorm.get(i);
-        String b = sallesNorm.get(j);
+        final String a = sallesNorm.get(i);
+        final String b = sallesNorm.get(j);
         if (CorrespondanceSalle.estDoublonSalle(a, b)) {
-          String canonique = a.length() >= b.length() ? a : b;
+          final String canonique = a.length() >= b.length() ? a : b;
           remplacements.put(a, canonique);
           remplacements.put(b, canonique);
         }
@@ -180,8 +180,8 @@ class ReconciliationNomsSalles {
   }
 
   private ValeurConcert appliquerRemplacementSalle(
-      ValeurConcert c, Map<String, String> remplacements) {
-    String canonique = remplacements.get(c.salleNorm());
+      final ValeurConcert c, final Map<String, String> remplacements) {
+    final String canonique = remplacements.get(c.salleNorm());
     if (canonique == null || canonique.equals(c.salleNorm())) return c;
     log.debug(
         "doublon salle intra-lot réconcilié entrant={} canonique={}", c.salleNorm(), canonique);
@@ -189,7 +189,7 @@ class ReconciliationNomsSalles {
   }
 
   private List<ValeurConcert> reconcilierContreBase(
-      List<ValeurConcert> lot, Map<String, List<String>> indexExistants) {
+      final List<ValeurConcert> lot, final Map<String, List<String>> indexExistants) {
     return lot.stream().map(concert -> reconcilierUnConcert(concert, indexExistants)).toList();
   }
 
@@ -207,11 +207,11 @@ class ReconciliationNomsSalles {
    * @return concert réconcilié (salleNorm canonique si un candidat correspond)
    */
   private ValeurConcert reconcilierUnConcert(
-      ValeurConcert concert, Map<String, List<String>> indexExistants) {
-    String cle =
+      final ValeurConcert concert, final Map<String, List<String>> indexExistants) {
+    final String cle =
         cleReconciliation(
             concert.artisteNorm(), concert.date(), formaterHeure(concert.heure()), concert.dept());
-    List<String> sallesExistantes = indexExistants.get(cle);
+    final List<String> sallesExistantes = indexExistants.get(cle);
     if (sallesExistantes == null || sallesExistantes.contains(concert.salleNorm())) {
       return concert;
     }
@@ -233,22 +233,22 @@ class ReconciliationNomsSalles {
    * @param concerts concerts avec {@code salleSourceId} résolus
    * @param cachesSalles map sourceId → UUID
    */
-  void absorberRenommagesSalles(List<ValeurConcert> concerts, Map<String, UUID> cachesSalles) {
-    Map<UUID, String> meilleurNom = new HashMap<>();
-    Map<UUID, Integer> meilleurScore = new HashMap<>();
+  void absorberRenommagesSalles(final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    final Map<UUID, String> meilleurNom = new HashMap<>();
+    final Map<UUID, Integer> meilleurScore = new HashMap<>();
     for (ValeurConcert c : concerts) {
       if (c.salleSourceId() == null) continue;
-      UUID salleId = cachesSalles.get(c.salleSourceId());
+      final UUID salleId = cachesSalles.get(c.salleSourceId());
       if (salleId == null) continue;
-      int score = scoreSalle(c.salle());
+      final int score = scoreSalle(c.salle());
       if (!meilleurNom.containsKey(salleId) || score > meilleurScore.get(salleId)) {
         meilleurNom.put(salleId, c.salle());
         meilleurScore.put(salleId, score);
       }
     }
     for (var entree : meilleurNom.entrySet()) {
-      String nouveauNom = entree.getValue();
-      int modifies =
+      final String nouveauNom = entree.getValue();
+      final int modifies =
           jdbc.update(
               "UPDATE salles SET nom = :nom, nom_norm = :nomNorm"
                   + " WHERE id = CAST(:uuid AS uuid) AND nom <> :nom",

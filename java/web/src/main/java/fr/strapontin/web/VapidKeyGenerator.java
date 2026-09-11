@@ -41,31 +41,31 @@ public final class VapidKeyGenerator {
    * @throws Exception si la génération de clés échoue
    */
   public static PaireVapid genererPaire() throws Exception {
-    KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+    final KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
     kpg.initialize(new ECGenParameterSpec("secp256r1"));
-    KeyPair paire = kpg.generateKeyPair();
+    final KeyPair paire = kpg.generateKeyPair();
 
-    ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
-    ECPoint w = pubKey.getW();
-    byte[] uncompressed = new byte[65];
+    final ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
+    final ECPoint w = pubKey.getW();
+    final byte[] uncompressed = new byte[65];
     uncompressed[0] = 0x04;
-    byte[] x = vers32Octets(w.getAffineX());
-    byte[] y = vers32Octets(w.getAffineY());
+    final byte[] x = vers32Octets(w.getAffineX());
+    final byte[] y = vers32Octets(w.getAffineY());
     System.arraycopy(x, 0, uncompressed, 1, 32);
     System.arraycopy(y, 0, uncompressed, 33, 32);
-    String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
+    final String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
 
-    ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
-    byte[] d = vers32Octets(privKey.getS());
-    String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(d);
+    final ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
+    final byte[] d = vers32Octets(privKey.getS());
+    final String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(d);
 
     return new PaireVapid(clePublique, clePrivee);
   }
 
-  private static byte[] vers32Octets(BigInteger n) {
-    byte[] raw = n.toByteArray();
+  private static byte[] vers32Octets(final BigInteger n) {
+    final byte[] raw = n.toByteArray();
     if (raw.length == 32) return raw;
-    byte[] result = new byte[32];
+    final byte[] result = new byte[32];
     if (raw.length > 32) {
       System.arraycopy(raw, raw.length - 32, result, 0, 32);
     } else {

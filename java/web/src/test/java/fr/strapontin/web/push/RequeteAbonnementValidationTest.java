@@ -35,21 +35,21 @@ class RequeteAbonnementValidationTest {
 
   @Test
   void endpoint_null_estRejete() {
-    Set<ConstraintViolation<RequeteAbonnement>> violations =
+    final Set<ConstraintViolation<RequeteAbonnement>> violations =
         VALIDATOR.validate(new RequeteAbonnement(null, new ClesAbonnement("p256dh", "auth")));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void keys_null_estRejete() {
-    Set<ConstraintViolation<RequeteAbonnement>> violations =
+    final Set<ConstraintViolation<RequeteAbonnement>> violations =
         VALIDATOR.validate(new RequeteAbonnement("https://push.exemple/abc", null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void keysP256dh_vide_estRejete() {
-    Set<ConstraintViolation<RequeteAbonnement>> violations =
+    final Set<ConstraintViolation<RequeteAbonnement>> violations =
         VALIDATOR.validate(
             new RequeteAbonnement("https://push.exemple/abc", new ClesAbonnement("", "auth")));
     assertFalse(violations.isEmpty());
@@ -57,7 +57,7 @@ class RequeteAbonnementValidationTest {
 
   @Test
   void endpoint_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteAbonnement>> violations =
+    final Set<ConstraintViolation<RequeteAbonnement>> violations =
         VALIDATOR.validate(
             new RequeteAbonnement("a".repeat(2049), new ClesAbonnement("p256dh", "auth")));
     assertFalse(violations.isEmpty());

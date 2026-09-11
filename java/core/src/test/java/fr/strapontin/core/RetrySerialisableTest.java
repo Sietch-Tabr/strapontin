@@ -23,40 +23,40 @@ class RetrySerialisableTest {
 
   @Test
   void executer_succesDuPremierCoup_retourneLeResultatSansRetry() {
-    AtomicInteger appels = new AtomicInteger();
-    int resultat =
-        RetrySerialisable.executer(
-            3,
-            log,
-            "test",
-            () -> {
-              appels.incrementAndGet();
-              return 42;
-            });
+    final AtomicInteger appels = new AtomicInteger();
+    final int resultat =
+            RetrySerialisable.executer(
+                    3,
+                    log,
+                    "test",
+                    () -> {
+                      appels.incrementAndGet();
+                      return 42;
+                    });
     assertEquals(42, resultat);
     assertEquals(1, appels.get());
   }
 
   @Test
   void executer_conflitPuisSucces_retenteEtRetourneLeResultat() {
-    AtomicInteger appels = new AtomicInteger();
-    int resultat =
-        RetrySerialisable.executer(
-            3,
-            log,
-            "test",
-            () -> {
-              int n = appels.incrementAndGet();
-              if (n < 2) throw new PessimisticLockingFailureException("conflit");
-              return 42;
-            });
+    final AtomicInteger appels = new AtomicInteger();
+    final int resultat =
+            RetrySerialisable.executer(
+                    3,
+                    log,
+                    "test",
+                    () -> {
+                      final int n = appels.incrementAndGet();
+                      if (n < 2) throw new PessimisticLockingFailureException("conflit");
+                      return 42;
+                    });
     assertEquals(42, resultat);
     assertEquals(2, appels.get());
   }
 
   @Test
   void executer_conflitPersistant_relanceApresMaxTentatives() {
-    AtomicInteger appels = new AtomicInteger();
+    final AtomicInteger appels = new AtomicInteger();
     assertThrows(
         PessimisticLockingFailureException.class,
         () ->
@@ -73,7 +73,7 @@ class RetrySerialisableTest {
 
   @Test
   void executer_variantesRunnable_executeLOperation() {
-    AtomicInteger appels = new AtomicInteger();
+    final AtomicInteger appels = new AtomicInteger();
     RetrySerialisable.executer(3, log, "test", appels::incrementAndGet);
     assertTrue(appels.get() >= 1);
   }

@@ -34,7 +34,7 @@ class SalleRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  SalleRepository(NamedParameterJdbcTemplate jdbc) {
+  SalleRepository(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -47,7 +47,7 @@ class SalleRepository {
    * @param userId identifiant de l'utilisateur
    * @return liste des salles suivies
    */
-  List<SalleUtilisateur> listerPourUtilisateur(String userId) {
+  List<SalleUtilisateur> listerPourUtilisateur(final String userId) {
     return jdbc.query(
         """
         SELECT us.salle_id AS id, s.nom, us.created_at,
@@ -82,7 +82,7 @@ class SalleRepository {
    * @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
    * @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
    */
-  List<Map<String, Object>> rechercherEnBase(String pattern) {
+  List<Map<String, Object>> rechercherEnBase(final String pattern) {
     return jdbc.queryForList(
         """
         SELECT salle, ville, digitick_slug FROM (
@@ -114,7 +114,7 @@ class SalleRepository {
    * @param salleId UUID stable de la salle
    * @return {@code true} si déjà présente
    */
-  boolean existePourUtilisateur(String userId, UUID salleId) {
+  boolean existePourUtilisateur(final String userId, final UUID salleId) {
     return !jdbc.queryForList(
             """
             SELECT 1 FROM user_salles
@@ -131,7 +131,7 @@ class SalleRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre de salles suivies
    */
-  int compterPourUtilisateur(String userId) {
+  int compterPourUtilisateur(final String userId) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
@@ -149,18 +149,18 @@ class SalleRepository {
    *   recherché, filtrées aux tokens d'au moins 3 caractères
    * @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
    */
-  List<Map<String, Object>> chercherCandidatsParCle(Set<String> tokens) {
+  List<Map<String, Object>> chercherCandidatsParCle(final Set<String> tokens) {
     if (tokens.isEmpty()) return List.of();
 
-    List<String> tokensList = new ArrayList<>(tokens);
-    StringBuilder whereTokens = new StringBuilder("(");
+    final List<String> tokensList = new ArrayList<>(tokens);
+    final StringBuilder whereTokens = new StringBuilder("(");
     for (int i = 0; i < tokensList.size(); i++) {
       if (i > 0) whereTokens.append(" OR ");
       whereTokens.append("salle_cle LIKE :t").append(i);
     }
     whereTokens.append(")");
 
-    MapSqlParameterSource params = new MapSqlParameterSource();
+    final MapSqlParameterSource params = new MapSqlParameterSource();
     for (int i = 0; i < tokensList.size(); i++) {
       params.addValue("t" + i, "%" + tokensList.get(i) + "%");
     }
@@ -176,8 +176,8 @@ class SalleRepository {
    * @param nom nom affiché
    * @return UUID stable de la salle (existant ou nouvellement créé)
    */
-  UUID upsertSalle(String salleCle, String nom) {
-    Map<String, Object> params = new HashMap<>();
+  UUID upsertSalle(final String salleCle, final String nom) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
     params.put("nom", nom);
     params.put("nomNorm", Normalisation.normaliserTexte(nom));
@@ -203,8 +203,8 @@ class SalleRepository {
    * @param dept numéro de département (null si inconnu)
    * @return UUID stable de la salle
    */
-  UUID upsertSalleAvecLoc(String salleCle, String nom, String ville, String dept) {
-    Map<String, Object> params = new HashMap<>();
+  UUID upsertSalleAvecLoc(final String salleCle, final String nom, final String ville, final String dept) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
     params.put("nom", nom);
     params.put("nomNorm", Normalisation.normaliserTexte(nom));
@@ -236,8 +236,8 @@ class SalleRepository {
    * @param ville nouvelle ville (null = inchangée)
    * @param dept nouveau numéro de département (null = inchangé)
    */
-  void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
-    MapSqlParameterSource params = new MapSqlParameterSource();
+  void mettreAJourSalle(final UUID salleId, final String nom, final String ville, final String dept) {
+    final MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("uuid", salleId.toString());
     params.addValue("nom", nom);
     params.addValue("nomNorm", nom != null ? Normalisation.normaliserTexte(nom) : null);
@@ -267,21 +267,21 @@ class SalleRepository {
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucune source connue
    */
-  String lireIdentifiantsSources(UUID salleId) {
-    List<Map<String, Object>> lignes =
+  String lireIdentifiantsSources(final UUID salleId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT source, identifiant_externe
-            FROM salle_sources
-            WHERE salle_id = CAST(:uuid AS uuid)
-            ORDER BY source
-            """,
+                SELECT source, identifiant_externe
+                FROM salle_sources
+                WHERE salle_id = CAST(:uuid AS uuid)
+                ORDER BY source
+                """,
             Map.of("uuid", salleId.toString()));
     if (lignes.isEmpty()) return null;
-    List<String> ids = new ArrayList<>();
+    final List<String> ids = new ArrayList<>();
     for (Map<String, Object> l : lignes) {
-      String source = (String) l.get("source");
-      String prefixe =
+      final String source = (String) l.get("source");
+      final String prefixe =
           "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
       ids.add(prefixe + ":" + l.get("identifiant_externe"));
     }
@@ -294,17 +294,17 @@ class SalleRepository {
    * @param salleId UUID de la salle
    * @return {@code true} si supprimée, {@code false} si des contraintes empêchent la suppression
    */
-  boolean supprimerSalleDigitick(UUID salleId) {
-    int nb =
+  boolean supprimerSalleDigitick(final UUID salleId) {
+    final int nb =
         jdbc.update(
             """
-            DELETE FROM salles
-            WHERE id = CAST(:uuid AS uuid)
-              AND NOT EXISTS (
-                  SELECT 1 FROM user_salles WHERE salle_id = CAST(:uuid AS uuid))
-              AND NOT EXISTS (
-                  SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
-            """,
+                DELETE FROM salles
+                WHERE id = CAST(:uuid AS uuid)
+                  AND NOT EXISTS (
+                      SELECT 1 FROM user_salles WHERE salle_id = CAST(:uuid AS uuid))
+                  AND NOT EXISTS (
+                      SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
+                """,
             Map.of("uuid", salleId.toString()));
     return nb > 0;
   }
@@ -318,7 +318,7 @@ class SalleRepository {
    * @param salleId UUID stable de la salle
    * @param wikidataId Q-ID Wikidata
    */
-  void mettreAJourWikidataId(UUID salleId, String wikidataId) {
+  void mettreAJourWikidataId(final UUID salleId, final String wikidataId) {
     jdbc.update(
         """
         UPDATE salles SET wikidata_id = COALESCE(wikidata_id, :wikidataId)
@@ -336,16 +336,16 @@ class SalleRepository {
    * @param exclureSalleId salle en cours d'attribution, exclue de la recherche
    * @return le nom affiché de la salle en conflit, si elle existe
    */
-  Optional<String> trouverConflitDigitickSlug(String slug, UUID exclureSalleId) {
-    List<Map<String, Object>> lignes =
+  Optional<String> trouverConflitDigitickSlug(final String slug, final UUID exclureSalleId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
-            FROM salle_sources ss
-            JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
-              AND ss.salle_id != CAST(:uuid AS uuid)
-            """,
+                SELECT COALESCE(s.nom_affiche, s.nom) AS nom
+                FROM salle_sources ss
+                JOIN salles s ON s.id = ss.salle_id
+                WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
+                  AND ss.salle_id != CAST(:uuid AS uuid)
+                """,
             Map.of("slug", slug, "uuid", exclureSalleId.toString()));
     return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get("nom"));
   }
@@ -357,7 +357,7 @@ class SalleRepository {
    * @param source nom de la source (ex. {@code "ticketmaster"})
    * @param identifiantExterne identifiant dans la source externe
    */
-  void enregistrerSalleSource(UUID salleId, String source, String identifiantExterne) {
+  void enregistrerSalleSource(final UUID salleId, final String source, final String identifiantExterne) {
     jdbc.update(
         """
         INSERT INTO salle_sources (salle_id, source, identifiant_externe)
@@ -376,7 +376,7 @@ class SalleRepository {
    * @param userId identifiant de l'utilisateur
    * @param salleId UUID stable de la salle
    */
-  void ajouterPourUtilisateur(String userId, UUID salleId) {
+  void ajouterPourUtilisateur(final String userId, final UUID salleId) {
     jdbc.update(
         """
         INSERT INTO user_salles (user_id, salle_id)
@@ -392,7 +392,7 @@ class SalleRepository {
    * @param salleId UUID stable de la salle
    * @return le nombre de lignes réellement supprimées (0 si la salle n'était pas suivie)
    */
-  int supprimerPourUtilisateur(String userId, UUID salleId) {
+  int supprimerPourUtilisateur(final String userId, final UUID salleId) {
     return jdbc.update(
         """
         DELETE FROM user_salles

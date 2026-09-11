@@ -50,8 +50,8 @@ class ReferentielArtistesServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              RowMapper<ArtisteReferentiel> mapper = invocation.getArgument(2);
-              ResultSet rs = mock(ResultSet.class);
+              final RowMapper<ArtisteReferentiel> mapper = invocation.getArgument(2);
+              final ResultSet rs = mock(ResultSet.class);
               when(rs.getObject("id", UUID.class)).thenReturn(UUID.randomUUID());
               when(rs.getString("nom")).thenReturn("Jain");
               when(rs.getString("nom_affiche")).thenReturn("Jain");
@@ -65,7 +65,7 @@ class ReferentielArtistesServiceTest {
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    ReponseReferentielArtistes reponse = service.lister(0, "Jain", null, false);
+    final ReponseReferentielArtistes reponse = service.lister(0, "Jain", null, false);
 
     assertEquals(1, reponse.artistes().size());
     assertEquals(1L, reponse.totalArtistes());
@@ -114,7 +114,7 @@ class ReferentielArtistesServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(1L);
 
-    ReponseReferentielArtistes reponse = service.lister(5, null, null, false);
+    final ReponseReferentielArtistes reponse = service.lister(5, null, null, false);
 
     assertEquals(1L, reponse.totalArtistes());
     assertTrue(reponse.artistes().isEmpty());
@@ -124,10 +124,10 @@ class ReferentielArtistesServiceTest {
   // jamais s'auto-corriger via COALESCE, il faut explicitement effacer pour redevenir candidat.
   @Test
   void reinitialiserEnrichissement_artisteExistant_effaceLesTroisChamps() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean maj = service.reinitialiserEnrichissement(id);
+    final boolean maj = service.reinitialiserEnrichissement(id);
 
     assertTrue(maj);
     verify(jdbc)
@@ -152,10 +152,10 @@ class ReferentielArtistesServiceTest {
   // passer par une fusion.
   @Test
   void ignorerIntervention_artisteAvecSourceFlaggee_effaceEtLogueEtRetourneTrue() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean maj = service.ignorerIntervention(id);
+    final boolean maj = service.ignorerIntervention(id);
 
     assertTrue(maj);
     verify(jdbc)
@@ -179,10 +179,10 @@ class ReferentielArtistesServiceTest {
   // alternative à la fusion pour un simple mauvais lien (attractionId erroné).
   @Test
   void corrigerIdentifiantTm_artisteAvecSourceTicketmaster_metAJourEtReinitialiseLaSante() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean maj = service.corrigerIdentifiantTm(id, "K8vZ917G1B7");
+    final boolean maj = service.corrigerIdentifiantTm(id, "K8vZ917G1B7");
 
     assertTrue(maj);
     verify(jdbc)
@@ -228,7 +228,7 @@ class ReferentielArtistesServiceTest {
 
   @Test
   void fusionner_uuidIdentiques_retourneFalseSansAppelBase() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
 
     assertFalse(service.fusionner(id, id));
     verify(jdbc, never()).queryForObject(anyString(), anyMap(), eq(Long.class));
@@ -245,10 +245,10 @@ class ReferentielArtistesServiceTest {
   @Test
   void fusionner_nominal_reassigneEtSupprimeLaSource() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    UUID cible = UUID.randomUUID();
-    UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
 
-    boolean fusionne = service.fusionner(cible, source);
+    final boolean fusionne = service.fusionner(cible, source);
 
     assertTrue(fusionne);
     verify(jdbc, times(1)).update(contains("DELETE FROM observations o1"), anyMap());
@@ -274,8 +274,8 @@ class ReferentielArtistesServiceTest {
   @Test
   void fusionner_evenementEnConflitCoteCible_reporteLesObservationsAvantRemapping() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    UUID cible = UUID.randomUUID();
-    UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
 
     service.fusionner(cible, source);
 
@@ -306,10 +306,10 @@ class ReferentielArtistesServiceTest {
   @Test
   void fusionner_conflitSourceCommune_supprimeLaLigneSuspecte() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    UUID cible = UUID.randomUUID();
-    UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
 
-    Map<String, Object> conflit =
+    final Map<String, Object> conflit =
         Map.of(
             "source",
             "ticketmaster",
@@ -328,7 +328,7 @@ class ReferentielArtistesServiceTest {
     when(jdbc.queryForList(contains("FROM artiste_sources src"), anyMap()))
         .thenReturn(List.of(conflit));
 
-    boolean fusionne = service.fusionner(cible, source);
+    final boolean fusionne = service.fusionner(cible, source);
 
     assertTrue(fusionne);
     verify(jdbc)

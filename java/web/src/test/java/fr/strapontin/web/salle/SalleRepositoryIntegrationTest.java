@@ -38,7 +38,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeAll
   static void migrerBase() {
-    DriverManagerDataSource dataSource = new DriverManagerDataSource();
+    final DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
@@ -56,7 +56,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
     repository = new SalleRepository(jdbc);
   }
 
-  private UUID creerSalle(String salleCle) {
+  private UUID creerSalle(final String salleCle) {
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:cle, :cle, :cle)",
         Map.of("cle", salleCle));
@@ -68,40 +68,40 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void lireIdentifiantsSources_sourceTicketmaster_abregeLePrefixeEnTm() {
-    UUID salleId = creerSalle("zenith paris");
+    final UUID salleId = creerSalle("zenith paris");
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), 'ticketmaster', 'rZASnyZ1eE')",
         Map.of("uuid", salleId.toString()));
 
-    String identifiants = repository.lireIdentifiantsSources(salleId);
+    final String identifiants = repository.lireIdentifiantsSources(salleId);
 
     assertEquals("tm:rZASnyZ1eE", identifiants);
   }
 
   @Test
   void lireIdentifiantsSources_sourceDigitick_conservePrefixeInchange() {
-    UUID salleId = creerSalle("lempreinte");
+    final UUID salleId = creerSalle("lempreinte");
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
             + " VALUES (CAST(:uuid AS uuid), 'digitick', 'lempreinte')",
         Map.of("uuid", salleId.toString()));
 
-    String identifiants = repository.lireIdentifiantsSources(salleId);
+    final String identifiants = repository.lireIdentifiantsSources(salleId);
 
     assertEquals("digitick:lempreinte", identifiants);
   }
 
   @Test
   void lireIdentifiantsSources_plusieursSources_melangeAbregeEtInchange() {
-    UUID salleId = creerSalle("bataclan");
+    final UUID salleId = creerSalle("bataclan");
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
             + " (CAST(:uuid AS uuid), 'ticketmaster', 'rZ6SnyZe6d'),"
             + " (CAST(:uuid AS uuid), 'eventim', 'internal:le bataclan')",
         Map.of("uuid", salleId.toString()));
 
-    String identifiants = repository.lireIdentifiantsSources(salleId);
+    final String identifiants = repository.lireIdentifiantsSources(salleId);
 
     assertTrue(identifiants.contains("tm:rZ6SnyZe6d"));
     assertTrue(identifiants.contains("eventim:internal:le bataclan"));
@@ -112,7 +112,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void lireIdentifiantsSources_aucuneSource_retourneNull() {
-    UUID salleId = creerSalle("salle sans source");
+    final UUID salleId = creerSalle("salle sans source");
 
     assertNull(repository.lireIdentifiantsSources(salleId));
   }
@@ -123,9 +123,9 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   // toute salle ajoutée via le flux interactif (recherche Nominatim).
   @Test
   void upsertSalle_nomAvecApostropheEtEspaces_nomNormConserveLesEspaces() {
-    UUID salleId = repository.upsertSalle("lempreinte", "L'Empreinte");
+    final UUID salleId = repository.upsertSalle("lempreinte", "L'Empreinte");
 
-    String nomNorm =
+    final String nomNorm =
         jdbc.queryForObject(
             "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
 
@@ -134,10 +134,10 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void upsertSalleAvecLoc_nomAvecEspaces_nomNormConserveLesEspaces() {
-    UUID salleId =
+    final UUID salleId =
         repository.upsertSalleAvecLoc("accorhotelsarena", "Accorhotels Arena", "Paris", "75");
 
-    String nomNorm =
+    final String nomNorm =
         jdbc.queryForObject(
             "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
 
@@ -149,11 +149,11 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   // le matching Wikidata/Overpass exactement comme.
   @Test
   void mettreAJourSalle_nouveauNom_recalculeNomNorm() {
-    UUID salleId = repository.upsertSalle("elyseemontmartre", "Elysee Montmartre");
+    final UUID salleId = repository.upsertSalle("elyseemontmartre", "Elysee Montmartre");
 
     repository.mettreAJourSalle(salleId, "Élysée Montmartre", null, null);
 
-    String nomNorm =
+    final String nomNorm =
         jdbc.queryForObject(
             "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
 
@@ -162,11 +162,11 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void mettreAJourSalle_nomNull_conserveNomNormExistant() {
-    UUID salleId = repository.upsertSalle("elyseemontmartre", "Élysée Montmartre");
+    final UUID salleId = repository.upsertSalle("elyseemontmartre", "Élysée Montmartre");
 
     repository.mettreAJourSalle(salleId, null, "Paris", "75");
 
-    String nomNorm =
+    final String nomNorm =
         jdbc.queryForObject(
             "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
 
@@ -178,8 +178,8 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   // concerts.salle_cle/salles.nom_cle (colonnes générées indexées, V49). Ces tests valident que
   // la requête retourne toujours les mêmes résultats après le passage aux nouvelles colonnes.
 
-  private void creerConcert(String artiste, String salle, UUID salleId) {
-    UUID evenementId =
+  private void creerConcert(final String artiste, final String salle, final UUID salleId) {
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id)"
                 + " VALUES (:artisteNorm, '2026-06-15', :salleNorm, CAST(:salleId AS uuid))"
@@ -199,7 +199,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   void rechercherEnBase_concertNonResolu_trouveParNomApprochant() {
     creerConcert("Radiohead", "Zenith Paris", null);
 
-    List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
+    final List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
 
     assertEquals(1, resultats.size());
     assertEquals("Zenith Paris", resultats.get(0).get("salle"));
@@ -210,10 +210,10 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
     // Un concert déjà résolu (salle_id renseigné) n'est plus jamais trouvé via la branche
     // "concerts non résolus" (salle_id IS NULL) — il ne peut apparaître que via la branche
     // référentiel, une seule fois malgré le concert associé (DISTINCT sur l'union).
-    UUID salleId = creerSalle("zenithparis");
+    final UUID salleId = creerSalle("zenithparis");
     creerConcert("Radiohead", "Zenith Paris", salleId);
 
-    List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
+    final List<Map<String, Object>> resultats = repository.rechercherEnBase("%zenithparis%");
 
     assertEquals(1, resultats.size());
     assertEquals("zenithparis", resultats.get(0).get("salle"));
@@ -221,7 +221,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void rechercherEnBase_salleDigitick_retourneSonSlug() {
-    UUID salleId = creerSalle("bataclan");
+    final UUID salleId = creerSalle("bataclan");
     jdbc.update(
         "UPDATE salles SET nom = 'Bataclan', nom_norm = 'bataclan' WHERE id = :id",
         Map.of("id", salleId));
@@ -230,7 +230,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
             + " VALUES (CAST(:uuid AS uuid), 'digitick', 'le-bataclan')",
         Map.of("uuid", salleId.toString()));
 
-    List<Map<String, Object>> resultats = repository.rechercherEnBase("%bataclan%");
+    final List<Map<String, Object>> resultats = repository.rechercherEnBase("%bataclan%");
 
     assertEquals(1, resultats.size());
     assertEquals("le-bataclan", resultats.get(0).get("digitick_slug"));
@@ -240,7 +240,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   void rechercherEnBase_salleReferentielSansConcertNiDigitick_nApparaitPas() {
     creerSalle("salle inconnue du public");
 
-    List<Map<String, Object>> resultats = repository.rechercherEnBase("%salleinconnue%");
+    final List<Map<String, Object>> resultats = repository.rechercherEnBase("%salleinconnue%");
 
     assertTrue(resultats.isEmpty());
   }

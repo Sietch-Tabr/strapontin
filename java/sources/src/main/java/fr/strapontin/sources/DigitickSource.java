@@ -9,6 +9,7 @@ import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +43,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   static final String PREFIXE = "digitick:";
   private static final String URL_BILLETTERIE =
       "https://web.digitick.com/ext/billetterie5/index.php?site={slug}&action=ajax&op=1";
-  private static final Charset CHARSET_DIGITICK = Charset.forName("ISO-8859-1");
+  private static final Charset CHARSET_DIGITICK = StandardCharsets.ISO_8859_1;
   private static final String GENRE_CONCERT = "Concert";
   private static final String SEL_EVENEMENTS = "dl[class~=evenement\\d+]";
   private static final String SEL_NOM = "a.evenementNom";
@@ -65,7 +66,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   private static RestClient creerRestClient() {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(10));
     factory.setReadTimeout(Duration.ofSeconds(15));
     return RestClient.builder()
@@ -84,7 +85,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    *
    * @param restClient client HTTP à utiliser
    */
-  public DigitickSource(RestClient restClient) {
+  public DigitickSource(final RestClient restClient) {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
   }
 
@@ -94,7 +95,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   @Override
-  public boolean accepteIdentifiantSalle(String identifiant) {
+  public boolean accepteIdentifiantSalle(final String identifiant) {
     return identifiant != null && identifiant.startsWith(PREFIXE);
   }
 
@@ -105,21 +106,21 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return liste des concerts trouvés, vide si la salle est inaccessible ou sans concert
    */
   @Override
-  public List<ConcertBrut> fetchSalle(String identifiant) {
-    String slug = identifiant.substring(PREFIXE.length());
+  public List<ConcertBrut> fetchSalle(final String identifiant) {
+    final String slug = identifiant.substring(PREFIXE.length());
     if (slug.isBlank()) {
       log.warn("Digitick fetchSalle — slug vide pour identifiant={}", identifiant);
       return List.of();
     }
     compteurBilan.enregistrerAppel();
     try {
-      byte[] octets = restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
+      final byte[] octets = restClient.get().uri(URL_BILLETTERIE, slug).retrieve().body(byte[].class);
       if (octets == null || octets.length == 0) {
         log.warn("Digitick fetchSalle — réponse vide slug={}", slug);
         return List.of();
       }
-      String html = new String(octets, CHARSET_DIGITICK);
-      List<ConcertBrut> concerts = parserConcerts(html, slug);
+      final String html = new String(octets, CHARSET_DIGITICK);
+      final List<ConcertBrut> concerts = parserConcerts(html, slug);
       log.info("Digitick fetchSalle slug={} total={}", slug, concerts.size());
       return concerts;
     } catch (Exception e) {
@@ -147,53 +148,53 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param slug slug de la salle, utilisé pour construire le {@code salleSourceId}
    * @return liste de concerts filtrés
    */
-  static List<ConcertBrut> parserConcerts(String html, String slug) {
-    Document doc = Jsoup.parse(html);
-    Elements evenements = doc.select(SEL_EVENEMENTS);
-    List<ConcertBrut> concerts = new ArrayList<>();
+  static List<ConcertBrut> parserConcerts(final String html, final String slug) {
+    final Document doc = Jsoup.parse(html);
+    final Elements evenements = doc.select(SEL_EVENEMENTS);
+    final List<ConcertBrut> concerts = new ArrayList<>();
 
     for (Element ev : evenements) {
-      ConcertBrut concert = parserEvenement(ev, slug);
+      final ConcertBrut concert = parserEvenement(ev, slug);
       if (concert != null) concerts.add(concert);
     }
     return concerts;
   }
 
-  private static ConcertBrut parserEvenement(Element ev, String slug) {
+  private static ConcertBrut parserEvenement(final Element ev, final String slug) {
     // Filtre genre : uniquement les concerts
-    Element genreEl = ev.selectFirst(SEL_GENRE);
+    final Element genreEl = ev.selectFirst(SEL_GENRE);
     if (genreEl == null || !GENRE_CONCERT.equalsIgnoreCase(genreEl.ownText().trim())) return null;
 
     // Filtre CP : exclut packs multi-dates sans salle fixe
-    Element cpEl = ev.selectFirst(SEL_CODE_POSTAL);
+    final Element cpEl = ev.selectFirst(SEL_CODE_POSTAL);
     if (cpEl == null || cpEl.text().isBlank()) return null;
 
     // Date et heure depuis l'attribut datetime ISO 8601
-    Element timeEl = ev.selectFirst(SEL_DATETIME);
+    final Element timeEl = ev.selectFirst(SEL_DATETIME);
     if (timeEl == null) return null;
-    String[] datHeure = parserDatetime(timeEl.attr("datetime"));
+    final String[] datHeure = parserDatetime(timeEl.attr("datetime"));
     if (datHeure == null) return null;
 
     // Nom de l'artiste : premier lien .evenementNom, entités HTML déjà décodées par Jsoup
-    Element nomEl = ev.selectFirst(SEL_NOM);
+    final Element nomEl = ev.selectFirst(SEL_NOM);
     if (nomEl == null || nomEl.text().isBlank()) return null;
-    String artiste = normaliserCasse(nomEl.text().trim());
+    final String artiste = normaliserCasse(nomEl.text().trim());
 
     // Salle
-    Element salleNomEl = ev.selectFirst(SEL_SALLE_NOM);
-    String salle = salleNomEl != null ? salleNomEl.text().trim() : "Salle inconnue";
+    final Element salleNomEl = ev.selectFirst(SEL_SALLE_NOM);
+    final String salle = salleNomEl != null ? salleNomEl.text().trim() : "Salle inconnue";
 
     // Ville : le premier span.evenementSalleVille commence par "- Ville", le second est la ville
-    Elements villeEls = ev.select(SEL_VILLE);
-    String ville = villeEls.size() >= 2 ? villeEls.get(1).text().trim() : null;
+    final Elements villeEls = ev.select(SEL_VILLE);
+    final String ville = villeEls.size() >= 2 ? villeEls.get(1).text().trim() : null;
 
     // Département depuis code postal
-    String cp = cpEl.text().trim();
-    String dept = Normalisation.extraireDeptFrancais(cp);
+    final String cp = cpEl.text().trim();
+    final String dept = Normalisation.extraireDeptFrancais(cp);
 
     // URL d'achat
-    Element urlEl = ev.selectFirst(SEL_URL);
-    String url = urlEl != null ? urlEl.attr("href") : null;
+    final Element urlEl = ev.selectFirst(SEL_URL);
+    final String url = urlEl != null ? urlEl.attr("href") : null;
 
     return new ConcertBrut(
         artiste,
@@ -222,10 +223,10 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
    * @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
    */
-  static String normaliserCasse(String nom) {
+  static String normaliserCasse(final String nom) {
     if (nom == null || nom.isBlank()) return nom;
-    String lower = nom.toLowerCase(Locale.FRENCH);
-    StringBuilder sb = new StringBuilder(lower.length());
+    final String lower = nom.toLowerCase(Locale.FRENCH);
+    final StringBuilder sb = new StringBuilder(lower.length());
     boolean capitaliser = true;
     for (char c : lower.toCharArray()) {
       if (Character.isLetter(c)) {
@@ -247,11 +248,11 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
    * @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
    */
-  static String[] parserDatetime(String datetime) {
+  static String[] parserDatetime(final String datetime) {
     if (datetime == null || datetime.length() < 10) return null;
-    String date = datetime.substring(0, 10);
+    final String date = datetime.substring(0, 10);
     if (datetime.length() < 16) return new String[] {date, null};
-    String heure = datetime.substring(11, 16);
+    final String heure = datetime.substring(11, 16);
     return new String[] {date, "00:00".equals(heure) ? null : heure};
   }
 }

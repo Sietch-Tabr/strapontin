@@ -39,16 +39,16 @@ public class SourcesHealthIndicator implements HealthIndicator {
   private final GestionQuotaTM gestionQuotaTM;
   private final NamedParameterJdbcTemplate jdbc;
 
-  public SourcesHealthIndicator(GestionQuotaTM gestionQuotaTM, NamedParameterJdbcTemplate jdbc) {
+  public SourcesHealthIndicator(final GestionQuotaTM gestionQuotaTM, final NamedParameterJdbcTemplate jdbc) {
     this.gestionQuotaTM = gestionQuotaTM;
     this.jdbc = jdbc;
   }
 
   @Override
   public Health health() {
-    Health.Builder builder = Health.up();
+    final Health.Builder builder = Health.up();
 
-    Optional<QuotaTM> quota = gestionQuotaTM.lireQuota();
+    final Optional<QuotaTM> quota = gestionQuotaTM.lireQuota();
     quota.ifPresent(
         q -> {
           builder.withDetail("quotaTmDispo", q.dispo());
@@ -58,15 +58,15 @@ public class SourcesHealthIndicator implements HealthIndicator {
           }
         });
 
-    List<Map<String, Object>> jobsEnErreur =
+    final List<Map<String, Object>> jobsEnErreur =
         jdbc.queryForList(
             """
-            SELECT type_job, erreur FROM fetch_jobs
-            WHERE type_job LIKE 'fetch:%' AND erreur IS NOT NULL
-            """,
+                SELECT type_job, erreur FROM fetch_jobs
+                WHERE type_job LIKE 'fetch:%' AND erreur IS NOT NULL
+                """,
             Map.of());
     if (!jobsEnErreur.isEmpty()) {
-      Map<String, Object> details = new LinkedHashMap<>();
+      final Map<String, Object> details = new LinkedHashMap<>();
       for (Map<String, Object> ligne : jobsEnErreur) {
         details.put((String) ligne.get("type_job"), ligne.get("erreur"));
       }

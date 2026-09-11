@@ -20,12 +20,12 @@ public class RevoquerAdminsJob extends QuartzJobBean {
   private WorkerRevocationService workerRevocationService;
 
   @Autowired
-  public void setWorkerRevocationService(WorkerRevocationService workerRevocationService) {
+  public void setWorkerRevocationService(final WorkerRevocationService workerRevocationService) {
     this.workerRevocationService = workerRevocationService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
+  protected void executeInternal(final JobExecutionContext context) {
     workerRevocationService.executerRevoquerAdmins();
   }
 }

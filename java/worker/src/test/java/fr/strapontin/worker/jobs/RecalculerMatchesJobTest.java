@@ -15,8 +15,8 @@ class RecalculerMatchesJobTest {
 
   @Test
   void executeInternal_delegueAWorkerServicePourTousLesUsers() {
-    WorkerService workerService = mock(WorkerService.class);
-    RecalculerMatchesJob job = new RecalculerMatchesJob();
+    final WorkerService workerService = mock(WorkerService.class);
+    final RecalculerMatchesJob job = new RecalculerMatchesJob();
     job.setWorkerService(workerService);
 
     job.executeInternal(mock(JobExecutionContext.class));

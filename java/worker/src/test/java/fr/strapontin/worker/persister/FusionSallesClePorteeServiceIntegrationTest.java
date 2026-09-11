@@ -46,13 +46,13 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     jdbc.update("DELETE FROM logs_admin", Map.of());
   }
 
-  private UUID creerSalle(String nom, String dept, String wikidataId) {
+  private UUID creerSalle(final String nom, final String dept, final String wikidataId) {
     return creerSalle(nom, dept, wikidataId, null, null);
   }
 
   private UUID creerSalle(
-      String nom, String dept, String wikidataId, Double latitude, Double longitude) {
-    UUID id = UUID.randomUUID();
+      final String nom, final String dept, final String wikidataId, final Double latitude, final Double longitude) {
+    final UUID id = UUID.randomUUID();
     // wikidataId/latitude/longitude peuvent être null (Map.of rejette les valeurs nulles) —
     // MapSqlParameterSource accepte les valeurs nulles sans lever d'exception.
     jdbc.update(
@@ -71,8 +71,8 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     return id;
   }
 
-  private void creerConcert(String artisteNorm, String heure, String dept, UUID salleId) {
-    UUID evenementId =
+  private void creerConcert(final String artisteNorm, final String heure, final String dept, final UUID salleId) {
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id)"
                 + " VALUES (:artisteNorm, CAST(:date AS date), CAST(:heure AS time), 'salle',"
@@ -96,20 +96,20 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     // Cas réel documenté (#1099) : "Grand Theatre Limoges" (Eventim, sans wikidata_id) et
     // "Opera de Limoges" (TM, wikidata_id connu) désignent le même bâtiment — aucun rapport
     // textuel entre les deux noms, seul un concert partagé (artiste+date+heure+dept) le révèle.
-    UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null);
-    UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551");
+    final UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null);
+    final UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551");
     creerConcert("laurent voulzy", "20:30", "87", grandTheatre);
     creerConcert("laurent voulzy", "20:30", "87", operaLimoges);
 
-    int fusions = fusionSallesClePortee.fusionner();
+    final int fusions = fusionSallesClePortee.fusionner();
 
     assertEquals(1, fusions);
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "Une seule salle doit subsister après fusion");
-    Long nbConcerts = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long nbConcerts = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(
         1L, nbConcerts, "Les deux concerts partageant la même clé forte doivent être dédupliqués");
-    String wikidataId =
+    final String wikidataId =
         jdbc.queryForObject("SELECT wikidata_id FROM salles", Map.of(), String.class);
     assertEquals(
         "Q3354551", wikidataId, "Le wikidata_id déjà connu doit être préservé après fusion");
@@ -118,14 +118,14 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   @Test
   void fusionner_fusionEffectuee_journaliseDansLogsAdmin() {
     // Une fusion automatique et destructive ne doit jamais rester silencieuse.
-    UUID a = creerSalle("Grand Theatre Limoges", "87", null);
-    UUID b = creerSalle("Opera de Limoges", "87", "Q3354551");
+    final UUID a = creerSalle("Grand Theatre Limoges", "87", null);
+    final UUID b = creerSalle("Opera de Limoges", "87", "Q3354551");
     creerConcert("laurent voulzy", "20:30", "87", a);
     creerConcert("laurent voulzy", "20:30", "87", b);
 
     fusionSallesClePortee.fusionner();
 
-    Long nbLogs =
+    final Long nbLogs =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM logs_admin WHERE source = 'reconciliation-nocturne' AND"
                 + " message LIKE '%fusionnées%'",
@@ -138,10 +138,10 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     creerSalle("Salle A", "87", null);
     creerSalle("Salle B", "87", null);
 
-    int fusions = fusionSallesClePortee.fusionner();
+    final int fusions = fusionSallesClePortee.fusionner();
 
     assertEquals(0, fusions);
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles);
   }
 
@@ -149,15 +149,15 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // réellement distinctes.
   @Test
   void fusionner_sallesReellementDistinctesConcertCoincident_neFusionnePas() {
-    UUID arena = creerSalle("Arena du Pays d'Aix", "13", null);
-    UUID pasino = creerSalle("Pasino Grand Aix-en-Provence", "13", null);
+    final UUID arena = creerSalle("Arena du Pays d'Aix", "13", null);
+    final UUID pasino = creerSalle("Pasino Grand Aix-en-Provence", "13", null);
     creerConcert("collision upstream", "21:00", "13", arena);
     creerConcert("collision upstream", "21:00", "13", pasino);
 
-    int fusions = fusionSallesClePortee.fusionner();
+    final int fusions = fusionSallesClePortee.fusionner();
 
     assertEquals(0, fusions, "des noms sans rapport ne doivent pas fusionner malgré la clé forte");
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles);
   }
 
@@ -166,29 +166,29 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // l'une de l'autre (complexe multi-salles, ou deux bâtiments distincts par coïncidence).
   @Test
   void fusionner_coordonneesEloigneesNomsSimilaires_neFusionnePas() {
-    UUID salleParis = creerSalle("La Seine Musicale", "92", null, 48.8296, 2.2404);
-    UUID salleMarseille = creerSalle("La Seine Musicale Marseille", "13", null, 43.2965, 5.3698);
+    final UUID salleParis = creerSalle("La Seine Musicale", "92", null, 48.8296, 2.2404);
+    final UUID salleMarseille = creerSalle("La Seine Musicale Marseille", "13", null, 43.2965, 5.3698);
     creerConcert("collision upstream", "21:00", "92", salleParis);
     creerConcert("collision upstream", "21:00", "13", salleMarseille);
 
-    int fusions = fusionSallesClePortee.fusionner();
+    final int fusions = fusionSallesClePortee.fusionner();
 
     assertEquals(
         0,
         fusions,
         "des coordonnées distantes doivent bloquer la fusion malgré la clé forte et le nom");
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles);
   }
 
   @Test
   void fusionner_coordonneesProchesNomsSimilaires_fusionne() {
-    UUID salleA = creerSalle("Grand Theatre Limoges", "87", null, 45.8336, 1.2611);
-    UUID salleB = creerSalle("Opera de Limoges", "87", "Q3354551", 45.8337, 1.2612);
+    final UUID salleA = creerSalle("Grand Theatre Limoges", "87", null, 45.8336, 1.2611);
+    final UUID salleB = creerSalle("Opera de Limoges", "87", "Q3354551", 45.8337, 1.2612);
     creerConcert("laurent voulzy", "20:30", "87", salleA);
     creerConcert("laurent voulzy", "20:30", "87", salleB);
 
-    int fusions = fusionSallesClePortee.fusionner();
+    final int fusions = fusionSallesClePortee.fusionner();
 
     assertEquals(1, fusions, "des coordonnées proches ne doivent pas bloquer une fusion légitime");
   }
@@ -198,19 +198,19 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // orphelines.
   @Test
   void fusionner_sourceAvecSousSalle_reassigneLeParentIdVersLaCible() {
-    UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null);
-    UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551");
-    UUID sousSalleDeLaSource = creerSalle("Grand Theatre Limoges - Petite Salle", "87", null);
+    final UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null);
+    final UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551");
+    final UUID sousSalleDeLaSource = creerSalle("Grand Theatre Limoges - Petite Salle", "87", null);
     jdbc.update(
         "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
         Map.of("parentId", grandTheatre.toString(), "id", sousSalleDeLaSource.toString()));
     creerConcert("laurent voulzy", "20:30", "87", grandTheatre);
     creerConcert("laurent voulzy", "20:30", "87", operaLimoges);
 
-    int fusions = fusionSallesClePortee.fusionner();
+    final int fusions = fusionSallesClePortee.fusionner();
 
     assertEquals(1, fusions);
-    String parentIdApres =
+    final String parentIdApres =
         jdbc.queryForObject(
             "SELECT salle_parent_id::text FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", sousSalleDeLaSource.toString()),
@@ -226,9 +226,9 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // cible -> intermediaire -> source deviendrait intermediaire -> cible -> intermediaire.
   @Test
   void fusionner_cibleDescendanteDeLaSourceViaIntermediaire_detacheSansCreerDeCycle() {
-    UUID source = creerSalle("Grand Theatre Limoges", "87", null);
-    UUID intermediaire = creerSalle("Grand Theatre Limoges - Aile Est", "87", null);
-    UUID cible = creerSalle("Grand Theatre Limoges - Aile Est - Loge", "87", null);
+    final UUID source = creerSalle("Grand Theatre Limoges", "87", null);
+    final UUID intermediaire = creerSalle("Grand Theatre Limoges - Aile Est", "87", null);
+    final UUID cible = creerSalle("Grand Theatre Limoges - Aile Est - Loge", "87", null);
     jdbc.update(
         "UPDATE salles SET salle_parent_id = CAST(:parentId AS uuid) WHERE id = CAST(:id AS uuid)",
         Map.of("parentId", source.toString(), "id", intermediaire.toString()));
@@ -238,13 +238,13 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
 
     fusionSallesClePortee.fusionnerUnePaire(cible, source);
 
-    String parentIntermediaire =
+    final String parentIntermediaire =
         jdbc.queryForObject(
             "SELECT salle_parent_id::text FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", intermediaire.toString()),
             String.class);
     assertNull(parentIntermediaire, "l'intermédiaire doit être détaché plutôt que créer un cycle");
-    Long nbLogsCycle =
+    final Long nbLogsCycle =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM logs_admin WHERE message LIKE '%cycle salle_parent_id évité%'",
             Map.of(), Long.class);

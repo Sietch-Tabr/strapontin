@@ -37,7 +37,7 @@ public class UserConfigController {
   /**
    * @param userConfigService service de gestion de la configuration utilisateur
    */
-  public UserConfigController(UserConfigService userConfigService) {
+  public UserConfigController(final UserConfigService userConfigService) {
     this.userConfigService = userConfigService;
   }
 
@@ -48,8 +48,8 @@ public class UserConfigController {
    * @return la configuration ou valeurs par défaut si absente
    */
   @GetMapping
-  public ResponseEntity<ConfigUtilisateur> lireConfig(Authentication auth) {
-    String userId = utilisateur(auth).id();
+  public ResponseEntity<ConfigUtilisateur> lireConfig(final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(userConfigService.lireConfig(userId));
   }
 
@@ -62,17 +62,17 @@ public class UserConfigController {
    */
   @PatchMapping("/departements")
   public ResponseEntity<Map<String, Object>> majDepartements(
-      @Valid @RequestBody RequeteDepartements requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @Valid @RequestBody final RequeteDepartements requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
 
-    String brut = requete.departements() == null ? "" : requete.departements();
-    List<String> bruts =
+    final String brut = requete.departements() == null ? "" : requete.departements();
+    final List<String> bruts =
         Arrays.stream(brut.split(",")).map(String::strip).filter(s -> !s.isEmpty()).toList();
 
-    UserConfigService.ResultatMajDepartements resultat =
+    final UserConfigService.ResultatMajDepartements resultat =
         userConfigService.majDepartements(userId, bruts);
 
-    Map<String, Object> rep = new HashMap<>();
+    final Map<String, Object> rep = new HashMap<>();
     rep.put("succes", "departements");
     if (!resultat.ignores().isEmpty()) {
       rep.put("ignores", resultat.ignores());
@@ -89,8 +89,8 @@ public class UserConfigController {
    */
   @PatchMapping("/notifications")
   public ResponseEntity<Map<String, Object>> majNotifications(
-      @Valid @RequestBody RequeteNotifications requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @Valid @RequestBody final RequeteNotifications requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     userConfigService.majNotifications(userId, requete);
     return ResponseEntity.ok(Map.of("succes", "notifications"));
   }
@@ -104,8 +104,8 @@ public class UserConfigController {
    */
   @PatchMapping("/filtres")
   public ResponseEntity<Map<String, Object>> majFiltres(
-      @Valid @RequestBody RequeteFiltres requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @Valid @RequestBody final RequeteFiltres requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     userConfigService.majFiltres(userId, requete.filtreDisponibles());
     return ResponseEntity.ok(Map.of("succes", "filtres"));
   }
@@ -119,8 +119,8 @@ public class UserConfigController {
    */
   @PatchMapping("/theme")
   public ResponseEntity<Map<String, Object>> majTheme(
-      @Valid @RequestBody RequeteTheme requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @Valid @RequestBody final RequeteTheme requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     userConfigService.majTheme(userId, requete.valeur());
     return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));
   }
@@ -132,8 +132,8 @@ public class UserConfigController {
    * @return {@code {"nonVu": true|false}}
    */
   @GetMapping("/onboarding")
-  public ResponseEntity<Map<String, Object>> onboarding(Authentication auth) {
-    String userId = utilisateur(auth).id();
+  public ResponseEntity<Map<String, Object>> onboarding(final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(Map.of("nonVu", userConfigService.onboardingNonVu(userId)));
   }
 
@@ -144,13 +144,13 @@ public class UserConfigController {
    * @return 204 No Content
    */
   @PostMapping("/onboarding-vu")
-  public ResponseEntity<Void> marquerOnboardingVu(Authentication auth) {
-    String userId = utilisateur(auth).id();
+  public ResponseEntity<Void> marquerOnboardingVu(final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     userConfigService.marquerOnboardingVu(userId);
     return ResponseEntity.noContent().build();
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
 }

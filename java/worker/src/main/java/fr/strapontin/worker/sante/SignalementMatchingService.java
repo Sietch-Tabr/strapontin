@@ -30,7 +30,7 @@ public class SignalementMatchingService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public SignalementMatchingService(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+  public SignalementMatchingService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
@@ -46,13 +46,13 @@ public class SignalementMatchingService {
    * @param details métadonnées structurées, peut être {@code null}
    */
   public void signaler(
-      String type,
-      String entiteType,
-      UUID entiteId,
-      String confiance,
-      Map<String, Object> details) {
+      final String type,
+      final String entiteType,
+      final UUID entiteId,
+      final String confiance,
+      final Map<String, Object> details) {
     try {
-      String detailsJson = details != null ? objectMapper.writeValueAsString(details) : null;
+      final String detailsJson = details != null ? objectMapper.writeValueAsString(details) : null;
       jdbc.update(
           """
           INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)

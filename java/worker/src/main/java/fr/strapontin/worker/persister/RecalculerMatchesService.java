@@ -50,7 +50,7 @@ public class RecalculerMatchesService {
    * @param txManager gestionnaire de transactions (transaction par utilisateur)
    */
   public RecalculerMatchesService(
-      NamedParameterJdbcTemplate jdbc, PlatformTransactionManager txManager) {
+      final NamedParameterJdbcTemplate jdbc, final PlatformTransactionManager txManager) {
     this.jdbc = jdbc;
     this.txParUser = new TransactionTemplate(txManager);
   }
@@ -64,28 +64,28 @@ public class RecalculerMatchesService {
    * @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
    * @return nombre d'utilisateurs traités
    */
-  public int recalculerMatches(List<String> userIds) {
-    Set<String> usersAvecArtistes =
+  public int recalculerMatches(final List<String> userIds) {
+    final Set<String> usersAvecArtistes =
         new LinkedHashSet<>(
             jdbc.queryForList(
                 "SELECT DISTINCT user_id FROM user_artistes", Map.of(), String.class));
-    Set<String> usersAvecSalles =
+    final Set<String> usersAvecSalles =
         new LinkedHashSet<>(
             jdbc.queryForList("SELECT DISTINCT user_id FROM user_salles", Map.of(), String.class));
 
-    Set<String> usersSet = new LinkedHashSet<>();
+    final Set<String> usersSet = new LinkedHashSet<>();
     usersSet.addAll(usersAvecArtistes);
     usersSet.addAll(usersAvecSalles);
 
-    List<String> usersARecalculer =
+    final List<String> usersARecalculer =
         userIds != null
             ? userIds.stream().filter(usersSet::contains).toList()
             : new ArrayList<>(usersSet);
 
-    String aujourdhui = LocalDate.now().toString();
+    final String aujourdhui = LocalDate.now().toString();
 
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-      var futures =
+      final var futures =
           usersARecalculer.stream()
               .map(
                   userId ->
@@ -108,14 +108,14 @@ public class RecalculerMatchesService {
     return usersARecalculer.size();
   }
 
-  private void recalculerPourUser(String userId, String aujourdhui) {
-    List<UUID> artisteIds =
+  private void recalculerPourUser(final String userId, final String aujourdhui) {
+    final List<UUID> artisteIds =
         jdbc.queryForList(
             "SELECT artiste_id FROM user_artistes WHERE user_id = :userId",
             Map.of(CLE_USER_ID, userId),
             UUID.class);
 
-    List<UUID> salleIds =
+    final List<UUID> salleIds =
         jdbc.queryForList(
             "SELECT salle_id FROM user_salles WHERE user_id = :userId",
             Map.of(CLE_USER_ID, userId),
@@ -123,8 +123,8 @@ public class RecalculerMatchesService {
 
     if (artisteIds.isEmpty() && salleIds.isEmpty()) return;
 
-    List<String> departements = obtenirDepartementsUser(userId);
-    Set<UUID> concertIds = new LinkedHashSet<>();
+    final List<String> departements = obtenirDepartementsUser(userId);
+    final Set<UUID> concertIds = new LinkedHashSet<>();
 
     if (!artisteIds.isEmpty()) {
       concertIds.addAll(rechercherConcertsParArtistes(artisteIds, departements, aujourdhui));
@@ -148,9 +148,9 @@ public class RecalculerMatchesService {
     log.info("matches recalculés userId={} matches={}", userId, concertIds.size());
   }
 
-  private List<String> obtenirDepartementsUser(String userId) {
+  private List<String> obtenirDepartementsUser(final String userId) {
     try {
-      String[] depts =
+      final String[] depts =
           jdbc.queryForObject(
               "SELECT departements FROM user_config WHERE user_id = :userId",
               Map.of(CLE_USER_ID, userId),
@@ -176,8 +176,8 @@ public class RecalculerMatchesService {
           + " ))";
 
   private List<UUID> rechercherConcertsParArtistes(
-      List<UUID> artisteIds, List<String> departements, String aujourdhui) {
-    Map<String, Object> params = new HashMap<>();
+      final List<UUID> artisteIds, final List<String> departements, final String aujourdhui) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("artisteIds", artisteIds);
     params.put("aujourdhui", LocalDate.parse(aujourdhui));
 
@@ -201,7 +201,7 @@ public class RecalculerMatchesService {
   // Suivre le complexe (salle parent) doit aussi remonter les concerts de ses sous-salles — un nom
   // sans qualificatif (voir ResolveurSalleParConcert) résout précisément vers ce parent, "site,
   // salle non précisée". Suivre une sous-salle précise reste inchangé (pas de remontée aux frères).
-  private List<UUID> rechercherConcertsParSalles(List<UUID> salleIds, String aujourdhui) {
+  private List<UUID> rechercherConcertsParSalles(final List<UUID> salleIds, final String aujourdhui) {
     return jdbc.queryForList(
         "SELECT DISTINCT c.id FROM concerts c"
             + " WHERE (c.salle_id IN (:salleIds)"
@@ -213,17 +213,17 @@ public class RecalculerMatchesService {
         UUID.class);
   }
 
-  private void supprimerMatchesPetimes(String userId, Set<UUID> concertIds) {
+  private void supprimerMatchesPetimes(final String userId, final Set<UUID> concertIds) {
     jdbc.update(
         "DELETE FROM user_matches WHERE user_id = :userId AND concert_id NOT IN (:concertIds)",
         Map.of(CLE_USER_ID, userId, "concertIds", concertIds));
   }
 
-  private void insererNouveauxMatches(String userId, Set<UUID> concertIds) {
-    String sql =
+  private void insererNouveauxMatches(final String userId, final Set<UUID> concertIds) {
+    final String sql =
         "INSERT INTO user_matches (user_id, concert_id)"
             + " VALUES (:userId, :concertId) ON CONFLICT DO NOTHING";
-    SqlParameterSource[] params =
+    final SqlParameterSource[] params =
         concertIds.stream()
             .map(
                 id ->
@@ -236,7 +236,7 @@ public class RecalculerMatchesService {
     }
   }
 
-  private void marquerIndisponiblesCommeLus(String userId, Set<UUID> concertIds) {
+  private void marquerIndisponiblesCommeLus(final String userId, final Set<UUID> concertIds) {
     jdbc.update(
         """
         UPDATE user_matches um
@@ -252,7 +252,7 @@ public class RecalculerMatchesService {
         Map.of(CLE_USER_ID, userId, "concertIds", concertIds));
   }
 
-  private void reinitialiserNotifPreventesOuvertes(String userId) {
+  private void reinitialiserNotifPreventesOuvertes(final String userId) {
     jdbc.update(
         """
         UPDATE user_matches um
@@ -267,12 +267,12 @@ public class RecalculerMatchesService {
         Map.of(CLE_USER_ID, userId));
   }
 
-  private void purgerMatchesOrphelins(Set<String> usersAvecAbonnements) {
+  private void purgerMatchesOrphelins(final Set<String> usersAvecAbonnements) {
     if (usersAvecAbonnements.isEmpty()) {
       jdbc.update("DELETE FROM user_matches", Map.of());
       return;
     }
-    int supprimes =
+    final int supprimes =
         jdbc.update(
             "DELETE FROM user_matches WHERE user_id NOT IN (:userIds)",
             Map.of("userIds", usersAvecAbonnements));

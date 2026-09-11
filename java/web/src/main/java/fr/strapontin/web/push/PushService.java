@@ -48,9 +48,9 @@ public class PushService {
    * @param logAdminService service de logs admin
    */
   public PushService(
-      ConfigService configService,
-      NamedParameterJdbcTemplate jdbc,
-      LogAdminService logAdminService) {
+      final ConfigService configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final LogAdminService logAdminService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
@@ -66,7 +66,7 @@ public class PushService {
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
-  public void setSelf(@Lazy PushService self) {
+  public void setSelf(@Lazy final PushService self) {
     this.self = self;
   }
 
@@ -76,7 +76,7 @@ public class PushService {
    * @return réponse avec clé ou {@code disponible: false}
    */
   public ReponseVapid obtenirCleVapid() {
-    String clePublique = configService.lireConfig("VAPID_PUBLIC_KEY").orElse(null);
+    final String clePublique = configService.lireConfig("VAPID_PUBLIC_KEY").orElse(null);
     return clePublique != null
         ? new ReponseVapid(true, clePublique)
         : new ReponseVapid(false, null);
@@ -94,7 +94,7 @@ public class PushService {
    * @param requete données de l'abonnement
    * @throws ErreurMetier 400 si données incomplètes/invalides, 429 si cap atteint
    */
-  public void abonner(String userId, RequeteAbonnement requete) {
+  public void abonner(final String userId, final RequeteAbonnement requete) {
     if (requete.endpoint() == null
         || requete.keys() == null
         || requete.keys().p256dh() == null
@@ -123,8 +123,8 @@ public class PushService {
    * @throws ErreurMetier 429 si le cap est atteint
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  void abonnerTransactionnel(String userId, RequeteAbonnement requete) {
-    int total =
+  void abonnerTransactionnel(final String userId, final RequeteAbonnement requete) {
+    final int total =
         Objects.requireNonNullElse(
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM push_abonnements WHERE user_id = :userId",
@@ -160,7 +160,7 @@ public class PushService {
    * @param userId identifiant de l'utilisateur
    * @param endpoint URL de l'endpoint push à supprimer
    */
-  public void desabonner(String userId, String endpoint) {
+  public void desabonner(final String userId, final String endpoint) {
     jdbc.update(
         "DELETE FROM push_abonnements WHERE user_id = :userId AND endpoint = :endpoint",
         Map.of(CLE_USER_ID, userId, "endpoint", endpoint));
@@ -174,7 +174,7 @@ public class PushService {
    * @param userId identifiant de l'utilisateur
    * @return les abonnements actifs, le plus récent en premier
    */
-  public List<AbonnementDto> listerAbonnements(String userId) {
+  public List<AbonnementDto> listerAbonnements(final String userId) {
     return jdbc.query(
         "SELECT endpoint, cree_le FROM push_abonnements WHERE user_id = :userId"
             + " ORDER BY cree_le DESC",

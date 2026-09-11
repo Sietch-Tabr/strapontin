@@ -36,7 +36,7 @@ public class ReferentielSallesController {
 
   private final ReferentielSallesService service;
 
-  public ReferentielSallesController(ReferentielSallesService service) {
+  public ReferentielSallesController(final ReferentielSallesService service) {
     this.service = service;
   }
 
@@ -53,12 +53,12 @@ public class ReferentielSallesController {
    */
   @GetMapping("/salles")
   public ResponseEntity<ReponseReferentielSalles> lister(
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(required = false) String nom,
-      @RequestParam(required = false) String ville,
-      @RequestParam(required = false) String dept,
-      @RequestParam(required = false) String statut,
-      @RequestParam(defaultValue = "false") boolean wikidataManquant) {
+      @RequestParam(defaultValue = "0") final int page,
+      @RequestParam(required = false) final String nom,
+      @RequestParam(required = false) final String ville,
+      @RequestParam(required = false) final String dept,
+      @RequestParam(required = false) final String statut,
+      @RequestParam(defaultValue = "false") final boolean wikidataManquant) {
     return ResponseEntity.ok(service.lister(page, nom, ville, dept, statut, wikidataManquant));
   }
 
@@ -71,10 +71,10 @@ public class ReferentielSallesController {
    */
   @PatchMapping("/salles/{uuid}")
   public ResponseEntity<Map<String, Object>> modifierNomAffiche(
-      @PathVariable String uuid, @Valid @RequestBody RequeteNomAffiche corps) {
-    UUID id = parseUuid(uuid);
+      @PathVariable final String uuid, @Valid @RequestBody final RequeteNomAffiche corps) {
+    final UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID de salle invalide.");
-    boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
+    final boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
     if (!maj) return erreur(404, "Salle inconnue.");
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -89,10 +89,10 @@ public class ReferentielSallesController {
    */
   @PostMapping("/salles/{uuid}/reinitialiser-enrichissement")
   public ResponseEntity<Map<String, Object>> reinitialiserEnrichissement(
-      @PathVariable String uuid) {
-    UUID id = parseUuid(uuid);
+      @PathVariable final String uuid) {
+    final UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID de salle invalide.");
-    boolean maj = service.reinitialiserEnrichissement(id);
+    final boolean maj = service.reinitialiserEnrichissement(id);
     if (!maj) return erreur(404, "Salle inconnue.");
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -106,12 +106,12 @@ public class ReferentielSallesController {
    */
   @PostMapping("/salles/{uuid}/fusionner/{uuidCible}")
   public ResponseEntity<Map<String, Object>> fusionner(
-      @PathVariable String uuid, @PathVariable String uuidCible) {
-    UUID source = parseUuid(uuid);
-    UUID cible = parseUuid(uuidCible);
+      @PathVariable final String uuid, @PathVariable final String uuidCible) {
+    final UUID source = parseUuid(uuid);
+    final UUID cible = parseUuid(uuidCible);
     if (source == null || cible == null) return erreur(400, "UUID invalide.");
     if (source.equals(cible)) return erreur(400, "Les deux salles doivent être différentes.");
-    boolean fusionnee = service.fusionner(cible, source);
+    final boolean fusionnee = service.fusionner(cible, source);
     if (!fusionnee) return erreur(404, "Salle source ou cible inconnue.");
     return ResponseEntity.ok(Map.of("succes", true));
   }

@@ -20,7 +20,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
   @Override
-  public void addResourceHandlers(ResourceHandlerRegistry registry) {
+  public void addResourceHandlers(final ResourceHandlerRegistry registry) {
     // sw.js et index.html : no-cache (le navigateur doit toujours vérifier les mises à jour).
     registry
         .addResourceHandler("/sw.js", "/index.html")

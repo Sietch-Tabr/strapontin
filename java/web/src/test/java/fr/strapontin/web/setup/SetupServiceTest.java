@@ -89,7 +89,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_identifiantTropCourt_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup("ab", "admin@exemple.fr", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
@@ -98,7 +98,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_identifiantFormatInvalide_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup("admin!", "admin@exemple.fr", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
@@ -107,7 +107,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_emailInvalide_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete = new RequeteSetup("admin", "pas-un-email", "motdepasse12345", null, null);
+    final RequeteSetup requete = new RequeteSetup("admin", "pas-un-email", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
   }
@@ -115,7 +115,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_motDePasseTropCourt_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete = new RequeteSetup("admin", "admin@exemple.fr", "court", null, null);
+    final RequeteSetup requete = new RequeteSetup("admin", "admin@exemple.fr", "court", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
   }
@@ -144,7 +144,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_contactEmailAbsent_repliSurEmailAdmin() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup(
             "admin", "admin@exemple.fr", "motdepasse12345", "https://strapontin.fr", "");
 
@@ -156,7 +156,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_baseUrlAbsente_neSauvegardeRienPourPublicBaseUrl() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup("admin", "admin@exemple.fr", "motdepasse12345", null, null);
 
     setupService.initialiserTransactionnel(requete);

@@ -28,7 +28,7 @@ class ReconciliateurSallesOrphelines {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  ReconciliateurSallesOrphelines(NamedParameterJdbcTemplate jdbc) {
+  ReconciliateurSallesOrphelines(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -46,7 +46,7 @@ class ReconciliateurSallesOrphelines {
    * @return nombre de concerts orphelins résolus
    */
   int retenterSallesOrphelines() {
-    List<Map<String, Object>> orphelins =
+    final List<Map<String, Object>> orphelins =
         jdbc.queryForList(
             "SELECT id, salle, dept FROM concerts"
                 + " WHERE salle_id IS NULL AND date >= CURRENT_DATE",
@@ -56,13 +56,13 @@ class ReconciliateurSallesOrphelines {
     // candidats chargés une seule fois (pas une requête SQL par orphelin) — le volume de salles
     // reste compatible avec un score en mémoire, contrairement au N+1 SQL que remplace cette
     // méthode.
-    List<CandidatSalleMatching> candidats = chargerCandidatsMatching();
+    final List<CandidatSalleMatching> candidats = chargerCandidatsMatching();
 
     int resolus = 0;
     for (Map<String, Object> orphelin : orphelins) {
-      String salle = (String) orphelin.get("salle");
-      String dept = (String) orphelin.get("dept");
-      UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
+      final String salle = (String) orphelin.get("salle");
+      final String dept = (String) orphelin.get("dept");
+      final UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
       if (salleId == null) continue;
       jdbc.update(
           "UPDATE evenements SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
@@ -116,8 +116,8 @@ class ReconciliateurSallesOrphelines {
    * @return UUID de la meilleure salle candidate, ou {@code null} si aucune ne correspond
    */
   private UUID meilleurCandidatEnMemoire(
-      String nom, String dept, List<CandidatSalleMatching> candidats) {
-    String nomNorm = Normalisation.normaliserTexte(nom);
+      final String nom, final String dept, final List<CandidatSalleMatching> candidats) {
+    final String nomNorm = Normalisation.normaliserTexte(nom);
     UUID meilleurUuid = null;
     double meilleurScore = -1;
     for (CandidatSalleMatching candidat : candidats) {
@@ -127,7 +127,7 @@ class ReconciliateurSallesOrphelines {
         continue;
       }
       if (!CorrespondanceSalle.estDoublonSalle(nomNorm, candidat.nomNorm())) continue;
-      double score = CorrespondanceSalle.jaccardTokens(nomNorm, candidat.nomNorm());
+      final double score = CorrespondanceSalle.jaccardTokens(nomNorm, candidat.nomNorm());
       if (score > meilleurScore) {
         meilleurScore = score;
         meilleurUuid = candidat.id();

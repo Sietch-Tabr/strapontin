@@ -95,7 +95,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    *
    * @param apiKey clé API Ticketmaster Discovery v2
    */
-  public TicketmasterSource(String apiKey) {
+  public TicketmasterSource(final String apiKey) {
     this(apiKey, new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
   }
 
@@ -108,7 +108,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  public TicketmasterSource(String apiKey, CadenceurAppels cadenceur) {
+  public TicketmasterSource(final String apiKey, final CadenceurAppels cadenceur) {
     this(
         apiKey,
         RestClient.builder()
@@ -126,7 +126,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param restClient client HTTP Spring à utiliser
    */
-  public TicketmasterSource(String apiKey, RestClient restClient) {
+  public TicketmasterSource(final String apiKey, final RestClient restClient) {
     this(apiKey, restClient, new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
   }
 
@@ -138,7 +138,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param restClient client HTTP Spring à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  TicketmasterSource(String apiKey, RestClient restClient, CadenceurAppels cadenceur) {
+  TicketmasterSource(final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this(
         apiKey,
         restClient,
@@ -155,9 +155,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    */
   TicketmasterSource(
-      String apiKey,
-      RestClient restClient,
-      Cache<String, Boolean> avertissementsAttractionIntrouvable) {
+      final String apiKey,
+      final RestClient restClient,
+      final Cache<String, Boolean> avertissementsAttractionIntrouvable) {
     this(
         apiKey,
         restClient,
@@ -175,10 +175,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
   TicketmasterSource(
-      String apiKey,
-      RestClient restClient,
-      Cache<String, Boolean> avertissementsAttractionIntrouvable,
-      CadenceurAppels cadenceur) {
+      final String apiKey,
+      final RestClient restClient,
+      final Cache<String, Boolean> avertissementsAttractionIntrouvable,
+      final CadenceurAppels cadenceur) {
     this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
     this.restClient = Objects.requireNonNull(restClient, "restClient");
     this.avertissementsAttractionIntrouvable =
@@ -227,7 +227,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
    * @return tableau à deux éléments : [date, heure] où heure peut être null
    */
-  public static String[] parseDateTM(String dateStr, String heureStr) {
+  public static String[] parseDateTM(final String dateStr, final String heureStr) {
     return MapeurEvenementTM.parseDateTM(dateStr, heureStr);
   }
 
@@ -239,7 +239,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    *   null
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
-  public static ConcertBrut mapEvenement(Map<String, Object> evt, String artisteFallback) {
+  public static ConcertBrut mapEvenement(final Map<String, Object> evt, final String artisteFallback) {
     return MapeurEvenementTM.mapper(evt, artisteFallback);
   }
 
@@ -260,7 +260,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private ResultatPage fetchPage(
       UriComponentsBuilder uriBase, int numPage, String artisteFallback) {
     cadenceur.attendre();
-    String uri =
+    final String uri =
         uriBase
             .cloneBuilder()
             .queryParam("apikey", apiKey)
@@ -273,12 +273,12 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .toUriString();
 
     compteurBilan.enregistrerAppel();
-    Instant avantAppelHttp = Instant.now();
+    final Instant avantAppelHttp = Instant.now();
     try {
-      var response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
+      final var response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
 
       QuotaTM quota = null;
-      var headers = response.getHeaders();
+      final var headers = response.getHeaders();
       if (headers.get("Rate-Limit-Available") != null) {
         quota =
             new QuotaTM(
@@ -289,28 +289,28 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
                 Instant.now().toString());
       }
 
-      var data = response.getBody();
+      final var data = response.getBody();
       if (data == null) return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
 
-      var page = (Map<String, Object>) data.get("page");
-      int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
-      int totalPages = page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
+      final var page = (Map<String, Object>) data.get("page");
+      final int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
+      final int totalPages = page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
 
-      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      List<Map<String, Object>> evts =
+      final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final List<Map<String, Object>> evts =
           embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
       if (evts == null) return new ResultatPage(List.of(), total, totalPages, quota, true);
 
-      List<ConcertBrut> concerts = new ArrayList<>();
+      final List<ConcertBrut> concerts = new ArrayList<>();
       for (var evt : evts) {
-        ConcertBrut c = mapEvenement(evt, artisteFallback);
+        final ConcertBrut c = mapEvenement(evt, artisteFallback);
         if (c != null) concerts.add(c);
       }
       return new ResultatPage(concerts, total, totalPages, quota, true);
 
     } catch (Exception e) {
-      String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
-      long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
+      final String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
+      final long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
       // Diagnostic dédié au 429 (Spike Arrest) : la durée réelle de l'appel HTTP objective si le
       // rejet survient après une latence réseau anormale (jitter) plutôt qu'immédiatement (autre
       // cause) — le cadenceur n'espace que l'instant de départ côté client, jamais l'instant
@@ -335,16 +335,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param message message à assainir, peut être {@code null}
    * @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
    */
-  static String redigerApiKey(String message) {
+  static String redigerApiKey(final String message) {
     return message == null ? null : message.replaceAll("apikey=[^&\\s\"]+", "apikey=***");
   }
 
   private record FenetreTemps(String debut, String fin) {}
 
   private static FenetreTemps obtenirFenetreTemps() {
-    Instant maintenant = Instant.now();
-    Instant dans6Mois = maintenant.plus(6L * 30, ChronoUnit.DAYS);
-    DateTimeFormatter fmt =
+    final Instant maintenant = Instant.now();
+    final Instant dans6Mois = maintenant.plus(6L * 30, ChronoUnit.DAYS);
+    final DateTimeFormatter fmt =
         DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
     return new FenetreTemps(fmt.format(maintenant), fmt.format(dans6Mois));
   }
@@ -361,15 +361,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    *   récupérées avec succès (voir {@link ResultatPage#succes})
    */
   private ResultatMultiPage fetchToutesPages(
-      UriComponentsBuilder uriBase, String artisteFallback, String contexte) {
-    List<ConcertBrut> tousLesEvents = new ArrayList<>();
+      final UriComponentsBuilder uriBase, final String artisteFallback, final String contexte) {
+    final List<ConcertBrut> tousLesEvents = new ArrayList<>();
     int borneMax = NB_PAGES_MAX;
     int totalElements = 0;
     boolean continuer = true;
     boolean succes = true;
 
     for (int numPage = 0; numPage < borneMax && continuer; numPage++) {
-      ResultatPage resultat = fetchPage(uriBase, numPage, artisteFallback);
+      final ResultatPage resultat = fetchPage(uriBase, numPage, artisteFallback);
       if (!resultat.succes()) succes = false;
       if (resultat.quota() != null) dernierQuota.set(resultat.quota());
       if (numPage == 0) {
@@ -378,13 +378,13 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       }
       tousLesEvents.addAll(resultat.concerts());
 
-      boolean fini =
+      final boolean fini =
           resultat.concerts().isEmpty()
               || (totalElements > 0 && tousLesEvents.size() >= totalElements);
       continuer = !fini;
     }
 
-    int nbPagesTotal = (int) Math.ceil((double) totalElements / TAILLE_PAGE_REGION);
+    final int nbPagesTotal = (int) Math.ceil((double) totalElements / TAILLE_PAGE_REGION);
     if (nbPagesTotal > NB_PAGES_MAX) {
       concertsManquesCumules.addAndGet(Math.max(0, totalElements - tousLesEvents.size()));
       log.warn(
@@ -406,7 +406,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   @Override
-  public boolean accepteIdentifiantSalle(String identifiant) {
+  public boolean accepteIdentifiantSalle(final String identifiant) {
     return identifiant != null && identifiant.startsWith(PREFIXE_IDENTIFIANT + ":");
   }
 
@@ -417,9 +417,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return liste des concerts trouvés
    */
   @Override
-  public List<ConcertBrut> fetchArtiste(String nom) {
-    FenetreTemps fenetre = obtenirFenetreTemps();
-    var uriBase =
+  public List<ConcertBrut> fetchArtiste(final String nom) {
+    final FenetreTemps fenetre = obtenirFenetreTemps();
+    final var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("keyword", nom)
             .queryParam("classificationName", CLASSIFICATIONS.toArray())
@@ -427,7 +427,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("sort", TRI_DATE_ASC)
             .queryParam("startDateTime", fenetre.debut());
 
-    ResultatPage resultat = fetchPage(uriBase, 0, nom);
+    final ResultatPage resultat = fetchPage(uriBase, 0, nom);
     if (resultat.quota() != null) dernierQuota.set(resultat.quota());
     if (resultat.succes()) {
       log.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
@@ -447,13 +447,13 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return liste des concerts à venir dans cette salle
    */
   @Override
-  public List<ConcertBrut> fetchSalle(String identifiant) {
-    String venueId =
+  public List<ConcertBrut> fetchSalle(final String identifiant) {
+    final String venueId =
         identifiant.startsWith(PREFIXE_IDENTIFIANT + ":")
             ? identifiant.substring(PREFIXE_IDENTIFIANT.length() + 1)
             : identifiant;
-    FenetreTemps fenetre = obtenirFenetreTemps();
-    var uriBase =
+    final FenetreTemps fenetre = obtenirFenetreTemps();
+    final var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("venueId", venueId)
             .queryParam("size", TAILLE_PAGE_REGION)
@@ -461,7 +461,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("startDateTime", fenetre.debut())
             .queryParam("endDateTime", fenetre.fin());
 
-    ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "salle=" + venueId);
+    final ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "salle=" + venueId);
     if (resultat.succes()) {
       log.info("TM fetchSalle venueId={} total={}", venueId, resultat.concerts().size());
     } else {
@@ -481,8 +481,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
    */
   @SuppressWarnings("unchecked")
-  public String rechercherAttractionId(String nom) {
-    String uri =
+  public String rechercherAttractionId(final String nom) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/attractions.json")
             .queryParam("keyword", nom)
             .queryParam("locale", "*")
@@ -492,15 +492,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
-      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      var attractions =
+      final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final var attractions =
           embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
       if (attractions == null || attractions.isEmpty()) return null;
-      String nomNorm = Normalisation.normaliserTexte(nom);
+      final String nomNorm = Normalisation.normaliserTexte(nom);
       for (var attraction : attractions) {
-        String nomAttraction = (String) attraction.getOrDefault("name", "");
+        final String nomAttraction = (String) attraction.getOrDefault("name", "");
         if (Normalisation.normaliserTexte(nomAttraction).equals(nomNorm)) {
           return (String) attraction.get("id");
         }
@@ -527,20 +527,20 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return liste des concerts trouvés pour tous les artistes du lot
    */
   @Override
-  public List<ConcertBrut> fetchArtistesLot(List<String> attractionIds) {
+  public List<ConcertBrut> fetchArtistesLot(final List<String> attractionIds) {
     if (attractionIds.isEmpty()) return List.of();
     // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler après coup un
     // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
     log.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
-    FenetreTemps fenetre = obtenirFenetreTemps();
-    var uriBase =
+    final FenetreTemps fenetre = obtenirFenetreTemps();
+    final var uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("attractionId", String.join(",", attractionIds))
             .queryParam("size", TAILLE_PAGE_REGION)
             .queryParam("sort", TRI_DATE_ASC)
             .queryParam("startDateTime", fenetre.debut());
 
-    ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "lot");
+    final ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "lot");
     if (!resultat.succes()) {
       log.warn(
           "TM fetchArtistesLot ids={} échoué (voir erreur HTTP ci-dessus)", attractionIds.size());
@@ -573,7 +573,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param venueId identifiant de salle TM
    * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
    */
-  public StatutIdTM verifierVenue(String venueId) {
+  public StatutIdTM verifierVenue(final String venueId) {
     return healthCheck.verifierVenue(venueId);
   }
 
@@ -583,7 +583,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param attractionId identifiant d'artiste TM
    * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
    */
-  public StatutIdTM verifierAttraction(String attractionId) {
+  public StatutIdTM verifierAttraction(final String attractionId) {
     return healthCheck.verifierAttraction(attractionId);
   }
 
@@ -595,7 +595,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param attractionId identifiant TM de l'attraction
    * @return nom actuel retourné par TM, ou {@code null} si introuvable ou en cas d'erreur réseau
    */
-  public String recupererNomAttraction(String attractionId) {
+  public String recupererNomAttraction(final String attractionId) {
     return healthCheck.recupererNomAttraction(attractionId);
   }
 
@@ -605,7 +605,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param nom nom de la salle recherchée
    * @return candidats trouvés (peut être vide)
    */
-  public List<CandidatVenueTM> rechercherVenuesParNom(String nom) {
+  public List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
     return healthCheck.rechercherVenuesParNom(nom);
   }
 
@@ -615,7 +615,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param venueId identifiant de salle TM
    * @return nombre d'événements trouvés, 0 en cas d'erreur
    */
-  public int compterEventsVenue(String venueId) {
+  public int compterEventsVenue(final String venueId) {
     return healthCheck.compterEventsVenue(venueId);
   }
 
@@ -629,16 +629,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   @Override
   public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
     if (classifs == null) classifs = CLASSIFICATIONS;
-    List<ConcertBrut> tous = new ArrayList<>();
+    final List<ConcertBrut> tous = new ArrayList<>();
 
     for (int i = 0; i < depts.size(); i++) {
-      String dept = depts.get(i);
-      CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
+      final String dept = depts.get(i);
+      final CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
       if (centre == null) {
         log.warn("département sans coordonnées connues, ignoré dept={}", dept);
       } else {
-        FenetreTemps fenetre = obtenirFenetreTemps();
-        var uriBase =
+        final FenetreTemps fenetre = obtenirFenetreTemps();
+        final var uriBase =
             UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
                 .queryParam("latlong", centre.lat() + "," + centre.lng())
                 .queryParam("radius", centre.rayon())

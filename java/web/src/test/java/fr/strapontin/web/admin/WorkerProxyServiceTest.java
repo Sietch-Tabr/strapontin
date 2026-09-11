@@ -38,10 +38,10 @@ class WorkerProxyServiceTest {
   // propagé au worker, pour relier une action admin aux logs du job réellement exécuté.
   @Test
   void relancerFetches_correlationIdPresentDansMdc_estTransmisEnHeader() {
-    RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
     MDC.put("correlationId", "corr-test-123");
 
-    WorkerProxyService service =
+    final WorkerProxyService service =
         new WorkerProxyService(restClient, new ObjectMapper(), mock(LogAdminService.class));
     service.relancerFetches();
 
@@ -51,13 +51,13 @@ class WorkerProxyServiceTest {
 
   @Test
   void relancerJob_workerInaccessible_retourneEchecAvecStatut503() {
-    RestClient restClientEnPanne = mock(RestClient.class);
+    final RestClient restClientEnPanne = mock(RestClient.class);
     when(restClientEnPanne.post()).thenThrow(new RuntimeException("connexion refusée"));
-    LogAdminService logAdminService = mock(LogAdminService.class);
-    WorkerProxyService service =
+    final LogAdminService logAdminService = mock(LogAdminService.class);
+    final WorkerProxyService service =
         new WorkerProxyService(restClientEnPanne, new ObjectMapper(), logAdminService);
 
-    ResultatRelance resultat = service.relancerJob("purger:salles");
+    final ResultatRelance resultat = service.relancerJob("purger:salles");
 
     assertFalse(resultat.succes());
     assertNotNull(resultat.messageErreur());
@@ -71,16 +71,16 @@ class WorkerProxyServiceTest {
   // message unique masquant la cause réelle.
   @Test
   void relancerJob_workerRepond400_retourneJobInconnuAvecStatut400() {
-    RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
-    HttpClientErrorException exception =
+    final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    final HttpClientErrorException exception =
         HttpClientErrorException.create(
             HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY, new byte[0], null);
     when(restClient.post().uri(anyString(), any(Object[].class)).retrieve().toBodilessEntity())
         .thenThrow(exception);
-    WorkerProxyService service =
+    final WorkerProxyService service =
         new WorkerProxyService(restClient, new ObjectMapper(), mock(LogAdminService.class));
 
-    ResultatRelance resultat = service.relancerJob("job-inconnu");
+    final ResultatRelance resultat = service.relancerJob("job-inconnu");
 
     assertFalse(resultat.succes());
     assertTrue(resultat.messageErreur().contains("Job inconnu"));
@@ -89,8 +89,8 @@ class WorkerProxyServiceTest {
 
   @Test
   void relancerJob_workerRepond500_retourneErreurInterneAvecStatut502() {
-    RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
-    HttpServerErrorException exception =
+    final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    final HttpServerErrorException exception =
         HttpServerErrorException.create(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Internal Server Error",
@@ -99,10 +99,10 @@ class WorkerProxyServiceTest {
             null);
     when(restClient.post().uri(anyString(), any(Object[].class)).retrieve().toBodilessEntity())
         .thenThrow(exception);
-    WorkerProxyService service =
+    final WorkerProxyService service =
         new WorkerProxyService(restClient, new ObjectMapper(), mock(LogAdminService.class));
 
-    ResultatRelance resultat = service.relancerJob("purger:salles");
+    final ResultatRelance resultat = service.relancerJob("purger:salles");
 
     assertFalse(resultat.succes());
     assertTrue(resultat.messageErreur().contains("Erreur interne worker"));
@@ -111,8 +111,8 @@ class WorkerProxyServiceTest {
 
   @Test
   void relancerFetches_workerRepond500_retourneErreurInterneAvecStatut502() {
-    RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
-    HttpServerErrorException exception =
+    final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    final HttpServerErrorException exception =
         HttpServerErrorException.create(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Internal Server Error",
@@ -120,10 +120,10 @@ class WorkerProxyServiceTest {
             new byte[0],
             null);
     when(restClient.post().uri(anyString()).retrieve().toBodilessEntity()).thenThrow(exception);
-    WorkerProxyService service =
+    final WorkerProxyService service =
         new WorkerProxyService(restClient, new ObjectMapper(), mock(LogAdminService.class));
 
-    ResultatRelance resultat = service.relancerFetches();
+    final ResultatRelance resultat = service.relancerFetches();
 
     assertFalse(resultat.succes());
     assertEquals(502, resultat.statutHttp());
@@ -131,12 +131,12 @@ class WorkerProxyServiceTest {
 
   @Test
   void relancerFetches_succes_retourneResultatPositif() {
-    RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
-    LogAdminService logAdminService = mock(LogAdminService.class);
-    WorkerProxyService service =
+    final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    final LogAdminService logAdminService = mock(LogAdminService.class);
+    final WorkerProxyService service =
         new WorkerProxyService(restClient, new ObjectMapper(), logAdminService);
 
-    ResultatRelance resultat = service.relancerFetches();
+    final ResultatRelance resultat = service.relancerFetches();
 
     assertTrue(resultat.succes());
     assertEquals(200, resultat.statutHttp());

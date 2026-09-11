@@ -60,17 +60,17 @@ public class ReconciliationNocturneService {
   private final ControleIntegriteService controleIntegrite;
 
   public ReconciliationNocturneService(
-      NamedParameterJdbcTemplate jdbc,
-      TicketmasterSource tm,
-      LogsAdminWorker logsAdminWorker,
-      EnrichissementSallesService enrichissementSalles,
-      EnrichissementArtistesService enrichissementArtistes,
-      CoherenceWikidataSalleService coherenceWikidataSalle,
-      ReconciliateurSalles reconciliateurSalles,
-      FusionSallesClePorteeService fusionSallesClePortee,
-      CoherenceMultiSalleService coherenceMultiSalle,
-      SuggestionMotsGenericsService suggestionMotsGenerics,
-      ControleIntegriteService controleIntegrite) {
+      final NamedParameterJdbcTemplate jdbc,
+      final TicketmasterSource tm,
+      final LogsAdminWorker logsAdminWorker,
+      final EnrichissementSallesService enrichissementSalles,
+      final EnrichissementArtistesService enrichissementArtistes,
+      final CoherenceWikidataSalleService coherenceWikidataSalle,
+      final ReconciliateurSalles reconciliateurSalles,
+      final FusionSallesClePorteeService fusionSallesClePortee,
+      final CoherenceMultiSalleService coherenceMultiSalle,
+      final SuggestionMotsGenericsService suggestionMotsGenerics,
+      final ControleIntegriteService controleIntegrite) {
     this.jdbc = jdbc;
     this.tm = tm;
     this.logsAdminWorker = logsAdminWorker;
@@ -96,21 +96,21 @@ public class ReconciliationNocturneService {
    * @return bilan agrégé de l'exécution
    */
   public ResultatReconciliation executer() {
-    int[] bilanSalles = healthCheckSallesTM();
+    final int[] bilanSalles = healthCheckSallesTM();
     healthCheckArtistesTM();
-    int nomsIncoherentsTM = healthCheckNomsArtistesTM();
+    final int nomsIncoherentsTM = healthCheckNomsArtistesTM();
     alerterDigitickSuspect();
 
-    int enrichisArtistes = enrichissementArtistes.enrichir();
-    int enrichisSalles = enrichissementSalles.enrichir();
-    int incoherencesWikidata = coherenceWikidataSalle.verifier();
-    int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
-    int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
-    int sallesFusionnees = fusionSallesClePortee.fusionner();
-    int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
-    int doublonsSignales = coherenceMultiSalle.detecterDoublons();
-    int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
-    int integriteSignalements = controleIntegrite.verifier();
+    final int enrichisArtistes = enrichissementArtistes.enrichir();
+    final int enrichisSalles = enrichissementSalles.enrichir();
+    final int incoherencesWikidata = coherenceWikidataSalle.verifier();
+    final int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
+    final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
+    final int sallesFusionnees = fusionSallesClePortee.fusionner();
+    final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
+    final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
+    final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
+    final int integriteSignalements = controleIntegrite.verifier();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -146,24 +146,24 @@ public class ReconciliationNocturneService {
    * @return nombre d'incohérences détectées
    */
   private int healthCheckNomsArtistesTM() {
-    List<Map<String, Object>> lies =
+    final List<Map<String, Object>> lies =
         jdbc.queryForList(
             """
-            SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le,
-                   asrc.nom_tm_ignore, a.nom
-            FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
-            WHERE asrc.source = 'ticketmaster'
-            """,
+                SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le,
+                       asrc.nom_tm_ignore, a.nom
+                FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
+                WHERE asrc.source = 'ticketmaster'
+                """,
             Map.of());
 
     int incoherences = 0;
     for (var ligne : lies) {
-      UUID artisteId = (UUID) ligne.get("artiste_id");
-      String attractionId = (String) ligne.get("identifiant_externe");
-      String nom = (String) ligne.get("nom");
-      String nomTmIgnore = (String) ligne.get("nom_tm_ignore");
-      boolean dejaSignale = ligne.get("necessite_intervention_le") != null;
-      String nomAttraction = tm.recupererNomAttraction(attractionId);
+      final UUID artisteId = (UUID) ligne.get("artiste_id");
+      final String attractionId = (String) ligne.get("identifiant_externe");
+      final String nom = (String) ligne.get("nom");
+      final String nomTmIgnore = (String) ligne.get("nom_tm_ignore");
+      final boolean dejaSignale = ligne.get("necessite_intervention_le") != null;
+      final String nomAttraction = tm.recupererNomAttraction(attractionId);
       if (nomAttraction == null) continue;
       if (CorrespondanceArtiste.estDoublonArtiste(
           Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomAttraction))) {
@@ -185,11 +185,11 @@ public class ReconciliationNocturneService {
    *
    * @return {@code true} si le nom a été pré-accepté (aucun signalement à faire)
    */
-  private boolean preAccepterSiAliasWikidataConnu(UUID artisteId, String nomAttraction) {
-    List<String> alias = lireAliasWikidata(artisteId);
+  private boolean preAccepterSiAliasWikidataConnu(final UUID artisteId, final String nomAttraction) {
+    final List<String> alias = lireAliasWikidata(artisteId);
     if (alias.isEmpty()) return false;
-    String nomAttractionNorm = Normalisation.normaliserTexte(nomAttraction);
-    boolean correspond =
+    final String nomAttractionNorm = Normalisation.normaliserTexte(nomAttraction);
+    final boolean correspond =
         alias.stream()
             .anyMatch(
                 a ->
@@ -207,13 +207,13 @@ public class ReconciliationNocturneService {
     return true;
   }
 
-  private List<String> lireAliasWikidata(UUID artisteId) {
-    List<String[]> resultats =
+  private List<String> lireAliasWikidata(final UUID artisteId) {
+    final List<String[]> resultats =
         jdbc.query(
             "SELECT alias_wikidata FROM artistes WHERE id = CAST(:id AS uuid)",
             Map.of("id", artisteId.toString()),
             (rs, _) -> {
-              java.sql.Array tableau = rs.getArray("alias_wikidata");
+              final java.sql.Array tableau = rs.getArray("alias_wikidata");
               return tableau != null ? (String[]) tableau.getArray() : new String[0];
             });
     return resultats.isEmpty() ? List.of() : Arrays.asList(resultats.get(0));
@@ -230,7 +230,7 @@ public class ReconciliationNocturneService {
    * comme accepté, pas une valeur obsolète d'une nuit précédente.
    */
   private void signalerNomIncoherent(
-      UUID artisteId, String attractionId, String nom, String nomAttraction, boolean dejaSignale) {
+      final UUID artisteId, final String attractionId, final String nom, final String nomAttraction, final boolean dejaSignale) {
     jdbc.update(
         """
         UPDATE artiste_sources
@@ -259,29 +259,29 @@ public class ReconciliationNocturneService {
    * @return tableau {@code [verifiees, redecouvertes, ambigues]}
    */
   private int[] healthCheckSallesTM() {
-    List<Map<String, Object>> suspectes =
+    final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
             """
-            SELECT ss.salle_id, ss.identifiant_externe, s.nom
-            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'ticketmaster' AND ss.suspect_depuis IS NOT NULL
-            """,
+                SELECT ss.salle_id, ss.identifiant_externe, s.nom
+                FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+                WHERE ss.source = 'ticketmaster' AND ss.suspect_depuis IS NOT NULL
+                """,
             Map.of());
 
     int verifiees = 0;
     int redecouvertes = 0;
     int ambigues = 0;
     for (var ligne : suspectes) {
-      UUID salleId = (UUID) ligne.get("salle_id");
-      String ancienVenueId = (String) ligne.get("identifiant_externe");
-      String nom = (String) ligne.get("nom");
+      final UUID salleId = (UUID) ligne.get("salle_id");
+      final String ancienVenueId = (String) ligne.get("identifiant_externe");
+      final String nom = (String) ligne.get("nom");
       verifiees++;
       if (tm.verifierVenue(ancienVenueId) != StatutIdTM.MORT) {
         reinitialiserSuspect(TypeEntiteSource.SALLE, salleId);
         continue;
       }
 
-      int resultatRedecouverte = redecouvrirSalle(salleId, ancienVenueId, nom);
+      final int resultatRedecouverte = redecouvrirSalle(salleId, ancienVenueId, nom);
       if (resultatRedecouverte > 0) redecouvertes++;
       else if (resultatRedecouverte < 0) ambigues++;
     }
@@ -291,9 +291,9 @@ public class ReconciliationNocturneService {
   /**
    * @return 1 si redécouverte automatique effectuée, -1 si ambigu (0 ou ≥2 candidats), 0 sinon
    */
-  private int redecouvrirSalle(UUID salleId, String ancienVenueId, String nom) {
-    List<CandidatVenueTM> candidats = tm.rechercherVenuesParNom(nom);
-    List<CandidatVenueTM> valides =
+  private int redecouvrirSalle(final UUID salleId, final String ancienVenueId, final String nom) {
+    final List<CandidatVenueTM> candidats = tm.rechercherVenuesParNom(nom);
+    final List<CandidatVenueTM> valides =
         candidats.stream()
             .filter(c -> !c.id().equals(ancienVenueId))
             .filter(c -> tm.compterEventsVenue(c.id()) > 0)
@@ -301,7 +301,7 @@ public class ReconciliationNocturneService {
             .toList();
 
     if (valides.size() == 1) {
-      String nouveauId = valides.get(0).id();
+      final String nouveauId = valides.get(0).id();
       jdbc.update(
           """
           UPDATE salle_sources
@@ -337,19 +337,19 @@ public class ReconciliationNocturneService {
   }
 
   private void healthCheckArtistesTM() {
-    List<Map<String, Object>> suspects =
+    final List<Map<String, Object>> suspects =
         jdbc.queryForList(
             """
-            SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
-            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
-            WHERE asrc.source = 'ticketmaster' AND asrc.suspect_depuis IS NOT NULL
-            """,
+                SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
+                FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
+                WHERE asrc.source = 'ticketmaster' AND asrc.suspect_depuis IS NOT NULL
+                """,
             Map.of());
 
     for (var ligne : suspects) {
-      UUID artisteId = (UUID) ligne.get("artiste_id");
-      String ancienAttractionId = (String) ligne.get("identifiant_externe");
-      String nom = (String) ligne.get("nom");
+      final UUID artisteId = (UUID) ligne.get("artiste_id");
+      final String ancienAttractionId = (String) ligne.get("identifiant_externe");
+      final String nom = (String) ligne.get("nom");
       if (tm.verifierAttraction(ancienAttractionId) != StatutIdTM.MORT) {
         reinitialiserSuspect(TypeEntiteSource.ARTISTE, artisteId);
         continue;
@@ -365,7 +365,7 @@ public class ReconciliationNocturneService {
    * confirme que l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect"
    * perdurer jusqu'à expiration (24h, cf. {@link #executer()}).
    */
-  private void reinitialiserSuspect(TypeEntiteSource type, UUID id) {
+  private void reinitialiserSuspect(final TypeEntiteSource type, final UUID id) {
     jdbc.update(
         "UPDATE "
             + type.table()
@@ -376,8 +376,8 @@ public class ReconciliationNocturneService {
         Map.of("id", id.toString()));
   }
 
-  private void redecouvrirArtiste(UUID artisteId, String ancienAttractionId, String nom) {
-    String nouveauId = tm.rechercherAttractionId(nom);
+  private void redecouvrirArtiste(final UUID artisteId, final String ancienAttractionId, final String nom) {
+    final String nouveauId = tm.rechercherAttractionId(nom);
     if (nouveauId != null
         && !nouveauId.equals(ancienAttractionId)
         && !dejaUtiliseParAutreEntite(TypeEntiteSource.ARTISTE, artisteId, nouveauId)) {
@@ -409,8 +409,8 @@ public class ReconciliationNocturneService {
   }
 
   private boolean dejaUtiliseParAutreEntite(
-      TypeEntiteSource type, UUID idActuel, String candidatId) {
-    List<Map<String, Object>> lignes =
+      final TypeEntiteSource type, final UUID idActuel, final String candidatId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT 1 FROM "
                 + type.table()
@@ -423,13 +423,13 @@ public class ReconciliationNocturneService {
   }
 
   private void alerterDigitickSuspect() {
-    List<Map<String, Object>> suspectes =
+    final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
             """
-            SELECT ss.identifiant_externe, s.nom
-            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
-            """,
+                SELECT ss.identifiant_externe, s.nom
+                FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+                WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
+                """,
             Map.of());
     if (suspectes.isEmpty()) return;
 

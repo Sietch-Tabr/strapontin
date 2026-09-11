@@ -39,7 +39,7 @@ class AideRestControllerTest {
   @BeforeEach
   void setUp() {
     controller = new AideRestController(emailService, configService);
-    UtilisateurDetails utilisateur =
+    final UtilisateurDetails utilisateur =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     lenient().when(auth.getPrincipal()).thenReturn(utilisateur);
   }
@@ -52,7 +52,7 @@ class AideRestControllerTest {
     when(configService.lireConfig("SIGNAL_LIEN"))
         .thenReturn(java.util.Optional.of("https://signal.me/x"));
 
-    var rep = controller.config();
+    final var rep = controller.config();
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("resendDisponible"));
@@ -66,7 +66,7 @@ class AideRestControllerTest {
     when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(java.util.Optional.empty());
     when(configService.lireConfig("SIGNAL_LIEN")).thenReturn(java.util.Optional.empty());
 
-    var rep = controller.config();
+    final var rep = controller.config();
 
     assertEquals(false, rep.getBody().get("resendDisponible"));
     assertEquals("", rep.getBody().get("contactEmail"));
@@ -75,9 +75,9 @@ class AideRestControllerTest {
 
   @Test
   void signaler_troisSignalementsSuccessifs_sontAcceptes() {
-    var request = requete("10.0.0.1");
+    final var request = requete("10.0.0.1");
     for (int i = 0; i < 3; i++) {
-      var rep =
+      final var rep =
           controller.signaler(new RequeteSignalement("bug", "message test " + i), auth, request);
       assertEquals(
           HttpStatus.NO_CONTENT, rep.getStatusCode(), "Le signalement " + (i + 1) + " doit passer");
@@ -86,22 +86,22 @@ class AideRestControllerTest {
 
   @Test
   void signaler_quatriemeSignalement_retourneErreurRateLimit() {
-    var request = requete("10.0.0.2");
+    final var request = requete("10.0.0.2");
     for (int i = 0; i < 3; i++) {
       controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
     }
-    var rep = controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
+    final var rep = controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 
   @Test
   void signaler_ipsDifferentes_bucketsIndependants() {
-    var ip1 = requete("10.0.0.3");
-    var ip2 = requete("10.0.0.4");
+    final var ip1 = requete("10.0.0.3");
+    final var ip2 = requete("10.0.0.4");
     for (int i = 0; i < 3; i++) {
       controller.signaler(new RequeteSignalement("bug", "msg"), auth, ip1);
     }
-    var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, ip2);
+    final var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, ip2);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
 
@@ -112,16 +112,16 @@ class AideRestControllerTest {
   void signaler_headerXRealIpIgnore_seulRemoteAddrCompte() {
     // Épuise le bucket de 10.0.0.20 avec X-Real-IP variés (tous ignorés)
     for (int i = 0; i < 3; i++) {
-      var req = new MockHttpServletRequest();
+      final var req = new MockHttpServletRequest();
       req.setRemoteAddr("10.0.0.20");
       req.addHeader("X-Real-IP", "1.2.3." + i);
       controller.signaler(new RequeteSignalement("bug", "msg"), auth, req);
     }
     // Même remoteAddr → bucket épuisé même avec un X-Real-IP différent
-    var req429 = new MockHttpServletRequest();
+    final var req429 = new MockHttpServletRequest();
     req429.setRemoteAddr("10.0.0.20");
     req429.addHeader("X-Real-IP", "9.9.9.9");
-    var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, req429);
+    final var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, req429);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 
@@ -142,10 +142,10 @@ class AideRestControllerTest {
 
   @Test
   void signaler_principalPasUtilisateurDetails_retourne401SansEnvoi() {
-    Authentication authAnonyme = mock(Authentication.class);
+    final Authentication authAnonyme = mock(Authentication.class);
     when(authAnonyme.getPrincipal()).thenReturn("anonymousUser");
 
-    var rep =
+    final var rep =
         controller.signaler(
             new RequeteSignalement("bug", "message"), authAnonyme, requete("10.0.1.3"));
 
@@ -153,8 +153,8 @@ class AideRestControllerTest {
     verify(emailService, never()).envoyerSignalement(anyString(), anyString(), anyString());
   }
 
-  private static MockHttpServletRequest requete(String ip) {
-    var request = new MockHttpServletRequest();
+  private static MockHttpServletRequest requete(final String ip) {
+    final var request = new MockHttpServletRequest();
     request.setRemoteAddr(ip);
     return request;
   }

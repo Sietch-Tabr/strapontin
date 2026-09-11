@@ -66,19 +66,19 @@ final class ClientSparqlWikidata {
    *
    * @param restClient client HTTP à utiliser
    */
-  ClientSparqlWikidata(RestClient restClient) {
+  ClientSparqlWikidata(final RestClient restClient) {
     this.restClient = restClient;
   }
 
   private static RestClient construireRestClientParDefaut() {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(5));
     factory.setReadTimeout(TIMEOUT_LECTURE);
     return RestClient.builder().requestFactory(factory).build();
   }
 
   @SuppressWarnings("unchecked")
-  private java.util.Map<String, Object> effectuerRequete(String sparql) {
+  private java.util.Map<String, Object> effectuerRequete(final String sparql) {
     return restClient
         .post()
         .uri(BASE_URL)
@@ -98,7 +98,7 @@ final class ClientSparqlWikidata {
    * @param sparql corps de la requête SPARQL
    * @return corps JSON désérialisé, ou null en cas d'échec définitif
    */
-  java.util.Map<String, Object> executer(String sparql) {
+  java.util.Map<String, Object> executer(final String sparql) {
     // un appel logique = un executer, quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
     compteurBilan.enregistrerAppel();
@@ -110,7 +110,7 @@ final class ClientSparqlWikidata {
       try {
         return effectuerRequete(sparql);
       } catch (HttpClientErrorException.TooManyRequests e) {
-        long attenteMs = extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
+        final long attenteMs = extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
         log.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
         dormir(attenteMs);
       } catch (HttpServerErrorException.ServiceUnavailable
@@ -149,9 +149,9 @@ final class ClientSparqlWikidata {
     return compteurBilan.preleverBilan();
   }
 
-  private static Optional<Long> extraireRetryAfterMs(HttpHeaders headers) {
+  private static Optional<Long> extraireRetryAfterMs(final HttpHeaders headers) {
     if (headers == null) return Optional.empty();
-    String valeur = headers.getFirst("Retry-After");
+    final String valeur = headers.getFirst("Retry-After");
     if (valeur == null) return Optional.empty();
     try {
       return Optional.of(Long.parseLong(valeur) * 1000);
@@ -160,7 +160,7 @@ final class ClientSparqlWikidata {
     }
   }
 
-  private static void dormir(long ms) {
+  private static void dormir(final long ms) {
     try {
       Thread.sleep(ms);
     } catch (InterruptedException e) {
@@ -176,8 +176,8 @@ final class ClientSparqlWikidata {
    * @return valeur textuelle, ou null si absente
    */
   @SuppressWarnings("unchecked")
-  static String valeurBinding(java.util.Map<String, Object> binding, String cle) {
-    var v = (java.util.Map<String, Object>) binding.get(cle);
+  static String valeurBinding(final java.util.Map<String, Object> binding, final String cle) {
+    final var v = (java.util.Map<String, Object>) binding.get(cle);
     return v != null ? (String) v.get("value") : null;
   }
 
@@ -190,10 +190,10 @@ final class ClientSparqlWikidata {
    * @return la liste des bindings, vide si absente
    */
   @SuppressWarnings("unchecked")
-  static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
-    var results = (Map<String, Object>) data.get("results");
+  static List<Map<String, Object>> extraireBindings(final Map<String, Object> data) {
+    final var results = (Map<String, Object>) data.get("results");
     if (results == null) return List.of();
-    var bindings = (List<Map<String, Object>>) results.get("bindings");
+    final var bindings = (List<Map<String, Object>>) results.get("bindings");
     return bindings != null ? bindings : List.of();
   }
 
@@ -205,7 +205,7 @@ final class ClientSparqlWikidata {
    * @param s la chaîne à insérer dans le littéral
    * @return la chaîne échappée
    */
-  static String echapperLitteral(String s) {
+  static String echapperLitteral(final String s) {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 
@@ -220,7 +220,7 @@ final class ClientSparqlWikidata {
    * @param qId identifiant à vérifier
    * @return {@code true} si le format est un Q-ID valide
    */
-  static boolean estQIdValide(String qId) {
+  static boolean estQIdValide(final String qId) {
     return qId != null && MOTIF_Q_ID.matcher(qId).matches();
   }
 }

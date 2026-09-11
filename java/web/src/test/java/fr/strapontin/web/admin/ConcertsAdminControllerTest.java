@@ -39,7 +39,7 @@ class ConcertsAdminControllerTest {
   void lister_delegueAuService() {
     when(service.lister(0)).thenReturn(new ReponseConcertsAConfirmer(List.of(), 0, 1, 0));
 
-    ResponseEntity<ReponseConcertsAConfirmer> reponse = controller.lister(0);
+    final ResponseEntity<ReponseConcertsAConfirmer> reponse = controller.lister(0);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service).lister(0);
@@ -47,7 +47,7 @@ class ConcertsAdminControllerTest {
 
   @Test
   void confirmer_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse = controller.confirmer("pas-un-uuid");
+    final ResponseEntity<Map<String, Object>> reponse = controller.confirmer("pas-un-uuid");
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).confirmerSuppression(any());
@@ -55,27 +55,27 @@ class ConcertsAdminControllerTest {
 
   @Test
   void confirmer_concertInconnuOuNonFlague_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.confirmerSuppression(id)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.confirmer(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse = controller.confirmer(id.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
   }
 
   @Test
   void confirmer_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.confirmerSuppression(id)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.confirmer(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse = controller.confirmer(id.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
   }
 
   @Test
   void annuler_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse = controller.annuler("pas-un-uuid");
+    final ResponseEntity<Map<String, Object>> reponse = controller.annuler("pas-un-uuid");
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).annulerSuppression(any());
@@ -83,20 +83,20 @@ class ConcertsAdminControllerTest {
 
   @Test
   void annuler_concertInconnuOuNonFlague_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.annulerSuppression(id)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.annuler(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse = controller.annuler(id.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
   }
 
   @Test
   void annuler_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.annulerSuppression(id)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.annuler(id.toString());
+    final ResponseEntity<Map<String, Object>> reponse = controller.annuler(id.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
   }

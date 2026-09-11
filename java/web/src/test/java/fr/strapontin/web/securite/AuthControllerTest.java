@@ -62,10 +62,10 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_sansSession_retourne409() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getSession(false)).thenReturn(null);
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, null);
 
     assertEquals(409, reponse.getStatusCode().value());
@@ -73,12 +73,12 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_sansChallengeEnAttente_retourne409() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(null);
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, null);
 
     assertEquals(409, reponse.getStatusCode().value());
@@ -86,12 +86,12 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_sansAuthentification_retourne401() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, null);
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
@@ -99,21 +99,21 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_codeCorrect_retourne200() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
     when(totpChallengeService.verifier("u1", "alice", "123456", "127.0.0.1"))
         .thenReturn(ResultatTotp.succes());
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("123456"), httpRequest, auth);
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -122,21 +122,21 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_codeIncorrect_retourne422() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
     when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
         .thenReturn(ResultatTotp.echec(3));
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
 
     assertEquals(422, reponse.getStatusCode().value());
@@ -145,21 +145,21 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_tropDEchecs_invalideSessionEtRetourne401() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
     when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
         .thenReturn(ResultatTotp.verrouilleMaintenant());
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
@@ -168,21 +168,21 @@ class AuthControllerTest {
 
   @Test
   void verifierTotp_compteurDejaVerrouille_invalideSessionEtRetourne401() {
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(httpRequest.getRemoteAddr()).thenReturn("127.0.0.1");
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
     when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
         .thenReturn(ResultatTotp.dejaVerrouille());
 
-    var reponse =
+    final var reponse =
         authController.verifierTotp(new TotpChallengeRequest("000000"), httpRequest, auth);
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
@@ -195,7 +195,7 @@ class AuthControllerTest {
 
   @Test
   void reinitialiserMotDePasse_identifiantTropCourt_retourne400() {
-    var reponse =
+    final var reponse =
         authController.reinitialiserMotDePasse(
             new ResetPasswordRequest("token", "motdepasse12345", "ab"),
             mock(HttpServletRequest.class));
@@ -204,7 +204,7 @@ class AuthControllerTest {
 
   @Test
   void reinitialiserMotDePasse_identifiantTropLong_retourne400() {
-    var reponse =
+    final var reponse =
         authController.reinitialiserMotDePasse(
             new ResetPasswordRequest("token", "motdepasse12345", "a".repeat(31)),
             mock(HttpServletRequest.class));
@@ -213,7 +213,7 @@ class AuthControllerTest {
 
   @Test
   void reinitialiserMotDePasse_identifiantFormatInvalide_retourne400() {
-    var reponse =
+    final var reponse =
         authController.reinitialiserMotDePasse(
             new ResetPasswordRequest("token", "motdepasse12345", "alice:test"),
             mock(HttpServletRequest.class));
@@ -239,13 +239,13 @@ class AuthControllerTest {
   @Test
   void reinitialiserMotDePasse_activationInvitation_peupleWebAuthenticationDetailsSurLeToken() {
     when(authService.activerCompteInvite("token", "alice", "motdepasse12345")).thenReturn("alice");
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getRemoteAddr()).thenReturn("203.0.113.7");
     when(httpRequest.getSession(false)).thenReturn(null);
     when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
@@ -253,7 +253,7 @@ class AuthControllerTest {
     authController.reinitialiserMotDePasse(
         new ResetPasswordRequest("token", "motdepasse12345", "alice"), httpRequest);
 
-    ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
+    final ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
         ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
     verify(authenticationManager).authenticate(tokenCaptor.capture());
     assertNotNull(tokenCaptor.getValue().getDetails());
@@ -266,26 +266,26 @@ class AuthControllerTest {
 
   @Test
   void logout_sansSession_retourne204() {
-    HttpServletRequest req = mock(HttpServletRequest.class);
-    HttpServletResponse resp = mock(HttpServletResponse.class);
+    final HttpServletRequest req = mock(HttpServletRequest.class);
+    final HttpServletResponse resp = mock(HttpServletResponse.class);
     when(req.getSession(false)).thenReturn(null);
 
-    var reponse = authController.logout(req, resp);
+    final var reponse = authController.logout(req, resp);
 
     assertEquals(204, reponse.getStatusCode().value());
   }
 
   @Test
   void logout_cookieSuppression_aFlagsSecureEtSameSite() {
-    HttpServletRequest req = mock(HttpServletRequest.class);
-    HttpServletResponse resp = mock(HttpServletResponse.class);
+    final HttpServletRequest req = mock(HttpServletRequest.class);
+    final HttpServletResponse resp = mock(HttpServletResponse.class);
     when(req.getSession(false)).thenReturn(null);
 
     authController.logout(req, resp);
 
-    ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
+    final ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
     verify(resp).addCookie(cookieCaptor.capture());
-    Cookie cookie = cookieCaptor.getValue();
+    final Cookie cookie = cookieCaptor.getValue();
     assertEquals("SESSION", cookie.getName());
     assertEquals(0, cookie.getMaxAge());
     assertTrue(cookie.isHttpOnly());
@@ -297,7 +297,7 @@ class AuthControllerTest {
   void reinitialiserMotDePasse_resetClassique_retourne200() {
     doNothing().when(authService).reinitialiserMotDePasse(anyString(), anyString());
 
-    var reponse =
+    final var reponse =
         authController.reinitialiserMotDePasse(
             new ResetPasswordRequest("tokenvalide", "motdepasse12345", null),
             mock(HttpServletRequest.class));
@@ -309,18 +309,18 @@ class AuthControllerTest {
 
   @Test
   void login_credentialsValides_retourneUtilisateurEtOuvreSession() {
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getSession(false)).thenReturn(null);
-    HttpSession session = mock(HttpSession.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(true)).thenReturn(session);
 
-    var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+    final var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("alice", reponse.getBody().identifiant());
@@ -330,14 +330,14 @@ class AuthControllerTest {
 
   @Test
   void login_sessionExistante_lInvalideAvantDEnCreerUneNouvelle() {
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession ancienneSession = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession ancienneSession = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(ancienneSession);
     when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
 
@@ -348,18 +348,18 @@ class AuthControllerTest {
 
   @Test
   void login_totpActif_positionneSessionTotpEnAttente() {
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getSession(false)).thenReturn(null);
-    HttpSession session = mock(HttpSession.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(true)).thenReturn(session);
 
-    var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
+    final var reponse = authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
 
     assertTrue(reponse.getBody().totpRequis());
     verify(session).setAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE, Boolean.TRUE);
@@ -367,20 +367,20 @@ class AuthControllerTest {
 
   @Test
   void login_credentialsValides_peupleWebAuthenticationDetailsSurLeToken() {
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getRemoteAddr()).thenReturn("203.0.113.7");
     when(httpRequest.getSession(false)).thenReturn(null);
     when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
 
     authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest);
 
-    ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
+    final ArgumentCaptor<UsernamePasswordAuthenticationToken> tokenCaptor =
         ArgumentCaptor.forClass(UsernamePasswordAuthenticationToken.class);
     verify(authenticationManager).authenticate(tokenCaptor.capture());
     assertNotNull(tokenCaptor.getValue().getDetails());
@@ -391,11 +391,11 @@ class AuthControllerTest {
 
   @Test
   void login_principalInattendu_leveIllegalStateException() {
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn("pas-un-utilisateur-details");
     when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getSession(false)).thenReturn(null);
     when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
 
@@ -408,36 +408,36 @@ class AuthControllerTest {
 
   @Test
   void moi_nonAuthentifie_retourne401() {
-    var reponse = authController.moi(null, mock(HttpServletRequest.class));
+    final var reponse = authController.moi(null, mock(HttpServletRequest.class));
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
   }
 
   @Test
   void moi_principalPasUtilisateurDetails_retourne401() {
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn("anonymousUser");
 
-    var reponse = authController.moi(auth, mock(HttpServletRequest.class));
+    final var reponse = authController.moi(auth, mock(HttpServletRequest.class));
 
     assertEquals(HttpStatus.UNAUTHORIZED.value(), reponse.getStatusCode().value());
   }
 
   @Test
   void moi_authentifieAvecChallengeTotpEnAttente_retourneTotpRequisVrai() {
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
-    HttpSession session = mock(HttpSession.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpSession session = mock(HttpSession.class);
     when(httpRequest.getSession(false)).thenReturn(session);
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
-    var reponse = authController.moi(auth, httpRequest);
+    final var reponse = authController.moi(auth, httpRequest);
 
     assertEquals(200, reponse.getStatusCode().value());
     assertTrue(reponse.getBody().totpRequis());
@@ -445,16 +445,16 @@ class AuthControllerTest {
 
   @Test
   void moi_authentifieSansSession_retourneTotpRequisFaux() {
-    UtilisateurDetails principal =
+    final UtilisateurDetails principal =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
 
-    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     when(httpRequest.getSession(false)).thenReturn(null);
 
-    var reponse = authController.moi(auth, httpRequest);
+    final var reponse = authController.moi(auth, httpRequest);
 
     assertFalse(reponse.getBody().totpRequis());
   }
@@ -463,7 +463,7 @@ class AuthControllerTest {
 
   @Test
   void motDePasseOublieEndpoint_emailBlanc_neDelegueRienEtRetourne200() {
-    var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(""));
+    final var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(""));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(authService, never()).motDePasseOublie(anyString(), anyString());
@@ -474,7 +474,7 @@ class AuthControllerTest {
     when(configService.lireConfig("PUBLIC_BASE_URL"))
         .thenReturn(java.util.Optional.of("https://strapontin.fr"));
 
-    var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "));
+    final var reponse = authController.motDePasseOublie(new ForgotPasswordRequest(" Alice@Test.FR "));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(authService).motDePasseOublie("alice@test.fr", "https://strapontin.fr");
@@ -488,7 +488,7 @@ class AuthControllerTest {
   void motDePasseOublieEndpoint_baseUrlNonConfiguree_neDelegueRienEtAlerte() {
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(java.util.Optional.empty());
 
-    var reponse = authController.motDePasseOublie(new ForgotPasswordRequest("alice@test.fr"));
+    final var reponse = authController.motDePasseOublie(new ForgotPasswordRequest("alice@test.fr"));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(authService, never()).motDePasseOublie(anyString(), anyString());
@@ -501,7 +501,7 @@ class AuthControllerTest {
   void typeToken_tokenInvitation_retourneTypeInvite() {
     when(authService.estTokenInvite("token")).thenReturn(true);
 
-    var reponse = authController.typeToken("token");
+    final var reponse = authController.typeToken("token");
 
     assertEquals("invite", reponse.getBody().get("type"));
   }
@@ -510,7 +510,7 @@ class AuthControllerTest {
   void typeToken_tokenResetOuInconnu_retourneTypeReset() {
     when(authService.estTokenInvite("token")).thenReturn(false);
 
-    var reponse = authController.typeToken("token");
+    final var reponse = authController.typeToken("token");
 
     assertEquals("reset", reponse.getBody().get("type"));
   }

@@ -33,7 +33,7 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
 
   @BeforeAll
   static void migrerBase() {
-    DriverManagerDataSource dataSource = new DriverManagerDataSource();
+    final DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
@@ -53,8 +53,8 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
     service = new SignalementsAdminService(jdbc, new LogAdminService(jdbc, new ObjectMapper()));
   }
 
-  private UUID creerArtiste(String nom) {
-    UUID id = UUID.randomUUID();
+  private UUID creerArtiste(final String nom) {
+    final UUID id = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
         Map.of("id", id.toString(), "nom", nom, "nomNorm", nom.toLowerCase()));
@@ -63,20 +63,20 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
 
   @Test
   void lister_signalementNouveauEtMecanismesEtablis_lesAgregeTous() {
-    UUID artisteCollision = UUID.randomUUID();
+    final UUID artisteCollision = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
             + " VALUES ('collision_wikidata_artiste', 'artiste', CAST(:id AS uuid), 'basse')",
         Map.of("id", artisteCollision.toString()));
 
-    UUID artisteIntervention = creerArtiste("Jain");
+    final UUID artisteIntervention = creerArtiste("Jain");
     jdbc.update(
         "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe,"
             + " necessite_intervention_le) VALUES (CAST(:id AS uuid), 'ticketmaster', 'tm1',"
             + " now())",
         Map.of("id", artisteIntervention.toString()));
 
-    UUID salleContaminee =
+    final UUID salleContaminee =
         jdbc.queryForObject(
             "INSERT INTO salles (salle_cle, nom, nom_norm, contamination_signalee)"
                 + " VALUES ('zenith-test', 'Zenith Test', 'zenith test', 'autre nom')"
@@ -84,7 +84,7 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
             Map.of(),
             UUID.class);
 
-    ReponseSignalements reponse = service.lister(0);
+    final ReponseSignalements reponse = service.lister(0);
 
     assertEquals(3, reponse.signalements().size());
     assertEquals(3L, reponse.total());
@@ -110,7 +110,7 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
 
   @Test
   void resoudre_signalementActif_leRetireDeLaListe() {
-    long id =
+    final long id =
         jdbc.queryForObject(
             "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
                 + " VALUES ('collision_wikidata_artiste', 'artiste', CAST(:id AS uuid), 'basse')"
@@ -118,7 +118,7 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
             Map.of("id", UUID.randomUUID().toString()),
             Long.class);
 
-    boolean resolu = service.resoudre(id);
+    final boolean resolu = service.resoudre(id);
 
     assertTrue(resolu);
     assertEquals(0, service.lister(0).total());

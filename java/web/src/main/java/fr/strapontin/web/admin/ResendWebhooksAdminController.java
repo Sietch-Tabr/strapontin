@@ -33,7 +33,7 @@ public class ResendWebhooksAdminController {
 
   private final ResendWebhooksAdminService service;
 
-  public ResendWebhooksAdminController(ResendWebhooksAdminService service) {
+  public ResendWebhooksAdminController(final ResendWebhooksAdminService service) {
     this.service = service;
   }
 
@@ -55,8 +55,8 @@ public class ResendWebhooksAdminController {
    *   introuvable, erreur API Resend)
    */
   @PostMapping("/evenements/{id}/rejouer")
-  public ResponseEntity<Map<String, Object>> rejouerEvenement(@PathVariable String id) {
-    boolean rejoue = service.rejouerEvenement(id);
+  public ResponseEntity<Map<String, Object>> rejouerEvenement(@PathVariable final String id) {
+    final boolean rejoue = service.rejouerEvenement(id);
     if (!rejoue) return erreur(502, "Rejeu impossible — vérifier la configuration Resend.");
     return ResponseEntity.ok(Map.of("succes", true));
   }

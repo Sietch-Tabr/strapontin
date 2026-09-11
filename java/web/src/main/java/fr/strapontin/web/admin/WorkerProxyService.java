@@ -44,7 +44,7 @@ public class WorkerProxyService {
    * @param logAdminService service de logs admin
    */
   public WorkerProxyService(
-      RestClient restClient, ObjectMapper objectMapper, LogAdminService logAdminService) {
+      final RestClient restClient, final ObjectMapper objectMapper, final LogAdminService logAdminService) {
     this.restClient = restClient;
     this.objectMapper = objectMapper;
     this.logAdminService = logAdminService;
@@ -59,8 +59,8 @@ public class WorkerProxyService {
    * @return la même requête, avec le header ajouté si un correlationId est disponible
    */
   private RestClient.RequestHeadersSpec<?> ajouterCorrelationId(
-      RestClient.RequestHeadersSpec<?> requete) {
-    String correlationId = MDC.get(CLE_MDC_CORRELATION_ID);
+      final RestClient.RequestHeadersSpec<?> requete) {
+    final String correlationId = MDC.get(CLE_MDC_CORRELATION_ID);
     return correlationId != null ? requete.header(HEADER_CORRELATION_ID, correlationId) : requete;
   }
 
@@ -71,13 +71,13 @@ public class WorkerProxyService {
    */
   public List<String> obtenirJobsEnCours() {
     try {
-      String corps =
+      final String corps =
           ajouterCorrelationId(restClient.get().uri(WORKER_BASE_URL + "/trigger/actif"))
               .retrieve()
               .body(String.class);
-      @SuppressWarnings("unchecked")
-      Map<String, Object> data = objectMapper.readValue(corps, Map.class);
-      Object actifs = data.get("actifs");
+      @SuppressWarnings("unchecked") final
+          Map<String, Object> data = objectMapper.readValue(corps, Map.class);
+      final Object actifs = data.get("actifs");
       if (actifs instanceof List<?> liste) {
         return liste.stream().map(Object::toString).toList();
       }
@@ -94,13 +94,13 @@ public class WorkerProxyService {
    */
   public Map<String, Instant> obtenirProchainesExec() {
     try {
-      String corps =
+      final String corps =
           ajouterCorrelationId(restClient.get().uri(WORKER_BASE_URL + "/trigger/prochaines-exec"))
               .retrieve()
               .body(String.class);
-      @SuppressWarnings("unchecked")
-      Map<String, Object> data = objectMapper.readValue(corps, Map.class);
-      Map<String, Instant> resultat = new HashMap<>();
+      @SuppressWarnings("unchecked") final
+          Map<String, Object> data = objectMapper.readValue(corps, Map.class);
+      final Map<String, Instant> resultat = new HashMap<>();
       data.forEach(
           (k, v) -> {
             if (v instanceof Number n) resultat.put(k, Instant.ofEpochMilli(n.longValue()));
@@ -118,7 +118,7 @@ public class WorkerProxyService {
    * @param identifiants identifiants préfixés par source (ex. {@code "tm:rZFSnyZdFvA"})
    * @return {@code true} si planifié, {@code false} si le worker est inaccessible
    */
-  public boolean relancerSalle(String identifiants) {
+  public boolean relancerSalle(final String identifiants) {
     try {
       ajouterCorrelationId(
               restClient
@@ -170,7 +170,7 @@ public class WorkerProxyService {
    * @param typeJob identifiant lisible du job à relancer
    * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
    */
-  public ResultatRelance relancerJob(String typeJob) {
+  public ResultatRelance relancerJob(final String typeJob) {
     try {
       ajouterCorrelationId(
               restClient.post().uri(WORKER_BASE_URL + "/trigger/job?typeJob={typeJob}", typeJob))

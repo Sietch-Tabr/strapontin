@@ -54,7 +54,7 @@ public class GestionQuotaResendWorker {
   private GestionQuotaResendWorker self;
 
   public GestionQuotaResendWorker(
-      NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper, LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.logsAdminWorker = logsAdminWorker;
@@ -68,13 +68,13 @@ public class GestionQuotaResendWorker {
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
-  public void setSelf(@Lazy GestionQuotaResendWorker self) {
+  public void setSelf(@Lazy final GestionQuotaResendWorker self) {
     this.self = self;
   }
 
   private Optional<CompteurEnvoisResend> lireCompteurBrut() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_QUOTA),
@@ -89,9 +89,9 @@ public class GestionQuotaResendWorker {
     }
   }
 
-  private void ecrireCompteur(CompteurEnvoisResend compteur) {
+  private void ecrireCompteur(final CompteurEnvoisResend compteur) {
     try {
-      String json = objectMapper.writeValueAsString(compteur);
+      final String json = objectMapper.writeValueAsString(compteur);
       jdbc.update(
           "INSERT INTO app_config (cle, valeur_chiffree) VALUES (:cle, :json)"
               + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()",
@@ -105,14 +105,14 @@ public class GestionQuotaResendWorker {
     return LocalDate.now(ZoneOffset.UTC).toString();
   }
 
-  private static String moisCourant(String jour) {
+  private static String moisCourant(final String jour) {
     return jour.substring(0, 7);
   }
 
   private static CompteurEnvoisResend appliquerRollover(
-      CompteurEnvoisResend c, String jour, String mois) {
-    boolean jourChange = !jour.equals(c.jour());
-    boolean moisChange = !mois.equals(c.mois());
+      final CompteurEnvoisResend c, final String jour, final String mois) {
+    final boolean jourChange = !jour.equals(c.jour());
+    final boolean moisChange = !mois.equals(c.mois());
     if (!jourChange && !moisChange) return c;
     return new CompteurEnvoisResend(
         jour,
@@ -124,8 +124,8 @@ public class GestionQuotaResendWorker {
   }
 
   private CompteurEnvoisResend lireCompteurCourant() {
-    String jour = jourCourant();
-    String mois = moisCourant(jour);
+    final String jour = jourCourant();
+    final String mois = moisCourant(jour);
     return lireCompteurBrut()
         .map(c -> appliquerRollover(c, jour, mois))
         .orElse(new CompteurEnvoisResend(jour, 0, mois, 0, false, false));
@@ -155,7 +155,7 @@ public class GestionQuotaResendWorker {
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
   boolean reserverEnvoiTransactionnel() {
-    CompteurEnvoisResend actuel = lireCompteurCourant();
+    final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
       ecrireCompteur(actuel);
       log.error(

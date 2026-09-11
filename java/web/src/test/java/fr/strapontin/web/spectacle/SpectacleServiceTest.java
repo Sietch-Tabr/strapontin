@@ -43,16 +43,16 @@ class SpectacleServiceTest {
   }
 
   private static FiltreConcerts filtre(
-      String q,
-      String mois,
-      String classification,
-      String genre,
-      boolean quinzaine,
-      String tri,
-      boolean masques,
-      List<String> sources,
-      String indisponibles,
-      int page) {
+      final String q,
+      final String mois,
+      final String classification,
+      final String genre,
+      final boolean quinzaine,
+      final String tri,
+      final boolean masques,
+      final List<String> sources,
+      final String indisponibles,
+      final int page) {
     return new FiltreConcerts(
         q,
         mois,
@@ -76,7 +76,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(2);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ReponseSpectacles rep =
+    final ReponseSpectacles rep =
         service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, null, 0));
 
     assertNotNull(rep);
@@ -94,7 +94,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
 
     service.listerSpectacles("u1", filtre("", "", "", "", true, "date", false, null, null, 0));
 
@@ -105,8 +105,8 @@ class SpectacleServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void listerSpectacles_sourceArtistesSeuls_filtreParUuids() {
-    UUID id1 = UUID.randomUUID();
-    UUID id2 = UUID.randomUUID();
+    final UUID id1 = UUID.randomUUID();
+    final UUID id2 = UUID.randomUUID();
     when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
     when(jdbc.queryForList(contains("user_artistes WHERE user_id"), anyMap(), eq(UUID.class)))
         .thenReturn(List.of(id1, id2));
@@ -165,7 +165,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(1);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
 
     service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, null, 2));
 
@@ -192,11 +192,11 @@ class SpectacleServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void masquerArtiste_executeMiseAJourAvecArtisteId() {
-    java.util.UUID artisteId = java.util.UUID.randomUUID();
+    final java.util.UUID artisteId = java.util.UUID.randomUUID();
 
     service.masquerArtiste("u1", artisteId);
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc)
         .update(
             org.mockito.ArgumentMatchers.argThat(
@@ -209,7 +209,7 @@ class SpectacleServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void listerSpectacles_sourceSallesSeules_filtreParSalleIds() {
-    UUID id1 = UUID.randomUUID();
+    final UUID id1 = UUID.randomUUID();
     when(userConfigService.lireFiltreDisponibles("u1")).thenReturn(false);
     when(jdbc.queryForList(contains("user_salles WHERE user_id"), anyMap(), eq(UUID.class)))
         .thenReturn(List.of(id1));
@@ -251,7 +251,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("COUNT(*)"), anyMap(), eq(Integer.class))).thenReturn(0);
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
 
     service.listerSpectacles(
         "u1", filtre("radiohead", "", "", "", false, "date", false, null, null, 0));
@@ -306,7 +306,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ReponseSpectacles rep =
+    final ReponseSpectacles rep =
         service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, "1", 0));
 
     assertTrue(rep.inclureIndisponibles());
@@ -323,7 +323,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ReponseSpectacles rep =
+    final ReponseSpectacles rep =
         service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, "0", 0));
 
     assertFalse(rep.inclureIndisponibles());
@@ -339,7 +339,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     doNothing().when(jdbc).query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ReponseSpectacles rep =
+    final ReponseSpectacles rep =
         service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, null, 0));
 
     assertFalse(rep.inclureIndisponibles(), "préférence disponibles seuls → indisponibles exclus");
@@ -354,7 +354,7 @@ class SpectacleServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(0);
     org.mockito.Mockito.doAnswer(
             invocation -> {
-              RowCallbackHandler handler = invocation.getArgument(2);
+              final RowCallbackHandler handler = invocation.getArgument(2);
               handler.processRow(ligneFiltre("genre", "Rock"));
               handler.processRow(ligneFiltre("mois", "2026-05"));
               handler.processRow(ligneFiltre("classification", "concert"));
@@ -363,7 +363,7 @@ class SpectacleServiceTest {
         .when(jdbc)
         .query(contains("filtres_base"), anyMap(), any(RowCallbackHandler.class));
 
-    ReponseSpectacles rep =
+    final ReponseSpectacles rep =
         service.listerSpectacles("u1", filtre("", "", "", "", false, "date", false, null, null, 0));
 
     assertEquals(List.of("Rock"), rep.genresDisponibles());
@@ -371,9 +371,9 @@ class SpectacleServiceTest {
     assertEquals(List.of("concert"), rep.classificationsDisponibles());
   }
 
-  private static java.sql.ResultSet ligneFiltre(String type, String valeur)
+  private static java.sql.ResultSet ligneFiltre(final String type, final String valeur)
       throws java.sql.SQLException {
-    java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+    final java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
     when(rs.getString("type")).thenReturn(type);
     when(rs.getString("valeur")).thenReturn(valeur);
     return rs;
@@ -382,11 +382,11 @@ class SpectacleServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void demasquerArtiste_executeMiseAJourAvecArtisteId() {
-    java.util.UUID artisteId = java.util.UUID.randomUUID();
+    final java.util.UUID artisteId = java.util.UUID.randomUUID();
 
     service.demasquerArtiste("u1", artisteId);
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc)
         .update(
             org.mockito.ArgumentMatchers.argThat(

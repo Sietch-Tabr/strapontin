@@ -34,7 +34,7 @@ public final class SalleHierarchie {
    * @return {@code true} si cette assignation créerait un cycle
    */
   public static boolean creeraitCycle(
-      UUID candidatParentId, UUID salleId, Function<UUID, UUID> lecteurParent) {
+      final UUID candidatParentId, final UUID salleId, final Function<UUID, UUID> lecteurParent) {
     if (candidatParentId == null || salleId == null) return false;
     UUID courant = candidatParentId;
     int profondeur = 0;

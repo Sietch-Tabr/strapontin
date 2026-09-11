@@ -36,19 +36,19 @@ public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
   /**
    * @param appareilsService service d'enregistrement des appareils
    */
-  public AppareilEnregistrementInterceptor(AppareilsService appareilsService) {
+  public AppareilEnregistrementInterceptor(final AppareilsService appareilsService) {
     this.appareilsService = appareilsService;
   }
 
   @Override
   public boolean preHandle(
-      HttpServletRequest request, HttpServletResponse response, Object handler) {
-    HttpSession session = request.getSession(false);
+      final HttpServletRequest request, final HttpServletResponse response, final Object handler) {
+    final HttpSession session = request.getSession(false);
     if (session == null || session.getAttribute(ATTRIBUT_DEJA_ENREGISTRE) != null) {
       return true;
     }
 
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null
         || !auth.isAuthenticated()
         || !(auth.getPrincipal() instanceof UtilisateurDetails details)) {

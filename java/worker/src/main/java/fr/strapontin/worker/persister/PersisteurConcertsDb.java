@@ -43,7 +43,7 @@ public class PersisteurConcertsDb {
   /**
    * @param jdbc template JDBC injecté par Spring
    */
-  public PersisteurConcertsDb(NamedParameterJdbcTemplate jdbc) {
+  public PersisteurConcertsDb(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -57,37 +57,37 @@ public class PersisteurConcertsDb {
    * @param type {@code "salle"} ou {@code "artiste"}
    * @return cache des UUIDs résolus par identifiant préfixé
    */
-  Map<String, UUID> resoudreUuidsParSource(List<ValeurConcert> concerts, String type) {
-    Map<String, List<String>> parSource = new HashMap<>();
+  Map<String, UUID> resoudreUuidsParSource(final List<ValeurConcert> concerts, final String type) {
+    final Map<String, List<String>> parSource = new HashMap<>();
     for (ValeurConcert c : concerts) {
-      String sourceId = "salle".equals(type) ? c.salleSourceId() : c.artisteSourceId();
+      final String sourceId = "salle".equals(type) ? c.salleSourceId() : c.artisteSourceId();
       if (sourceId != null) {
-        int sep = sourceId.indexOf(':');
+        final int sep = sourceId.indexOf(':');
         if (sep > 0) {
-          String source = sourceId.substring(0, sep);
-          String identifiant = sourceId.substring(sep + 1);
+          final String source = sourceId.substring(0, sep);
+          final String identifiant = sourceId.substring(sep + 1);
           parSource.computeIfAbsent(source, _ -> new ArrayList<>()).add(identifiant);
         }
       }
     }
 
-    boolean estSalle = "salle".equals(type);
-    String sql =
+    final boolean estSalle = "salle".equals(type);
+    final String sql =
         estSalle
             ? "SELECT salle_id, identifiant_externe FROM salle_sources"
-                + " WHERE source = :source AND identifiant_externe IN (:ids)"
+            + " WHERE source = :source AND identifiant_externe IN (:ids)"
             : "SELECT artiste_id, identifiant_externe FROM artiste_sources"
-                + " WHERE source = :source AND identifiant_externe IN (:ids)";
-    String colUuid = estSalle ? "salle_id" : "artiste_id";
+            + " WHERE source = :source AND identifiant_externe IN (:ids)";
+    final String colUuid = estSalle ? "salle_id" : "artiste_id";
 
-    Map<String, UUID> cache = new HashMap<>();
+    final Map<String, UUID> cache = new HashMap<>();
     for (var entry : parSource.entrySet()) {
-      String source = entry.getKey();
-      List<String> ids = entry.getValue().stream().distinct().toList();
-      List<Map<String, Object>> lignes =
+      final String source = entry.getKey();
+      final List<String> ids = entry.getValue().stream().distinct().toList();
+      final List<Map<String, Object>> lignes =
           jdbc.queryForList(sql, Map.of("source", source, "ids", ids));
       for (var ligne : lignes) {
-        String cle = source + ":" + ligne.get("identifiant_externe");
+        final String cle = source + ":" + ligne.get("identifiant_externe");
         cache.put(cle, (UUID) ligne.get(colUuid));
       }
     }
@@ -110,31 +110,31 @@ public class PersisteurConcertsDb {
    * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour
    *   Eventim uniquement
    */
-  List<ValeurConcert> resoudreParUrl(List<ValeurConcert> concerts) {
-    List<ValeurConcert> avecUrl =
+  List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
+    final List<ValeurConcert> avecUrl =
         concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();
     if (avecUrl.isEmpty()) return concerts;
 
-    List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
-    List<Map<String, Object>> lignesExistantes =
+    final List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
+    final List<Map<String, Object>> lignesExistantes =
         jdbc.queryForList(
             """
-            SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
-                   e.heure AS heure, o.source AS source, o.url AS url
-            FROM observations o JOIN evenements e ON e.id = o.evenement_id
-            WHERE o.url IN (:urls) AND o.source = 'eventim'
-            """,
+                SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
+                       e.heure AS heure, o.source AS source, o.url AS url
+                FROM observations o JOIN evenements e ON e.id = o.evenement_id
+                WHERE o.url IN (:urls) AND o.source = 'eventim'
+                """,
             Map.of("urls", urls));
 
     if (lignesExistantes.isEmpty()) return concerts;
 
     record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
 
-    Map<CleUrl, Map<String, Object>> index = new HashMap<>();
+    final Map<CleUrl, Map<String, Object>> index = new HashMap<>();
     for (Map<String, Object> l : lignesExistantes) {
-      java.sql.Date sqlDate = (java.sql.Date) l.get("date");
-      java.sql.Time sqlHeure = (java.sql.Time) l.get("heure");
-      CleUrl cle =
+      final java.sql.Date sqlDate = (java.sql.Date) l.get("date");
+      final java.sql.Time sqlHeure = (java.sql.Time) l.get("heure");
+      final CleUrl cle =
           new CleUrl(
               (String) l.get("source"),
               (String) l.get("url"),
@@ -147,11 +147,11 @@ public class PersisteurConcertsDb {
         .map(
             c -> {
               if (c.url() == null) return c;
-              CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
-              Map<String, Object> existant = index.get(cle);
+              final CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
+              final Map<String, Object> existant = index.get(cle);
               if (existant == null) return c;
-              String artisteNormExistant = (String) existant.get("artiste_norm");
-              UUID artisteIdExistant = (UUID) existant.get("artiste_id");
+              final String artisteNormExistant = (String) existant.get("artiste_norm");
+              final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
               if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm()))
                 return c;
               log.debug(
@@ -159,7 +159,7 @@ public class PersisteurConcertsDb {
                   c.artisteNorm(),
                   artisteNormExistant,
                   c.url());
-              UUID artisteIdFinal = c.artisteId() != null ? c.artisteId() : artisteIdExistant;
+              final UUID artisteIdFinal = c.artisteId() != null ? c.artisteId() : artisteIdExistant;
               return c.avecArtisteNormEtId(artisteNormExistant, artisteIdFinal);
             })
         .toList();
@@ -189,8 +189,8 @@ public class PersisteurConcertsDb {
    *
    * @param concerts concerts après réconciliation, avant upsert
    */
-  void alignerHeureReportTM(List<ValeurConcert> concerts) {
-    List<ValeurConcert> reports =
+  void alignerHeureReportTM(final List<ValeurConcert> concerts) {
+    final List<ValeurConcert> reports =
         concerts.stream()
             .filter(
                 c ->
@@ -202,36 +202,36 @@ public class PersisteurConcertsDb {
             .toList();
     if (reports.isEmpty()) return;
 
-    List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
-    List<Map<String, Object>> existants =
+    final List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
+    final List<Map<String, Object>> existants =
         jdbc.queryForList(
             """
-            SELECT e.id AS id, o.url AS url, e.date AS date, e.heure AS heure
-            FROM observations o JOIN evenements e ON e.id = o.evenement_id
-            WHERE o.source = 'ticketmaster' AND o.url IN (:urls)
-            """,
+                SELECT e.id AS id, o.url AS url, e.date AS date, e.heure AS heure
+                FROM observations o JOIN evenements e ON e.id = o.evenement_id
+                WHERE o.source = 'ticketmaster' AND o.url IN (:urls)
+                """,
             Map.of("urls", urls));
 
     record CleUrlDate(String url, LocalDate date) {}
-    Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
+    final Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
     for (Map<String, Object> ligne : existants) {
-      CleUrlDate cle =
+      final CleUrlDate cle =
           new CleUrlDate(
               (String) ligne.get("url"), ((java.sql.Date) ligne.get("date")).toLocalDate());
       parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
     }
 
     for (ValeurConcert c : reports) {
-      List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
+      final List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
       if (candidats == null) continue;
-      var heuresDistinctes =
+      final var heuresDistinctes =
           candidats.stream()
               .map(l -> ((java.sql.Time) l.get("heure")).toLocalTime())
               .collect(java.util.stream.Collectors.toSet());
       if (heuresDistinctes.size() != 1) continue;
-      LocalTime heureExistante = heuresDistinctes.iterator().next();
+      final LocalTime heureExistante = heuresDistinctes.iterator().next();
       if (heureExistante.equals(c.heure())) continue;
-      UUID idExistant = (UUID) candidats.get(0).get("id");
+      final UUID idExistant = (UUID) candidats.get(0).get("id");
       jdbc.update(
           "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
           Map.of("heure", c.heure(), "id", idExistant.toString()));
@@ -249,7 +249,7 @@ public class PersisteurConcertsDb {
    * billetterie standard, ne doit jamais empêcher le rapprochement avec la fiche normale du même
    * événement réel.
    */
-  private static boolean estPackage(String url) {
+  private static boolean estPackage(final String url) {
     return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
   }
 
@@ -258,10 +258,10 @@ public class PersisteurConcertsDb {
   private static final int TOLERANCE_HEURE_MINUTES = 3;
 
   private static boolean heuresCompatibles(
-      LocalTime existante, LocalTime entrante, boolean packageExistant, boolean packageEntrant) {
+      final LocalTime existante, final LocalTime entrante, final boolean packageExistant, final boolean packageEntrant) {
     if (packageExistant || packageEntrant) return true;
     if (existante == null || entrante == null) return true;
-    long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
+    final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
     return diffMinutes <= TOLERANCE_HEURE_MINUTES;
   }
 
@@ -280,15 +280,15 @@ public class PersisteurConcertsDb {
    * supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant
    * l'écriture plutôt qu'en nettoyage après coup ; sinon, création.
    */
-  private ResolutionEvenement resoudreOuCreerEvenement(ValeurConcert v) {
-    MapSqlParameterSource paramsExact =
+  private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert v) {
+    final MapSqlParameterSource paramsExact =
         new MapSqlParameterSource()
             .addValue("artisteNorm", v.artisteNorm())
             .addValue("date", v.date(), Types.DATE)
             .addValue("heure", v.heure(), Types.TIME)
             .addValue(
                 "salleId", v.salleId() != null ? v.salleId().toString() : null, Types.VARCHAR);
-    List<UUID> exact =
+    final List<UUID> exact =
         jdbc.query(
             "SELECT id FROM evenements WHERE artiste_norm = :artisteNorm AND date = :date"
                 + " AND heure IS NOT DISTINCT FROM :heure"
@@ -298,29 +298,29 @@ public class PersisteurConcertsDb {
     if (!exact.isEmpty()) return new ResolutionEvenement(exact.get(0), false);
 
     if (v.salleId() != null) {
-      List<Map<String, Object>> candidats =
+      final List<Map<String, Object>> candidats =
           jdbc.queryForList(
               """
-              SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
-                     e.heure AS heure,
-                     EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
-                            AND o.url ~* '/pack/') AS a_observation_package
-              FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
-              """,
+                  SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
+                         e.heure AS heure,
+                         EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
+                                AND o.url ~* '/pack/') AS a_observation_package
+                  FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
+                  """,
               Map.of("salleId", v.salleId().toString(), "date", v.date()));
-      boolean entrantPackage = estPackage(v.url());
+      final boolean entrantPackage = estPackage(v.url());
       for (var c : candidats) {
-        UUID candArtisteId = (UUID) c.get("artiste_id");
-        String candArtisteNorm = (String) c.get("artiste_norm");
-        boolean artisteCorrespond =
+        final UUID candArtisteId = (UUID) c.get("artiste_id");
+        final String candArtisteNorm = (String) c.get("artiste_norm");
+        final boolean artisteCorrespond =
             v.artisteId() != null
                 ? v.artisteId().equals(candArtisteId)
                 : candArtisteId == null
-                    && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
+                && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
         if (!artisteCorrespond) continue;
-        java.sql.Time heureSql = (java.sql.Time) c.get("heure");
-        LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
-        boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
+        final java.sql.Time heureSql = (java.sql.Time) c.get("heure");
+        final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
+        final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
         if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
           continue;
         }
@@ -328,23 +328,23 @@ public class PersisteurConcertsDb {
       }
     }
 
-    UUID nouveauId =
+    final UUID nouveauId =
         jdbc.queryForObject(
             """
-            INSERT INTO evenements
-                (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
-                 genre, statut, presale_debut, presale_nom, artiste_id)
-            VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
-                    :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
-                    :presaleNom, CAST(:artisteId AS uuid))
-            RETURNING id
-            """,
+                INSERT INTO evenements
+                    (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
+                     genre, statut, presale_debut, presale_nom, artiste_id)
+                VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
+                        :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
+                        :presaleNom, CAST(:artisteId AS uuid))
+                RETURNING id
+                """,
             paramsCreation(v),
             UUID.class);
     return new ResolutionEvenement(nouveauId, true);
   }
 
-  private static MapSqlParameterSource paramsCreation(ValeurConcert v) {
+  private static MapSqlParameterSource paramsCreation(final ValeurConcert v) {
     return new MapSqlParameterSource()
         .addValue("artisteNorm", v.artisteNorm())
         .addValue("date", v.date(), Types.DATE)
@@ -374,9 +374,9 @@ public class PersisteurConcertsDb {
    * informatif) ; appelé après {@link #upsertObservation} pour refléter l'observation qui vient
    * d'être upsertée.
    */
-  private void mettreAJourChampsEvenement(UUID evenementId, ValeurConcert v) {
-    String salleBrutReference = meilleurSalleBrut(evenementId);
-    String salleNormReference =
+  private void mettreAJourChampsEvenement(final UUID evenementId, final ValeurConcert v) {
+    final String salleBrutReference = meilleurSalleBrut(evenementId);
+    final String salleNormReference =
         salleBrutReference != null ? Normalisation.normaliserTexte(salleBrutReference) : null;
     jdbc.update(
         """
@@ -401,7 +401,7 @@ public class PersisteurConcertsDb {
             .addValue("salleNormReference", salleNormReference));
   }
 
-  private void upsertObservation(UUID evenementId, ValeurConcert v) {
+  private void upsertObservation(final UUID evenementId, final ValeurConcert v) {
     jdbc.update(
         """
         INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)
@@ -427,17 +427,17 @@ public class PersisteurConcertsDb {
    * Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm}
    * cohérent avec ce que {@code concerts.salle} affichera.
    */
-  private String meilleurSalleBrut(UUID evenementId) {
-    List<String> resultat =
+  private String meilleurSalleBrut(final UUID evenementId) {
+    final List<String> resultat =
         jdbc.query(
             """
-            SELECT salle_brut FROM observations WHERE evenement_id = CAST(:id AS uuid)
-            ORDER BY (CASE WHEN url ~* '/pack/' THEN 10 ELSE 0 END
-                      + CASE source::text
-                          WHEN 'ticketmaster' THEN 1 WHEN 'eventim' THEN 2 WHEN 'digitick' THEN 3
-                          ELSE 4 END)
-            LIMIT 1
-            """,
+                SELECT salle_brut FROM observations WHERE evenement_id = CAST(:id AS uuid)
+                ORDER BY (CASE WHEN url ~* '/pack/' THEN 10 ELSE 0 END
+                          + CASE source::text
+                              WHEN 'ticketmaster' THEN 1 WHEN 'eventim' THEN 2 WHEN 'digitick' THEN 3
+                              ELSE 4 END)
+                LIMIT 1
+                """,
             Map.of("id", evenementId.toString()),
             (rs, _) -> rs.getString("salle_brut"));
     return resultat.isEmpty() ? null : resultat.get(0);
@@ -453,13 +453,13 @@ public class PersisteurConcertsDb {
    * @param valeurs concerts réconciliés et dédupliqués du lot
    * @return décompte des événements créés et mis à jour du lot
    */
-  PersisterConcerts.ResultatPersistance upsertLot(List<ValeurConcert> valeurs) {
+  PersisterConcerts.ResultatPersistance upsertLot(final List<ValeurConcert> valeurs) {
     if (valeurs.isEmpty()) return new PersisterConcerts.ResultatPersistance(0, 0);
 
     int inserts = 0;
     int updates = 0;
     for (ValeurConcert v : valeurs) {
-      ResolutionEvenement resolution = resoudreOuCreerEvenement(v);
+      final ResolutionEvenement resolution = resoudreOuCreerEvenement(v);
       upsertObservation(resolution.id(), v);
       if (!resolution.nouveau()) {
         mettreAJourChampsEvenement(resolution.id(), v);

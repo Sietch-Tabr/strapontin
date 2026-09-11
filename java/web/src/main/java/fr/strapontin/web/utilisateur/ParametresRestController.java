@@ -42,7 +42,7 @@ public class ParametresRestController {
    * @param configService service de configuration pour lire PUBLIC_BASE_URL
    */
   public ParametresRestController(
-      ParametresService parametresService, ConfigService configService) {
+      final ParametresService parametresService, final ConfigService configService) {
     this.parametresService = parametresService;
     this.configService = configService;
   }
@@ -54,7 +54,7 @@ public class ParametresRestController {
    * @return {@code {nbArtistes, nbSalles}}
    */
   @GetMapping("/stats")
-  public ResponseEntity<Map<String, Object>> stats(Authentication auth) {
+  public ResponseEntity<Map<String, Object>> stats(final Authentication auth) {
     return ResponseEntity.ok(parametresService.stats(utilisateur(auth).id()));
   }
 
@@ -70,9 +70,9 @@ public class ParametresRestController {
    */
   @PostMapping("/email-change")
   public ResponseEntity<Map<String, Object>> emailChange(
-      @Valid @RequestBody RequeteEmailChange corps, Authentication auth) {
-    UtilisateurDetails details = utilisateur(auth);
-    String emailNorm = corps.email().strip().toLowerCase();
+      @Valid @RequestBody final RequeteEmailChange corps, final Authentication auth) {
+    final UtilisateurDetails details = utilisateur(auth);
+    final String emailNorm = corps.email().strip().toLowerCase();
     if (emailNorm.equalsIgnoreCase(details.email())) {
       return erreur(400, "Cette adresse est déjà votre adresse email actuelle.");
     }
@@ -83,7 +83,7 @@ public class ParametresRestController {
       return erreur(
           503, "L'envoi d'email n'est pas configuré. Impossible de confirmer le changement.");
     }
-    Optional<String> baseUrl = resoudreBaseUrl();
+    final Optional<String> baseUrl = resoudreBaseUrl();
     if (baseUrl.isEmpty()) {
       return erreur(
           503, "L'envoi d'email n'est pas configuré. Impossible de confirmer le changement.");
@@ -105,11 +105,11 @@ public class ParametresRestController {
    */
   @GetMapping("/confirmer-email")
   public ResponseEntity<Void> confirmerEmail(
-      @RequestParam(required = false) String token, Authentication auth) {
-    String userIdAuthentifie = utilisateur(auth).id();
-    ParametresService.ResultatConfirmation resultat =
+      @RequestParam(required = false) final String token, final Authentication auth) {
+    final String userIdAuthentifie = utilisateur(auth).id();
+    final ParametresService.ResultatConfirmation resultat =
         parametresService.confirmerEmail(token, userIdAuthentifie);
-    String redirection =
+    final String redirection =
         switch (resultat.statut()) {
           case OK -> "/parametres?succes=email-confirme#compte";
           case LIEN_INVALIDE -> "/parametres?erreur=lien-invalide#compte";
@@ -121,7 +121,7 @@ public class ParametresRestController {
     return ResponseEntity.status(302).location(URI.create(redirection)).build();
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
 

@@ -54,7 +54,7 @@ public class SuggestionMotsGenericsService {
   private final ObjectMapper objectMapper;
 
   public SuggestionMotsGenericsService(
-      NamedParameterJdbcTemplate jdbc, LogsAdminWorker logsAdminWorker, ObjectMapper objectMapper) {
+      final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.objectMapper = objectMapper;
@@ -67,22 +67,22 @@ public class SuggestionMotsGenericsService {
    * @return nombre de mots nouvellement suggérés
    */
   public int suggerer() {
-    List<String> noms = jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
+    final List<String> noms = jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
 
-    Map<String, Integer> frequences = new HashMap<>();
+    final Map<String, Integer> frequences = new HashMap<>();
     for (String nom : noms) {
-      Set<String> tokens = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nom));
+      final Set<String> tokens = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nom));
       tokens.removeAll(CorrespondanceSalle.MOTS_GENERIQUES_SALLE);
       for (String token : tokens) {
         frequences.merge(token, 1, Integer::sum);
       }
     }
 
-    Set<String> dejaSuggeres = lireDejaSuggeres();
+    final Set<String> dejaSuggeres = lireDejaSuggeres();
     int nouveaux = 0;
     for (var entree : frequences.entrySet()) {
-      String mot = entree.getKey();
-      int occurrences = entree.getValue();
+      final String mot = entree.getKey();
+      final int occurrences = entree.getValue();
       if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) continue;
 
       dejaSuggeres.add(mot);
@@ -101,7 +101,7 @@ public class SuggestionMotsGenericsService {
 
   private Set<String> lireDejaSuggeres() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_CONFIG),
@@ -118,9 +118,9 @@ public class SuggestionMotsGenericsService {
     }
   }
 
-  private void ecrireDejaSuggeres(Set<String> mots) {
+  private void ecrireDejaSuggeres(final Set<String> mots) {
     try {
-      String json = objectMapper.writeValueAsString(mots);
+      final String json = objectMapper.writeValueAsString(mots);
       jdbc.update(
           """
           INSERT INTO app_config (cle, valeur_chiffree)

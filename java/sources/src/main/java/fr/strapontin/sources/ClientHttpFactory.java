@@ -27,8 +27,8 @@ final class ClientHttpFactory {
    * @param lecture   durée maximale d'attente d'une réponse une fois la connexion établie
    * @return fabrique configurée
    */
-  static SimpleClientHttpRequestFactory creerRequestFactory(Duration connexion, Duration lecture) {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+  static SimpleClientHttpRequestFactory creerRequestFactory(final Duration connexion, final Duration lecture) {
+    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(connexion);
     factory.setReadTimeout(lecture);
     return factory;

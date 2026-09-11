@@ -45,7 +45,7 @@ public class ConfigService {
   private final Cache<String, Optional<String>> cache;
 
   public ConfigService(
-      @Value("${app.config.secret}") String secret, NamedParameterJdbcTemplate jdbc) {
+      @Value("${app.config.secret}") final String secret, final NamedParameterJdbcTemplate jdbc) {
     this.cipher = new ConfigCipher(secret);
     this.jdbc = jdbc;
     this.cache =
@@ -58,7 +58,7 @@ public class ConfigService {
    * @param cle la clé de configuration
    * @return la valeur déchiffrée, ou vide si la clé n'existe pas
    */
-  public Optional<String> lireConfig(String cle) {
+  public Optional<String> lireConfig(final String cle) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     return cache.get(cle, this::chargerDepuisDb);
   }
@@ -71,7 +71,7 @@ public class ConfigService {
    * @param cle la clé de configuration
    * @param valeur la valeur en clair, ou {@code null} pour supprimer
    */
-  public void sauvegarderConfig(String cle, String valeur) {
+  public void sauvegarderConfig(final String cle, final String valeur) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     cache.invalidate(cle);
     if (valeur == null || valeur.isBlank()) {
@@ -79,15 +79,15 @@ public class ConfigService {
       log.info("config supprimée cle={}", cle);
       return;
     }
-    String valeurChiffree = cipher.chiffrer(valeur);
-    String sql =
+    final String valeurChiffree = cipher.chiffrer(valeur);
+    final String sql =
         """
-        INSERT INTO app_config (cle, valeur_chiffree)
-        VALUES (:cle, :valeur)
-        ON CONFLICT (cle) DO UPDATE
-          SET valeur_chiffree = EXCLUDED.valeur_chiffree,
-              mis_a_jour_le   = now()
-        """;
+            INSERT INTO app_config (cle, valeur_chiffree)
+            VALUES (:cle, :valeur)
+            ON CONFLICT (cle) DO UPDATE
+              SET valeur_chiffree = EXCLUDED.valeur_chiffree,
+                  mis_a_jour_le   = now()
+            """;
     jdbc.update(sql, Map.of("cle", cle, "valeur", valeurChiffree));
   }
 
@@ -97,13 +97,13 @@ public class ConfigService {
    * @return les clés configurées
    */
   public Set<String> lireConfigsPresentes() {
-    List<String> cles =
+    final List<String> cles =
         jdbc.query("SELECT cle FROM app_config", Map.of(), (rs, _) -> rs.getString("cle"));
     return new HashSet<>(cles);
   }
 
-  private Optional<String> chargerDepuisDb(String cle) {
-    List<String> lignes =
+  private Optional<String> chargerDepuisDb(final String cle) {
+    final List<String> lignes =
         jdbc.query(
             "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
             Map.of("cle", cle),

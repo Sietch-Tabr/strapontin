@@ -45,7 +45,7 @@ public class SuiviChroniciteService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public SuiviChroniciteService(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+  public SuiviChroniciteService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
@@ -60,13 +60,13 @@ public class SuiviChroniciteService {
    * @return le nombre de cycles consécutifs en échec après cet enregistrement (0 si ce cycle est
    *   propre)
    */
-  public int enregistrerCycle(String cle, boolean cycleEnEchec) {
-    Map<String, Integer> streaks = lireStreaks();
+  public int enregistrerCycle(final String cle, final boolean cycleEnEchec) {
+    final Map<String, Integer> streaks = lireStreaks();
     if (!cycleEnEchec) {
       if (streaks.remove(cle) != null) ecrireStreaks(streaks);
       return 0;
     }
-    int nouveau = streaks.getOrDefault(cle, 0) + 1;
+    final int nouveau = streaks.getOrDefault(cle, 0) + 1;
     streaks.put(cle, nouveau);
     ecrireStreaks(streaks);
     return nouveau;
@@ -81,14 +81,14 @@ public class SuiviChroniciteService {
    * @param streak nombre de cycles consécutifs en échec (voir {@link #enregistrerCycle})
    * @return le message complété si chronique, inchangé sinon
    */
-  public String enrichirSiChronique(String message, int streak) {
+  public String enrichirSiChronique(final String message, final int streak) {
     if (streak < SEUIL_CYCLES_CHRONIQUE) return message;
     return message + " — chronique depuis " + streak + " cycles consécutifs";
   }
 
   private Map<String, Integer> lireStreaks() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_CONFIG),
@@ -103,9 +103,9 @@ public class SuiviChroniciteService {
     }
   }
 
-  private void ecrireStreaks(Map<String, Integer> streaks) {
+  private void ecrireStreaks(final Map<String, Integer> streaks) {
     try {
-      String json = objectMapper.writeValueAsString(streaks);
+      final String json = objectMapper.writeValueAsString(streaks);
       jdbc.update(
           """
           INSERT INTO app_config (cle, valeur_chiffree)

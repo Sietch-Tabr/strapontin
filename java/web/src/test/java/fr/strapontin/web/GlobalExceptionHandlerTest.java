@@ -49,52 +49,52 @@ class GlobalExceptionHandlerTest {
 
   @Test
   void gererDoublon_duplicateKeyException_retourne409AvecMessageGenerique() {
-    Map<String, Object> rep = handler.gererDoublon(new DuplicateKeyException("pk violation"));
+    final Map<String, Object> rep = handler.gererDoublon(new DuplicateKeyException("pk violation"));
     assertEquals("Cette ressource existe déjà.", rep.get("erreur"));
   }
 
   @Test
   void gererRessourceDejaExistante_retourne409AvecMessageException() {
-    var ex = new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
-    Map<String, Object> rep = handler.gererRessourceDejaExistante(ex);
+    final var ex = new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
+    final Map<String, Object> rep = handler.gererRessourceDejaExistante(ex);
     assertEquals("Cet artiste est déjà dans votre liste.", rep.get("erreur"));
   }
 
   @Test
   void gererValidation_champsInvalide_retourne400AvecPremierMessage() {
-    BindingResult bindingResult = mock(BindingResult.class);
+    final BindingResult bindingResult = mock(BindingResult.class);
     when(bindingResult.getFieldErrors())
         .thenReturn(List.of(new FieldError("obj", "nom", "Le nom est obligatoire.")));
-    MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+    final MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
     when(ex.getBindingResult()).thenReturn(bindingResult);
 
-    Map<String, Object> rep = handler.gererValidation(ex);
+    final Map<String, Object> rep = handler.gererValidation(ex);
 
     assertEquals("Le nom est obligatoire.", rep.get("erreur"));
   }
 
   @Test
   void gererValidation_sansChampErreur_retourne400AvecMessageGenerique() {
-    BindingResult bindingResult = mock(BindingResult.class);
+    final BindingResult bindingResult = mock(BindingResult.class);
     when(bindingResult.getFieldErrors()).thenReturn(List.of());
-    MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+    final MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
     when(ex.getBindingResult()).thenReturn(bindingResult);
 
-    Map<String, Object> rep = handler.gererValidation(ex);
+    final Map<String, Object> rep = handler.gererValidation(ex);
 
     assertEquals("Données invalides.", rep.get("erreur"));
   }
 
   @Test
   void gererRessourceIntrouvable_retourne404() {
-    Map<String, Object> rep =
+    final Map<String, Object> rep =
         handler.gererRessourceIntrouvable(mock(NoResourceFoundException.class));
     assertEquals("Ressource introuvable.", rep.get("erreur"));
   }
 
   @Test
   void gererMethodeNonSupportee_retourne405() {
-    Map<String, Object> rep =
+    final Map<String, Object> rep =
         handler.gererMethodeNonSupportee(new HttpRequestMethodNotSupportedException("DELETE"));
     assertEquals("Méthode non supportée.", rep.get("erreur"));
   }
@@ -103,21 +103,21 @@ class GlobalExceptionHandlerTest {
   void gererErreurBd_dataAccessException_retourne500() {
     when(request.getServletPath()).thenReturn("/api/test");
     when(request.getMethod()).thenReturn("GET");
-    Map<String, Object> rep =
+    final Map<String, Object> rep =
         handler.gererErreurBd(new DataRetrievalFailureException("connexion JDBC perdue"), request);
     assertEquals("Erreur de base de données.", rep.get("erreur"));
   }
 
   @Test
   void gererErreurAuthentification_retourne401() {
-    Map<String, Object> rep =
+    final Map<String, Object> rep =
         handler.gererErreurAuthentification(new BadCredentialsException("identifiants invalides"));
     assertEquals("Authentification requise.", rep.get("erreur"));
   }
 
   @Test
   void gererErreurMetier_statutPersonnalise_retourneStatutDeLException() {
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         handler.gererErreurMetier(new ErreurMetier("Limite atteinte.", 422));
     assertEquals(422, rep.getStatusCode().value());
     assertEquals("Limite atteinte.", rep.getBody().get("erreur"));
@@ -125,7 +125,7 @@ class GlobalExceptionHandlerTest {
 
   @Test
   void gererErreurMetier_sansStatut_retourne400() {
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         handler.gererErreurMetier(new ErreurMetier("Données invalides."));
     assertEquals(400, rep.getStatusCode().value());
     assertEquals("Données invalides.", rep.getBody().get("erreur"));
@@ -139,7 +139,7 @@ class GlobalExceptionHandlerTest {
         .when(logAdminService)
         .logAdmin(anyString(), anyString(), anyString(), any());
 
-    Map<String, Object> rep = handler.gererErreurInattendue(new RuntimeException("panne"), request);
+    final Map<String, Object> rep = handler.gererErreurInattendue(new RuntimeException("panne"), request);
 
     assertEquals("Une erreur inattendue s'est produite.", rep.get("erreur"));
   }

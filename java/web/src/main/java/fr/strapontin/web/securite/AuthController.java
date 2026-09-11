@@ -61,11 +61,11 @@ public class AuthController {
    * @param logAdminService audit des tentatives bloquées faute de PUBLIC_BASE_URL configurée
    */
   public AuthController(
-      AuthenticationManager authenticationManager,
-      AuthService authService,
-      TotpChallengeService totpChallengeService,
-      ConfigService configService,
-      LogAdminService logAdminService) {
+      final AuthenticationManager authenticationManager,
+      final AuthService authService,
+      final TotpChallengeService totpChallengeService,
+      final ConfigService configService,
+      final LogAdminService logAdminService) {
     this.authenticationManager = authenticationManager;
     this.authService = authService;
     this.totpChallengeService = totpChallengeService;
@@ -82,17 +82,17 @@ public class AuthController {
    */
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(
-      @Valid @RequestBody LoginRequest req, HttpServletRequest httpRequest) {
+      @Valid @RequestBody final LoginRequest req, final HttpServletRequest httpRequest) {
 
-    UsernamePasswordAuthenticationToken tokenNonAuthentifie =
+    final UsernamePasswordAuthenticationToken tokenNonAuthentifie =
         UsernamePasswordAuthenticationToken.unauthenticated(req.identifiant(), req.motDePasse());
     tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
-    Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
+    final Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
 
-    SessionOuverte sessionOuverte =
+    final SessionOuverte sessionOuverte =
         ouvrirSession(auth, httpRequest, "Principal inattendu après authentification");
-    UtilisateurDetails details = sessionOuverte.details();
-    boolean totpRequis = details.twoFactorActif();
+    final UtilisateurDetails details = sessionOuverte.details();
+    final boolean totpRequis = details.twoFactorActif();
     if (totpRequis) {
       sessionOuverte
           .session()
@@ -118,11 +118,11 @@ public class AuthController {
    */
   @PostMapping("/api/auth/logout")
   public ResponseEntity<Void> logout(
-      HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
-    HttpSession session = httpRequest.getSession(false);
+      final HttpServletRequest httpRequest, final HttpServletResponse httpResponse) {
+    final HttpSession session = httpRequest.getSession(false);
     if (session != null) session.invalidate();
     SecurityContextHolder.clearContext();
-    Cookie cookie = new Cookie("SESSION", "");
+    final Cookie cookie = new Cookie("SESSION", "");
     cookie.setMaxAge(0);
     cookie.setPath("/");
     cookie.setHttpOnly(true);
@@ -147,10 +147,10 @@ public class AuthController {
    */
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
-      @Valid @RequestBody TotpChallengeRequest req,
-      HttpServletRequest httpRequest,
-      Authentication auth) {
-    HttpSession session = httpRequest.getSession(false);
+      @Valid @RequestBody final TotpChallengeRequest req,
+      final HttpServletRequest httpRequest,
+      final Authentication auth) {
+    final HttpSession session = httpRequest.getSession(false);
     if (session == null
         || !Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
       return ResponseEntity.status(409).body(Map.of("erreur", "Aucun challenge TOTP en attente"));
@@ -163,7 +163,7 @@ public class AuthController {
           .body(Map.of("erreur", "Authentification requise"));
     }
 
-    ResultatTotp resultat =
+    final ResultatTotp resultat =
         totpChallengeService.verifier(
             principal.id(), principal.identifiant(), req.code(), httpRequest.getRemoteAddr());
 
@@ -205,17 +205,17 @@ public class AuthController {
    * @return l'utilisateur courant ou 401 si non authentifié
    */
   @GetMapping("/api/auth/me")
-  public ResponseEntity<UtilisateurDto> moi(Authentication auth, HttpServletRequest httpRequest) {
+  public ResponseEntity<UtilisateurDto> moi(final Authentication auth, final HttpServletRequest httpRequest) {
     if (!(auth != null
         && auth.isAuthenticated()
         && auth.getPrincipal() instanceof UtilisateurDetails details)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
-    HttpSession session = httpRequest.getSession(false);
-    boolean totpRequis =
+    final HttpSession session = httpRequest.getSession(false);
+    final boolean totpRequis =
         session != null
             && Boolean.TRUE.equals(
-                session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE));
+            session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE));
     return ResponseEntity.ok(
         new UtilisateurDto(
             details.id(),
@@ -237,7 +237,7 @@ public class AuthController {
    */
   @PostMapping("/api/auth/forgot-password")
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
-      @RequestBody ForgotPasswordRequest req) {
+      @RequestBody final ForgotPasswordRequest req) {
     if (req.email() != null && !req.email().isBlank()) {
       resoudreBaseUrl()
           .ifPresentOrElse(
@@ -262,8 +262,8 @@ public class AuthController {
    * @return {@code {type: "invite"}} ou {@code {type: "reset"}}
    */
   @GetMapping("/api/auth/type-token")
-  public ResponseEntity<Map<String, Object>> typeToken(@RequestParam String token) {
-    boolean estInvite = authService.estTokenInvite(token);
+  public ResponseEntity<Map<String, Object>> typeToken(@RequestParam final String token) {
+    final boolean estInvite = authService.estTokenInvite(token);
     return ResponseEntity.ok(Map.of("type", estInvite ? "invite" : "reset"));
   }
 
@@ -279,9 +279,9 @@ public class AuthController {
    */
   @PostMapping("/api/auth/reset-password")
   public ResponseEntity<?> reinitialiserMotDePasse(
-      @Valid @RequestBody ResetPasswordRequest req, HttpServletRequest httpRequest) {
+      @Valid @RequestBody final ResetPasswordRequest req, final HttpServletRequest httpRequest) {
     if (req.identifiant() != null && !req.identifiant().isBlank()) {
-      String ident = req.identifiant().strip().toLowerCase();
+      final String ident = req.identifiant().strip().toLowerCase();
       if (ident.length() < 3 || ident.length() > 30) {
         return ResponseEntity.badRequest()
             .body(Map.of("erreur", "L'identifiant doit contenir entre 3 et 30 caractères."));
@@ -294,14 +294,14 @@ public class AuthController {
                     "L'identifiant ne peut contenir que des lettres, chiffres, points,"
                         + " tirets et underscores."));
       }
-      String identFinal = authService.activerCompteInvite(req.token(), ident, req.motDePasse());
+      final String identFinal = authService.activerCompteInvite(req.token(), ident, req.motDePasse());
 
-      UsernamePasswordAuthenticationToken tokenNonAuthentifie =
+      final UsernamePasswordAuthenticationToken tokenNonAuthentifie =
           UsernamePasswordAuthenticationToken.unauthenticated(identFinal, req.motDePasse());
       tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
-      Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
+      final Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
 
-      UtilisateurDetails details =
+      final UtilisateurDetails details =
           ouvrirSession(auth, httpRequest, "Principal inattendu après activation invitation")
               .details();
       log.debug("Activation compte invitation, connexion : {}", details.identifiant());
@@ -340,15 +340,15 @@ public class AuthController {
    * @return la session nouvellement créée et les détails de l'utilisateur authentifié
    */
   private SessionOuverte ouvrirSession(
-      Authentication auth, HttpServletRequest httpRequest, String messageErreur) {
-    HttpSession sessionExistante = httpRequest.getSession(false);
+      final Authentication auth, final HttpServletRequest httpRequest, final String messageErreur) {
+    final HttpSession sessionExistante = httpRequest.getSession(false);
     if (sessionExistante != null) sessionExistante.invalidate();
 
-    SecurityContext contexte = SecurityContextHolder.createEmptyContext();
+    final SecurityContext contexte = SecurityContextHolder.createEmptyContext();
     contexte.setAuthentication(auth);
     SecurityContextHolder.setContext(contexte);
 
-    HttpSession session = httpRequest.getSession(true);
+    final HttpSession session = httpRequest.getSession(true);
     session.setAttribute(
         HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
 

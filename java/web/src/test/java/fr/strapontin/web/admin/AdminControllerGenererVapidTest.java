@@ -46,7 +46,7 @@ class AdminControllerGenererVapidTest {
   void genererVapid_succes_exposeClePubliqueEtNbAbonnementsSupprimes() throws Exception {
     when(vapidService.genererVapid()).thenReturn(new VapidService.ResultatVapid("cle-pub", 3));
 
-    ResponseEntity<Map<String, Object>> reponse = controller.genererVapid();
+    final ResponseEntity<Map<String, Object>> reponse = controller.genererVapid();
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("cle-pub", reponse.getBody().get("clePublique"));
@@ -57,7 +57,7 @@ class AdminControllerGenererVapidTest {
   void genererVapid_exceptionService_retourne500() throws Exception {
     when(vapidService.genererVapid()).thenThrow(new RuntimeException("erreur génération clé"));
 
-    ResponseEntity<Map<String, Object>> reponse = controller.genererVapid();
+    final ResponseEntity<Map<String, Object>> reponse = controller.genererVapid();
 
     assertEquals(500, reponse.getStatusCode().value());
   }

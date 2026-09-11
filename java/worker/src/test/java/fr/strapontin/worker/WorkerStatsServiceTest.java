@@ -62,7 +62,7 @@ class WorkerStatsServiceTest {
     service = creerService(List.of(tm, eventim));
   }
 
-  private WorkerStatsService creerService(List<SourceConcerts> sources) {
+  private WorkerStatsService creerService(final List<SourceConcerts> sources) {
     return new WorkerStatsService(
         sources,
         tm,
@@ -141,10 +141,10 @@ class WorkerStatsServiceTest {
   // générique sur `sources` (instanceof SourceAvecBilanFetch), sans méthode dédiée.
   @Test
   void enregistrerStatJob_digitickPanneTotale_insereLogsAdminNiveauError() {
-    DigitickSource digitick = mock(DigitickSource.class);
+    final DigitickSource digitick = mock(DigitickSource.class);
     when(digitick.nom()).thenReturn("digitick");
     when(digitick.preleverBilan()).thenReturn(new BilanFetch(4, 4));
-    WorkerStatsService serviceAvecDigitick = creerService(List.of(tm, eventim, digitick));
+    final WorkerStatsService serviceAvecDigitick = creerService(List.of(tm, eventim, digitick));
 
     serviceAvecDigitick.enregistrerStatJob(
         "fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
@@ -259,7 +259,7 @@ class WorkerStatsServiceTest {
   void enregistrerStatJob_nominal_enregistreLaDureeDansLeTimerMicrometer() {
     service.enregistrerStatJob("fetch:region", 42, new ResultatPersistance(1, 0), null);
 
-    var timer =
+    final var timer =
         meterRegistry
             .find("strapontin.worker.job.duration")
             .tag("type_job", "fetch:region")
@@ -277,7 +277,7 @@ class WorkerStatsServiceTest {
 
     service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
 
-    var compteur =
+    final var compteur =
         meterRegistry.find("strapontin.worker.source.erreurs").tag("source", "eventim").counter();
 
     assertEquals(2.0, compteur.count(), 0.001);
@@ -318,7 +318,7 @@ class WorkerStatsServiceTest {
   // entre deux appels à enregistrerStatJob — simulé ici par un stockage en mémoire derrière le
   // jdbc mocké, fidèle au comportement réel (INSERT ... ON CONFLICT DO UPDATE).
   private void simulerPersistanceAppConfig() {
-    java.util.concurrent.atomic.AtomicReference<String> valeur =
+    final java.util.concurrent.atomic.AtomicReference<String> valeur =
         new java.util.concurrent.atomic.AtomicReference<>();
     when(jdbc.queryForObject(
             anyString(),
@@ -330,7 +330,7 @@ class WorkerStatsServiceTest {
             org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
-              java.util.Map<String, ?> params = invocation.getArgument(1);
+              final java.util.Map<String, ?> params = invocation.getArgument(1);
               valeur.set((String) params.get("json"));
               return 1;
             });

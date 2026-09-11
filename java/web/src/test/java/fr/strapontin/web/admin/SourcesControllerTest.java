@@ -36,7 +36,7 @@ class SourcesControllerTest {
 
   @Test
   void mettreAJourDigitickSlug_uuidInvalide_retourne400() {
-    var reponse = controller.mettreAJourDigitickSlug("pas-un-uuid", new RequeteSlug("slug-x"));
+    final var reponse = controller.mettreAJourDigitickSlug("pas-un-uuid", new RequeteSlug("slug-x"));
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(sourcesService, org.mockito.Mockito.never()).mettreAJourDigitickSlug(any(), any());
@@ -44,9 +44,9 @@ class SourcesControllerTest {
 
   @Test
   void mettreAJourDigitickSlug_nominal_delegueAuServiceEtRetourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
 
-    ResponseEntity<?> reponse =
+    final ResponseEntity<?> reponse =
         controller.mettreAJourDigitickSlug(id.toString(), new RequeteSlug("le-splendid"));
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -55,7 +55,7 @@ class SourcesControllerTest {
 
   @Test
   void mettreAJourDigitickSlug_slugNull_transmetChaineVide() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
 
     controller.mettreAJourDigitickSlug(id.toString(), new RequeteSlug(null));
 
@@ -66,7 +66,7 @@ class SourcesControllerTest {
   void testerDigitickSlug_accessible_retourne200AvecNbConcerts() {
     when(sourcesService.testerDigitickSlug("le-splendid")).thenReturn(5);
 
-    var reponse = controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("le-splendid"));
+    final var reponse = controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("le-splendid"));
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals(5, reponse.getBody().get("nbConcerts"));
@@ -76,14 +76,14 @@ class SourcesControllerTest {
   void testerDigitickSlug_inaccessible_retourne404() {
     when(sourcesService.testerDigitickSlug("mauvais-slug")).thenReturn(-1);
 
-    var reponse = controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("mauvais-slug"));
+    final var reponse = controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("mauvais-slug"));
 
     assertEquals(404, reponse.getStatusCode().value());
   }
 
   @Test
   void creerSalleDigitick_nomVide_retourne400() {
-    var reponse =
+    final var reponse =
         controller.creerSalleDigitick(new RequeteDigitickSalle(" ", "slug-x", null, null));
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -93,7 +93,7 @@ class SourcesControllerTest {
 
   @Test
   void creerSalleDigitick_slugVide_retourne400() {
-    var reponse =
+    final var reponse =
         controller.creerSalleDigitick(new RequeteDigitickSalle("Salle X", " ", null, null));
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -103,10 +103,10 @@ class SourcesControllerTest {
 
   @Test
   void creerSalleDigitick_nominal_retourne201AvecSalleId() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(sourcesService.creerSalleDigitick("Salle X", "slug-x", "Nancy", "54")).thenReturn(id);
 
-    var reponse =
+    final var reponse =
         controller.creerSalleDigitick(new RequeteDigitickSalle("Salle X", "slug-x", "Nancy", "54"));
 
     assertEquals(201, reponse.getStatusCode().value());
@@ -115,7 +115,7 @@ class SourcesControllerTest {
 
   @Test
   void modifierSalleDigitick_uuidInvalide_retourne400() {
-    var reponse =
+    final var reponse =
         controller.modifierSalleDigitick(
             "pas-un-uuid", new RequeteDigitickSalle("Salle X", null, null, null));
 
@@ -126,9 +126,9 @@ class SourcesControllerTest {
 
   @Test
   void modifierSalleDigitick_nominal_delegueAuService() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
 
-    var reponse =
+    final var reponse =
         controller.modifierSalleDigitick(
             id.toString(), new RequeteDigitickSalle("Nouveau nom", "  ", null, null));
 
@@ -141,7 +141,7 @@ class SourcesControllerTest {
     when(sourcesService.listerSalles(true, 2, "olympia"))
         .thenReturn(new ReponseSallesSources(java.util.List.of(), 2, 3, 120));
 
-    var reponse = controller.listerSalles(true, 2, "olympia");
+    final var reponse = controller.listerSalles(true, 2, "olympia");
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(sourcesService).listerSalles(true, 2, "olympia");

@@ -46,7 +46,7 @@ class ParametresServiceTest {
     when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(3);
     when(jdbc.queryForObject(contains("user_salles"), anyMap(), eq(Integer.class))).thenReturn(5);
 
-    Map<String, Object> res = service.stats("u1");
+    final Map<String, Object> res = service.stats("u1");
 
     assertEquals(3, res.get("nbArtistes"));
     assertEquals(5, res.get("nbSalles"));
@@ -59,7 +59,7 @@ class ParametresServiceTest {
     when(jdbc.queryForObject(contains("user_salles"), anyMap(), eq(Integer.class)))
         .thenReturn(null);
 
-    Map<String, Object> res = service.stats("u1");
+    final Map<String, Object> res = service.stats("u1");
 
     assertEquals(0, res.get("nbArtistes"));
     assertEquals(0, res.get("nbSalles"));
@@ -97,7 +97,7 @@ class ParametresServiceTest {
     verify(jdbc).update(contains("DELETE FROM verifications"), anyMap());
     verify(jdbc).update(contains("INSERT INTO verifications"), anyMap());
     verify(jdbc).update(contains("UPDATE users SET pending_email"), anyMap());
-    ArgumentCaptor<String> lienCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> lienCaptor = ArgumentCaptor.forClass(String.class);
     verify(emailService).envoyerConfirmationEmail(eq("nouveau@example.com"), lienCaptor.capture());
     assertTrue(
         lienCaptor.getValue().startsWith("http://localhost/api/parametres/confirmer-email?token="));
@@ -105,7 +105,7 @@ class ParametresServiceTest {
 
   @Test
   void confirmerEmail_tokenAbsent_retourneLienInvalide() {
-    ParametresService.ResultatConfirmation res = service.confirmerEmail(null, "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail(null, "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.LIEN_INVALIDE, res.statut());
     verifyNoInteractions(jdbc);
@@ -113,7 +113,7 @@ class ParametresServiceTest {
 
   @Test
   void confirmerEmail_tokenVide_retourneLienInvalide() {
-    ParametresService.ResultatConfirmation res = service.confirmerEmail("", "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail("", "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.LIEN_INVALIDE, res.statut());
     verifyNoInteractions(jdbc);
@@ -123,7 +123,7 @@ class ParametresServiceTest {
   void confirmerEmail_tokenExpire_retourneLienExpire() {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap())).thenReturn(List.of());
 
-    ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenexpire", "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenexpire", "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.LIEN_EXPIRE, res.statut());
   }
@@ -133,7 +133,7 @@ class ParametresServiceTest {
     when(jdbc.queryForList(contains("SELECT identifier"), anyMap()))
         .thenReturn(List.of(Map.of("identifier", "email-change:autreUser")));
 
-    ParametresService.ResultatConfirmation res = service.confirmerEmail("token123", "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail("token123", "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.MAUVAIS_UTILISATEUR, res.statut());
   }
@@ -145,7 +145,7 @@ class ParametresServiceTest {
     when(jdbc.queryForList(contains("SELECT pending_email"), anyMap(), eq(String.class)))
         .thenReturn(List.of());
 
-    ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenok", "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenok", "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.AUCUN_CHANGEMENT, res.statut());
   }
@@ -160,7 +160,7 @@ class ParametresServiceTest {
             contains("SELECT 1 FROM users WHERE email"), anyMap(), eq(Integer.class)))
         .thenReturn(List.of(1));
 
-    ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenok", "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenok", "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.EMAIL_DEJA_UTILISE, res.statut());
     verify(jdbc).update(contains("UPDATE users SET pending_email = NULL"), anyMap());
@@ -177,7 +177,7 @@ class ParametresServiceTest {
             contains("SELECT 1 FROM users WHERE email"), anyMap(), eq(Integer.class)))
         .thenReturn(List.of());
 
-    ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenok", "u1");
+    final ParametresService.ResultatConfirmation res = service.confirmerEmail("tokenok", "u1");
 
     assertEquals(ParametresService.ResultatConfirmation.Statut.OK, res.statut());
     assertEquals("u1", res.userId());

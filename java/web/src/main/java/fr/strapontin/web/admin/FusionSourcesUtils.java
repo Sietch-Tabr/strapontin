@@ -27,14 +27,14 @@ final class FusionSourcesUtils {
    *   sante_source}/{@code sante_cible}
    * @return {@code true} si la ligne côté source doit être conservée
    */
-  static boolean laSourceEstPlusSaine(Map<String, Object> conflit) {
-    boolean suspectSource = (boolean) conflit.get("suspect_source");
-    boolean suspectCible = (boolean) conflit.get("suspect_cible");
+  static boolean laSourceEstPlusSaine(final Map<String, Object> conflit) {
+    final boolean suspectSource = (boolean) conflit.get("suspect_source");
+    final boolean suspectCible = (boolean) conflit.get("suspect_cible");
     if (suspectSource != suspectCible) {
       return !suspectSource;
     }
-    int santeSource = ((Number) conflit.get("sante_source")).intValue();
-    int santeCible = ((Number) conflit.get("sante_cible")).intValue();
+    final int santeSource = ((Number) conflit.get("sante_source")).intValue();
+    final int santeCible = ((Number) conflit.get("sante_cible")).intValue();
     return santeSource <= santeCible;
   }
 }

@@ -42,7 +42,7 @@ public record BilanFetch(int appels, int erreursHttp) {
    * @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade
    * @return {@code true} si panne totale
    */
-  public boolean panneTotale(int seuilAppelsMin) {
+  public boolean panneTotale(final int seuilAppelsMin) {
     return appels >= seuilAppelsMin && erreursHttp == appels;
   }
 
@@ -56,24 +56,24 @@ public record BilanFetch(int appels, int erreursHttp) {
    * @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade en {@code error}
    * @return entrée à journaliser, vide si rien à signaler
    */
-  public Optional<EntreeLog> evaluer(String typeJob, String nomSource, int seuilAppelsMin) {
+  public Optional<EntreeLog> evaluer(final String typeJob, final String nomSource, final int seuilAppelsMin) {
     if (appels == 0) return Optional.empty();
-    boolean panneTotale = panneTotale(seuilAppelsMin);
+    final boolean panneTotale = panneTotale(seuilAppelsMin);
     if (!panneTotale && erreursHttp == 0) return Optional.empty();
 
-    String niveau = panneTotale ? "error" : "warn";
-    String message =
-        typeJob
-            + " — "
-            + nomSource
-            + " "
-            + (panneTotale ? "intégralement en échec" : "en échec partiel")
-            + " sur ce cycle ("
-            + erreursHttp
-            + "/"
-            + appels
-            + " appels HTTP)";
-    Map<String, Object> meta = Map.of("appels", appels, "erreursHttp", erreursHttp);
+    final String niveau = panneTotale ? "error" : "warn";
+    final String message =
+            typeJob
+                    + " — "
+                    + nomSource
+                    + " "
+                    + (panneTotale ? "intégralement en échec" : "en échec partiel")
+                    + " sur ce cycle ("
+                    + erreursHttp
+                    + "/"
+                    + appels
+                    + " appels HTTP)";
+    final Map<String, Object> meta = Map.of("appels", appels, "erreursHttp", erreursHttp);
     return Optional.of(new EntreeLog(niveau, message, meta));
   }
 }

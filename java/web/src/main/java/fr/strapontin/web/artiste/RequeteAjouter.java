@@ -30,7 +30,7 @@ public record RequeteAjouter(
    *
    * @param nom nom de l'artiste
    */
-  public RequeteAjouter(String nom) {
+  public RequeteAjouter(final String nom) {
     this(nom, null);
   }
 }

@@ -35,13 +35,13 @@ public class TotpGuardFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain filterChain)
       throws ServletException, IOException {
 
-    HttpSession session = request.getSession(false);
+    final HttpSession session = request.getSession(false);
     if (session != null
         && Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
-      String chemin = request.getServletPath();
+      final String chemin = request.getServletPath();
       if (chemin.startsWith("/api/") && !API_TOTP_AUTORISES.contains(chemin)) {
         response.setStatus(401);
         response.setContentType("application/json;charset=UTF-8");

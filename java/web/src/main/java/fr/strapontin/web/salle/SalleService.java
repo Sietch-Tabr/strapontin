@@ -87,12 +87,12 @@ public class SalleService {
    * @param logAdminService journalisation des suppressions dans {@code logs_admin}
    */
   public SalleService(
-      SalleRepository salleRepository,
-      ConfigService configService,
-      ObjectMapper objectMapper,
-      RestClient restClient,
-      CadenceurAppels cadenceurTicketmaster,
-      LogAdminService logAdminService) {
+      final SalleRepository salleRepository,
+      final ConfigService configService,
+      final ObjectMapper objectMapper,
+      final RestClient restClient,
+      final CadenceurAppels cadenceurTicketmaster,
+      final LogAdminService logAdminService) {
     this.salleRepository = salleRepository;
     this.configService = configService;
     this.objectMapper = objectMapper;
@@ -111,7 +111,7 @@ public class SalleService {
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
-  public void setSelf(@Lazy SalleService self) {
+  public void setSelf(@Lazy final SalleService self) {
     this.self = self;
   }
 
@@ -126,29 +126,29 @@ public class SalleService {
    * @param q terme de recherche (optionnel, min 2 caractères)
    * @return la liste des salles et les suggestions
    */
-  public ReponseSalles lister(String userId, String q) {
-    String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
+  public ReponseSalles lister(final String userId, final String q) {
+    final String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
 
-    List<SalleUtilisateur> salles = salleRepository.listerPourUtilisateur(userId);
+    final List<SalleUtilisateur> salles = salleRepository.listerPourUtilisateur(userId);
 
     List<ResultatSalle> resultats = List.of();
     boolean dejaLaSuivie = false;
 
     if (recherche.length() >= 2) {
-      Set<String> sallesDejaAjoutees =
+      final Set<String> sallesDejaAjoutees =
           salles.stream().map(s -> normaliserSalleCle(s.nom())).collect(Collectors.toSet());
 
-      List<Map<String, Object>> enBase =
+      final List<Map<String, Object>> enBase =
           salleRepository.rechercherEnBase("%" + normaliserSalleCle(recherche) + "%");
 
-      List<ResultatSalle> listeResultats =
+      final List<ResultatSalle> listeResultats =
           enBase.stream()
               .filter(
                   r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
               .map(
                   r -> {
-                    String digitickSlug = (String) r.get("digitick_slug");
-                    String src = digitickSlug != null ? "base-digitick" : "base";
+                    final String digitickSlug = (String) r.get("digitick_slug");
+                    final String src = digitickSlug != null ? "base-digitick" : "base";
                     return new ResultatSalle(
                         (String) r.get("salle"), (String) r.get("ville"), null, digitickSlug, src);
                   })
@@ -161,10 +161,10 @@ public class SalleService {
       // ArtisteService.lister). En parallèle, l'attente totale est bornée par le plus lent des
       // deux appels, pas leur somme.
       if (listeResultats.size() < 3) {
-        var futureNominatim =
+        final var futureNominatim =
             CompletableFuture.supplyAsync(() -> rechercherSallesNominatim(recherche));
-        var futureTm = CompletableFuture.supplyAsync(() -> rechercherSallesTM(recherche));
-        List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
+        final var futureTm = CompletableFuture.supplyAsync(() -> rechercherSallesTM(recherche));
+        final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
         resultatsExternes.addAll(futureTm.join());
         for (ResultatSalle r : resultatsExternes) {
           if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) continue;
@@ -173,7 +173,7 @@ public class SalleService {
       }
 
       resultats = listeResultats;
-      String rechercheNorm = normaliserSalleCle(recherche);
+      final String rechercheNorm = normaliserSalleCle(recherche);
       dejaLaSuivie = contientCorrespondancePartielle(rechercheNorm, sallesDejaAjoutees);
     }
 
@@ -198,9 +198,9 @@ public class SalleService {
    * @param liste suggestions déjà collectées (modifiée en place)
    * @param candidat nouveau résultat externe à intégrer
    */
-  static void fusionnerOuAjouter(List<ResultatSalle> liste, ResultatSalle candidat) {
+  static void fusionnerOuAjouter(final List<ResultatSalle> liste, final ResultatSalle candidat) {
     for (int i = 0; i < liste.size(); i++) {
-      ResultatSalle existant = liste.get(i);
+      final ResultatSalle existant = liste.get(i);
       if (CorrespondanceSalle.estDoublonSalle(
           Normalisation.normaliserTexte(existant.salle()),
           Normalisation.normaliserTexte(candidat.salle()))) {
@@ -235,7 +235,7 @@ public class SalleService {
    * @throws RessourceDejaExistante si la salle est déjà suivie
    */
   @Transactional
-  public void ajouter(String userId, String nom, String tmVenueId) {
+  public void ajouter(final String userId, final String nom, final String tmVenueId) {
     ajouter(userId, nom, tmVenueId, null, null);
   }
 
@@ -263,13 +263,13 @@ public class SalleService {
    */
   @Transactional
   public void ajouter(
-      String userId, String nom, String tmVenueId, String osmId, String wikidataId) {
-    String salleCle = normaliserSalleCle(nom);
+      final String userId, final String nom, final String tmVenueId, final String osmId, final String wikidataId) {
+    final String salleCle = normaliserSalleCle(nom);
     if (salleCle.isEmpty()) {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    UUID salleId = resoudreSalleId(nom, salleCle);
+    final UUID salleId = resoudreSalleId(nom, salleCle);
     if (salleRepository.existePourUtilisateur(userId, salleId)) {
       throw new RessourceDejaExistante("Cette salle est déjà dans votre liste.");
     }
@@ -310,8 +310,8 @@ public class SalleService {
    *
    * @param salleId UUID de la salle ajoutée/créée dans la transaction en cours
    */
-  private void executerApresCommit(UUID salleId) {
-    Runnable action = () -> declencherWorkerParSources(salleId);
+  private void executerApresCommit(final UUID salleId) {
+    final Runnable action = () -> declencherWorkerParSources(salleId);
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
           new TransactionSynchronization() {
@@ -346,7 +346,7 @@ public class SalleService {
    * @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
    */
   @Transactional(propagation = Propagation.NESTED)
-  void mettreAJourWikidataIdEnSavepoint(UUID salleId, String wikidataId) {
+  void mettreAJourWikidataIdEnSavepoint(final UUID salleId, final String wikidataId) {
     salleRepository.mettreAJourWikidataId(salleId, wikidataId);
   }
 
@@ -369,19 +369,19 @@ public class SalleService {
    * @param salleCle clé normalisée ({@link #normaliserSalleCle})
    * @return UUID de la salle existante ou nouvellement créée
    */
-  public UUID resoudreSalleId(String nom, String salleCle) {
-    Set<String> tokens =
+  public UUID resoudreSalleId(final String nom, final String salleCle) {
+    final Set<String> tokens =
         Arrays.stream(nom.split("\\s+"))
             .map(SalleService::normaliserSalleCle)
             .filter(t -> t.length() >= 3)
             .collect(Collectors.toSet());
-    String nomNormCible = Normalisation.normaliserTexte(nom);
+    final String nomNormCible = Normalisation.normaliserTexte(nom);
     for (Map<String, Object> candidat : salleRepository.chercherCandidatsParCle(tokens)) {
-      String cleCandidate = (String) candidat.get("salle_cle");
+      final String cleCandidate = (String) candidat.get("salle_cle");
       if (cleCandidate.equals(salleCle)) {
         return salleRepository.upsertSalle(salleCle, nom);
       }
-      String nomCandidat = (String) candidat.get("nom");
+      final String nomCandidat = (String) candidat.get("nom");
       if (CorrespondanceSalle.estDoublonSalle(
           nomNormCible, Normalisation.normaliserTexte(nomCandidat))) {
         return (UUID) candidat.get("id");
@@ -398,8 +398,8 @@ public class SalleService {
    *
    * @param salleId UUID de la salle
    */
-  public void declencherWorkerParSources(UUID salleId) {
-    String identifiants = salleRepository.lireIdentifiantsSources(salleId);
+  public void declencherWorkerParSources(final UUID salleId) {
+    final String identifiants = salleRepository.lireIdentifiantsSources(salleId);
     if (identifiants != null) {
       declencherWorkerSalle(identifiants);
     }
@@ -411,7 +411,7 @@ public class SalleService {
    * @param userId identifiant de l'utilisateur
    * @param salleId UUID stable de la salle
    */
-  public void supprimer(String userId, UUID salleId) {
+  public void supprimer(final String userId, final UUID salleId) {
     if (salleRepository.supprimerPourUtilisateur(userId, salleId) == 0) {
       return;
     }
@@ -439,9 +439,9 @@ public class SalleService {
    * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
    */
   @Transactional
-  public UUID creerSalleDigitick(String nom, String slug, String ville, String dept) {
-    String salleCle = normaliserSalleCle(nom);
-    UUID salleId = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
+  public UUID creerSalleDigitick(final String nom, final String slug, final String ville, final String dept) {
+    final String salleCle = normaliserSalleCle(nom);
+    final UUID salleId = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
     salleRepository
         .trouverConflitDigitickSlug(slug, salleId)
         .ifPresent(
@@ -461,7 +461,7 @@ public class SalleService {
    * @param ville nouvelle ville (null = inchangée)
    * @param dept nouveau numéro de département (null = inchangé)
    */
-  public void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
+  public void mettreAJourSalle(final UUID salleId, final String nom, final String ville, final String dept) {
     salleRepository.mettreAJourSalle(salleId, nom, ville, dept);
   }
 
@@ -472,7 +472,7 @@ public class SalleService {
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucun
    */
-  public String lireIdentifiantsSources(UUID salleId) {
+  public String lireIdentifiantsSources(final UUID salleId) {
     return salleRepository.lireIdentifiantsSources(salleId);
   }
 
@@ -482,7 +482,7 @@ public class SalleService {
    * @param salleId UUID de la salle
    * @return {@code true} si supprimée, {@code false} si des contraintes bloquent
    */
-  public boolean supprimerSalleDigitick(UUID salleId) {
+  public boolean supprimerSalleDigitick(final UUID salleId) {
     return salleRepository.supprimerSalleDigitick(salleId);
   }
 
@@ -492,8 +492,8 @@ public class SalleService {
    * @param nom nom brut de la salle
    * @return identifiant normalisé (ex. {@code "olympia"})
    */
-  public static String normaliserSalleCle(String nom) {
-    String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
+  public static String normaliserSalleCle(final String nom) {
+    final String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
     return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
   }
 
@@ -511,7 +511,7 @@ public class SalleService {
    * @param clesNorm clés normalisées des salles déjà suivies
    * @return {@code true} si une salle déjà suivie contient la recherche
    */
-  static boolean contientCorrespondancePartielle(String rechercheNorm, Set<String> clesNorm) {
+  static boolean contientCorrespondancePartielle(final String rechercheNorm, final Set<String> clesNorm) {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
   }
 
@@ -529,15 +529,15 @@ public class SalleService {
    *   ({@code Mockito.spy}) évitant un appel réseau réel — même motif que {@code
    *   ArtisteService#rechercherWikidata}.
    */
-  List<ResultatSalle> rechercherSallesNominatim(String terme) {
+  List<ResultatSalle> rechercherSallesNominatim(final String terme) {
     try {
-      String contact = configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
-      String url =
+      final String contact = configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
+      final String url =
           NOMINATIM_URL
               + "?q="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
-      WorkerTriggerUtils.ReponseHttp reponse =
+      final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
@@ -573,31 +573,31 @@ public class SalleService {
    * @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
    */
   @SuppressWarnings("unchecked")
-  List<ResultatSalle> parseNominatimResultats(String json) {
-    List<ResultatSalle> resultats = new ArrayList<>();
+  List<ResultatSalle> parseNominatimResultats(final String json) {
+    final List<ResultatSalle> resultats = new ArrayList<>();
     try {
-      List<Map<String, Object>> items = objectMapper.readValue(json, List.class);
+      final List<Map<String, Object>> items = objectMapper.readValue(json, List.class);
       for (Map<String, Object> item : items) {
-        String type = (String) item.get("type");
-        Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
-        String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
-        boolean pertinent =
+        final String type = (String) item.get("type");
+        final Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
+        final String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
+        final boolean pertinent =
             TYPES_SALLE_NOMINATIM.contains(type)
                 || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
         if (!pertinent) continue;
 
-        String displayName = (String) item.get("display_name");
+        final String displayName = (String) item.get("display_name");
         if (displayName == null || displayName.isBlank()) continue;
-        String nom = displayName.split(",")[0].strip();
+        final String nom = displayName.split(",")[0].strip();
 
-        String osmType = (String) item.get("osm_type");
-        Object osmIdBrut = item.get("osm_id");
-        String osmId = osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
+        final String osmType = (String) item.get("osm_type");
+        final Object osmIdBrut = item.get("osm_id");
+        final String osmId = osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
 
-        Map<String, Object> address = (Map<String, Object>) item.get("address");
-        String ville = extraireVille(address);
+        final Map<String, Object> address = (Map<String, Object>) item.get("address");
+        final String ville = extraireVille(address);
 
-        String wikidataId = extratags != null ? (String) extratags.get("wikidata") : null;
+        final String wikidataId = extratags != null ? (String) extratags.get("wikidata") : null;
 
         resultats.add(new ResultatSalle(nom, ville, null, null, "osm", osmId, wikidataId));
       }
@@ -607,10 +607,10 @@ public class SalleService {
     return resultats;
   }
 
-  private static String extraireVille(Map<String, Object> address) {
+  private static String extraireVille(final Map<String, Object> address) {
     if (address == null) return null;
     for (String cle : List.of("city", "town", "village", "municipality")) {
-      Object valeur = address.get(cle);
+      final Object valeur = address.get(cle);
       if (valeur instanceof String s && !s.isBlank()) return s;
     }
     return null;
@@ -624,12 +624,12 @@ public class SalleService {
    *   que {@link #rechercherSallesNominatim}.
    */
   @SuppressWarnings("unchecked")
-  List<ResultatSalle> rechercherSallesTM(String terme) {
-    Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
+  List<ResultatSalle> rechercherSallesTM(final String terme) {
+    final Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
     if (tmKey.isEmpty()) return List.of();
 
     try {
-      String url =
+      final String url =
           TM_VENUES_URL
               + "?keyword="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
@@ -637,7 +637,7 @@ public class SalleService {
               + URLEncoder.encode(tmKey.get(), StandardCharsets.UTF_8);
 
       cadenceurTicketmaster.attendre();
-      WorkerTriggerUtils.ReponseHttp reponse =
+      final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
@@ -647,26 +647,26 @@ public class SalleService {
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return List.of();
 
-      Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
-      Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
+      final Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
+      final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
       if (embedded == null) return List.of();
 
-      List<Map<String, Object>> venues = (List<Map<String, Object>>) embedded.get("venues");
+      final List<Map<String, Object>> venues = (List<Map<String, Object>>) embedded.get("venues");
       if (venues == null) return List.of();
 
       return venues.stream()
           .map(
               v -> {
-                String nomBrut = (String) v.get("name");
+                final String nomBrut = (String) v.get("name");
                 if (nomBrut == null)
                   return new ResultatSalle(null, null, null, null, "ticketmaster");
-                String nom = Normalisation.normaliserCasse(nomBrut);
+                final String nom = Normalisation.normaliserCasse(nomBrut);
                 if (nomBrut.contains("??")) {
                   log.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
                 }
-                String id = (String) v.get("id");
-                Map<String, Object> city = (Map<String, Object>) v.get("city");
-                String ville = city != null ? (String) city.get("name") : null;
+                final String id = (String) v.get("id");
+                final Map<String, Object> city = (Map<String, Object>) v.get("city");
+                final String ville = city != null ? (String) city.get("name") : null;
                 return new ResultatSalle(nom, ville, id, null, "ticketmaster");
               })
           .filter(r -> r.salle() != null)
@@ -678,7 +678,7 @@ public class SalleService {
     }
   }
 
-  private void declencherWorkerSalle(String identifiants) {
+  private void declencherWorkerSalle(final String identifiants) {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient,
         log,

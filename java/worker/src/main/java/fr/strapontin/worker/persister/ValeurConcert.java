@@ -48,7 +48,7 @@ public record ValeurConcert(
   // Seul point de reconstruction du record — les méthodes avecXxx ci-dessous ne varient que sur
   // ces quatre champs (les seuls jamais modifiés après la résolution des identités sources) ;
   // l'ajout d'un futur champ au record ne demande de mettre à jour que cette seule méthode.
-  private ValeurConcert avec(String artisteNorm, String salleNorm, UUID salleId, UUID artisteId) {
+  private ValeurConcert avec(final String artisteNorm, final String salleNorm, final UUID salleId, final UUID artisteId) {
     return new ValeurConcert(
         artiste,
         artisteNorm,
@@ -77,7 +77,7 @@ public record ValeurConcert(
    * @param nouvelleSalleNorm nouveau nom de salle normalisé
    * @return nouveau record avec le champ modifié
    */
-  public ValeurConcert avecSalleNorm(String nouvelleSalleNorm) {
+  public ValeurConcert avecSalleNorm(final String nouvelleSalleNorm) {
     return avec(artisteNorm, nouvelleSalleNorm, salleId, artisteId);
   }
 
@@ -87,7 +87,7 @@ public record ValeurConcert(
    * @param nouvelleSalleId nouveau UUID de salle
    * @return nouveau record avec le champ modifié
    */
-  public ValeurConcert avecSalleId(UUID nouvelleSalleId) {
+  public ValeurConcert avecSalleId(final UUID nouvelleSalleId) {
     return avec(artisteNorm, salleNorm, nouvelleSalleId, artisteId);
   }
 
@@ -97,7 +97,7 @@ public record ValeurConcert(
    * @param nouvelArtisteNorm nouveau nom d'artiste normalisé
    * @return nouveau record avec le champ modifié
    */
-  public ValeurConcert avecArtisteNorm(String nouvelArtisteNorm) {
+  public ValeurConcert avecArtisteNorm(final String nouvelArtisteNorm) {
     return avec(nouvelArtisteNorm, salleNorm, salleId, artisteId);
   }
 
@@ -107,7 +107,7 @@ public record ValeurConcert(
    * @param nouvelArtisteId nouveau UUID d'artiste
    * @return nouveau record avec le champ modifié
    */
-  public ValeurConcert avecArtisteId(UUID nouvelArtisteId) {
+  public ValeurConcert avecArtisteId(final UUID nouvelArtisteId) {
     return avec(artisteNorm, salleNorm, salleId, nouvelArtisteId);
   }
 
@@ -118,7 +118,7 @@ public record ValeurConcert(
    * @param nouvelArtisteId nouveau UUID d'artiste (null conserve l'existant)
    * @return nouveau record avec les champs modifiés
    */
-  public ValeurConcert avecUuids(UUID nouvelleSalleId, UUID nouvelArtisteId) {
+  public ValeurConcert avecUuids(final UUID nouvelleSalleId, final UUID nouvelArtisteId) {
     return avec(artisteNorm, salleNorm, nouvelleSalleId, nouvelArtisteId);
   }
 
@@ -129,7 +129,7 @@ public record ValeurConcert(
    * @param nouvelArtisteId nouveau UUID d'artiste
    * @return nouveau record avec les champs modifiés
    */
-  public ValeurConcert avecArtisteNormEtId(String nouvelArtisteNorm, UUID nouvelArtisteId) {
+  public ValeurConcert avecArtisteNormEtId(final String nouvelArtisteNorm, final UUID nouvelArtisteId) {
     return avec(nouvelArtisteNorm, salleNorm, salleId, nouvelArtisteId);
   }
 }

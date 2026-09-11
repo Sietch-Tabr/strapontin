@@ -40,9 +40,9 @@ class EmailSender {
   private final GestionQuotaResend gestionQuotaResend;
 
   EmailSender(
-      ConfigService configService,
-      JdbcTemplate jdbcTemplate,
-      GestionQuotaResend gestionQuotaResend) {
+      final ConfigService configService,
+      final JdbcTemplate jdbcTemplate,
+      final GestionQuotaResend gestionQuotaResend) {
     this.configService = configService;
     this.jdbcTemplate = jdbcTemplate;
     this.gestionQuotaResend = gestionQuotaResend;
@@ -51,13 +51,13 @@ class EmailSender {
   record ContexteEmail(Resend client, String expediteur, String baseUrl) {}
 
   Optional<ContexteEmail> obtenirContexte() {
-    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       return Optional.empty();
     }
-    String expediteur =
+    final String expediteur =
         configService.lireConfig("CONTACT_EMAIL").or(this::obtenirEmailPremierAdmin).orElse("");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     return Optional.of(new ContexteEmail(new Resend(cle.get()), expediteur, baseUrl));
   }
 
@@ -88,18 +88,18 @@ class EmailSender {
   }
 
   void envoyer(
-      ContexteEmail ctx,
-      String destinataire,
-      String replyTo,
-      String sujet,
-      String corps,
-      String texte) {
+      final ContexteEmail ctx,
+      final String destinataire,
+      final String replyTo,
+      final String sujet,
+      final String corps,
+      final String texte) {
     if (!gestionQuotaResend.reserverEnvoi()) {
       log.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
       return;
     }
     try {
-      CreateEmailOptions options =
+      final CreateEmailOptions options =
           CreateEmailOptions.builder()
               .from(ctx.expediteur())
               .replyTo(replyTo)

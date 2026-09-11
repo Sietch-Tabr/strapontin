@@ -35,7 +35,7 @@ public class LogAdminService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
 
-  public LogAdminService(NamedParameterJdbcTemplate jdbc, ObjectMapper jackson) {
+  public LogAdminService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
     this.jackson = jackson;
   }
@@ -59,7 +59,7 @@ public class LogAdminService {
    * @param source module source
    * @param message message
    */
-  public void logAdmin(String niveau, String source, String message) {
+  public void logAdmin(final String niveau, final String source, final String message) {
     logAdmin(niveau, source, message, null);
   }
 
@@ -71,13 +71,13 @@ public class LogAdminService {
    * @param message message
    * @param meta métadonnées (sérialisées en JSON), ou null
    */
-  public void logAdmin(String niveau, String source, String message, Map<String, Object> meta) {
+  public void logAdmin(final String niveau, final String source, final String message, final Map<String, Object> meta) {
     try {
-      PGobject pgMeta = new PGobject();
+      final PGobject pgMeta = new PGobject();
       pgMeta.setType("jsonb");
       pgMeta.setValue(meta != null ? jackson.writeValueAsString(meta) : null);
 
-      Map<String, Object> params = new HashMap<>();
+      final Map<String, Object> params = new HashMap<>();
       params.put("ts", Instant.now().toEpochMilli());
       params.put("niveau", niveau);
       params.put("source", source);
@@ -104,7 +104,7 @@ public class LogAdminService {
    * @param limite nombre maximum d'entrées à retourner
    * @return la liste des entrées, de la plus récente à la plus ancienne
    */
-  public List<EntreeLogAdmin> lireLogs(int limite) {
+  public List<EntreeLogAdmin> lireLogs(final int limite) {
     return jdbc.query(
         """
         SELECT ts, niveau, source, message, meta::text
@@ -131,7 +131,7 @@ public class LogAdminService {
    * @param tsDepuis horodatage Unix en millisecondes, exclusif
    * @return les entrées d'erreur, de la plus ancienne à la plus récente
    */
-  public List<EntreeLogAdmin> lireErreursDepuis(long tsDepuis) {
+  public List<EntreeLogAdmin> lireErreursDepuis(final long tsDepuis) {
     return jdbc.query(
         """
         SELECT ts, niveau, source, message, meta::text

@@ -41,7 +41,7 @@ public class CoherenceMultiSalleService {
   private final LogsAdminWorker logsAdminWorker;
 
   public CoherenceMultiSalleService(
-      NamedParameterJdbcTemplate jdbc, LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
   }
@@ -57,24 +57,24 @@ public class CoherenceMultiSalleService {
    * @return nombre de salles nouvellement signalées
    */
   public int detecterContamination() {
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
-                   s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
-            FROM salle_sources ss
-            JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.identifiant_externe LIKE :prefixe
-            """,
+                SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
+                       s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
+                FROM salle_sources ss
+                JOIN salles s ON s.id = ss.salle_id
+                WHERE ss.identifiant_externe LIKE :prefixe
+                """,
             Map.of("prefixe", PREFIXE_INTERNAL + "%"));
     if (lignes.isEmpty()) return 0;
 
-    Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
-    Map<UUID, String> nomNormParSalle = new HashMap<>();
-    Map<UUID, String> signaleeParSalle = new HashMap<>();
+    final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
+    final Map<UUID, String> nomNormParSalle = new HashMap<>();
+    final Map<UUID, String> signaleeParSalle = new HashMap<>();
     for (var ligne : lignes) {
-      UUID salleId = (UUID) ligne.get("salle_id");
-      String identifiant = (String) ligne.get("identifiant");
+      final UUID salleId = (UUID) ligne.get("salle_id");
+      final String identifiant = (String) ligne.get("identifiant");
       nomsExtraitsParSalle
           .computeIfAbsent(salleId, _ -> new ArrayList<>())
           .add(identifiant.substring(PREFIXE_INTERNAL.length()));
@@ -84,15 +84,15 @@ public class CoherenceMultiSalleService {
 
     int signalees = 0;
     for (var entree : nomsExtraitsParSalle.entrySet()) {
-      UUID salleId = entree.getKey();
-      String nomNormSalle = nomNormParSalle.get(salleId);
-      List<String> mesententes =
+      final UUID salleId = entree.getKey();
+      final String nomNormSalle = nomNormParSalle.get(salleId);
+      final List<String> mesententes =
           entree.getValue().stream()
               .filter(nomExtrait -> estContaminationReelle(nomExtrait, nomNormSalle))
               .distinct()
               .sorted()
               .toList();
-      String signatureActuelle = mesententes.isEmpty() ? null : String.join("|", mesententes);
+      final String signatureActuelle = mesententes.isEmpty() ? null : String.join("|", mesententes);
       if (Objects.equals(signatureActuelle, signaleeParSalle.get(salleId))) continue;
 
       memoriserContaminationSignalee(salleId, signatureActuelle);
@@ -114,8 +114,8 @@ public class CoherenceMultiSalleService {
     return signalees;
   }
 
-  private void memoriserContaminationSignalee(UUID salleId, String signature) {
-    Map<String, Object> params = new HashMap<>();
+  private void memoriserContaminationSignalee(final UUID salleId, final String signature) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("signature", signature);
     params.put("id", salleId.toString());
     jdbc.update(
@@ -133,7 +133,7 @@ public class CoherenceMultiSalleService {
    * dollfus noack") — {@link CorrespondanceSalle#estDoublonSalle} seul rejette mécaniquement ces
    * deux cas dès qu'un côté est bien plus long ou bien plus court que l'autre.
    */
-  private static boolean estContaminationReelle(String nomExtrait, String nomNormSalle) {
+  private static boolean estContaminationReelle(final String nomExtrait, final String nomNormSalle) {
     if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) return false;
     if (nomContenuDansLAutre(nomExtrait, nomNormSalle)) return false;
     return !estSigleDe(nomExtrait, nomNormSalle);
@@ -144,16 +144,16 @@ public class CoherenceMultiSalleService {
    * chaque mot de la plus longue, concaténées sans espace, égalent exactement la plus courte sans
    * espace (ex. "ed n" pour "espace dollfus noack" → initiales e, d, n).
    */
-  private static boolean estSigleDe(String a, String b) {
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    String sigleObserve = court.replace(" ", "");
+  private static boolean estSigleDe(final String a, final String b) {
+    final String court = a.length() <= b.length() ? a : b;
+    final String plusLong = a.length() <= b.length() ? b : a;
+    final String sigleObserve = court.replace(" ", "");
     if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) return false;
 
-    String[] mots = plusLong.split("\\s+");
+    final String[] mots = plusLong.split("\\s+");
     if (mots.length != sigleObserve.length()) return false;
 
-    StringBuilder initiales = new StringBuilder();
+    final StringBuilder initiales = new StringBuilder();
     for (String mot : mots) {
       if (mot.isEmpty()) return false;
       initiales.append(mot.charAt(0));
@@ -173,7 +173,7 @@ public class CoherenceMultiSalleService {
    * @return nombre de paires nouvellement signalées
    */
   public int detecterDoublons() {
-    List<Map<String, Object>> salles =
+    final List<Map<String, Object>> salles =
         jdbc.queryForList(
             "SELECT id, nom_norm, dept, doublon_signale, salle_parent_id FROM salles ORDER BY id",
             Map.of());
@@ -181,23 +181,23 @@ public class CoherenceMultiSalleService {
     int signalees = 0;
     for (int i = 0; i < salles.size(); i++) {
       for (int j = i + 1; j < salles.size(); j++) {
-        var a = salles.get(i);
-        var b = salles.get(j);
-        UUID idA = (UUID) a.get("id");
-        UUID idB = (UUID) b.get("id");
-        UUID parentA = (UUID) a.get("salle_parent_id");
-        UUID parentB = (UUID) b.get("salle_parent_id");
+        final var a = salles.get(i);
+        final var b = salles.get(j);
+        final UUID idA = (UUID) a.get("id");
+        final UUID idB = (UUID) b.get("id");
+        final UUID parentA = (UUID) a.get("salle_parent_id");
+        final UUID parentB = (UUID) b.get("salle_parent_id");
         // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons — leur nom qualifié
         // ("X - Y") satisferait sinon le containment de tokens ci-dessous par construction.
         if (idA.equals(parentB) || idB.equals(parentA)) continue;
-        String deptA = (String) a.get("dept");
-        String deptB = (String) b.get("dept");
+        final String deptA = (String) a.get("dept");
+        final String deptB = (String) b.get("dept");
         if (deptA != null && deptB != null && !deptA.equals(deptB)) continue;
         if (!nomContenuDansLAutre((String) a.get("nom_norm"), (String) b.get("nom_norm"))) {
           continue;
         }
 
-        String dejaSignale = (String) a.get("doublon_signale");
+        final String dejaSignale = (String) a.get("doublon_signale");
         if (idB.toString().equals(dejaSignale)) continue;
 
         memoriserDoublonSignale(idA, idB);
@@ -223,16 +223,16 @@ public class CoherenceMultiSalleService {
   // caractères validait à tort un article court ("les") trivialement présent dans un token du nom
   // long ("lessaion") sans aucun rapport sémantique réel — même classe de faux positif que
   // CorrespondanceSalle#estContainmentTokensPartiel.
-  private static boolean nomContenuDansLAutre(String nomNormA, String nomNormB) {
-    String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
-    String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
+  private static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
+    final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
+    final String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
     if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) return false;
-    Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
-    Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
+    final Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
+    final Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
     return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);
   }
 
-  private void memoriserDoublonSignale(UUID idA, UUID idB) {
+  private void memoriserDoublonSignale(final UUID idA, final UUID idB) {
     jdbc.update(
         "UPDATE salles SET doublon_signale = :idB WHERE id = CAST(:idA AS uuid)",
         new MapSqlParameterSource()

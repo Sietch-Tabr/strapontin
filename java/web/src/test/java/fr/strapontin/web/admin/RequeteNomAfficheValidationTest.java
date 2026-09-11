@@ -27,21 +27,21 @@ class RequeteNomAfficheValidationTest {
   @Test
   void nomAffiche_null_estValide() {
     // null est la valeur légitime pour revenir au nom automatique.
-    Set<ConstraintViolation<RequeteNomAffiche>> violations =
+    final Set<ConstraintViolation<RequeteNomAffiche>> violations =
         VALIDATOR.validate(new RequeteNomAffiche(null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void nomAffiche_present_estValide() {
-    Set<ConstraintViolation<RequeteNomAffiche>> violations =
+    final Set<ConstraintViolation<RequeteNomAffiche>> violations =
         VALIDATOR.validate(new RequeteNomAffiche("Zénith de Nantes Métropole"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void nomAffiche_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteNomAffiche>> violations =
+    final Set<ConstraintViolation<RequeteNomAffiche>> violations =
         VALIDATOR.validate(new RequeteNomAffiche("a".repeat(201)));
     assertFalse(violations.isEmpty());
   }

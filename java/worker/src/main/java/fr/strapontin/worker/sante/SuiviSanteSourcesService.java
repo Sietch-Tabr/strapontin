@@ -50,7 +50,7 @@ public class SuiviSanteSourcesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
 
-  public SuiviSanteSourcesService(NamedParameterJdbcTemplate jdbc, TicketmasterSource tm) {
+  public SuiviSanteSourcesService(final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
     this.jdbc = jdbc;
     this.tm = tm;
   }
@@ -62,11 +62,11 @@ public class SuiviSanteSourcesService {
    * @param identifiantPrefixe identifiant préfixé {@code source:identifiant_externe}
    * @param nbResultats nombre de concerts retournés par ce fetch
    */
-  public void enregistrerResultatSalle(String identifiantPrefixe, int nbResultats) {
-    int sep = identifiantPrefixe.indexOf(':');
+  public void enregistrerResultatSalle(final String identifiantPrefixe, final int nbResultats) {
+    final int sep = identifiantPrefixe.indexOf(':');
     if (sep < 0) return;
-    String source = normaliserSource(identifiantPrefixe.substring(0, sep));
-    String identifiant = identifiantPrefixe.substring(sep + 1);
+    final String source = normaliserSource(identifiantPrefixe.substring(0, sep));
+    final String identifiant = identifiantPrefixe.substring(sep + 1);
     mettreAJourCompteur(TypeEntiteSource.SALLE, source, identifiant, nbResultats > 0);
   }
 
@@ -80,30 +80,30 @@ public class SuiviSanteSourcesService {
    * @param concertsLot concerts retournés par ce lot
    */
   public void enregistrerResultatArtistesLot(
-      List<String> attractionIds, List<ConcertBrut> concertsLot) {
+      final List<String> attractionIds, final List<ConcertBrut> concertsLot) {
     for (String attractionId : attractionIds) {
-      String artisteSourceId = "ticketmaster:" + attractionId;
-      boolean succes =
+      final String artisteSourceId = "ticketmaster:" + attractionId;
+      final boolean succes =
           concertsLot.stream().anyMatch(c -> artisteSourceId.equals(c.artisteSourceId()));
       mettreAJourCompteur(TypeEntiteSource.ARTISTE, "ticketmaster", attractionId, succes);
     }
   }
 
-  private static String normaliserSource(String prefixe) {
+  private static String normaliserSource(final String prefixe) {
     return PREFIXES_ABREGES.getOrDefault(prefixe, prefixe);
   }
 
   private void mettreAJourCompteur(
-      TypeEntiteSource type, String source, String identifiant, boolean succes) {
+      final TypeEntiteSource type, final String source, final String identifiant, final boolean succes) {
     // necessite_intervention_le n'existe que sur artiste_sources — résolution naturelle
     // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent.
-    boolean estArtisteSources = type == TypeEntiteSource.ARTISTE;
-    String colonneInterventionResolue =
+    final boolean estArtisteSources = type == TypeEntiteSource.ARTISTE;
+    final String colonneInterventionResolue =
         estArtisteSources
             ? ", necessite_intervention_le = CASE WHEN :effacerIntervention THEN NULL ELSE"
-                + " necessite_intervention_le END"
+            + " necessite_intervention_le END"
             : "";
-    String sql =
+    final String sql =
         "UPDATE "
             + type.table()
             + " SET nb_zero_consecutifs = CASE WHEN :succes THEN 0 ELSE nb_zero_consecutifs + 1"
@@ -112,7 +112,7 @@ public class SuiviSanteSourcesService {
             + colonneInterventionResolue
             + " WHERE source = :source AND identifiant_externe = :identifiant";
     try {
-      boolean effacerIntervention =
+      final boolean effacerIntervention =
           estArtisteSources && succes ? peutEffacerIntervention(source, identifiant) : succes;
       jdbc.update(
           sql,
@@ -140,18 +140,18 @@ public class SuiviSanteSourcesService {
    * @param identifiant identifiant externe (TM : attractionId brut, sans préfixe)
    * @return {@code true} si l'effacement peut avoir lieu
    */
-  private boolean peutEffacerIntervention(String source, String identifiant) {
+  private boolean peutEffacerIntervention(final String source, final String identifiant) {
     if (!"ticketmaster".equals(source)) return true;
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT asrc.necessite_intervention_le, a.nom
-            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
-            WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
-            """,
+                SELECT asrc.necessite_intervention_le, a.nom
+                FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
+                WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
+                """,
             Map.of("source", source, "identifiant", identifiant));
     if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) return true;
-    String nomAttraction = tm.recupererNomAttraction(identifiant);
+    final String nomAttraction = tm.recupererNomAttraction(identifiant);
     if (nomAttraction == null) return false;
     return Normalisation.normaliserTexte((String) lignes.get(0).get("nom"))
         .equals(Normalisation.normaliserTexte(nomAttraction));

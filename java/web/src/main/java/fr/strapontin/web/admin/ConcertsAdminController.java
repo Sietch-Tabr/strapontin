@@ -33,7 +33,7 @@ public class ConcertsAdminController {
 
   private final ConcertsAdminService service;
 
-  public ConcertsAdminController(ConcertsAdminService service) {
+  public ConcertsAdminController(final ConcertsAdminService service) {
     this.service = service;
   }
 
@@ -45,7 +45,7 @@ public class ConcertsAdminController {
    */
   @GetMapping
   public ResponseEntity<ReponseConcertsAConfirmer> lister(
-      @RequestParam(defaultValue = "0") int page) {
+      @RequestParam(defaultValue = "0") final int page) {
     return ResponseEntity.ok(service.lister(page));
   }
 
@@ -56,10 +56,10 @@ public class ConcertsAdminController {
    * @return 200 si supprimé, 400 si UUID invalide, 404 si concert inconnu ou non flagué
    */
   @PostMapping("/{uuid}/confirmer")
-  public ResponseEntity<Map<String, Object>> confirmer(@PathVariable String uuid) {
-    UUID id = parseUuid(uuid);
+  public ResponseEntity<Map<String, Object>> confirmer(@PathVariable final String uuid) {
+    final UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID de concert invalide.");
-    boolean supprime = service.confirmerSuppression(id);
+    final boolean supprime = service.confirmerSuppression(id);
     if (!supprime) return erreur(404, "Concert inconnu ou non flagué.");
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -71,10 +71,10 @@ public class ConcertsAdminController {
    * @return 200 si annulé, 400 si UUID invalide, 404 si concert inconnu ou non flagué
    */
   @PostMapping("/{uuid}/annuler")
-  public ResponseEntity<Map<String, Object>> annuler(@PathVariable String uuid) {
-    UUID id = parseUuid(uuid);
+  public ResponseEntity<Map<String, Object>> annuler(@PathVariable final String uuid) {
+    final UUID id = parseUuid(uuid);
     if (id == null) return erreur(400, "UUID de concert invalide.");
-    boolean annule = service.annulerSuppression(id);
+    final boolean annule = service.annulerSuppression(id);
     if (!annule) return erreur(404, "Concert inconnu ou non flagué.");
     return ResponseEntity.ok(Map.of("succes", true));
   }

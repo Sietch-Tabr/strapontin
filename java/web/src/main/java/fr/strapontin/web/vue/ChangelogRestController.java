@@ -38,7 +38,7 @@ public class ChangelogRestController {
    * @param buildProperties métadonnées de build (version courante de l'application)
    */
   public ChangelogRestController(
-      ChangelogService changelogService, BuildProperties buildProperties) {
+      final ChangelogService changelogService, final BuildProperties buildProperties) {
     this.changelogService = changelogService;
     this.buildProperties = buildProperties;
   }
@@ -50,9 +50,9 @@ public class ChangelogRestController {
    * @return {@code {"nonVu": true|false}}
    */
   @GetMapping("/nouveaute")
-  public ResponseEntity<Map<String, Object>> nouveaute(Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    boolean nonVu = changelogService.estNonVu(userId, buildProperties.getVersion());
+  public ResponseEntity<Map<String, Object>> nouveaute(final Authentication auth) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    final boolean nonVu = changelogService.estNonVu(userId, buildProperties.getVersion());
     return ResponseEntity.ok(Map.of("nonVu", nonVu));
   }
 
@@ -63,8 +63,8 @@ public class ChangelogRestController {
    * @return 204 No Content
    */
   @PostMapping("/marquer-vue")
-  public ResponseEntity<Void> marquerVue(Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+  public ResponseEntity<Void> marquerVue(final Authentication auth) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     changelogService.marquerVue(userId, buildProperties.getVersion());
     return ResponseEntity.noContent().build();
   }

@@ -72,10 +72,10 @@ public class ArtisteService {
    * @param logAdminService journalisation des actions admin
    */
   public ArtisteService(
-      ArtisteRepository artisteRepository,
-      ObjectMapper objectMapper,
-      RestClient restClient,
-      LogAdminService logAdminService) {
+      final ArtisteRepository artisteRepository,
+      final ObjectMapper objectMapper,
+      final RestClient restClient,
+      final LogAdminService logAdminService) {
     this.artisteRepository = artisteRepository;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
@@ -93,30 +93,30 @@ public class ArtisteService {
    * @param q terme de recherche (optionnel, min 2 caractères)
    * @return la liste des artistes et les suggestions
    */
-  public ReponseArtistes lister(String userId, String q) {
-    String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
+  public ReponseArtistes lister(final String userId, final String q) {
+    final String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
 
-    List<ArtisteUtilisateur> artistes = artisteRepository.listerPourUtilisateur(userId);
+    final List<ArtisteUtilisateur> artistes = artisteRepository.listerPourUtilisateur(userId);
 
     List<SuggestionArtiste> suggestions = List.of();
     boolean dejaLeSuivi = false;
 
     if (recherche.length() >= 2) {
-      String rechercheNorm = Normalisation.normaliserTexte(recherche);
-      Set<String> nomsSuivisNorm =
+      final String rechercheNorm = Normalisation.normaliserTexte(recherche);
+      final Set<String> nomsSuivisNorm =
           artistes.stream()
               .map(a -> Normalisation.normaliserTexte(a.artisteAffiche()))
               .collect(Collectors.toSet());
 
-      List<String> enBase = artisteRepository.rechercherEnBase("%" + rechercheNorm + "%");
+      final List<String> enBase = artisteRepository.rechercherEnBase("%" + rechercheNorm + "%");
 
-      List<SuggestionArtiste> resultatsSuggestions =
+      final List<SuggestionArtiste> resultatsSuggestions =
           enBase.stream()
               .filter(a -> !nomsSuivisNorm.contains(Normalisation.normaliserTexte(a)))
               .map(a -> new SuggestionArtiste(a, "base"))
               .collect(Collectors.toCollection(ArrayList::new));
 
-      Set<String> nomsDejaPresents =
+      final Set<String> nomsDejaPresents =
           resultatsSuggestions.stream()
               .map(s -> Normalisation.normaliserTexte(s.nom()))
               .collect(Collectors.toCollection(HashSet::new));
@@ -128,8 +128,8 @@ public class ArtisteService {
       // constaté en E2E (webkit, timeout d'assertion à 25 s dépassé). En parallèle, l'attente
       // totale est bornée par le plus lent des deux, pas leur somme.
       if (resultatsSuggestions.size() < 3) {
-        var futureWikidata = CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
-        var futureDeezer = CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
+        final var futureWikidata = CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
+        final var futureDeezer = CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
         ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureWikidata.join());
         ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureDeezer.join());
       }
@@ -142,9 +142,9 @@ public class ArtisteService {
   }
 
   private static void ajouterSuggestionsInedites(
-      List<SuggestionArtiste> cible, Set<String> nomsDejaPresents, List<SuggestionArtiste> source) {
+      final List<SuggestionArtiste> cible, final Set<String> nomsDejaPresents, final List<SuggestionArtiste> source) {
     for (SuggestionArtiste r : source) {
-      String norm = Normalisation.normaliserTexte(r.nom());
+      final String norm = Normalisation.normaliserTexte(r.nom());
       if (!nomsDejaPresents.contains(norm)) {
         cible.add(r);
         nomsDejaPresents.add(norm);
@@ -167,7 +167,7 @@ public class ArtisteService {
    * @throws ErreurMetier si le nom est un tribute/hommage ou si le cap de 500 artistes est atteint
    */
   @Transactional
-  public void ajouter(String userId, String nom) {
+  public void ajouter(final String userId, final String nom) {
     ajouter(userId, nom, null);
   }
 
@@ -195,15 +195,15 @@ public class ArtisteService {
    * @throws ErreurMetier si le nom est un tribute/hommage ou si le cap de 500 artistes est atteint
    */
   @Transactional
-  public void ajouter(String userId, String nom, String wikidataId) {
+  public void ajouter(final String userId, final String nom, final String wikidataId) {
     if (FiltreArtiste.estTribute(nom)) {
       throw new ErreurMetier(
           "Ce nom ressemble à un hommage/tribute — suivez l'artiste original plutôt que"
               + " l'attraction dédiée.");
     }
-    String normalise = Normalisation.normaliserTexte(nom);
+    final String normalise = Normalisation.normaliserTexte(nom);
 
-    UUID artisteId = resoudreArtisteId(nom, normalise);
+    final UUID artisteId = resoudreArtisteId(nom, normalise);
     if (artisteRepository.existePourUtilisateur(userId, artisteId)) {
       throw new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
     }
@@ -230,8 +230,8 @@ public class ArtisteService {
    * @param nom nom affiché tel que saisi
    * @param wikidataId Q-ID Wikidata optionnel (peut être {@code null})
    */
-  private void executerApresCommit(UUID artisteId, String nom, String wikidataId) {
-    Runnable action =
+  private void executerApresCommit(final UUID artisteId, final String nom, final String wikidataId) {
+    final Runnable action =
         () -> {
           if (wikidataId != null && !wikidataId.isBlank()) {
             resoudreEtPersisterWikidata(artisteId, nom, wikidataId);
@@ -251,10 +251,10 @@ public class ArtisteService {
     }
   }
 
-  private void resoudreEtPersisterWikidata(UUID artisteId, String nom, String wikidataId) {
+  private void resoudreEtPersisterWikidata(final UUID artisteId, final String nom, final String wikidataId) {
     try {
       artisteRepository.enregistrerArtisteSource(artisteId, "wikidata", wikidataId);
-      String deezerId = resoudreDeezerId(wikidataId);
+      final String deezerId = resoudreDeezerId(wikidataId);
       if (deezerId != null) {
         artisteRepository.enregistrerArtisteSource(artisteId, "deezer", deezerId);
       }
@@ -289,10 +289,10 @@ public class ArtisteService {
    * @param normalise nom normalisé ({@link Normalisation#normaliserTexte})
    * @return UUID de l'artiste existant ou nouvellement créé
    */
-  public UUID resoudreArtisteId(String nom, String normalise) {
-    Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
+  public UUID resoudreArtisteId(final String nom, final String normalise) {
+    final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
     for (Map<String, Object> candidat : artisteRepository.chercherCandidatsParTokens(tokens)) {
-      String nomNormCandidat = (String) candidat.get("nom_norm");
+      final String nomNormCandidat = (String) candidat.get("nom_norm");
       if (nomNormCandidat.equals(normalise)) {
         return artisteRepository.upsertArtiste(nom, normalise);
       }
@@ -317,7 +317,7 @@ public class ArtisteService {
    * @param nomsNorm noms normalisés des artistes déjà suivis
    * @return {@code true} si un artiste déjà suivi contient la recherche
    */
-  static boolean contientCorrespondancePartielle(String rechercheNorm, Set<String> nomsNorm) {
+  static boolean contientCorrespondancePartielle(final String rechercheNorm, final Set<String> nomsNorm) {
     return nomsNorm.stream().anyMatch(nom -> nom.contains(rechercheNorm));
   }
 
@@ -331,7 +331,7 @@ public class ArtisteService {
    * @param userId identifiant de l'utilisateur
    * @param artisteId UUID stable de l'artiste
    */
-  public void supprimer(String userId, UUID artisteId) {
+  public void supprimer(final String userId, final UUID artisteId) {
     if (artisteRepository.supprimer(userId, artisteId) == 0) {
       return;
     }
@@ -358,14 +358,14 @@ public class ArtisteService {
    *   ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
    *   motif que {@link #resoudreDeezerId}.
    */
-  List<SuggestionArtiste> rechercherWikidata(String terme) {
+  List<SuggestionArtiste> rechercherWikidata(final String terme) {
     try {
-      String url =
+      final String url =
           WIKIDATA_API_URL
               + "?action=wbsearchentities&search="
               + URLEncoder.encode(terme, StandardCharsets.UTF_8)
               + "&language=fr&format=json&type=item&limit=6";
-      WorkerTriggerUtils.ReponseHttp reponse =
+      final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
@@ -386,18 +386,18 @@ public class ArtisteService {
   }
 
   @SuppressWarnings("unchecked")
-  private List<SuggestionArtiste> parseWikidataResultats(String json) {
-    List<SuggestionArtiste> resultats = new ArrayList<>();
+  private List<SuggestionArtiste> parseWikidataResultats(final String json) {
+    final List<SuggestionArtiste> resultats = new ArrayList<>();
     try {
-      Map<String, Object> root = objectMapper.readValue(json, Map.class);
-      List<Map<String, Object>> search = (List<Map<String, Object>>) root.get("search");
+      final Map<String, Object> root = objectMapper.readValue(json, Map.class);
+      final List<Map<String, Object>> search = (List<Map<String, Object>>) root.get("search");
       if (search == null) return resultats;
 
       for (Map<String, Object> item : search) {
-        String label = (String) item.get("label");
-        String id = (String) item.get("id");
+        final String label = (String) item.get("label");
+        final String id = (String) item.get("id");
         if (label == null || label.isBlank() || id == null) continue;
-        String description = (String) item.get("description");
+        final String description = (String) item.get("description");
         // Description absente : on ne peut ni confirmer ni exclure — on garde plutôt que de
         // priver l'utilisateur d'un résultat potentiellement pertinent (simple suggestion,
         // l'utilisateur reste seul décideur au clic).
@@ -420,14 +420,14 @@ public class ArtisteService {
    * @return identifiant Deezer, ou {@code null} si absent ou en cas d'échec réseau
    */
   @SuppressWarnings("unchecked")
-  String resoudreDeezerId(String wikidataId) {
+  String resoudreDeezerId(final String wikidataId) {
     try {
-      String url =
+      final String url =
           WIKIDATA_API_URL
               + "?action=wbgetentities&ids="
               + URLEncoder.encode(wikidataId, StandardCharsets.UTF_8)
               + "&props=claims&format=json";
-      WorkerTriggerUtils.ReponseHttp reponse =
+      final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
@@ -438,17 +438,17 @@ public class ArtisteService {
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
       if (reponse.statut() != 200) return null;
 
-      Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
-      Map<String, Object> entities = (Map<String, Object>) root.get("entities");
+      final Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
+      final Map<String, Object> entities = (Map<String, Object>) root.get("entities");
       if (entities == null) return null;
-      Map<String, Object> entite = (Map<String, Object>) entities.get(wikidataId);
+      final Map<String, Object> entite = (Map<String, Object>) entities.get(wikidataId);
       if (entite == null) return null;
-      Map<String, Object> claims = (Map<String, Object>) entite.get("claims");
+      final Map<String, Object> claims = (Map<String, Object>) entite.get("claims");
       if (claims == null) return null;
-      List<Map<String, Object>> p2722 = (List<Map<String, Object>>) claims.get("P2722");
+      final List<Map<String, Object>> p2722 = (List<Map<String, Object>>) claims.get("P2722");
       if (p2722 == null || p2722.isEmpty()) return null;
-      Map<String, Object> mainsnak = (Map<String, Object>) p2722.get(0).get("mainsnak");
-      Map<String, Object> datavalue = (Map<String, Object>) mainsnak.get("datavalue");
+      final Map<String, Object> mainsnak = (Map<String, Object>) p2722.get(0).get("mainsnak");
+      final Map<String, Object> datavalue = (Map<String, Object>) mainsnak.get("datavalue");
       return (String) datavalue.get("value");
     } catch (Exception e) {
       log.warn("Wikidata wbgetentities échoué pour '{}'", wikidataId, e);
@@ -463,11 +463,11 @@ public class ArtisteService {
    *   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
    *   que {@link #rechercherWikidata}.
    */
-  List<SuggestionArtiste> rechercherDeezer(String terme) {
+  List<SuggestionArtiste> rechercherDeezer(final String terme) {
     try {
-      String url =
+      final String url =
           DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";
-      WorkerTriggerUtils.ReponseHttp reponse =
+      final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
               .uri(url)
@@ -487,11 +487,11 @@ public class ArtisteService {
   }
 
   @SuppressWarnings("unchecked")
-  private List<SuggestionArtiste> parseDeezerResultats(String json) {
-    List<SuggestionArtiste> resultats = new ArrayList<>();
+  private List<SuggestionArtiste> parseDeezerResultats(final String json) {
+    final List<SuggestionArtiste> resultats = new ArrayList<>();
     try {
-      Map<String, Object> root = objectMapper.readValue(json, Map.class);
-      List<Map<String, Object>> data = (List<Map<String, Object>>) root.get("data");
+      final Map<String, Object> root = objectMapper.readValue(json, Map.class);
+      final List<Map<String, Object>> data = (List<Map<String, Object>>) root.get("data");
       if (data == null) return resultats;
 
       data.stream()

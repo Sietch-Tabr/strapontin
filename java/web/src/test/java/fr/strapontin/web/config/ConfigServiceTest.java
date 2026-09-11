@@ -45,19 +45,19 @@ class ConfigServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void sauvegarderConfig_valeurNonVide_persisteValeurChiffreeEtNonEnClair() {
-    ConfigService service = creerService();
-    ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
+    final ConfigService service = creerService();
+    final ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
 
     service.sauvegarderConfig("MA_CLE", "valeur-en-clair");
 
     verify(jdbc).update(anyString(), params.capture());
-    Object valeurStockee = params.getValue().get("valeur");
+    final Object valeurStockee = params.getValue().get("valeur");
     assertNotEquals("valeur-en-clair", valeurStockee);
   }
 
   @Test
   void sauvegarderConfig_valeurVide_supprimeLaCle() {
-    ConfigService service = creerService();
+    final ConfigService service = creerService();
     service.sauvegarderConfig("MA_CLE", "");
     verify(jdbc).update(contains("DELETE FROM app_config"), anyMap());
   }
@@ -66,7 +66,7 @@ class ConfigServiceTest {
   void lireConfig_cleAbsenteEnBase_retourneVide() {
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of());
-    ConfigService service = creerService();
+    final ConfigService service = creerService();
     assertEquals(Optional.empty(), service.lireConfig("CLE_INEXISTANTE"));
   }
 
@@ -74,12 +74,12 @@ class ConfigServiceTest {
   void lireConfig_valeurChiffreeParUnAutreSecret_neLancePasEtRetourneVide() {
     // Simule une valeur chiffrée avec un secret différent (ex. APP_CONFIG_SECRET changé) : le
     // service doit logger l'échec et retourner Optional.empty(), jamais propager l'exception.
-    ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
-    String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
+    final ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
+    final String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of(chiffreAvecAutreSecret));
 
-    ConfigService service = creerService();
+    final ConfigService service = creerService();
     assertEquals(Optional.empty(), service.lireConfig("CLE_AVEC_MAUVAIS_SECRET"));
   }
 
@@ -87,7 +87,7 @@ class ConfigServiceTest {
   void lireConfig_appelsRepetes_utiliseLeCache() {
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of());
-    ConfigService service = creerService();
+    final ConfigService service = creerService();
 
     service.lireConfig("CLE_INEXISTANTE");
     service.lireConfig("CLE_INEXISTANTE");

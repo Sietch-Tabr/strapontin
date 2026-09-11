@@ -26,21 +26,21 @@ class LoginRequestValidationTest {
 
   @Test
   void identifiantEtMotDePasse_presents_estValide() {
-    Set<ConstraintViolation<LoginRequest>> violations =
+    final Set<ConstraintViolation<LoginRequest>> violations =
         VALIDATOR.validate(new LoginRequest("alice", "motdepasse12345"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void identifiant_null_estRejete() {
-    Set<ConstraintViolation<LoginRequest>> violations =
+    final Set<ConstraintViolation<LoginRequest>> violations =
         VALIDATOR.validate(new LoginRequest(null, "motdepasse12345"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void motDePasse_vide_estRejete() {
-    Set<ConstraintViolation<LoginRequest>> violations =
+    final Set<ConstraintViolation<LoginRequest>> violations =
         VALIDATOR.validate(new LoginRequest("alice", " "));
     assertFalse(violations.isEmpty());
   }

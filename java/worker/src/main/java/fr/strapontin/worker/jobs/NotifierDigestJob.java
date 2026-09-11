@@ -20,12 +20,12 @@ public class NotifierDigestJob extends QuartzJobBean {
   private NotificationDigestService notificationDigestService;
 
   @Autowired
-  public void setNotificationDigestService(NotificationDigestService notificationDigestService) {
+  public void setNotificationDigestService(final NotificationDigestService notificationDigestService) {
     this.notificationDigestService = notificationDigestService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
+  protected void executeInternal(final JobExecutionContext context) {
     notificationDigestService.executerDigest("quotidien");
   }
 }

@@ -30,12 +30,12 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class ReconciliationNomsSallesTest {
 
-  private static ValeurConcert concert(String artisteNorm, LocalDate date, String salleNorm) {
+  private static ValeurConcert concert(final String artisteNorm, final LocalDate date, final String salleNorm) {
     return concert(artisteNorm, date, null, salleNorm, null);
   }
 
   private static ValeurConcert concert(
-      String artisteNorm, LocalDate date, LocalTime heure, String salleNorm, String dept) {
+      final String artisteNorm, final LocalDate date, final LocalTime heure, final String salleNorm, final String dept) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
@@ -66,17 +66,17 @@ class ReconciliationNomsSallesTest {
   // (littéralement identique, donc sans changement à apporter) plus loin dans la liste.
   @Test
   void reconcilierSalles_candidatFlouAvantCandidatExact_neReecritPasAvecLeFlou() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
 
-    LocalDate date = LocalDate.of(2025, 6, 15);
+    final LocalDate date = LocalDate.of(2025, 6, 15);
 
-    Map<String, Object> candidatFlou = new HashMap<>();
+    final Map<String, Object> candidatFlou = new HashMap<>();
     candidatFlou.put("artiste_norm", "coldplay");
     candidatFlou.put("date", date.toString());
     candidatFlou.put("salle_norm", "zenith europe strasbourg");
 
-    Map<String, Object> candidatExact = new HashMap<>();
+    final Map<String, Object> candidatExact = new HashMap<>();
     candidatExact.put("artiste_norm", "coldplay");
     candidatExact.put("date", date.toString());
     candidatExact.put("salle_norm", "zenith de strasbourg europe");
@@ -84,8 +84,8 @@ class ReconciliationNomsSallesTest {
     // Ordre volontairement défavorable : flou avant exact.
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(candidatFlou, candidatExact));
 
-    ValeurConcert entrant = concert("coldplay", date, "zenith de strasbourg europe");
-    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(entrant));
+    final ValeurConcert entrant = concert("coldplay", date, "zenith de strasbourg europe");
+    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(entrant));
 
     assertEquals(1, resultat.size());
     assertEquals("zenith de strasbourg europe", resultat.get(0).salleNorm());
@@ -96,11 +96,11 @@ class ReconciliationNomsSallesTest {
   // calibrée sur un nom_norm déjà normalisé — voir CorrespondanceSalle).
   @Test
   void absorberRenommagesSalles_renommageAbsorbe_recalculeNomNorm() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
-    UUID salleId = UUID.randomUUID();
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
+    final UUID salleId = UUID.randomUUID();
 
-    ValeurConcert entrant =
+    final ValeurConcert entrant =
         new ValeurConcert(
             "Coldplay",
             "coldplay",
@@ -126,8 +126,8 @@ class ReconciliationNomsSallesTest {
 
     reconciliateur.absorberRenommagesSalles(List.of(entrant), Map.of("tm:venue1", salleId));
 
-    @SuppressWarnings("unchecked")
-    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    @SuppressWarnings("unchecked") final
+        ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc).update(anyString(), paramsCaptor.capture());
     assertEquals(
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
@@ -138,15 +138,15 @@ class ReconciliationNomsSallesTest {
   // fusionner entre elles au sein d'un même lot si elles ne sont pas dans le même département.
   @Test
   void reconcilierSalles_memeArtisteDateDeptDifferent_neFusionnePasIntraLot() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    LocalDate date = LocalDate.of(2026, 9, 1);
-    ValeurConcert concert1 = concert("artiste x", date, null, "grand kursaal", "25");
-    ValeurConcert concert2 = concert("artiste x", date, null, "kursaal besancon", "90");
+    final LocalDate date = LocalDate.of(2026, 9, 1);
+    final ValeurConcert concert1 = concert("artiste x", date, null, "grand kursaal", "25");
+    final ValeurConcert concert2 = concert("artiste x", date, null, "kursaal besancon", "90");
 
-    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
 
     assertEquals("grand kursaal", resultat.get(0).salleNorm());
     assertEquals("kursaal besancon", resultat.get(1).salleNorm());
@@ -156,16 +156,16 @@ class ReconciliationNomsSallesTest {
   // titre générique dans deux salles différentes ne doivent pas non plus fusionner.
   @Test
   void reconcilierSalles_memeArtisteDateDeptHeureDifferente_neFusionnePasIntraLot() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    LocalDate date = LocalDate.of(2026, 9, 1);
-    ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(15, 0), "grand kursaal", "25");
-    ValeurConcert concert2 =
+    final LocalDate date = LocalDate.of(2026, 9, 1);
+    final ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(15, 0), "grand kursaal", "25");
+    final ValeurConcert concert2 =
         concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
 
-    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
 
     assertEquals("grand kursaal", resultat.get(0).salleNorm());
     assertEquals("kursaal besancon", resultat.get(1).salleNorm());
@@ -174,16 +174,16 @@ class ReconciliationNomsSallesTest {
   // Même artiste/date/dept/heure : la fusion floue doit continuer à s'appliquer normalement.
   @Test
   void reconcilierSalles_memeArtisteDateDeptHeure_fusionneIntraLotCommeAvant() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    LocalDate date = LocalDate.of(2026, 9, 1);
-    ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(20, 0), "grand kursaal", "25");
-    ValeurConcert concert2 =
+    final LocalDate date = LocalDate.of(2026, 9, 1);
+    final ValeurConcert concert1 = concert("artiste x", date, LocalTime.of(20, 0), "grand kursaal", "25");
+    final ValeurConcert concert2 =
         concert("artiste x", date, LocalTime.of(20, 0), "kursaal besancon", "25");
 
-    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
+    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(List.of(concert1, concert2));
 
     assertEquals(resultat.get(0).salleNorm(), resultat.get(1).salleNorm());
   }

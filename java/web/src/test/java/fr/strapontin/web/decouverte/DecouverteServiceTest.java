@@ -51,7 +51,7 @@ class DecouverteServiceTest {
 
   @Test
   void filtresMois_moisValide_poseBornesCorrectesEnParamsSql() throws Exception {
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     invoquerConstruireFiltresWhere(service, "2026-05", params);
     org.junit.jupiter.api.Assertions.assertEquals(
         LocalDate.of(2026, 5, 1), params.get("moisDebut"));
@@ -60,7 +60,7 @@ class DecouverteServiceTest {
 
   @Test
   void filtresMois_decembre_moisFinEstJanvierAnneeSuivante() throws Exception {
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     invoquerConstruireFiltresWhere(service, "2026-12", params);
     org.junit.jupiter.api.Assertions.assertEquals(
         LocalDate.of(2026, 12, 1), params.get("moisDebut"));
@@ -69,7 +69,7 @@ class DecouverteServiceTest {
 
   @Test
   void filtresMois_formatSansZeroLeading_filtreIgnore() throws Exception {
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     invoquerConstruireFiltresWhere(service, "2026-5", params);
     org.junit.jupiter.api.Assertions.assertFalse(params.containsKey("moisDebut"));
     org.junit.jupiter.api.Assertions.assertFalse(params.containsKey("moisFin"));
@@ -77,15 +77,15 @@ class DecouverteServiceTest {
 
   @Test
   void filtresMois_vide_filtreIgnore() throws Exception {
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     invoquerConstruireFiltresWhere(service, "", params);
     org.junit.jupiter.api.Assertions.assertFalse(params.containsKey("moisDebut"));
     org.junit.jupiter.api.Assertions.assertFalse(params.containsKey("moisFin"));
   }
 
   private static void invoquerConstruireFiltresWhere(
-      DecouverteService svc, String mois, Map<String, Object> params) throws Exception {
-    var m =
+      final DecouverteService svc, final String mois, final Map<String, Object> params) throws Exception {
+    final var m =
         DecouverteService.class.getDeclaredMethod(
             "construireFiltresWhere",
             List.class,
@@ -101,12 +101,12 @@ class DecouverteServiceTest {
 
   // --- decouvrir() ---
 
-  private void stubRequetesCommunes(List<String> deptsUtilisateur) {
+  private void stubRequetesCommunes(final List<String> deptsUtilisateur) {
     stubRequetesCommunes(deptsUtilisateur, 0);
   }
 
   @SuppressWarnings("unchecked")
-  private void stubRequetesCommunes(List<String> deptsUtilisateur, int total) {
+  private void stubRequetesCommunes(final List<String> deptsUtilisateur, final int total) {
     when(jdbc.query(contains("departements FROM user_config"), anyMap(), any(RowMapper.class)))
         .thenReturn(
             deptsUtilisateur.isEmpty()
@@ -132,13 +132,13 @@ class DecouverteServiceTest {
   @Test
   void decouvrir_deptsNullDansFiltre_utiliseDepartementsUtilisateur() {
     stubRequetesCommunes(List.of("75", "92"));
-    FiltreConcerts filtre =
+    final FiltreConcerts filtre =
         new FiltreConcerts("", "", "", "", "date", 0, false, false, null, null, null);
 
-    ReponseDecouverte rep = service.decouvrir("user-1", filtre);
+    final ReponseDecouverte rep = service.decouvrir("user-1", filtre);
 
     assertThat(rep.deptsUtilisateur()).containsExactly("75", "92");
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.atLeastOnce())
         .queryForObject(sqlCaptor.capture(), anyMap(), eq(Integer.class));
     assertThat(sqlCaptor.getValue()).contains("dept = ANY(:depts)");
@@ -148,13 +148,13 @@ class DecouverteServiceTest {
   @SuppressWarnings("unchecked")
   void decouvrir_deptsFournisDansFiltre_prevalentSurDepartementsUtilisateur() {
     stubRequetesCommunes(List.of("75"));
-    FiltreConcerts filtre =
+    final FiltreConcerts filtre =
         new FiltreConcerts(
             "", "", "", "", "date", 0, false, false, null, null, List.of("33", "44"));
 
     service.decouvrir("user-1", filtre);
 
-    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.atLeastOnce())
         .queryForObject(contains("SELECT COUNT(*)"), paramsCaptor.capture(), eq(Integer.class));
     assertThat((String[]) paramsCaptor.getValue().get("depts")).containsExactly("33", "44");
@@ -164,12 +164,12 @@ class DecouverteServiceTest {
   @SuppressWarnings("unchecked")
   void decouvrir_triNouveaute_appliqueLaClauseTriCorrespondante() {
     stubRequetesCommunes(List.of());
-    FiltreConcerts filtre =
+    final FiltreConcerts filtre =
         new FiltreConcerts("", "", "", "", "nouveaute", 0, false, false, null, null, List.of("75"));
 
     service.decouvrir("user-1", filtre);
 
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.atLeastOnce())
         .query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
     assertThat(sqlCaptor.getAllValues())
@@ -180,15 +180,15 @@ class DecouverteServiceTest {
   @SuppressWarnings("unchecked")
   void decouvrir_pageDeuxAvecTotal250_calculeOffsetEtTotalPages() {
     stubRequetesCommunes(List.of(), 250);
-    FiltreConcerts filtre =
+    final FiltreConcerts filtre =
         new FiltreConcerts("", "", "", "", "date", 2, false, false, null, null, List.of("75"));
 
-    ReponseDecouverte rep = service.decouvrir("user-1", filtre);
+    final ReponseDecouverte rep = service.decouvrir("user-1", filtre);
 
     assertThat(rep.page()).isEqualTo(2);
     assertThat(rep.totalConcerts()).isEqualTo(250);
     assertThat(rep.totalPages()).isEqualTo(3);
-    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     org.mockito.Mockito.verify(jdbc)
         .query(contains("LEFT JOIN artistes"), paramsCaptor.capture(), any(RowMapper.class));
     assertThat(paramsCaptor.getValue().get("offset")).isEqualTo(200);
@@ -197,10 +197,10 @@ class DecouverteServiceTest {
   @Test
   void decouvrir_pageNegative_estRameneeAZero() {
     stubRequetesCommunes(List.of());
-    FiltreConcerts filtre =
+    final FiltreConcerts filtre =
         new FiltreConcerts("", "", "", "", "date", -5, false, false, null, null, List.of("75"));
 
-    ReponseDecouverte rep = service.decouvrir("user-1", filtre);
+    final ReponseDecouverte rep = service.decouvrir("user-1", filtre);
 
     assertThat(rep.page()).isEqualTo(0);
   }

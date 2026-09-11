@@ -51,7 +51,7 @@ public class WikidataArtisteSource
 
   @Override
   public Set<UUID> preleverAmbiguites() {
-    Set<UUID> resultat = new HashSet<>(ambiguites);
+    final Set<UUID> resultat = new HashSet<>(ambiguites);
     ambiguites.clear();
     return resultat;
   }
@@ -86,12 +86,12 @@ public class WikidataArtisteSource
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
    */
-  public WikidataArtisteSource(RestClient restClient, Cache<String, EnrichissementArtiste> cache) {
+  public WikidataArtisteSource(final RestClient restClient, final Cache<String, EnrichissementArtiste> cache) {
     this(new ClientSparqlWikidata(restClient), cache);
   }
 
   private WikidataArtisteSource(
-      ClientSparqlWikidata client, Cache<String, EnrichissementArtiste> cache) {
+      final ClientSparqlWikidata client, final Cache<String, EnrichissementArtiste> cache) {
     this.client = client;
     this.cache = cache;
   }
@@ -102,15 +102,15 @@ public class WikidataArtisteSource
   }
 
   @Override
-  public Map<UUID, EnrichissementArtiste> enrichirLot(List<ArtisteAEnrichir> artistes) {
-    Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
+  public Map<UUID, EnrichissementArtiste> enrichirLot(final List<ArtisteAEnrichir> artistes) {
+    final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
 
-    List<ArtisteAEnrichir> connus = artistes.stream().filter(a -> a.wikidataId() != null).toList();
-    List<ArtisteAEnrichir> aDecouvrir =
+    final List<ArtisteAEnrichir> connus = artistes.stream().filter(a -> a.wikidataId() != null).toList();
+    final List<ArtisteAEnrichir> aDecouvrir =
         artistes.stream().filter(a -> a.wikidataId() == null).toList();
 
     for (int i = 0; i < connus.size(); i += TAILLE_LOT_MAX) {
-      List<ArtisteAEnrichir> lot = connus.subList(i, Math.min(i + TAILLE_LOT_MAX, connus.size()));
+      final List<ArtisteAEnrichir> lot = connus.subList(i, Math.min(i + TAILLE_LOT_MAX, connus.size()));
       resultats.putAll(enrichirLotConnu(lot));
     }
 
@@ -123,29 +123,29 @@ public class WikidataArtisteSource
 
   // --- Mode batch (Q-ID connu) ---
 
-  private Map<UUID, EnrichissementArtiste> enrichirLotConnu(List<ArtisteAEnrichir> lot) {
-    Map<String, UUID> qidVersUuid = new HashMap<>();
+  private Map<UUID, EnrichissementArtiste> enrichirLotConnu(final List<ArtisteAEnrichir> lot) {
+    final Map<String, UUID> qidVersUuid = new HashMap<>();
     for (ArtisteAEnrichir a : lot) qidVersUuid.put(a.wikidataId(), a.id());
 
-    String sparql = construireRequeteBatch(lot.stream().map(ArtisteAEnrichir::wikidataId).toList());
-    Map<String, Object> data = client.executer(sparql);
+    final String sparql = construireRequeteBatch(lot.stream().map(ArtisteAEnrichir::wikidataId).toList());
+    final Map<String, Object> data = client.executer(sparql);
     if (data == null) return Map.of();
 
-    Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
+    final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
     for (Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
-      String qid = extraireQid(binding);
+      final String qid = extraireQid(binding);
       if (qid == null) continue;
-      UUID artisteId = qidVersUuid.get(qid);
+      final UUID artisteId = qidVersUuid.get(qid);
       if (artisteId == null) continue;
-      EnrichissementArtiste enrichissement = construireEnrichissement(qid, binding);
+      final EnrichissementArtiste enrichissement = construireEnrichissement(qid, binding);
       cache.put(qid, enrichissement);
       resultats.put(artisteId, enrichissement);
     }
     return resultats;
   }
 
-  private static String construireRequeteBatch(List<String> qIds) {
-    String values =
+  private static String construireRequeteBatch(final List<String> qIds) {
+    final String values =
         qIds.stream()
             .filter(ClientSparqlWikidata::estQIdValide)
             .map(q -> "wd:" + q)
@@ -182,18 +182,18 @@ public class WikidataArtisteSource
    * meilleurs candidats mwapi signale donc deux entités distinctes en concurrence, jamais un faux
    * positif sur une même entité aux occupations multiples.
    */
-  private Optional<EnrichissementArtiste> decouvrir(ArtisteAEnrichir artiste) {
-    String sparql = construireRequeteDecouverte(artiste.nom());
-    Map<String, Object> data = client.executer(sparql);
+  private Optional<EnrichissementArtiste> decouvrir(final ArtisteAEnrichir artiste) {
+    final String sparql = construireRequeteDecouverte(artiste.nom());
+    final Map<String, Object> data = client.executer(sparql);
     if (data == null) return Optional.empty();
 
-    List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
+    final List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
     if (bindings.isEmpty()) {
       log.info("Wikidata découverte — aucun candidat nom={}", artiste.nom());
       return Optional.empty();
     }
 
-    Set<String> typesDistincts =
+    final Set<String> typesDistincts =
         bindings.stream()
             .map(b -> ClientSparqlWikidata.valeurBinding(b, "typeMatch"))
             .filter(Objects::nonNull)
@@ -207,9 +207,9 @@ public class WikidataArtisteSource
       return Optional.empty();
     }
 
-    String qid = extraireQid(bindings.get(0));
+    final String qid = extraireQid(bindings.get(0));
     if (qid == null) return Optional.empty();
-    EnrichissementArtiste enrichissement = construireEnrichissement(qid, bindings.get(0));
+    final EnrichissementArtiste enrichissement = construireEnrichissement(qid, bindings.get(0));
     cache.put(qid, enrichissement);
     return Optional.of(enrichissement);
   }
@@ -226,7 +226,7 @@ public class WikidataArtisteSource
    * branche « groupe » (organisation, jamais une personne physique) peut produire un {@code
    * ?typeMatch} distinct pour la même recherche, cf. {@link #decouvrir}.
    */
-  private static String construireRequeteDecouverte(String nom) {
+  private static String construireRequeteDecouverte(final String nom) {
     return """
     SELECT ?item ?itemLabel ?deezerId ?tmId ?num ?typeMatch WHERE {
       SERVICE wikibase:mwapi {
@@ -259,13 +259,13 @@ public class WikidataArtisteSource
 
   // --- Commun ---
 
-  private static String extraireQid(Map<String, Object> binding) {
-    String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
+  private static String extraireQid(final Map<String, Object> binding) {
+    final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
     return itemUri != null ? itemUri.substring(itemUri.lastIndexOf('/') + 1) : null;
   }
 
   private static EnrichissementArtiste construireEnrichissement(
-      String qid, Map<String, Object> binding) {
+      final String qid, final Map<String, Object> binding) {
     return new EnrichissementArtiste(
         qid,
         ClientSparqlWikidata.valeurBinding(binding, "itemLabel"),
@@ -276,8 +276,8 @@ public class WikidataArtisteSource
 
   // GROUP_CONCAT (séparateur "|") produit une chaîne vide, jamais absente, quand aucun alias n'est
   // connu — filtrée explicitement plutôt que de produire une liste avec un unique élément vide.
-  private static List<String> extraireAlias(Map<String, Object> binding) {
-    String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
+  private static List<String> extraireAlias(final Map<String, Object> binding) {
+    final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
     if (aliases == null || aliases.isBlank()) return List.of();
     return java.util.Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
   }

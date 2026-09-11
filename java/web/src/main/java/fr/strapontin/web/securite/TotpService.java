@@ -56,7 +56,7 @@ public class TotpService {
    * @return le secret Base32 (32 caractères pour 20 octets)
    */
   public String genererSecret() {
-    byte[] octets = new byte[TAILLE_SECRET_OCTETS];
+    final byte[] octets = new byte[TAILLE_SECRET_OCTETS];
     rng.nextBytes(octets);
     return base32Encoder(octets);
   }
@@ -68,9 +68,9 @@ public class TotpService {
    * @param identifiant le nom d'utilisateur affiché dans l'app TOTP
    * @return l'URI otpauth://totp/...
    */
-  public String genererUriOtpAuth(String secret, String identifiant) {
-    String label = URLEncoder.encode("Strapontin:" + identifiant, StandardCharsets.UTF_8);
-    String issuer = URLEncoder.encode(ISSUER, StandardCharsets.UTF_8);
+  public String genererUriOtpAuth(final String secret, final String identifiant) {
+    final String label = URLEncoder.encode("Strapontin:" + identifiant, StandardCharsets.UTF_8);
+    final String issuer = URLEncoder.encode(ISSUER, StandardCharsets.UTF_8);
     return "otpauth://totp/"
         + label
         + "?secret="
@@ -86,12 +86,12 @@ public class TotpService {
    * @param otpUri l'URI otpauth:// à encoder
    * @return le contenu SVG (sans déclaration XML), ou {@code null} en cas d'erreur
    */
-  public String genererQrCodeSvg(String otpUri) {
+  public String genererQrCodeSvg(final String otpUri) {
     try {
-      QrCode qrCode = new QrCode();
+      final QrCode qrCode = new QrCode();
       qrCode.setContent(otpUri);
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      SvgRenderer renderer = new SvgRenderer(baos, 3.0, Color.WHITE, Color.BLACK, false, 0);
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      final SvgRenderer renderer = new SvgRenderer(baos, 3.0, Color.WHITE, Color.BLACK, false, 0);
       renderer.render(qrCode);
       return baos.toString(StandardCharsets.UTF_8);
     } catch (Exception e) {
@@ -111,22 +111,22 @@ public class TotpService {
    * @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
    *   utilisé
    */
-  public boolean verifierCode(String secret, String code) {
+  public boolean verifierCode(final String secret, final String code) {
     if (secret == null || code == null) return false;
     // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme
     // Bitwarden affichent le code par groupes (« 365 493 »), souvent collé tel quel.
-    String codeNorm = code.replaceAll("\\s", "");
+    final String codeNorm = code.replaceAll("\\s", "");
     if (!codeNorm.matches("\\d{6}")) return false;
     try {
-      byte[] secretOctets = base32Decoder(secret);
-      long compteur = System.currentTimeMillis() / 1000L / PERIODE_SECONDES;
+      final byte[] secretOctets = base32Decoder(secret);
+      final long compteur = System.currentTimeMillis() / 1000L / PERIODE_SECONDES;
       for (int derive = -1; derive <= 1; derive++) {
-        long pas = compteur + derive;
+        final long pas = compteur + derive;
         if (MessageDigest.isEqual(
             calculerCode(secretOctets, pas).getBytes(StandardCharsets.UTF_8),
             codeNorm.getBytes(StandardCharsets.UTF_8))) {
-          String cleCache = secret + ":" + pas;
-          java.util.Set<String> utilises =
+          final String cleCache = secret + ":" + pas;
+          final java.util.Set<String> utilises =
               codesConsommes.get(cleCache, _ -> java.util.concurrent.ConcurrentHashMap.newKeySet());
           if (!utilises.add(codeNorm)) return false;
           return true;
@@ -139,24 +139,24 @@ public class TotpService {
     }
   }
 
-  private String calculerCode(byte[] secret, long compteur)
+  private String calculerCode(final byte[] secret, final long compteur)
       throws NoSuchAlgorithmException, InvalidKeyException {
-    byte[] msg = ByteBuffer.allocate(8).putLong(compteur).array();
-    Mac mac = Mac.getInstance("HmacSHA1");
+    final byte[] msg = ByteBuffer.allocate(8).putLong(compteur).array();
+    final Mac mac = Mac.getInstance("HmacSHA1");
     mac.init(new SecretKeySpec(secret, "HmacSHA1"));
-    byte[] hash = mac.doFinal(msg);
-    int offset = hash[hash.length - 1] & 0x0F;
-    int binaire =
+    final byte[] hash = mac.doFinal(msg);
+    final int offset = hash[hash.length - 1] & 0x0F;
+    final int binaire =
         ((hash[offset] & 0x7F) << 24)
             | ((hash[offset + 1] & 0xFF) << 16)
             | ((hash[offset + 2] & 0xFF) << 8)
             | (hash[offset + 3] & 0xFF);
-    int otp = binaire % PUISSANCES_10[DIGITS];
+    final int otp = binaire % PUISSANCES_10[DIGITS];
     return String.format("%0" + DIGITS + "d", otp);
   }
 
-  static String base32Encoder(byte[] data) {
-    StringBuilder sb = new StringBuilder();
+  static String base32Encoder(final byte[] data) {
+    final StringBuilder sb = new StringBuilder();
     int tampon = 0, bitsRestants = 0;
     for (byte b : data) {
       tampon = (tampon << 8) | (b & 0xFF);
@@ -172,12 +172,12 @@ public class TotpService {
     return sb.toString();
   }
 
-  static byte[] base32Decoder(String encoded) {
-    String norm = encoded.toUpperCase().replaceAll("[^A-Z2-7]", "");
-    byte[] resultat = new byte[norm.length() * 5 / 8];
+  static byte[] base32Decoder(final String encoded) {
+    final String norm = encoded.toUpperCase().replaceAll("[^A-Z2-7]", "");
+    final byte[] resultat = new byte[norm.length() * 5 / 8];
     int tampon = 0, bitsRestants = 0, idx = 0;
     for (char c : norm.toCharArray()) {
-      int val = BASE32.indexOf(c);
+      final int val = BASE32.indexOf(c);
       if (val < 0) continue;
       tampon = (tampon << 5) | val;
       bitsRestants += 5;

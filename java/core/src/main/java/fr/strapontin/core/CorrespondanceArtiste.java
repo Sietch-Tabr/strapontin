@@ -42,7 +42,7 @@ public final class CorrespondanceArtiste {
    * @param b deuxième nom normalisé
    * @return {@code true} si les artistes sont considérés identiques
    */
-  public static boolean estDoublonArtiste(String a, String b) {
+  public static boolean estDoublonArtiste(final String a, final String b) {
     Objects.requireNonNull(a, "a");
     Objects.requireNonNull(b, "b");
     if (a.equals(b)) return true;
@@ -57,9 +57,9 @@ public final class CorrespondanceArtiste {
 
   // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul, préfixe trivial
   // d'un artiste sans rapport) et se couper sur un mot complet, sans exigence de ratio.
-  private static boolean estPrefixeDeMotComplet(String a, String b) {
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
+  private static boolean estPrefixeDeMotComplet(final String a, final String b) {
+    final String court = a.length() <= b.length() ? a : b;
+    final String plusLong = a.length() <= b.length() ? b : a;
     return court.contains(" ") && plusLong.startsWith(court + " ");
   }
 }

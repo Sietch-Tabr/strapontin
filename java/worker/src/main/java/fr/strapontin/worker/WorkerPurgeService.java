@@ -36,20 +36,20 @@ public class WorkerPurgeService {
   private final WorkerStatsService workerStatsService;
 
   public WorkerPurgeService(
-      NamedParameterJdbcTemplate jdbc, WorkerStatsService workerStatsService) {
+      final NamedParameterJdbcTemplate jdbc, final WorkerStatsService workerStatsService) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
   }
 
   /** Supprime les concerts passés depuis plus de 7 jours. */
   public void executerPurgerConcerts() {
-    LocalDate dateLimite = LocalDate.now().minusDays(7);
+    final LocalDate dateLimite = LocalDate.now().minusDays(7);
     log.info("purger:concerts dateLimite={}", dateLimite);
     workerStatsService.executerAvecStats(
         log,
         "purger:concerts",
         () -> {
-          int supprimes =
+          final int supprimes =
               jdbc.update(
                   "DELETE FROM evenements WHERE date < :dateLimite",
                   Map.of("dateLimite", dateLimite));
@@ -85,7 +85,7 @@ public class WorkerPurgeService {
         log,
         "purger:concerts-non-confirmes",
         () -> {
-          int signales =
+          final int signales =
               jdbc.update(
                   "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
@@ -117,7 +117,7 @@ public class WorkerPurgeService {
         log,
         "purger:concerts-hors-portee",
         () -> {
-          int signales =
+          final int signales =
               jdbc.update(
                   "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE"
@@ -156,17 +156,17 @@ public class WorkerPurgeService {
         log,
         "purger:salles",
         () -> {
-          List<UUID> candidats =
+          final List<UUID> candidats =
               jdbc.query(
                   """
-                  SELECT id FROM salles
-                  WHERE NOT EXISTS (
-                      SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
-                    AND NOT EXISTS (
-                      SELECT 1 FROM user_salles WHERE salle_id = salles.id)
-                    AND NOT EXISTS (
-                      SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
-                  """,
+                      SELECT id FROM salles
+                      WHERE NOT EXISTS (
+                          SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
+                        AND NOT EXISTS (
+                          SELECT 1 FROM user_salles WHERE salle_id = salles.id)
+                        AND NOT EXISTS (
+                          SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
+                      """,
                   Map.of(),
                   (rs, _) -> rs.getObject("id", UUID.class));
 
@@ -206,15 +206,15 @@ public class WorkerPurgeService {
         log,
         "purger:artistes",
         () -> {
-          int supprimes =
+          final int supprimes =
               jdbc.update(
                   """
-                  DELETE FROM artistes
-                  WHERE NOT EXISTS (
-                      SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
-                    AND NOT EXISTS (
-                      SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
-                  """,
+                      DELETE FROM artistes
+                      WHERE NOT EXISTS (
+                          SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
+                        AND NOT EXISTS (
+                          SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
+                      """,
                   Map.of());
           log.info("purger:artistes terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);
@@ -230,21 +230,21 @@ public class WorkerPurgeService {
    * désormais temporelle et la purge planifiée (cf. {@code PurgerLogsAdminJob}).
    */
   public void executerPurgerLogsAdmin() {
-    long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
-    Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
-    Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
+    final long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
+    final Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
+    final Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     log.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
     workerStatsService.executerAvecStats(
         log,
         "purger:logs-admin",
         () -> {
-          int supprimesLogs =
+          final int supprimesLogs =
               jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of("seuil", seuilLogs));
-          int supprimesHistorique =
+          final int supprimesHistorique =
               jdbc.update(
                   "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
                   Map.of("seuil", Timestamp.from(seuilHistorique)));
-          int supprimesVerifications =
+          final int supprimesVerifications =
               jdbc.update(
                   "DELETE FROM verifications WHERE expires_at < :seuil",
                   Map.of("seuil", Timestamp.from(seuilVerifications)));

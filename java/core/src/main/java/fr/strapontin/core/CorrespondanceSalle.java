@@ -70,12 +70,12 @@ public final class CorrespondanceSalle {
   private CorrespondanceSalle() {}
 
   private static boolean estDoublonTexte(
-      String a,
-      String b,
-      double seuilSimilarite,
-      int longueurMinContainment,
-      double ratioMinContainment,
-      boolean containmentAutorise) {
+      final String a,
+      final String b,
+      final double seuilSimilarite,
+      final int longueurMinContainment,
+      final double ratioMinContainment,
+      final boolean containmentAutorise) {
     if (a.equals(b)) return true;
     if (Normalisation.similarite(a, b) >= seuilSimilarite) return true;
     // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)
@@ -93,8 +93,8 @@ public final class CorrespondanceSalle {
    * @param s chaîne normalisée
    * @return ensemble des tokens significatifs
    */
-  public static Set<String> tokensSignificatifs(String s) {
-    Set<String> tokens = new HashSet<>(Arrays.asList(s.split("\\s+")));
+  public static Set<String> tokensSignificatifs(final String s) {
+    final Set<String> tokens = new HashSet<>(Arrays.asList(s.split("\\s+")));
     tokens.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
     return tokens;
   }
@@ -107,8 +107,8 @@ public final class CorrespondanceSalle {
    * @param s chaîne normalisée
    * @return ensemble des tokens significatifs et spécifiques (hors mots-types génériques)
    */
-  private static Set<String> tokensSpecifiques(String s) {
-    Set<String> tokens = new HashSet<>(tokensSignificatifs(s));
+  private static Set<String> tokensSpecifiques(final String s) {
+    final Set<String> tokens = new HashSet<>(tokensSignificatifs(s));
     tokens.removeAll(MOTS_GENERIQUES_SALLE);
     return tokens;
   }
@@ -123,14 +123,14 @@ public final class CorrespondanceSalle {
    * @param b deuxième chaîne normalisée
    * @return coefficient de Jaccard entre 0.0 et 1.0
    */
-  public static double jaccardTokens(String a, String b) {
-    Set<String> tokensA = tokensSignificatifs(a);
-    Set<String> tokensB = tokensSignificatifs(b);
+  public static double jaccardTokens(final String a, final String b) {
+    final Set<String> tokensA = tokensSignificatifs(a);
+    final Set<String> tokensB = tokensSignificatifs(b);
     if (tokensA.isEmpty() && tokensB.isEmpty()) return 1.0;
-    Set<String> union = new HashSet<>(tokensA);
+    final Set<String> union = new HashSet<>(tokensA);
     union.addAll(tokensB);
     if (union.isEmpty()) return 0.0;
-    Set<String> intersection = new HashSet<>(tokensA);
+    final Set<String> intersection = new HashSet<>(tokensA);
     intersection.retainAll(tokensB);
     return (double) intersection.size() / union.size();
   }
@@ -155,17 +155,17 @@ public final class CorrespondanceSalle {
    * @param specLong tokens spécifiques du nom le plus long
    * @return {@code true} si tous les tokens de {@code specCourt} sont couverts
    */
-  private static boolean estContainmentTokensPartiel(Set<String> specCourt, Set<String> specLong) {
+  private static boolean estContainmentTokensPartiel(final Set<String> specCourt, final Set<String> specLong) {
     if (specCourt.isEmpty() || specLong.isEmpty()) return false;
     for (String tokenCourt : specCourt) {
       if (tokenCourt.length() < LONGUEUR_MIN_CONTAINMENT_TOKEN) return false;
       // La garde de longueur doit aussi s'appliquer au token du nom long : sans elle, un article
       // court comme "les" (issu d'un nom mal désapostrophé, ex. "lessaion") valide trivialement un
       // containment sans aucun rapport sémantique réel avec le nom recherché.
-      boolean couvert =
-          specLong.stream()
-              .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
-              .anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
+      final boolean couvert =
+              specLong.stream()
+                      .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
+                      .anyMatch(t -> t.contains(tokenCourt) || tokenCourt.contains(t));
       if (!couvert) return false;
     }
     return true;
@@ -194,7 +194,7 @@ public final class CorrespondanceSalle {
    * @param b deuxième nom normalisé
    * @return {@code true} si les salles sont considérées identiques
    */
-  public static boolean estDoublonSalle(String a, String b) {
+  public static boolean estDoublonSalle(final String a, final String b) {
     return estDoublonSalle(a, b, true);
   }
 
@@ -214,7 +214,7 @@ public final class CorrespondanceSalle {
    *   confirmer un candidat validé sur l'un de ces deux seuls critères
    * @return {@code true} si les salles sont considérées identiques
    */
-  public static boolean estDoublonSalle(String a, String b, boolean pivotAutorise) {
+  public static boolean estDoublonSalle(final String a, final String b, final boolean pivotAutorise) {
     if (estDoublonTexte(
         a,
         b,
@@ -224,12 +224,12 @@ public final class CorrespondanceSalle {
         pivotAutorise)) return true;
     if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) return true;
 
-    Set<String> tokA = tokensSignificatifs(a);
-    Set<String> tokB = tokensSignificatifs(b);
-    Set<String> specA = tokensSpecifiques(a);
-    Set<String> specB = tokensSpecifiques(b);
-    Set<String> intersectionSpec = intersection(specA, specB);
-    double jaccardSpec = jaccard(specA, specB, intersectionSpec);
+    final Set<String> tokA = tokensSignificatifs(a);
+    final Set<String> tokB = tokensSignificatifs(b);
+    final Set<String> specA = tokensSpecifiques(a);
+    final Set<String> specB = tokensSpecifiques(b);
+    final Set<String> intersectionSpec = intersection(specA, specB);
+    final double jaccardSpec = jaccard(specA, specB, intersectionSpec);
 
     if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) return true;
     if (pivotAutorise && estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec)) {
@@ -238,14 +238,14 @@ public final class CorrespondanceSalle {
     return estContainmentPartielSuffisant(specA, specB);
   }
 
-  private static Set<String> intersection(Set<String> a, Set<String> b) {
-    Set<String> resultat = new HashSet<>(a);
+  private static Set<String> intersection(final Set<String> a, final Set<String> b) {
+    final Set<String> resultat = new HashSet<>(a);
     resultat.retainAll(b);
     return resultat;
   }
 
-  private static double jaccard(Set<String> a, Set<String> b, Set<String> intersection) {
-    Set<String> union = new HashSet<>(a);
+  private static double jaccard(final Set<String> a, final Set<String> b, final Set<String> intersection) {
+    final Set<String> union = new HashSet<>(a);
     union.addAll(b);
     return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
   }
@@ -254,14 +254,14 @@ public final class CorrespondanceSalle {
   // (déjà couverts par l'égalité stricte) ou sans mot distinctif partagé ne doivent jamais être
   // déclarés doublons sur ce seul critère.
   private static boolean estJaccardSpecifiqueSuffisant(
-      Set<String> specA, Set<String> specB, double jaccardSpec) {
+      final Set<String> specA, final Set<String> specB, final double jaccardSpec) {
     return !(specA.isEmpty() && specB.isEmpty()) && jaccardSpec > SEUIL_JACCARD_SALLE;
   }
 
   // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs de type
   // "galaxie" (1 token) vs "le galaxie amneville".
   private static boolean estPivotSpecifique(
-      Set<String> tokA, Set<String> tokB, double jaccardSpec, Set<String> intersectionSpec) {
+      final Set<String> tokA, final Set<String> tokB, final double jaccardSpec, final Set<String> intersectionSpec) {
     return tokA.size() >= 2
         && tokB.size() >= 2
         && jaccardSpec > SEUIL_JACCARD_PIVOT
@@ -273,10 +273,10 @@ public final class CorrespondanceSalle {
   // Paris" → seul "paris" reste après retrait de "casino") correspond trivialement à n'importe
   // quel autre nom partageant ce token comme simple nom de ville ("Théâtre Rive Gauche Paris 14",
   // "Cathédrale Américaine Paris 08"...), sans aucun rapport avec le lieu recherché.
-  private static boolean estContainmentPartielSuffisant(Set<String> specA, Set<String> specB) {
+  private static boolean estContainmentPartielSuffisant(final Set<String> specA, final Set<String> specB) {
     if (specA.size() < 2 || specB.size() < 2) return false;
-    Set<String> specCourt = specA.size() <= specB.size() ? specA : specB;
-    Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
+    final Set<String> specCourt = specA.size() <= specB.size() ? specA : specB;
+    final Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
     return estContainmentTokensPartiel(specCourt, specLong);
   }
 
@@ -284,10 +284,10 @@ public final class CorrespondanceSalle {
 
   // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une espace) — l'extraction
   // opère donc sur le nom brut, jamais sur nom_norm.
-  private static String extraireQualificatif(String nomBrut) {
-    int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
+  private static String extraireQualificatif(final String nomBrut) {
+    final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
     if (idx <= 0) return null;
-    String qualif = nomBrut.substring(idx + SEPARATEUR_QUALIFICATIF.length()).trim();
+    final String qualif = nomBrut.substring(idx + SEPARATEUR_QUALIFICATIF.length()).trim();
     return qualif.isEmpty() ? null : qualif;
   }
 
@@ -299,10 +299,10 @@ public final class CorrespondanceSalle {
    * @param nomBrut nom brut (non normalisé)
    * @return le nom de base, ou {@code null} si {@code nomBrut} ne porte aucun qualificatif
    */
-  public static String extraireBase(String nomBrut) {
-    int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
+  public static String extraireBase(final String nomBrut) {
+    final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
     if (idx <= 0) return null;
-    String base = nomBrut.substring(0, idx).trim();
+    final String base = nomBrut.substring(0, idx).trim();
     return base.isEmpty() ? null : base;
   }
 
@@ -316,9 +316,9 @@ public final class CorrespondanceSalle {
    * @param nomBrutB second nom, non normalisé
    * @return {@code true} si les deux portent un qualificatif et que ceux-ci ne correspondent pas
    */
-  public static boolean qualificatifsDivergents(String nomBrutA, String nomBrutB) {
-    String qualifA = extraireQualificatif(nomBrutA);
-    String qualifB = extraireQualificatif(nomBrutB);
+  public static boolean qualificatifsDivergents(final String nomBrutA, final String nomBrutB) {
+    final String qualifA = extraireQualificatif(nomBrutA);
+    final String qualifB = extraireQualificatif(nomBrutB);
     if (qualifA == null || qualifB == null) return false;
     return !estDoublonSalle(
         Normalisation.normaliserTexte(qualifA), Normalisation.normaliserTexte(qualifB));

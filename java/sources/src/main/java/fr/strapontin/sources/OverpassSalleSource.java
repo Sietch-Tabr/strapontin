@@ -134,7 +134,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   private static RestClient construireRestClientParDefaut() {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(5));
     factory.setReadTimeout(TIMEOUT_LECTURE_CLIENT);
     return RestClient.builder().requestFactory(factory).build();
@@ -145,7 +145,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
    *
    * @param restClient client HTTP à utiliser
    */
-  public OverpassSalleSource(RestClient restClient) {
+  public OverpassSalleSource(final RestClient restClient) {
     this.restClient = restClient;
   }
 
@@ -155,10 +155,10 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   @Override
-  public Map<UUID, EnrichissementSalle> enrichirLot(List<SalleAEnrichir> salles) {
-    List<SalleAEnrichir> aTraiter =
+  public Map<UUID, EnrichissementSalle> enrichirLot(final List<SalleAEnrichir> salles) {
+    final List<SalleAEnrichir> aTraiter =
         salles.stream().filter(s -> s.wikidataId() == null && s.dept() != null).toList();
-    int sansDept =
+    final int sansDept =
         (int) salles.stream().filter(s -> s.wikidataId() == null).count() - aTraiter.size();
     if (sansDept > 0) {
       log.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
@@ -169,21 +169,21 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
       return Map.of();
     }
 
-    Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
-    Map<String, List<SalleAEnrichir>> parDept =
+    final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
+    final Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
     for (var entree : parDept.entrySet()) {
-      CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
+      final CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
       if (centre == null) continue;
-      List<SalleAEnrichir> sallesDept = entree.getValue();
+      final List<SalleAEnrichir> sallesDept = entree.getValue();
       for (int i = 0; i < sallesDept.size(); i += TAILLE_LOT) {
-        List<SalleAEnrichir> lot =
+        final List<SalleAEnrichir> lot =
             sallesDept.subList(i, Math.min(i + TAILLE_LOT, sallesDept.size()));
         cadenceur.attendre();
-        ResultatLot resultat = enrichirUnLot(lot, centre);
+        final ResultatLot resultat = enrichirUnLot(lot, centre);
         resultats.putAll(resultat.resultats());
         if (!resultat.succes()) {
-          int echecs = echecsConsecutifsCycle.incrementAndGet();
+          final int echecs = echecsConsecutifsCycle.incrementAndGet();
           if (echecs >= SEUIL_ECHECS_CONSECUTIFS) {
             log.warn(
                 "Overpass — {} échecs consécutifs, instance probablement indisponible, cycle"
@@ -205,14 +205,14 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
    */
   private record ResultatLot(Map<UUID, EnrichissementSalle> resultats, boolean succes) {}
 
-  private ResultatLot enrichirUnLot(List<SalleAEnrichir> lot, CentreDept centre) {
-    String requete = construireRequeteOverpassQL(lot, centre);
+  private ResultatLot enrichirUnLot(final List<SalleAEnrichir> lot, final CentreDept centre) {
+    final String requete = construireRequeteOverpassQL(lot, centre);
     Exception derniereErreur = null;
     for (int essai = 1; essai <= NB_ESSAIS_MAX; essai++) {
       compteurBilan.enregistrerAppel();
       try {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> data =
+        @SuppressWarnings("unchecked") final
+            Map<String, Object> data =
             restClient
                 .post()
                 .uri(BASE_URL)
@@ -242,13 +242,13 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
    * @param e exception levée par l'appel HTTP
    * @return délai en millisecondes avant le prochain essai
    */
-  static long delaiAvantRetry(Exception e) {
+  static long delaiAvantRetry(final Exception e) {
     return e instanceof HttpClientErrorException.TooManyRequests
         ? DELAI_APRES_429_MS
         : DELAI_APRES_ERREUR_MS;
   }
 
-  private static void attendre(long ms) {
+  private static void attendre(final long ms) {
     try {
       Thread.sleep(ms);
     } catch (InterruptedException e) {
@@ -263,23 +263,23 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   // jamais un nom OSM en apostrophe courbe (constaté sur « L'Empreinte » à Savigny-le-Temple). La
   // normalisation de Normalisation.normaliserTexte, elle, n'intervient qu'après réception de la
   // réponse (mapperReponse) et ne peut pas rattraper un élément qu'Overpass n'a jamais renvoyé.
-  private static String echapperRegex(String nom) {
-    String echappeMeta = METACARACTERES_REGEX.matcher(nom).replaceAll("\\\\$1");
+  private static String echapperRegex(final String nom) {
+    final String echappeMeta = METACARACTERES_REGEX.matcher(nom).replaceAll("\\\\$1");
     // Le guillemet droit est échappé en dernier, après les métacaractères regex : la regex
     // produite ici est elle-même insérée dans un littéral OverpassQL délimité par des guillemets
     // ("name"~"regex") — un guillemet non échappé dans le nom d'une salle romprait ce littéral et
     // permettrait d'injecter des clauses OverpassQL arbitraires dans la requête. Fait avant
     // l'échappement des métacaractères, le backslash qu'il insère serait lui-même ré-échappé (le
     // backslash fait partie des métacaractères), produisant un antislash surnuméraire.
-    String echappeGuillemets = echappeMeta.replace("\"", "\\\"");
+    final String echappeGuillemets = echappeMeta.replace("\"", "\\\"");
     return APOSTROPHE_DROITE.matcher(echappeGuillemets).replaceAll("['’]");
   }
 
-  private static String construireRequeteOverpassQL(List<SalleAEnrichir> lot, CentreDept centre) {
-    String nomsRegex =
+  private static String construireRequeteOverpassQL(final List<SalleAEnrichir> lot, final CentreDept centre) {
+    final String nomsRegex =
         lot.stream().map(s -> echapperRegex(s.nom())).collect(Collectors.joining("|"));
-    int rayonMetres = centre.rayon() * 1000 + MARGE_RAYON_METRES;
-    String around =
+    final int rayonMetres = centre.rayon() * 1000 + MARGE_RAYON_METRES;
+    final String around =
         "around:%d,%s,%s"
             .formatted(
                 rayonMetres,
@@ -297,17 +297,17 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
 
   @SuppressWarnings("unchecked")
   private static Map<UUID, EnrichissementSalle> mapperReponse(
-      Map<String, Object> data, List<SalleAEnrichir> lot) {
-    Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
+      final Map<String, Object> data, final List<SalleAEnrichir> lot) {
+    final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
     if (data == null) return resultats;
-    var elements = (List<Map<String, Object>>) data.get("elements");
+    final var elements = (List<Map<String, Object>>) data.get("elements");
     if (elements == null) return resultats;
 
     for (SalleAEnrichir salle : lot) {
       for (var element : elements) {
-        var tags = (Map<String, String>) element.get("tags");
+        final var tags = (Map<String, String>) element.get("tags");
         if (tags == null) continue;
-        String nomTag = tags.get("name");
+        final String nomTag = tags.get("name");
         if (nomTag == null || !Normalisation.normaliserTexte(nomTag).equals(salle.nomNorm())) {
           continue;
         }
@@ -318,9 +318,9 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return resultats;
   }
 
-  private static EnrichissementSalle construireEnrichissement(Map<String, String> tags) {
+  private static EnrichissementSalle construireEnrichissement(final Map<String, String> tags) {
     Integer capacite = null;
-    String capaciteStr = tags.get("capacity");
+    final String capaciteStr = tags.get("capacity");
     if (capaciteStr != null) {
       try {
         capacite = Integer.parseInt(capaciteStr.replaceAll("[^0-9]", ""));

@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClient;
 
 class WikidataArtisteSourceTest {
 
-  private static WikidataArtisteSource source(RestClient restClient) {
+  private static WikidataArtisteSource source(final RestClient restClient) {
     return new WikidataArtisteSource(restClient, Caffeine.newBuilder().build());
   }
 
@@ -31,12 +31,12 @@ class WikidataArtisteSourceTest {
 
   @Test
   void enrichirLot_wikidataIdConnu_requeteBatchEtRetourneP2722EtP6262() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -52,10 +52,10 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(1, resultat.size());
-    EnrichissementArtiste enrichissement = resultat.get(id);
+    final EnrichissementArtiste enrichissement = resultat.get(id);
     assertEquals("Q167023", enrichissement.wikidataId());
     assertEquals("Daft Punk", enrichissement.nomAffiche());
     assertEquals("27", enrichissement.deezerId());
@@ -65,12 +65,12 @@ class WikidataArtisteSourceTest {
 
   @Test
   void enrichirLot_wikidataIdConnu_extraitLesAliasSkosAltLabel() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "-M-", "m", "Q313039", null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "-M-", "m", "Q313039", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -85,7 +85,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(List.of("-M-", "Matthieu Chedid"), resultat.get(id).aliasWikidata());
     serveur.verify();
@@ -93,12 +93,12 @@ class WikidataArtisteSourceTest {
 
   @Test
   void enrichirLot_wikidataIdConnu_aucunAlias_retourneListeVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -113,7 +113,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(List.of(), resultat.get(id).aliasWikidata());
     serveur.verify();
@@ -121,12 +121,12 @@ class WikidataArtisteSourceTest {
 
   @Test
   void enrichirLot_wikidataIdInconnu_utiliseDecouverteMwapi() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Angele", "angele", null, null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Angele", "angele", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -144,7 +144,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(1, resultat.size());
     assertEquals("Q243550", resultat.get(id).wikidataId());
@@ -159,12 +159,12 @@ class WikidataArtisteSourceTest {
   // wdt:P31/wdt:P279*.
   @Test
   void enrichirLot_decouverte_utiliseFiltreTypeTransitifPourLesGroupes() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Muse", "muse", null, null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Muse", "muse", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -183,7 +183,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals("Q22151", resultat.get(id).wikidataId());
     assertEquals("705", resultat.get(id).deezerId());
@@ -192,12 +192,12 @@ class WikidataArtisteSourceTest {
 
   @Test
   void enrichirLot_decouverteAucunCandidat_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste =
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste =
         new ArtisteAEnrichir(id, "Artiste Inconnu", "artiste inconnu", null, null);
 
     serveur
@@ -209,7 +209,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -220,12 +220,12 @@ class WikidataArtisteSourceTest {
   // structurellement des artistes légitimement suivis comme Pierre-Emmanuel Barré.
   @Test
   void enrichirLot_decouverteHumoriste_estRapproche() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste =
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste =
         new ArtisteAEnrichir(id, "Pierre-Emmanuel Barré", "pierre-emmanuel barre", null, null);
 
     serveur
@@ -245,7 +245,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals("Q3382524", resultat.get(id).wikidataId());
     serveur.verify();
@@ -257,12 +257,12 @@ class WikidataArtisteSourceTest {
   // branchement du filtre était nécessaire.
   @Test
   void enrichirLot_decouverteAuteurComique_estRapproche() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste =
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste =
         new ArtisteAEnrichir(id, "Auteur Comique Inconnu", "auteur comique inconnu", null, null);
 
     serveur
@@ -282,7 +282,7 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of(artiste));
 
     assertEquals("Q17350457", resultat.get(id).wikidataId());
     serveur.verify();
@@ -293,12 +293,12 @@ class WikidataArtisteSourceTest {
   // doivent bloquer tout rapprochement plutôt que de deviner celle en tête.
   @Test
   void enrichirLot_decouverteAmbigueGroupeEtPersonne_neRapprocheRien() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Van Halen", "van halen", null, null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Van Halen", "van halen", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -318,8 +318,8 @@ class WikidataArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataArtisteSource source = source(restClient);
-    Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(List.of(artiste));
+    final WikidataArtisteSource source = source(restClient);
+    final Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -330,11 +330,11 @@ class WikidataArtisteSourceTest {
 
   @Test
   void enrichirLot_lotVide_retourneVideSansHttp() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of());
+    final Map<UUID, EnrichissementArtiste> resultat = source(restClient).enrichirLot(List.of());
 
     assertTrue(resultat.isEmpty());
     serveur.verify();

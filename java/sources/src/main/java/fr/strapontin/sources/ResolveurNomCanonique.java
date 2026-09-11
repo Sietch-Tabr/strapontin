@@ -89,34 +89,34 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
    */
-  public ResolveurNomCanonique(RestClient restClient, Cache<String, ResultatResolution> cache) {
+  public ResolveurNomCanonique(final RestClient restClient, final Cache<String, ResultatResolution> cache) {
     this.restClient = restClient;
     this.cache = cache;
   }
 
   @SuppressWarnings("unchecked")
-  private String rechercherDeezerArtiste(String nom) {
-    String uri =
+  private String rechercherDeezerArtiste(final String nom) {
+    final String uri =
         DEEZER_BASE + "/search/artist?q=" + encode(nom) + "&limit=" + LIMITE_CANDIDATS_DEEZER;
     compteurBilan.enregistrerAppel();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return null;
-      var dataList = (List<Map<String, Object>>) data.get("data");
+      final var dataList = (List<Map<String, Object>>) data.get("data");
       if (dataList == null || dataList.isEmpty()) return null;
 
-      String nomNormalise = Normalisation.normaliserTexte(nom);
+      final String nomNormalise = Normalisation.normaliserTexte(nom);
       Map<String, Object> meilleurCandidat = null;
       Map<String, Object> meilleurCandidatExact = null;
       double meilleurePopularite = -1;
       double meilleurePopulariteExacte = -1;
       for (Map<String, Object> candidat : dataList) {
-        String nomCandidat = (String) candidat.get("name");
+        final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null) continue;
-        String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
-        double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
+        final String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
+        final double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
         if (similarite < SEUIL_CONFIANCE_DEEZER) continue;
-        double popularite = popularite(candidat);
+        final double popularite = popularite(candidat);
         if (meilleurCandidat == null || popularite > meilleurePopularite) {
           meilleurCandidat = candidat;
           meilleurePopularite = popularite;
@@ -132,7 +132,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       if (meilleurCandidatExact != null) meilleurCandidat = meilleurCandidatExact;
       if (meilleurCandidat == null) return null;
 
-      String resultat = (String) meilleurCandidat.get("name");
+      final String resultat = (String) meilleurCandidat.get("name");
       if (!resultat.equals(nom)) {
         log.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
       }
@@ -144,8 +144,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
-  private static double popularite(Map<String, Object> candidat) {
-    Object nbFan = candidat.get("nb_fan");
+  private static double popularite(final Map<String, Object> candidat) {
+    final Object nbFan = candidat.get("nb_fan");
     return nbFan instanceof Number nombre ? nombre.doubleValue() : 0;
   }
 
@@ -160,7 +160,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     return compteurBilan.preleverBilan();
   }
 
-  private static String encode(String s) {
+  private static String encode(final String s) {
     return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
   }
 
@@ -174,14 +174,14 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
    * @param nom nom brut à résoudre
    * @return résultat contenant le nom canonique et la source utilisée
    */
-  public ResultatResolution resoudreNomCanonique(String type, String nom) {
-    String cleCache = type + ":" + nom;
-    ResultatResolution cached = cache.getIfPresent(cleCache);
+  public ResultatResolution resoudreNomCanonique(final String type, final String nom) {
+    final String cleCache = type + ":" + nom;
+    final ResultatResolution cached = cache.getIfPresent(cleCache);
     if (cached != null) return cached;
 
     ResultatResolution resultat;
     if ("artiste".equals(type)) {
-      String nomDeezer = rechercherDeezerArtiste(nom);
+      final String nomDeezer = rechercherDeezerArtiste(nom);
       resultat =
           nomDeezer != null
               ? new ResultatResolution(nomDeezer, SourceResolution.DEEZER)

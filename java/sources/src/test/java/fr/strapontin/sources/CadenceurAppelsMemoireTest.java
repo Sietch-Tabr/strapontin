@@ -15,22 +15,22 @@ class CadenceurAppelsMemoireTest {
 
   @Test
   void attendre_deuxAppelsRapproches_respecteLeDelaiMinimal() {
-    CadenceurAppels cadenceur = new CadenceurAppelsMemoire(100);
-    long debut = System.currentTimeMillis();
+    final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(100);
+    final long debut = System.currentTimeMillis();
     cadenceur.attendre();
     cadenceur.attendre();
-    long ecoule = System.currentTimeMillis() - debut;
+    final long ecoule = System.currentTimeMillis() - debut;
     assertTrue(ecoule >= 100, "écart observé=" + ecoule + "ms, attendu >= 100ms");
   }
 
   @Test
   void attendre_appelsEspacesNaturellement_neBloquePas() throws InterruptedException {
-    CadenceurAppels cadenceur = new CadenceurAppelsMemoire(50);
+    final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(50);
     cadenceur.attendre();
     Thread.sleep(60);
-    long debut = System.currentTimeMillis();
+    final long debut = System.currentTimeMillis();
     cadenceur.attendre();
-    long ecoule = System.currentTimeMillis() - debut;
+    final long ecoule = System.currentTimeMillis() - debut;
     assertTrue(ecoule < 50, "aucune attente supplémentaire attendue, observé=" + ecoule + "ms");
   }
 }

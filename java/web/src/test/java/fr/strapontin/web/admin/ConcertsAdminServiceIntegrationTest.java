@@ -39,7 +39,7 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeAll
   static void migrerBase() {
-    DriverManagerDataSource dataSource = new DriverManagerDataSource();
+    final DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
@@ -56,8 +56,8 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
     service = new ConcertsAdminService(jdbc, new LogAdminService(jdbc, new ObjectMapper()));
   }
 
-  private void creerConcertFlague(String artiste) {
-    UUID evenementId =
+  private void creerConcertFlague(final String artiste) {
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, absences_consecutives,"
                 + " suppression_suggeree_le)"
@@ -77,7 +77,7 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void lister_concertFlague_mappeSuppressionSuggereeLeSansErreur() {
     creerConcertFlague("Vincent Dedienne");
 
-    ReponseConcertsAConfirmer reponse = service.lister(0);
+    final ReponseConcertsAConfirmer reponse = service.lister(0);
 
     assertEquals(1, reponse.concerts().size());
     assertEquals("Vincent Dedienne", reponse.concerts().get(0).artiste());

@@ -21,7 +21,7 @@ final class EnrichissementUtils {
    * @param nom nom à capitaliser
    * @return le nom avec sa première lettre en majuscule, inchangé si vide
    */
-  static String capitaliser(String nom) {
+  static String capitaliser(final String nom) {
     return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
   }
 
@@ -30,7 +30,7 @@ final class EnrichissementUtils {
    *
    * @param delaiMs délai d'attente en millisecondes
    */
-  static void attendreEntreLots(long delaiMs) {
+  static void attendreEntreLots(final long delaiMs) {
     try {
       Thread.sleep(delaiMs);
     } catch (InterruptedException e) {

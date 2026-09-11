@@ -26,38 +26,38 @@ class SalleHierarchieTest {
 
   @Test
   void creeraitCycle_autoReference_retourneTrue() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     assertTrue(SalleHierarchie.creeraitCycle(salleId, salleId, _ -> null));
   }
 
   @Test
   void creeraitCycle_candidatSansRapportAvecLaSalle_retourneFalse() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
-    UUID c = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
+    final UUID c = UUID.randomUUID();
     // b -> c (chaîne totalement indépendante de a) : assigner b comme parent de a ne cycle pas
-    Map<UUID, UUID> parents = Map.of(b, c);
+    final Map<UUID, UUID> parents = Map.of(b, c);
 
     assertFalse(SalleHierarchie.creeraitCycle(b, a, id -> parents.get(id)));
   }
 
   @Test
   void creeraitCycle_boucleDeuxSalles_retourneTrue() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
     // b est déjà parent de a — assigner b comme parent de b (via a) créerait A -> B -> A
-    Map<UUID, UUID> parents = Map.of(a, b);
+    final Map<UUID, UUID> parents = Map.of(a, b);
 
     assertTrue(SalleHierarchie.creeraitCycle(a, b, id -> parents.get(id)));
   }
 
   @Test
   void creeraitCycle_candidatDescendantEloigne_retourneTrue() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
-    UUID c = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
+    final UUID c = UUID.randomUUID();
     // c -> b -> a : assigner c comme parent de a créerait A -> C -> B -> A
-    Map<UUID, UUID> parents = Map.of(c, b, b, a);
+    final Map<UUID, UUID> parents = Map.of(c, b, b, a);
 
     assertTrue(SalleHierarchie.creeraitCycle(c, a, id -> parents.get(id)));
   }

@@ -60,10 +60,10 @@ public class EnrichissementArtistesService {
   private final SignalementMatchingService signalementMatchingService;
 
   public EnrichissementArtistesService(
-      NamedParameterJdbcTemplate jdbc,
-      List<SourceEnrichissementArtiste> sources,
-      LogsAdminWorker logsAdminWorker,
-      SignalementMatchingService signalementMatchingService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final List<SourceEnrichissementArtiste> sources,
+      final LogsAdminWorker logsAdminWorker,
+      final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.sources = sources;
     this.logsAdminWorker = logsAdminWorker;
@@ -79,7 +79,7 @@ public class EnrichissementArtistesService {
    * @return nombre d'artistes effectivement mis à jour
    */
   public int enrichir() {
-    List<ArtisteAEnrichir> candidats = selectionnerCandidats();
+    final List<ArtisteAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
       log.info("enrichissement:artistes — aucun candidat");
       return 0;
@@ -88,7 +88,7 @@ public class EnrichissementArtistesService {
     int nbEnrichis = 0;
     for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
       if (i > 0) EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
-      List<ArtisteAEnrichir> lot =
+      final List<ArtisteAEnrichir> lot =
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
@@ -106,7 +106,7 @@ public class EnrichissementArtistesService {
   private void remonterBilans() {
     for (SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
-      BilanFetch bilan = avecBilan.preleverBilan();
+      final BilanFetch bilan = avecBilan.preleverBilan();
       bilan
           .evaluer(
               "reconciliation:nocturne",
@@ -134,13 +134,13 @@ public class EnrichissementArtistesService {
     }
   }
 
-  private int enrichirEtPersisterLot(List<ArtisteAEnrichir> lot) {
-    Map<UUID, String> attractionIdsExistants = lireAttractionIdsExistants(lot);
+  private int enrichirEtPersisterLot(final List<ArtisteAEnrichir> lot) {
+    final Map<UUID, String> attractionIdsExistants = lireAttractionIdsExistants(lot);
 
-    Map<UUID, EnrichissementArtiste> accumule = new HashMap<>();
+    final Map<UUID, EnrichissementArtiste> accumule = new HashMap<>();
     List<ArtisteAEnrichir> courant = lot;
     for (SourceEnrichissementArtiste source : sources) {
-      Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(courant);
+      final Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(courant);
       for (var entree : resultat.entrySet()) {
         accumule.merge(
             entree.getKey(), entree.getValue(), EnrichissementArtistesService::fusionner);
@@ -150,7 +150,7 @@ public class EnrichissementArtistesService {
 
     int nbEnrichis = 0;
     for (ArtisteAEnrichir artiste : lot) {
-      EnrichissementArtiste enrichissement = accumule.get(artiste.id());
+      final EnrichissementArtiste enrichissement = accumule.get(artiste.id());
       if (enrichissement == null) continue;
       if (!mettreAJourArtiste(artiste.id(), artiste.nom(), enrichissement)) continue;
       traiterCrossValidationP6262(
@@ -180,17 +180,17 @@ public class EnrichissementArtistesService {
                 rs.getString("deezer_id")));
   }
 
-  private Map<UUID, String> lireAttractionIdsExistants(List<ArtisteAEnrichir> candidats) {
-    List<UUID> ids = candidats.stream().map(ArtisteAEnrichir::id).toList();
-    List<Map<String, Object>> lignes =
+  private Map<UUID, String> lireAttractionIdsExistants(final List<ArtisteAEnrichir> candidats) {
+    final List<UUID> ids = candidats.stream().map(ArtisteAEnrichir::id).toList();
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT artiste_id, identifiant_externe
-            FROM artiste_sources
-            WHERE source = 'ticketmaster' AND artiste_id IN (:ids)
-            """,
+                SELECT artiste_id, identifiant_externe
+                FROM artiste_sources
+                WHERE source = 'ticketmaster' AND artiste_id IN (:ids)
+                """,
             Map.of("ids", ids));
-    Map<UUID, String> resultat = new HashMap<>();
+    final Map<UUID, String> resultat = new HashMap<>();
     for (var ligne : lignes) {
       resultat.put((UUID) ligne.get("artiste_id"), (String) ligne.get("identifiant_externe"));
     }
@@ -198,20 +198,20 @@ public class EnrichissementArtistesService {
   }
 
   private static List<ArtisteAEnrichir> appliquerConnus(
-      List<ArtisteAEnrichir> candidats, Map<UUID, EnrichissementArtiste> accumule) {
+      final List<ArtisteAEnrichir> candidats, final Map<UUID, EnrichissementArtiste> accumule) {
     return candidats.stream()
         .map(
             a -> {
-              EnrichissementArtiste e = accumule.get(a.id());
-              String wikidataId =
+              final EnrichissementArtiste e = accumule.get(a.id());
+              final String wikidataId =
                   e != null && e.wikidataId() != null ? e.wikidataId() : a.wikidataId();
-              String deezerId = e != null && e.deezerId() != null ? e.deezerId() : a.deezerId();
+              final String deezerId = e != null && e.deezerId() != null ? e.deezerId() : a.deezerId();
               return new ArtisteAEnrichir(a.id(), a.nom(), a.nomNorm(), wikidataId, deezerId);
             })
         .toList();
   }
 
-  private static EnrichissementArtiste fusionner(EnrichissementArtiste a, EnrichissementArtiste b) {
+  private static EnrichissementArtiste fusionner(final EnrichissementArtiste a, final EnrichissementArtiste b) {
     return new EnrichissementArtiste(
         b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
         b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
@@ -219,7 +219,7 @@ public class EnrichissementArtistesService {
         b.ticketmasterAttractionId() != null
             ? b.ticketmasterAttractionId()
             : a.ticketmasterAttractionId(),
-        !b.aliasWikidata().isEmpty() ? b.aliasWikidata() : a.aliasWikidata());
+        b.aliasWikidata().isEmpty() ? a.aliasWikidata() : b.aliasWikidata());
   }
 
   /**
@@ -232,8 +232,8 @@ public class EnrichissementArtistesService {
    *   aucun signal géographique de cross-validation n'existe pour départager un homonyme réel d'un
    *   doublon.
    */
-  private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
-    Map<String, Object> params = new HashMap<>();
+  private boolean mettreAJourArtiste(final UUID artisteId, final String nom, final EnrichissementArtiste e) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
     params.put("deezerId", e.deezerId());
@@ -276,18 +276,18 @@ public class EnrichissementArtistesService {
    * P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé.
    */
   private void traiterCrossValidationP6262(
-      ArtisteAEnrichir artiste, EnrichissementArtiste enrichissement, String attractionIdExistant) {
-    String tmIdWikidata = enrichissement.ticketmasterAttractionId();
+      final ArtisteAEnrichir artiste, final EnrichissementArtiste enrichissement, final String attractionIdExistant) {
+    final String tmIdWikidata = enrichissement.ticketmasterAttractionId();
     if (tmIdWikidata == null) return;
 
     if (attractionIdExistant == null) {
-      int lignesInserees =
+      final int lignesInserees =
           jdbc.update(
               """
-              INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
-              VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
-              ON CONFLICT DO NOTHING
-              """,
+                  INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
+                  VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
+                  ON CONFLICT DO NOTHING
+                  """,
               Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
       if (lignesInserees > 0) {
         log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);

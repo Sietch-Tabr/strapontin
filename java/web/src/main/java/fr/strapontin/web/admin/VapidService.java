@@ -32,9 +32,9 @@ public class VapidService {
    * @param logAdminService audit des actions admin
    */
   public VapidService(
-      ConfigService configService,
-      NamedParameterJdbcTemplate jdbc,
-      LogAdminService logAdminService) {
+      final ConfigService configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final LogAdminService logAdminService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
@@ -47,12 +47,12 @@ public class VapidService {
    * @throws Exception si la génération de clés échoue
    */
   public ResultatVapid genererVapid() throws Exception {
-    VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
+    final VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
 
     configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());
     configService.sauvegarderConfig("VAPID_PRIVATE_KEY", paire.clePrivee());
 
-    int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
+    final int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
     logAdminService.logAdmin(
         "warn",
         "admin",

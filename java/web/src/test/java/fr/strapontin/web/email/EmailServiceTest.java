@@ -34,7 +34,7 @@ class EmailServiceTest {
   @BeforeEach
   void setUp() {
     configService = mock(ConfigService.class);
-    EmailSender emailSender = mock(EmailSender.class);
+    final EmailSender emailSender = mock(EmailSender.class);
     emailService = new EmailService(configService, emailSender);
   }
 

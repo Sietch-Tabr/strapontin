@@ -91,11 +91,11 @@ public class NotificationDigestService {
    */
   @org.springframework.beans.factory.annotation.Autowired
   public NotificationDigestService(
-      ConfigServiceWorker configService,
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper jackson,
-      LogsAdminWorker logsAdminWorker,
-      GestionQuotaResendWorker gestionQuotaResendWorker) {
+      final ConfigServiceWorker configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper jackson,
+      final LogsAdminWorker logsAdminWorker,
+      final GestionQuotaResendWorker gestionQuotaResendWorker) {
     this(
         configService,
         jdbc,
@@ -111,13 +111,13 @@ public class NotificationDigestService {
    * exercer le chemin nominal de succès de l'envoi email/push.
    */
   NotificationDigestService(
-      ConfigServiceWorker configService,
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper jackson,
-      LogsAdminWorker logsAdminWorker,
-      GestionQuotaResendWorker gestionQuotaResendWorker,
-      FabriqueResend fabriqueResend,
-      FabriquePushService fabriquePushService) {
+      final ConfigServiceWorker configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper jackson,
+      final LogsAdminWorker logsAdminWorker,
+      final GestionQuotaResendWorker gestionQuotaResendWorker,
+      final FabriqueResend fabriqueResend,
+      final FabriquePushService fabriquePushService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.jackson = jackson;
@@ -174,9 +174,9 @@ public class NotificationDigestService {
    *
    * @param frequence {@code "temps_reel"} (après chaque recalcul) ou {@code "quotidien"} (cron 8h)
    */
-  public void executerDigest(String frequence) {
+  public void executerDigest(final String frequence) {
     log.info("notifier:digest démarré frequence={}", frequence);
-    long debut = System.currentTimeMillis();
+    final long debut = System.currentTimeMillis();
     int nbUtilisateurs = 0;
     int nbMatchesNotifies = 0;
     int nbEmailsOk = 0;
@@ -185,20 +185,20 @@ public class NotificationDigestService {
     String erreur = null;
 
     try {
-      MatchesGroupes groupes = chargerMatchesNonNotifies(frequence);
+      final MatchesGroupes groupes = chargerMatchesNonNotifies(frequence);
 
       if (groupes.parUtilisateur().isEmpty()) {
         log.info("notifier:digest — aucun match non notifié");
         return;
       }
 
-      Timestamp maintenant = Timestamp.from(Instant.now());
+      final Timestamp maintenant = Timestamp.from(Instant.now());
       for (Map.Entry<String, List<ConcertNotif>> entree : groupes.parUtilisateur().entrySet()) {
-        String userId = entree.getKey();
-        List<ConcertNotif> concerts = entree.getValue();
-        Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
+        final String userId = entree.getKey();
+        final List<ConcertNotif> concerts = entree.getValue();
+        final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
         try {
-          ResultatDigest res =
+          final ResultatDigest res =
               envoyerDigest(
                   userId,
                   groupes.emailsUtilisateurs().get(userId),
@@ -221,16 +221,16 @@ public class NotificationDigestService {
           log.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
         }
         if (!concertIdsNotifies.isEmpty()) {
-          int updated =
+          final int updated =
               jdbc.update(
                   """
-                  UPDATE user_matches um
-                  SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
-                  FROM concerts c
-                  WHERE c.id = um.concert_id
-                    AND um.user_id = :userId
-                    AND um.concert_id IN (:concertIds)
-                  """,
+                      UPDATE user_matches um
+                      SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
+                      FROM concerts c
+                      WHERE c.id = um.concert_id
+                        AND um.user_id = :userId
+                        AND um.concert_id IN (:concertIds)
+                      """,
                   new MapSqlParameterSource()
                       .addValue("userId", userId)
                       .addValue("maintenant", maintenant)
@@ -274,73 +274,73 @@ public class NotificationDigestService {
    * @param frequence {@code "temps_reel"} ou {@code "quotidien"}
    * @return les matches non notifiés, groupés par utilisateur
    */
-  private MatchesGroupes chargerMatchesNonNotifies(String frequence) {
-    List<Map<String, Object>> lignes =
+  private MatchesGroupes chargerMatchesNonNotifies(final String frequence) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
-                   COALESCE(a.nom, c.artiste) AS artiste,
-                   CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
-                   c.statut,
-                   uc.notif_artistes, uc.notif_salles,
-                   uc.notif_artistes_push, uc.notif_salles_push,
-                   uc.frequence_notifications::text AS frequence_notifications,
-                   CASE
-                     WHEN EXISTS (
-                       SELECT 1 FROM user_artistes ua
-                       WHERE ua.user_id = um.user_id
-                         AND c.artiste_id = ua.artiste_id
-                     ) THEN 'ARTISTE'
-                     ELSE 'SALLE'
-                   END AS source
-            FROM user_matches um
-            JOIN concerts    c  ON c.id      = um.concert_id
-            LEFT JOIN artistes a ON a.id = c.artiste_id
-            JOIN users       u  ON u.id      = um.user_id
-            JOIN user_config uc ON uc.user_id = um.user_id
-            WHERE um.notification_envoyee_le IS NULL
-              AND um.masque_le  IS NULL
-              AND (
-                (uc.frequence_notifications = CAST(:frequence AS frequence_notif)
-                 AND (
-                   ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
-                     SELECT 1 FROM user_artistes ua
-                     WHERE ua.user_id = um.user_id
-                       AND c.artiste_id = ua.artiste_id
-                   ))
-                   OR
-                   ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
-                     SELECT 1 FROM user_salles us
-                     WHERE us.user_id = um.user_id
-                       AND c.salle_id = us.salle_id
-                   ))
-                 ))
-                OR
-                (CAST(:frequence AS frequence_notif) = 'temps_reel'
-                 AND uc.frequence_notifications = 'jamais'
-                 AND (
-                   (uc.notif_artistes_push = true AND EXISTS (
-                     SELECT 1 FROM user_artistes ua
-                     WHERE ua.user_id = um.user_id
-                       AND c.artiste_id = ua.artiste_id
-                   ))
-                   OR
-                   (uc.notif_salles_push = true AND EXISTS (
-                     SELECT 1 FROM user_salles us
-                     WHERE us.user_id = um.user_id
-                       AND c.salle_id = us.salle_id
-                   ))
-                 ))
-              )
-            ORDER BY um.user_id, c.date
-            """,
+                SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
+                       COALESCE(a.nom, c.artiste) AS artiste,
+                       CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
+                       c.statut,
+                       uc.notif_artistes, uc.notif_salles,
+                       uc.notif_artistes_push, uc.notif_salles_push,
+                       uc.frequence_notifications::text AS frequence_notifications,
+                       CASE
+                         WHEN EXISTS (
+                           SELECT 1 FROM user_artistes ua
+                           WHERE ua.user_id = um.user_id
+                             AND c.artiste_id = ua.artiste_id
+                         ) THEN 'ARTISTE'
+                         ELSE 'SALLE'
+                       END AS source
+                FROM user_matches um
+                JOIN concerts    c  ON c.id      = um.concert_id
+                LEFT JOIN artistes a ON a.id = c.artiste_id
+                JOIN users       u  ON u.id      = um.user_id
+                JOIN user_config uc ON uc.user_id = um.user_id
+                WHERE um.notification_envoyee_le IS NULL
+                  AND um.masque_le  IS NULL
+                  AND (
+                    (uc.frequence_notifications = CAST(:frequence AS frequence_notif)
+                     AND (
+                       ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
+                         SELECT 1 FROM user_artistes ua
+                         WHERE ua.user_id = um.user_id
+                           AND c.artiste_id = ua.artiste_id
+                       ))
+                       OR
+                       ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
+                         SELECT 1 FROM user_salles us
+                         WHERE us.user_id = um.user_id
+                           AND c.salle_id = us.salle_id
+                       ))
+                     ))
+                    OR
+                    (CAST(:frequence AS frequence_notif) = 'temps_reel'
+                     AND uc.frequence_notifications = 'jamais'
+                     AND (
+                       (uc.notif_artistes_push = true AND EXISTS (
+                         SELECT 1 FROM user_artistes ua
+                         WHERE ua.user_id = um.user_id
+                           AND c.artiste_id = ua.artiste_id
+                       ))
+                       OR
+                       (uc.notif_salles_push = true AND EXISTS (
+                         SELECT 1 FROM user_salles us
+                         WHERE us.user_id = um.user_id
+                           AND c.salle_id = us.salle_id
+                       ))
+                     ))
+                  )
+                ORDER BY um.user_id, c.date
+                """,
             Map.of("frequence", frequence));
 
-    Map<String, String> emailsUtilisateurs = new LinkedHashMap<>();
-    Map<String, ConfigNotifUser> configsUtilisateurs = new LinkedHashMap<>();
-    Map<String, List<ConcertNotif>> parUtilisateur = new LinkedHashMap<>();
+    final Map<String, String> emailsUtilisateurs = new LinkedHashMap<>();
+    final Map<String, ConfigNotifUser> configsUtilisateurs = new LinkedHashMap<>();
+    final Map<String, List<ConcertNotif>> parUtilisateur = new LinkedHashMap<>();
     for (Map<String, Object> ligne : lignes) {
-      String userId = (String) ligne.get("user_id");
+      final String userId = (String) ligne.get("user_id");
       emailsUtilisateurs.putIfAbsent(userId, (String) ligne.get("email"));
       configsUtilisateurs.putIfAbsent(
           userId,
@@ -373,7 +373,7 @@ public class NotificationDigestService {
    * {@code WorkerStatsService#remonterBilan}).
    */
   private void remonterBilanPush() {
-    BilanFetch bilan = compteurPush.preleverBilan();
+    final BilanFetch bilan = compteurPush.preleverBilan();
     bilan
         .evaluer("notifier:digest", "Push", BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT)
         .ifPresent(
@@ -383,32 +383,32 @@ public class NotificationDigestService {
   }
 
   private ResultatDigest envoyerDigest(
-      String userId, String email, List<ConcertNotif> concerts, ConfigNotifUser config) {
-    boolean emailActif = !"jamais".equals(config.frequenceNotifications());
-    List<ConcertNotif> concertsEmail =
+      final String userId, final String email, final List<ConcertNotif> concerts, final ConfigNotifUser config) {
+    final boolean emailActif = !"jamais".equals(config.frequenceNotifications());
+    final List<ConcertNotif> concertsEmail =
         emailActif
             ? concerts.stream()
-                .filter(
-                    c ->
-                        ("ARTISTE".equals(c.source()) && config.notifArtistes())
-                            || ("SALLE".equals(c.source()) && config.notifSalles()))
-                .toList()
+            .filter(
+                c ->
+                    ("ARTISTE".equals(c.source()) && config.notifArtistes())
+                        || ("SALLE".equals(c.source()) && config.notifSalles()))
+            .toList()
             : List.of();
-    List<ConcertNotif> concertsPush =
+    final List<ConcertNotif> concertsPush =
         concerts.stream()
             .filter(
                 c ->
                     ("ARTISTE".equals(c.source()) && config.notifArtistesPush())
                         || ("SALLE".equals(c.source()) && config.notifSallesPush()))
             .toList();
-    boolean emailOk = envoyerEmail(email, concertsEmail);
-    boolean pushOk = envoyerPush(userId, concertsPush);
+    final boolean emailOk = envoyerEmail(email, concertsEmail);
+    final boolean pushOk = envoyerPush(userId, concertsPush);
     return new ResultatDigest(emailOk, pushOk, concertsEmail, concertsPush);
   }
 
-  private boolean envoyerEmail(String email, List<ConcertNotif> concerts) {
+  private boolean envoyerEmail(final String email, final List<ConcertNotif> concerts) {
     if (concerts.isEmpty()) return false;
-    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       log.debug("RESEND_API_KEY absent — digest email ignoré");
       return false;
@@ -419,17 +419,17 @@ public class NotificationDigestService {
       // digest plutôt que perdu.
       return false;
     }
-    String expediteur = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    final String expediteur = configService.lireConfig("CONTACT_EMAIL").orElse("");
+    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
 
-    int nb = concerts.size();
-    String sujet =
+    final int nb = concerts.size();
+    final String sujet =
         nb == 1
             ? "1 nouveau concert correspond à vos préférences"
             : "%d nouveaux concerts correspondent à vos préférences".formatted(nb);
     try {
-      Resend resend = fabriqueResend.creer(cle.get());
-      CreateEmailOptions options =
+      final Resend resend = fabriqueResend.creer(cle.get());
+      final CreateEmailOptions options =
           CreateEmailOptions.builder()
               .from(expediteur)
               .replyTo(expediteur)
@@ -466,28 +466,28 @@ public class NotificationDigestService {
    * @param status statut HTTP retourné par le push service
    * @return issue de l'envoi
    */
-  static ResultatEnvoiPush interpreterStatutPush(int status) {
+  static ResultatEnvoiPush interpreterStatutPush(final int status) {
     if (status == 404 || status == 410) return ResultatEnvoiPush.ABONNEMENT_MORT;
     if (status >= 200 && status < 300) return ResultatEnvoiPush.SUCCES;
     return ResultatEnvoiPush.ECHEC;
   }
 
-  private boolean envoyerPush(String userId, List<ConcertNotif> concerts) {
+  private boolean envoyerPush(final String userId, final List<ConcertNotif> concerts) {
     if (concerts.isEmpty()) return false;
-    Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
-    Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
+    final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
+    final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) {
       log.debug("VAPID non configuré — push digest ignoré pour {}", userId);
       return false;
     }
-    List<Map<String, Object>> abonnements =
+    final List<Map<String, Object>> abonnements =
         jdbc.queryForList(
             "SELECT id, endpoint, p256dh, auth FROM push_abonnements WHERE user_id = :userId",
             Map.of("userId", userId));
     if (abonnements.isEmpty()) return false;
 
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-    String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
+    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
     PushService pushService;
     try {
       pushService =
@@ -497,18 +497,18 @@ public class NotificationDigestService {
       return false;
     }
 
-    String payload = construirePayloadPush(concerts, baseUrl);
+    final String payload = construirePayloadPush(concerts, baseUrl);
     int nbEnvoyes = 0;
     for (Map<String, Object> ab : abonnements) {
       compteurPush.enregistrerAppel();
       try {
-        String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
-        String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
-        Subscription subscription =
+        final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
+        final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
+        final Subscription subscription =
             new Subscription((String) ab.get("endpoint"), new Subscription.Keys(p256dh, auth));
-        Notification notification = new Notification(subscription, payload);
-        HttpResponse response = pushService.send(notification);
-        int status = response.getStatusLine().getStatusCode();
+        final Notification notification = new Notification(subscription, payload);
+        final HttpResponse response = pushService.send(notification);
+        final int status = response.getStatusLine().getStatusCode();
         switch (interpreterStatutPush(status)) {
           case ABONNEMENT_MORT -> {
             // Abonnement mort (410/404) : nettoyage attendu, pas une panne du canal push —
@@ -539,17 +539,17 @@ public class NotificationDigestService {
   // route déclarée avec un schéma https:// en préfixe si PUBLIC_BASE_URL est configurée
   // (navigation muette au lieu du scroll/anchor visé). icon reste préfixé par baseUrl (ou
   // relatif si absente), résolu par le service worker contre sa propre origine dans les deux cas.
-  private static String construirePayloadPush(List<ConcertNotif> concerts, String baseUrl) {
-    ConcertNotif premier = concerts.get(0);
-    String titre =
+  private static String construirePayloadPush(final List<ConcertNotif> concerts, final String baseUrl) {
+    final ConcertNotif premier = concerts.get(0);
+    final String titre =
         concerts.size() == 1
             ? premier.artiste() + " — " + premier.salle()
             : concerts.size() + " nouveaux concerts";
-    String corps =
+    final String corps =
         concerts.size() == 1
             ? ("presale".equals(premier.statut()) ? "Prévente · " : "")
-                + formaterDate(premier.date())
-                + (premier.ville() != null ? " · " + premier.ville() : "")
+            + formaterDate(premier.date())
+            + (premier.ville() != null ? " · " + premier.ville() : "")
             : construireLignesPreventePush(concerts);
     String url;
     if (concerts.size() == 1) {
@@ -581,8 +581,8 @@ public class NotificationDigestService {
    * @return le corps texte du push, une ligne (éventuellement précédée d'une ligne vide) par
    *   concert
    */
-  private static String construireLignesPreventePush(List<ConcertNotif> concerts) {
-    StringBuilder corps = new StringBuilder();
+  private static String construireLignesPreventePush(final List<ConcertNotif> concerts) {
+    final StringBuilder corps = new StringBuilder();
     String artistePrecedent = null;
     for (ConcertNotif c : concerts) {
       if (artistePrecedent != null && !artistePrecedent.equals(c.artiste())) corps.append('\n');
@@ -597,28 +597,28 @@ public class NotificationDigestService {
     return corps.toString();
   }
 
-  private static String e(String valeur) {
+  private static String e(final String valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }
 
   private static String construireCorpsEmail(
-      String sujet, List<ConcertNotif> concerts, String baseUrl) {
-    StringBuilder lignes = new StringBuilder();
+      final String sujet, final List<ConcertNotif> concerts, final String baseUrl) {
+    final StringBuilder lignes = new StringBuilder();
     String artistePrecedent = null;
     for (ConcertNotif c : concerts) {
-      String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
-      String lien =
+      final String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
+      final String lien =
           c.url() != null
               ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                  .formatted(e(c.url()))
+              .formatted(e(c.url()))
               : "";
-      String prevente =
+      final String prevente =
           "presale".equals(c.statut())
               ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
               : "";
       // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
       // digest couvrant plusieurs artistes se lit comme une liste continue.
-      String stylecel =
+      final String stylecel =
           artistePrecedent != null && !artistePrecedent.equals(c.artiste())
               ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
               : "padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top";
@@ -664,11 +664,11 @@ public class NotificationDigestService {
 
   private void logAdminDigest(int nbEmails, int nbPush, int nbErreurs) {
     try {
-      String metaJson =
+      final String metaJson =
           jackson.writeValueAsString(
               Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
-      String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
-      String niveau = nbErreurs > 0 ? "warn" : "info";
+      final String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
+      final String niveau = nbErreurs > 0 ? "warn" : "info";
       jdbc.update(
           """
           INSERT INTO logs_admin (ts, niveau, source, message, meta)
@@ -687,7 +687,7 @@ public class NotificationDigestService {
 
   private void enregistrerStat(long dureeMs, int nbNotifies, String erreur) {
     try {
-      Map<String, Object> params = new LinkedHashMap<>();
+      final Map<String, Object> params = new LinkedHashMap<>();
       params.put("typeJob", "notifier:digest");
       params.put("now", Timestamp.from(Instant.now()));
       params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
@@ -710,8 +710,8 @@ public class NotificationDigestService {
     }
   }
 
-  private static String formaterDate(String dateIso) {
-    LocalDate date = LocalDate.parse(dateIso);
+  private static String formaterDate(final String dateIso) {
+    final LocalDate date = LocalDate.parse(dateIso);
     return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
         .withLocale(Locale.FRANCE)
         .format(date);

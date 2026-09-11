@@ -43,24 +43,24 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
 
   private final boolean actif;
 
-  public BloquerAccesDirectIpFilter(Environment env) {
+  public BloquerAccesDirectIpFilter(final Environment env) {
     this.actif = Arrays.stream(env.getActiveProfiles()).noneMatch("dev"::equals);
   }
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)
       throws ServletException, IOException {
     if (!actif) {
       chain.doFilter(request, response);
       return;
     }
-    String chemin = request.getServletPath();
+    final String chemin = request.getServletPath();
     if (CHEMINS_EXEMPTS.contains(chemin) || estStatique(chemin)) {
       chain.doFilter(request, response);
       return;
     }
-    String host = request.getHeader("Host");
+    final String host = request.getHeader("Host");
     if (host != null
         && (PATTERN_IPV4.matcher(host).matches() || PATTERN_IPV6.matcher(host).matches())) {
       response.setStatus(HttpStatus.FORBIDDEN.value());
@@ -71,7 +71,7 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
     chain.doFilter(request, response);
   }
 
-  private boolean estStatique(String chemin) {
+  private boolean estStatique(final String chemin) {
     for (String prefixe : PREFIXES_STATIQUES) {
       if (chemin.startsWith(prefixe)) return true;
     }

@@ -35,7 +35,7 @@ public class PushController {
    * @param pushService service de gestion des abonnements push
    * @param notificationPushService service d'envoi de notifications push
    */
-  public PushController(PushService pushService, NotificationPushService notificationPushService) {
+  public PushController(final PushService pushService, final NotificationPushService notificationPushService) {
     this.pushService = pushService;
     this.notificationPushService = notificationPushService;
   }
@@ -59,7 +59,7 @@ public class PushController {
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
-      @Valid @RequestBody RequeteAbonnement requete, Authentication auth) {
+      @Valid @RequestBody final RequeteAbonnement requete, final Authentication auth) {
     pushService.abonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete);
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
@@ -76,10 +76,10 @@ public class PushController {
    */
   @PostMapping("/tester")
   public ResponseEntity<Map<String, Object>> tester(
-      @Valid @RequestBody(required = false) RequeteTesterPush requete, Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    String endpoint = requete != null ? requete.endpoint() : null;
-    boolean envoye = notificationPushService.envoyerNotificationTest(userId, endpoint);
+      @Valid @RequestBody(required = false) final RequeteTesterPush requete, final Authentication auth) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+    final String endpoint = requete != null ? requete.endpoint() : null;
+    final boolean envoye = notificationPushService.envoyerNotificationTest(userId, endpoint);
     return envoye
         ? ResponseEntity.ok(Map.of("ok", true))
         : ResponseEntity.badRequest().body(Map.of("erreur", "Aucun abonnement actif."));
@@ -94,7 +94,7 @@ public class PushController {
    */
   @DeleteMapping
   public ResponseEntity<Map<String, Object>> desabonner(
-      @Valid @RequestBody RequeteDesabonnement requete, Authentication auth) {
+      @Valid @RequestBody final RequeteDesabonnement requete, final Authentication auth) {
     pushService.desabonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete.endpoint());
     return ResponseEntity.ok(Map.of("ok", true));
   }
@@ -107,7 +107,7 @@ public class PushController {
    */
   @GetMapping("/abonnements")
   public ResponseEntity<java.util.List<PushService.AbonnementDto>> listerAbonnements(
-      Authentication auth) {
+      final Authentication auth) {
     return ResponseEntity.ok(
         pushService.listerAbonnements(((UtilisateurDetails) auth.getPrincipal()).id()));
   }

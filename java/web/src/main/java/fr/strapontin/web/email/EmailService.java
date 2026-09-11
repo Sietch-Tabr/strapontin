@@ -36,7 +36,7 @@ public class EmailService {
   private final ConfigService configService;
   private final EmailSender emailSender;
 
-  EmailService(ConfigService configService, EmailSender emailSender) {
+  EmailService(final ConfigService configService, final EmailSender emailSender) {
     this.configService = configService;
     this.emailSender = emailSender;
   }
@@ -59,24 +59,24 @@ public class EmailService {
    * @param email l'adresse email du destinataire
    * @param lienReset le lien de création de compte (valable 7 jours)
    */
-  public void envoyerInvitation(String email, String lienReset) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerInvitation(final String email, final String lienReset) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email invitation non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.invitation(lienReset, ctx.get().baseUrl());
+    final String corps = EmailTemplates.invitation(lienReset, ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Bienvenue sur Strapontin
-
-        Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
-        votre identifiant et votre mot de passe (lien valable 7 jours) :
-
-        %s
-        """
+            Bienvenue sur Strapontin
+            
+            Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
+            votre identifiant et votre mot de passe (lien valable 7 jours) :
+            
+            %s
+            """
             .formatted(lienReset);
 
     try {
@@ -94,25 +94,25 @@ public class EmailService {
    * @param email l'adresse email du destinataire
    * @param lienReset le lien de réinitialisation (valable 1 heure)
    */
-  public void envoyerResetMotDePasse(String email, String lienReset) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerResetMotDePasse(final String email, final String lienReset) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email reset non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.resetMotDePasse(lienReset, ctx.get().baseUrl());
+    final String corps = EmailTemplates.resetMotDePasse(lienReset, ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Réinitialisation du mot de passe
-
-        Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
-
-        %s
-
-        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-        """
+            Réinitialisation du mot de passe
+            
+            Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
+            
+            %s
+            
+            Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+            """
             .formatted(lienReset);
 
     try {
@@ -134,26 +134,26 @@ public class EmailService {
    *
    * @param email l'adresse de l'utilisateur concerné
    */
-  public void envoyer2faReinitialisee(String email) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyer2faReinitialisee(final String email) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email reset 2FA non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.reinitialisation2fa(ctx.get().baseUrl());
+    final String corps = EmailTemplates.reinitialisation2fa(ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Votre double authentification a été réinitialisée
-
-        Un administrateur a réinitialisé la double authentification (2FA) de votre compte.
-        Vous pouvez vous reconnecter sans code, puis la reconfigurer depuis vos paramètres :
-
-        %s/parametres/totp
-
-        Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.
-        """
+            Votre double authentification a été réinitialisée
+            
+            Un administrateur a réinitialisé la double authentification (2FA) de votre compte.
+            Vous pouvez vous reconnecter sans code, puis la reconfigurer depuis vos paramètres :
+            
+            %s/parametres/totp
+            
+            Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.
+            """
             .formatted(ctx.get().baseUrl());
 
     try {
@@ -176,25 +176,25 @@ public class EmailService {
    * @param email le nouvel email destinataire
    * @param lien le lien de confirmation (valable 24 heures)
    */
-  public void envoyerConfirmationEmail(String email, String lien) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerConfirmationEmail(final String email, final String lien) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — confirmation email non envoyée");
       return;
     }
 
-    String corps = EmailTemplates.confirmationEmail(lien, ctx.get().baseUrl());
+    final String corps = EmailTemplates.confirmationEmail(lien, ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Confirmation de votre nouvelle adresse email
-
-        Cliquez sur ce lien pour valider votre nouvelle adresse (valable 24 heures) :
-
-        %s
-
-        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-        """
+            Confirmation de votre nouvelle adresse email
+            
+            Cliquez sur ce lien pour valider votre nouvelle adresse (valable 24 heures) :
+            
+            %s
+            
+            Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+            """
             .formatted(lien);
 
     try {
@@ -230,17 +230,17 @@ public class EmailService {
    * @param emailUtilisateur l'adresse email de l'utilisateur connecté
    */
   public void envoyerSignalementSalleManquante(
-      String nom, String ville, String urlSite, String commentaire, String emailUtilisateur) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+      final String nom, final String ville, final String urlSite, final String commentaire, final String emailUtilisateur) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");
       return;
     }
 
-    String corpsAdmin =
+    final String corpsAdmin =
         EmailTemplates.signalementSalleManquante(
             nom, ville, urlSite, commentaire, emailUtilisateur, ctx.get().baseUrl());
-    String texteAdmin =
+    final String texteAdmin =
         "Salle manquante signalée par %s%nNom : %s%nVille : %s%nSite : %s%n%n%s"
             .formatted(emailUtilisateur, nom, ville, urlSite, commentaire);
 
@@ -259,8 +259,8 @@ public class EmailService {
       return;
     }
 
-    String corpsUser = EmailTemplates.confirmationSignalementSalle(nom, ctx.get().baseUrl());
-    String texteUser =
+    final String corpsUser = EmailTemplates.confirmationSignalementSalle(nom, ctx.get().baseUrl());
+    final String texteUser =
         "Votre signalement pour « %s » a été transmis à l'administrateur.".formatted(nom);
 
     try {
@@ -288,14 +288,14 @@ public class EmailService {
    * @param message le message
    * @param expediteurEmail l'email de l'expéditeur
    */
-  public void envoyerSignalement(String type, String message, String expediteurEmail) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerSignalement(final String type, final String message, final String expediteurEmail) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — signalement non envoyé");
       return;
     }
 
-    String typeLabel =
+    final String typeLabel =
         switch (type) {
           case "bug" -> "Bug";
           case "suggestion" -> "Amélioration";
@@ -303,10 +303,10 @@ public class EmailService {
           default -> type;
         };
 
-    String corps =
+    final String corps =
         EmailTemplates.signalement(typeLabel, expediteurEmail, message, ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         "Signalement — %s%n%nEmail : %s%n%n%s".formatted(typeLabel, expediteurEmail, message);
 
     try {
@@ -330,22 +330,22 @@ public class EmailService {
    * @param concerts la liste des concerts à notifier (doit être non vide)
    * @return {@code true} si l'email a été envoyé avec succès
    */
-  public boolean envoyerDigestConcerts(String email, List<ConcertDigest> concerts) {
+  public boolean envoyerDigestConcerts(final String email, final List<ConcertDigest> concerts) {
     if (concerts.isEmpty()) return false;
 
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — digest concerts non envoyé");
       return false;
     }
 
-    int nb = concerts.size();
-    String sujet =
+    final int nb = concerts.size();
+    final String sujet =
         nb == 1
             ? "1 nouveau concert correspond à vos préférences"
             : "%d nouveaux concerts correspondent à vos préférences".formatted(nb);
 
-    List<LigneConcert> lignes =
+    final List<LigneConcert> lignes =
         concerts.stream()
             .map(
                 c ->
@@ -355,7 +355,7 @@ public class EmailService {
                         c.ville() != null ? c.salle() + " · " + c.ville() : c.salle(),
                         c.url()))
             .toList();
-    String corps = EmailTemplates.digestConcerts(sujet, lignes, ctx.get().baseUrl());
+    final String corps = EmailTemplates.digestConcerts(sujet, lignes, ctx.get().baseUrl());
 
     try {
       emailSender.envoyer(ctx.get(), email, ctx.get().expediteur(), sujet, corps, sujet);
@@ -372,24 +372,24 @@ public class EmailService {
    *
    * @param email l'adresse de l'utilisateur supprimé
    */
-  public void envoyerSuppressionCompte(String email) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerSuppressionCompte(final String email) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email suppression compte non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.suppressionCompte(ctx.get().baseUrl());
+    final String corps = EmailTemplates.suppressionCompte(ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Votre compte Strapontin a été supprimé
-
-        Votre compte Strapontin a été supprimé par un administrateur.
-        Vos données ont été effacées.
-
-        Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
-        """;
+            Votre compte Strapontin a été supprimé
+            
+            Votre compte Strapontin a été supprimé par un administrateur.
+            Vos données ont été effacées.
+            
+            Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
+            """;
 
     try {
       emailSender.envoyer(
@@ -411,8 +411,8 @@ public class EmailService {
    * @param emailAdmin l'adresse email de l'administrateur destinataire
    * @return {@code true} si l'email a été envoyé avec succès
    */
-  public boolean envoyerEmailTest(String emailAdmin) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public boolean envoyerEmailTest(final String emailAdmin) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email de test non envoyé");
       return false;
@@ -439,22 +439,22 @@ public class EmailService {
    *
    * @param email l'adresse de l'utilisateur promu
    */
-  public void envoyerPromotionAdmin(String email) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerPromotionAdmin(final String email) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email promotion admin non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.promotionAdmin(ctx.get().baseUrl());
+    final String corps = EmailTemplates.promotionAdmin(ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Vous êtes maintenant administrateur Strapontin
-
-        Votre compte a été promu au rôle administrateur.
-        Accédez au panneau d'administration : %s/admin
-        """
+            Vous êtes maintenant administrateur Strapontin
+            
+            Votre compte a été promu au rôle administrateur.
+            Accédez au panneau d'administration : %s/admin
+            """
             .formatted(ctx.get().baseUrl());
 
     try {
@@ -477,22 +477,22 @@ public class EmailService {
    * @param email l'adresse de l'administrateur concerné
    * @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
    */
-  public void envoyerPreavisRevocationAdmin(String email, String dateEffective) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerPreavisRevocationAdmin(final String email, final String dateEffective) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — email préavis révocation admin non envoyé");
       return;
     }
 
-    String corps = EmailTemplates.preavisRevocationAdmin(dateEffective, ctx.get().baseUrl());
+    final String corps = EmailTemplates.preavisRevocationAdmin(dateEffective, ctx.get().baseUrl());
 
-    String texte =
+    final String texte =
         """
-        Préavis de révocation admin
-
-        Votre accès administrateur Strapontin sera supprimé le %s.
-        Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
-        """
+            Préavis de révocation admin
+            
+            Votre accès administrateur Strapontin sera supprimé le %s.
+            Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
+            """
             .formatted(dateEffective);
 
     try {
@@ -509,8 +509,8 @@ public class EmailService {
     }
   }
 
-  private static String formaterDate(String dateIso) {
-    LocalDate date = LocalDate.parse(dateIso);
+  private static String formaterDate(final String dateIso) {
+    final LocalDate date = LocalDate.parse(dateIso);
     return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
         .withLocale(Locale.FRANCE)
         .format(date);

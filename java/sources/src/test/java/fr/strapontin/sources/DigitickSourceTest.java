@@ -110,14 +110,14 @@ class DigitickSourceTest {
 
   @Test
   void accepteIdentifiantSalle_prefixeValide_retourneVrai() {
-    DigitickSource source = new DigitickSource();
+    final DigitickSource source = new DigitickSource();
     assertTrue(source.accepteIdentifiantSalle("digitick:lempreinte"));
     assertTrue(source.accepteIdentifiantSalle("digitick:a"));
   }
 
   @Test
   void accepteIdentifiantSalle_prefixeInvalide_retourneFaux() {
-    DigitickSource source = new DigitickSource();
+    final DigitickSource source = new DigitickSource();
     assertFalse(source.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
     assertFalse(source.accepteIdentifiantSalle("eventim:123"));
     assertFalse(source.accepteIdentifiantSalle("lempreinte"));
@@ -127,16 +127,16 @@ class DigitickSourceTest {
 
   @Test
   void parserConcerts_filtreLesNonConcerts_retourne2Concerts() {
-    List<ConcertBrut> concerts = DigitickSource.parserConcerts(HTML_CONCERTS, "lempreinte");
+    final List<ConcertBrut> concerts = DigitickSource.parserConcerts(HTML_CONCERTS, "lempreinte");
 
     assertEquals(2, concerts.size());
   }
 
   @Test
   void parserConcerts_concertNominal_champsCorrects() {
-    List<ConcertBrut> concerts = DigitickSource.parserConcerts(HTML_CONCERTS, "lempreinte");
+    final List<ConcertBrut> concerts = DigitickSource.parserConcerts(HTML_CONCERTS, "lempreinte");
 
-    ConcertBrut concert = concerts.get(0);
+    final ConcertBrut concert = concerts.get(0);
     assertEquals("Ronnie Romero + Gus G", concert.artiste());
     assertEquals("2026-10-07", concert.date());
     assertEquals("20:00", concert.heure());
@@ -153,9 +153,9 @@ class DigitickSourceTest {
 
   @Test
   void parserConcerts_heureMinuit_heureNull() {
-    List<ConcertBrut> concerts = DigitickSource.parserConcerts(HTML_CONCERTS, "lempreinte");
+    final List<ConcertBrut> concerts = DigitickSource.parserConcerts(HTML_CONCERTS, "lempreinte");
 
-    ConcertBrut concert = concerts.get(1);
+    final ConcertBrut concert = concerts.get(1);
     assertEquals("Laura Cox", concert.artiste());
     assertEquals("2026-11-19", concert.date());
     assertNull(concert.heure());
@@ -163,14 +163,14 @@ class DigitickSourceTest {
 
   @Test
   void parserConcerts_htmlVide_retourneListeVide() {
-    List<ConcertBrut> concerts =
+    final List<ConcertBrut> concerts =
         DigitickSource.parserConcerts("<html><body></body></html>", "slug");
     assertTrue(concerts.isEmpty());
   }
 
   @Test
   void parserDatetime_formatComplet_retourneDateEtHeure() {
-    String[] resultat = DigitickSource.parserDatetime("2026-10-07T20:00:00");
+    final String[] resultat = DigitickSource.parserDatetime("2026-10-07T20:00:00");
     assertNotNull(resultat);
     assertEquals("2026-10-07", resultat[0]);
     assertEquals("20:00", resultat[1]);
@@ -178,7 +178,7 @@ class DigitickSourceTest {
 
   @Test
   void parserDatetime_heureMinuit_retourneHeureNull() {
-    String[] resultat = DigitickSource.parserDatetime("2026-11-19T00:00:00");
+    final String[] resultat = DigitickSource.parserDatetime("2026-11-19T00:00:00");
     assertNotNull(resultat);
     assertEquals("2026-11-19", resultat[0]);
     assertNull(resultat[1]);
@@ -210,65 +210,65 @@ class DigitickSourceTest {
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("site=lempreinte")))
         .andRespond(withSuccess(HTML_CONCERTS, MediaType.TEXT_HTML));
 
-    DigitickSource source = new DigitickSource(restClient);
+    final DigitickSource source = new DigitickSource(restClient);
     source.fetchSalle("digitick:lempreinte");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(0, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_erreurHttp_compteUneErreur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("site=lempreinte")))
         .andRespond(withServerError());
 
-    DigitickSource source = new DigitickSource(restClient);
+    final DigitickSource source = new DigitickSource(restClient);
     source.fetchSalle("digitick:lempreinte");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_slugVide_neCompteAucunAppel() {
-    DigitickSource source = new DigitickSource(RestClient.create());
+    final DigitickSource source = new DigitickSource(RestClient.create());
     source.fetchSalle("digitick:");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(0, bilan.appels());
     assertEquals(0, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("site=lempreinte")))
         .andRespond(withServerError());
 
-    DigitickSource source = new DigitickSource(restClient);
+    final DigitickSource source = new DigitickSource(restClient);
     source.fetchSalle("digitick:lempreinte");
     source.preleverBilan();
 
-    BilanFetch second = source.preleverBilan();
+    final BilanFetch second = source.preleverBilan();
     assertEquals(0, second.appels());
     assertEquals(0, second.erreursHttp());
   }

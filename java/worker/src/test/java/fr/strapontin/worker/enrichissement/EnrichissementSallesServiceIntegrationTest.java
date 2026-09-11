@@ -55,7 +55,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     when(wikidataSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
   }
 
-  private UUID insererSalle(String nom, String jourBatchExpression) {
+  private UUID insererSalle(final String nom, final String jourBatchExpression) {
     return jdbc.queryForObject(
         "INSERT INTO salles (salle_cle, nom, nom_norm, jour_batch)"
             + " VALUES (:cle, :nom, :norm, "
@@ -68,13 +68,13 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_salleDuJourBatchCourant_estCandidate() {
-    UUID salleAujourdhui = insererSalle("Salle Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    final UUID salleAujourdhui = insererSalle("Salle Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
 
     service.enrichir();
 
-    ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
     verify(overpassSalleSource).enrichirLot(captor.capture());
-    List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
+    final List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
     assertTrue(idsTraites.contains(salleAujourdhui));
     assertEquals(1, idsTraites.size());
   }
@@ -96,8 +96,8 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_salleSansDeptAvecConcertRattache_heriteDuDeptDuConcert() {
-    UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
-    UUID evenementId =
+    final UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, dept, salle_id)"
                 + " VALUES ('artiste', CURRENT_DATE + 30, 'salle sans dept', '87',"
@@ -113,9 +113,9 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
 
     service.enrichir();
 
-    ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
     verify(overpassSalleSource).enrichirLot(captor.capture());
-    SalleAEnrichir candidat = captor.getValue().getFirst();
+    final SalleAEnrichir candidat = captor.getValue().getFirst();
     assertEquals("87", candidat.dept());
   }
 }

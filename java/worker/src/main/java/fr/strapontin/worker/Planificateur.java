@@ -80,11 +80,11 @@ public class Planificateur {
   @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronRecalculerMatches;
 
-  private static JobDetail creerJobDetail(Class<? extends Job> jobClass, String identite) {
+  private static JobDetail creerJobDetail(final Class<? extends Job> jobClass, final String identite) {
     return JobBuilder.newJob(jobClass).withIdentity(identite).storeDurably().build();
   }
 
-  private static Trigger creerTrigger(JobDetail jobDetail, String identite, String cron) {
+  private static Trigger creerTrigger(final JobDetail jobDetail, final String identite, final String cron) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetail)
         .withIdentity(identite)
@@ -98,7 +98,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerFetchArtistesBatch(JobDetail jobDetailFetchArtistesBatch) {
+  Trigger triggerFetchArtistesBatch(final JobDetail jobDetailFetchArtistesBatch) {
     return creerTrigger(
         jobDetailFetchArtistesBatch, "triggerFetchArtistesBatch", cronFetchArtistes);
   }
@@ -109,7 +109,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerFetchRegion(JobDetail jobDetailFetchRegion) {
+  Trigger triggerFetchRegion(final JobDetail jobDetailFetchRegion) {
     return creerTrigger(jobDetailFetchRegion, "triggerFetchRegion", cronFetchRegion);
   }
 
@@ -119,7 +119,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerFetchSallesAll(JobDetail jobDetailFetchSallesAll) {
+  Trigger triggerFetchSallesAll(final JobDetail jobDetailFetchSallesAll) {
     return creerTrigger(jobDetailFetchSallesAll, "triggerFetchSallesAll", cronFetchSalles);
   }
 
@@ -129,7 +129,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerRecalculerMatches(JobDetail jobDetailRecalculerMatches) {
+  Trigger triggerRecalculerMatches(final JobDetail jobDetailRecalculerMatches) {
     return creerTrigger(
         jobDetailRecalculerMatches, "triggerRecalculerMatches", cronRecalculerMatches);
   }
@@ -140,7 +140,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerPurgerConcerts(JobDetail jobDetailPurgerConcerts) {
+  Trigger triggerPurgerConcerts(final JobDetail jobDetailPurgerConcerts) {
     return creerTrigger(jobDetailPurgerConcerts, "triggerPurgerConcerts", "0 0 0 * * ?");
   }
 
@@ -150,7 +150,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerPurgerSalles(JobDetail jobDetailPurgerSalles) {
+  Trigger triggerPurgerSalles(final JobDetail jobDetailPurgerSalles) {
     return creerTrigger(jobDetailPurgerSalles, "triggerPurgerSalles", "0 5 0 * * ?");
   }
 
@@ -160,7 +160,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerPurgerArtistes(JobDetail jobDetailPurgerArtistes) {
+  Trigger triggerPurgerArtistes(final JobDetail jobDetailPurgerArtistes) {
     return creerTrigger(jobDetailPurgerArtistes, "triggerPurgerArtistes", "0 6 0 * * ?");
   }
 
@@ -170,7 +170,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerPurgerLogsAdmin(JobDetail jobDetailPurgerLogsAdmin) {
+  Trigger triggerPurgerLogsAdmin(final JobDetail jobDetailPurgerLogsAdmin) {
     return creerTrigger(jobDetailPurgerLogsAdmin, "triggerPurgerLogsAdmin", "0 15 0 * * ?");
   }
 
@@ -180,7 +180,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerNotifierDigest(JobDetail jobDetailNotifierDigest) {
+  Trigger triggerNotifierDigest(final JobDetail jobDetailNotifierDigest) {
     return creerTrigger(jobDetailNotifierDigest, "triggerNotifierDigest", "0 0 8 * * ?");
   }
 
@@ -190,7 +190,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerRevoquerAdmins(JobDetail jobDetailRevoquerAdmins) {
+  Trigger triggerRevoquerAdmins(final JobDetail jobDetailRevoquerAdmins) {
     return creerTrigger(jobDetailRevoquerAdmins, "triggerRevoquerAdmins", "0 0 * * * ?");
   }
 
@@ -200,7 +200,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerReconciliationNocturne(JobDetail jobDetailReconciliationNocturne) {
+  Trigger triggerReconciliationNocturne(final JobDetail jobDetailReconciliationNocturne) {
     return creerTrigger(
         jobDetailReconciliationNocturne, "triggerReconciliationNocturne", "0 0 3 * * ?");
   }
@@ -211,7 +211,7 @@ public class Planificateur {
   }
 
   @Bean
-  Trigger triggerSuiviCyclesJobs(JobDetail jobDetailSuiviCyclesJobs) {
+  Trigger triggerSuiviCyclesJobs(final JobDetail jobDetailSuiviCyclesJobs) {
     return creerTrigger(jobDetailSuiviCyclesJobs, "triggerSuiviCyclesJobs", "0 30 * * * ?");
   }
 }

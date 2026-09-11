@@ -28,7 +28,7 @@ public class BanniereService {
    * @param configService    lecture/écriture de la configuration applicative
    * @param logAdminService  service de logs admin
    */
-  public BanniereService(ConfigService configService, LogAdminService logAdminService) {
+  public BanniereService(final ConfigService configService, final LogAdminService logAdminService) {
     this.configService = configService;
     this.logAdminService = logAdminService;
   }
@@ -39,7 +39,7 @@ public class BanniereService {
    * @param message texte de la bannière
    * @param type    type ({@code info}, {@code warning} ou {@code error})
    */
-  public void publierBanniere(String message, String type) {
+  public void publierBanniere(final String message, final String type) {
     configService.sauvegarderConfig("BANNER_MESSAGE", message);
     configService.sauvegarderConfig("BANNER_TYPE", type);
     configService.sauvegarderConfig("BANNER_ID", Instant.now().toString());

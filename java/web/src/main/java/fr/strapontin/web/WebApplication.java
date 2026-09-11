@@ -24,7 +24,7 @@ import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHtt
 @EnableScheduling
 public class WebApplication {
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     SpringApplication.run(WebApplication.class, args);
   }
 }

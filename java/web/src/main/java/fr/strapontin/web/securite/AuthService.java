@@ -46,10 +46,10 @@ public class AuthService {
    * @param sessionRepository dépôt de sessions JDBC (révocation après reset de mdp)
    */
   public AuthService(
-      VerificationRepository verificationRepository,
-      EmailService emailService,
-      PasswordEncoder passwordEncoder,
-      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+      final VerificationRepository verificationRepository,
+      final EmailService emailService,
+      final PasswordEncoder passwordEncoder,
+      final FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     this.verificationRepository = verificationRepository;
     this.emailService = emailService;
     this.passwordEncoder = passwordEncoder;
@@ -65,21 +65,21 @@ public class AuthService {
    * @param baseUrl URL de base de l'application pour construire le lien de reset
    */
   @Transactional
-  public void motDePasseOublie(String email, String baseUrl) {
+  public void motDePasseOublie(final String email, final String baseUrl) {
     if (!verificationRepository.utilisateurExistePourEmail(email)) {
       return;
     }
 
-    String prefixe = "reset:" + email;
+    final String prefixe = "reset:" + email;
     verificationRepository.supprimerParIdentifiant(prefixe);
 
-    String token = genererToken(32);
-    String tokenId = UUID.randomUUID().toString();
-    Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
+    final String token = genererToken(32);
+    final String tokenId = UUID.randomUUID().toString();
+    final Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
 
     verificationRepository.inserer(tokenId, prefixe, GenerateurSecrets.sha256Hex(token), expiresAt);
 
-    String lienReset = baseUrl + "/reset-password?token=" + token;
+    final String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerResetMotDePasse(email, lienReset);
     log.debug("Email reset MDP envoyé pour email hashé {}", email.hashCode());
   }
@@ -90,7 +90,7 @@ public class AuthService {
    * @param token token brut (non hashé)
    * @return {@code true} si le token est de type {@code invite:}
    */
-  public boolean estTokenInvite(String token) {
+  public boolean estTokenInvite(final String token) {
     return verificationRepository
         .lireIdentifiantParTokenHash(GenerateurSecrets.sha256Hex(token))
         .map(s -> s.startsWith("invite:"))
@@ -107,9 +107,9 @@ public class AuthService {
    * @throws ErreurMetier si le token est invalide, expiré, non-invite ou l'identifiant pris
    */
   @Transactional
-  public String activerCompteInvite(String token, String identifiant, String motDePasse) {
-    String tokenHash = GenerateurSecrets.sha256Hex(token);
-    String fullIdentifiant =
+  public String activerCompteInvite(final String token, final String identifiant, final String motDePasse) {
+    final String tokenHash = GenerateurSecrets.sha256Hex(token);
+    final String fullIdentifiant =
         verificationRepository
             .lireIdentifiantParTokenHash(tokenHash)
             .orElseThrow(
@@ -120,7 +120,7 @@ public class AuthService {
       throw new ErreurMetier("Ce lien n'est pas un lien d'invitation.");
     }
 
-    String email = fullIdentifiant.split(":", 2)[1];
+    final String email = fullIdentifiant.split(":", 2)[1];
 
     if (verificationRepository.identifiantDejaUtiliseParEmail(identifiant, email)) {
       throw new ErreurMetier("Cet identifiant est déjà utilisé.");
@@ -148,17 +148,17 @@ public class AuthService {
    * @throws ErreurMetier si le token est invalide ou expiré
    */
   @Transactional
-  public void reinitialiserMotDePasse(String token, String motDePasse) {
-    String tokenHash = GenerateurSecrets.sha256Hex(token);
-    String identifiant =
+  public void reinitialiserMotDePasse(final String token, final String motDePasse) {
+    final String tokenHash = GenerateurSecrets.sha256Hex(token);
+    final String identifiant =
         verificationRepository
             .lireIdentifiantParTokenHash(tokenHash)
             .orElseThrow(
                 () ->
                     new ErreurMetier("Lien invalide ou expiré. Recommencez depuis le formulaire."));
 
-    String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
-    boolean estInvitation = identifiant.startsWith("invite:");
+    final String email = identifiant.contains(":") ? identifiant.split(":", 2)[1] : identifiant;
+    final boolean estInvitation = identifiant.startsWith("invite:");
     log.info(
         "Réinitialisation mot de passe : type={}, emailHash={}",
         estInvitation ? "invite" : "reset",
@@ -171,7 +171,7 @@ public class AuthService {
     revoquerSessionsUtilisateur(email);
   }
 
-  private void revoquerSessionsUtilisateur(String email) {
+  private void revoquerSessionsUtilisateur(final String email) {
     verificationRepository
         .lireUsernameParEmail(email)
         .ifPresent(
@@ -182,10 +182,10 @@ public class AuthService {
                     .forEach(sessionRepository::deleteById));
   }
 
-  private static String genererToken(int nbOctets) {
-    byte[] octets = new byte[nbOctets];
+  private static String genererToken(final int nbOctets) {
+    final byte[] octets = new byte[nbOctets];
     rng.nextBytes(octets);
-    StringBuilder sb = new StringBuilder();
+    final StringBuilder sb = new StringBuilder();
     for (byte b : octets) sb.append(String.format("%02x", b));
     return sb.toString();
   }

@@ -39,7 +39,7 @@ public final class FiltreConcertsBuilder {
    * @param tri {@code "nouveaute"} (par date de première détection) ou {@code "date"} (défaut)
    * @return la clause ORDER BY (sans le mot-clé)
    */
-  public static String clauseTri(String tri) {
+  public static String clauseTri(final String tri) {
     return "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
   }
 
@@ -50,8 +50,8 @@ public final class FiltreConcertsBuilder {
    * @param maxLongueur  longueur maximale conservée
    * @return la saisie nettoyée et tronquée
    */
-  public static String tronquer(String valeur, int maxLongueur) {
-    String nettoyee = valeur.strip();
+  public static String tronquer(final String valeur, final int maxLongueur) {
+    final String nettoyee = valeur.strip();
     return nettoyee.substring(0, Math.min(nettoyee.length(), maxLongueur));
   }
 
@@ -67,7 +67,7 @@ public final class FiltreConcertsBuilder {
    * @param params paramètres nommés
    * @param mois   mois au format {@code YYYY-MM}
    */
-  public static void appliquerMois(StringBuilder where, Map<String, Object> params, String mois) {
+  public static void appliquerMois(final StringBuilder where, final Map<String, Object> params, final String mois) {
     if (mois.isBlank() || !mois.matches("\\d{4}-\\d{2}")) {
       return;
     }
@@ -90,7 +90,7 @@ public final class FiltreConcertsBuilder {
    * @param genreStr genre déjà tronqué via {@link #tronquer(String, int)}
    */
   public static void appliquerGenre(
-      StringBuilder where, Map<String, Object> params, String genreStr) {
+      final StringBuilder where, final Map<String, Object> params, final String genreStr) {
     if (!genreStr.isEmpty()) {
       where.append(" AND c.genre ILIKE :genre");
       params.put("genre", genreStr);
@@ -105,7 +105,7 @@ public final class FiltreConcertsBuilder {
    * @param classification classification exacte
    */
   public static void appliquerClassification(
-      StringBuilder where, Map<String, Object> params, String classification) {
+      final StringBuilder where, final Map<String, Object> params, final String classification) {
     if (!classification.isBlank()) {
       where.append(" AND c.classification = :classification");
       params.put("classification", classification);

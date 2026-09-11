@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
 
   private final LogAdminService logAdminService;
 
-  public GlobalExceptionHandler(LogAdminService logAdminService) {
+  public GlobalExceptionHandler(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }
 
@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
    * @return {@code {"erreur": "message"}} avec le code HTTP de l'exception
    */
   @ExceptionHandler(ErreurMetier.class)
-  public ResponseEntity<Map<String, Object>> gererErreurMetier(ErreurMetier ex) {
+  public ResponseEntity<Map<String, Object>> gererErreurMetier(final ErreurMetier ex) {
     return ResponseEntity.status(ex.getStatus()).body(Map.of("erreur", ex.getMessage()));
   }
 
@@ -63,7 +63,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(RessourceDejaExistante.class)
   @ResponseStatus(HttpStatus.CONFLICT)
-  public Map<String, Object> gererRessourceDejaExistante(RessourceDejaExistante ex) {
+  public Map<String, Object> gererRessourceDejaExistante(final RessourceDejaExistante ex) {
     return Map.of("erreur", ex.getMessage());
   }
 
@@ -75,8 +75,8 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   @ResponseStatus(HttpStatus.BAD_REQUEST)
-  public Map<String, Object> gererValidation(MethodArgumentNotValidException ex) {
-    String message =
+  public Map<String, Object> gererValidation(final MethodArgumentNotValidException ex) {
+    final String message =
         ex.getBindingResult().getFieldErrors().stream()
             .map(fe -> fe.getDefaultMessage())
             .findFirst()
@@ -92,7 +92,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(DuplicateKeyException.class)
   @ResponseStatus(HttpStatus.CONFLICT)
-  public Map<String, Object> gererDoublon(DuplicateKeyException ex) {
+  public Map<String, Object> gererDoublon(final DuplicateKeyException ex) {
     log.debug("Contrainte d'unicité violée : {}", ex.getMessage());
     return Map.of("erreur", "Cette ressource existe déjà.");
   }
@@ -105,7 +105,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(NoResourceFoundException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
-  public Map<String, Object> gererRessourceIntrouvable(NoResourceFoundException ex) {
+  public Map<String, Object> gererRessourceIntrouvable(final NoResourceFoundException ex) {
     return Map.of("erreur", "Ressource introuvable.");
   }
 
@@ -117,7 +117,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-  public Map<String, Object> gererMethodeNonSupportee(HttpRequestMethodNotSupportedException ex) {
+  public Map<String, Object> gererMethodeNonSupportee(final HttpRequestMethodNotSupportedException ex) {
     return Map.of("erreur", "Méthode non supportée.");
   }
 
@@ -129,7 +129,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(AuthenticationException.class)
   @ResponseStatus(HttpStatus.UNAUTHORIZED)
-  public Map<String, Object> gererErreurAuthentification(AuthenticationException ex) {
+  public Map<String, Object> gererErreurAuthentification(final AuthenticationException ex) {
     return Map.of("erreur", "Authentification requise.");
   }
 
@@ -142,7 +142,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(DataAccessException.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public Map<String, Object> gererErreurBd(DataAccessException ex, HttpServletRequest request) {
+  public Map<String, Object> gererErreurBd(final DataAccessException ex, final HttpServletRequest request) {
     log.error("Erreur d'accès aux données", ex);
     logErreurServeur(request, ex);
     return Map.of("erreur", "Erreur de base de données.");
@@ -157,15 +157,15 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-  public Map<String, Object> gererErreurInattendue(Exception ex, HttpServletRequest request) {
+  public Map<String, Object> gererErreurInattendue(final Exception ex, final HttpServletRequest request) {
     log.error("Erreur inattendue", ex);
     logErreurServeur(request, ex);
     return Map.of("erreur", "Une erreur inattendue s'est produite.");
   }
 
-  private void logErreurServeur(HttpServletRequest request, Exception ex) {
+  private void logErreurServeur(final HttpServletRequest request, final Exception ex) {
     try {
-      Map<String, Object> meta = new HashMap<>();
+      final Map<String, Object> meta = new HashMap<>();
       meta.put("chemin", request.getServletPath());
       meta.put("methode", request.getMethod());
       meta.put("exception", ex.getClass().getSimpleName());

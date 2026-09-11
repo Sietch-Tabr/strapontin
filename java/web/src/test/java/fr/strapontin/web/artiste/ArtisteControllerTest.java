@@ -40,7 +40,7 @@ class ArtisteControllerTest {
   @BeforeEach
   void setUp() {
     controller = new ArtisteController(artisteService);
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
@@ -48,10 +48,10 @@ class ArtisteControllerTest {
 
   @Test
   void listerArtistes_utilisateurAuthentifie_delegueAuService() {
-    ReponseArtistes attendu = new ReponseArtistes(List.of(), List.of(), false);
+    final ReponseArtistes attendu = new ReponseArtistes(List.of(), List.of(), false);
     when(artisteService.lister("user-1", "")).thenReturn(attendu);
 
-    ResponseEntity<ReponseArtistes> rep = controller.listerArtistes("", auth);
+    final ResponseEntity<ReponseArtistes> rep = controller.listerArtistes("", auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertSame(attendu, rep.getBody());
@@ -59,7 +59,7 @@ class ArtisteControllerTest {
 
   @Test
   void ajouterArtiste_nomValide_retourne201AvecSuccesTrue() {
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.ajouterArtiste(new RequeteAjouter("Radiohead"), auth);
 
     assertEquals(HttpStatus.CREATED, rep.getStatusCode());
@@ -80,8 +80,8 @@ class ArtisteControllerTest {
 
   @Test
   void supprimerArtiste_delegueAuService_retourne204() {
-    UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    ResponseEntity<Void> rep = controller.supprimerArtiste(artisteId, auth);
+    final UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    final ResponseEntity<Void> rep = controller.supprimerArtiste(artisteId, auth);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(artisteService).supprimer("user-1", artisteId);

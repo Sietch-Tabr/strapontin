@@ -34,12 +34,12 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
 
   @Test
   void signaler_memeTypeEtEntiteDeuxFois_neCreeQuUneLigneActive() {
-    UUID entiteId = UUID.randomUUID();
+    final UUID entiteId = UUID.randomUUID();
 
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
 
-    Long nb =
+    final Long nb =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM signalements_matching WHERE entite_id = CAST(:id AS uuid)",
             Map.of("id", entiteId.toString()),
@@ -49,7 +49,7 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
 
   @Test
   void signaler_signalementResolu_permetUnNouveauSignalement() {
-    UUID entiteId = UUID.randomUUID();
+    final UUID entiteId = UUID.randomUUID();
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
     jdbc.update(
         "UPDATE signalements_matching SET resolu_le = now() WHERE entite_id = CAST(:id AS uuid)",
@@ -57,7 +57,7 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
 
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
 
-    Long nb =
+    final Long nb =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM signalements_matching WHERE entite_id = CAST(:id AS uuid)",
             Map.of("id", entiteId.toString()),

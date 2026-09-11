@@ -41,7 +41,7 @@ public class PreferencesController {
   /**
    * @param preferencesService service d'import/export des préférences
    */
-  public PreferencesController(PreferencesService preferencesService) {
+  public PreferencesController(final PreferencesService preferencesService) {
     this.preferencesService = preferencesService;
   }
 
@@ -56,15 +56,15 @@ public class PreferencesController {
    */
   @PostMapping(value = "/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> importer(
-      @RequestParam MultipartFile fichier,
-      @RequestParam(defaultValue = "fusionner") String mode,
-      @RequestParam(defaultValue = "false") boolean importerConfig,
-      Authentication auth) {
+      @RequestParam final MultipartFile fichier,
+      @RequestParam(defaultValue = "fusionner") final String mode,
+      @RequestParam(defaultValue = "false") final boolean importerConfig,
+      final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }
 
-    String contentType = fichier.getContentType();
+    final String contentType = fichier.getContentType();
     if (contentType == null || !contentType.equals(MediaType.APPLICATION_JSON_VALUE)) {
       return erreur(400, "Le fichier doit être au format JSON.");
     }
@@ -82,10 +82,10 @@ public class PreferencesController {
       return erreur(422, "Version de fichier non supportée : " + export.version() + ".");
     }
 
-    PreferencesService.ResultatImportComplet res =
+    final PreferencesService.ResultatImportComplet res =
         preferencesService.importer(ud.id(), export, "ecraser".equals(mode), importerConfig);
 
-    Map<String, Object> corps = new HashMap<>();
+    final Map<String, Object> corps = new HashMap<>();
     corps.put("importe", true);
     corps.put("artistes", res.artistes());
     corps.put("salles", res.salles());
@@ -100,11 +100,11 @@ public class PreferencesController {
    * @return JSON téléchargeable avec les préférences
    */
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExportComplet> exporter(Authentication auth) {
+  public ResponseEntity<ExportComplet> exporter(final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }
-    ExportComplet export = preferencesService.exporter(ud.id());
+    final ExportComplet export = preferencesService.exporter(ud.id());
     return ResponseEntity.ok()
         .header(
             HttpHeaders.CONTENT_DISPOSITION,

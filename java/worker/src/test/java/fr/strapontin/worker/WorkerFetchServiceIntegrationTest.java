@@ -57,14 +57,14 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     jdbc.update("DELETE FROM users", Map.of());
   }
 
-  private void insererUser(String id) {
+  private void insererUser(final String id) {
     jdbc.update(
         "INSERT INTO users (id, email) VALUES (:id, :email)",
         Map.of("id", id, "email", id + "@test.fr"));
   }
 
-  private UUID insererSalleAvecSourceTm(String salleCle, String venueId) {
-    UUID salleId =
+  private UUID insererSalleAvecSourceTm(final String salleCle, final String venueId) {
+    final UUID salleId =
         jdbc.queryForObject(
             "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:id, :nom, :norm)"
                 + " ON CONFLICT (salle_cle) DO UPDATE SET nom = EXCLUDED.nom RETURNING id",
@@ -77,7 +77,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     return salleId;
   }
 
-  private void insererUserSalle(String userId, UUID salleId) {
+  private void insererUserSalle(final String userId, final UUID salleId) {
     jdbc.update(
         "INSERT INTO user_salles (user_id, salle_id) VALUES (:userId, CAST(:salleId AS uuid))",
         Map.of("userId", userId, "salleId", salleId.toString()));
@@ -86,7 +86,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void executerFetchSallesAll_salleSuivie_estFetchee() {
     insererUser("u1");
-    UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
+    final UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
     insererUserSalle("u1", salleSuivie);
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
     when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
@@ -108,8 +108,8 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     verify(ticketmasterSource, never()).fetchSalle("tm:venue-non-suivie");
   }
 
-  private UUID insererArtisteSuivi(String userId, String nom) {
-    UUID artisteId =
+  private UUID insererArtisteSuivi(final String userId, final String nom) {
+    final UUID artisteId =
         jdbc.queryForObject(
             "INSERT INTO artistes (nom, nom_norm) VALUES (:nom, :norm) RETURNING id",
             Map.of("nom", nom, "norm", nom.toLowerCase()),
@@ -121,8 +121,8 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     return artisteId;
   }
 
-  private void insererConcertAncien(UUID artisteId, String artisteNorm) {
-    UUID evenementId =
+  private void insererConcertAncien(final UUID artisteId, final String artisteNorm) {
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, artiste_id, updated_at)"
                 + " VALUES (:artisteNorm, :date, 'salle test', CAST(:artisteId AS uuid),"
@@ -144,7 +144,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void executerFetchArtistesBatch_concertNonReconfirme_incrementeLesAbsencesConsecutives() {
     insererUser("u1");
-    UUID artisteId = insererArtisteSuivi("u1", "Indila");
+    final UUID artisteId = insererArtisteSuivi("u1", "Indila");
     insererConcertAncien(artisteId, "Indila");
     when(ticketmasterSource.rechercherAttractionId(anyString())).thenReturn(null);
     when(ticketmasterSource.fetchArtiste(anyString())).thenReturn(List.<ConcertBrut>of());
@@ -153,7 +153,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
     fetchService.executerFetchArtistesBatch();
 
-    Integer absences =
+    final Integer absences =
         jdbc.queryForObject(
             "SELECT absences_consecutives FROM concerts WHERE artiste_id = CAST(:id AS uuid)",
             Map.of("id", artisteId.toString()),
@@ -161,8 +161,8 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, absences);
   }
 
-  private void insererConcertAncienSurSalle(UUID salleId) {
-    UUID evenementId =
+  private void insererConcertAncienSurSalle(final UUID salleId) {
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id, updated_at)"
                 + " VALUES ('artiste salle', :date, 'salle test', CAST(:salleId AS uuid),"
@@ -182,7 +182,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void executerFetchSallesAll_concertNonReconfirme_incrementeLesAbsencesConsecutives() {
     insererUser("u1");
-    UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
+    final UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
     insererUserSalle("u1", salleSuivie);
     insererConcertAncienSurSalle(salleSuivie);
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
@@ -190,7 +190,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
     fetchService.executerFetchSallesAll();
 
-    Integer absences =
+    final Integer absences =
         jdbc.queryForObject(
             "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
             Map.of("id", salleSuivie.toString()),
@@ -198,7 +198,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, absences);
   }
 
-  private void insererUserConfigDept(String userId, String dept) {
+  private void insererUserConfigDept(final String userId, final String dept) {
     jdbc.update(
         "INSERT INTO user_config (user_id, departements) VALUES (:userId, ARRAY[:dept]::text[])",
         Map.of("userId", userId, "dept", dept));
@@ -211,7 +211,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   void executerFetchRegion_concertNiArtisteNiSalleSuivi_incrementeLesAbsencesConsecutives() {
     insererUser("u1");
     insererUserConfigDept("u1", "75");
-    UUID salleNonSuivie = insererSalleAvecSourceTm("salle-decouverte", "venue-decouverte");
+    final UUID salleNonSuivie = insererSalleAvecSourceTm("salle-decouverte", "venue-decouverte");
     jdbc.update(
         "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)",
         Map.of("id", salleNonSuivie.toString()));
@@ -224,7 +224,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
     fetchService.executerFetchRegion();
 
-    Integer absences =
+    final Integer absences =
         jdbc.queryForObject(
             "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
             Map.of("id", salleNonSuivie.toString()),

@@ -23,7 +23,7 @@ enum TypeEntiteSource {
   private final String table;
   private final String colonneId;
 
-  TypeEntiteSource(String table, String colonneId) {
+  TypeEntiteSource(final String table, final String colonneId) {
     this.table = table;
     this.colonneId = colonneId;
   }

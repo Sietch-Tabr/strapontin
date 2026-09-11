@@ -64,14 +64,14 @@ public class AdminController {
    * @param configService service de configuration pour lire PUBLIC_BASE_URL
    */
   public AdminController(
-      AdminService adminService,
-      ConfigAdminService configAdminService,
-      JobsAdminService jobsAdminService,
-      BanniereService banniereService,
-      WorkerProxyService workerProxyService,
-      EmailService emailService,
-      VapidService vapidService,
-      ConfigService configService) {
+      final AdminService adminService,
+      final ConfigAdminService configAdminService,
+      final JobsAdminService jobsAdminService,
+      final BanniereService banniereService,
+      final WorkerProxyService workerProxyService,
+      final EmailService emailService,
+      final VapidService vapidService,
+      final ConfigService configService) {
     this.adminService = adminService;
     this.configAdminService = configAdminService;
     this.jobsAdminService = jobsAdminService;
@@ -90,7 +90,7 @@ public class AdminController {
    */
   @GetMapping("/utilisateurs")
   public ResponseEntity<ReponseUtilisateursAdmin> listerUtilisateurs(
-      @RequestParam(defaultValue = "0") int page) {
+      @RequestParam(defaultValue = "0") final int page) {
     return ResponseEntity.ok(adminService.listerUtilisateurs(page));
   }
 
@@ -109,25 +109,25 @@ public class AdminController {
    */
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
-      @Valid @RequestBody RequeteCreerUtilisateur requete, Authentication auth) {
-    String adminId = utilisateur(auth).id();
-    String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
+      @Valid @RequestBody final RequeteCreerUtilisateur requete, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
+    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
 
     if (email.isEmpty()) {
       return erreur(400, "Format d'email invalide.");
     }
 
-    Optional<String> baseUrl = resoudreBaseUrl();
+    final Optional<String> baseUrl = resoudreBaseUrl();
     if (baseUrl.isEmpty()) {
       return erreur(503, "PUBLIC_BASE_URL n'est pas configurée. Impossible d'inviter un compte.");
     }
 
-    boolean emailDisponible = emailService.estDisponible();
+    final boolean emailDisponible = emailService.estDisponible();
     return adminService
         .creerUtilisateur(email, adminId, baseUrl.get())
         .map(
             r -> {
-              Map<String, Object> corps = new HashMap<>();
+              final Map<String, Object> corps = new HashMap<>();
               corps.put("succes", true);
               corps.put("email", r.email());
               corps.put("identifiant", r.identifiant());
@@ -149,10 +149,10 @@ public class AdminController {
    */
   @PatchMapping("/utilisateurs/{userId}")
   public ResponseEntity<Map<String, Object>> modifierUtilisateur(
-      @PathVariable String userId,
-      @Valid @RequestBody RequeteModifierUtilisateur requete,
-      Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId,
+      @Valid @RequestBody final RequeteModifierUtilisateur requete,
+      final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Utilisez /parametres pour modifier votre propre compte.");
     }
@@ -169,8 +169,8 @@ public class AdminController {
    */
   @DeleteMapping("/utilisateurs/{userId}")
   public ResponseEntity<Map<String, Object>> supprimerUtilisateur(
-      @PathVariable String userId, Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de supprimer ce compte.");
     }
@@ -192,21 +192,21 @@ public class AdminController {
    */
   @PostMapping("/utilisateurs/{userId}/reset-mdp")
   public ResponseEntity<Map<String, Object>> reinitialiserMdp(
-      @PathVariable String userId, Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de réinitialiser ce compte.");
     }
-    Optional<String> baseUrl = resoudreBaseUrl();
+    final Optional<String> baseUrl = resoudreBaseUrl();
     if (baseUrl.isEmpty()) {
       return erreur(503, "PUBLIC_BASE_URL n'est pas configurée. Impossible d'envoyer le lien.");
     }
-    boolean emailDisponible = emailService.estDisponible();
+    final boolean emailDisponible = emailService.estDisponible();
     return adminService
         .reinitialiserMdp(userId, adminId, baseUrl.get())
         .map(
             r -> {
-              Map<String, Object> corps = new HashMap<>();
+              final Map<String, Object> corps = new HashMap<>();
               corps.put("succes", true);
               corps.put("action", "reinitialiserMdp");
               corps.put("email", r.email());
@@ -227,8 +227,8 @@ public class AdminController {
    */
   @PostMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> initierRevocationAdmin(
-      @PathVariable String userId, Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de révoquer votre propre compte.");
     }
@@ -245,8 +245,8 @@ public class AdminController {
    */
   @DeleteMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> annulerRevocationAdmin(
-      @PathVariable String userId, Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible d'annuler votre propre révocation.");
     }
@@ -263,8 +263,8 @@ public class AdminController {
    */
   @PostMapping("/utilisateurs/{userId}/reset-totp")
   public ResponseEntity<Map<String, Object>> reinitialiserTotp(
-      @PathVariable String userId, Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de réinitialiser ce compte.");
     }
@@ -284,8 +284,8 @@ public class AdminController {
    */
   @PostMapping("/utilisateurs/{userId}/revoquer-sessions")
   public ResponseEntity<Map<String, Object>> revoquerSessions(
-      @PathVariable String userId, Authentication auth) {
-    String adminId = utilisateur(auth).id();
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
     if (adminService.revoquerToutesSessions(userId, adminId)) {
       return ResponseEntity.ok(
           Map.<String, Object>of("succes", true, "action", "revoquerSessions"));
@@ -312,10 +312,10 @@ public class AdminController {
    */
   @PatchMapping("/config")
   public ResponseEntity<Map<String, Object>> sauvegarderConfig(
-      @Valid @RequestBody RequeteConfig requete, Authentication auth) {
-    String adminId = utilisateur(auth).id();
-    String cle = requete.cle() == null ? "" : requete.cle().strip();
-    String valeur = requete.valeur() == null ? "" : requete.valeur().strip();
+      @Valid @RequestBody final RequeteConfig requete, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
+    final String cle = requete.cle() == null ? "" : requete.cle().strip();
+    final String valeur = requete.valeur() == null ? "" : requete.valeur().strip();
 
     configAdminService.sauvegarderConfig(cle, valeur, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "sauvegarderConfig", "cle", cle));
@@ -329,7 +329,7 @@ public class AdminController {
   @PostMapping("/vapid/generer")
   public ResponseEntity<Map<String, Object>> genererVapid() {
     try {
-      VapidService.ResultatVapid resultat = vapidService.genererVapid();
+      final VapidService.ResultatVapid resultat = vapidService.genererVapid();
       return ResponseEntity.ok(
           Map.of(
               "succes",
@@ -353,7 +353,7 @@ public class AdminController {
    */
   @PostMapping("/config/tester-tm")
   public ResponseEntity<Map<String, Object>> testerApiTm() {
-    boolean valide = configAdminService.testerApiTm();
+    final boolean valide = configAdminService.testerApiTm();
     return valide
         ? ResponseEntity.ok(Map.of("valide", true))
         : erreur(400, "Clé Ticketmaster invalide ou absente.");
@@ -366,9 +366,9 @@ public class AdminController {
    * @return 200 si l'email a été envoyé, 400 sinon
    */
   @PostMapping("/config/tester-email")
-  public ResponseEntity<Map<String, Object>> testerEmail(Authentication auth) {
-    String emailAdmin = utilisateur(auth).email();
-    boolean succes = emailService.envoyerEmailTest(emailAdmin);
+  public ResponseEntity<Map<String, Object>> testerEmail(final Authentication auth) {
+    final String emailAdmin = utilisateur(auth).email();
+    final boolean succes = emailService.envoyerEmailTest(emailAdmin);
     return succes
         ? ResponseEntity.ok(Map.of("succes", true))
         : erreur(400, "Envoi impossible — vérifiez RESEND_API_KEY et CONTACT_EMAIL.");
@@ -382,8 +382,8 @@ public class AdminController {
    */
   @PostMapping("/banniere")
   public ResponseEntity<Map<String, Object>> publierBanniere(
-      @Valid @RequestBody RequeteBanniere requete) {
-    String type =
+      @Valid @RequestBody final RequeteBanniere requete) {
+    final String type =
         Set.of("info", "warning", "error").contains(requete.type()) ? requete.type() : "info";
     banniereService.publierBanniere(requete.message().strip(), type);
     return ResponseEntity.ok(Map.of("succes", true, "action", "publierBanniere"));
@@ -427,7 +427,7 @@ public class AdminController {
    */
   @PostMapping("/relancer")
   public ResponseEntity<Map<String, Object>> relancerFetches() {
-    ResultatRelance resultat = workerProxyService.relancerFetches();
+    final ResultatRelance resultat = workerProxyService.relancerFetches();
     if (resultat.succes()) {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     }
@@ -447,8 +447,8 @@ public class AdminController {
    * @return 200 si déclenché, 400 si le job est inconnu, 502/503 selon la cause de l'échec
    */
   @PostMapping("/jobs/relancer")
-  public ResponseEntity<Map<String, Object>> relancerJob(@RequestParam String typeJob) {
-    ResultatRelance resultat = workerProxyService.relancerJob(typeJob);
+  public ResponseEntity<Map<String, Object>> relancerJob(@RequestParam final String typeJob) {
+    final ResultatRelance resultat = workerProxyService.relancerJob(typeJob);
     if (resultat.succes()) {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     }
@@ -467,7 +467,7 @@ public class AdminController {
         Map.of("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null));
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }

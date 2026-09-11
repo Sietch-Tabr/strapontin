@@ -58,7 +58,7 @@ class AlerteLogsAdminServiceTest {
 
   @Test
   void verifier_erreursPresentesEtEmailConfigure_envoieEtAvanceLeCurseurAuDernierTs() {
-    List<EntreeLogAdmin> erreurs =
+    final List<EntreeLogAdmin> erreurs =
         List.of(
             new EntreeLogAdmin(100L, "error", "worker", "échec job 1", null),
             new EntreeLogAdmin(200L, "error", "worker", "échec job 2", null));
@@ -75,7 +75,7 @@ class AlerteLogsAdminServiceTest {
 
   @Test
   void verifier_aucunDestinataireAlerte_neAvancePasLeCurseur() {
-    List<EntreeLogAdmin> erreurs =
+    final List<EntreeLogAdmin> erreurs =
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
@@ -89,7 +89,7 @@ class AlerteLogsAdminServiceTest {
 
   @Test
   void verifier_echecEnvoiEmail_neAvancePasLeCurseur() {
-    List<EntreeLogAdmin> erreurs =
+    final List<EntreeLogAdmin> erreurs =
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);

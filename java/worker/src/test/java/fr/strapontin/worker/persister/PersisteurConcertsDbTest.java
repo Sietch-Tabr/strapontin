@@ -29,7 +29,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class PersisteurConcertsDbTest {
 
-  private static ValeurConcert concert(String url, LocalTime heure, String statut) {
+  private static ValeurConcert concert(final String url, final LocalTime heure, final String statut) {
     return new ValeurConcert(
         "Artiste",
         "artiste",
@@ -55,10 +55,10 @@ class PersisteurConcertsDbTest {
   // Un event TM "package" (VIP/bundle) n'a pas de statut — Set.of(...).contains(null) lève une NPE.
   @Test
   void alignerHeureReportTM_concertPackageStatutNull_neLevePasDException() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
 
-    List<ValeurConcert> concerts =
+    final List<ValeurConcert> concerts =
         List.of(concert("http://tm/pack/123", LocalTime.of(20, 0), null));
 
     db.alignerHeureReportTM(concerts);
@@ -68,10 +68,10 @@ class PersisteurConcertsDbTest {
 
   @Test
   void alignerHeureReportTM_statutNonReport_ignoreLeConcert() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
 
-    List<ValeurConcert> concerts = List.of(concert("http://tm/123", LocalTime.of(20, 0), "onsale"));
+    final List<ValeurConcert> concerts = List.of(concert("http://tm/123", LocalTime.of(20, 0), "onsale"));
 
     db.alignerHeureReportTM(concerts);
 
@@ -80,11 +80,11 @@ class PersisteurConcertsDbTest {
 
   @Test
   void alignerHeureReportTM_reportAvecUneSeuleHeureExistante_aligneLaLigneExistante() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
-    UUID idExistant = UUID.randomUUID();
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc);
+    final UUID idExistant = UUID.randomUUID();
 
-    Map<String, Object> ligneExistante =
+    final Map<String, Object> ligneExistante =
         Map.of(
             "id",
             idExistant,
@@ -96,7 +96,7 @@ class PersisteurConcertsDbTest {
             Time.valueOf(LocalTime.of(19, 0)));
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneExistante));
 
-    List<ValeurConcert> concerts =
+    final List<ValeurConcert> concerts =
         List.of(concert("http://tm/123", LocalTime.of(20, 30), "rescheduled"));
 
     db.alignerHeureReportTM(concerts);

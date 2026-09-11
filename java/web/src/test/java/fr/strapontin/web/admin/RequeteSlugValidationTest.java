@@ -27,20 +27,20 @@ class RequeteSlugValidationTest {
   @Test
   void slug_null_estValide() {
     // null/vide est légitime : suppression du slug existant.
-    Set<ConstraintViolation<RequeteSlug>> violations = VALIDATOR.validate(new RequeteSlug(null));
+    final Set<ConstraintViolation<RequeteSlug>> violations = VALIDATOR.validate(new RequeteSlug(null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void slug_present_estValide() {
-    Set<ConstraintViolation<RequeteSlug>> violations =
+    final Set<ConstraintViolation<RequeteSlug>> violations =
         VALIDATOR.validate(new RequeteSlug("le-splendid"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void slug_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteSlug>> violations =
+    final Set<ConstraintViolation<RequeteSlug>> violations =
         VALIDATOR.validate(new RequeteSlug("a".repeat(101)));
     assertFalse(violations.isEmpty());
   }

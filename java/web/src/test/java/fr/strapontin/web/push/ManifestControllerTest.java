@@ -24,8 +24,8 @@ import org.springframework.http.ResponseEntity;
  */
 class ManifestControllerTest {
 
-  private static HttpServletRequest requetePour(String scheme, String host, int port) {
-    HttpServletRequest request = mock(HttpServletRequest.class);
+  private static HttpServletRequest requetePour(final String scheme, final String host, final int port) {
+    final HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getScheme()).thenReturn(scheme);
     when(request.getServerName()).thenReturn(host);
     when(request.getServerPort()).thenReturn(port);
@@ -35,14 +35,14 @@ class ManifestControllerTest {
 
   @Test
   void manifest_publicBaseUrlConfiguree_idStableIndependantDeLHote() {
-    ConfigService configService = mock(ConfigService.class);
+    final ConfigService configService = mock(ConfigService.class);
     when(configService.lireConfig("PUBLIC_BASE_URL"))
         .thenReturn(Optional.of("https://strapontin.kwaite.fr"));
-    ManifestController controller = new ManifestController(configService);
+    final ManifestController controller = new ManifestController(configService);
 
-    ResponseEntity<Map<String, Object>> repLan =
+    final ResponseEntity<Map<String, Object>> repLan =
         controller.manifest(requetePour("http", "192.168.20.78", 8080));
-    ResponseEntity<Map<String, Object>> repDomaine =
+    final ResponseEntity<Map<String, Object>> repDomaine =
         controller.manifest(requetePour("https", "strapontin.kwaite.fr", 443));
 
     assertThat(repLan.getBody().get("id")).isEqualTo("https://strapontin.kwaite.fr/");
@@ -53,11 +53,11 @@ class ManifestControllerTest {
 
   @Test
   void manifest_publicBaseUrlAbsente_idReplieSurLHoteDeLaRequete() {
-    ConfigService configService = mock(ConfigService.class);
+    final ConfigService configService = mock(ConfigService.class);
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.empty());
-    ManifestController controller = new ManifestController(configService);
+    final ManifestController controller = new ManifestController(configService);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.manifest(requetePour("http", "192.168.20.78", 8080));
 
     assertThat(reponse.getBody().get("id")).isEqualTo("http://192.168.20.78:8080/");

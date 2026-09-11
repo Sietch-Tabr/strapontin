@@ -48,7 +48,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeAll
   static void migrerBase() {
-    DriverManagerDataSource dataSource = new DriverManagerDataSource();
+    final DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
@@ -61,7 +61,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   @BeforeEach
   void setUp() {
     jdbc.update("DELETE FROM users", Map.of());
-    AdminService s =
+    final AdminService s =
         new AdminService(
             jdbc,
             mock(EmailService.class),
@@ -71,7 +71,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
     service = s;
   }
 
-  private void insererAdmin(String id) {
+  private void insererAdmin(final String id) {
     jdbc.update(
         """
         INSERT INTO users (id, email, role, display_username)
@@ -88,18 +88,18 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void modifierUtilisateur_nomEtRetrogradationCombines_rejetteSansEcrireEnBase() {
     insererAdmin("admin1");
     insererAdmin("admin2");
-    RequeteModifierUtilisateur requete =
+    final RequeteModifierUtilisateur requete =
         new RequeteModifierUtilisateur("Nouveau Nom", null, "user");
 
     assertThrows(
         ErreurMetier.class, () -> service.modifierUtilisateur("admin2", requete, "admin1"));
 
-    String nomEnBase =
+    final String nomEnBase =
         jdbc.queryForObject(
             "SELECT display_username FROM users WHERE id = :id",
             Map.of("id", "admin2"),
             String.class);
-    String roleEnBase =
+    final String roleEnBase =
         jdbc.queryForObject(
             "SELECT role::text FROM users WHERE id = :id", Map.of("id", "admin2"), String.class);
     assertNotEquals("Nouveau Nom", nomEnBase);
@@ -110,17 +110,17 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void modifierUtilisateur_seulementRetrogradation_appliqueLaRevocationDifferee() {
     insererAdmin("admin3");
     insererAdmin("admin4");
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
 
     assertDoesNotThrow(() -> service.modifierUtilisateur("admin4", requete, "admin3"));
 
-    Timestamp revocationLe =
+    final Timestamp revocationLe =
         jdbc.queryForObject(
             "SELECT revocation_admin_le FROM users WHERE id = :id",
             Map.of("id", "admin4"),
             Timestamp.class);
     assertNotNull(revocationLe, "la révocation différée doit être planifiée");
-    String roleEnBase =
+    final String roleEnBase =
         jdbc.queryForObject(
             "SELECT role::text FROM users WHERE id = :id", Map.of("id", "admin4"), String.class);
     assertEquals("admin", roleEnBase, "le rôle ne change qu'à l'échéance (RevoquerAdminsJob)");

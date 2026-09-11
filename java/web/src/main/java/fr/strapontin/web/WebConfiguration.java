@@ -31,12 +31,12 @@ public class WebConfiguration implements WebMvcConfigurer {
   /**
    * @param appareilEnregistrementInterceptor intercepteur d'enregistrement d'appareil
    */
-  public WebConfiguration(AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
+  public WebConfiguration(final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
     this.appareilEnregistrementInterceptor = appareilEnregistrementInterceptor;
   }
 
   @Override
-  public void addInterceptors(InterceptorRegistry registry) {
+  public void addInterceptors(final InterceptorRegistry registry) {
     registry.addInterceptor(appareilEnregistrementInterceptor).addPathPatterns("/api/**");
   }
 
@@ -58,7 +58,7 @@ public class WebConfiguration implements WebMvcConfigurer {
    */
   @Bean
   RestClient restClient() {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(5));
     factory.setReadTimeout(Duration.ofSeconds(10));
     return RestClient.builder().requestFactory(factory).build();
@@ -72,7 +72,7 @@ public class WebConfiguration implements WebMvcConfigurer {
    * @return cadenceur adossé à Postgres
    */
   @Bean
-  CadenceurAppels cadenceurTicketmaster(NamedParameterJdbcTemplate jdbc) {
+  CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
   }

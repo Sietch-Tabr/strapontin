@@ -73,10 +73,10 @@ public class ConfigAdminService {
    *   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
    */
   public ConfigAdminService(
-      ConfigService configService,
-      LogAdminService logAdminService,
-      RestClient restClient,
-      CadenceurAppels cadenceurTicketmaster) {
+      final ConfigService configService,
+      final LogAdminService logAdminService,
+      final RestClient restClient,
+      final CadenceurAppels cadenceurTicketmaster) {
     this.configService = configService;
     this.logAdminService = logAdminService;
     this.restClient = restClient;
@@ -89,7 +89,7 @@ public class ConfigAdminService {
    * @return {@code true} si la clé est configurée et acceptée par l'API TM (HTTP 200)
    */
   public boolean testerApiTm() {
-    Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
+    final Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");
     if (cle.isEmpty()) return false;
     try {
       cadenceurTicketmaster.attendre();
@@ -107,11 +107,11 @@ public class ConfigAdminService {
    * @return statuts de configuration
    */
   public List<ConfigStatut> lireConfigStatuts() {
-    Set<String> presentes = configService.lireConfigsPresentes();
-    List<ConfigStatut> statuts = new ArrayList<>();
+    final Set<String> presentes = configService.lireConfigsPresentes();
+    final List<ConfigStatut> statuts = new ArrayList<>();
     for (String cle : CLES_AUTORISEES) {
-      boolean presente = presentes.contains(cle);
-      String valeur =
+      final boolean presente = presentes.contains(cle);
+      final String valeur =
           (presente && CLES_EN_CLAIR.contains(cle))
               ? configService.lireConfig(cle).orElse(null)
               : null;
@@ -128,7 +128,7 @@ public class ConfigAdminService {
    * @param adminId identifiant de l'admin
    * @throws ErreurMetier si la clé est non autorisée ou le format invalide
    */
-  public void sauvegarderConfig(String cle, String valeur, String adminId) {
+  public void sauvegarderConfig(final String cle, final String valeur, final String adminId) {
     if (!CLES_AUTORISEES.contains(cle)) {
       throw new ErreurMetier("Clé de configuration invalide.");
     }
@@ -136,14 +136,14 @@ public class ConfigAdminService {
       throw new ErreurMetier("La valeur ne peut pas être vide pour " + cle + ".");
     }
     if (valeur != null && !valeur.isEmpty()) {
-      String erreur = validerFormatConfig(cle, valeur);
+      final String erreur = validerFormatConfig(cle, valeur);
       if (erreur != null) throw new ErreurMetier(erreur);
     }
     configService.sauvegarderConfig(cle, valeur == null || valeur.isEmpty() ? null : valeur);
     logAdminService.logAdmin("info", "admin", "Config sauvegardée : " + cle, Map.of("cle", cle));
   }
 
-  private String validerFormatConfig(String cle, String valeur) {
+  private String validerFormatConfig(final String cle, final String valeur) {
     if ("TICKETMASTER_API_KEY".equals(cle) && !FORMAT_TM_KEY.matcher(valeur).matches()) {
       return "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).";
     }
@@ -163,9 +163,9 @@ public class ConfigAdminService {
     }
     if ("PUBLIC_BASE_URL".equals(cle)) {
       try {
-        java.net.URI uri = java.net.URI.create(valeur);
-        String host = uri.getHost();
-        boolean estIp =
+        final java.net.URI uri = java.net.URI.create(valeur);
+        final String host = uri.getHost();
+        final boolean estIp =
             "localhost".equals(host)
                 || (host != null && host.matches("(\\d{1,3}\\.){3}\\d{1,3}"))
                 || (host != null && host.contains(":") && host.matches("[0-9a-fA-F:]+"));

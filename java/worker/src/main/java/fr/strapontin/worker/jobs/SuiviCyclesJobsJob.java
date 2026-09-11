@@ -20,12 +20,12 @@ public class SuiviCyclesJobsJob extends QuartzJobBean {
   private WorkerSuiviCyclesService workerSuiviCyclesService;
 
   @Autowired
-  public void setWorkerSuiviCyclesService(WorkerSuiviCyclesService workerSuiviCyclesService) {
+  public void setWorkerSuiviCyclesService(final WorkerSuiviCyclesService workerSuiviCyclesService) {
     this.workerSuiviCyclesService = workerSuiviCyclesService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
+  protected void executeInternal(final JobExecutionContext context) {
     workerSuiviCyclesService.executerSuiviCycles();
   }
 }

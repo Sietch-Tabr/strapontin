@@ -34,9 +34,9 @@ public class BackupAlerteController {
   private final String backupSecret;
 
   public BackupAlerteController(
-      EmailAlerteService emailAlerteService,
-      LogAdminService logAdminService,
-      @Value("${BACKUP_INTERNAL_SECRET:}") String backupSecret) {
+      final EmailAlerteService emailAlerteService,
+      final LogAdminService logAdminService,
+      @Value("${BACKUP_INTERNAL_SECRET:}") final String backupSecret) {
     this.emailAlerteService = emailAlerteService;
     this.logAdminService = logAdminService;
     this.backupSecret = backupSecret;
@@ -57,12 +57,12 @@ public class BackupAlerteController {
    */
   @PostMapping("/api/interne/backup-statut")
   public ResponseEntity<Map<String, Object>> signalerStatut(
-      @RequestParam(defaultValue = "") String statut,
-      @RequestParam(defaultValue = "") String horodatage,
-      @RequestParam(defaultValue = "") String raison,
-      @RequestParam(defaultValue = "") String archive,
-      @RequestHeader(value = "Authorization", defaultValue = "") String authorization) {
-    String attendu = "Bearer " + backupSecret;
+      @RequestParam(defaultValue = "") final String statut,
+      @RequestParam(defaultValue = "") final String horodatage,
+      @RequestParam(defaultValue = "") final String raison,
+      @RequestParam(defaultValue = "") final String archive,
+      @RequestHeader(value = "Authorization", defaultValue = "") final String authorization) {
+    final String attendu = "Bearer " + backupSecret;
     if (backupSecret.isBlank()
         || !MessageDigest.isEqual(
             attendu.getBytes(StandardCharsets.UTF_8),

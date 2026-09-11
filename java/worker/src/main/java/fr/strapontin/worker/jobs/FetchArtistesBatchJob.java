@@ -30,18 +30,18 @@ public class FetchArtistesBatchJob extends QuartzJobBean {
   private WorkerFetchService workerFetchService;
 
   @Autowired
-  public void setWorkerFetchService(WorkerFetchService workerFetchService) {
+  public void setWorkerFetchService(final WorkerFetchService workerFetchService) {
     this.workerFetchService = workerFetchService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
-    String idsRetry = context.getMergedJobDataMap().getString(CLE_IDS_RETRY);
+  protected void executeInternal(final JobExecutionContext context) {
+    final String idsRetry = context.getMergedJobDataMap().getString(CLE_IDS_RETRY);
     if (idsRetry == null || idsRetry.isBlank()) {
       workerFetchService.executerFetchArtistesBatch();
       return;
     }
-    List<String> ids = Arrays.asList(idsRetry.split(","));
+    final List<String> ids = Arrays.asList(idsRetry.split(","));
     workerFetchService.executerFetchArtistesBatch(ids);
   }
 }

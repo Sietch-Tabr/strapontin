@@ -75,7 +75,7 @@ class WorkerFetchServiceTest {
     // enregistrerStatJob doit s'exécuter sans lever d'exception, mais son détail est testé dans
     // WorkerStatsServiceTest.
     logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
-    WorkerStatsService workerStatsService =
+    final WorkerStatsService workerStatsService =
         new WorkerStatsService(
             sources,
             tm,
@@ -127,9 +127,9 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_plusDeVingtCinqArtistes_persisteParLotDeVingt() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
+    final java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
     for (int i = 0; i < 25; i++) {
-      java.util.Map<String, Object> row = new java.util.HashMap<>();
+      final java.util.Map<String, Object> row = new java.util.HashMap<>();
       row.put("artiste_id_str", "artiste-" + i);
       row.put("artiste_affiche", "Artiste " + i);
       row.put("attraction_id", "attractionId" + i);
@@ -151,7 +151,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_lotEnEchec_remonteLogsAdminNiveauError() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -178,7 +178,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_lotEnEchec_transmetLesIdsAuRetryLotsService() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -197,7 +197,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_avecIdsCibles_neFetchQueCesArtistes() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -220,7 +220,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_cyclePropre_notifieRetryLotsServiceSansEchec() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-1");
     row.put("artiste_affiche", "Artiste 1");
     row.put("attraction_id", "attractionId1");
@@ -239,7 +239,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_lotTraite_metAJourLesAbsencesConsecutives() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-123");
     row.put("artiste_affiche", "Indila");
     row.put("attraction_id", "attractionId1");
@@ -265,7 +265,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_identifiantTmAmbigu_ignoreLeFetchEtFlagueIntervention() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-ambigu");
     row.put("artiste_affiche", "U2");
     row.put("attraction_id", "K8vZ91712W7");
@@ -288,7 +288,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchArtistesBatch_artisteAvecDeezerIdConnu_transmisAFetchArtiste() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.Map<String, Object> row = new java.util.HashMap<>();
+    final java.util.Map<String, Object> row = new java.util.HashMap<>();
     row.put("artiste_id_str", "artiste-furies");
     row.put("artiste_affiche", "Furies");
     row.put("attraction_id", "attractionIdFuries");
@@ -333,7 +333,7 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_concertClassificationTheatre_nAppliquePasLaResolutionDeezer() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    fr.strapontin.core.ConcertBrut concertHumoriste =
+    final fr.strapontin.core.ConcertBrut concertHumoriste =
         new fr.strapontin.core.ConcertBrut(
             "Fabrice Eboue",
             "2026-09-01",
@@ -350,7 +350,7 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    fr.strapontin.core.ConcertBrut concertMusique =
+    final fr.strapontin.core.ConcertBrut concertMusique =
         new fr.strapontin.core.ConcertBrut(
             "Indila",
             "2026-09-02",
@@ -378,10 +378,10 @@ class WorkerFetchServiceTest {
 
     verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Fabrice Eboue"));
     verify(resolveur).resoudreNomCanonique("artiste", "Indila");
-    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+    final org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
         org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
-    List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
+    final List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
     assertTrue(persistes.stream().anyMatch(c -> "Fabrice Eboue".equals(c.artiste())));
     assertTrue(persistes.stream().anyMatch(c -> "Indila Officiel".equals(c.artiste())));
   }
@@ -393,7 +393,7 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_concertClassificationDiversOuSports_nAppliquePasLaResolutionDeezer() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    fr.strapontin.core.ConcertBrut concertDivers =
+    final fr.strapontin.core.ConcertBrut concertDivers =
         new fr.strapontin.core.ConcertBrut(
             "Holiday On Ice",
             "2026-09-01",
@@ -410,7 +410,7 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    fr.strapontin.core.ConcertBrut concertSports =
+    final fr.strapontin.core.ConcertBrut concertSports =
         new fr.strapontin.core.ConcertBrut(
             "Equipe de France de basket-ball",
             "2026-09-02",
@@ -446,7 +446,7 @@ class WorkerFetchServiceTest {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(false);
     when(eventim.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    fr.strapontin.core.ConcertBrut concertEventimSansClassification =
+    final fr.strapontin.core.ConcertBrut concertEventimSansClassification =
         new fr.strapontin.core.ConcertBrut(
             "Paris is Magique",
             "2026-09-01",
@@ -477,7 +477,7 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_candidatDeezerDivergeDuNomAfficheWikidataConnu_gardeLeNomBrut() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    fr.strapontin.core.ConcertBrut concert =
+    final fr.strapontin.core.ConcertBrut concert =
         new fr.strapontin.core.ConcertBrut(
             "Nino Arial",
             "2026-09-01",
@@ -508,7 +508,7 @@ class WorkerFetchServiceTest {
 
     fetchService.executerFetchSalle("tm:venue-42");
 
-    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+    final org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
         org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
     assertTrue(captor.getValue().stream().allMatch(c -> "Nino Arial".equals(c.artiste())));
@@ -522,7 +522,7 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_candidatDeezerCoherentAvecNomAfficheWikidataConnu_accepteLeNomDeezer() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    fr.strapontin.core.ConcertBrut concert =
+    final fr.strapontin.core.ConcertBrut concert =
         new fr.strapontin.core.ConcertBrut(
             "stromae",
             "2026-09-01",
@@ -553,7 +553,7 @@ class WorkerFetchServiceTest {
 
     fetchService.executerFetchSalle("tm:venue-42");
 
-    org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+    final org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
         org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
     assertTrue(captor.getValue().stream().allMatch(c -> "Stromae".equals(c.artiste())));
@@ -591,7 +591,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchRegion_plusDeCinqDepartements_persisteParLotDeCinq() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+    final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(
             anyString(),
             anyMap(),
@@ -611,7 +611,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchRegion_unLotEnEchecParmiPlusieurs_remonteLogsAdminNiveauWarn() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+    final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(
             anyString(),
             anyMap(),
@@ -639,7 +639,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchRegion_unLotEnEchec_transmetLesDeptsAuRetryLotsService() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
+    final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(
             anyString(),
             anyMap(),
@@ -771,7 +771,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_plusDeVingtSalles_persisteParLotDeVingt() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
+    final java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
     for (int i = 0; i < 25; i++) {
       lignes.add(
           java.util.Map.of(
@@ -793,7 +793,7 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchSallesAll_unLotEnEchecParmiPlusieurs_remonteLogsAdminNiveauWarn() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
+    final java.util.List<java.util.Map<String, Object>> lignes = new java.util.ArrayList<>();
     for (int i = 0; i < 25; i++) {
       lignes.add(
           java.util.Map.of(

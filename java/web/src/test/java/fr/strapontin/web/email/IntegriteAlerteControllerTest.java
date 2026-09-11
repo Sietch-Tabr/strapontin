@@ -42,7 +42,7 @@ class IntegriteAlerteControllerTest {
 
   @Test
   void signalerStatut_secretInvalide_retourne403() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.signalerStatut("ok", "", "Bearer mauvais-secret");
 
     assertEquals(HttpStatus.FORBIDDEN, reponse.getStatusCode());
@@ -51,10 +51,10 @@ class IntegriteAlerteControllerTest {
 
   @Test
   void signalerStatut_secretAbsentDeLaConfig_retourne403() {
-    IntegriteAlerteController sansSecret =
+    final IntegriteAlerteController sansSecret =
         new IntegriteAlerteController(emailAlerteService, logAdminService, "");
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         sansSecret.signalerStatut("ok", "", "Bearer " + SECRET);
 
     assertEquals(HttpStatus.FORBIDDEN, reponse.getStatusCode());
@@ -62,7 +62,7 @@ class IntegriteAlerteControllerTest {
 
   @Test
   void signalerStatut_ok_loggeInfoSansEnvoyerDAlerte() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.signalerStatut("ok", "", "Bearer " + SECRET);
 
     assertEquals(HttpStatus.OK, reponse.getStatusCode());
@@ -72,7 +72,7 @@ class IntegriteAlerteControllerTest {
 
   @Test
   void signalerStatut_modifie_loggeErrorEtEnvoieAlerte() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.signalerStatut("modifie", "web.jar : md5 modifié", "Bearer " + SECRET);
 
     assertEquals(HttpStatus.OK, reponse.getStatusCode());

@@ -42,7 +42,7 @@ public class WorkerConfiguration {
    * @return le customizer Spring Boot
    */
   @Bean
-  SchedulerFactoryBeanCustomizer globalJobListeners(LogAdminJobListener listener) {
+  SchedulerFactoryBeanCustomizer globalJobListeners(final LogAdminJobListener listener) {
     return factory -> factory.setGlobalJobListeners(listener);
   }
 
@@ -55,7 +55,7 @@ public class WorkerConfiguration {
    * @return cadenceur adossé à Postgres
    */
   @Bean
-  CadenceurAppels cadenceurTicketmaster(NamedParameterJdbcTemplate jdbc) {
+  CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
   }
@@ -72,8 +72,8 @@ public class WorkerConfiguration {
    */
   @Bean
   TicketmasterSource ticketmasterSource(
-      ConfigServiceWorker configService, CadenceurAppels cadenceurTicketmaster) {
-    String apiKey =
+      final ConfigServiceWorker configService, final CadenceurAppels cadenceurTicketmaster) {
+    final String apiKey =
         configService
             .lireConfig("TICKETMASTER_API_KEY")
             .orElseThrow(

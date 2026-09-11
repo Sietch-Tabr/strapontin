@@ -34,7 +34,7 @@ public class LogAdminJobListener implements JobListener {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
 
-  public LogAdminJobListener(NamedParameterJdbcTemplate jdbc, ObjectMapper jackson) {
+  public LogAdminJobListener(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
     this.jackson = jackson;
   }
@@ -45,21 +45,21 @@ public class LogAdminJobListener implements JobListener {
   }
 
   @Override
-  public void jobToBeExecuted(JobExecutionContext context) {
+  public void jobToBeExecuted(final JobExecutionContext context) {
     insererLog("info", "Job démarré : " + nomJob(context), null);
   }
 
   @Override
-  public void jobExecutionVetoed(JobExecutionContext context) {
+  public void jobExecutionVetoed(final JobExecutionContext context) {
     // job annulé par un trigger listener — aucune action requise
   }
 
   @Override
-  public void jobWasExecuted(JobExecutionContext context, JobExecutionException ex) {
-    String nom = nomJob(context);
-    long dureeMs = context.getJobRunTime();
+  public void jobWasExecuted(final JobExecutionContext context, final JobExecutionException ex) {
+    final String nom = nomJob(context);
+    final long dureeMs = context.getJobRunTime();
     if (ex != null) {
-      Map<String, Object> meta = new HashMap<>();
+      final Map<String, Object> meta = new HashMap<>();
       meta.put("dureeMs", dureeMs);
       meta.put("erreur", ex.getMessage() != null ? ex.getMessage() : "erreur inconnue");
       insererLog("error", "Job échoué : " + nom, meta);
@@ -68,15 +68,15 @@ public class LogAdminJobListener implements JobListener {
     }
   }
 
-  private String nomJob(JobExecutionContext context) {
-    String cle = context.getJobDetail().getKey().getName();
+  private String nomJob(final JobExecutionContext context) {
+    final String cle = context.getJobDetail().getKey().getName();
     return NomsJobs.PAR_CLE_QUARTZ.getOrDefault(cle, cle);
   }
 
-  private void insererLog(String niveau, String message, Map<String, Object> meta) {
+  private void insererLog(final String niveau, final String message, final Map<String, Object> meta) {
     try {
-      String metaJson = meta != null ? jackson.writeValueAsString(meta) : null;
-      Map<String, Object> params = new HashMap<>();
+      final String metaJson = meta != null ? jackson.writeValueAsString(meta) : null;
+      final Map<String, Object> params = new HashMap<>();
       params.put("ts", Instant.now().toEpochMilli());
       params.put("niveau", niveau);
       params.put("source", "worker");

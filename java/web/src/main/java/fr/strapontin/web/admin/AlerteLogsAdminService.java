@@ -41,9 +41,9 @@ public class AlerteLogsAdminService {
    * @param emailAlerteService envoi du digest et résolution du destinataire d'alerte
    */
   public AlerteLogsAdminService(
-      LogAdminService logAdminService,
-      ConfigService configService,
-      EmailAlerteService emailAlerteService) {
+      final LogAdminService logAdminService,
+      final ConfigService configService,
+      final EmailAlerteService emailAlerteService) {
     this.logAdminService = logAdminService;
     this.configService = configService;
     this.emailAlerteService = emailAlerteService;
@@ -57,11 +57,11 @@ public class AlerteLogsAdminService {
    */
   @Scheduled(cron = "0 */15 * * * *")
   public void verifier() {
-    long curseur = lireCurseur();
-    List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);
+    final long curseur = lireCurseur();
+    final List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);
     if (erreurs.isEmpty()) return;
 
-    Optional<String> email = emailAlerteService.obtenirDestinataireAlerte();
+    final Optional<String> email = emailAlerteService.obtenirDestinataireAlerte();
     if (email.isEmpty()) {
       log.warn(
           "alerteLogsAdmin: aucun destinataire d'alerte disponible — {} erreur(s) en attente,"
@@ -70,7 +70,7 @@ public class AlerteLogsAdminService {
       return;
     }
 
-    boolean envoye = emailAlerteService.envoyerAlerteLogsAdmin(email.get(), erreurs);
+    final boolean envoye = emailAlerteService.envoyerAlerteLogsAdmin(email.get(), erreurs);
     if (!envoye) {
       log.warn(
           "alerteLogsAdmin: échec d'envoi — {} erreur(s) en attente, curseur non avancé",
@@ -78,7 +78,7 @@ public class AlerteLogsAdminService {
       return;
     }
 
-    long nouveauCurseur = erreurs.get(erreurs.size() - 1).ts();
+    final long nouveauCurseur = erreurs.get(erreurs.size() - 1).ts();
     configService.sauvegarderConfig(CLE_CURSEUR, String.valueOf(nouveauCurseur));
   }
 

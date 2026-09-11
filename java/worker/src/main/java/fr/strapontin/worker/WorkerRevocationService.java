@@ -29,7 +29,7 @@ public class WorkerRevocationService {
   private final WorkerStatsService workerStatsService;
 
   public WorkerRevocationService(
-      NamedParameterJdbcTemplate jdbc, WorkerStatsService workerStatsService) {
+      final NamedParameterJdbcTemplate jdbc, final WorkerStatsService workerStatsService) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
   }
@@ -51,18 +51,18 @@ public class WorkerRevocationService {
         log,
         "revoquer:admins",
         () -> {
-          List<String> usernamesRevoques =
+          final List<String> usernamesRevoques =
               jdbc.queryForList(
                   "SELECT username FROM users WHERE revocation_admin_le < now() AND role ="
                       + " 'admin'",
                   Map.of(),
                   String.class);
-          int nb =
+          final int nb =
               jdbc.update(
                   """
-                  UPDATE users SET role = 'user', revocation_admin_le = NULL
-                  WHERE revocation_admin_le < now() AND role = 'admin'
-                  """,
+                      UPDATE users SET role = 'user', revocation_admin_le = NULL
+                      WHERE revocation_admin_le < now() AND role = 'admin'
+                      """,
                   Map.of());
           log.info("revoquer:admins terminé nb={}", nb);
           if (nb > 0) {
@@ -88,10 +88,10 @@ public class WorkerRevocationService {
    *
    * @param usernames identifiants (colonne {@code username}) des comptes venant d'être rétrogradés
    */
-  private void revoquerSessions(List<String> usernames) {
+  private void revoquerSessions(final List<String> usernames) {
     if (usernames.isEmpty()) return;
     try {
-      int supprimees =
+      final int supprimees =
           jdbc.update(
               "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME IN (:usernames)",
               Map.of("usernames", usernames));

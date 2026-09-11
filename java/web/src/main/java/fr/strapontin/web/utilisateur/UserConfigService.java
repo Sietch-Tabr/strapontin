@@ -45,9 +45,9 @@ public class UserConfigService {
    * @param logAdminService journalisation des actions utilisateur
    */
   public UserConfigService(
-      NamedParameterJdbcTemplate jdbc,
-      ConfigService configService,
-      LogAdminService logAdminService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ConfigService configService,
+      final LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.configService = configService;
     this.logAdminService = logAdminService;
@@ -59,8 +59,8 @@ public class UserConfigService {
    * @param userId identifiant de l'utilisateur
    * @return {@code true} si seuls les concerts disponibles doivent être affichés (défaut)
    */
-  public boolean lireFiltreDisponibles(String userId) {
-    List<Boolean> lignes =
+  public boolean lireFiltreDisponibles(final String userId) {
+    final List<Boolean> lignes =
         jdbc.queryForList(
             "SELECT filtre_disponibles FROM user_config WHERE user_id = :userId",
             Map.of("userId", userId),
@@ -74,18 +74,18 @@ public class UserConfigService {
    * @param userId identifiant de l'utilisateur
    * @return la configuration, ou les valeurs par défaut si absente
    */
-  public ConfigUtilisateur lireConfig(String userId) {
-    List<ConfigUtilisateur> lignes =
+  public ConfigUtilisateur lireConfig(final String userId) {
+    final List<ConfigUtilisateur> lignes =
         jdbc.query(
             """
-            SELECT departements, filtre_disponibles, frequence_notifications,
-                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
-            FROM user_config
-            WHERE user_id = :userId
-            """,
+                SELECT departements, filtre_disponibles, frequence_notifications,
+                       notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
+                FROM user_config
+                WHERE user_id = :userId
+                """,
             Map.of("userId", userId),
             (rs, _) -> {
-              String[] depts = (String[]) rs.getArray("departements").getArray();
+              final String[] depts = (String[]) rs.getArray("departements").getArray();
               return new ConfigUtilisateur(
                   Arrays.asList(depts),
                   rs.getBoolean("filtre_disponibles"),
@@ -98,13 +98,13 @@ public class UserConfigService {
                   false);
             });
 
-    boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
+    final boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
 
     if (lignes.isEmpty()) {
       return new ConfigUtilisateur(
           List.of(), true, "jamais", false, false, false, false, "auto", resendDisponible);
     }
-    ConfigUtilisateur base = lignes.get(0);
+    final ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
         base.departements(),
         base.filtreDisponibles(),
@@ -126,15 +126,15 @@ public class UserConfigService {
    * @param bruts liste brute des codes département (peuvent être invalides)
    * @return résultat avec la liste des codes ignorés
    */
-  public ResultatMajDepartements majDepartements(String userId, List<String> bruts) {
-    List<String> depts =
+  public ResultatMajDepartements majDepartements(final String userId, final List<String> bruts) {
+    final List<String> depts =
         bruts.stream()
             .filter(s -> normaliserDept(s) != null)
             .map(this::normaliserDept)
             .distinct()
             .collect(Collectors.toList());
 
-    List<String> ignores = bruts.stream().filter(s -> normaliserDept(s) == null).toList();
+    final List<String> ignores = bruts.stream().filter(s -> normaliserDept(s) == null).toList();
 
     upsertConfig(userId, Map.of("departements", depts.toArray(String[]::new)));
     return new ResultatMajDepartements(ignores);
@@ -147,11 +147,11 @@ public class UserConfigService {
    * @param requete données de la requête
    * @throws ErreurMetier si la fréquence est invalide ou aucun canal de notification sélectionné
    */
-  public void majNotifications(String userId, RequeteNotifications requete) {
+  public void majNotifications(final String userId, final RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
       throw new ErreurMetier("Valeur invalide.");
     }
-    boolean aucunCanal =
+    final boolean aucunCanal =
         !requete.notifArtistes()
             && !requete.notifSalles()
             && !requete.notifArtistesPush()
@@ -161,7 +161,7 @@ public class UserConfigService {
           "Activez au moins un type de contenu pour recevoir des notifications.");
     }
 
-    Map<String, Object> champs = new HashMap<>();
+    final Map<String, Object> champs = new HashMap<>();
     champs.put("frequenceNotifications", requete.frequenceNotifications());
     champs.put("notifArtistes", requete.notifArtistes());
     champs.put("notifSalles", requete.notifSalles());
@@ -197,8 +197,8 @@ public class UserConfigService {
    * @param userId identifiant de l'utilisateur
    * @return {@code true} si la modale doit être affichée (absence de ligne = jamais vue)
    */
-  public boolean onboardingNonVu(String userId) {
-    List<Boolean> lignes =
+  public boolean onboardingNonVu(final String userId) {
+    final List<Boolean> lignes =
         jdbc.queryForList(
             "SELECT onboarding_vu FROM user_config WHERE user_id = :userId",
             Map.of("userId", userId),
@@ -211,7 +211,7 @@ public class UserConfigService {
    *
    * @param userId identifiant de l'utilisateur
    */
-  public void marquerOnboardingVu(String userId) {
+  public void marquerOnboardingVu(final String userId) {
     upsertConfig(userId, Map.of("onboardingVu", true));
   }
 
@@ -221,7 +221,7 @@ public class UserConfigService {
    * @param userId identifiant de l'utilisateur
    * @param filtreDisponibles nouvelle valeur du filtre
    */
-  public void majFiltres(String userId, boolean filtreDisponibles) {
+  public void majFiltres(final String userId, final boolean filtreDisponibles) {
     upsertConfig(userId, Map.of("filtreDisponibles", filtreDisponibles));
   }
 
@@ -232,7 +232,7 @@ public class UserConfigService {
    * @param valeur nouvelle valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
    * @throws ErreurMetier si la valeur du thème est invalide
    */
-  public void majTheme(String userId, String valeur) {
+  public void majTheme(final String userId, final String valeur) {
     if (!THEMES_VALIDES.contains(valeur)) {
       throw new ErreurMetier("Valeur de thème invalide.");
     }
@@ -245,44 +245,44 @@ public class UserConfigService {
         Map.of("userId", userId, "theme", valeur));
   }
 
-  private void upsertConfig(String userId, Map<String, Object> champs) {
-    StringBuilder setClauses = new StringBuilder();
-    Map<String, Object> params = new HashMap<>(champs);
+  private void upsertConfig(final String userId, final Map<String, Object> champs) {
+    final StringBuilder setClauses = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>(champs);
     params.put("userId", userId);
 
     for (String cle : champs.keySet()) {
       if (setClauses.length() > 0) setClauses.append(", ");
-      String colonne = versColonne(cle);
+      final String colonne = versColonne(cle);
       setClauses.append(colonne).append(" = ").append(versCast(cle, ":" + cle));
     }
 
-    List<String> colonnes =
+    final List<String> colonnes =
         champs.keySet().stream().map(this::versColonne).collect(Collectors.toList());
-    List<String> placeholders =
+    final List<String> placeholders =
         champs.keySet().stream().map(c -> versCast(c, ":" + c)).collect(Collectors.toList());
 
     colonnes.add(0, "user_id");
     placeholders.add(0, ":userId");
 
-    String sql =
+    final String sql =
         """
-        INSERT INTO user_config (%s)
-        VALUES (%s)
-        ON CONFLICT (user_id) DO UPDATE SET %s, updated_at = now()
-        """
+            INSERT INTO user_config (%s)
+            VALUES (%s)
+            ON CONFLICT (user_id) DO UPDATE SET %s, updated_at = now()
+            """
             .formatted(String.join(", ", colonnes), String.join(", ", placeholders), setClauses);
 
     jdbc.update(sql, params);
   }
 
-  private static String versCast(String champJava, String placeholder) {
+  private static String versCast(final String champJava, final String placeholder) {
     return switch (champJava) {
       case "frequenceNotifications" -> "CAST(" + placeholder + " AS frequence_notif)";
       default -> placeholder;
     };
   }
 
-  private String versColonne(String champJava) {
+  private String versColonne(final String champJava) {
     return switch (champJava) {
       case "departements" -> "departements";
       case "filtreDisponibles" -> "filtre_disponibles";
@@ -297,8 +297,8 @@ public class UserConfigService {
     };
   }
 
-  private String normaliserDept(String d) {
-    String valeur = d.toUpperCase();
+  private String normaliserDept(final String d) {
+    final String valeur = d.toUpperCase();
     if (valeur.matches("2[AB]")) return "20";
     if (FORMAT_DEPT.matcher(valeur).matches()) return valeur;
     return null;

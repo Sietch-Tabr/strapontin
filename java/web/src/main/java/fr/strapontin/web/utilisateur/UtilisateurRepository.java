@@ -33,7 +33,7 @@ class UtilisateurRepository {
   private final ConfigCipher cipher;
 
   UtilisateurRepository(
-      NamedParameterJdbcTemplate jdbc, @Value("${app.config.secret}") String secretConfig) {
+      final NamedParameterJdbcTemplate jdbc, @Value("${app.config.secret}") final String secretConfig) {
     this.jdbc = jdbc;
     this.cipher = new ConfigCipher(secretConfig);
   }
@@ -44,7 +44,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return emails, ou {@link Optional#empty()} si l'utilisateur n'existe pas
    */
-  Optional<EmailsUtilisateur> lireEmails(String userId) {
+  Optional<EmailsUtilisateur> lireEmails(final String userId) {
     return jdbc
         .query(
             "SELECT email, pending_email FROM users WHERE id = :id",
@@ -61,7 +61,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur courant (exclu)
    * @return {@code true} si l'identifiant est pris
    */
-  boolean identifiantDejaUtilise(String identifiant, String userId) {
+  boolean identifiantDejaUtilise(final String identifiant, final String userId) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE lower(username) = :ident AND id != :userId",
             Map.of("ident", identifiant, CLE_USER_ID, userId),
@@ -80,7 +80,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @param identifiant nouvel identifiant (déjà validé, en minuscules)
    */
-  void majIdentifiant(String userId, String identifiant) {
+  void majIdentifiant(final String userId, final String identifiant) {
     jdbc.update(
         """
         UPDATE users
@@ -99,7 +99,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @param nouveauHash hash bcrypt du nouveau mot de passe
    */
-  void changerMotDePasse(String userId, String nouveauHash) {
+  void changerMotDePasse(final String userId, final String nouveauHash) {
     jdbc.update(
         "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
             + " 'credential'",
@@ -113,7 +113,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @param secret secret Base32 TOTP en clair
    */
-  void activerTotp(String userId, String secret) {
+  void activerTotp(final String userId, final String secret) {
     jdbc.update(
         "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
         Map.of("secret", cipher.chiffrer(secret), "id", userId));
@@ -130,8 +130,8 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return secret Base32 en clair, ou {@code null} si absent
    */
-  String lireSecretTotp(String userId) {
-    List<String> lignes =
+  String lireSecretTotp(final String userId) {
+    final List<String> lignes =
         jdbc.queryForList(
             "SELECT two_factor_secret FROM users WHERE id = :id",
             Map.of("id", userId),
@@ -139,7 +139,7 @@ class UtilisateurRepository {
     if (lignes.isEmpty()) {
       return null;
     }
-    String brut = lignes.get(0);
+    final String brut = lignes.get(0);
     try {
       return cipher.dechiffrer(brut);
     } catch (RuntimeException e) {
@@ -154,8 +154,8 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre d'échecs, ou 0 si l'utilisateur n'existe pas
    */
-  int lireEchecsTotp(String userId) {
-    Integer echecs =
+  int lireEchecsTotp(final String userId) {
+    final Integer echecs =
         jdbc.queryForObject(
             "SELECT totp_failure_count FROM users WHERE id = :id",
             Map.of("id", userId),
@@ -168,7 +168,7 @@ class UtilisateurRepository {
    *
    * @param userId identifiant de l'utilisateur
    */
-  void desactiverTotp(String userId) {
+  void desactiverTotp(final String userId) {
     jdbc.update(
         "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
         Map.of("id", userId));
@@ -180,7 +180,7 @@ class UtilisateurRepository {
    * @return nombre d'utilisateurs ayant le rôle {@code admin}
    */
   int compterAdmins() {
-    Integer n =
+    final Integer n =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM users WHERE role = 'admin'", Map.of(), Integer.class);
     return n == null ? 0 : n;
@@ -191,7 +191,7 @@ class UtilisateurRepository {
    *
    * @param userId identifiant de l'utilisateur à supprimer
    */
-  void supprimer(String userId) {
+  void supprimer(final String userId) {
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
   }
 
@@ -204,21 +204,21 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre de concerts non vus pour les artistes suivis
    */
-  int compterNouveauxMatchesArtistes(String userId) {
-    Integer count =
+  int compterNouveauxMatchesArtistes(final String userId) {
+    final Integer count =
         jdbc.queryForObject(
             """
-            SELECT COUNT(*) FROM user_matches um
-            JOIN concerts c ON c.id = um.concert_id
-            WHERE um.user_id = :userId
-              AND um.vu_le IS NULL
-              AND um.masque_le IS NULL
-              AND EXISTS (
-                SELECT 1 FROM user_artistes ua
-                WHERE ua.user_id = :userId
-                  AND c.artiste_id = ua.artiste_id
-              )
-            """,
+                SELECT COUNT(*) FROM user_matches um
+                JOIN concerts c ON c.id = um.concert_id
+                WHERE um.user_id = :userId
+                  AND um.vu_le IS NULL
+                  AND um.masque_le IS NULL
+                  AND EXISTS (
+                    SELECT 1 FROM user_artistes ua
+                    WHERE ua.user_id = :userId
+                      AND c.artiste_id = ua.artiste_id
+                  )
+                """,
             Map.of(CLE_USER_ID, userId),
             Integer.class);
     return count != null ? count : 0;

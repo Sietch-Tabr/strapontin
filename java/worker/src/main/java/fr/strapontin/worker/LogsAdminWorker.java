@@ -33,7 +33,7 @@ public class LogsAdminWorker {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public LogsAdminWorker(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+  public LogsAdminWorker(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
@@ -47,9 +47,9 @@ public class LogsAdminWorker {
    * @param message message lisible
    * @param meta métadonnées structurées, peut être null
    */
-  public void inserer(String niveau, String source, String message, Map<String, Object> meta) {
+  public void inserer(final String niveau, final String source, final String message, final Map<String, Object> meta) {
     try {
-      String metaJson = meta != null ? objectMapper.writeValueAsString(meta) : "{}";
+      final String metaJson = meta != null ? objectMapper.writeValueAsString(meta) : "{}";
       jdbc.update(
           """
           INSERT INTO logs_admin (ts, niveau, source, message, meta)

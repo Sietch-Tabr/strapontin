@@ -50,7 +50,7 @@ class ArtisteServiceTest {
 
   @Test
   void ajouter_artisteDejaPresent_leveRessourceDejaExistante() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
     when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(true);
 
@@ -60,7 +60,7 @@ class ArtisteServiceTest {
 
   @Test
   void ajouter_capAtteint_leveErreurMetier() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
     when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(500);
@@ -77,7 +77,7 @@ class ArtisteServiceTest {
 
   @Test
   void ajouter_nomValide_insereDansLaBase() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
     when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(42);
@@ -93,8 +93,8 @@ class ArtisteServiceTest {
   // de doublon ni appeler upsertArtiste (qui écraserait le nom affiché global).
   @Test
   void ajouter_variantFlouDejaPresent_reutiliseArtisteExistantSansUpsert() {
-    UUID artisteExistant = UUID.randomUUID();
-    Map<String, Object> candidat = new HashMap<>();
+    final UUID artisteExistant = UUID.randomUUID();
+    final Map<String, Object> candidat = new HashMap<>();
     candidat.put("id", artisteExistant);
     candidat.put("nom_norm", "krash karma");
     when(artisteRepository.chercherCandidatsParTokens(any())).thenReturn(List.of(candidat));
@@ -109,8 +109,8 @@ class ArtisteServiceTest {
 
   @Test
   void ajouter_correspondanceExacteParmiLesCandidats_passeParUpsertPourMettreAJourLeNom() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> candidat = new HashMap<>();
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> candidat = new HashMap<>();
     candidat.put("id", artisteId);
     candidat.put("nom_norm", "radiohead");
     when(artisteRepository.chercherCandidatsParTokens(any())).thenReturn(List.of(candidat));
@@ -128,12 +128,12 @@ class ArtisteServiceTest {
   // (Mockito.spy) pour éviter un appel réseau réel vers Wikidata en test unitaire.
   @Test
   void ajouter_wikidataIdFourni_resoutDeezerIdEtPersisteLesSources() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.upsertArtiste("Daft Punk", "daft punk")).thenReturn(artisteId);
     when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
 
-    ArtisteService spy = Mockito.spy(service);
+    final ArtisteService spy = Mockito.spy(service);
     doReturn("27").when(spy).resoudreDeezerId("Q167023");
 
     spy.ajouter("u1", "Daft Punk", "Q167023");
@@ -147,7 +147,7 @@ class ArtisteServiceTest {
   // et loggé, ne doit jamais faire échouer l'ajout à la liste de suivi.
   @Test
   void ajouter_wikidataIdDejaAttribueAUnAutreArtiste_neFaitPasEchouerLajout() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.upsertArtiste("Daft Punk", "daft punk")).thenReturn(artisteId);
     when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
@@ -165,7 +165,7 @@ class ArtisteServiceTest {
 
   @Test
   void supprimer_delegueAuRepository_sansException() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.supprimer("u1", artisteId)).thenReturn(1);
 
     assertDoesNotThrow(() -> service.supprimer("u1", artisteId));
@@ -177,7 +177,7 @@ class ArtisteServiceTest {
   // utilisateur) ne doit produire aucune entrée d'audit trompeuse "artiste supprimé".
   @Test
   void supprimer_artisteNonSuivi_neLogguePas() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.supprimer("u1", artisteId)).thenReturn(0);
 
     service.supprimer("u1", artisteId);
@@ -187,7 +187,7 @@ class ArtisteServiceTest {
 
   @Test
   void supprimer_artisteReellementSupprime_logguePourAudit() {
-    UUID artisteId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
     when(artisteRepository.supprimer("u1", artisteId)).thenReturn(1);
 
     service.supprimer("u1", artisteId);
@@ -224,13 +224,13 @@ class ArtisteServiceTest {
     when(artisteRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
     when(artisteRepository.rechercherEnBase(anyString())).thenReturn(List.of());
 
-    ArtisteService espion = Mockito.spy(service);
+    final ArtisteService espion = Mockito.spy(service);
     doReturn(List.of(new SuggestionArtiste("Nina Simone", "wikidata", "chanteuse", "Q212484")))
         .when(espion)
         .rechercherWikidata("Nina Simone");
     doReturn(List.of()).when(espion).rechercherDeezer("Nina Simone");
 
-    var reponse = espion.lister("user1", "Nina Simone");
+    final var reponse = espion.lister("user1", "Nina Simone");
 
     assertEquals(1, reponse.suggestions().size());
     verify(espion).rechercherWikidata("Nina Simone");
@@ -246,7 +246,7 @@ class ArtisteServiceTest {
     when(artisteRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
     when(artisteRepository.rechercherEnBase(anyString())).thenReturn(List.of());
 
-    ArtisteService espion = Mockito.spy(service);
+    final ArtisteService espion = Mockito.spy(service);
     doReturn(
             List.of(
                 new SuggestionArtiste("A", "wikidata", "musicien", "Q1"),

@@ -62,7 +62,7 @@ class AdminServiceTest {
   void creerUtilisateur_emailLibre_creeCompteEtEnvoieInvitation() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
 
-    Optional<ResultatCreation> resultat =
+    final Optional<ResultatCreation> resultat =
         adminService.creerUtilisateur("alice@exemple.fr", "admin-1", "https://strapontin.fr");
 
     assertTrue(resultat.isPresent());
@@ -76,7 +76,7 @@ class AdminServiceTest {
   void creerUtilisateur_emailExistant_retourneEmpty() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of(1));
 
-    Optional<ResultatCreation> resultat =
+    final Optional<ResultatCreation> resultat =
         adminService.creerUtilisateur("bob@exemple.fr", "admin-1", "https://strapontin.fr");
 
     assertTrue(resultat.isEmpty());
@@ -86,21 +86,21 @@ class AdminServiceTest {
 
   @Test
   void modifierUtilisateur_aucunChamp_leveErreurMetier() {
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_emailInvalide_leveErreurMetier() {
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "pas-un-email", "");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "pas-un-email", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
 
   @Test
   void modifierUtilisateur_roleInvalide_leveErreurMetier() {
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "superadmin");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, "", "superadmin");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
   }
@@ -108,7 +108,7 @@ class AdminServiceTest {
   @Test
   void modifierUtilisateur_emailDejaPris_leveErreurMetier() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of(1));
-    RequeteModifierUtilisateur requete =
+    final RequeteModifierUtilisateur requete =
         new RequeteModifierUtilisateur(null, "pris@exemple.fr", "");
     assertThrows(
         ErreurMetier.class, () -> adminService.modifierUtilisateur("user-1", requete, "admin-1"));
@@ -117,7 +117,7 @@ class AdminServiceTest {
   @Test
   void modifierUtilisateur_nomSeul_miseAJour() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("Alice", null, null);
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur("Alice", null, null);
 
     adminService.modifierUtilisateur("user-1", requete, "admin-1");
 
@@ -129,12 +129,12 @@ class AdminServiceTest {
   @Test
   void modifierUtilisateur_promotionAdmin_envoieEmail() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("email", "promo@exemple.fr");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "admin");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "admin");
     adminService.modifierUtilisateur("user-1", requete, "admin-1");
 
     verify(emailService).envoyerPromotionAdmin("promo@exemple.fr");
@@ -147,7 +147,7 @@ class AdminServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(Map.of("role", "user")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
     adminService.modifierUtilisateur("user-1", requete, "admin-1");
 
     verify(emailService, never()).envoyerPromotionAdmin(anyString());
@@ -160,14 +160,14 @@ class AdminServiceTest {
   @Test
   void modifierUtilisateur_retrogradeAdminActuel_delegueAInitierRevocationAdmin() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
-    Map<String, Object> ligneAdminCible = new HashMap<>();
+    final Map<String, Object> ligneAdminCible = new HashMap<>();
     ligneAdminCible.put("role", "admin");
     ligneAdminCible.put("email", "admin-cible@exemple.fr");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
     adminService.modifierUtilisateur("admin-cible", requete, "admin-1");
 
     verify(emailService).envoyerPreavisRevocationAdmin(eq("admin-cible@exemple.fr"), anyString());
@@ -182,14 +182,14 @@ class AdminServiceTest {
   @Test
   void modifierUtilisateur_retrogradeSeulAdmin_leveErreurMetier409() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
-    Map<String, Object> ligneAdminCible = new HashMap<>();
+    final Map<String, Object> ligneAdminCible = new HashMap<>();
     ligneAdminCible.put("role", "admin");
     ligneAdminCible.put("email", "admin-cible@exemple.fr");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
 
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
-    ErreurMetier ex =
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    final ErreurMetier ex =
         assertThrows(
             ErreurMetier.class,
             () -> adminService.modifierUtilisateur("admin-cible", requete, "admin-1"));
@@ -202,13 +202,13 @@ class AdminServiceTest {
   // déjà ouverte de modifierUtilisateur — risque d'épuisement du pool HikariCP (incident v2.6.4).
   @Test
   void modifierUtilisateur_nomEtRetrogradationCombines_leveErreurMetierSansAppelerJdbcUpdate() {
-    Map<String, Object> ligneAdminCible = new HashMap<>();
+    final Map<String, Object> ligneAdminCible = new HashMap<>();
     ligneAdminCible.put("role", "admin");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
 
-    RequeteModifierUtilisateur requete =
+    final RequeteModifierUtilisateur requete =
         new RequeteModifierUtilisateur("Nouveau Nom", null, "user");
-    ErreurMetier ex =
+    final ErreurMetier ex =
         assertThrows(
             ErreurMetier.class,
             () -> adminService.modifierUtilisateur("admin-cible", requete, "admin-1"));
@@ -228,7 +228,7 @@ class AdminServiceTest {
 
   @Test
   void initierRevocationAdmin_pasAdmin_leveErreurMetier() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("email", "user@exemple.fr");
     ligne.put("role", "user");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
@@ -240,13 +240,13 @@ class AdminServiceTest {
 
   @Test
   void initierRevocationAdmin_seulAdmin_leveErreurMetier409() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("email", "admin@exemple.fr");
     ligne.put("role", "admin");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
 
-    ErreurMetier ex =
+    final ErreurMetier ex =
         assertThrows(
             ErreurMetier.class, () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
     assertEquals(409, ex.getStatus());
@@ -255,7 +255,7 @@ class AdminServiceTest {
 
   @Test
   void initierRevocationAdmin_adminCible_initieRevocationEtEnvoieEmail() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("email", "admin@exemple.fr");
     ligne.put("role", "admin");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
@@ -274,7 +274,7 @@ class AdminServiceTest {
   // (isolation SERIALIZABLE) — la première tentative échoue, la seconde réussit.
   @Test
   void initierRevocationAdmin_conflitSerialisationPuisSucces_reessaieEtReussit() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("email", "admin@exemple.fr");
     ligne.put("role", "admin");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
@@ -291,7 +291,7 @@ class AdminServiceTest {
 
   @Test
   void initierRevocationAdmin_conflitSerialisationPersistant_leveApresMaxTentatives() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("email", "admin@exemple.fr");
     ligne.put("role", "admin");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
@@ -327,7 +327,7 @@ class AdminServiceTest {
   void reinitialiserMdp_utilisateurInexistant_retourneEmpty() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    Optional<ResultatReset> resultat =
+    final Optional<ResultatReset> resultat =
         adminService.reinitialiserMdp("user-1", "admin-1", "https://strapontin.fr");
 
     assertTrue(resultat.isEmpty());
@@ -336,12 +336,12 @@ class AdminServiceTest {
 
   @Test
   void reinitialiserMdp_utilisateurExistant_envoieResetEtRetourneEmailEtLien() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", "user-1");
     ligne.put("email", "carol@exemple.fr");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
 
-    Optional<ResultatReset> resultat =
+    final Optional<ResultatReset> resultat =
         adminService.reinitialiserMdp("user-1", "admin-1", "https://strapontin.fr");
 
     assertTrue(resultat.isPresent());
@@ -358,7 +358,7 @@ class AdminServiceTest {
         .thenReturn(List.of(Map.of("email", "user@exemple.fr")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean resultat = adminService.reinitialiserTotp("user-1", "admin-1");
+    final boolean resultat = adminService.reinitialiserTotp("user-1", "admin-1");
 
     assertTrue(resultat);
     verify(emailService).envoyer2faReinitialisee("user@exemple.fr");
@@ -369,7 +369,7 @@ class AdminServiceTest {
   void reinitialiserTotp_utilisateurInexistant_retourneFalse() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    boolean resultat = adminService.reinitialiserTotp("inconnu", "admin-1");
+    final boolean resultat = adminService.reinitialiserTotp("inconnu", "admin-1");
 
     assertFalse(resultat);
     verify(emailService, never()).envoyer2faReinitialisee(anyString());
@@ -381,7 +381,7 @@ class AdminServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(Map.of("username", "user1")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(2);
 
-    boolean resultat = adminService.revoquerToutesSessions("user-1", "admin-1");
+    final boolean resultat = adminService.revoquerToutesSessions("user-1", "admin-1");
 
     assertTrue(resultat);
     verify(jdbc)
@@ -395,7 +395,7 @@ class AdminServiceTest {
   void revoquerToutesSessions_utilisateurInexistant_retourneFalse() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    boolean resultat = adminService.revoquerToutesSessions("inconnu", "admin-1");
+    final boolean resultat = adminService.revoquerToutesSessions("inconnu", "admin-1");
 
     assertFalse(resultat);
     verify(jdbc, never()).update(org.mockito.ArgumentMatchers.contains("SPRING_SESSION"), anyMap());
@@ -405,7 +405,7 @@ class AdminServiceTest {
   // exécution que la page (COUNT(*) OVER()), pas d'une requête COUNT séparée.
   @Test
   void listerUtilisateurs_nominal_retournePageAvecTotal() {
-    Map<String, Object> ligne = new HashMap<>();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", "u1");
     ligne.put("email", "a@b.fr");
     ligne.put("role", "user");
@@ -419,7 +419,7 @@ class AdminServiceTest {
     ligne.put("total_filtre", 3L);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
 
-    ReponseUtilisateursAdmin reponse = adminService.listerUtilisateurs(0);
+    final ReponseUtilisateursAdmin reponse = adminService.listerUtilisateurs(0);
 
     assertEquals(1, reponse.utilisateurs().size());
     assertEquals(3L, reponse.total());
@@ -433,7 +433,7 @@ class AdminServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(5L);
 
-    ReponseUtilisateursAdmin reponse = adminService.listerUtilisateurs(3);
+    final ReponseUtilisateursAdmin reponse = adminService.listerUtilisateurs(3);
 
     assertEquals(5L, reponse.total());
     assertTrue(reponse.utilisateurs().isEmpty());

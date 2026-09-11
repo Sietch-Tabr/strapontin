@@ -26,21 +26,21 @@ class TotpChallengeRequestValidationTest {
 
   @Test
   void code_present_estValide() {
-    Set<ConstraintViolation<TotpChallengeRequest>> violations =
+    final Set<ConstraintViolation<TotpChallengeRequest>> violations =
         VALIDATOR.validate(new TotpChallengeRequest("123456"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void code_null_estRejete() {
-    Set<ConstraintViolation<TotpChallengeRequest>> violations =
+    final Set<ConstraintViolation<TotpChallengeRequest>> violations =
         VALIDATOR.validate(new TotpChallengeRequest(null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void code_vide_estRejete() {
-    Set<ConstraintViolation<TotpChallengeRequest>> violations =
+    final Set<ConstraintViolation<TotpChallengeRequest>> violations =
         VALIDATOR.validate(new TotpChallengeRequest(""));
     assertFalse(violations.isEmpty());
   }

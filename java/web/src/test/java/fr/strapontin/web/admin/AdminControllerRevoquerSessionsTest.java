@@ -44,10 +44,10 @@ class AdminControllerRevoquerSessionsTest {
             mock(ConfigService.class));
   }
 
-  private static Authentication authPour(String userId) {
-    UtilisateurDetails ud =
+  private static Authentication authPour(final String userId) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", "admin", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
@@ -56,7 +56,7 @@ class AdminControllerRevoquerSessionsTest {
   void revoquerSessions_utilisateurExistant_retourne200() {
     when(adminService.revoquerToutesSessions("user-1", "admin-1")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.revoquerSessions("user-1", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -67,7 +67,7 @@ class AdminControllerRevoquerSessionsTest {
   void revoquerSessions_utilisateurInexistant_retourne404() {
     when(adminService.revoquerToutesSessions("inconnu", "admin-1")).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.revoquerSessions("inconnu", authPour("admin-1"));
 
     assertEquals(404, reponse.getStatusCode().value());

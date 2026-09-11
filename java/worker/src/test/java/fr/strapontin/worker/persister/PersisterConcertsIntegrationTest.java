@@ -57,20 +57,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   private static ConcertBrut concertSansUrl(
-      String artiste, String date, String salle, String source) {
+      final String artiste, final String date, final String salle, final String source) {
     return new ConcertBrut(
         artiste, date, "20:30", salle, "Paris", "75", null, source, "music", "Pop", "onsale", null,
         null, null, null);
   }
 
   private static ConcertBrut concertAvecHeure(
-      String artiste, String date, String heure, String salle, String source) {
+      final String artiste, final String date, final String heure, final String salle, final String source) {
     return new ConcertBrut(
         artiste, date, heure, salle, "Paris", "75", null, source, "music", "Pop", "onsale", null,
         null, null, null);
   }
 
-  private static ConcertBrut concert(String artiste, String date, String salle, String source) {
+  private static ConcertBrut concert(final String artiste, final String date, final String salle, final String source) {
     return new ConcertBrut(
         artiste,
         date,
@@ -90,14 +90,14 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   private static ConcertBrut concertAvecUrl(
-      String artiste, String date, String salle, String source, String url) {
+      final String artiste, final String date, final String salle, final String source, final String url) {
     return new ConcertBrut(
         artiste, date, "20:30", salle, "Paris", "75", url, source, "music", "Pop", "onsale", null,
         null, null, null);
   }
 
   private static ConcertBrut concertAvecSourceId(
-      String artiste, String date, String salle, String salleSourceId, String artisteSourceId) {
+      final String artiste, final String date, final String salle, final String salleSourceId, final String artisteSourceId) {
     return new ConcertBrut(
         artiste,
         date,
@@ -122,18 +122,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
    * existant), équivalent du seed direct {@code INSERT INTO concerts} de l'ancien modèle.
    */
   private UUID seedEvenementAvecObservation(
-      String artiste,
-      String artisteNorm,
-      String date,
-      String heure,
-      String salle,
-      String salleNorm,
-      String dept,
-      UUID salleId,
-      UUID artisteId,
-      String source,
-      String url) {
-    MapSqlParameterSource paramsEvenement =
+      final String artiste,
+      final String artisteNorm,
+      final String date,
+      final String heure,
+      final String salle,
+      final String salleNorm,
+      final String dept,
+      final UUID salleId,
+      final UUID artisteId,
+      final String source,
+      final String url) {
+    final MapSqlParameterSource paramsEvenement =
         new MapSqlParameterSource()
             .addValue("artisteNorm", artisteNorm)
             .addValue("date", date)
@@ -142,7 +142,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("dept", dept)
             .addValue("salleId", salleId != null ? salleId.toString() : null)
             .addValue("artisteId", artisteId != null ? artisteId.toString() : null);
-    UUID evenementId =
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, dept, salle_id,"
                 + " artiste_id)"
@@ -165,17 +165,17 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_concertValide_insereEnBase() {
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(concert("Julien Clerc", "2026-09-15", "Accor Arena", "ticketmaster"));
 
-    PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(liste);
+    final PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(liste);
 
     assertEquals(1, res.nbInseres());
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
   }
 
-  private void insererSalleAvecCoordonnees(String nom, double latitude, double longitude) {
+  private void insererSalleAvecCoordonnees(final String nom, final double latitude, final double longitude) {
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm, latitude, longitude)"
             + " VALUES (:cle, :nom, :norm, :lat, :lon)",
@@ -207,9 +207,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:venue-gps-1",
                 null)));
 
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "aucune nouvelle salle ne doit être créée");
-    Long nbLiees =
+    final Long nbLiees =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM concerts WHERE salle_norm = 'zenith historique inconnu'"
                 + " AND salle_id = (SELECT id FROM salles WHERE nom = 'Salle GPS Existante')",
@@ -233,7 +233,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:venue-gps-2",
                 null)));
 
-    Map<String, Object> salleCreee =
+    final Map<String, Object> salleCreee =
         jdbc.queryForMap(
             "SELECT latitude, longitude FROM salles WHERE nom = 'Zenith Nouveau Lieu'", Map.of());
     assertEquals(48.8566, (Double) salleCreee.get("latitude"), 0.0001);
@@ -253,7 +253,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:venue-gps-3",
                 null)));
 
-    Map<String, Object> salleCreee =
+    final Map<String, Object> salleCreee =
         jdbc.queryForMap(
             "SELECT latitude, longitude FROM salles WHERE nom = 'Zenith Sans Geocodage'", Map.of());
     assertNull(salleCreee.get("latitude"));
@@ -263,8 +263,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_upsertConflitMemeArtisteDateSalleHeure_metsAJourPasInsertion() {
     // Même artiste, date, heure et salle → conflit → mise à jour (pas doublon)
-    ConcertBrut v1 = concert("Mika", "2026-07-10", "Olympia", "ticketmaster");
-    ConcertBrut v2 =
+    final ConcertBrut v1 = concert("Mika", "2026-07-10", "Olympia", "ticketmaster");
+    final ConcertBrut v2 =
         new ConcertBrut(
             "Mika",
             "2026-07-10",
@@ -285,7 +285,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(List.of(v1));
     persisterConcerts.persisterConcerts(List.of(v2));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
   }
 
@@ -294,7 +294,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // Eventim envoie systématiquement un statut null (pas de distinction prévente/vente
     // complète côté API) — un premier cycle Eventim change déjà concerts.source, un second
     // cycle Eventim ne doit pas pour autant écraser le statut détecté par TM.
-    ConcertBrut viaTm =
+    final ConcertBrut viaTm =
         new ConcertBrut(
             "Angele",
             "2026-11-06",
@@ -311,7 +311,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null,
             null,
             null);
-    ConcertBrut viaEventim =
+    final ConcertBrut viaEventim =
         new ConcertBrut(
             "Angele",
             "2026-11-06",
@@ -333,7 +333,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(List.of(viaEventim));
     persisterConcerts.persisterConcerts(List.of(viaEventim));
 
-    String statut =
+    final String statut =
         jdbc.queryForObject(
             "SELECT statut FROM concerts WHERE artiste_norm = 'angele'", Map.of(), String.class);
     assertEquals("presale", statut);
@@ -345,8 +345,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // observation par priorité de source) sur la branche de conflit de l'upsert, pas seulement à
     // l'insertion initiale — Eventim arrive en premier, Ticketmaster (priorité supérieure)
     // en second, devient donc la référence affichée aux deux upserts.
-    ConcertBrut v1 = concert("Mika", "2026-07-10", "THEATRE HEBERTOT", "eventim");
-    ConcertBrut v2 =
+    final ConcertBrut v1 = concert("Mika", "2026-07-10", "THEATRE HEBERTOT", "eventim");
+    final ConcertBrut v2 =
         new ConcertBrut(
             "Mika",
             "2026-07-10",
@@ -367,7 +367,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(List.of(v1));
     persisterConcerts.persisterConcerts(List.of(v2));
 
-    Map<String, Object> row = jdbc.queryForMap("SELECT salle, salle_norm FROM concerts", Map.of());
+    final Map<String, Object> row = jdbc.queryForMap("SELECT salle, salle_norm FROM concerts", Map.of());
     assertEquals("Théâtre du Châtelet", row.get("salle"));
     assertEquals(
         fr.strapontin.core.Normalisation.normaliserTexte("Théâtre du Châtelet"),
@@ -376,7 +376,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_preferenceArtisteDiacritiques_conserveNomAvecAccents() {
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             new ConcertBrut(
                 "Julien Dore",
@@ -413,7 +413,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(liste);
 
-    String artiste =
+    final String artiste =
         jdbc.queryForObject(
             "SELECT artiste FROM concerts WHERE artiste_norm = 'julien dore'",
             Map.of(),
@@ -423,7 +423,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_listeVide_retourneIdsVides() {
-    PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(List.of());
+    final PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(List.of());
     assertEquals(0, res.nbInseres() + res.nbMisAJour());
   }
 
@@ -435,7 +435,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(concert("Star Academy 1", DATE_RECENTE, "Accor Arena", "ticketmaster")));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
   }
 
@@ -454,7 +454,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "Cirque D'Hiver Bouglione",
                 "ticketmaster")));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count);
   }
 
@@ -465,7 +465,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(concert("Pink Floyd", DATE_RECENTE, "Accor Arena", "ticketmaster")));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(2L, count);
   }
 
@@ -476,7 +476,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
             + " arena')",
         Map.of());
-    java.util.UUID salleId =
+    final java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'accor arena'",
             Map.of(),
@@ -491,7 +491,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             concertAvecSourceId(
                 "Stromae", "2026-10-01", "Accor Arena", "ticketmaster:KovZpaZGFe", null)));
 
-    java.util.UUID uuidEnBase =
+    final java.util.UUID uuidEnBase =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae'",
             Map.of(),
@@ -509,7 +509,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             + " VALUES ('parc expos quimper', 'Parc Des Expos De Penvillers',"
             + " 'parc des expos de penvillers', '29')",
         Map.of());
-    java.util.UUID salleQuimperId =
+    final java.util.UUID salleQuimperId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'parc expos quimper'",
             Map.of(),
@@ -538,7 +538,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:rZFSnyZAv1F",
                 null)));
 
-    java.util.UUID salleEnBase =
+    final java.util.UUID salleEnBase =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'chimene badi'",
             Map.of(),
@@ -549,7 +549,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "le mapping salle_sources incohérent (dept 29) ne doit pas être suivi pour un concert"
             + " dept 22");
 
-    Long nbAvertissements =
+    final Long nbAvertissements =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM logs_admin WHERE source = 'persistance'"
                 + " AND message LIKE '%incohérence géographique%'",
@@ -565,7 +565,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             + " VALUES ('paris la defense arena', 'Paris La Défense Arena',"
             + " 'paris la defense arena')",
         Map.of());
-    java.util.UUID salleId =
+    final java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'paris la defense arena'",
             Map.of(),
@@ -581,14 +581,14 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             concertAvecSourceId(
                 "Dua Lipa", "2026-11-15", "Plenitude Arena", "ticketmaster:KovZpbFGFe", null)));
 
-    java.util.UUID uuidEnBase =
+    final java.util.UUID uuidEnBase =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'dua lipa'",
             Map.of(),
             (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
     assertEquals(salleId, uuidEnBase, "le salle_id doit être stable après renommage");
 
-    String nomMisAJour =
+    final String nomMisAJour =
         jdbc.queryForObject(
             "SELECT nom FROM salles WHERE id = CAST(:uuid AS uuid)",
             Map.of("uuid", salleId.toString()),
@@ -603,7 +603,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('zenith paris', 'Zénith Paris',"
             + " 'zenith paris')",
         Map.of());
-    java.util.UUID salleId =
+    final java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'zenith paris'",
             Map.of(),
@@ -625,10 +625,10 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             concertAvecSourceId(
                 "Mika", "2026-10-10", "Zenith de Paris", "ticketmaster:KovZpZenith", null)));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "la réconciliation ne doit pas créer un doublon");
 
-    java.util.UUID uuidEnBase =
+    final java.util.UUID uuidEnBase =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'mika'",
             Map.of(),
@@ -645,12 +645,12 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             concertAvecSourceId(
                 "Stromae", "2026-11-20", "L'Empreinte", "ticketmaster:KovZpEmpreinte", null)));
 
-    Long nbSalles =
+    final Long nbSalles =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salles WHERE salle_cle = 'l empreinte'", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "la salle doit être créée dans salles");
 
-    Long nbSources =
+    final Long nbSources =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salle_sources"
                 + " WHERE source = 'ticketmaster' AND identifiant_externe = 'KovZpEmpreinte'",
@@ -658,7 +658,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             Long.class);
     assertEquals(1L, nbSources, "le mapping source doit être créé dans salle_sources");
 
-    java.util.UUID uuidEnBase =
+    final java.util.UUID uuidEnBase =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae'",
             Map.of(),
@@ -675,7 +675,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "INSERT INTO salles (salle_cle, nom, nom_norm)"
             + " VALUES ('La Seine Musicale', 'La Seine Musicale', 'La Seine Musicale')",
         Map.of());
-    java.util.UUID uuidOriginal =
+    final java.util.UUID uuidOriginal =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'La Seine Musicale'",
             Map.of(),
@@ -690,21 +690,21 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:rZ7SnyZaA4L",
                 null)));
 
-    Long nbSalles =
+    final Long nbSalles =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salles WHERE unaccent(lower(nom)) = 'la seine musicale'",
             Map.of(),
             Long.class);
     assertEquals(1L, nbSalles, "aucun doublon ne doit être créé");
 
-    java.util.UUID uuidConcert =
+    final java.util.UUID uuidConcert =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'billie eilish'",
             Map.of(),
             (rs, _) -> rs.getObject("salle_id", java.util.UUID.class));
     assertEquals(uuidOriginal, uuidConcert, "le concert doit pointer vers la salle originale");
 
-    Long nbSources =
+    final Long nbSources =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salle_sources WHERE source = 'ticketmaster'"
                 + " AND identifiant_externe = 'rZ7SnyZaA4L'"
@@ -740,7 +740,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:KovZOlympia",
                 null)));
 
-    java.util.UUID uuidOriginal =
+    final java.util.UUID uuidOriginal =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'l olympia'",
             Map.of(),
@@ -766,11 +766,11 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "eventim:internal:lolympia",
                 null)));
 
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(
         1L, nbSalles, "aucune salle dupliquée ne doit être créée pour la variante sans apostrophe");
 
-    java.util.UUID uuidConcertEventim =
+    final java.util.UUID uuidConcertEventim =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae' AND date ="
                 + " '2026-11-21'",
@@ -792,7 +792,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
             + " VALUES ('l olympia', 'L''Olympia', 'l olympia', '75')",
         Map.of());
-    java.util.UUID uuidOriginal =
+    final java.util.UUID uuidOriginal =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'l olympia'",
             Map.of(),
@@ -801,10 +801,10 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(concertAvecSourceId("AC/DC", "2026-11-25", "LOlympia", null, null)));
 
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "aucune salle dupliquée ne doit être créée sans identifiant source");
 
-    java.util.UUID uuidConcert =
+    final java.util.UUID uuidConcert =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'ac dc'",
             Map.of(),
@@ -828,7 +828,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:leforum",
                 null)));
 
-    java.util.UUID salleTM =
+    final java.util.UUID salleTM =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'vincent dedienne'",
             Map.of(),
@@ -853,7 +853,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "eventim:leforumfrejus",
                 null)));
 
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(
         1L,
         nbSalles,
@@ -861,14 +861,14 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     // Même artiste+date+heure+salle_id que la ligne TM déjà en base : le second persist met à
     // jour cette ligne (ON CONFLICT), il n'en insère pas une seconde.
-    Long nbConcerts =
+    final Long nbConcerts =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM concerts WHERE artiste_norm = 'vincent dedienne'",
             Map.of(),
             Long.class);
     assertEquals(1L, nbConcerts, "les deux concerts doivent fusionner sur la même ligne");
 
-    java.util.UUID salleFinale =
+    final java.util.UUID salleFinale =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'vincent dedienne'",
             Map.of(),
@@ -909,7 +909,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "eventim:leforumfrejus2",
                 null)));
 
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles, "deux salles distinctes doivent être créées, dept différent");
   }
 
@@ -922,7 +922,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // fusionner à tort des salles homonymes de villes différentes (ex. Casino Barrière
     // Toulouse/Lille, cas confirmé). Ici : salle existante "Casino Barriere" avec
     // salles.dept NULL, mais un concert déjà rattaché révèle sa vraie localisation (59, Lille).
-    java.util.UUID salleLille = java.util.UUID.randomUUID();
+    final java.util.UUID salleLille = java.util.UUID.randomUUID();
     jdbc.update(
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
             + " VALUES (CAST(:id AS uuid), 'casino barriere', 'Casino - Barriere',"
@@ -962,7 +962,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 null,
                 null)));
 
-    java.util.UUID salleIdConcertToulouse =
+    final java.util.UUID salleIdConcertToulouse =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'artiste toulouse'",
             Map.of(),
@@ -990,7 +990,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             concertAvecSourceId(
                 "Julien Clerc", "2026-12-01", "Accor Arena", "ticketmaster:venue-aa", null)));
 
-    String dept =
+    final String dept =
         jdbc.queryForObject(
             "SELECT dept FROM salles WHERE salle_cle = 'accor arena'", Map.of(), String.class);
     assertEquals("75", dept, "le dept du concert doit être propagé à la salle existante sans dept");
@@ -1024,7 +1024,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:venue-aa",
                 null)));
 
-    String dept =
+    final String dept =
         jdbc.queryForObject(
             "SELECT dept FROM salles WHERE salle_cle = 'accor arena'", Map.of(), String.class);
     assertEquals("75", dept, "un dept déjà connu ne doit jamais être écrasé");
@@ -1039,10 +1039,10 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId("Angele", "2026-11-26", "Salle Totalement Inconnue", null, null)));
 
-    Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(0L, nbSalles, "aucune salle ne doit être créée sans identifiant source fiable");
 
-    java.util.UUID salleId =
+    final java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'angele'",
             Map.of(),
@@ -1056,7 +1056,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // Sans résolution de chaîne : "olympia" → "l olympia" (1 hop) au lieu de "l olympia paris"
     // → doublon. Avec résolution : toutes convergent vers "l olympia paris" → 1 seul concert.
     // URL null pour que supprimerDoublonsParUrl n'interfère pas dans le comptage.
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             concertSansUrl("Mika", "2026-10-01", "Olympia", "ticketmaster"),
             concertSansUrl("Mika", "2026-10-01", "L'Olympia", "ticketmaster"),
@@ -1064,7 +1064,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(liste);
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(
         1L, count, "les trois variantes transitives de salle doivent fusionner en un seul concert");
   }
@@ -1078,7 +1078,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('accor arena', 'Accor Arena', 'accor"
             + " arena')",
         Map.of());
-    java.util.UUID salleId =
+    final java.util.UUID salleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = 'accor arena'",
             Map.of(),
@@ -1089,7 +1089,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         Map.of("uuid", salleId.toString()));
 
     // Bon nom en premier, mauvais nom en dernier → sans fix, "ACCOR ARENA" aurait gagné.
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             concertAvecSourceId(
                 "Mika", "2026-10-01", "Accor Aréna", "ticketmaster:KovZpAccor", null),
@@ -1098,7 +1098,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(liste);
 
-    String nomEnBase =
+    final String nomEnBase =
         jdbc.queryForObject(
             "SELECT nom FROM salles WHERE id = CAST(:uuid AS uuid)",
             Map.of("uuid", salleId.toString()),
@@ -1108,7 +1108,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_artisteNormVide_rejetteLeConcert() {
-    ConcertBrut concert =
+    final ConcertBrut concert =
         new ConcertBrut(
             "???",
             "2026-09-01",
@@ -1126,18 +1126,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null,
             null);
 
-    PersisterConcerts.ResultatPersistance res =
+    final PersisterConcerts.ResultatPersistance res =
         persisterConcerts.persisterConcerts(List.of(concert));
 
     assertEquals(0, res.nbInseres() + res.nbMisAJour());
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(0L, count);
   }
 
   @Test
   void persisterConcerts_deuxSeancesHeuresDifferentes_insereDeuxConcerts() {
     // matinée + soirée du même artiste dans la même salle le même jour doivent coexister
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             concertAvecHeure(
                 "Tartuffe", "2026-10-10", "14:30", "Comédie-Française", "ticketmaster"),
@@ -1146,7 +1146,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(liste);
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(2L, count, "matinée et soirée doivent être deux concerts distincts");
   }
 
@@ -1155,7 +1155,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // page festival Eventim : "Yael Naim" (batch H:00) puis "Solidays 2026" (region H:30)
     // ont la même URL source. resoudreParUrl doit forcer l'artiste_norm du 2ème fetch à celui
     // du 1er fetch déjà en base, évitant deux lignes et les notifications répétées.
-    String urlFestival =
+    final String urlFestival =
         "https://www.eventim.fr/event/solidays-2026-hippodrome-de-longchamp-21086080/";
 
     persisterConcerts.persisterConcerts(
@@ -1168,10 +1168,10 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             concertAvecUrl(
                 "Solidays 2026", DATE_RECENTE, "Hippodrome de Longchamp", "eventim", urlFestival)));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "les deux concerts avec la même URL doivent fusionner en un seul");
 
-    String artisteEnBase =
+    final String artisteEnBase =
         jdbc.queryForObject("SELECT artiste_norm FROM concerts", Map.of(), String.class);
     assertEquals("yael naim", artisteEnBase, "l'artiste_norm du premier fetch doit être conservé");
   }
@@ -1186,7 +1186,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // réconciliation (resoudreParUrl, ReconciliateurArtistes) — ni resoudreParUrl (URL partagée)
     // ni la réconciliation floue par date/salle ne doivent forcer l'entrant vers l'ancienne
     // valeur, sans remédiation de données manuelle.
-    String urlEvenement = "https://www.ticketmaster.fr/event/holiday-on-ice-123456";
+    final String urlEvenement = "https://www.ticketmaster.fr/event/holiday-on-ice-123456";
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -1226,10 +1226,10 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 null,
                 null)));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "l'ancienne ligne corrompue doit être absorbée, pas dupliquée");
 
-    String artisteEnBase =
+    final String artisteEnBase =
         jdbc.queryForObject("SELECT artiste_norm FROM concerts", Map.of(), String.class);
     assertEquals(
         "holiday on ice",
@@ -1241,7 +1241,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   void persisterConcerts_memeUrlTicketmasterHeureReportee_remplaceLAncienneLigne() {
     // Un report Ticketmaster (même URL, heure changée) doit mettre à jour la ligne existante,
     // pas en créer une nouvelle à côté.
-    String urlEvenement = "https://www.ticketmaster.fr/event/pussycat-dolls-653083";
+    final String urlEvenement = "https://www.ticketmaster.fr/event/pussycat-dolls-653083";
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -1281,10 +1281,10 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 null,
                 null)));
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "l'ancienne ligne (20h, en vente) doit être absorbée, pas dupliquée");
 
-    Map<String, Object> ligne =
+    final Map<String, Object> ligne =
         jdbc.queryForList("SELECT heure::text, statut::text FROM concerts", Map.of()).get(0);
     assertEquals("19:00:00", ligne.get("heure"), "l'heure reportée doit être conservée");
     assertEquals("rescheduled", ligne.get("statut"), "le statut à jour doit être conservé");
@@ -1294,7 +1294,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   void persisterConcerts_memeUrlTicketmasterMatineeEtSoireeUneAnnulee_neModifiePasLAutre() {
     // Certaines productions (théâtre, cirque) partagent un seul idmanif Ticketmaster pour
     // plusieurs séances le même jour — l'annulation de l'une ne doit jamais toucher l'autre.
-    String urlProduction = "https://www.ticketmaster.fr/event/les-miserables-642735";
+    final String urlProduction = "https://www.ticketmaster.fr/event/les-miserables-642735";
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -1351,7 +1351,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 null,
                 null)));
 
-    List<String> heures =
+    final List<String> heures =
         jdbc.queryForList(
             "SELECT heure::text FROM concerts WHERE url = :url ORDER BY heure",
             Map.of("url", urlProduction),
@@ -1366,7 +1366,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
     // Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
     // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
-    java.util.UUID artisteId = java.util.UUID.randomUUID();
+    final java.util.UUID artisteId = java.util.UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
         new MapSqlParameterSource()
@@ -1374,7 +1374,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nom", "Mika")
             .addValue("nomNorm", "mika"));
 
-    ConcertBrut concertDigitick =
+    final ConcertBrut concertDigitick =
         new ConcertBrut(
             "Mika",
             "2026-12-10",
@@ -1394,7 +1394,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(List.of(concertDigitick));
 
-    java.util.UUID artisteIdEnBase =
+    final java.util.UUID artisteIdEnBase =
         jdbc.queryForObject(
             "SELECT artiste_id FROM concerts WHERE artiste_norm = 'mika'",
             Map.of(),
@@ -1406,14 +1406,14 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_deuxConcertsSansHeure_fusionne() {
     // deux enregistrements sans heure pour le même (artiste, date, salle) → 1 seul concert
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "ticketmaster"),
             concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "eventim"));
 
     persisterConcerts.persisterConcerts(liste);
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(
         1L, count, "deux concerts sans heure du même artiste/date/salle doivent fusionner");
   }
@@ -1424,8 +1424,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // salle_id depuis V37. TM et Eventim nommant la même salle différemment mais résolvant
     // au même salle_id produisaient un "ON CONFLICT DO UPDATE command cannot affect row a
     // second time" si deduplicerLotReconcilie utilisait salle_norm comme clé.
-    java.util.UUID salleId = java.util.UUID.randomUUID();
-    String salleCle = "salle-test-" + salleId;
+    final java.util.UUID salleId = java.util.UUID.randomUUID();
+    final String salleCle = "salle-test-" + salleId;
     jdbc.update(
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
             + " VALUES (CAST(:id AS uuid), :salleCle, :nom, :nomNorm, '75')",
@@ -1443,7 +1443,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             + " VALUES (CAST(:salleId AS uuid), 'eventim', 'eventim:internal:zenith de paris')",
         Map.of("salleId", salleId.toString()));
 
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             new ConcertBrut(
                 "Radiohead",
@@ -1483,7 +1483,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "persisterConcerts ne doit pas lever BadSqlGrammarException quand deux concerts ont"
             + " le même salle_id mais des salle_norm différents");
 
-    Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
+    final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_id");
   }
 
@@ -1494,8 +1494,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void
       upsertLot_memeArtisteIdSalleIdDateHeureArtisteNormDistinct_fusionneSansPerdreLesObservations() {
-    UUID artisteId = UUID.randomUUID();
-    UUID salleId = UUID.randomUUID();
+    final UUID artisteId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
         new MapSqlParameterSource()
@@ -1511,9 +1511,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nom", "Accor Arena")
             .addValue("nomNorm", "accor arena"));
 
-    LocalDate date = LocalDate.parse("2026-12-05");
-    LocalTime heure = LocalTime.parse("20:00");
-    ValeurConcert viaTm =
+    final LocalDate date = LocalDate.parse("2026-12-05");
+    final LocalTime heure = LocalTime.parse("20:00");
+    final ValeurConcert viaTm =
         new ValeurConcert(
             "Coldplay",
             "coldplay",
@@ -1534,7 +1534,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null,
             salleId,
             artisteId);
-    ValeurConcert viaDigitick =
+    final ValeurConcert viaDigitick =
         new ValeurConcert(
             "Cold Play",
             "cold play",
@@ -1558,20 +1558,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisteurConcertsDb.upsertLot(List.of(viaTm, viaDigitick));
 
-    Long nbEvenements =
+    final Long nbEvenements =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM evenements WHERE artiste_id = CAST(:id AS uuid)",
             Map.of("id", artisteId.toString()),
             Long.class);
     assertEquals(1L, nbEvenements, "un seul événement malgré artiste_norm distinct");
-    Long nbObservations =
+    final Long nbObservations =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM observations o JOIN evenements e ON e.id = o.evenement_id"
                 + " WHERE e.artiste_id = CAST(:id AS uuid)",
             Map.of("id", artisteId.toString()),
             Long.class);
     assertEquals(2L, nbObservations, "les deux observations sont conservées, aucune supprimée");
-    String source =
+    final String source =
         jdbc.queryForObject(
             "SELECT source::text FROM concerts WHERE artiste_id = CAST(:id AS uuid)",
             Map.of("id", artisteId.toString()),
@@ -1590,7 +1590,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (gen_random_uuid(), 'Jay Z', 'jay z')",
         Map.of());
 
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             new ConcertBrut(
                 "Jay Z",
@@ -1627,7 +1627,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(liste);
 
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList("SELECT url FROM concerts WHERE artiste_norm = 'jay z'", Map.of());
     assertEquals(1, lignes.size(), "les deux fiches doivent fusionner en un seul événement");
     assertEquals(
@@ -1635,7 +1635,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         lignes.get(0).get("url"),
         "la fiche non-package doit l'emporter comme référence affichée");
 
-    Long nbObservations =
+    final Long nbObservations =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM observations o"
                 + " JOIN evenements e ON e.id = o.evenement_id WHERE e.artiste_norm = 'jay z'",
@@ -1650,7 +1650,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   // doublons ; supprimerDoublonsSansArtisteId doit prendre le relais en comparant artiste_norm.
   @Test
   void persisterConcerts_artisteNonSuiviCoTeteAffiche_fusionneSansArtisteId() {
-    List<ConcertBrut> liste =
+    final List<ConcertBrut> liste =
         List.of(
             new ConcertBrut(
                 "Earl Sweatshirt",
@@ -1687,7 +1687,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(liste);
 
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT url, artiste_id FROM concerts WHERE artiste_norm LIKE 'earl sweatshirt%'",
             Map.of());
@@ -1740,7 +1740,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 "ticketmaster:venue-elysee-montmartre-2",
                 null)));
 
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT url FROM concerts WHERE artiste_norm LIKE 'earl sweatshirt%'", Map.of());
     assertEquals(
@@ -1754,7 +1754,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   // devient un enfant du complexe plutôt que d'être fusionnée ou de rester ambiguë.
   @Test
   void persisterConcerts_complexeMultiSalles_creeUneSousSalleDistincteEnEnfant() {
-    ConcertBrut grandeSeine =
+    final ConcertBrut grandeSeine =
         new ConcertBrut(
             "Artiste Grande Seine",
             DATE_RECENTE,
@@ -1773,7 +1773,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null);
     persisterConcerts.persisterConcerts(List.of(grandeSeine));
 
-    ConcertBrut auditorium =
+    final ConcertBrut auditorium =
         new ConcertBrut(
             "Artiste Auditorium",
             DATE_RECENTE,
@@ -1792,17 +1792,17 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null);
     persisterConcerts.persisterConcerts(List.of(auditorium));
 
-    List<Map<String, Object>> salles =
+    final List<Map<String, Object>> salles =
         jdbc.queryForList(
             "SELECT id::text, nom, salle_parent_id::text FROM salles ORDER BY nom", Map.of());
     assertEquals(2, salles.size(), "les deux halls doivent rester deux salles distinctes");
 
-    Map<String, Object> salleGrandeSeine =
+    final Map<String, Object> salleGrandeSeine =
         salles.stream()
             .filter(s -> ((String) s.get("nom")).contains("Grande Seine"))
             .findFirst()
             .orElseThrow();
-    Map<String, Object> salleAuditorium =
+    final Map<String, Object> salleAuditorium =
         salles.stream()
             .filter(s -> ((String) s.get("nom")).contains("Auditorium"))
             .findFirst()
@@ -1815,7 +1815,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         salleAuditorium.get("salle_parent_id"),
         "la seconde sous-salle doit être rattachée à la première comme complexe");
 
-    List<String> sallesDistinctesParConcert =
+    final List<String> sallesDistinctesParConcert =
         jdbc.queryForList("SELECT DISTINCT salle_id::text FROM concerts", Map.of(), String.class);
     assertEquals(
         2,

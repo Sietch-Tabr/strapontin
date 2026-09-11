@@ -15,8 +15,8 @@ class PurgerConcertsJobTest {
 
   @Test
   void executeInternal_delegueAWorkerPurgeService() {
-    WorkerPurgeService workerPurgeService = mock(WorkerPurgeService.class);
-    PurgerConcertsJob job = new PurgerConcertsJob();
+    final WorkerPurgeService workerPurgeService = mock(WorkerPurgeService.class);
+    final PurgerConcertsJob job = new PurgerConcertsJob();
     job.setWorkerPurgeService(workerPurgeService);
 
     job.executeInternal(mock(JobExecutionContext.class));

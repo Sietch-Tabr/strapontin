@@ -44,7 +44,7 @@ class AdminControllerBanniereTest {
 
   @Test
   void publierBanniere_typeValide_delegueAuServiceAvecMessageStrippe() {
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.publierBanniere(new RequeteBanniere("  Maintenance  ", "warning"));
 
     assertEquals(200, rep.getStatusCode().value());
@@ -60,7 +60,7 @@ class AdminControllerBanniereTest {
 
   @Test
   void effacerBanniere_delegueAuService() {
-    ResponseEntity<Map<String, Object>> rep = controller.effacerBanniere();
+    final ResponseEntity<Map<String, Object>> rep = controller.effacerBanniere();
 
     assertEquals(200, rep.getStatusCode().value());
     verify(banniereService).effacerBanniere();

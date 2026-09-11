@@ -29,22 +29,22 @@ final class TicketmasterHealthCheck {
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
 
-  TicketmasterHealthCheck(String apiKey, RestClient restClient, CadenceurAppels cadenceur) {
+  TicketmasterHealthCheck(final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this.apiKey = apiKey;
     this.restClient = restClient;
     this.cadenceur = cadenceur;
   }
 
-  StatutIdTM verifierVenue(String venueId) {
+  StatutIdTM verifierVenue(final String venueId) {
     return verifierRessource("/venues/" + venueId + ".json");
   }
 
-  StatutIdTM verifierAttraction(String attractionId) {
+  StatutIdTM verifierAttraction(final String attractionId) {
     return verifierRessource("/attractions/" + attractionId + ".json");
   }
 
-  private StatutIdTM verifierRessource(String chemin) {
-    String uri =
+  private StatutIdTM verifierRessource(final String chemin) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + chemin)
             .queryParam("apikey", apiKey)
             .build()
@@ -65,15 +65,15 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
-  String recupererNomAttraction(String attractionId) {
-    String uri =
+  String recupererNomAttraction(final String attractionId) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
             .queryParam("apikey", apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
       log.warn(
@@ -85,8 +85,8 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
-  List<CandidatVenueTM> rechercherVenuesParNom(String nom) {
-    String uri =
+  List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
             .queryParam("keyword", nom)
             .queryParam("countryCode", "FR")
@@ -95,14 +95,14 @@ final class TicketmasterHealthCheck {
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return List.of();
-      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      var venues = embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+      final var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final var venues = embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
       if (venues == null) return List.of();
-      List<CandidatVenueTM> resultat = new ArrayList<>();
+      final List<CandidatVenueTM> resultat = new ArrayList<>();
       for (var v : venues) {
-        Object id = v.get("id");
+        final Object id = v.get("id");
         if (id != null) resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
       }
       return resultat;
@@ -116,8 +116,8 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
-  int compterEventsVenue(String venueId) {
-    String uri =
+  int compterEventsVenue(final String venueId) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
             .queryParam("venueId", venueId)
             .queryParam("size", 1)
@@ -126,9 +126,9 @@ final class TicketmasterHealthCheck {
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) return 0;
-      var page = (Map<String, Object>) data.get("page");
+      final var page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
       log.warn(

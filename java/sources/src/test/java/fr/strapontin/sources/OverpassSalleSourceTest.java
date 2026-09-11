@@ -29,15 +29,15 @@ class OverpassSalleSourceTest {
 
   @Test
   void enrichirLot_salleAvecWikidataIdConnu_ignoree() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, "44", "Q123");
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, "44", "Q123");
 
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -47,15 +47,15 @@ class OverpassSalleSourceTest {
   // Overpass — la salle reste candidate pour la découverte Wikidata par nom, indépendante.
   @Test
   void enrichirLot_salleSansDept_ignoreeSansHttp() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, null);
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, null);
 
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -63,12 +63,12 @@ class OverpassSalleSourceTest {
 
   @Test
   void enrichirLot_reponseValideAvecWikidata_retourneEnrichissement() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             "Zenith de Nantes",
@@ -94,11 +94,11 @@ class OverpassSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
-    EnrichissementSalle enrichissement = resultat.get(id);
+    final EnrichissementSalle enrichissement = resultat.get(id);
     assertNotNull(enrichissement);
     assertEquals("Q3550188", enrichissement.wikidataId());
     assertEquals("Zénith de Nantes Métropole", enrichissement.nomAffiche());
@@ -110,19 +110,19 @@ class OverpassSalleSourceTest {
 
   @Test
   void enrichirLot_nomAvecGuillemet_echappeSansRompreLeLitteralOverpassQL() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    String nom = "Salle \"Le Central\"";
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final String nom = "Salle \"Le Central\"";
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id, nom, fr.strapontin.core.Normalisation.normaliserTexte(nom), null, "44", null);
 
     // Requête envoyée en corps form-urlencoded (data=...) : la comparaison doit passer par le
     // même encodage que le client, pas par la chaîne brute.
-    String fragmentAttendu =
+    final String fragmentAttendu =
         java.net.URLEncoder.encode(
             "name\"~\"Salle \\\"Le Central\\\"\",i", java.nio.charset.StandardCharsets.UTF_8);
     serveur
@@ -130,8 +130,8 @@ class OverpassSalleSourceTest {
         .andExpect(content().string(org.hamcrest.Matchers.containsString(fragmentAttendu)))
         .andRespond(withSuccess("{\"elements\":[]}", MediaType.APPLICATION_JSON));
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -139,12 +139,12 @@ class OverpassSalleSourceTest {
 
   @Test
   void enrichirLot_nomNeCorrespondPas_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             "Salle Inconnue",
@@ -162,8 +162,8 @@ class OverpassSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -173,12 +173,12 @@ class OverpassSalleSourceTest {
   // échouent ici pour vérifier le retry sans faire lever d'exception à l'appelant.
   @Test
   void enrichirLot_erreurReseau_retenteUneFoisPuisRetourneVideSansException() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             "Zenith",
@@ -190,8 +190,8 @@ class OverpassSalleSourceTest {
     serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
     serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -202,11 +202,11 @@ class OverpassSalleSourceTest {
   // 4e département, jamais interrogé (aucune expectation déclarée pour lui), le prouve.
   @Test
   void enrichirLot_echecsConsecutifs_interromptLeCycleSansInterrogerLaSuite() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    List<SalleAEnrichir> salles =
+    final List<SalleAEnrichir> salles =
         List.of(
             salleDept("Salle 01", "01"),
             salleDept("Salle 02", "02"),
@@ -218,14 +218,14 @@ class OverpassSalleSourceTest {
       serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
     }
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(salles);
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(salles);
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
   }
 
-  private static SalleAEnrichir salleDept(String nom, String dept) {
+  private static SalleAEnrichir salleDept(final String nom, final String dept) {
     return new SalleAEnrichir(
         UUID.randomUUID(),
         nom,
@@ -237,12 +237,12 @@ class OverpassSalleSourceTest {
 
   @Test
   void enrichirLot_nomAvecApostropheDroite_matchApostropheCourbeOsm() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             "L'Empreinte",
@@ -270,8 +270,8 @@ class OverpassSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertNotNull(resultat.get(id));
@@ -283,7 +283,7 @@ class OverpassSalleSourceTest {
   // isolée (504, timeout).
   @Test
   void delaiAvantRetry_429_backoffPlusLongQuUneErreurReseau() {
-    long delai429 =
+    final long delai429 =
         OverpassSalleSource.delaiAvantRetry(
             org.springframework.web.client.HttpClientErrorException.create(
                 org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,
@@ -291,7 +291,7 @@ class OverpassSalleSourceTest {
                 org.springframework.http.HttpHeaders.EMPTY,
                 new byte[0],
                 null));
-    long delaiErreurReseau =
+    final long delaiErreurReseau =
         OverpassSalleSource.delaiAvantRetry(new java.io.IOException("connexion refusée"));
 
     assertTrue(delai429 > delaiErreurReseau);
@@ -299,12 +299,12 @@ class OverpassSalleSourceTest {
 
   @Test
   void enrichirLot_lotVide_retourneVideSansHttp() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of());
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of());
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -315,25 +315,25 @@ class OverpassSalleSourceTest {
   // dans le même cycle nocturne) ne doit déclencher aucun appel HTTP supplémentaire.
   @Test
   void enrichirLot_disjoncteurDejaOuvertParUnAppelPrecedent_neReinterrogePas() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     for (int i = 0; i < 3; i++) {
       serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
       serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
     }
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
-    List<SalleAEnrichir> premierLot =
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final List<SalleAEnrichir> premierLot =
         List.of(
             salleDept("Salle 01", "01"), salleDept("Salle 02", "02"), salleDept("Salle 03", "03"));
     source.enrichirLot(premierLot);
 
     // Aucune expectation supplémentaire déclarée ci-dessus pour ce second appel — serveur.verify()
     // échouerait si le moindre appel HTTP était émis.
-    List<SalleAEnrichir> secondLot = List.of(salleDept("Salle 04", "04"));
-    Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(secondLot);
+    final List<SalleAEnrichir> secondLot = List.of(salleDept("Salle 04", "04"));
+    final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(secondLot);
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -343,9 +343,9 @@ class OverpassSalleSourceTest {
   // réarmer le disjoncteur pour le cycle suivant.
   @Test
   void preleverBilan_apresDisjoncteurOuvert_reinitialiseLeDisjoncteurPourLeCycleSuivant() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     for (int i = 0; i < 3; i++) {
       serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
@@ -355,13 +355,13 @@ class OverpassSalleSourceTest {
         .expect(requestTo(urlOverpass()))
         .andRespond(withSuccess("{\"elements\":[]}", MediaType.APPLICATION_JSON));
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
     source.enrichirLot(
         List.of(
             salleDept("Salle 01", "01"), salleDept("Salle 02", "02"), salleDept("Salle 03", "03")));
     source.preleverBilan();
 
-    Map<UUID, EnrichissementSalle> resultat =
+    final Map<UUID, EnrichissementSalle> resultat =
         source.enrichirLot(List.of(salleDept("Salle 04", "04")));
 
     assertTrue(resultat.isEmpty());
@@ -379,13 +379,13 @@ class OverpassSalleSourceTest {
   // géographique par département), pas un seul appel mélangeant les deux.
   @Test
   void enrichirLot_deuxDepartementsDifferents_genereDeuxRequetes() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id1 = UUID.randomUUID();
-    UUID id2 = UUID.randomUUID();
-    SalleAEnrichir salleParis =
+    final UUID id1 = UUID.randomUUID();
+    final UUID id2 = UUID.randomUUID();
+    final SalleAEnrichir salleParis =
         new SalleAEnrichir(
             id1,
             "Salle A",
@@ -393,7 +393,7 @@ class OverpassSalleSourceTest {
             null,
             "75",
             null);
-    SalleAEnrichir salleNantes =
+    final SalleAEnrichir salleNantes =
         new SalleAEnrichir(
             id2,
             "Salle B",
@@ -419,7 +419,7 @@ class OverpassSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    OverpassSalleSource source = new OverpassSalleSource(restClient);
+    final OverpassSalleSource source = new OverpassSalleSource(restClient);
     source.enrichirLot(List.of(salleParis, salleNantes));
 
     serveur.verify();

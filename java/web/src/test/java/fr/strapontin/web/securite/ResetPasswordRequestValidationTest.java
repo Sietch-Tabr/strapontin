@@ -30,21 +30,21 @@ class ResetPasswordRequestValidationTest {
 
   @Test
   void tokenEtMotDePasseValides_sansIdentifiant_estValide() {
-    Set<ConstraintViolation<ResetPasswordRequest>> violations =
+    final Set<ConstraintViolation<ResetPasswordRequest>> violations =
         VALIDATOR.validate(new ResetPasswordRequest("token-abc", "motdepasse12345", null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void token_null_estRejete() {
-    Set<ConstraintViolation<ResetPasswordRequest>> violations =
+    final Set<ConstraintViolation<ResetPasswordRequest>> violations =
         VALIDATOR.validate(new ResetPasswordRequest(null, "motdepasse12345", null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void motDePasse_tropCourt_estRejete() {
-    Set<ConstraintViolation<ResetPasswordRequest>> violations =
+    final Set<ConstraintViolation<ResetPasswordRequest>> violations =
         VALIDATOR.validate(new ResetPasswordRequest("token-abc", "court", null));
     assertFalse(violations.isEmpty());
   }

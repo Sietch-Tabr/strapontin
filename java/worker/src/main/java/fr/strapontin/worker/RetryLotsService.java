@@ -59,9 +59,9 @@ public class RetryLotsService {
   private final LogsAdminWorker logsAdminWorker;
 
   public RetryLotsService(
-      Scheduler scheduler,
-      SuiviChroniciteService suiviChronicite,
-      LogsAdminWorker logsAdminWorker) {
+      final Scheduler scheduler,
+      final SuiviChroniciteService suiviChronicite,
+      final LogsAdminWorker logsAdminWorker) {
     this.scheduler = scheduler;
     this.suiviChronicite = suiviChronicite;
     this.logsAdminWorker = logsAdminWorker;
@@ -76,17 +76,17 @@ public class RetryLotsService {
    * @param identifiantsEnEchec identifiants des entités des lots en échec de ce cycle, vide si le
    *   cycle est propre
    */
-  public void gererResultat(String typeJob, List<String> identifiantsEnEchec) {
-    ConfigRetry config = CONFIGS_PAR_TYPE_JOB.get(typeJob);
+  public void gererResultat(final String typeJob, final List<String> identifiantsEnEchec) {
+    final ConfigRetry config = CONFIGS_PAR_TYPE_JOB.get(typeJob);
     if (config == null) return;
 
-    String cleChronicite = "retry:" + typeJob;
+    final String cleChronicite = "retry:" + typeJob;
     if (identifiantsEnEchec.isEmpty()) {
       suiviChronicite.enregistrerCycle(cleChronicite, false);
       return;
     }
 
-    int streak = suiviChronicite.enregistrerCycle(cleChronicite, true);
+    final int streak = suiviChronicite.enregistrerCycle(cleChronicite, true);
     if (streak >= SuiviChroniciteService.SEUIL_CYCLES_CHRONIQUE) {
       logsAdminWorker.inserer(
           "warn",
@@ -99,9 +99,9 @@ public class RetryLotsService {
     programmerRetry(typeJob, config, identifiantsEnEchec);
   }
 
-  private void programmerRetry(String typeJob, ConfigRetry config, List<String> identifiants) {
+  private void programmerRetry(final String typeJob, final ConfigRetry config, final List<String> identifiants) {
     try {
-      Trigger trigger =
+      final Trigger trigger =
           TriggerBuilder.newTrigger()
               .forJob(config.jobKey())
               .withIdentity("retry-" + typeJob + "-" + System.currentTimeMillis(), "retry")

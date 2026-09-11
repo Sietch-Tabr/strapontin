@@ -29,7 +29,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class ReconciliateurArtistesTest {
 
-  private static ValeurConcert concert(String artisteNorm, LocalDate date, String salleNorm) {
+  private static ValeurConcert concert(final String artisteNorm, final LocalDate date, final String salleNorm) {
     return new ValeurConcert(
         "Artiste",
         artisteNorm,
@@ -58,20 +58,20 @@ class ReconciliateurArtistesTest {
   // le premier match flou trouvé, ratant le candidat exact plus loin dans la même liste.
   @Test
   void reconcilierArtistes_candidatFlouAvantCandidatExact_prioriseLexact() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
 
-    LocalDate date = LocalDate.of(2025, 6, 15);
-    UUID idFlou = UUID.randomUUID();
-    UUID idExact = UUID.randomUUID();
+    final LocalDate date = LocalDate.of(2025, 6, 15);
+    final UUID idFlou = UUID.randomUUID();
+    final UUID idExact = UUID.randomUUID();
 
-    Map<String, Object> candidatFlou = new HashMap<>();
+    final Map<String, Object> candidatFlou = new HashMap<>();
     candidatFlou.put("artiste_norm", "krashkarma");
     candidatFlou.put("artiste_id", idFlou);
     candidatFlou.put("date", date.toString());
     candidatFlou.put("salle_norm", "zenith paris");
 
-    Map<String, Object> candidatExact = new HashMap<>();
+    final Map<String, Object> candidatExact = new HashMap<>();
     candidatExact.put("artiste_norm", "krash karma");
     candidatExact.put("artiste_id", idExact);
     candidatExact.put("date", date.toString());
@@ -80,8 +80,8 @@ class ReconciliateurArtistesTest {
     // Ordre volontairement défavorable : flou avant exact.
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(candidatFlou, candidatExact));
 
-    ValeurConcert entrant = concert("krash karma", date, "zenith paris");
-    List<ValeurConcert> resultat = reconciliateur.reconcilierArtistes(List.of(entrant));
+    final ValeurConcert entrant = concert("krash karma", date, "zenith paris");
+    final List<ValeurConcert> resultat = reconciliateur.reconcilierArtistes(List.of(entrant));
 
     assertEquals(1, resultat.size());
     assertEquals(idExact, resultat.get(0).artisteId());
@@ -89,7 +89,7 @@ class ReconciliateurArtistesTest {
   }
 
   private static ValeurConcert concertAvecUrlEtClassification(
-      String artiste, String url, String classification, String source) {
+      final String artiste, final String url, final String classification, final String source) {
     return new ValeurConcert(
         artiste,
         artiste.toLowerCase(),
@@ -114,15 +114,15 @@ class ReconciliateurArtistesTest {
 
   @Test
   void corrigerParUrl_entrantIneligibleUrlExistanteNomDifferent_corrigeLaLigneExistante() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
 
-    Map<String, Object> ligneExistante = new HashMap<>();
+    final Map<String, Object> ligneExistante = new HashMap<>();
     ligneExistante.put("url", "https://tm.example/nino-arial-billet");
     ligneExistante.put("artiste_norm", "nino arbol");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneExistante));
 
-    ValeurConcert entrant =
+    final ValeurConcert entrant =
         concertAvecUrlEtClassification(
             "Nino Arial", "https://tm.example/nino-arial-billet", "theatre", "ticketmaster");
 
@@ -152,10 +152,10 @@ class ReconciliateurArtistesTest {
 
   @Test
   void corrigerParUrl_entrantEligibleDeezer_neCorrigePas() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
 
-    ValeurConcert entrant =
+    final ValeurConcert entrant =
         concertAvecUrlEtClassification(
             "Niño Árbol", "https://tm.example/nino-arial-billet", "music", "ticketmaster");
 
@@ -166,11 +166,11 @@ class ReconciliateurArtistesTest {
 
   @Test
   void corrigerParUrl_aucuneLigneExistantePourCetteUrl_neCorrigePas() {
-    NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    ValeurConcert entrant =
+    final ValeurConcert entrant =
         concertAvecUrlEtClassification(
             "Nino Arial", "https://tm.example/nino-arial-billet", "theatre", "ticketmaster");
 

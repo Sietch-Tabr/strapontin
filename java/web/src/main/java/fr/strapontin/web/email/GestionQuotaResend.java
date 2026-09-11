@@ -43,14 +43,14 @@ class GestionQuotaResend {
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  GestionQuotaResend(JdbcTemplate jdbc, ObjectMapper objectMapper) {
+  GestionQuotaResend(final JdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
 
   private Optional<CompteurEnvoisResend> lireCompteurBrut() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = ?", String.class, CLE_QUOTA);
       if (json == null) return Optional.empty();
@@ -63,9 +63,9 @@ class GestionQuotaResend {
     }
   }
 
-  private void ecrireCompteur(CompteurEnvoisResend compteur) {
+  private void ecrireCompteur(final CompteurEnvoisResend compteur) {
     try {
-      String json = objectMapper.writeValueAsString(compteur);
+      final String json = objectMapper.writeValueAsString(compteur);
       jdbc.update(
           "INSERT INTO app_config (cle, valeur_chiffree) VALUES (?, ?)"
               + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = ?, mis_a_jour_le = now()",
@@ -81,14 +81,14 @@ class GestionQuotaResend {
     return LocalDate.now(ZoneOffset.UTC).toString();
   }
 
-  private static String moisCourant(String jour) {
+  private static String moisCourant(final String jour) {
     return jour.substring(0, 7);
   }
 
   private static CompteurEnvoisResend appliquerRollover(
-      CompteurEnvoisResend c, String jour, String mois) {
-    boolean jourChange = !jour.equals(c.jour());
-    boolean moisChange = !mois.equals(c.mois());
+      final CompteurEnvoisResend c, final String jour, final String mois) {
+    final boolean jourChange = !jour.equals(c.jour());
+    final boolean moisChange = !mois.equals(c.mois());
     if (!jourChange && !moisChange) return c;
     return new CompteurEnvoisResend(
         jour,
@@ -107,8 +107,8 @@ class GestionQuotaResend {
    * @return le compteur courant, ou un compteur initial à zéro si absent de la base
    */
   CompteurEnvoisResend lireCompteurCourant() {
-    String jour = jourCourant();
-    String mois = moisCourant(jour);
+    final String jour = jourCourant();
+    final String mois = moisCourant(jour);
     return lireCompteurBrut()
         .map(c -> appliquerRollover(c, jour, mois))
         .orElse(new CompteurEnvoisResend(jour, 0, mois, 0, false, false));
@@ -122,7 +122,7 @@ class GestionQuotaResend {
    *     persisté, pour que le prochain appel reparte d'un état à jour)
    */
   boolean reserverEnvoi() {
-    CompteurEnvoisResend actuel = lireCompteurCourant();
+    final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
       ecrireCompteur(actuel);
       log.error(
@@ -151,10 +151,10 @@ class GestionQuotaResend {
    * @param compteur le compteur courant (voir {@link #lireCompteurCourant()})
    * @return {@code true} si une alerte doit être envoyée
    */
-  boolean seuilFranchiNonSignale(CompteurEnvoisResend compteur) {
-    boolean jourSeuil =
+  boolean seuilFranchiNonSignale(final CompteurEnvoisResend compteur) {
+    final boolean jourSeuil =
         compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE && !compteur.alerteJourEnvoyee();
-    boolean moisSeuil =
+    final boolean moisSeuil =
         compteur.envoyesMois() >= LIMITE_MOIS * SEUIL_ALERTE && !compteur.alerteMoisEnvoyee();
     return jourSeuil || moisSeuil;
   }
@@ -165,9 +165,9 @@ class GestionQuotaResend {
    *
    * @param compteur le compteur courant au moment de l'envoi de l'alerte
    */
-  void marquerAlerteEnvoyee(CompteurEnvoisResend compteur) {
-    boolean jourSeuil = compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE;
-    boolean moisSeuil = compteur.envoyesMois() >= LIMITE_MOIS * SEUIL_ALERTE;
+  void marquerAlerteEnvoyee(final CompteurEnvoisResend compteur) {
+    final boolean jourSeuil = compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE;
+    final boolean moisSeuil = compteur.envoyesMois() >= LIMITE_MOIS * SEUIL_ALERTE;
     ecrireCompteur(
         new CompteurEnvoisResend(
             compteur.jour(),

@@ -50,10 +50,10 @@ public class SourcesService {
    * @param salleService service salle (upsert, mise à jour, déclenchement worker)
    */
   public SourcesService(
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper objectMapper,
-      RestClient restClient,
-      SalleService salleService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final RestClient restClient,
+      final SalleService salleService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
@@ -78,8 +78,8 @@ public class SourcesService {
    * @return map {@code {quotaTM, etatQuota}} — valeurs null si quota absent
    */
   public Map<String, Object> lireQuotaTM() {
-    QuotaTM quota = lireQuotaTMDepuisBase();
-    String etat = calculerEtatQuota(quota);
+    final QuotaTM quota = lireQuotaTMDepuisBase();
+    final String etat = calculerEtatQuota(quota);
     return Map.of("quotaTM", quota != null ? quota : "null", "etatQuota", etat);
   }
 
@@ -89,7 +89,7 @@ public class SourcesService {
    * @param salleId UUID de la salle
    * @return identifiants CSV ou {@code null} si aucun identifiant connu
    */
-  public String obtenirIdentifiantsSalle(UUID salleId) {
+  public String obtenirIdentifiantsSalle(final UUID salleId) {
     return salleService.lireIdentifiantsSources(salleId);
   }
 
@@ -102,7 +102,7 @@ public class SourcesService {
    * @param cp code postal 5 chiffres (peut être {@code null})
    * @return UUID stable de la salle créée ou retrouvée
    */
-  public UUID creerSalleDigitick(String nom, String slug, String ville, String cp) {
+  public UUID creerSalleDigitick(final String nom, final String slug, final String ville, final String cp) {
     return salleService.creerSalleDigitick(nom, slug, ville, cp);
   }
 
@@ -114,7 +114,7 @@ public class SourcesService {
    * @param ville nouvelle ville (null = inchangée)
    * @param cp nouveau code postal (null = inchangé)
    */
-  public void modifierSalleDigitick(UUID salleId, String nom, String ville, String cp) {
+  public void modifierSalleDigitick(final UUID salleId, final String nom, final String ville, final String cp) {
     salleService.mettreAJourSalle(salleId, nom, ville, cp);
   }
 
@@ -124,7 +124,7 @@ public class SourcesService {
    * @param salleId UUID de la salle
    * @return {@code true} si supprimée, {@code false} si des contraintes bloquent la suppression
    */
-  public boolean supprimerSalleDigitick(UUID salleId) {
+  public boolean supprimerSalleDigitick(final UUID salleId) {
     return salleService.supprimerSalleDigitick(salleId);
   }
 
@@ -140,8 +140,8 @@ public class SourcesService {
    * @param slug nouveau slug Digitick (peut être vide pour supprimer)
    * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
    */
-  public void mettreAJourDigitickSlug(UUID salleId, String slug) {
-    String slugStrip = slug == null ? "" : slug.strip();
+  public void mettreAJourDigitickSlug(final UUID salleId, final String slug) {
+    final String slugStrip = slug == null ? "" : slug.strip();
     if (!slugStrip.isEmpty()) {
       verifierSlugDigitickLibre(salleId, slugStrip);
     }
@@ -169,16 +169,16 @@ public class SourcesService {
    * @param slug slug à vérifier
    * @throws ErreurMetier 409 si le slug est déjà utilisé par une autre salle
    */
-  private void verifierSlugDigitickLibre(UUID salleId, String slug) {
-    List<Map<String, Object>> conflits =
+  private void verifierSlugDigitickLibre(final UUID salleId, final String slug) {
+    final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
-            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
-            FROM salle_sources ss
-            JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
-              AND ss.salle_id != CAST(:uuid AS uuid)
-            """,
+                SELECT COALESCE(s.nom_affiche, s.nom) AS nom
+                FROM salle_sources ss
+                JOIN salles s ON s.id = ss.salle_id
+                WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
+                  AND ss.salle_id != CAST(:uuid AS uuid)
+                """,
             Map.of("slug", slug, "uuid", salleId.toString()));
     if (!conflits.isEmpty()) {
       throw new ErreurMetier(
@@ -198,11 +198,11 @@ public class SourcesService {
    * @param slug slug à tester
    * @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
    */
-  public int testerDigitickSlug(String slug) {
+  public int testerDigitickSlug(final String slug) {
     if (slug == null || slug.isBlank()) return -1;
     try {
-      byte[] octets = restClient.get().uri(URL_DIGITICK, slug).retrieve().body(byte[].class);
-      String html =
+      final byte[] octets = restClient.get().uri(URL_DIGITICK, slug).retrieve().body(byte[].class);
+      final String html =
           octets != null ? new String(octets, java.nio.charset.StandardCharsets.ISO_8859_1) : "";
       return (int) PATTERN_EVENEMENT.matcher(html).results().count();
     } catch (Exception e) {
@@ -214,11 +214,11 @@ public class SourcesService {
   private static final Pattern PATTERN_EVENEMENT = Pattern.compile("evenement\\d");
 
   private List<StatutSource> construireSources() {
-    Instant dernierFetch = lireDernierFetch();
-    QuotaTM quotaTM = lireQuotaTMDepuisBase();
-    String etatQuota = calculerEtatQuota(quotaTM);
+    final Instant dernierFetch = lireDernierFetch();
+    final QuotaTM quotaTM = lireQuotaTMDepuisBase();
+    final String etatQuota = calculerEtatQuota(quotaTM);
 
-    List<StatutSource> sources = new ArrayList<>();
+    final List<StatutSource> sources = new ArrayList<>();
     sources.add(
         new StatutSource(
             "ticketmaster",
@@ -266,7 +266,7 @@ public class SourcesService {
   }
 
   private QuotaTM lireQuotaTMDepuisBase() {
-    List<String> quotaJson =
+    final List<String> quotaJson =
         jdbc.queryForList(
             "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
             Map.of(),
@@ -280,15 +280,15 @@ public class SourcesService {
     }
   }
 
-  private String calculerEtatQuota(QuotaTM quota) {
+  private String calculerEtatQuota(final QuotaTM quota) {
     if (quota == null || quota.total() == 0) return "ok";
-    int pct = quota.dispo() * 100 / quota.total();
+    final int pct = quota.dispo() * 100 / quota.total();
     return pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
   }
 
   private Instant lireDernierFetch() {
     try {
-      java.sql.Timestamp ts =
+      final java.sql.Timestamp ts =
           jdbc.queryForObject(
               "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL OR erreur = ''",
               Map.of(),
@@ -306,7 +306,7 @@ public class SourcesService {
    * @param source identifiant de la source (ex. {@code "ticketmaster"}, {@code "digitick"})
    * @return nombre de salles avec un identifiant pour cette source, 0 en cas d'échec
    */
-  private Integer compterSallesParSource(String source) {
+  private Integer compterSallesParSource(final String source) {
     return compterAvecFallback(
         "SELECT COUNT(*) FROM salle_sources WHERE source = :source",
         Map.of("source", source),
@@ -319,7 +319,7 @@ public class SourcesService {
    * @param source identifiant de la source (ex. {@code "ticketmaster"})
    * @return nombre d'artistes avec un identifiant pour cette source, 0 en cas d'échec
    */
-  private Integer compterArtistesParSource(String source) {
+  private Integer compterArtistesParSource(final String source) {
     return compterAvecFallback(
         "SELECT COUNT(*) FROM artiste_sources WHERE source = :source",
         Map.of("source", source),
@@ -364,9 +364,9 @@ public class SourcesService {
    * @return le compte, ou 0 en cas d'échec
    */
   private Integer compterAvecFallback(
-      String sql, Map<String, Object> params, String descriptionEchec) {
+      final String sql, final Map<String, Object> params, final String descriptionEchec) {
     try {
-      Integer nb = jdbc.queryForObject(sql, params, Integer.class);
+      final Integer nb = jdbc.queryForObject(sql, params, Integer.class);
       return nb != null ? nb : 0;
     } catch (Exception e) {
       log.debug("Impossible de compter {} : {}", descriptionEchec, e.getMessage());
@@ -384,22 +384,22 @@ public class SourcesService {
    * @param nom filtre nom partiel (insensible à la casse), peut être null
    * @return page de résultats
    */
-  public ReponseSallesSources listerSalles(boolean digitick, int page, String nom) {
+  public ReponseSallesSources listerSalles(final boolean digitick, final int page, final String nom) {
     return digitick ? listerSallesAvecDigitick(page, nom) : listerSallesSansTmNiEventim(page, nom);
   }
 
-  private ReponseSallesSources listerSallesAvecDigitick(int page, String nom) {
-    int pageNum = Math.max(0, page);
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+  private ReponseSallesSources listerSallesAvecDigitick(final int page, final String nom) {
+    final int pageNum = Math.max(0, page);
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND s.nom ILIKE :nom ");
       params.put("nom", "%" + nom.strip() + "%");
     }
     params.put("taille", TAILLE_PAGE_SALLES);
     params.put("offset", pageNum * TAILLE_PAGE_SALLES);
-    long[] total = {0};
-    List<SalleSourceAdmin> salles =
+    final long[] total = {0};
+    final List<SalleSourceAdmin> salles =
         jdbc.query(
             "SELECT s.id, s.nom, s.ville, s.dept, ss.identifiant_externe AS digitick_slug,"
                 + " COUNT(*) OVER() AS total_filtre"
@@ -429,22 +429,22 @@ public class SourcesService {
               "salles avec Digitick");
     }
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
     return new ReponseSallesSources(salles, pageNum, totalPages, total[0]);
   }
 
-  private ReponseSallesSources listerSallesSansTmNiEventim(int page, String nom) {
-    int pageNum = Math.max(0, page);
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+  private ReponseSallesSources listerSallesSansTmNiEventim(final int page, final String nom) {
+    final int pageNum = Math.max(0, page);
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND s.nom ILIKE :nom ");
       params.put("nom", "%" + nom.strip() + "%");
     }
     params.put("taille", TAILLE_PAGE_SALLES);
     params.put("offset", pageNum * TAILLE_PAGE_SALLES);
-    long[] total = {0};
-    List<SalleSourceAdmin> salles =
+    final long[] total = {0};
+    final List<SalleSourceAdmin> salles =
         jdbc.query(
             "SELECT s.id, s.nom, s.ville, s.dept,"
                 + " MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS"
@@ -472,7 +472,7 @@ public class SourcesService {
     // COUNT(*) OVER() porte ici sur les lignes post-HAVING (fenêtre appliquée après le filtrage
     // par groupe), donc valide même avec ce HAVING — seul le repli page-vide doit le reproduire.
     if (salles.isEmpty() && pageNum > 0) {
-      Long totalVide =
+      final Long totalVide =
           jdbc.queryForObject(
               "SELECT COUNT(*) FROM (SELECT s.id"
                   + " FROM salles s"
@@ -488,7 +488,7 @@ public class SourcesService {
       total[0] = totalVide != null ? totalVide : 0;
     }
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
     return new ReponseSallesSources(salles, pageNum, totalPages, total[0]);
   }
 }

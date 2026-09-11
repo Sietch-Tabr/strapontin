@@ -44,7 +44,7 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceInvalide_leveErreurMetier() {
-    RequeteNotifications requete = new RequeteNotifications("invalide", true, false, false, false);
+    final RequeteNotifications requete = new RequeteNotifications("invalide", true, false, false, false);
 
     assertThatThrownBy(() -> service.majNotifications("user-1", requete))
         .isInstanceOf(ErreurMetier.class);
@@ -52,7 +52,7 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_aucunCanalActifEtFrequenceNonJamais_leveErreurMetier() {
-    RequeteNotifications requete =
+    final RequeteNotifications requete =
         new RequeteNotifications("quotidien", false, false, false, false);
 
     assertThatThrownBy(() -> service.majNotifications("user-1", requete))
@@ -61,7 +61,7 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceJamaisSansCanal_neLevePasErreur() {
-    RequeteNotifications requete = new RequeteNotifications("jamais", false, false, false, false);
+    final RequeteNotifications requete = new RequeteNotifications("jamais", false, false, false, false);
 
     service.majNotifications("user-1", requete);
 
@@ -70,7 +70,7 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceValideAvecCanal_metAJourLaConfig() {
-    RequeteNotifications requete =
+    final RequeteNotifications requete =
         new RequeteNotifications("temps_reel", true, false, false, false);
 
     service.majNotifications("user-1", requete);
@@ -95,7 +95,7 @@ class UserConfigServiceTest {
   void majDepartements_codesCorseA_normaliseVers20() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    UserConfigService.ResultatMajDepartements resultat =
+    final UserConfigService.ResultatMajDepartements resultat =
         service.majDepartements("user-1", List.of("2A"));
 
     assertThat(resultat.ignores()).isEmpty();
@@ -105,7 +105,7 @@ class UserConfigServiceTest {
   void majDepartements_codeDomTom3Chiffres_accepte() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    UserConfigService.ResultatMajDepartements resultat =
+    final UserConfigService.ResultatMajDepartements resultat =
         service.majDepartements("user-1", List.of("974"));
 
     assertThat(resultat.ignores()).isEmpty();
@@ -115,7 +115,7 @@ class UserConfigServiceTest {
   void majDepartements_codeFormatInvalide_estIgnore() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    UserConfigService.ResultatMajDepartements resultat =
+    final UserConfigService.ResultatMajDepartements resultat =
         service.majDepartements("user-1", List.of("abc"));
 
     assertThat(resultat.ignores()).containsExactly("abc");
@@ -127,7 +127,7 @@ class UserConfigServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
 
-    ConfigUtilisateur config = service.lireConfig("user-1");
+    final ConfigUtilisateur config = service.lireConfig("user-1");
 
     assertThat(config.departements()).isEmpty();
     assertThat(config.filtreDisponibles()).isTrue();

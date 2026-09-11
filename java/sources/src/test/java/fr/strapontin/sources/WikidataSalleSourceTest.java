@@ -23,7 +23,7 @@ import org.springframework.web.client.RestClient;
 class WikidataSalleSourceTest {
 
   private static WikidataSalleSource source(
-      RestClient restClient, Cache<String, EnrichissementSalle> cache) {
+      final RestClient restClient, final Cache<String, EnrichissementSalle> cache) {
     return new WikidataSalleSource(restClient, cache);
   }
 
@@ -37,12 +37,12 @@ class WikidataSalleSourceTest {
   // doit être tentée, pas une simple mise de côté silencieuse.
   @Test
   void enrichirLot_salleSansWikidataId_utiliseDecouverteMwapi() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -70,8 +70,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q2831576", resultat.get(id).wikidataId());
@@ -85,13 +85,13 @@ class WikidataSalleSourceTest {
   // tronqué au séparateur qui, lui, trouve un candidat.
   @Test
   void enrichirLot_rechercheCompleteEchoue_replieSurNomTronqueAuSeparateur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    String nomComplet = "Zenith Toulouse - Metropole";
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final String nomComplet = "Zenith Toulouse - Metropole";
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             nomComplet,
@@ -122,8 +122,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q3576489", resultat.get(id).wikidataId());
@@ -135,13 +135,13 @@ class WikidataSalleSourceTest {
   // recherche mwapi échoue sur le nom complet mais trouve l'entité sur "La Belle Electrique" seul.
   @Test
   void enrichirLot_rechercheCompleteEchoue_replieSansDernierMot() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    String nomComplet = "La Belle Electrique Grenoble";
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final String nomComplet = "La Belle Electrique Grenoble";
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             nomComplet,
@@ -172,8 +172,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q61854481", resultat.get(id).wikidataId());
@@ -186,13 +186,13 @@ class WikidataSalleSourceTest {
   // croisé indépendant.
   @Test
   void enrichirLot_pivotGeneriqueSansLocalisation_rejetteLeCandidat() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    String nomComplet = "La Nouvelle Vague";
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final String nomComplet = "La Nouvelle Vague";
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             nomComplet,
@@ -222,8 +222,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(0, resultat.size());
     serveur.verify();
@@ -234,12 +234,12 @@ class WikidataSalleSourceTest {
   // attendu ferait échouer le test).
   @Test
   void enrichirLot_nomDeuxMots_nePasTronquerAUnMotUnique() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -250,8 +250,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -261,13 +261,13 @@ class WikidataSalleSourceTest {
   // toutes échouer : aucun candidat, mais aucune exception, résultat vide.
   @Test
   void enrichirLot_rechercheCompleteEtTronqueeEchouent_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    String nomComplet = "Zenith Toulouse - Metropole";
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final String nomComplet = "Zenith Toulouse - Metropole";
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             nomComplet,
@@ -301,8 +301,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(0, resultat.size());
     serveur.verify();
@@ -318,12 +318,12 @@ class WikidataSalleSourceTest {
   // enrichirLot_salleSansWikidataId_utiliseDecouverteMwapi ci-dessus).
   @Test
   void construireRequeteDecouverte_contientLeFiltrePaysFrance() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Orléans Arena", "orleans arena", null, null, null);
 
     serveur
@@ -338,7 +338,7 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(List.of(salle));
 
     serveur.verify();
@@ -348,12 +348,12 @@ class WikidataSalleSourceTest {
   // commune) plutôt que le lieu physique recherché — la requête doit les exclure explicitement.
   @Test
   void construireRequeteDecouverte_excluLesEntitesAdministratives() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Summum", "summum", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Summum", "summum", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -373,7 +373,7 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(List.of(salle));
 
     serveur.verify();
@@ -385,12 +385,12 @@ class WikidataSalleSourceTest {
   // écart sans traitement spécifique de l'article.
   @Test
   void enrichirLot_decouverte_ignoreArticleDefiniFrancaisPourLaComparaison() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "L'Olympia", "l olympia", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "L'Olympia", "l olympia", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -406,8 +406,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q915451", resultat.get(id).wikidataId());
@@ -421,12 +421,12 @@ class WikidataSalleSourceTest {
   // alias, ces salles ne seraient jamais enrichies malgré une entrée Wikidata existante.
   @Test
   void enrichirLot_decouverte_matchSurAliasSiLibellePrincipalDifferent() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -442,11 +442,11 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
-    EnrichissementSalle enrichissement = resultat.get(id);
+    final EnrichissementSalle enrichissement = resultat.get(id);
     assertEquals("Q537720", enrichissement.wikidataId());
     assertEquals("Accor Arena", enrichissement.nomAffiche());
     serveur.verify();
@@ -458,12 +458,12 @@ class WikidataSalleSourceTest {
   // tokens de CorrespondanceSalle.estDoublonSalle absorbe ce cas (tokens communs "zenith"+"paris").
   @Test
   void enrichirLot_decouverte_absorbeSuffixeDescriptifAbsentDeWikidata() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id, "Zenith Paris - la Villette", "zenith paris la villette", null, null, null);
 
@@ -480,8 +480,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q247566", resultat.get(id).wikidataId());
@@ -496,12 +496,12 @@ class WikidataSalleSourceTest {
   // sur query.wikidata.org (Q2234305).
   @Test
   void enrichirLot_decouverte_absorbeAliasCombinantAncienEtNouveauNom() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Dôme de Paris", "dome de paris", null, null, null);
 
     serveur
@@ -519,8 +519,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q2234305", resultat.get(id).wikidataId());
@@ -534,13 +534,13 @@ class WikidataSalleSourceTest {
   // existe réellement et passe la correspondance de nom (tokens "collegiale"+"saint" communs).
   @Test
   void enrichirLot_decouverte_rejetteCandidatVilleIncompatible() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    String nomComplet = "Collegiale Saint-Mexme Chinon";
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final String nomComplet = "Collegiale Saint-Mexme Chinon";
+    final SalleAEnrichir salle =
         new SalleAEnrichir(
             id,
             nomComplet,
@@ -581,8 +581,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -594,12 +594,12 @@ class WikidataSalleSourceTest {
   // candidat sans rapport (ex. une gare/un arrêt de tram matché par erreur, ville non renseignée).
   @Test
   void enrichirLot_decouverte_rejetteCandidatDeptIncompatibleVilleInconnue() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Palais des Congres", "palais des congres", null, "04", null);
 
     serveur
@@ -626,8 +626,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -637,12 +637,12 @@ class WikidataSalleSourceTest {
   // l'acceptation d'un candidat par ailleurs valide.
   @Test
   void enrichirLot_decouverte_deptConnuEtCorrespondant_accepteCandidat() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -659,8 +659,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q537720", resultat.get(id).wikidataId());
@@ -671,12 +671,12 @@ class WikidataSalleSourceTest {
   // candidat — constaté en production (gare de Villepinte, arrêt de tram bordelais).
   @Test
   void construireRequeteDecouverte_excluLesInfrastructuresDeTransport() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -693,7 +693,7 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(List.of(salle));
 
     serveur.verify();
@@ -704,12 +704,12 @@ class WikidataSalleSourceTest {
   // Royale, distinct du monument éponyme accueillant les concerts).
   @Test
   void construireRequeteDecouverte_excluLesCommerces() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Saline Royale", "saline royale", null, null, null);
 
     serveur
@@ -727,7 +727,7 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(List.of(salle));
 
     serveur.verify();
@@ -739,12 +739,12 @@ class WikidataSalleSourceTest {
   // salle de concert » (Q1060829) sert d'alternative vérifiée aux coordonnées.
   @Test
   void construireRequeteDecouverte_accepteLeTypeBatimentSalleDeConcertSansCoordonnees() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Salle Paul Fort", "salle paul fort", null, null, null);
 
     serveur
@@ -763,8 +763,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q57315616", resultat.get(id).wikidataId());
@@ -773,12 +773,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_decouverte_villeConnueEtCorrespondante_accepteCandidat() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Accor Arena", "accor arena", "Paris", "75", null);
 
     serveur
@@ -795,8 +795,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Q537720", resultat.get(id).wikidataId());
@@ -805,12 +805,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_decouverteNomDifferent_ignoreCandidat() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Le Zenith", "le zenith", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Le Zenith", "le zenith", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -825,8 +825,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -834,12 +834,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_decouverteAucunCandidat_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle =
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Salle Inconnue", "salle inconnue", null, null, null);
 
     serveur
@@ -851,8 +851,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -860,12 +860,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_reponseValide_retourneEnrichissement() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -880,11 +880,11 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
-    EnrichissementSalle enrichissement = resultat.get(id);
+    final EnrichissementSalle enrichissement = resultat.get(id);
     assertNotNull(enrichissement);
     assertEquals("Q3550188", enrichissement.wikidataId());
     assertEquals("Zénith de Nantes Métropole", enrichissement.nomAffiche());
@@ -894,12 +894,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_reponseAvecCoordonnees_extraitLatitudeEtLongitude() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -915,10 +915,10 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
-    EnrichissementSalle enrichissement = resultat.get(id);
+    final EnrichissementSalle enrichissement = resultat.get(id);
     assertEquals(47.238, enrichissement.latitude());
     assertEquals(-1.573, enrichissement.longitude());
     serveur.verify();
@@ -926,12 +926,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_reponseSansCoordonnees_latitudeEtLongitudeNull() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -945,10 +945,10 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
-    EnrichissementSalle enrichissement = resultat.get(id);
+    final EnrichissementSalle enrichissement = resultat.get(id);
     assertNull(enrichissement.latitude());
     assertNull(enrichissement.longitude());
     serveur.verify();
@@ -958,12 +958,12 @@ class WikidataSalleSourceTest {
   // seulement le mode batch (Q-ID déjà connu) — deux requêtes SPARQL distinctes.
   @Test
   void enrichirLot_decouverteAvecCoordonnees_extraitLatitudeEtLongitude() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -980,10 +980,10 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
-    EnrichissementSalle enrichissement = resultat.get(id);
+    final EnrichissementSalle enrichissement = resultat.get(id);
     assertEquals(50.641, enrichissement.latitude());
     assertEquals(3.045, enrichissement.longitude());
     serveur.verify();
@@ -991,20 +991,20 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_resultatEnCache_retourneSansHttp() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    Cache<String, EnrichissementSalle> cache = Caffeine.newBuilder().build();
-    EnrichissementSalle attendu =
+    final Cache<String, EnrichissementSalle> cache = Caffeine.newBuilder().build();
+    final EnrichissementSalle attendu =
         new EnrichissementSalle("Q3550188", "Zénith", "Nantes", null, null);
     cache.put("Q3550188", attendu);
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
 
-    WikidataSalleSource src = source(restClient, cache);
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, cache);
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(attendu, resultat.get(id));
     serveur.verify();
@@ -1012,12 +1012,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_429AvecRetryAfter_reessaieEtReussit() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -1034,8 +1034,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals(1, resultat.size());
     assertEquals("Zénith", resultat.get(id).nomAffiche());
@@ -1044,12 +1044,12 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_503Persistant_abandonneApres3Tentatives() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
 
     for (int i = 0; i < 3; i++) {
       serveur
@@ -1057,8 +1057,8 @@ class WikidataSalleSourceTest {
           .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE).body(""));
     }
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
     serveur.verify();
@@ -1066,11 +1066,11 @@ class WikidataSalleSourceTest {
 
   @Test
   void enrichirLot_batchSuperieurA50_decoupeEnPlusieursRequetes() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    List<SalleAEnrichir> salles = new java.util.ArrayList<>();
+    final List<SalleAEnrichir> salles = new java.util.ArrayList<>();
     for (int i = 0; i < 60; i++) {
       salles.add(
           new SalleAEnrichir(UUID.randomUUID(), "Salle" + i, "salle" + i, null, null, "Q" + i));
@@ -1093,7 +1093,7 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
     src.enrichirLot(salles);
 
     serveur.verify();
@@ -1103,9 +1103,9 @@ class WikidataSalleSourceTest {
 
   @Test
   void typesInvalides_typeExclu_retourneLeQid() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -1118,8 +1118,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Set<String> resultat = src.typesInvalides(List.of("Q110597455"));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Set<String> resultat = src.typesInvalides(List.of("Q110597455"));
 
     assertEquals(Set.of("Q110597455"), resultat);
     serveur.verify();
@@ -1127,9 +1127,9 @@ class WikidataSalleSourceTest {
 
   @Test
   void typesInvalides_typeValide_retourneEnsembleVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -1140,8 +1140,8 @@ class WikidataSalleSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
-    Set<String> resultat = src.typesInvalides(List.of("Q537720"));
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Set<String> resultat = src.typesInvalides(List.of("Q537720"));
 
     assertEquals(Set.of(), resultat);
     serveur.verify();

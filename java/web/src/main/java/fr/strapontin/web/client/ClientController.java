@@ -36,7 +36,7 @@ public class ClientController {
 
   private final LogAdminService logAdminService;
 
-  public ClientController(LogAdminService logAdminService) {
+  public ClientController(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }
 
@@ -49,33 +49,33 @@ public class ClientController {
    */
   @PostMapping("/erreur")
   public ResponseEntity<Map<String, Object>> signalerErreur(
-      @RequestBody Map<String, Object> corps, HttpServletRequest request) {
-    String message =
+      @RequestBody final Map<String, Object> corps, final HttpServletRequest request) {
+    final String message =
         tronquer(String.valueOf(corps.getOrDefault("message", "")), LONGUEUR_MAX_MESSAGE);
     String type = String.valueOf(corps.getOrDefault("type", "js-error"));
     if (!TYPES_VALIDES.contains(type)) {
       type = "js-error";
     }
-    String url = tronquer(String.valueOf(corps.getOrDefault("url", "")), LONGUEUR_MAX_URL);
-    String userAgent = tronquer(request.getHeader("User-Agent"), LONGUEUR_MAX_URL);
+    final String url = tronquer(String.valueOf(corps.getOrDefault("url", "")), LONGUEUR_MAX_URL);
+    final String userAgent = tronquer(request.getHeader("User-Agent"), LONGUEUR_MAX_URL);
 
     if (message.isBlank()) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Message requis."));
     }
 
-    Map<String, Object> meta = new HashMap<>();
+    final Map<String, Object> meta = new HashMap<>();
     meta.put("url", url != null ? url : "");
     meta.put("userAgent", userAgent != null ? userAgent : "");
     for (var entree : corps.entrySet()) {
       if (meta.size() >= MAX_CLES_META) {
         break;
       }
-      String cle = entree.getKey();
+      final String cle = entree.getKey();
       if (!"message".equals(cle)
           && !"type".equals(cle)
           && !"url".equals(cle)
           && !"userAgent".equals(cle)) {
-        Object valeur = entree.getValue();
+        final Object valeur = entree.getValue();
         meta.put(cle, valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
       }
     }
@@ -85,7 +85,7 @@ public class ClientController {
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
-  private String tronquer(String valeur, int max) {
+  private String tronquer(final String valeur, final int max) {
     if (valeur == null) return null;
     return valeur.length() > max ? valeur.substring(0, max) : valeur;
   }

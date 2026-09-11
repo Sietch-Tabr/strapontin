@@ -69,10 +69,10 @@ public class AdminService {
    * @param verificationRepository accès aux tokens de vérification
    */
   public AdminService(
-      NamedParameterJdbcTemplate jdbc,
-      EmailService emailService,
-      LogAdminService logAdminService,
-      VerificationRepository verificationRepository) {
+      final NamedParameterJdbcTemplate jdbc,
+      final EmailService emailService,
+      final LogAdminService logAdminService,
+      final VerificationRepository verificationRepository) {
     this.jdbc = jdbc;
     this.emailService = emailService;
     this.logAdminService = logAdminService;
@@ -89,7 +89,7 @@ public class AdminService {
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
-  public void setSelf(@Lazy AdminService self) {
+  public void setSelf(@Lazy final AdminService self) {
     this.self = self;
   }
 
@@ -99,34 +99,34 @@ public class AdminService {
    * @param page numéro de page (0-indexé)
    * @return page d'utilisateurs triés par date de création
    */
-  public ReponseUtilisateursAdmin listerUtilisateurs(int page) {
-    int pageNum = Math.max(0, page);
-    Map<String, Object> paramsPage =
+  public ReponseUtilisateursAdmin listerUtilisateurs(final int page) {
+    final int pageNum = Math.max(0, page);
+    final Map<String, Object> paramsPage =
         Map.of("taille", TAILLE_PAGE_UTILISATEURS, "offset", pageNum * TAILLE_PAGE_UTILISATEURS);
-    List<Map<String, Object>> pageUsers =
+    final List<Map<String, Object>> pageUsers =
         jdbc.queryForList(
             """
-            SELECT u.id, u.email, u.role::text, u.username, u.display_username,
-                   u.must_change_credentials, u.created_at, u.revocation_admin_le,
-                   COUNT(DISTINCT us.salle_id) AS nb_salles,
-                   COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
-                   COUNT(*) OVER() AS total_filtre
-            FROM users u
-            LEFT JOIN user_salles us ON us.user_id = u.id
-            LEFT JOIN user_artistes ua ON ua.user_id = u.id
-            GROUP BY u.id, u.email, u.role, u.username, u.display_username,
-                     u.must_change_credentials, u.created_at, u.revocation_admin_le
-            ORDER BY u.created_at
-            LIMIT :taille OFFSET :offset
-            """,
+                SELECT u.id, u.email, u.role::text, u.username, u.display_username,
+                       u.must_change_credentials, u.created_at, u.revocation_admin_le,
+                       COUNT(DISTINCT us.salle_id) AS nb_salles,
+                       COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
+                       COUNT(*) OVER() AS total_filtre
+                FROM users u
+                LEFT JOIN user_salles us ON us.user_id = u.id
+                LEFT JOIN user_artistes ua ON ua.user_id = u.id
+                GROUP BY u.id, u.email, u.role, u.username, u.display_username,
+                         u.must_change_credentials, u.created_at, u.revocation_admin_le
+                ORDER BY u.created_at
+                LIMIT :taille OFFSET :offset
+                """,
             paramsPage);
 
-    long total =
+    final long total =
         pageUsers.isEmpty()
             ? compterUtilisateurs(pageNum)
             : ((Number) pageUsers.get(0).get("total_filtre")).longValue();
 
-    Map<String, Long> activiteParUsername = new HashMap<>();
+    final Map<String, Long> activiteParUsername = new HashMap<>();
     jdbc.query(
         """
         SELECT PRINCIPAL_NAME, MAX(LAST_ACCESS_TIME) as derniere
@@ -138,16 +138,16 @@ public class AdminService {
         (org.springframework.jdbc.core.RowCallbackHandler)
             rs -> activiteParUsername.put(rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
 
-    List<UtilisateurAdmin> utilisateurs =
+    final List<UtilisateurAdmin> utilisateurs =
         pageUsers.stream()
             .map(
                 u -> {
-                  String username = (String) u.get("username");
-                  Long derniereMs = activiteParUsername.get(username);
-                  java.sql.Timestamp revocationTs =
+                  final String username = (String) u.get("username");
+                  final Long derniereMs = activiteParUsername.get(username);
+                  final java.sql.Timestamp revocationTs =
                       (java.sql.Timestamp) u.get("revocation_admin_le");
-                  Number nbSallesNum = (Number) u.get("nb_salles");
-                  Number nbArtistesNum = (Number) u.get("nb_artistes");
+                  final Number nbSallesNum = (Number) u.get("nb_salles");
+                  final Number nbArtistesNum = (Number) u.get("nb_artistes");
                   return new UtilisateurAdmin(
                       (String) u.get("id"),
                       (String) u.get("email"),
@@ -163,15 +163,15 @@ public class AdminService {
                 })
             .toList();
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_UTILISATEURS));
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_UTILISATEURS));
     return new ReponseUtilisateursAdmin(utilisateurs, pageNum, totalPages, total);
   }
 
   // page vide (offset au-delà du total, ex. dernier utilisateur supprimé depuis) : total_filtre
   // n'est renvoyé par aucune ligne, un second aller-retour reste alors nécessaire.
-  private long compterUtilisateurs(int pageNum) {
+  private long compterUtilisateurs(final int pageNum) {
     if (pageNum == 0) return 0;
-    Long total = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Long.class);
+    final Long total = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Long.class);
     return total != null ? total : 0;
   }
 
@@ -184,21 +184,21 @@ public class AdminService {
    * @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
    */
   @Transactional
-  public Optional<ResultatCreation> creerUtilisateur(String email, String adminId, String baseUrl) {
-    boolean emailExistant =
+  public Optional<ResultatCreation> creerUtilisateur(final String email, final String adminId, final String baseUrl) {
+    final boolean emailExistant =
         !jdbc.queryForList(
-                "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
+            "SELECT 1 FROM users WHERE email = :email", Map.of("email", email), Integer.class)
             .isEmpty();
     if (emailExistant) {
       return Optional.empty();
     }
 
-    String userId = UUID.randomUUID().toString();
-    String usernameTemp = "u_" + GenerateurSecrets.genererHex(4);
-    String motDePasseTemp = GenerateurSecrets.genererToken(12);
-    String hashMdp = bcrypt.encode(motDePasseTemp);
+    final String userId = UUID.randomUUID().toString();
+    final String usernameTemp = "u_" + GenerateurSecrets.genererHex(4);
+    final String motDePasseTemp = GenerateurSecrets.genererToken(12);
+    final String hashMdp = bcrypt.encode(motDePasseTemp);
 
-    Map<String, Object> paramsUser = new HashMap<>();
+    final Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
     paramsUser.put("email", email);
     paramsUser.put("username", usernameTemp);
@@ -212,7 +212,7 @@ public class AdminService {
         """,
         paramsUser);
 
-    String accountId = UUID.randomUUID().toString();
+    final String accountId = UUID.randomUUID().toString();
     jdbc.update(
         """
         INSERT INTO accounts (id, account_id, provider_id, user_id, password, created_at, updated_at)
@@ -220,15 +220,15 @@ public class AdminService {
         """,
         Map.of("id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
 
-    String token = GenerateurSecrets.genererToken(32);
-    Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
+    final String token = GenerateurSecrets.genererToken(32);
+    final Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
     verificationRepository.inserer(
         UUID.randomUUID().toString(),
         "invite:" + email,
         GenerateurSecrets.sha256Hex(token),
         expiresAt);
 
-    String lienReset = baseUrl + "/reset-password?token=" + token;
+    final String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerInvitation(email, lienReset);
     logAdminService.logAdmin(
         "info", "admin", "compte créé", Map.of("email", email, "parAdmin", adminId));
@@ -255,9 +255,9 @@ public class AdminService {
    */
   @Transactional
   public void modifierUtilisateur(
-      String userId, RequeteModifierUtilisateur requete, String adminId) {
-    ChampsModification champs = validerEtNormaliser(requete, userId);
-    boolean retrogradationAdmin = detecterRetrogradationAdmin(userId, champs.role());
+      final String userId, final RequeteModifierUtilisateur requete, final String adminId) {
+    final ChampsModification champs = validerEtNormaliser(requete, userId);
+    final boolean retrogradationAdmin = detecterRetrogradationAdmin(userId, champs.role());
     // initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
     // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà @Transactional, elle
     // consommerait une seconde connexion HikariCP suspendue. Rejeter la combinaison en un seul
@@ -278,10 +278,10 @@ public class AdminService {
   private record ChampsModification(String nom, String email, String role) {}
 
   private ChampsModification validerEtNormaliser(
-      RequeteModifierUtilisateur requete, String userId) {
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
-    String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
-    String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
+      final RequeteModifierUtilisateur requete, final String userId) {
+    final String nom = requete.nom() == null ? "" : requete.nom().strip();
+    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
+    final String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
     if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
       throw new ErreurMetier("Au moins un champ à modifier est requis.");
@@ -298,7 +298,7 @@ public class AdminService {
     return new ChampsModification(nom, email, role);
   }
 
-  private boolean emailDejaPris(String email, String userId) {
+  private boolean emailDejaPris(final String email, final String userId) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE email = :email AND id != :id",
             Map.of("email", email, "id", userId),
@@ -306,26 +306,26 @@ public class AdminService {
         .isEmpty();
   }
 
-  private boolean detecterRetrogradationAdmin(String userId, String role) {
+  private boolean detecterRetrogradationAdmin(final String userId, final String role) {
     if (role.isEmpty()) return false;
-    List<Map<String, Object>> roleActuelRows =
+    final List<Map<String, Object>> roleActuelRows =
         jdbc.queryForList(
             "SELECT role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
-    String roleActuel =
+    final String roleActuel =
         roleActuelRows.isEmpty() ? null : (String) roleActuelRows.get(0).get("role");
     return "user".equals(role) && "admin".equals(roleActuel);
   }
 
   private void appliquerModification(
-      String userId, ChampsModification champs, boolean retrogradationAdmin) {
-    Map<String, Object> miseAJour = new HashMap<>();
+      final String userId, final ChampsModification champs, final boolean retrogradationAdmin) {
+    final Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put("userId", userId);
     if (!champs.nom().isEmpty()) miseAJour.put("nom", champs.nom());
     if (!champs.email().isEmpty()) miseAJour.put("email", champs.email());
     if (!champs.role().isEmpty() && !retrogradationAdmin) miseAJour.put("role", champs.role());
 
-    StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
+    final StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
     if (!champs.nom().isEmpty()) setClauses.append(", display_username = :nom");
     if (!champs.email().isEmpty()) setClauses.append(", email = :email");
     if (!champs.role().isEmpty() && !retrogradationAdmin) {
@@ -335,7 +335,7 @@ public class AdminService {
   }
 
   private void notifierModification(
-      String userId, String adminId, ChampsModification champs, boolean retrogradationAdmin) {
+      final String userId, final String adminId, final ChampsModification champs, final boolean retrogradationAdmin) {
     if (!champs.nom().isEmpty()) {
       logAdminService.logAdmin(
           "info", "admin", "nom modifié", Map.of("userId", userId, "parAdmin", adminId));
@@ -358,7 +358,7 @@ public class AdminService {
         "rôle modifié",
         Map.of("userId", userId, "nouveauRole", champs.role(), "parAdmin", adminId));
     if ("admin".equals(champs.role())) {
-      List<Map<String, Object>> cible =
+      final List<Map<String, Object>> cible =
           jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
       if (!cible.isEmpty()) {
         emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
@@ -379,7 +379,7 @@ public class AdminService {
    * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
    *   n'est pas admin (400)
    */
-  public void initierRevocationAdmin(String userId, String adminId) {
+  public void initierRevocationAdmin(final String userId, final String adminId) {
     RetrySerialisable.executer(
         MAX_TENTATIVES_REVOCATION,
         log,
@@ -401,8 +401,8 @@ public class AdminService {
    *   n'est pas admin (400)
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  void initierRevocationAdminTransactionnel(String userId, String adminId) {
-    List<Map<String, Object>> cible =
+  void initierRevocationAdminTransactionnel(final String userId, final String adminId) {
+    final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT email, role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
     if (cible.isEmpty()) throw new ErreurMetier("Utilisateur introuvable.", 404);
@@ -410,7 +410,7 @@ public class AdminService {
       throw new ErreurMetier("Cet utilisateur n'est pas administrateur.");
     }
 
-    int nbAdmins =
+    final int nbAdmins =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM users WHERE role = 'admin' AND revocation_admin_le IS NULL",
             Map.of(),
@@ -419,12 +419,12 @@ public class AdminService {
       throw new ErreurMetier("Impossible de révoquer le seul administrateur restant.", 409);
     }
 
-    Instant dateEffective = Instant.now().plus(7, ChronoUnit.DAYS);
+    final Instant dateEffective = Instant.now().plus(7, ChronoUnit.DAYS);
     jdbc.update(
         "UPDATE users SET revocation_admin_le = :date WHERE id = :id",
         Map.of("date", Timestamp.from(dateEffective), "id", userId));
 
-    String dateFormatee =
+    final String dateFormatee =
         DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
             .withLocale(Locale.FRANCE)
             .format(LocalDate.ofInstant(dateEffective, ZoneId.of("Europe/Paris")));
@@ -444,8 +444,8 @@ public class AdminService {
    * @param adminId identifiant de l'admin demandeur
    * @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
    */
-  public void annulerRevocationAdmin(String userId, String adminId) {
-    int miseAJour =
+  public void annulerRevocationAdmin(final String userId, final String adminId) {
+    final int miseAJour =
         jdbc.update(
             "UPDATE users SET revocation_admin_le = NULL WHERE id = :id"
                 + " AND revocation_admin_le IS NOT NULL",
@@ -464,8 +464,8 @@ public class AdminService {
    * @param adminId identifiant de l'admin demandeur
    */
   @Transactional
-  public void supprimerUtilisateur(String userId, String adminId) {
-    List<Map<String, Object>> cible =
+  public void supprimerUtilisateur(final String userId, final String adminId) {
+    final List<Map<String, Object>> cible =
         jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of("userId", userId));
     logAdminService.logAdmin(
@@ -489,22 +489,22 @@ public class AdminService {
    * @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
    */
   @Transactional
-  public Optional<ResultatReset> reinitialiserMdp(String userId, String adminId, String baseUrl) {
-    List<Map<String, Object>> cible =
+  public Optional<ResultatReset> reinitialiserMdp(final String userId, final String adminId, final String baseUrl) {
+    final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT id, email FROM users WHERE id = :userId", Map.of("userId", userId));
     if (cible.isEmpty()) return Optional.empty();
 
-    String email = (String) cible.get(0).get("email");
-    String prefixeReset = "reset:" + email;
+    final String email = (String) cible.get(0).get("email");
+    final String prefixeReset = "reset:" + email;
     verificationRepository.supprimerParIdentifiant(prefixeReset);
 
-    String token = GenerateurSecrets.genererToken(32);
-    Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
+    final String token = GenerateurSecrets.genererToken(32);
+    final Instant expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
     verificationRepository.inserer(
         UUID.randomUUID().toString(), prefixeReset, GenerateurSecrets.sha256Hex(token), expiresAt);
 
-    String lienReset = baseUrl + "/reset-password?token=" + token;
+    final String lienReset = baseUrl + "/reset-password?token=" + token;
     emailService.envoyerResetMotDePasse(email, lienReset);
     logAdminService.logAdmin(
         "warn",
@@ -525,8 +525,8 @@ public class AdminService {
    * @param adminId identifiant de l'admin à l'origine de l'action
    * @return {@code true} si l'utilisateur existait, {@code false} sinon
    */
-  public boolean reinitialiserTotp(String userId, String adminId) {
-    List<Map<String, Object>> cible =
+  public boolean reinitialiserTotp(final String userId, final String adminId) {
+    final List<Map<String, Object>> cible =
         jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
     if (cible.isEmpty()) return false;
 
@@ -549,13 +549,13 @@ public class AdminService {
    * @param adminId identifiant de l'admin à l'origine de l'action
    * @return {@code true} si l'utilisateur existait, {@code false} sinon
    */
-  public boolean revoquerToutesSessions(String userId, String adminId) {
-    List<Map<String, Object>> cible =
+  public boolean revoquerToutesSessions(final String userId, final String adminId) {
+    final List<Map<String, Object>> cible =
         jdbc.queryForList(
             "SELECT username FROM users WHERE id = :userId", Map.of("userId", userId));
     if (cible.isEmpty()) return false;
 
-    int supprimees =
+    final int supprimees =
         jdbc.update(
             "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME = :username",
             Map.of("username", cible.get(0).get("username")));

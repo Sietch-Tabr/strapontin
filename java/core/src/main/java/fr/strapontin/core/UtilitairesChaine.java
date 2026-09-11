@@ -26,7 +26,7 @@ public final class UtilitairesChaine {
    * @return la chaîne échappée
    * @since 2.2.3
    */
-  public static String echapperJson(String s) {
+  public static String echapperJson(final String s) {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 
@@ -40,7 +40,7 @@ public final class UtilitairesChaine {
    * @return la chaîne échappée
    * @since 2.8.7
    */
-  public static String echapperHtml(Object valeur) {
+  public static String echapperHtml(final Object valeur) {
     if (valeur == null) return "";
     return String.valueOf(valeur)
         .replace("&", "&amp;")
@@ -66,10 +66,10 @@ public final class UtilitairesChaine {
    * @since 2.7.11
    */
   public static boolean estContainmentRatio(
-      String a, String b, int longueurMinContainment, double ratioMinContainment) {
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
-    double ratio = (double) court.length() / plusLong.length();
+      final String a, final String b, final int longueurMinContainment, final double ratioMinContainment) {
+    final String court = a.length() <= b.length() ? a : b;
+    final String plusLong = a.length() <= b.length() ? b : a;
+    final double ratio = (double) court.length() / plusLong.length();
     return court.length() >= longueurMinContainment
         && ratio >= ratioMinContainment
         && plusLong.contains(court);
@@ -87,7 +87,7 @@ public final class UtilitairesChaine {
    * @return {@code true} si les deux chaînes sont identiques une fois les espaces retirés
    * @since 2.9.1
    */
-  public static boolean estEgaliteSansEspaces(String a, String b) {
+  public static boolean estEgaliteSansEspaces(final String a, final String b) {
     return a.replace(" ", "").equals(b.replace(" ", ""));
   }
 }

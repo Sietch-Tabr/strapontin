@@ -41,7 +41,7 @@ public class EmailAlerteService {
   private final ConfigService configService;
   private final EmailSender emailSender;
 
-  EmailAlerteService(ConfigService configService, EmailSender emailSender) {
+  EmailAlerteService(final ConfigService configService, final EmailSender emailSender) {
     this.configService = configService;
     this.emailSender = emailSender;
   }
@@ -61,7 +61,7 @@ public class EmailAlerteService {
    * Indique si une alerte du type donné a déjà été envoyée il y a moins de
    * {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle.
    */
-  private boolean alerteRecente(String cleConfig) {
+  private boolean alerteRecente(final String cleConfig) {
     return configService
         .lireConfig(cleConfig)
         .map(Instant::parse)
@@ -80,8 +80,8 @@ public class EmailAlerteService {
    *
    * @param emailBouncee l'adresse email qui a produit le bounce
    */
-  public void envoyerNotificationBounce(String emailBouncee) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerNotificationBounce(final String emailBouncee) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — notification bounce non envoyée");
       return;
@@ -90,13 +90,13 @@ public class EmailAlerteService {
       log.debug("Notification bounce déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
       return;
     }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
+    final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
       log.warn("Aucun destinataire d'alerte disponible — notification bounce non envoyée");
       return;
     }
 
-    String corps = EmailTemplates.alerteBounce(emailBouncee, ctx.get().baseUrl());
+    final String corps = EmailTemplates.alerteBounce(emailBouncee, ctx.get().baseUrl());
 
     try {
       emailSender.envoyer(
@@ -127,8 +127,8 @@ public class EmailAlerteService {
    *
    * @param emailPlaignant l'adresse email à l'origine de la plainte
    */
-  public void envoyerNotificationPlainteSpam(String emailPlaignant) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerNotificationPlainteSpam(final String emailPlaignant) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — notification plainte spam non envoyée");
       return;
@@ -138,13 +138,13 @@ public class EmailAlerteService {
           "Notification plainte spam déjà envoyée récemment — ignorée (garde-fou anti-boucle)");
       return;
     }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
+    final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
       log.warn("Aucun destinataire d'alerte disponible — notification plainte spam non envoyée");
       return;
     }
 
-    String corps = EmailTemplates.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
+    final String corps = EmailTemplates.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
 
     try {
       emailSender.envoyer(
@@ -173,22 +173,22 @@ public class EmailAlerteService {
    * @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
    * @param raison     la commande bash ayant déclenché l'échec, ou chaîne vide
    */
-  public void envoyerAlerteBackup(String horodatage, String raison) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerAlerteBackup(final String horodatage, final String raison) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte backup non envoyée");
       return;
     }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
+    final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
       log.warn("Aucun destinataire d'alerte disponible — alerte backup non envoyée");
       return;
     }
 
-    String corps = EmailTemplates.alerteBackup(horodatage, raison, ctx.get().baseUrl());
+    final String corps = EmailTemplates.alerteBackup(horodatage, raison, ctx.get().baseUrl());
 
-    String sujet = "Strapontin — échec backup nocturne";
-    String texte =
+    final String sujet = "Strapontin — échec backup nocturne";
+    final String texte =
         "Échec du backup nocturne. Horodatage : %s.%s Consultez l'administration : %s/admin"
             .formatted(
                 horodatage.isBlank() ? "inconnu" : horodatage,
@@ -211,20 +211,20 @@ public class EmailAlerteService {
    *
    * @param detail sortie résumée d'{@code aide --check}
    */
-  public void envoyerAlerteIntegrite(String detail) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerAlerteIntegrite(final String detail) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte intégrité non envoyée");
       return;
     }
-    Optional<String> destinataire = obtenirDestinataireAlerte();
+    final Optional<String> destinataire = obtenirDestinataireAlerte();
     if (destinataire.isEmpty()) {
       log.warn("Aucun destinataire d'alerte disponible — alerte intégrité non envoyée");
       return;
     }
 
-    String corps = EmailTemplates.alerteIntegrite(detail, ctx.get().baseUrl());
-    String sujet = "Strapontin — alerte contrôle d'intégrité";
+    final String corps = EmailTemplates.alerteIntegrite(detail, ctx.get().baseUrl());
+    final String sujet = "Strapontin — alerte contrôle d'intégrité";
     try {
       emailSender.envoyer(
           ctx.get(),
@@ -249,21 +249,21 @@ public class EmailAlerteService {
    * @param email               l'adresse email de l'administrateur
    * @param derniereActiviteIso la date ISO du dernier job complété, ou null
    */
-  public void envoyerAlerteWorkerInactif(String email, String derniereActiviteIso) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public void envoyerAlerteWorkerInactif(final String email, final String derniereActiviteIso) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte worker non envoyée");
       return;
     }
 
-    String detail =
+    final String detail =
         derniereActiviteIso != null
             ? "Dernier job complété : %s.".formatted(derniereActiviteIso)
             : "Aucun job complété enregistré.";
 
-    String corps = EmailTemplates.alerteWorker(detail, ctx.get().baseUrl());
+    final String corps = EmailTemplates.alerteWorker(detail, ctx.get().baseUrl());
 
-    String sujet = "Strapontin — worker inactif";
+    final String sujet = "Strapontin — worker inactif";
     try {
       emailSender.envoyer(
           ctx.get(),
@@ -293,21 +293,21 @@ public class EmailAlerteService {
    *     (RESEND_API_KEY absent ou échec d'envoi) — dans ce cas l'appelant ne doit pas marquer
    *     l'alerte comme signalée, pour ne pas la perdre en cas de panne temporaire de Resend
    */
-  public boolean envoyerAlerteQuotaResend(String email, CompteurEnvoisResend compteur) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+  public boolean envoyerAlerteQuotaResend(final String email, final CompteurEnvoisResend compteur) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte quota Resend non envoyée");
       return false;
     }
 
-    String corps =
+    final String corps =
         EmailTemplates.alerteQuotaResend(
             compteur.envoyesJour(),
             GestionQuotaResend.LIMITE_JOUR,
             compteur.envoyesMois(),
             GestionQuotaResend.LIMITE_MOIS,
             ctx.get().baseUrl());
-    String sujet = "Strapontin — quota Resend proche de la limite";
+    final String sujet = "Strapontin — quota Resend proche de la limite";
     try {
       emailSender.envoyer(
           ctx.get(),
@@ -340,15 +340,15 @@ public class EmailAlerteService {
    *     côté appelant, pour ne perdre aucune erreur en cas de panne temporaire de Resend
    */
   public boolean envoyerAlerteLogsAdmin(
-      String email, List<LogAdminService.EntreeLogAdmin> erreurs) {
-    Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+      final String email, final List<LogAdminService.EntreeLogAdmin> erreurs) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       log.warn("RESEND_API_KEY absent — alerte logs admin non envoyée");
       return false;
     }
 
-    String corps = EmailTemplates.alerteLogsAdmin(erreurs, ctx.get().baseUrl());
-    String sujet = "Strapontin — " + erreurs.size() + " nouvelle(s) erreur(s) admin";
+    final String corps = EmailTemplates.alerteLogsAdmin(erreurs, ctx.get().baseUrl());
+    final String sujet = "Strapontin — " + erreurs.size() + " nouvelle(s) erreur(s) admin";
     try {
       emailSender.envoyer(
           ctx.get(),

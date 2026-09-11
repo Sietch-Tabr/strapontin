@@ -60,9 +60,9 @@ class ClientSparqlWikidataTest {
   // production — un simple retry le résout la plupart du temps.
   @Test
   void executer_502BadGateway_retentePuisReussit() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(ClientSparqlWikidata.BASE_URL))
@@ -74,8 +74,8 @@ class ClientSparqlWikidataTest {
                 "{\"head\":{\"vars\":[]},\"results\":{\"bindings\":[]}}",
                 MediaType.parseMediaType("application/sparql-results+json")));
 
-    ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
-    var resultat = client.executer("SELECT * WHERE {}");
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
+    final var resultat = client.executer("SELECT * WHERE {}");
 
     assertNotNull(resultat);
     serveur.verify();
@@ -86,9 +86,9 @@ class ClientSparqlWikidataTest {
   // Jackson sans que la requête SPARQL elle-même soit en cause — un retry la résout.
   @Test
   void executer_contentTypeInattendu_retentePuisReussit() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(ClientSparqlWikidata.BASE_URL))
@@ -103,8 +103,8 @@ class ClientSparqlWikidataTest {
                 "{\"head\":{\"vars\":[]},\"results\":{\"bindings\":[]}}",
                 MediaType.parseMediaType("application/sparql-results+json")));
 
-    ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
-    var resultat = client.executer("SELECT * WHERE {}");
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
+    final var resultat = client.executer("SELECT * WHERE {}");
 
     assertNotNull(resultat);
     serveur.verify();
@@ -112,9 +112,9 @@ class ClientSparqlWikidataTest {
 
   @Test
   void executer_502Persistant_abandonneApresRetriesEtRetourneNull() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     for (int i = 0; i < 3; i++) {
       serveur
@@ -122,8 +122,8 @@ class ClientSparqlWikidataTest {
           .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
     }
 
-    ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
-    var resultat = client.executer("SELECT * WHERE {}");
+    final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
+    final var resultat = client.executer("SELECT * WHERE {}");
 
     assertNull(resultat);
     serveur.verify();

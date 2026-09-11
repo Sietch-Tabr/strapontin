@@ -85,9 +85,9 @@ class AppareilEnregistrementInterceptorTest {
     when(session.getId()).thenReturn("sess-1");
     when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
 
-    UtilisateurDetails details =
+    final UtilisateurDetails details =
         new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false);
-    Authentication auth = UsernamePasswordAuthenticationToken.authenticated(details, null, null);
+    final Authentication auth = UsernamePasswordAuthenticationToken.authenticated(details, null, null);
     SecurityContextHolder.getContext().setAuthentication(auth);
 
     assertTrue(interceptor.preHandle(request, response, new Object()));

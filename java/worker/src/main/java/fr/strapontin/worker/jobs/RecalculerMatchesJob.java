@@ -22,12 +22,12 @@ public class RecalculerMatchesJob extends QuartzJobBean {
   private WorkerService workerService;
 
   @Autowired
-  public void setWorkerService(WorkerService workerService) {
+  public void setWorkerService(final WorkerService workerService) {
     this.workerService = workerService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
+  protected void executeInternal(final JobExecutionContext context) {
     workerService.executerRecalculerMatches(null);
   }
 }

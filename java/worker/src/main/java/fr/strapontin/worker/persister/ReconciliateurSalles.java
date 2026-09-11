@@ -39,9 +39,9 @@ public class ReconciliateurSalles {
    * @param reconciliateurOrphelines retentative nocturne des concerts sans salle
    */
   public ReconciliateurSalles(
-      ReconciliationNomsSalles reconciliationNoms,
-      ResolveurSalleParConcert resolveurSalle,
-      ReconciliateurSallesOrphelines reconciliateurOrphelines) {
+      final ReconciliationNomsSalles reconciliationNoms,
+      final ResolveurSalleParConcert resolveurSalle,
+      final ReconciliateurSallesOrphelines reconciliateurOrphelines) {
     this.reconciliationNoms = reconciliationNoms;
     this.resolveurSalle = resolveurSalle;
     this.reconciliateurOrphelines = reconciliateurOrphelines;
@@ -55,7 +55,7 @@ public class ReconciliateurSalles {
    * @return coefficient de Jaccard entre 0.0 et 1.0
    * @see CorrespondanceSalle#jaccardTokens
    */
-  public static double jaccardTokens(String a, String b) {
+  public static double jaccardTokens(final String a, final String b) {
     return CorrespondanceSalle.jaccardTokens(a, b);
   }
 
@@ -67,56 +67,56 @@ public class ReconciliateurSalles {
    * @return {@code true} si les salles sont considérées identiques
    * @see CorrespondanceSalle#estDoublonSalle
    */
-  public static boolean estDoublonSalle(String a, String b) {
+  public static boolean estDoublonSalle(final String a, final String b) {
     return CorrespondanceSalle.estDoublonSalle(a, b);
   }
 
   /**
    * @see ReconciliationNomsSalles#reconcilierSalles
    */
-  List<ValeurConcert> reconcilierSalles(List<ValeurConcert> lot) {
+  List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
     return reconciliationNoms.reconcilierSalles(lot);
   }
 
   /**
    * @see ReconciliationNomsSalles#absorberRenommagesSalles
    */
-  void absorberRenommagesSalles(List<ValeurConcert> concerts, Map<String, UUID> cachesSalles) {
+  void absorberRenommagesSalles(final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     reconciliationNoms.absorberRenommagesSalles(concerts, cachesSalles);
   }
 
   /**
    * @see ResolveurSalleParConcert#upsertSalleSource
    */
-  UUID upsertSalleSource(ValeurConcert c) {
+  UUID upsertSalleSource(final ValeurConcert c) {
     return resolveurSalle.upsertSalleSource(c);
   }
 
   /**
    * @see ResolveurSalleParConcert#chercherSalleParTokens
    */
-  UUID chercherSalleParTokens(String nom, String dept) {
+  UUID chercherSalleParTokens(final String nom, final String dept) {
     return resolveurSalle.chercherSalleParTokens(nom, dept);
   }
 
   /**
    * @see ResolveurSalleParConcert#chercherSalleParCleForte
    */
-  UUID chercherSalleParCleForte(ValeurConcert c) {
+  UUID chercherSalleParCleForte(final ValeurConcert c) {
     return resolveurSalle.chercherSalleParCleForte(c);
   }
 
   /**
    * @see ResolveurSalleParConcert#raccrocherSallesParNomNorm
    */
-  List<ValeurConcert> raccrocherSallesParNomNorm(List<ValeurConcert> concerts) {
+  List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {
     return resolveurSalle.raccrocherSallesParNomNorm(concerts);
   }
 
   /**
    * @see ResolveurSalleParConcert#deptsConnus
    */
-  Map<UUID, String> deptsConnus(Set<UUID> salleIds) {
+  Map<UUID, String> deptsConnus(final Set<UUID> salleIds) {
     return resolveurSalle.deptsConnus(salleIds);
   }
 

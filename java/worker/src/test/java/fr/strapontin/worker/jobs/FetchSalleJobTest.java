@@ -18,13 +18,13 @@ class FetchSalleJobTest {
 
   @Test
   void executeInternal_identifiantsPresents_delegueAWorkerFetchService() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchSalleJob job = new FetchSalleJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchSalleJob job = new FetchSalleJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobDataMap donnees = new JobDataMap();
+    final JobDataMap donnees = new JobDataMap();
     donnees.put(FetchSalleJob.CLE_IDENTIFIANTS, "tm:rZFSnyZdFvA");
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(donnees);
 
     job.executeInternal(context);
@@ -34,11 +34,11 @@ class FetchSalleJobTest {
 
   @Test
   void executeInternal_identifiantsAbsents_neDelegueRien() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchSalleJob job = new FetchSalleJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchSalleJob job = new FetchSalleJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(new JobDataMap());
 
     job.executeInternal(context);
@@ -48,13 +48,13 @@ class FetchSalleJobTest {
 
   @Test
   void executeInternal_identifiantsVides_neDelegueRien() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchSalleJob job = new FetchSalleJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchSalleJob job = new FetchSalleJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobDataMap donnees = new JobDataMap();
+    final JobDataMap donnees = new JobDataMap();
     donnees.put(FetchSalleJob.CLE_IDENTIFIANTS, "   ");
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(donnees);
 
     job.executeInternal(context);

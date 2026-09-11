@@ -56,7 +56,7 @@ public class SalleController {
    * @param salleService service de gestion des salles
    * @param emailService service d'envoi d'emails
    */
-  public SalleController(SalleService salleService, EmailService emailService) {
+  public SalleController(final SalleService salleService, final EmailService emailService) {
     this.salleService = salleService;
     this.emailService = emailService;
   }
@@ -70,8 +70,8 @@ public class SalleController {
    */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(
-      @RequestParam(required = false, defaultValue = "") String q, Authentication auth) {
-    String userId = utilisateur(auth).id();
+      @RequestParam(required = false, defaultValue = "") final String q, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(salleService.lister(userId, q));
   }
 
@@ -85,19 +85,19 @@ public class SalleController {
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
-      @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
+      @Valid @RequestBody final RequeteAjouter requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
+    final String nom = requete.nom() == null ? "" : requete.nom().strip();
     if (nom.isEmpty() || nom.length() > 200) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Identifiant de salle invalide."));
     }
-    String tmVenueId =
+    final String tmVenueId =
         requete.tmVenueId() == null || requete.tmVenueId().isBlank()
             ? null
             : requete.tmVenueId().strip();
-    String osmId =
+    final String osmId =
         requete.osmId() == null || requete.osmId().isBlank() ? null : requete.osmId().strip();
-    String wikidataId =
+    final String wikidataId =
         requete.wikidataId() == null || requete.wikidataId().isBlank()
             ? null
             : requete.wikidataId().strip();
@@ -114,8 +114,8 @@ public class SalleController {
    * @return 204 si supprimée
    */
   @DeleteMapping("/{salleId}")
-  public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleId, Authentication auth) {
-    String userId = utilisateur(auth).id();
+  public ResponseEntity<Void> supprimerSalle(@PathVariable final UUID salleId, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     salleService.supprimer(userId, salleId);
     return ResponseEntity.noContent().build();
   }
@@ -133,20 +133,20 @@ public class SalleController {
    */
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
-      @Valid @RequestBody RequeteSignalementSalle requete,
-      Authentication auth,
-      HttpServletRequest request) {
-    UtilisateurDetails utilisateur = utilisateur(auth);
+      @Valid @RequestBody final RequeteSignalementSalle requete,
+      final Authentication auth,
+      final HttpServletRequest request) {
+    final UtilisateurDetails utilisateur = utilisateur(auth);
 
     // @Valid rejette une requête invalide avant l'exécution de cette méthode — le rate-limiting
     // ci-dessous n'est donc jamais consommé par une requête invalide.
-    String nom = requete.nom().strip();
-    String ville = requete.ville() == null ? "" : requete.ville().strip();
-    String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
-    String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
+    final String nom = requete.nom().strip();
+    final String ville = requete.ville() == null ? "" : requete.ville().strip();
+    final String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
+    final String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
 
-    String ip = request.getRemoteAddr();
-    Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
+    final String ip = request.getRemoteAddr();
+    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
     if (!bucket.tryConsume(1)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
@@ -171,7 +171,7 @@ public class SalleController {
   }
 
   private Bucket creerBucketSignalement() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
             .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))
@@ -179,7 +179,7 @@ public class SalleController {
     return Bucket.builder().addLimit(limite).build();
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
 }

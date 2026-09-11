@@ -21,12 +21,12 @@ public class PurgerLogsAdminJob extends QuartzJobBean {
   private WorkerPurgeService workerPurgeService;
 
   @Autowired
-  public void setWorkerPurgeService(WorkerPurgeService workerPurgeService) {
+  public void setWorkerPurgeService(final WorkerPurgeService workerPurgeService) {
     this.workerPurgeService = workerPurgeService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
+  protected void executeInternal(final JobExecutionContext context) {
     workerPurgeService.executerPurgerLogsAdmin();
   }
 }

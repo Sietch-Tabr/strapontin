@@ -62,18 +62,18 @@ public class WorkerFetchService {
   private final RetryLotsService retryLotsService;
 
   public WorkerFetchService(
-      List<SourceConcerts> sources,
-      TicketmasterSource tm,
-      ResolveurNomCanonique resolveur,
-      PersisterConcerts persisterConcerts,
-      RecalculerMatchesService recalculerMatchesService,
-      GestionQuotaTM gestionQuotaTM,
-      NotificationDigestService notificationDigestService,
-      NamedParameterJdbcTemplate jdbc,
-      SuiviSanteSourcesService suiviSanteSourcesService,
-      WorkerStatsService workerStatsService,
-      LogsAdminWorker logsAdminWorker,
-      RetryLotsService retryLotsService) {
+      final List<SourceConcerts> sources,
+      final TicketmasterSource tm,
+      final ResolveurNomCanonique resolveur,
+      final PersisterConcerts persisterConcerts,
+      final RecalculerMatchesService recalculerMatchesService,
+      final GestionQuotaTM gestionQuotaTM,
+      final NotificationDigestService notificationDigestService,
+      final NamedParameterJdbcTemplate jdbc,
+      final SuiviSanteSourcesService suiviSanteSourcesService,
+      final WorkerStatsService workerStatsService,
+      final LogsAdminWorker logsAdminWorker,
+      final RetryLotsService retryLotsService) {
     this.sources = sources;
     this.tm = tm;
     this.resolveur = resolveur;
@@ -104,10 +104,10 @@ public class WorkerFetchService {
    * @param identifiantsEnEchec identifiants des entités des lots en échec, pour un retry ciblé
    */
   private void remonterEchecsLots(
-      String typeJob, List<String> echecs, int totalLots, List<String> identifiantsEnEchec) {
+      final String typeJob, final List<String> echecs, final int totalLots, final List<String> identifiantsEnEchec) {
     if (!echecs.isEmpty()) {
-      String niveau = echecs.size() == totalLots ? "error" : "warn";
-      String message =
+      final String niveau = echecs.size() == totalLots ? "error" : "warn";
+      final String message =
           typeJob
               + " — "
               + echecs.size()
@@ -139,12 +139,12 @@ public class WorkerFetchService {
    *
    * @param artisteIdsCibles identifiants ({@code artistes.id}, texte) à retenter
    */
-  public void executerFetchArtistesBatch(List<String> artisteIdsCibles) {
+  public void executerFetchArtistesBatch(final List<String> artisteIdsCibles) {
     executerFetchArtistesBatchInterne(artisteIdsCibles);
   }
 
-  private void executerFetchArtistesBatchInterne(List<String> artisteIdsCibles) {
-    boolean retry = artisteIdsCibles != null;
+  private void executerFetchArtistesBatchInterne(final List<String> artisteIdsCibles) {
+    final boolean retry = artisteIdsCibles != null;
     log.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
         log,
@@ -156,7 +156,7 @@ public class WorkerFetchService {
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
 
-          List<Map<String, Object>> rows =
+          final List<Map<String, Object>> rows =
               jdbc.queryForList(
                   "SELECT ua.artiste_id::text AS artiste_id_str,"
                       + " MAX(ua.artiste_affiche) AS artiste_affiche,"
@@ -177,15 +177,15 @@ public class WorkerFetchService {
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
           }
 
-          List<SourceConcerts> sourcesSimples =
+          final List<SourceConcerts> sourcesSimples =
               sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
 
           ResultatPersistance resultat = new ResultatPersistance(0, 0);
-          List<String> echecsLots = new ArrayList<>();
-          List<String> idsEnEchec = new ArrayList<>();
-          int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
+          final List<String> echecsLots = new ArrayList<>();
+          final List<String> idsEnEchec = new ArrayList<>();
+          final int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
           for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
-            List<Map<String, Object>> lot =
+            final List<Map<String, Object>> lot =
                 rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
             try {
               resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
@@ -223,15 +223,15 @@ public class WorkerFetchService {
    * @return bilan de persistance du lot
    */
   private ResultatPersistance traiterLotArtistesBatch(
-      List<Map<String, Object>> lot, List<SourceConcerts> sourcesSimples) {
-    List<ConcertBrut> concertsTM = fetchTMParArtistes(lot);
+      final List<Map<String, Object>> lot, final List<SourceConcerts> sourcesSimples) {
+    final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot);
 
-    List<ConcertBrut> concertsAutresSources = new ArrayList<>();
+    final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
     for (SourceConcerts source : sourcesSimples) {
       for (Map<String, Object> row : lot) {
-        String nom = (String) row.get("artiste_affiche");
-        String deezerId = (String) row.get("deezer_id");
-        String wikidataId = (String) row.get("wikidata_id");
+        final String nom = (String) row.get("artiste_affiche");
+        final String deezerId = (String) row.get("deezer_id");
+        final String wikidataId = (String) row.get("wikidata_id");
         try {
           concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
         } catch (Exception e) {
@@ -241,19 +241,19 @@ public class WorkerFetchService {
       }
     }
 
-    List<ConcertBrut> tous = new ArrayList<>(concertsTM);
+    final List<ConcertBrut> tous = new ArrayList<>(concertsTM);
     tous.addAll(concertsAutresSources);
 
-    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
     log.info(
         "fetch:artistes:batch lot={} bruts={} dédoublonnés={}",
         lot.size(),
         tous.size(),
         dedoublonnes.size());
 
-    String debutLot = OffsetDateTime.now().toString();
-    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    List<String> artisteIds = lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
+    final String debutLot = OffsetDateTime.now().toString();
+    final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    final List<String> artisteIds = lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
     mettreAJourAbsences("artiste_id", artisteIds, debutLot);
     return resultat;
   }
@@ -294,9 +294,9 @@ public class WorkerFetchService {
   private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
   private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
 
-  private void mettreAJourAbsences(String colonne, List<String> ids, String debutCycle) {
+  private void mettreAJourAbsences(final String colonne, final List<String> ids, final String debutCycle) {
     if (ids.isEmpty()) return;
-    String sql =
+    final String sql =
         switch (colonne) {
           case "artiste_id" -> SQL_ABSENCES_ARTISTE;
           case "salle_id" -> SQL_ABSENCES_SALLE;
@@ -305,7 +305,7 @@ public class WorkerFetchService {
     jdbc.update(sql, Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
   }
 
-  private static ResultatPersistance accumuler(ResultatPersistance a, ResultatPersistance b) {
+  private static ResultatPersistance accumuler(final ResultatPersistance a, final ResultatPersistance b) {
     return new ResultatPersistance(a.nbInseres() + b.nbInseres(), a.nbMisAJour() + b.nbMisAJour());
   }
 
@@ -316,11 +316,11 @@ public class WorkerFetchService {
    * @param identifiant identifiant préfixé {@code source:identifiant_externe}
    * @param destination liste dans laquelle ajouter les concerts trouvés
    */
-  private void fetchEtSuivreSalle(String identifiant, List<ConcertBrut> destination) {
+  private void fetchEtSuivreSalle(final String identifiant, final List<ConcertBrut> destination) {
     for (SourceConcerts source : sources) {
       if (source.accepteIdentifiantSalle(identifiant)) {
         try {
-          List<ConcertBrut> resultat = source.fetchSalle(identifiant);
+          final List<ConcertBrut> resultat = source.fetchSalle(identifiant);
           destination.addAll(resultat);
           suiviSanteSourcesService.enregistrerResultatSalle(identifiant, resultat.size());
         } catch (Exception e) {
@@ -353,9 +353,9 @@ public class WorkerFetchService {
    */
   private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}
 
-  private List<ConcertBrut> fetchTMParArtistes(List<Map<String, Object>> rows) {
-    ResolutionAttractionIds resolution = resoudreAttractionIds(rows);
-    List<ConcertBrut> resultats =
+  private List<ConcertBrut> fetchTMParArtistes(final List<Map<String, Object>> rows) {
+    final ResolutionAttractionIds resolution = resoudreAttractionIds(rows);
+    final List<ConcertBrut> resultats =
         new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds()));
     resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId()));
     return resultats;
@@ -366,13 +366,13 @@ public class WorkerFetchService {
   // même artiste, rendant le MAX() de la requête appelante arbitraire. Mieux vaut ne pas fetcher
   // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts d'un
   // autre artiste sous cette identité.
-  private ResolutionAttractionIds resoudreAttractionIds(List<Map<String, Object>> rows) {
-    List<String> attractionIds = new ArrayList<>();
-    List<String> nomsSansTmId = new ArrayList<>();
+  private ResolutionAttractionIds resoudreAttractionIds(final List<Map<String, Object>> rows) {
+    final List<String> attractionIds = new ArrayList<>();
+    final List<String> nomsSansTmId = new ArrayList<>();
 
     for (Map<String, Object> row : rows) {
-      String nom = (String) row.get("artiste_affiche");
-      String artisteIdStr = (String) row.get("artiste_id_str");
+      final String nom = (String) row.get("artiste_affiche");
+      final String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
       if (attractionIdAmbigu(row, nom, artisteIdStr)) continue;
       if (attractionId == null) {
@@ -387,9 +387,9 @@ public class WorkerFetchService {
     return new ResolutionAttractionIds(attractionIds, nomsSansTmId);
   }
 
-  private boolean attractionIdAmbigu(Map<String, Object> row, String nom, String artisteIdStr) {
-    Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
-    int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
+  private boolean attractionIdAmbigu(final Map<String, Object> row, final String nom, final String artisteIdStr) {
+    final Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
+    final int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
     if (nbIdsDistincts <= 1) return false;
     log.warn(
         "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
@@ -405,7 +405,7 @@ public class WorkerFetchService {
     return true;
   }
 
-  private String rechercherEtEnregistrerAttractionId(String nom, String artisteIdStr) {
+  private String rechercherEtEnregistrerAttractionId(final String nom, final String artisteIdStr) {
     String attractionId = null;
     try {
       attractionId = tm.rechercherAttractionId(nom);
@@ -425,13 +425,13 @@ public class WorkerFetchService {
     return attractionId;
   }
 
-  private List<ConcertBrut> fetchParLotsAttractionIds(List<String> attractionIds) {
-    List<ConcertBrut> resultats = new ArrayList<>();
+  private List<ConcertBrut> fetchParLotsAttractionIds(final List<String> attractionIds) {
+    final List<ConcertBrut> resultats = new ArrayList<>();
     for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
-      List<String> lot =
+      final List<String> lot =
           attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
       try {
-        List<ConcertBrut> concertsLot = tm.fetchArtistesLot(lot);
+        final List<ConcertBrut> concertsLot = tm.fetchArtistesLot(lot);
         resultats.addAll(concertsLot);
         suiviSanteSourcesService.enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
@@ -441,8 +441,8 @@ public class WorkerFetchService {
     return resultats;
   }
 
-  private List<ConcertBrut> fetchParNomsSansAttractionId(List<String> nomsSansTmId) {
-    List<ConcertBrut> resultats = new ArrayList<>();
+  private List<ConcertBrut> fetchParNomsSansAttractionId(final List<String> nomsSansTmId) {
+    final List<ConcertBrut> resultats = new ArrayList<>();
     for (String nom : nomsSansTmId) {
       try {
         resultats.addAll(tm.fetchArtiste(nom));
@@ -469,12 +469,12 @@ public class WorkerFetchService {
    *
    * @param deptsCibles départements à retenter
    */
-  public void executerFetchRegion(List<String> deptsCibles) {
+  public void executerFetchRegion(final List<String> deptsCibles) {
     executerFetchRegionInterne(deptsCibles);
   }
 
-  private void executerFetchRegionInterne(List<String> deptsCibles) {
-    boolean retry = deptsCibles != null;
+  private void executerFetchRegionInterne(final List<String> deptsCibles) {
+    final boolean retry = deptsCibles != null;
     log.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
         log,
@@ -490,7 +490,7 @@ public class WorkerFetchService {
           if (retry) {
             deptsListe = deptsCibles;
           } else {
-            List<String[]> allDepts =
+            final List<String[]> allDepts =
                 jdbc.query(
                     "SELECT departements FROM user_config",
                     Map.of(),
@@ -504,11 +504,11 @@ public class WorkerFetchService {
           }
 
           ResultatPersistance resultat = new ResultatPersistance(0, 0);
-          List<String> echecsLots = new ArrayList<>();
-          List<String> deptsEnEchec = new ArrayList<>();
-          int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
+          final List<String> echecsLots = new ArrayList<>();
+          final List<String> deptsEnEchec = new ArrayList<>();
+          final int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
           for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
-            List<String> lotDepts =
+            final List<String> lotDepts =
                 deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
             try {
               resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
@@ -527,8 +527,8 @@ public class WorkerFetchService {
         });
   }
 
-  private static java.util.Set<String> collecterTousLesDepts(List<String[]> allDepts) {
-    java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
+  private static java.util.Set<String> collecterTousLesDepts(final List<String[]> allDepts) {
+    final java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
     for (String[] depts : allDepts) {
       if (depts != null) {
         for (String d : depts) {
@@ -555,8 +555,8 @@ public class WorkerFetchService {
    * @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
    * @return bilan de persistance du lot
    */
-  private ResultatPersistance traiterLotDepartements(List<String> lotDepts) {
-    List<ConcertBrut> tous = new ArrayList<>();
+  private ResultatPersistance traiterLotDepartements(final List<String> lotDepts) {
+    final List<ConcertBrut> tous = new ArrayList<>();
     for (SourceConcerts source : sources) {
       try {
         tous.addAll(source.fetchRegion(lotDepts, null));
@@ -565,15 +565,15 @@ public class WorkerFetchService {
       }
     }
 
-    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
     log.info(
         "fetch:region depts={} bruts={} dédoublonnés={}",
         lotDepts.size(),
         tous.size(),
         dedoublonnes.size());
 
-    String debutLot = OffsetDateTime.now().toString();
-    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    final String debutLot = OffsetDateTime.now().toString();
+    final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     mettreAJourAbsences("salle_id", sallesConnuesDesDepartements(lotDepts), debutLot);
     return resultat;
   }
@@ -582,7 +582,7 @@ public class WorkerFetchService {
    * Salles déjà connues (concerts futurs déjà en base) pour un lot de départements — inclut les
    * salles non suivies, contrairement à {@link #recupererIdentifiantsSallesSuivies}.
    */
-  private List<String> sallesConnuesDesDepartements(List<String> depts) {
+  private List<String> sallesConnuesDesDepartements(final List<String> depts) {
     return jdbc.queryForList(
         "SELECT DISTINCT salle_id::text FROM concerts"
             + " WHERE dept IN (:depts) AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
@@ -598,18 +598,18 @@ public class WorkerFetchService {
    *
    * @param identifiantsStr identifiants préfixés séparés par des virgules
    */
-  public void executerFetchSalle(String identifiantsStr) {
+  public void executerFetchSalle(final String identifiantsStr) {
     log.info("fetch:salle démarré identifiants={}", identifiantsStr);
     if (!gestionQuotaTM.verifier("fetch:salle")) return;
 
-    String[] identifiants = identifiantsStr.split(",");
-    List<ConcertBrut> concerts = new ArrayList<>();
+    final String[] identifiants = identifiantsStr.split(",");
+    final List<ConcertBrut> concerts = new ArrayList<>();
     for (String identifiant : identifiants) {
       fetchEtSuivreSalle(identifiant.trim(), concerts);
     }
     sauvegarderQuota();
 
-    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(concerts);
+    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(concerts);
     log.info(
         "fetch:salle identifiants={} bruts={} dédoublonnés={}",
         identifiantsStr,
@@ -644,12 +644,12 @@ public class WorkerFetchService {
    *
    * @param salleIdsCibles identifiants ({@code salles.id}, texte) à retenter
    */
-  public void executerFetchSallesAll(List<String> salleIdsCibles) {
+  public void executerFetchSallesAll(final List<String> salleIdsCibles) {
     executerFetchSallesAllInterne(salleIdsCibles);
   }
 
-  private void executerFetchSallesAllInterne(List<String> salleIdsCibles) {
-    boolean retry = salleIdsCibles != null;
+  private void executerFetchSallesAllInterne(final List<String> salleIdsCibles) {
+    final boolean retry = salleIdsCibles != null;
     log.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");
     workerStatsService.executerAvecStatsToleretErreur(
         log,
@@ -661,13 +661,13 @@ public class WorkerFetchService {
                 new ResultatPersistance(0, 0), "quota insuffisant");
           }
 
-          List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies(salleIdsCibles);
+          final List<SalleAFetcher> sallesAFetcher = recupererIdentifiantsSallesSuivies(salleIdsCibles);
           if (sallesAFetcher.isEmpty()) {
             log.info("fetch:salles:all — aucune salle suivie avec source configurée");
             return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
           }
 
-          ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
+          final ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
           sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
@@ -689,8 +689,8 @@ public class WorkerFetchService {
   // salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour aucune
   // salle TM (mismatch silencieux, aucune exception, aucun log d'erreur). Restreint aux salles
   // suivies (user_salles) — voir Javadoc de executerFetchSallesAll.
-  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(List<String> salleIdsCibles) {
-    boolean filtre = salleIdsCibles != null;
+  private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(final List<String> salleIdsCibles) {
+    final boolean filtre = salleIdsCibles != null;
     return jdbc
         .queryForList(
             "SELECT ss.salle_id::text AS salle_id,"
@@ -710,13 +710,13 @@ public class WorkerFetchService {
         .toList();
   }
 
-  private ResultatPersistance traiterTousLesLotsSalles(List<SalleAFetcher> sallesAFetcher) {
+  private ResultatPersistance traiterTousLesLotsSalles(final List<SalleAFetcher> sallesAFetcher) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    List<String> echecsLots = new ArrayList<>();
-    List<String> salleIdsEnEchec = new ArrayList<>();
-    int totalLots = (sallesAFetcher.size() + TAILLE_LOT_SALLES - 1) / TAILLE_LOT_SALLES;
+    final List<String> echecsLots = new ArrayList<>();
+    final List<String> salleIdsEnEchec = new ArrayList<>();
+    final int totalLots = (sallesAFetcher.size() + TAILLE_LOT_SALLES - 1) / TAILLE_LOT_SALLES;
     for (int i = 0; i < sallesAFetcher.size(); i += TAILLE_LOT_SALLES) {
-      List<SalleAFetcher> lotSalles =
+      final List<SalleAFetcher> lotSalles =
           sallesAFetcher.subList(i, Math.min(i + TAILLE_LOT_SALLES, sallesAFetcher.size()));
       try {
         resultat = accumuler(resultat, traiterLotSalles(lotSalles));
@@ -742,24 +742,24 @@ public class WorkerFetchService {
    * @param lotSalles sous-ensemble de salles suivies (taille {@value TAILLE_LOT_SALLES})
    * @return bilan de persistance du lot
    */
-  private ResultatPersistance traiterLotSalles(List<SalleAFetcher> lotSalles) {
-    List<ConcertBrut> tous = new ArrayList<>();
+  private ResultatPersistance traiterLotSalles(final List<SalleAFetcher> lotSalles) {
+    final List<ConcertBrut> tous = new ArrayList<>();
     for (SalleAFetcher salle : lotSalles) {
       for (String id : salle.identifiants().split(",")) {
         fetchEtSuivreSalle(id.trim(), tous);
       }
     }
 
-    List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
     log.info(
         "fetch:salles:all salles={} bruts={} dédoublonnés={}",
         lotSalles.size(),
         tous.size(),
         dedoublonnes.size());
 
-    String debutLot = OffsetDateTime.now().toString();
-    ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    List<String> salleIds = lotSalles.stream().map(SalleAFetcher::salleId).toList();
+    final String debutLot = OffsetDateTime.now().toString();
+    final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    final List<String> salleIds = lotSalles.stream().map(SalleAFetcher::salleId).toList();
     mettreAJourAbsences("salle_id", salleIds, debutLot);
     return resultat;
   }
@@ -776,7 +776,7 @@ public class WorkerFetchService {
    * @param c concert à évaluer
    * @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
    */
-  private static boolean estEligibleResolutionDeezer(ConcertBrut c) {
+  private static boolean estEligibleResolutionDeezer(final ConcertBrut c) {
     return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
   }
 
@@ -790,16 +790,16 @@ public class WorkerFetchService {
    * @param nomDeezer nom canonique proposé par {@link ResolveurNomCanonique}
    * @return {@code nomDeezer}, ou {@code nomBrut} si un {@code nom_affiche} déjà connu diverge
    */
-  private String nomCanoniqueValideOuBrut(String nomBrut, String nomDeezer) {
+  private String nomCanoniqueValideOuBrut(final String nomBrut, final String nomDeezer) {
     if (nomDeezer.equals(nomBrut)) return nomDeezer;
-    List<String> nomsAffiches =
+    final List<String> nomsAffiches =
         jdbc.query(
             "SELECT nom_affiche FROM artistes WHERE nom_norm = :nomNorm AND nom_affiche IS NOT"
                 + " NULL",
             Map.of("nomNorm", Normalisation.normaliserTexte(nomBrut)),
             (rs, _) -> rs.getString("nom_affiche"));
     if (nomsAffiches.isEmpty()) return nomDeezer;
-    String nomAffiche = nomsAffiches.get(0);
+    final String nomAffiche = nomsAffiches.get(0);
     if (CorrespondanceArtiste.estDoublonArtiste(
         Normalisation.normaliserTexte(nomAffiche), Normalisation.normaliserTexte(nomDeezer))) {
       return nomDeezer;
@@ -813,11 +813,11 @@ public class WorkerFetchService {
     return nomBrut;
   }
 
-  private List<ConcertBrut> resoudreEtDeduplicer(List<ConcertBrut> concerts) {
-    List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
+  private List<ConcertBrut> resoudreEtDeduplicer(final List<ConcertBrut> concerts) {
+    final List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
-    Map<String, String> tableauResolution = new LinkedHashMap<>();
-    List<String> noms =
+    final Map<String, String> tableauResolution = new LinkedHashMap<>();
+    final List<String> noms =
         dedoublonnes.stream()
             .filter(WorkerFetchService::estEligibleResolutionDeezer)
             .map(ConcertBrut::artiste)
@@ -825,7 +825,7 @@ public class WorkerFetchService {
             .toList();
 
     for (String nom : noms) {
-      ResolveurNomCanonique.ResultatResolution resultat =
+      final ResolveurNomCanonique.ResultatResolution resultat =
           resolveur.resoudreNomCanonique("artiste", nom);
       tableauResolution.put(nom, nomCanoniqueValideOuBrut(nom, resultat.nom()));
     }
@@ -834,7 +834,7 @@ public class WorkerFetchService {
         .map(
             c -> {
               if (!estEligibleResolutionDeezer(c)) return c;
-              String nomResolu = tableauResolution.getOrDefault(c.artiste(), c.artiste());
+              final String nomResolu = tableauResolution.getOrDefault(c.artiste(), c.artiste());
               if (nomResolu.equals(c.artiste())) return c;
               return new ConcertBrut(
                   nomResolu,
@@ -857,7 +857,7 @@ public class WorkerFetchService {
   }
 
   private void sauvegarderQuota() {
-    var quota = tm.obtenirQuota();
+    final var quota = tm.obtenirQuota();
     if (quota != null) gestionQuotaTM.ecrireQuota(quota);
   }
 

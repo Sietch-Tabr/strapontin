@@ -67,7 +67,7 @@ public class SecurityConfiguration {
    */
   @Bean
   SpringSessionBackedSessionRegistry<? extends Session> sessionRegistry(
-      FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+      final FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     return new SpringSessionBackedSessionRegistry<>(sessionRepository);
   }
 
@@ -86,13 +86,13 @@ public class SecurityConfiguration {
    */
   @Bean
   SecurityFilterChain securityFilterChain(
-      HttpSecurity http,
-      CorrelationIdFilter correlationIdFilter,
-      RateLimitingLoginFilter rateLimitingFilter,
-      BloquerAccesDirectIpFilter bloquerIpFilter,
-      TotpGuardFilter totpGuardFilter,
-      SessionRegistry sessionRegistry,
-      LogAdminService logAdminService)
+      final HttpSecurity http,
+      final CorrelationIdFilter correlationIdFilter,
+      final RateLimitingLoginFilter rateLimitingFilter,
+      final BloquerAccesDirectIpFilter bloquerIpFilter,
+      final TotpGuardFilter totpGuardFilter,
+      final SessionRegistry sessionRegistry,
+      final LogAdminService logAdminService)
       throws Exception {
     http.headers(
             headers ->
@@ -190,10 +190,10 @@ public class SecurityConfiguration {
                         (request, response, _) -> {
                           if (request.getServletPath().startsWith("/api/")) {
                             try {
-                              Map<String, Object> meta = new HashMap<>();
+                              final Map<String, Object> meta = new HashMap<>();
                               meta.put("chemin", request.getServletPath());
                               meta.put("ip", request.getRemoteAddr());
-                              String ua = request.getHeader("User-Agent");
+                              final String ua = request.getHeader("User-Agent");
                               meta.put(
                                   "userAgent",
                                   ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
@@ -216,10 +216,10 @@ public class SecurityConfiguration {
                         (request, response, _) -> {
                           if (request.getServletPath().startsWith("/api/")) {
                             try {
-                              Map<String, Object> meta = new HashMap<>();
+                              final Map<String, Object> meta = new HashMap<>();
                               meta.put("chemin", request.getServletPath());
                               meta.put("ip", request.getRemoteAddr());
-                              var auth =
+                              final var auth =
                                   org.springframework.security.core.context.SecurityContextHolder
                                       .getContext()
                                       .getAuthentication();
@@ -269,12 +269,12 @@ public class SecurityConfiguration {
    */
   @Bean
   AuthenticationManager authenticationManager(
-      UserDetailsService userDetailsService,
-      PasswordEncoder passwordEncoder,
-      ApplicationEventPublisher eventPublisher) {
-    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+      final UserDetailsService userDetailsService,
+      final PasswordEncoder passwordEncoder,
+      final ApplicationEventPublisher eventPublisher) {
+    final DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     provider.setPasswordEncoder(passwordEncoder);
-    ProviderManager providerManager = new ProviderManager(provider);
+    final ProviderManager providerManager = new ProviderManager(provider);
     providerManager.setAuthenticationEventPublisher(
         new DefaultAuthenticationEventPublisher(eventPublisher));
     return providerManager;
@@ -320,8 +320,8 @@ public class SecurityConfiguration {
    * @return le sérialiseur de cookies configuré
    */
   @Bean
-  CookieSerializer cookieSerializer(@Value("${app.cookie.secure:true}") boolean cookieSecure) {
-    DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
+  CookieSerializer cookieSerializer(@Value("${app.cookie.secure:true}") final boolean cookieSecure) {
+    final DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
     serialiseur.setUseSecureCookie(cookieSecure);
     serialiseur.setSameSite("Lax");
     serialiseur.setUseHttpOnlyCookie(true);

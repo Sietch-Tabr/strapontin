@@ -47,7 +47,7 @@ class AdminControllerRelancerJobTest {
     when(workerProxyService.relancerJob("purger:salles"))
         .thenReturn(new ResultatRelance(true, null, 200));
 
-    ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("purger:salles");
+    final ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("purger:salles");
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("déclenché", reponse.getBody().get("statut"));
@@ -58,7 +58,7 @@ class AdminControllerRelancerJobTest {
     when(workerProxyService.relancerJob("reconciliation:nocturne"))
         .thenReturn(new ResultatRelance(false, "Worker inaccessible.", 503));
 
-    ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("reconciliation:nocturne");
+    final ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("reconciliation:nocturne");
 
     assertEquals(503, reponse.getStatusCode().value());
   }
@@ -71,7 +71,7 @@ class AdminControllerRelancerJobTest {
     when(workerProxyService.relancerJob("job:inexistant"))
         .thenReturn(new ResultatRelance(false, "Job inconnu : job:inexistant.", 400));
 
-    ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("job:inexistant");
+    final ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("job:inexistant");
 
     assertEquals(400, reponse.getStatusCode().value());
   }
@@ -81,7 +81,7 @@ class AdminControllerRelancerJobTest {
     when(workerProxyService.relancerJob("reconciliation:nocturne"))
         .thenReturn(new ResultatRelance(false, "Erreur interne worker (statut 500).", 502));
 
-    ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("reconciliation:nocturne");
+    final ResponseEntity<Map<String, Object>> reponse = controller.relancerJob("reconciliation:nocturne");
 
     assertEquals(502, reponse.getStatusCode().value());
   }

@@ -62,12 +62,12 @@ public class EnrichissementSallesService {
   private final SignalementMatchingService signalementMatchingService;
 
   public EnrichissementSallesService(
-      NamedParameterJdbcTemplate jdbc,
-      List<SourceEnrichissementSalle> sources,
-      LogsAdminWorker logsAdminWorker,
-      SuiviChroniciteService suiviChronicite,
-      FusionSallesClePorteeService fusionSallesClePortee,
-      SignalementMatchingService signalementMatchingService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final List<SourceEnrichissementSalle> sources,
+      final LogsAdminWorker logsAdminWorker,
+      final SuiviChroniciteService suiviChronicite,
+      final FusionSallesClePorteeService fusionSallesClePortee,
+      final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.sources = sources;
     this.logsAdminWorker = logsAdminWorker;
@@ -86,7 +86,7 @@ public class EnrichissementSallesService {
    * @return nombre de salles effectivement mises à jour
    */
   public int enrichir() {
-    List<SalleAEnrichir> candidats = selectionnerCandidats();
+    final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
       log.info("enrichissement:salles — aucun candidat");
       return 0;
@@ -95,7 +95,7 @@ public class EnrichissementSallesService {
     int nbEnrichis = 0;
     for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
       if (i > 0) EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
-      List<SalleAEnrichir> lot =
+      final List<SalleAEnrichir> lot =
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
@@ -131,7 +131,7 @@ public class EnrichissementSallesService {
    */
   private void alerterSiCycleImproductif(int nbCandidats, int nbEnrichis) {
     if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) return;
-    double tauxReussite = (double) nbEnrichis / nbCandidats;
+    final double tauxReussite = (double) nbEnrichis / nbCandidats;
     if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) return;
     logsAdminWorker.inserer(
         "warn",
@@ -154,9 +154,9 @@ public class EnrichissementSallesService {
   private void remonterBilans() {
     for (SourceEnrichissementSalle source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
-      BilanFetch bilan = avecBilan.preleverBilan();
+      final BilanFetch bilan = avecBilan.preleverBilan();
       if (bilan.appels() == 0) continue;
-      int streak =
+      final int streak =
           suiviChronicite.enregistrerCycle(
               "reconciliation:nocturne|" + EnrichissementUtils.capitaliser(source.nom()),
               bilan.erreursHttp() > 0);
@@ -175,11 +175,11 @@ public class EnrichissementSallesService {
     }
   }
 
-  private int enrichirEtPersisterLot(List<SalleAEnrichir> lot) {
-    Map<UUID, EnrichissementSalle> accumule = new HashMap<>();
+  private int enrichirEtPersisterLot(final List<SalleAEnrichir> lot) {
+    final Map<UUID, EnrichissementSalle> accumule = new HashMap<>();
     List<SalleAEnrichir> courant = lot;
     for (SourceEnrichissementSalle source : sources) {
-      Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(courant);
+      final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(courant);
       for (var entree : resultat.entrySet()) {
         accumule.merge(entree.getKey(), entree.getValue(), EnrichissementSallesService::fusionner);
       }
@@ -188,7 +188,7 @@ public class EnrichissementSallesService {
 
     int nbEnrichis = 0;
     for (SalleAEnrichir salle : lot) {
-      EnrichissementSalle enrichissement = accumule.get(salle.id());
+      final EnrichissementSalle enrichissement = accumule.get(salle.id());
       if (enrichissement == null) continue;
       if (mettreAJourSalle(salle.id(), salle.nom(), enrichissement)) nbEnrichis++;
     }
@@ -224,18 +224,18 @@ public class EnrichissementSallesService {
   }
 
   private static List<SalleAEnrichir> appliquerWikidataIdConnu(
-      List<SalleAEnrichir> candidats, Map<UUID, EnrichissementSalle> accumule) {
+      final List<SalleAEnrichir> candidats, final Map<UUID, EnrichissementSalle> accumule) {
     return candidats.stream()
         .map(
             s -> {
-              EnrichissementSalle e = accumule.get(s.id());
-              String qid = e != null && e.wikidataId() != null ? e.wikidataId() : s.wikidataId();
+              final EnrichissementSalle e = accumule.get(s.id());
+              final String qid = e != null && e.wikidataId() != null ? e.wikidataId() : s.wikidataId();
               return new SalleAEnrichir(s.id(), s.nom(), s.nomNorm(), s.ville(), s.dept(), qid);
             })
         .toList();
   }
 
-  private static EnrichissementSalle fusionner(EnrichissementSalle a, EnrichissementSalle b) {
+  private static EnrichissementSalle fusionner(final EnrichissementSalle a, final EnrichissementSalle b) {
     return new EnrichissementSalle(
         b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
         b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
@@ -253,8 +253,8 @@ public class EnrichissementSallesService {
    *   ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout le
    *   cycle de réconciliation.
    */
-  private boolean mettreAJourSalle(UUID salleId, String nom, EnrichissementSalle e) {
-    Map<String, Object> params = new HashMap<>();
+  private boolean mettreAJourSalle(final UUID salleId, final String nom, final EnrichissementSalle e) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
     params.put("ville", e.ville());
@@ -288,8 +288,8 @@ public class EnrichissementSallesService {
    * l'absence de preuve géographique doit donc empêcher la fusion plutôt que l'autoriser par
    * défaut.
    */
-  private boolean gererCollisionWikidataId(UUID salleId, String nom, EnrichissementSalle e) {
-    Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
+  private boolean gererCollisionWikidataId(final UUID salleId, final String nom, final EnrichissementSalle e) {
+    final Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
     if (porteuse != null && tenterFusionParCoordonnees(salleId, porteuse)) {
       log.info(
           "collision wikidata_id résolue par fusion automatique salle={} wikidataId={} cible={}",
@@ -318,24 +318,24 @@ public class EnrichissementSallesService {
     return false;
   }
 
-  private Map<String, Object> trouverPorteuseWikidataId(String wikidataId) {
-    List<Map<String, Object>> lignes =
+  private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT id, latitude, longitude FROM salles WHERE wikidata_id = :wikidataId",
             Map.of("wikidataId", wikidataId));
     return lignes.isEmpty() ? null : lignes.get(0);
   }
 
-  private boolean tenterFusionParCoordonnees(UUID salleId, Map<String, Object> porteuse) {
-    List<Map<String, Object>> lignes =
+  private boolean tenterFusionParCoordonnees(final UUID salleId, final Map<String, Object> porteuse) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()));
     if (lignes.isEmpty()) return false;
-    Double latSalle = (Double) lignes.get(0).get("latitude");
-    Double lonSalle = (Double) lignes.get(0).get("longitude");
-    Double latPorteuse = (Double) porteuse.get("latitude");
-    Double lonPorteuse = (Double) porteuse.get("longitude");
+    final Double latSalle = (Double) lignes.get(0).get("latitude");
+    final Double lonSalle = (Double) lignes.get(0).get("longitude");
+    final Double latPorteuse = (Double) porteuse.get("latitude");
+    final Double lonPorteuse = (Double) porteuse.get("longitude");
     if (!FusionSallesClePorteeService.coordonneesConnuesEtProches(
         latSalle, lonSalle, latPorteuse, lonPorteuse)) {
       return false;

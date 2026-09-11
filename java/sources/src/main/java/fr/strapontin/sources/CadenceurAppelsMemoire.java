@@ -22,14 +22,14 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   /**
    * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
    */
-  CadenceurAppelsMemoire(long delaiMinMs) {
+  CadenceurAppelsMemoire(final long delaiMinMs) {
     this.delaiMinMs = delaiMinMs;
   }
 
   @Override
   public synchronized void attendre() {
-    long maintenant = System.currentTimeMillis();
-    long prochainAppel = dernierAppelMs.get() + delaiMinMs;
+    final long maintenant = System.currentTimeMillis();
+    final long prochainAppel = dernierAppelMs.get() + delaiMinMs;
     if (maintenant < prochainAppel) {
       try {
         Thread.sleep(prochainAppel - maintenant);

@@ -44,7 +44,7 @@ public class ReferentielArtistesService {
   private final LogAdminService logAdminService;
 
   public ReferentielArtistesService(
-      NamedParameterJdbcTemplate jdbc, LogAdminService logAdminService) {
+      final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
   }
@@ -62,10 +62,10 @@ public class ReferentielArtistesService {
    * @return page de résultats
    */
   public ReponseReferentielArtistes lister(
-      int page, String nom, String statut, boolean wikidataManquant) {
-    int pageNum = Math.max(0, page);
-    StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-    Map<String, Object> params = new HashMap<>();
+      final int page, final String nom, final String statut, final boolean wikidataManquant) {
+    final int pageNum = Math.max(0, page);
+    final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+    final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND nom ILIKE :nom ");
       params.put("nom", "%" + nom.strip() + "%");
@@ -78,11 +78,11 @@ public class ReferentielArtistesService {
       where.append(" AND wikidata_id IS NULL ");
     }
 
-    Map<String, Object> paramsPage = new HashMap<>(params);
+    final Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
     paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
-    long[] total = {0};
-    List<ArtisteReferentiel> artistes =
+    final long[] total = {0};
+    final List<ArtisteReferentiel> artistes =
         jdbc.query(
             CTE_ARTISTES_AGREGES
                 + "SELECT id, nom, nom_affiche, wikidata_id, deezer_id, nb_concerts, sources,"
@@ -108,7 +108,7 @@ public class ReferentielArtistesService {
     // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
     // second aller-retour reste alors nécessaire pour connaître le total réel.
     if (artistes.isEmpty() && pageNum > 0) {
-      Long totalVide =
+      final Long totalVide =
           jdbc.queryForObject(
               CTE_ARTISTES_AGREGES + "SELECT COUNT(*) FROM artistes_agr" + where,
               params,
@@ -116,11 +116,11 @@ public class ReferentielArtistesService {
       total[0] = totalVide != null ? totalVide : 0;
     }
 
-    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
     return new ReponseReferentielArtistes(artistes, pageNum, totalPages, total[0]);
   }
 
-  private static List<String> lireSources(String sourcesConcat) {
+  private static List<String> lireSources(final String sourcesConcat) {
     if (sourcesConcat == null || sourcesConcat.isBlank()) return List.of();
     return Arrays.stream(sourcesConcat.split(",")).toList();
   }
@@ -153,13 +153,13 @@ public class ReferentielArtistesService {
    * @param artisteId UUID de l'artiste
    * @return {@code true} si l'artiste existe et a été réinitialisé
    */
-  public boolean reinitialiserEnrichissement(UUID artisteId) {
-    int nb =
+  public boolean reinitialiserEnrichissement(final UUID artisteId) {
+    final int nb =
         jdbc.update(
             """
-            UPDATE artistes SET wikidata_id = NULL, deezer_id = NULL, nom_affiche = NULL
-            WHERE id = CAST(:id AS uuid)
-            """,
+                UPDATE artistes SET wikidata_id = NULL, deezer_id = NULL, nom_affiche = NULL
+                WHERE id = CAST(:id AS uuid)
+                """,
             Map.of("id", artisteId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -184,14 +184,14 @@ public class ReferentielArtistesService {
    * @param artisteId UUID de l'artiste
    * @return {@code true} si au moins une ligne {@code artiste_sources} a été mise à jour
    */
-  public boolean ignorerIntervention(UUID artisteId) {
-    int nb =
+  public boolean ignorerIntervention(final UUID artisteId) {
+    final int nb =
         jdbc.update(
             """
-            UPDATE artiste_sources
-            SET necessite_intervention_le = NULL, nom_tm_ignore = nom_tm_incoherent
-            WHERE artiste_id = CAST(:id AS uuid)
-            """,
+                UPDATE artiste_sources
+                SET necessite_intervention_le = NULL, nom_tm_ignore = nom_tm_incoherent
+                WHERE artiste_id = CAST(:id AS uuid)
+                """,
             Map.of("id", artisteId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -216,15 +216,15 @@ public class ReferentielArtistesService {
    * @param identifiantExterne nouvel attractionId Ticketmaster (non vide)
    * @return {@code true} si l'artiste a une source {@code ticketmaster} et a été mis à jour
    */
-  public boolean corrigerIdentifiantTm(UUID artisteId, String identifiantExterne) {
-    int nb =
+  public boolean corrigerIdentifiantTm(final UUID artisteId, final String identifiantExterne) {
+    final int nb =
         jdbc.update(
             """
-            UPDATE artiste_sources
-            SET identifiant_externe = :identifiant, nb_zero_consecutifs = 0,
-                suspect_depuis = NULL, necessite_intervention_le = NULL
-            WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'
-            """,
+                UPDATE artiste_sources
+                SET identifiant_externe = :identifiant, nb_zero_consecutifs = 0,
+                    suspect_depuis = NULL, necessite_intervention_le = NULL
+                WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'
+                """,
             Map.of("id", artisteId.toString(), "identifiant", identifiantExterne.strip()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -243,12 +243,12 @@ public class ReferentielArtistesService {
    * @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
    * @return {@code true} si l'artiste existe et a été mis à jour
    */
-  public boolean modifierNomAffiche(UUID artisteId, String nomAffiche) {
-    String valeur = nomAffiche == null || nomAffiche.isBlank() ? null : nomAffiche.strip();
-    Map<String, Object> params = new HashMap<>();
+  public boolean modifierNomAffiche(final UUID artisteId, final String nomAffiche) {
+    final String valeur = nomAffiche == null || nomAffiche.isBlank() ? null : nomAffiche.strip();
+    final Map<String, Object> params = new HashMap<>();
     params.put("nomAffiche", valeur);
     params.put("id", artisteId.toString());
-    int nb =
+    final int nb =
         jdbc.update(
             "UPDATE artistes SET nom_affiche = :nomAffiche WHERE id = CAST(:id AS uuid)", params);
     return nb > 0;
@@ -263,9 +263,9 @@ public class ReferentielArtistesService {
    * @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
    */
   @Transactional
-  public boolean fusionner(UUID cibleId, UUID sourceId) {
+  public boolean fusionner(final UUID cibleId, final UUID sourceId) {
     if (cibleId.equals(sourceId)) return false;
-    Long nbExistants =
+    final Long nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM artistes WHERE id IN (CAST(:cible AS uuid), CAST(:source AS"
                 + " uuid))",
@@ -273,7 +273,7 @@ public class ReferentielArtistesService {
             Long.class);
     if (nbExistants == null || nbExistants < 2) return false;
 
-    Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+    final Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
     // 1. Événements en conflit (même salle/date/heure déjà présent côté cible) : leurs
     // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
@@ -373,26 +373,26 @@ public class ReferentielArtistesService {
    * @param cibleId UUID de l'artiste à conserver
    * @param sourceId UUID de l'artiste à absorber
    */
-  private void dedupliquerArtisteSourcesAvantFusion(UUID cibleId, UUID sourceId) {
-    List<Map<String, Object>> conflits =
+  private void dedupliquerArtisteSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
+    final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
-            SELECT src.source AS source,
-                   src.identifiant_externe AS id_source,
-                   dst.identifiant_externe AS id_cible,
-                   src.nb_zero_consecutifs AS sante_source,
-                   dst.nb_zero_consecutifs AS sante_cible,
-                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-            FROM artiste_sources src
-            JOIN artiste_sources dst ON dst.source = src.source AND dst.artiste_id = CAST(:cible AS uuid)
-            WHERE src.artiste_id = CAST(:source AS uuid)
-            """,
+                SELECT src.source AS source,
+                       src.identifiant_externe AS id_source,
+                       dst.identifiant_externe AS id_cible,
+                       src.nb_zero_consecutifs AS sante_source,
+                       dst.nb_zero_consecutifs AS sante_cible,
+                       (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                       (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+                FROM artiste_sources src
+                JOIN artiste_sources dst ON dst.source = src.source AND dst.artiste_id = CAST(:cible AS uuid)
+                WHERE src.artiste_id = CAST(:source AS uuid)
+                """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (Map<String, Object> conflit : conflits) {
-      boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
-      Map<String, Object> paramsSuppression = new HashMap<>();
+      final boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
+      final Map<String, Object> paramsSuppression = new HashMap<>();
       paramsSuppression.put("source", conflit.get("source"));
       paramsSuppression.put("artisteId", garderSource ? cibleId.toString() : sourceId.toString());
       paramsSuppression.put(

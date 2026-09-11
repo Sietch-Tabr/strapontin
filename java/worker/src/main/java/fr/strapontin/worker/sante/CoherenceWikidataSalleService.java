@@ -62,9 +62,9 @@ public class CoherenceWikidataSalleService {
   private final LogsAdminWorker logsAdminWorker;
 
   public CoherenceWikidataSalleService(
-      NamedParameterJdbcTemplate jdbc,
-      WikidataSalleSource wikidata,
-      LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc,
+      final WikidataSalleSource wikidata,
+      final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.wikidata = wikidata;
     this.logsAdminWorker = logsAdminWorker;
@@ -77,33 +77,33 @@ public class CoherenceWikidataSalleService {
    * @return nombre d'incohérences détectées
    */
   public int verifier() {
-    List<SalleAEnrichir> candidats = selectionnerCandidats();
+    final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
       log.info("coherence:wikidata — aucun candidat");
       return 0;
     }
 
-    Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(candidats);
-    List<UUID> salleIds = candidats.stream().map(SalleAEnrichir::id).toList();
-    Map<UUID, List<String>> villesConcertsReelles = chargerVillesConcertsReelles(salleIds);
-    Map<UUID, String> signaturesDejaSignalees = chargerSignaturesDejaSignalees(salleIds);
+    final Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(candidats);
+    final List<UUID> salleIds = candidats.stream().map(SalleAEnrichir::id).toList();
+    final Map<UUID, List<String>> villesConcertsReelles = chargerVillesConcertsReelles(salleIds);
+    final Map<UUID, String> signaturesDejaSignalees = chargerSignaturesDejaSignalees(salleIds);
 
     int incoherences = 0;
     for (SalleAEnrichir salle : candidats) {
-      EnrichissementSalle enrichissement = resultats.get(salle.id());
+      final EnrichissementSalle enrichissement = resultats.get(salle.id());
       if (enrichissement == null) continue;
-      String communeWikidata = enrichissement.ville();
+      final String communeWikidata = enrichissement.ville();
       if (communeWikidata == null || communeWikidata.isBlank()) continue;
-      Coherence coherence =
+      final Coherence coherence =
           evaluerCoherence(salle, communeWikidata, villesConcertsReelles.get(salle.id()));
-      String signatureConnue = signaturesDejaSignalees.get(salle.id());
+      final String signatureConnue = signaturesDejaSignalees.get(salle.id());
       if (coherence == Coherence.COHERENTE) {
         if (signatureConnue != null) memoriserSignature(salle.id(), null);
         continue;
       }
       incoherences++;
-      boolean partielle = coherence == Coherence.INCOHERENTE_PARTIELLE;
-      String signature = communeWikidata + "|" + partielle;
+      final boolean partielle = coherence == Coherence.INCOHERENTE_PARTIELLE;
+      final String signature = communeWikidata + "|" + partielle;
       if (signature.equals(signatureConnue)) continue;
       memoriserSignature(salle.id(), signature);
       loggerIncoherence(salle, communeWikidata, partielle);
@@ -124,13 +124,13 @@ public class CoherenceWikidataSalleService {
    * @return nombre de {@code wikidata_id} invalidés
    */
   public int revaliderTypes() {
-    List<String> wikidataIds = selectionnerTousLesWikidataId();
+    final List<String> wikidataIds = selectionnerTousLesWikidataId();
     if (wikidataIds.isEmpty()) {
       log.info("coherence:wikidata:types — aucun candidat");
       return 0;
     }
 
-    Set<String> invalides = wikidata.typesInvalides(wikidataIds);
+    final Set<String> invalides = wikidata.typesInvalides(wikidataIds);
     for (String qid : invalides) {
       invaliderWikidataId(qid);
     }
@@ -144,7 +144,7 @@ public class CoherenceWikidataSalleService {
         "SELECT wikidata_id FROM salles WHERE wikidata_id IS NOT NULL", Map.of(), String.class);
   }
 
-  private void invaliderWikidataId(String qid) {
+  private void invaliderWikidataId(final String qid) {
     jdbc.update(
         "UPDATE salles SET wikidata_id = NULL WHERE wikidata_id = :qid", Map.of("qid", qid));
     logsAdminWorker.inserer(
@@ -161,9 +161,9 @@ public class CoherenceWikidataSalleService {
    * (commune Wikidata + type de contamination), absente si jamais signalée ou si la dernière
    * incohérence signalée a depuis été résolue.
    */
-  private Map<UUID, String> chargerSignaturesDejaSignalees(List<UUID> salleIds) {
+  private Map<UUID, String> chargerSignaturesDejaSignalees(final List<UUID> salleIds) {
     if (salleIds.isEmpty()) return Map.of();
-    Map<UUID, String> parSalle = new HashMap<>();
+    final Map<UUID, String> parSalle = new HashMap<>();
     jdbc.query(
         "SELECT id, coherence_wikidata_signalee FROM salles"
             + " WHERE id IN (:ids) AND coherence_wikidata_signalee IS NOT NULL",
@@ -176,8 +176,8 @@ public class CoherenceWikidataSalleService {
   }
 
   // Map.of() refuse une valeur null (réinitialisation d'une signature résolue) — HashMap requis.
-  private void memoriserSignature(UUID salleId, String signature) {
-    Map<String, Object> params = new HashMap<>();
+  private void memoriserSignature(final UUID salleId, final String signature) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("signature", signature);
     params.put("id", salleId.toString());
     jdbc.update(
@@ -194,9 +194,9 @@ public class CoherenceWikidataSalleService {
    * @return villes réelles par salle, absente si la salle n'a aucun concert avec une ville connue
    *   (ex. tous les concerts passés déjà purgés)
    */
-  private Map<UUID, List<String>> chargerVillesConcertsReelles(List<UUID> salleIds) {
+  private Map<UUID, List<String>> chargerVillesConcertsReelles(final List<UUID> salleIds) {
     if (salleIds.isEmpty()) return Map.of();
-    Map<UUID, List<String>> parSalle = new HashMap<>();
+    final Map<UUID, List<String>> parSalle = new HashMap<>();
     jdbc.query(
         "SELECT DISTINCT salle_id, ville FROM concerts"
             + " WHERE salle_id IN (:ids) AND ville IS NOT NULL AND ville != ''",
@@ -243,9 +243,9 @@ public class CoherenceWikidataSalleService {
    * @return la classification de cohérence
    */
   private static Coherence evaluerCoherence(
-      SalleAEnrichir salle, String communeWikidata, List<String> villesConcertsReelles) {
+      final SalleAEnrichir salle, final String communeWikidata, final List<String> villesConcertsReelles) {
     if (villesConcertsReelles != null && !villesConcertsReelles.isEmpty()) {
-      long nbCoherentes =
+      final long nbCoherentes =
           villesConcertsReelles.stream().filter(v -> villesCoherentes(v, communeWikidata)).count();
       if (nbCoherentes == villesConcertsReelles.size()) return Coherence.COHERENTE;
       return nbCoherentes > 0 ? Coherence.INCOHERENTE_PARTIELLE : Coherence.INCOHERENTE_TOTALE;
@@ -284,9 +284,9 @@ public class CoherenceWikidataSalleService {
   // d'Orange en Provence ») — évite un containment trivial sur un token court.
   private static final int LONGUEUR_MIN_CONTAINMENT = 5;
 
-  private static boolean villesCoherentes(String villeSalle, String communeWikidata) {
-    String villeSalleNorm = Normalisation.normaliserVille(villeSalle);
-    String communeNorm = Normalisation.normaliserVille(communeWikidata);
+  private static boolean villesCoherentes(final String villeSalle, final String communeWikidata) {
+    final String villeSalleNorm = Normalisation.normaliserVille(villeSalle);
+    final String communeNorm = Normalisation.normaliserVille(communeWikidata);
     if (villeSalleNorm.equals(communeNorm)) return true;
     if (!Collections.disjoint(canonicaliser(villeSalleNorm), canonicaliser(communeNorm))) {
       return true;
@@ -294,15 +294,15 @@ public class CoherenceWikidataSalleService {
     return containmentCoherent(villeSalleNorm, communeNorm);
   }
 
-  private static Set<String> canonicaliser(String villeNorm) {
-    Matcher matcher = ARRONDISSEMENT.matcher(villeNorm);
+  private static Set<String> canonicaliser(final String villeNorm) {
+    final Matcher matcher = ARRONDISSEMENT.matcher(villeNorm);
     if (matcher.matches()) return Set.of(matcher.group(2));
-    Set<String> quartier = QUARTIERS_EQUIVALENTS.get(villeNorm);
+    final Set<String> quartier = QUARTIERS_EQUIVALENTS.get(villeNorm);
     if (quartier != null) return quartier;
     return Set.of(villeNorm);
   }
 
-  private static boolean containmentCoherent(String a, String b) {
+  private static boolean containmentCoherent(final String a, final String b) {
     if (a.length() < LONGUEUR_MIN_CONTAINMENT || b.length() < LONGUEUR_MIN_CONTAINMENT) {
       return false;
     }
@@ -316,7 +316,7 @@ public class CoherenceWikidataSalleService {
    *   distinct signalant une contamination partielle plutôt qu'un mauvais rapprochement total,
    *   pour ne pas induire un examinateur en erreur sur l'ampleur réelle
    */
-  private void loggerIncoherence(SalleAEnrichir salle, String communeWikidata, boolean partielle) {
+  private void loggerIncoherence(final SalleAEnrichir salle, final String communeWikidata, final boolean partielle) {
     logsAdminWorker.inserer(
         "warn",
         "coherence-wikidata",

@@ -20,7 +20,7 @@ class ClientHttpFactoryTest {
 
   @Test
   void creerRequestFactory_avecDurees_retourneFabriqueNonNulle() {
-    SimpleClientHttpRequestFactory factory =
+    final SimpleClientHttpRequestFactory factory =
         ClientHttpFactory.creerRequestFactory(Duration.ofSeconds(10), Duration.ofSeconds(30));
 
     assertNotNull(factory);

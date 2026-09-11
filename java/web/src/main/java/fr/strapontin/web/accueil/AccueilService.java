@@ -33,7 +33,7 @@ public class AccueilService {
    * @param jdbc              accès JDBC
    * @param userConfigService lecture du filtre de disponibilité
    */
-  public AccueilService(NamedParameterJdbcTemplate jdbc, UserConfigService userConfigService) {
+  public AccueilService(final NamedParameterJdbcTemplate jdbc, final UserConfigService userConfigService) {
     this.jdbc = jdbc;
     this.userConfigService = userConfigService;
   }
@@ -48,7 +48,7 @@ public class AccueilService {
    *
    * @param userId identifiant de l'utilisateur
    */
-  public void marquerVus(String userId) {
+  public void marquerVus(final String userId) {
     jdbc.update(
         """
         UPDATE user_matches um
@@ -76,19 +76,19 @@ public class AccueilService {
    * @return groupes artiste/concerts avec compteurs
    */
   public ReponseAccueil accueil(
-      String userId, boolean masques, String indisponibles, boolean nouveau) {
-    LocalDate aujourd8 = LocalDate.now();
-    boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
-    boolean inclureIndisponibles =
+      final String userId, final boolean masques, final String indisponibles, final boolean nouveau) {
+    final LocalDate aujourd8 = LocalDate.now();
+    final boolean filtreDisponibles = userConfigService.lireFiltreDisponibles(userId);
+    final boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
 
-    StringBuilder where =
+    final StringBuilder where =
         new StringBuilder(
             """
-            um.user_id = :userId
-            AND c.date >= :aujourd8
-            AND um.masque_le IS %s
-            """
+                um.user_id = :userId
+                AND c.date >= :aujourd8
+                AND um.masque_le IS %s
+                """
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
@@ -108,7 +108,7 @@ public class AccueilService {
          )
         """);
 
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     params.put(CLE_USER_ID, userId);
     params.put("aujourd8", aujourd8);
 
@@ -117,19 +117,19 @@ public class AccueilService {
     // base, indépendante de l'utilisateur) utilisé auparavant ici. Sans lien avec le paramètre
     // `nouveau` de cette méthode (filtre chip "Nouveau", basé sur first_seen — fonctionnalité
     // distincte : concerts récemment détectés, pas concerts jamais vus).
-    List<ConcertAccueil> lignes =
+    final List<ConcertAccueil> lignes =
         jdbc.query(
             """
-            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
-                   c.artiste_id::text AS artiste_id, c.date::text,
-                   c.heure::text, c.salle, c.ville, c.url, c.statut,
-                   um.vu_le IS NULL AS est_nouveau
-            FROM user_matches um
-            INNER JOIN concerts c ON um.concert_id = c.id
-            LEFT JOIN artistes a ON a.id = c.artiste_id
-            WHERE %s
-            ORDER BY c.date ASC, c.artiste ASC
-            """
+                SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
+                       c.artiste_id::text AS artiste_id, c.date::text,
+                       c.heure::text, c.salle, c.ville, c.url, c.statut,
+                       um.vu_le IS NULL AS est_nouveau
+                FROM user_matches um
+                INNER JOIN concerts c ON um.concert_id = c.id
+                LEFT JOIN artistes a ON a.id = c.artiste_id
+                WHERE %s
+                ORDER BY c.date ASC, c.artiste ASC
+                """
                 .formatted(where),
             params,
             (rs, _) ->
@@ -146,17 +146,17 @@ public class AccueilService {
                     rs.getString("statut"),
                     rs.getBoolean("est_nouveau")));
 
-    Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
+    final Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
     for (ConcertAccueil c : lignes) {
       groupes.computeIfAbsent(c.artiste(), _ -> new ArrayList<>()).add(c);
     }
 
-    List<GroupeArtiste> artistesGroupes =
+    final List<GroupeArtiste> artistesGroupes =
         groupes.entrySet().stream()
             .map(
                 e -> {
-                  List<ConcertAccueil> dates = e.getValue();
-                  boolean estNew = dates.stream().anyMatch(ConcertAccueil::estNew);
+                  final List<ConcertAccueil> dates = e.getValue();
+                  final boolean estNew = dates.stream().anyMatch(ConcertAccueil::estNew);
                   return new GroupeArtiste(
                       e.getKey(),
                       dates.get(0).artisteNorm(),
@@ -167,7 +167,7 @@ public class AccueilService {
                 })
             .toList();
 
-    int nbArtistes =
+    final int nbArtistes =
         Objects.requireNonNullElse(
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
@@ -175,7 +175,7 @@ public class AccueilService {
                 Integer.class),
             0);
 
-    int nbSalles =
+    final int nbSalles =
         Objects.requireNonNullElse(
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",

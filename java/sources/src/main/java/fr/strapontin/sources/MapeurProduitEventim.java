@@ -42,9 +42,9 @@ final class MapeurProduitEventim {
     if (ville == null || dept == null) return ville;
     if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) return ville;
 
-    int idx = salle.lastIndexOf(SEPARATEUR_NOM_SALLE);
+    final int idx = salle.lastIndexOf(SEPARATEUR_NOM_SALLE);
     if (idx > 0) {
-      String commune = salle.substring(idx + SEPARATEUR_NOM_SALLE.length()).strip();
+      final String commune = salle.substring(idx + SEPARATEUR_NOM_SALLE.length()).strip();
       if (!commune.isBlank()) return commune;
     }
 
@@ -61,13 +61,13 @@ final class MapeurProduitEventim {
    * @param dateStr chaîne de date ISO 8601
    * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
    */
-  static String[] parseDateEventim(String dateStr) {
+  static String[] parseDateEventim(final String dateStr) {
     Objects.requireNonNull(dateStr, "dateStr");
-    String datePart = dateStr.substring(0, 10);
-    int tIndex = dateStr.indexOf('T');
+    final String datePart = dateStr.substring(0, 10);
+    final int tIndex = dateStr.indexOf('T');
     if (tIndex == -1) return new String[] {datePart, null};
-    String heurePart = dateStr.substring(tIndex + 1, Math.min(tIndex + 6, dateStr.length()));
-    String heure = "00:00".equals(heurePart) ? null : heurePart;
+    final String heurePart = dateStr.substring(tIndex + 1, Math.min(tIndex + 6, dateStr.length()));
+    final String heure = "00:00".equals(heurePart) ? null : heurePart;
     return new String[] {datePart, heure};
   }
 
@@ -81,11 +81,11 @@ final class MapeurProduitEventim {
    * @param titre titre de l'événement Eventim
    * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
    */
-  static String extraireNomArtiste(String titre) {
+  static String extraireNomArtiste(final String titre) {
     Objects.requireNonNull(titre, "titre");
-    String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
+    final String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
     for (String sep : new String[] {" - ", " : "}) {
-      int idx = titreNormalise.indexOf(sep);
+      final int idx = titreNormalise.indexOf(sep);
       if (idx > 0) return titreNormalise.substring(0, idx).strip();
     }
     return titre;
@@ -102,18 +102,18 @@ final class MapeurProduitEventim {
    */
   @SuppressWarnings("unchecked")
   static ConcertBrut mapper(
-      Map<String, Object> produit, String artisteFallback, String artisteSourceId) {
+      final Map<String, Object> produit, final String artisteFallback, final String artisteSourceId) {
     try {
-      var liveEnt = extraireLiveEntertainment(produit);
-      String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
+      final var liveEnt = extraireLiveEntertainment(produit);
+      final String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
       if (dateStr == null) return null;
 
-      String titre = (String) produit.get("name");
+      final String titre = (String) produit.get("name");
       if (titre == null) return null;
 
-      String[] datHeure = parseDateEventim(dateStr);
-      String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
-      var location = (Map<String, Object>) liveEnt.get("location");
+      final String[] datHeure = parseDateEventim(dateStr);
+      final String artiste = artisteFallback != null ? artisteFallback : extraireNomArtiste(titre);
+      final var location = (Map<String, Object>) liveEnt.get("location");
       return construireConcertEventim(
           produit, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
     } catch (Exception e) {
@@ -123,18 +123,18 @@ final class MapeurProduitEventim {
   }
 
   @SuppressWarnings("unchecked")
-  private static Map<String, Object> extraireLiveEntertainment(Map<String, Object> produit) {
-    var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
+  private static Map<String, Object> extraireLiveEntertainment(final Map<String, Object> produit) {
+    final var typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
     return typeAttributes != null
         ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
         : null;
   }
 
   @SuppressWarnings("unchecked")
-  private static String extraireUrlProduit(Map<String, Object> produit) {
-    String lienDirect = (String) produit.get("link");
+  private static String extraireUrlProduit(final Map<String, Object> produit) {
+    final String lienDirect = (String) produit.get("link");
     if (lienDirect != null && lienDirect.startsWith("http")) return lienDirect;
-    var urlObj = (Map<String, Object>) produit.get("url");
+    final var urlObj = (Map<String, Object>) produit.get("url");
     if (urlObj != null && urlObj.get("domain") != null && urlObj.get("path") != null) {
       return urlObj.get("domain") + (String) urlObj.get("path");
     }
@@ -142,32 +142,32 @@ final class MapeurProduitEventim {
   }
 
   private static ConcertBrut construireConcertEventim(
-      Map<String, Object> produit,
-      Map<String, Object> location,
-      String artiste,
-      String date,
-      String heure,
-      String artisteSourceId) {
-    String salle =
+      final Map<String, Object> produit,
+      final Map<String, Object> location,
+      final String artiste,
+      final String date,
+      final String heure,
+      final String artisteSourceId) {
+    final String salle =
         location != null && location.get("name") != null
             ? Normalisation.normaliserCasse((String) location.get("name"))
             : "Salle inconnue";
     String ville = location != null ? (String) location.get("city") : null;
-    String dept =
+    final String dept =
         Normalisation.extraireDeptFrancais(
             location != null ? (String) location.get("postalCode") : null);
     ville = corrigerVilleEventim(ville, dept, salle);
 
-    String url = extraireUrlProduit(produit);
+    final String url = extraireUrlProduit(produit);
     // inStock=false couvre à la fois les concerts complets et les préventes : impossible à
     // distinguer via l'API Eventim. On ne stocke pas de statut pour éviter les faux positifs.
-    String statut = null;
+    final String statut = null;
     // Eventim n'expose pas de venueId stable : on génère un identifiant interne basé sur
     // le nom normalisé pour alimenter salle_sources et vider la liste admin "Sans source".
     // Écrasable par un vrai venueId si Eventim en expose un à l'avenir (ON CONFLICT DO NOTHING).
-    String salleNorm = Normalisation.normaliserTexte(salle);
-    boolean salleInconnue = "Salle inconnue".equals(salle);
-    String salleSourceId =
+    final String salleNorm = Normalisation.normaliserTexte(salle);
+    final boolean salleInconnue = "Salle inconnue".equals(salle);
+    final String salleSourceId =
         (salleNorm.isBlank() || salleInconnue) ? null : "eventim:internal:" + salleNorm;
     return new ConcertBrut(
         artiste,

@@ -24,7 +24,7 @@ public record SuggestionArtiste(String nom, String source, String description, S
    * @param nom    nom affiché
    * @param source origine de la suggestion
    */
-  public SuggestionArtiste(String nom, String source) {
+  public SuggestionArtiste(final String nom, final String source) {
     this(nom, source, null, null);
   }
 }

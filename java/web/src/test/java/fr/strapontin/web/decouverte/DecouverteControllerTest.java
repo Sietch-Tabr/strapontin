@@ -44,7 +44,7 @@ class DecouverteControllerTest {
   @BeforeEach
   void setUp() {
     controller = new DecouverteController(decouverteService);
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
@@ -52,12 +52,12 @@ class DecouverteControllerTest {
 
   @Test
   void decouvrir_construitLeFiltreEtDelegueAuServiceAvecUserId() {
-    ReponseDecouverte attendu =
+    final ReponseDecouverte attendu =
         new ReponseDecouverte(
             List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
     when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(attendu);
 
-    ResponseEntity<ReponseDecouverte> rep =
+    final ResponseEntity<ReponseDecouverte> rep =
         controller.decouvrir(
             List.of("75", "92"), "zenith", "2026-05", "Pop", "concert", "nouveaute", 1, auth);
 
@@ -67,17 +67,17 @@ class DecouverteControllerTest {
 
   @Test
   void decouvrir_transmetLesCriteresDansLeFiltre() {
-    ReponseDecouverte vide =
+    final ReponseDecouverte vide =
         new ReponseDecouverte(
             List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
     when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(vide);
 
     controller.decouvrir(List.of("75"), "q", "2026-05", "Pop", "concert", "nouveaute", 2, auth);
 
-    org.mockito.ArgumentCaptor<FiltreConcerts> captor =
+    final org.mockito.ArgumentCaptor<FiltreConcerts> captor =
         org.mockito.ArgumentCaptor.forClass(FiltreConcerts.class);
     org.mockito.Mockito.verify(decouverteService).decouvrir(eq("user-1"), captor.capture());
-    FiltreConcerts filtre = captor.getValue();
+    final FiltreConcerts filtre = captor.getValue();
     assertEquals("q", filtre.q());
     assertEquals("2026-05", filtre.mois());
     assertEquals("Pop", filtre.genre());

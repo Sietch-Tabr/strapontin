@@ -23,7 +23,7 @@ class ChangelogService {
   /**
    * @param jdbc template JDBC nommé
    */
-  ChangelogService(NamedParameterJdbcTemplate jdbc) {
+  ChangelogService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -34,13 +34,13 @@ class ChangelogService {
    * @param versionCourante version actuelle de l'application
    * @return {@code true} si la dernière version vue diffère de {@code versionCourante}
    */
-  boolean estNonVu(String userId, String versionCourante) {
-    List<String> lignes =
+  boolean estNonVu(final String userId, final String versionCourante) {
+    final List<String> lignes =
         jdbc.queryForList(
             "SELECT changelog_version_vue FROM user_config WHERE user_id = :u",
             Map.of("u", userId),
             String.class);
-    String versionVue = lignes.isEmpty() ? null : lignes.get(0);
+    final String versionVue = lignes.isEmpty() ? null : lignes.get(0);
     return !versionCourante.equals(versionVue);
   }
 
@@ -55,7 +55,7 @@ class ChangelogService {
    * @param userId identifiant de l'utilisateur
    * @param versionCourante version actuelle de l'application
    */
-  void marquerVue(String userId, String versionCourante) {
+  void marquerVue(final String userId, final String versionCourante) {
     jdbc.update(
         """
         INSERT INTO user_config (user_id, changelog_version_vue)

@@ -71,7 +71,7 @@ class PushServiceTest {
   void abonner_capAtteint_leveErreurMetier429SansInserer() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(10);
 
-    ErreurMetier erreur =
+    final ErreurMetier erreur =
         assertThrows(ErreurMetier.class, () -> service.abonner("u1", abonnementValide()));
 
     assertEquals(429, erreur.getStatus());
@@ -82,23 +82,23 @@ class PushServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void listerAbonnements_delegueAuJdbcAvecLUserId() {
-    java.time.Instant creeLe = java.time.Instant.now();
-    java.sql.Timestamp ts = java.sql.Timestamp.from(creeLe);
+    final java.time.Instant creeLe = java.time.Instant.now();
+    final java.sql.Timestamp ts = java.sql.Timestamp.from(creeLe);
     when(jdbc.query(
             anyString(),
             anyMap(),
             org.mockito.ArgumentMatchers.any(org.springframework.jdbc.core.RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              org.springframework.jdbc.core.RowMapper<PushService.AbonnementDto> mapper =
+              final org.springframework.jdbc.core.RowMapper<PushService.AbonnementDto> mapper =
                   invocation.getArgument(2);
-              java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+              final java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
               when(rs.getString("endpoint")).thenReturn("https://push.exemple/abc");
               when(rs.getTimestamp("cree_le")).thenReturn(ts);
               return java.util.List.of(mapper.mapRow(rs, 0));
             });
 
-    var resultat = service.listerAbonnements("u1");
+    final var resultat = service.listerAbonnements("u1");
 
     assertEquals(1, resultat.size());
     assertEquals("https://push.exemple/abc", resultat.get(0).endpoint());

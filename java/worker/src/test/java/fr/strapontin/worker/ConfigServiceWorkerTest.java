@@ -49,8 +49,8 @@ class ConfigServiceWorkerTest {
 
   @Test
   void lireConfig_valeurChiffreeParLeMemeSecret_retourneValeurEnClair() {
-    ConfigCipher cipher = new ConfigCipher(SECRET);
-    String chiffre = cipher.chiffrer("valeur-en-clair");
+    final ConfigCipher cipher = new ConfigCipher(SECRET);
+    final String chiffre = cipher.chiffrer("valeur-en-clair");
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of(chiffre));
 
@@ -61,8 +61,8 @@ class ConfigServiceWorkerTest {
   void lireConfig_valeurChiffreeParUnAutreSecret_neLancePasEtRetourneVide() {
     // Même garde-fou que web.ConfigService : un APP_CONFIG_SECRET différent ne doit jamais faire
     // planter le worker, seulement logger l'échec et traiter la clé comme absente.
-    ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
-    String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
+    final ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
+    final String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of(chiffreAvecAutreSecret));
 

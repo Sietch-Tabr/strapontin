@@ -39,7 +39,7 @@ public class ManifestController {
   /**
    * @param configService lecture de {@code PUBLIC_BASE_URL} pour stabiliser {@code id}
    */
-  public ManifestController(ConfigService configService) {
+  public ManifestController(final ConfigService configService) {
     this.configService = configService;
   }
 
@@ -50,11 +50,11 @@ public class ManifestController {
    * @return le manifeste JSON avec {@code start_url} dynamique et {@code id} stable
    */
   @GetMapping(value = "/manifest.json", produces = "application/manifest+json")
-  public ResponseEntity<Map<String, Object>> manifest(HttpServletRequest request) {
-    String baseUrl = baseUrlDepuisRequete(request);
-    String idBaseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(baseUrl);
+  public ResponseEntity<Map<String, Object>> manifest(final HttpServletRequest request) {
+    final String baseUrl = baseUrlDepuisRequete(request);
+    final String idBaseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(baseUrl);
 
-    Map<String, Object> manifest = new LinkedHashMap<>();
+    final Map<String, Object> manifest = new LinkedHashMap<>();
     manifest.put("name", "Strapontin");
     manifest.put("short_name", "Strapontin");
     manifest.put("description", "Concert finder — suivez vos artistes et salles préférés");
@@ -104,10 +104,10 @@ public class ManifestController {
     return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
   }
 
-  private static String baseUrlDepuisRequete(HttpServletRequest request) {
-    String scheme = request.getScheme();
-    String host = request.getServerName();
-    int port = request.getServerPort();
+  private static String baseUrlDepuisRequete(final HttpServletRequest request) {
+    final String scheme = request.getScheme();
+    final String host = request.getServerName();
+    final int port = request.getServerPort();
     if (("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443)) {
       return scheme + "://" + host + request.getContextPath();
     }

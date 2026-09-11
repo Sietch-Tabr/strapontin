@@ -43,7 +43,7 @@ public class ControleIntegriteService {
   private final SignalementMatchingService signalementMatchingService;
 
   public ControleIntegriteService(
-      NamedParameterJdbcTemplate jdbc, SignalementMatchingService signalementMatchingService) {
+      final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.signalementMatchingService = signalementMatchingService;
   }
@@ -68,15 +68,15 @@ public class ControleIntegriteService {
    * (plutôt qu'un candidat hypothétique) pour détecter un cycle déjà présent dans les données.
    */
   private int verifierCyclesSalleParent() {
-    Map<UUID, UUID> parentParSalle = new HashMap<>();
+    final Map<UUID, UUID> parentParSalle = new HashMap<>();
     for (var ligne : jdbc.queryForList("SELECT id, salle_parent_id FROM salles", Map.of())) {
       parentParSalle.put((UUID) ligne.get("id"), (UUID) ligne.get("salle_parent_id"));
     }
 
     int signalees = 0;
     for (var entree : parentParSalle.entrySet()) {
-      UUID salleId = entree.getKey();
-      UUID parentId = entree.getValue();
+      final UUID salleId = entree.getKey();
+      final UUID parentId = entree.getValue();
       if (parentId == null) continue;
       if (SalleHierarchie.creeraitCycle(parentId, salleId, parentParSalle::get)) {
         signalementMatchingService.signaler(
@@ -97,24 +97,24 @@ public class ControleIntegriteService {
    * mauvais rattachement de concerts à cette salle.
    */
   private int verifierCoherenceDeptSalle() {
-    List<Map<String, Object>> lignes =
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT salle_id, dept_salle FROM (
-              SELECT s.id AS salle_id, s.dept AS dept_salle, e.dept AS dept_majoritaire,
-                     ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY COUNT(*) DESC) AS rang
-              FROM salles s
-              JOIN evenements e ON e.salle_id = s.id AND e.dept IS NOT NULL
-              WHERE s.dept IS NOT NULL
-              GROUP BY s.id, s.dept, e.dept
-            ) t
-            WHERE rang = 1 AND dept_salle != dept_majoritaire
-            """,
+                SELECT salle_id, dept_salle FROM (
+                  SELECT s.id AS salle_id, s.dept AS dept_salle, e.dept AS dept_majoritaire,
+                         ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY COUNT(*) DESC) AS rang
+                  FROM salles s
+                  JOIN evenements e ON e.salle_id = s.id AND e.dept IS NOT NULL
+                  WHERE s.dept IS NOT NULL
+                  GROUP BY s.id, s.dept, e.dept
+                ) t
+                WHERE rang = 1 AND dept_salle != dept_majoritaire
+                """,
             Map.of());
 
     int signalees = 0;
     for (var ligne : lignes) {
-      UUID salleId = (UUID) ligne.get("salle_id");
+      final UUID salleId = (UUID) ligne.get("salle_id");
       signalementMatchingService.signaler(
           "incoherence_dept_salle",
           "salle",
@@ -127,14 +127,14 @@ public class ControleIntegriteService {
   }
 
   private int verifierEvenementsOrphelinsAnciens() {
-    List<UUID> ids =
+    final List<UUID> ids =
         jdbc.query(
             """
-            SELECT id FROM evenements
-            WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE
-              AND updated_at < now() - make_interval(days => :seuilJours)
-              AND suppression_suggeree_le IS NULL
-            """,
+                SELECT id FROM evenements
+                WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE
+                  AND updated_at < now() - make_interval(days => :seuilJours)
+                  AND suppression_suggeree_le IS NULL
+                """,
             Map.of("seuilJours", SEUIL_JOURS_EVENEMENT_ORPHELIN),
             (rs, _) -> rs.getObject("id", UUID.class));
 
@@ -159,23 +159,23 @@ public class ControleIntegriteService {
   // TypeEntiteSource exclut structurellement tout appel avec un couple table/colonne non
   // constant — seule la requête SQL elle-même varie selon le type, jamais construite par
   // concaténation d'une valeur passée en paramètre.
-  private int verifierSourcesOrphelines(TypeEntiteSource type) {
-    String sql =
+  private int verifierSourcesOrphelines(final TypeEntiteSource type) {
+    final String sql =
         switch (type) {
           case ARTISTE ->
-              "SELECT artiste_id AS entite_id, source, identifiant_externe FROM artiste_sources s"
-                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id ="
-                  + " s.artiste_id)";
+            "SELECT artiste_id AS entite_id, source, identifiant_externe FROM artiste_sources s"
+                + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id ="
+                + " s.artiste_id)";
           case SALLE ->
-              "SELECT salle_id AS entite_id, source, identifiant_externe FROM salle_sources s"
-                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)";
+            "SELECT salle_id AS entite_id, source, identifiant_externe FROM salle_sources s"
+                + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)";
         };
-    String entiteType = type == TypeEntiteSource.ARTISTE ? "artiste" : "salle";
+    final String entiteType = type == TypeEntiteSource.ARTISTE ? "artiste" : "salle";
 
-    List<Map<String, Object>> lignes = jdbc.queryForList(sql, Map.of());
+    final List<Map<String, Object>> lignes = jdbc.queryForList(sql, Map.of());
     int signalees = 0;
     for (var ligne : lignes) {
-      UUID entiteId = (UUID) ligne.get("entite_id");
+      final UUID entiteId = (UUID) ligne.get("entite_id");
       signalementMatchingService.signaler(
           "source_orpheline",
           entiteType,

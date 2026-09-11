@@ -36,9 +36,9 @@ public class IntegriteAlerteController {
   private final String integriteSecret;
 
   public IntegriteAlerteController(
-      EmailAlerteService emailAlerteService,
-      LogAdminService logAdminService,
-      @Value("${INTEGRITY_INTERNAL_SECRET:}") String integriteSecret) {
+      final EmailAlerteService emailAlerteService,
+      final LogAdminService logAdminService,
+      @Value("${INTEGRITY_INTERNAL_SECRET:}") final String integriteSecret) {
     this.emailAlerteService = emailAlerteService;
     this.logAdminService = logAdminService;
     this.integriteSecret = integriteSecret;
@@ -58,10 +58,10 @@ public class IntegriteAlerteController {
    */
   @PostMapping("/api/interne/integrite-statut")
   public ResponseEntity<Map<String, Object>> signalerStatut(
-      @RequestParam(defaultValue = "") String statut,
-      @RequestParam(defaultValue = "") String detail,
-      @RequestHeader(value = "Authorization", defaultValue = "") String authorization) {
-    String attendu = "Bearer " + integriteSecret;
+      @RequestParam(defaultValue = "") final String statut,
+      @RequestParam(defaultValue = "") final String detail,
+      @RequestHeader(value = "Authorization", defaultValue = "") final String authorization) {
+    final String attendu = "Bearer " + integriteSecret;
     if (integriteSecret.isBlank()
         || !MessageDigest.isEqual(
             attendu.getBytes(StandardCharsets.UTF_8),

@@ -30,7 +30,7 @@ public class AccueilController {
   /**
    * @param accueilService service de la page d'accueil
    */
-  public AccueilController(AccueilService accueilService) {
+  public AccueilController(final AccueilService accueilService) {
     this.accueilService = accueilService;
   }
 
@@ -43,7 +43,7 @@ public class AccueilController {
    * @return 204 No Content
    */
   @PostMapping("/marquer-vus")
-  public ResponseEntity<Void> marquerVus(Authentication auth) {
+  public ResponseEntity<Void> marquerVus(final Authentication auth) {
     accueilService.marquerVus(((UtilisateurDetails) auth.getPrincipal()).id());
     return ResponseEntity.noContent().build();
   }
@@ -60,11 +60,11 @@ public class AccueilController {
    */
   @GetMapping
   public ResponseEntity<ReponseAccueil> accueil(
-      @RequestParam(required = false, defaultValue = "false") boolean masques,
-      @RequestParam(required = false) String indisponibles,
-      @RequestParam(required = false, defaultValue = "false") boolean nouveau,
-      Authentication auth) {
-    String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
+      @RequestParam(required = false, defaultValue = "false") final boolean masques,
+      @RequestParam(required = false) final String indisponibles,
+      @RequestParam(required = false, defaultValue = "false") final boolean nouveau,
+      final Authentication auth) {
+    final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     return ResponseEntity.ok(accueilService.accueil(userId, masques, indisponibles, nouveau));
   }
 }

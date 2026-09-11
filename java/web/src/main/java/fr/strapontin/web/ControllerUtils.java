@@ -26,7 +26,7 @@ public final class ControllerUtils {
    * @param message message d'erreur
    * @return la réponse HTTP
    */
-  public static ResponseEntity<Map<String, Object>> erreur(int status, String message) {
+  public static ResponseEntity<Map<String, Object>> erreur(final int status, final String message) {
     return ResponseEntity.status(status).body(Map.of("erreur", message));
   }
 
@@ -36,7 +36,7 @@ public final class ControllerUtils {
    * @param valeur chaîne à parser
    * @return l'UUID, ou {@code null} si {@code valeur} est absente ou mal formée
    */
-  public static UUID parseUuid(String valeur) {
+  public static UUID parseUuid(final String valeur) {
     if (valeur == null || valeur.isBlank()) return null;
     try {
       return UUID.fromString(valeur);

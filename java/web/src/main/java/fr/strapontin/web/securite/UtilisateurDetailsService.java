@@ -30,7 +30,7 @@ public class UtilisateurDetailsService implements UserDetailsService {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  public UtilisateurDetailsService(NamedParameterJdbcTemplate jdbc) {
+  public UtilisateurDetailsService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
@@ -42,16 +42,16 @@ public class UtilisateurDetailsService implements UserDetailsService {
    * @throws UsernameNotFoundException si aucun compte n'est trouvé
    */
   @Override
-  public UserDetails loadUserByUsername(String identifiant) throws UsernameNotFoundException {
-    String sql =
+  public UserDetails loadUserByUsername(final String identifiant) throws UsernameNotFoundException {
+    final String sql =
         """
-        SELECT u.id, u.username, u.email, u.role,
-               u.two_factor_enabled, u.must_change_credentials,
-               a.password
-        FROM users u
-        JOIN accounts a ON a.user_id = u.id AND a.provider_id = 'credential'
-        WHERE lower(u.username) = lower(:identifiant)
-        """;
+            SELECT u.id, u.username, u.email, u.role,
+                   u.two_factor_enabled, u.must_change_credentials,
+                   a.password
+            FROM users u
+            JOIN accounts a ON a.user_id = u.id AND a.provider_id = 'credential'
+            WHERE lower(u.username) = lower(:identifiant)
+            """;
 
     return jdbc.query(
         sql,

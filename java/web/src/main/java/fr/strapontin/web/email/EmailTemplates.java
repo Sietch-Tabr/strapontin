@@ -49,18 +49,18 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email d'invitation
    */
-  static String invitation(String lienReset, String baseUrl) {
-    String corps =
+  static String invitation(final String lienReset, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
-          votre identifiant et votre mot de passe :
-        </p>
-        %s
-        <p style="color: %s; font-size: 13px; margin: 16px 0 0">
-          Ce lien est valable 7 jours.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
+              votre identifiant et votre mot de passe :
+            </p>
+            %s
+            <p style="color: %s; font-size: 13px; margin: 16px 0 0">
+              Ce lien est valable 7 jours.
+            </p>
+            """
             .formatted(C_TEXTE, bouton(lienReset, "Créer mon compte →"), C_MUTE);
     return envelopper("Bienvenue sur Strapontin", corps, baseUrl);
   }
@@ -72,18 +72,18 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de réinitialisation
    */
-  static String resetMotDePasse(String lienReset, String baseUrl) {
-    String corps =
+  static String resetMotDePasse(final String lienReset, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur
-          le bouton ci-dessous. Ce lien est valable 1 heure.
-        </p>
-        %s
-        <p style="color: %s; font-size: 13px; margin-top: 24px">
-          Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur
+              le bouton ci-dessous. Ce lien est valable 1 heure.
+            </p>
+            %s
+            <p style="color: %s; font-size: 13px; margin-top: 24px">
+              Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+            </p>
+            """
             .formatted(C_TEXTE, bouton(lienReset, "Réinitialiser mon mot de passe →"), C_MUTE);
     return envelopper("Réinitialisation du mot de passe", corps, baseUrl);
   }
@@ -94,20 +94,20 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de notification
    */
-  static String reinitialisation2fa(String baseUrl) {
-    String corps =
+  static String reinitialisation2fa(final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          La double authentification (2FA) de votre compte a été réinitialisée par un
-          administrateur. Vous pouvez vous reconnecter sans code, puis la reconfigurer
-          depuis vos paramètres.
-        </p>
-        %s
-        <p style="color: %s; font-size: 13px; margin-top: 24px">
-          Si vous n'êtes pas à l'origine de cette action, contactez immédiatement
-          l'administrateur : votre compte pourrait être compromis.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              La double authentification (2FA) de votre compte a été réinitialisée par un
+              administrateur. Vous pouvez vous reconnecter sans code, puis la reconfigurer
+              depuis vos paramètres.
+            </p>
+            %s
+            <p style="color: %s; font-size: 13px; margin-top: 24px">
+              Si vous n'êtes pas à l'origine de cette action, contactez immédiatement
+              l'administrateur : votre compte pourrait être compromis.
+            </p>
+            """
             .formatted(
                 C_TEXTE, bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"), C_MUTE);
     return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
@@ -120,19 +120,19 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de confirmation
    */
-  static String confirmationEmail(String lien, String baseUrl) {
-    String corps =
+  static String confirmationEmail(final String lien, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse.
-          Ce lien est valable 24 heures.
-        </p>
-        %s
-        <p style="color: %s; font-size: 13px; margin-top: 24px">
-          Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-          Votre adresse actuelle reste inchangée.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse.
+              Ce lien est valable 24 heures.
+            </p>
+            %s
+            <p style="color: %s; font-size: 13px; margin-top: 24px">
+              Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+              Votre adresse actuelle reste inchangée.
+            </p>
+            """
             .formatted(C_TEXTE, bouton(lien, "Confirmer ma nouvelle adresse →"), C_MUTE);
     return envelopper("Confirmez votre nouvelle adresse email", corps, baseUrl);
   }
@@ -147,17 +147,17 @@ final class EmailTemplates {
    * @return le HTML de l'email de signalement
    */
   static String signalement(
-      String typeLabel, String expediteurEmail, String message, String baseUrl) {
-    String corps =
+      final String typeLabel, final String expediteurEmail, final String message, final String baseUrl) {
+    final String corps =
         """
-        <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
-          <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Email</td>
-            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-          </tr>
-        </table>
-        <p style="color: %s; font-size: 14px; white-space: pre-wrap; border-left: 3px solid %s; padding-left: 12px; margin: 0">%s</p>
-        """
+            <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Email</td>
+                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+              </tr>
+            </table>
+            <p style="color: %s; font-size: 14px; white-space: pre-wrap; border-left: 3px solid %s; padding-left: 12px; margin: 0">%s</p>
+            """
             .formatted(C_NOIR, e(expediteurEmail), C_TEXTE, C_BORDURE, e(message));
     return envelopper("Signalement — " + typeLabel, corps, baseUrl);
   }
@@ -170,18 +170,18 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML du digest
    */
-  static String digestConcerts(String sujet, List<LigneConcert> lignes, String baseUrl) {
-    StringBuilder lignesHtml = new StringBuilder();
+  static String digestConcerts(final String sujet, final List<LigneConcert> lignes, final String baseUrl) {
+    final StringBuilder lignesHtml = new StringBuilder();
     String artistePrecedent = null;
     for (LigneConcert c : lignes) {
-      String urlBillets =
+      final String urlBillets =
           c.url() != null
               ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
-                  .formatted(e(c.url()), C_NOIR))
+              .formatted(e(c.url()), C_NOIR))
               : "";
       // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
       // digest couvrant plusieurs artistes se lit comme une liste continue.
-      String stylecel =
+      final String stylecel =
           artistePrecedent != null && !artistePrecedent.equals(c.artiste())
               ? "padding: 16px 0 10px; border-top: 2px solid #ddd; vertical-align: top"
               : "padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top";
@@ -199,12 +199,12 @@ final class EmailTemplates {
                   stylecel, C_NOIR, e(c.artiste()), e(c.dateFormatee()), urlBillets, e(c.lieu())));
       artistePrecedent = c.artiste();
     }
-    String corps =
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
-        <table style="border-collapse: collapse; width: 100%%">%s</table>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
+            <table style="border-collapse: collapse; width: 100%%">%s</table>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(C_TEXTE, lignesHtml, bouton(baseUrl + "/", "Voir mes spectacles →"));
     return envelopper(sujet, corps, baseUrl);
   }
@@ -217,29 +217,29 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte backup
    */
-  static String alerteBackup(String horodatage, String raison, String baseUrl) {
-    String horodatageHtml =
+  static String alerteBackup(final String horodatage, final String raison, final String baseUrl) {
+    final String horodatageHtml =
         (horodatage != null && !horodatage.isBlank())
             ? "Démarré le : " + e(horodatage)
             : "Horodatage indisponible.";
-    String raisonHtml =
+    final String raisonHtml =
         (raison != null && !raison.isBlank())
             ? ("""
             <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
             border-left: 3px solid %s; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
             """
-                .formatted(C_ERREUR, e(raison)))
+            .formatted(C_ERREUR, e(raison)))
             : "";
-    String corps =
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 8px">%s</p>
-        %s
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Le backup local nocturne (dump PostgreSQL + .env + logs) n'a pas pu être
-          complété. Vérifiez l'espace disque et les logs systemd sur le serveur.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 8px">%s</p>
+            %s
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Le backup local nocturne (dump PostgreSQL + .env + logs) n'a pas pu être
+              complété. Vérifiez l'espace disque et les logs systemd sur le serveur.
+            </p>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(
                 C_TEXTE,
                 horodatageHtml,
@@ -257,17 +257,17 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte
    */
-  static String alerteIntegrite(String detail, String baseUrl) {
-    String corps =
+  static String alerteIntegrite(final String detail, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px; font-family: monospace;\
-        white-space: pre-wrap; background: #f5f5f5; border-left: 3px solid %s; padding: 8px 12px">\
-        %s</p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Une modification de fichier a été détectée hors d'un déploiement légitime
-          (JARs, .env, scripts/, units systemd). Vérifiez l'origine sur le serveur.
-        </p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 16px; font-family: monospace;\
+            white-space: pre-wrap; background: #f5f5f5; border-left: 3px solid %s; padding: 8px 12px">\
+            %s</p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Une modification de fichier a été détectée hors d'un déploiement légitime
+              (JARs, .env, scripts/, units systemd). Vérifiez l'origine sur le serveur.
+            </p>
+            """
             .formatted(C_ERREUR, C_ERREUR, e(detail), C_TEXTE);
     return enveloppErreur("Alerte contrôle d'intégrité", corps, baseUrl);
   }
@@ -279,20 +279,20 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte bounce
    */
-  static String alerteBounce(String emailBouncee, String baseUrl) {
-    String corps =
+  static String alerteBounce(final String emailBouncee, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px">
-          Un email envoyé par Strapontin a été rejeté définitivement par le serveur destinataire.
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Adresse concernée : <strong>%s</strong>
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Vérifiez l'adresse email de cet utilisateur depuis la page d'administration.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 16px">
+              Un email envoyé par Strapontin a été rejeté définitivement par le serveur destinataire.
+            </p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Adresse concernée : <strong>%s</strong>
+            </p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Vérifiez l'adresse email de cet utilisateur depuis la page d'administration.
+            </p>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(
                 C_TEXTE,
                 C_TEXTE,
@@ -309,21 +309,21 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte plainte spam
    */
-  static String alertePlainteSpam(String emailPlaignant, String baseUrl) {
-    String corps =
+  static String alertePlainteSpam(final String emailPlaignant, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px">
-          Un destinataire a signalé un email envoyé par Strapontin comme indésirable (spam).
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Adresse concernée : <strong>%s</strong>
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Une plainte spam menace la réputation d'envoi du domaine. Vérifiez l'adresse email de
-          cet utilisateur depuis la page d'administration.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 16px">
+              Un destinataire a signalé un email envoyé par Strapontin comme indésirable (spam).
+            </p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Adresse concernée : <strong>%s</strong>
+            </p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Une plainte spam menace la réputation d'envoi du domaine. Vérifiez l'adresse email de
+              cet utilisateur depuis la page d'administration.
+            </p>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(
                 C_TEXTE,
                 C_TEXTE,
@@ -340,15 +340,15 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte worker
    */
-  static String alerteWorker(String detail, String baseUrl) {
-    String corps =
+  static String alerteWorker(final String detail, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px">%s</p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 16px">%s</p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.
+            </p>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(
                 C_TEXTE,
                 e(detail),
@@ -368,18 +368,18 @@ final class EmailTemplates {
    * @return le HTML de l'alerte quota Resend
    */
   static String alerteQuotaResend(
-      int envoyesJour, int limiteJour, int envoyesMois, int limiteMois, String baseUrl) {
-    String corps =
+      final int envoyesJour, final int limiteJour, final int envoyesMois, final int limiteMois, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 8px">
-          Le quota d'envoi Resend approche de sa limite.
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Jour : %d / %d envois. Mois : %d / %d envois. Au-delà, les emails
-          transactionnels et notifications sont bloqués avant tout appel réseau.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 8px">
+              Le quota d'envoi Resend approche de sa limite.
+            </p>
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
+              Jour : %d / %d envois. Mois : %d / %d envois. Au-delà, les emails
+              transactionnels et notifications sont bloqués avant tout appel réseau.
+            </p>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(
                 C_TEXTE,
                 C_TEXTE,
@@ -398,34 +398,34 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML du digest d'erreurs
    */
-  static String alerteLogsAdmin(List<EntreeLogAdmin> erreurs, String baseUrl) {
-    String lignesHtml =
+  static String alerteLogsAdmin(final List<EntreeLogAdmin> erreurs, final String baseUrl) {
+    final String lignesHtml =
         erreurs.stream()
             .map(
                 entree -> {
-                  String dateFormatee =
+                  final String dateFormatee =
                       DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
                           .withLocale(Locale.FRANCE)
                           .withZone(ZoneId.of("Europe/Paris"))
                           .format(Instant.ofEpochMilli(entree.ts()));
                   return """
-                  <tr>
-                    <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
-                      <div style="font-weight: 600; color: %s; font-size: 14px">%s — %s</div>
-                      <div style="color: #666; font-size: 13px; margin-top: 2px">%s</div>
-                    </td>
-                  </tr>
-                  """
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
+                          <div style="font-weight: 600; color: %s; font-size: 14px">%s — %s</div>
+                          <div style="color: #666; font-size: 13px; margin-top: 2px">%s</div>
+                        </td>
+                      </tr>
+                      """
                       .formatted(
                           C_ERREUR, e(dateFormatee), e(entree.source()), e(entree.message()));
                 })
             .collect(Collectors.joining());
-    String corps =
+    final String corps =
         """
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">%d nouvelle(s) entrée(s) d'erreur dans les logs admin :</p>
-        <table style="border-collapse: collapse; width: 100%%">%s</table>
-        <p style="margin-top: 24px">%s</p>
-        """
+            <p style="color: %s; font-size: 14px; margin: 0 0 24px">%d nouvelle(s) entrée(s) d'erreur dans les logs admin :</p>
+            <table style="border-collapse: collapse; width: 100%%">%s</table>
+            <p style="margin-top: 24px">%s</p>
+            """
             .formatted(
                 C_TEXTE,
                 erreurs.size(),
@@ -440,17 +440,17 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de notification
    */
-  static String suppressionCompte(String baseUrl) {
-    String corps =
+  static String suppressionCompte(final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          Votre compte Strapontin a été supprimé par un administrateur.
-          Vos données ont été effacées.
-        </p>
-        <p style="color: %s; font-size: 13px; margin: 0">
-          Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              Votre compte Strapontin a été supprimé par un administrateur.
+              Vos données ont été effacées.
+            </p>
+            <p style="color: %s; font-size: 13px; margin: 0">
+              Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
+            </p>
+            """
             .formatted(C_TEXTE, C_MUTE);
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
   }
@@ -467,42 +467,42 @@ final class EmailTemplates {
    * @return le HTML de l'email de signalement admin
    */
   static String signalementSalleManquante(
-      String nom,
-      String ville,
-      String urlSite,
-      String commentaire,
-      String emailUtilisateur,
-      String baseUrl) {
-    String blocCommentaire =
+      final String nom,
+      final String ville,
+      final String urlSite,
+      final String commentaire,
+      final String emailUtilisateur,
+      final String baseUrl) {
+    final String blocCommentaire =
         (commentaire != null && !commentaire.isBlank())
             ? """
             <p style="color: %s; font-size: 14px; white-space: pre-wrap;\
              border-left: 3px solid %s; padding-left: 12px; margin: 16px 0 0">%s</p>
             """
-                .formatted(C_TEXTE, C_BORDURE, e(commentaire))
+            .formatted(C_TEXTE, C_BORDURE, e(commentaire))
             : "";
-    String corps =
+    final String corps =
         """
-        <table style="border-collapse: collapse; width: 100%%; margin-bottom: 8px">
-          <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 140px">Utilisateur</td>
-            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px">Nom de la salle</td>
-            <td style="padding: 8px 0; font-size: 14px; color: %s"><strong>%s</strong></td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px">Ville / CP</td>
-            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #888; font-size: 14px">Site / billetterie</td>
-            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-          </tr>
-        </table>
-        %s
-        """
+            <table style="border-collapse: collapse; width: 100%%; margin-bottom: 8px">
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-size: 14px; width: 140px">Utilisateur</td>
+                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-size: 14px">Nom de la salle</td>
+                <td style="padding: 8px 0; font-size: 14px; color: %s"><strong>%s</strong></td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-size: 14px">Ville / CP</td>
+                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #888; font-size: 14px">Site / billetterie</td>
+                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+              </tr>
+            </table>
+            %s
+            """
             .formatted(
                 C_NOIR,
                 e(emailUtilisateur),
@@ -523,16 +523,16 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de confirmation
    */
-  static String confirmationSignalementSalle(String nom, String baseUrl) {
-    String corps =
+  static String confirmationSignalementSalle(final String nom, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 16px">
-          Votre signalement pour <strong>%s</strong> a été transmis à l'administrateur.
-        </p>
-        <p style="color: %s; font-size: 13px; margin: 0">
-          L'administrateur pourra vous répondre directement par email si besoin.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 16px">
+              Votre signalement pour <strong>%s</strong> a été transmis à l'administrateur.
+            </p>
+            <p style="color: %s; font-size: 13px; margin: 0">
+              L'administrateur pourra vous répondre directement par email si besoin.
+            </p>
+            """
             .formatted(C_TEXTE, e(nom), C_MUTE);
     return envelopper("Votre signalement a été transmis", corps, baseUrl);
   }
@@ -543,15 +543,15 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de promotion
    */
-  static String promotionAdmin(String baseUrl) {
-    String corps =
+  static String promotionAdmin(final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          Votre compte Strapontin a été promu au rôle administrateur.
-          Vous avez désormais accès au panneau d'administration.
-        </p>
-        %s
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              Votre compte Strapontin a été promu au rôle administrateur.
+              Vous avez désormais accès au panneau d'administration.
+            </p>
+            %s
+            """
             .formatted(C_TEXTE, bouton(baseUrl + "/admin", "Accéder à l'administration →"));
     return envelopper("Vous êtes maintenant administrateur Strapontin", corps, baseUrl);
   }
@@ -563,17 +563,17 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de préavis
    */
-  static String preavisRevocationAdmin(String dateEffective, String baseUrl) {
-    String corps =
+  static String preavisRevocationAdmin(final String dateEffective, final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 24px">
-          Votre accès administrateur Strapontin sera supprimé le <strong>%s</strong>.
-          Après cette date, vous ne pourrez plus accéder au panneau d'administration.
-        </p>
-        <p style="color: %s; font-size: 13px; margin: 0">
-          Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 24px">
+              Votre accès administrateur Strapontin sera supprimé le <strong>%s</strong>.
+              Après cette date, vous ne pourrez plus accéder au panneau d'administration.
+            </p>
+            <p style="color: %s; font-size: 13px; margin: 0">
+              Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
+            </p>
+            """
             .formatted(C_TEXTE, e(dateEffective), C_MUTE);
     return enveloppErreur("Préavis de révocation admin", corps, baseUrl);
   }
@@ -584,32 +584,32 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de test
    */
-  static String emailTest(String baseUrl) {
-    String corps =
+  static String emailTest(final String baseUrl) {
+    final String corps =
         """
-        <p style="color: %s; margin: 0 0 16px">
-          Si vous recevez cet email, la configuration Resend est correcte.
-        </p>
-        <p style="color: %s; font-size: 13px; margin: 0">
-          Envoyé depuis l'administration Strapontin.
-        </p>
-        """
+            <p style="color: %s; margin: 0 0 16px">
+              Si vous recevez cet email, la configuration Resend est correcte.
+            </p>
+            <p style="color: %s; font-size: 13px; margin: 0">
+              Envoyé depuis l'administration Strapontin.
+            </p>
+            """
             .formatted(C_TEXTE, C_MUTE);
     return envelopper("Test de configuration email", corps, baseUrl);
   }
 
   // ---- Helpers privés ----
 
-  private static String envelopper(String titre, String corps, String baseUrl) {
+  private static String envelopper(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 
-  private static String enveloppErreur(String titre, String corps, String baseUrl) {
+  private static String enveloppErreur(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_ERREUR, titre, corps, baseUrl);
   }
 
   private static String enveloppAvecCouleur(
-      String couleur, String titre, String corps, String baseUrl) {
+      final String couleur, final String titre, final String corps, final String baseUrl) {
     return """
     <!doctype html>
     <html lang="fr">
@@ -631,7 +631,7 @@ final class EmailTemplates {
         .formatted(C_BORDURE, couleur, e(titre), corps, C_MUTE, e(baseUrl), C_MUTE);
   }
 
-  private static String bouton(String href, String texte) {
+  private static String bouton(final String href, final String texte) {
     return """
     <a href="%s" style="display: inline-block; background: %s; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
     """
@@ -644,7 +644,7 @@ final class EmailTemplates {
    * @param valeur la valeur à échapper (null retourne une chaîne vide)
    * @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
    */
-  static String e(Object valeur) {
+  static String e(final Object valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }
 }
