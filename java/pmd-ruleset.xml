@@ -13,8 +13,17 @@
   <rule ref="category/java/codestyle.xml"/>
   <rule ref="category/java/documentation.xml"/>
   <rule ref="category/java/errorprone.xml"/>
-  <rule ref="category/java/multithreading.xml"/>
   <rule ref="category/java/performance.xml"/>
+
+  <!-- UseConcurrentHashMap exclue après mesure : 87 sites, tous des variables locales scopées à
+       une méthode (une nouvelle Map par appel, jamais un champ partagé) — aucun accès concurrent
+       réel possible. Au moins une dizaine insèrent une valeur potentiellement null (colonnes SQL
+       nullable, champs de record nullables comme dept/wikidataId/salle_parent_id) —
+       ConcurrentHashMap lève une NullPointerException immédiate sur put(clé, null), contrairement
+       à HashMap : la conversion introduirait une régression réelle sans aucun bénéfice. -->
+  <rule ref="category/java/multithreading.xml">
+    <exclude name="UseConcurrentHashMap"/>
+  </rule>
   <rule ref="category/java/security.xml"/>
 
   <rule ref="category/java/design.xml"/>
