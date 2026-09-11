@@ -5,23 +5,19 @@
     xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
 
   <description>
-    Ruleset ciblant les bugs potentiels et la conception (bestpractices/design/errorprone/
-    multithreading/performance/security) — le style/formatage est déjà géré par google-java-format
-    et le style Javadoc par Checkstyle, non dupliqués ici.
+    Ruleset ciblant les bugs potentiels et la conception. Toutes les catégories PMD sont incluses
+    (y compris codestyle/documentation) — aucune exclusion sans mesure réelle préalable.
   </description>
 
   <rule ref="category/java/bestpractices.xml"/>
+  <rule ref="category/java/codestyle.xml"/>
+  <rule ref="category/java/documentation.xml"/>
   <rule ref="category/java/errorprone.xml"/>
   <rule ref="category/java/multithreading.xml"/>
   <rule ref="category/java/performance.xml"/>
   <rule ref="category/java/security.xml"/>
 
-  <rule ref="category/java/design.xml">
-    <!-- Seuils alignés sur java.md ; LawOfDemeter/LoosePackageCoupling trop bruyants pour ce
-         style de code (façades/services Spring densément câblés), exclus après mesure. -->
-    <exclude name="LawOfDemeter"/>
-    <exclude name="LoosePackageCoupling"/>
-  </rule>
+  <rule ref="category/java/design.xml"/>
   <rule ref="category/java/design.xml/CyclomaticComplexity">
     <properties>
       <property name="methodReportLevel" value="10"/>

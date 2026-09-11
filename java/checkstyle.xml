@@ -22,9 +22,22 @@
       <property name="max" value="7"/>
     </module>
 
-    <!-- MissingJavadocMethod/Type volontairement absents : Checkstyle (core 9.3, embarqué par le
-         plugin) ne reconnaît pas la syntaxe Markdown `///` (JEP 467), déjà largement utilisée
-         dans le code existant — un run réel les signale en masse sur du code déjà documenté. -->
+    <!-- Javadoc obligatoire sur le public/protégé (java.md), syntaxe /** */ classique uniquement —
+         Checkstyle ne reconnaît pas /// (JEP 467) comme du Javadoc valide, donc un membre
+         documenté seulement en /// est à juste titre signalé comme non documenté. -->
+    <module name="MissingJavadocMethod">
+      <property name="scope" value="protected"/>
+    </module>
+    <module name="MissingJavadocType">
+      <property name="scope" value="protected"/>
+    </module>
+
+    <!-- Signale explicitement /// (déprécié au profit de /** */, java.md) plutôt que de laisser
+         MissingJavadocMethod/Type seuls suggérer une absence totale de documentation. -->
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="^\s*///"/>
+      <property name="message" value="Javadoc /// déprécié — utiliser /** */ classique (java.md)"/>
+    </module>
 
     <!-- APIs interdites (java.md) -->
     <module name="Regexp">
