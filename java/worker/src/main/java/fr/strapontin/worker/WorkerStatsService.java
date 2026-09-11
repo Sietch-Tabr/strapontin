@@ -124,7 +124,7 @@ public class WorkerStatsService {
     }
     if (typeJob.startsWith("fetch:")) {
       boolean bilanLoggue = false;
-      for (SourceConcerts source : sources) {
+      for (final SourceConcerts source : sources) {
         if (source instanceof SourceAvecBilanFetch avecBilan) {
           bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
         }

@@ -157,7 +157,7 @@ public class ReconciliationNocturneService {
             Map.of());
 
     int incoherences = 0;
-    for (var ligne : lies) {
+    for (final var ligne : lies) {
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String attractionId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -283,7 +283,7 @@ public class ReconciliationNocturneService {
     int verifiees = 0;
     int redecouvertes = 0;
     int ambigues = 0;
-    for (var ligne : suspectes) {
+    for (final var ligne : suspectes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       final String ancienVenueId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -361,7 +361,7 @@ public class ReconciliationNocturneService {
                 """,
             Map.of());
 
-    for (var ligne : suspects) {
+    for (final var ligne : suspects) {
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String ancienAttractionId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");

@@ -153,7 +153,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     final Elements evenements = doc.select(SEL_EVENEMENTS);
     final List<ConcertBrut> concerts = new ArrayList<>();
 
-    for (Element ev : evenements) {
+    for (final Element ev : evenements) {
       final ConcertBrut concert = parserEvenement(ev, slug);
       if (concert != null) {
         concerts.add(concert);
@@ -242,7 +242,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     final String lower = nom.toLowerCase(Locale.FRENCH);
     final StringBuilder sb = new StringBuilder(lower.length());
     boolean capitaliser = true;
-    for (char c : lower.toCharArray()) {
+    for (final char c : lower.toCharArray()) {
       if (Character.isLetter(c)) {
         sb.append(capitaliser ? Character.toUpperCase(c) : c);
         capitaliser = false;

@@ -74,7 +74,7 @@ public class CoherenceMultiSalleService {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
     final Map<UUID, String> nomNormParSalle = new HashMap<>();
     final Map<UUID, String> signaleeParSalle = new HashMap<>();
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       final String identifiant = (String) ligne.get("identifiant");
       nomsExtraitsParSalle
@@ -85,7 +85,7 @@ public class CoherenceMultiSalleService {
     }
 
     int signalees = 0;
-    for (var entree : nomsExtraitsParSalle.entrySet()) {
+    for (final var entree : nomsExtraitsParSalle.entrySet()) {
       final UUID salleId = entree.getKey();
       final String nomNormSalle = nomNormParSalle.get(salleId);
       final List<String> mesententes =
@@ -168,7 +168,7 @@ public class CoherenceMultiSalleService {
     }
 
     final StringBuilder initiales = new StringBuilder();
-    for (String mot : mots) {
+    for (final String mot : mots) {
       if (mot.isEmpty()) {
         return false;
       }

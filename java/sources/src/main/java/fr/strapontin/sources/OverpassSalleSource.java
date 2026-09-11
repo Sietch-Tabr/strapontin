@@ -174,7 +174,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();
     final Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
-    for (var entree : parDept.entrySet()) {
+    for (final var entree : parDept.entrySet()) {
       final CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
       if (centre == null) {
         continue;
@@ -311,8 +311,8 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
       return resultats;
     }
 
-    for (SalleAEnrichir salle : lot) {
-      for (var element : elements) {
+    for (final SalleAEnrichir salle : lot) {
+      for (final var element : elements) {
         final var tags = (Map<String, String>) element.get("tags");
         if (tags == null) {
           continue;

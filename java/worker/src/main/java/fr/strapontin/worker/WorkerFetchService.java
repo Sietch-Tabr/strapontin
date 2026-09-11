@@ -227,8 +227,8 @@ public class WorkerFetchService {
     final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot);
 
     final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
-    for (SourceConcerts source : sourcesSimples) {
-      for (Map<String, Object> row : lot) {
+    for (final SourceConcerts source : sourcesSimples) {
+      for (final Map<String, Object> row : lot) {
         final String nom = (String) row.get("artiste_affiche");
         final String deezerId = (String) row.get("deezer_id");
         final String wikidataId = (String) row.get("wikidata_id");
@@ -319,7 +319,7 @@ public class WorkerFetchService {
    * @param destination liste dans laquelle ajouter les concerts trouvés
    */
   private void fetchEtSuivreSalle(final String identifiant, final List<ConcertBrut> destination) {
-    for (SourceConcerts source : sources) {
+    for (final SourceConcerts source : sources) {
       if (source.accepteIdentifiantSalle(identifiant)) {
         try {
           final List<ConcertBrut> resultat = source.fetchSalle(identifiant);
@@ -372,7 +372,7 @@ public class WorkerFetchService {
     final List<String> attractionIds = new ArrayList<>();
     final List<String> nomsSansTmId = new ArrayList<>();
 
-    for (Map<String, Object> row : rows) {
+    for (final Map<String, Object> row : rows) {
       final String nom = (String) row.get("artiste_affiche");
       final String artisteIdStr = (String) row.get("artiste_id_str");
       String attractionId = (String) row.get("attraction_id");
@@ -449,7 +449,7 @@ public class WorkerFetchService {
 
   private List<ConcertBrut> fetchParNomsSansAttractionId(final List<String> nomsSansTmId) {
     final List<ConcertBrut> resultats = new ArrayList<>();
-    for (String nom : nomsSansTmId) {
+    for (final String nom : nomsSansTmId) {
       try {
         resultats.addAll(tm.fetchArtiste(nom));
       } catch (Exception e) {
@@ -535,9 +535,9 @@ public class WorkerFetchService {
 
   private static java.util.Set<String> collecterTousLesDepts(final List<String[]> allDepts) {
     final java.util.Set<String> tousLesDepts = new java.util.LinkedHashSet<>();
-    for (String[] depts : allDepts) {
+    for (final String[] depts : allDepts) {
       if (depts != null) {
-        for (String d : depts) {
+        for (final String d : depts) {
           if (d != null && !d.isBlank()) {
             tousLesDepts.add(d.trim());
           }
@@ -565,7 +565,7 @@ public class WorkerFetchService {
    */
   private ResultatPersistance traiterLotDepartements(final List<String> lotDepts) {
     final List<ConcertBrut> tous = new ArrayList<>();
-    for (SourceConcerts source : sources) {
+    for (final SourceConcerts source : sources) {
       try {
         tous.addAll(source.fetchRegion(lotDepts, null));
       } catch (Exception e) {
@@ -614,7 +614,7 @@ public class WorkerFetchService {
 
     final String[] identifiants = identifiantsStr.split(",");
     final List<ConcertBrut> concerts = new ArrayList<>();
-    for (String identifiant : identifiants) {
+    for (final String identifiant : identifiants) {
       fetchEtSuivreSalle(identifiant.trim(), concerts);
     }
     sauvegarderQuota();
@@ -754,8 +754,8 @@ public class WorkerFetchService {
    */
   private ResultatPersistance traiterLotSalles(final List<SalleAFetcher> lotSalles) {
     final List<ConcertBrut> tous = new ArrayList<>();
-    for (SalleAFetcher salle : lotSalles) {
-      for (String id : salle.identifiants().split(",")) {
+    for (final SalleAFetcher salle : lotSalles) {
+      for (final String id : salle.identifiants().split(",")) {
         fetchEtSuivreSalle(id.trim(), tous);
       }
     }
@@ -838,7 +838,7 @@ public class WorkerFetchService {
             .distinct()
             .toList();
 
-    for (String nom : noms) {
+    for (final String nom : noms) {
       final ResolveurNomCanonique.ResultatResolution resultat =
           resolveur.resoudreNomCanonique("artiste", nom);
       tableauResolution.put(nom, nomCanoniqueValideOuBrut(nom, resultat.nom()));

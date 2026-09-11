@@ -70,17 +70,17 @@ public class SuggestionMotsGenericsService {
     final List<String> noms = jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
 
     final Map<String, Integer> frequences = new HashMap<>();
-    for (String nom : noms) {
+    for (final String nom : noms) {
       final Set<String> tokens = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nom));
       tokens.removeAll(CorrespondanceSalle.MOTS_GENERIQUES_SALLE);
-      for (String token : tokens) {
+      for (final String token : tokens) {
         frequences.merge(token, 1, Integer::sum);
       }
     }
 
     final Set<String> dejaSuggeres = lireDejaSuggeres();
     int nouveaux = 0;
-    for (var entree : frequences.entrySet()) {
+    for (final var entree : frequences.entrySet()) {
       final String mot = entree.getKey();
       final int occurrences = entree.getValue();
       if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) {

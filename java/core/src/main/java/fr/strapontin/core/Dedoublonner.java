@@ -62,7 +62,7 @@ public final class Dedoublonner {
   // à tort dès cette première passe.
   private static List<ConcertEnrichi> passeExacte(final List<ConcertEnrichi> enrichis) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
-    for (ConcertEnrichi c : enrichis) {
+    for (final ConcertEnrichi c : enrichis) {
       final String heureCle = c.concert().heure() != null ? c.concert().heure() : SANS_HEURE;
       final String cle =
               c.artisteNorm() + "|" + c.concert().date() + "|" + heureCle + "|" + c.villeNorm();
@@ -74,12 +74,12 @@ public final class Dedoublonner {
   // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil.
   private static List<ConcertEnrichi> passeFuzzyDateVille(final List<ConcertEnrichi> apresPasseExacte) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
-    for (ConcertEnrichi c : apresPasseExacte) {
+    for (final ConcertEnrichi c : apresPasseExacte) {
       final String cle = c.concert().date() + "|" + c.villeNorm();
       groupes.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
     final List<ConcertEnrichi> resultat = new ArrayList<>();
-    for (List<ConcertEnrichi> groupe : groupes.values()) {
+    for (final List<ConcertEnrichi> groupe : groupes.values()) {
       if (groupe.size() <= 1) {
         resultat.addAll(groupe);
       } else {
@@ -92,12 +92,12 @@ public final class Dedoublonner {
   // Fallback : (date, salle_norm) pour les grandes salles avec villes divergentes entre sources.
   private static List<ConcertBrut> passeFallbackDateSalle(final List<ConcertEnrichi> apresPasseFuzzy) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
-    for (ConcertEnrichi c : apresPasseFuzzy) {
+    for (final ConcertEnrichi c : apresPasseFuzzy) {
       final String cle = c.concert().date() + "|" + c.salleNorm();
       groupes.computeIfAbsent(cle, _ -> new ArrayList<>()).add(c);
     }
     final List<ConcertBrut> resultat = new ArrayList<>();
-    for (List<ConcertEnrichi> groupe : groupes.values()) {
+    for (final List<ConcertEnrichi> groupe : groupes.values()) {
       if (groupe.size() <= 1) {
         resultat.add(groupe.get(0).concert());
       } else {
@@ -194,7 +194,7 @@ public final class Dedoublonner {
     final ConcertEnrichi gagnant = concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
 
     String meilleureSalle = gagnant.concert().salle();
-    for (ConcertEnrichi c : concerts) {
+    for (final ConcertEnrichi c : concerts) {
       final int scoreM =
               scoreNomRiche(meilleureSalle) * POIDS_DIACRITIQUES
                       + (meilleureSalle.equals(meilleureSalle.toUpperCase()) ? 0 : 1);
@@ -207,7 +207,7 @@ public final class Dedoublonner {
     }
 
     String meilleurArtiste = gagnant.concert().artiste();
-    for (ConcertEnrichi c : concerts) {
+    for (final ConcertEnrichi c : concerts) {
       if (scoreNomRiche(c.concert().artiste()) > scoreNomRiche(meilleurArtiste)) {
         meilleurArtiste = c.concert().artiste();
       }

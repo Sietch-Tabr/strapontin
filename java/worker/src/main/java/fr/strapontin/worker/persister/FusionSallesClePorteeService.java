@@ -70,7 +70,7 @@ public class FusionSallesClePorteeService {
     final List<PaireSalles> paires = detecterPaires();
     final Set<UUID> dejaAbsorbees = new HashSet<>();
     int fusions = 0;
-    for (PaireSalles paire : paires) {
+    for (final PaireSalles paire : paires) {
       if (dejaAbsorbees.contains(paire.a()) || dejaAbsorbees.contains(paire.b())) {
         continue;
       }
@@ -117,7 +117,7 @@ public class FusionSallesClePorteeService {
                 """,
             Map.of());
     final List<PaireSalles> paires = new ArrayList<>();
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final String nomA = (String) ligne.get("nom_a");
       final String nomB = (String) ligne.get("nom_b");
       if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) {
@@ -361,7 +361,7 @@ public class FusionSallesClePorteeService {
             Map.of("source", sourceId.toString(), "cible", cibleId.toString()),
             (rs, _) -> rs.getObject("id", UUID.class));
 
-    for (UUID enfant : enfants) {
+    for (final UUID enfant : enfants) {
       if (SalleHierarchie.creeraitCycle(cibleId, enfant, this::lireSalleParentId)) {
         jdbc.update(
             "UPDATE salles SET salle_parent_id = NULL WHERE id = CAST(:id AS uuid)",
@@ -412,7 +412,7 @@ public class FusionSallesClePorteeService {
                 """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
-    for (Map<String, Object> conflit : conflits) {
+    for (final Map<String, Object> conflit : conflits) {
       final boolean garderSource = laSourceEstPlusSaine(conflit);
       final Map<String, Object> paramsSuppression = new HashMap<>();
       paramsSuppression.put("source", conflit.get("source"));

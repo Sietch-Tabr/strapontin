@@ -171,7 +171,7 @@ public class WorkerPurgeService {
                   (rs, _) -> rs.getObject("id", UUID.class));
 
           int supprimes = 0;
-          for (UUID id : candidats) {
+          for (final UUID id : candidats) {
             try {
               jdbc.update("DELETE FROM salles WHERE id = CAST(:id AS uuid)", Map.of("id", id));
               supprimes++;

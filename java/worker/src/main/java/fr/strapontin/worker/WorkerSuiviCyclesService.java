@@ -86,7 +86,7 @@ public class WorkerSuiviCyclesService {
   int verifier() {
     final Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;
-    for (var entree : FRAICHEUR_ATTENDUE.entrySet()) {
+    for (final var entree : FRAICHEUR_ATTENDUE.entrySet()) {
       final String typeJob = entree.getKey();
       final Duration fraicheurMax = entree.getValue();
       final Instant derniereExec = dernieresExecs.get(typeJob);

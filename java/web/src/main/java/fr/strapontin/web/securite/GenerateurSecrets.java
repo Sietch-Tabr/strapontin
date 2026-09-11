@@ -37,7 +37,7 @@ public final class GenerateurSecrets {
     final byte[] octets = new byte[nbOctets];
     RNG.nextBytes(octets);
     final StringBuilder sb = new StringBuilder();
-    for (byte b : octets) {
+    for (final byte b : octets) {
       sb.append(String.format("%02x", b));
     }
     return sb.toString();
@@ -67,7 +67,7 @@ public final class GenerateurSecrets {
       final MessageDigest md = MessageDigest.getInstance("SHA-256");
       final byte[] hash = md.digest(entree.getBytes(StandardCharsets.UTF_8));
       final StringBuilder sb = new StringBuilder();
-      for (byte b : hash) {
+      for (final byte b : hash) {
         sb.append(String.format("%02x", b));
       }
       return sb.toString();

@@ -114,7 +114,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       Map<String, Object> meilleurCandidatExact = null;
       double meilleurePopularite = -1;
       double meilleurePopulariteExacte = -1;
-      for (Map<String, Object> candidat : dataList) {
+      for (final Map<String, Object> candidat : dataList) {
         final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null) {
           continue;

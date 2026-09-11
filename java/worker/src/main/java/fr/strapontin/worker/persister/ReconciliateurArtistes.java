@@ -68,7 +68,7 @@ public class ReconciliateurArtistes {
    * @param remplacements table de remplacement à résoudre sur place
    */
   private static void resoudreChaines(final Map<String, String> remplacements) {
-    for (String cle : new ArrayList<>(remplacements.keySet())) {
+    for (final String cle : new ArrayList<>(remplacements.keySet())) {
       String valeur = cle;
       while (remplacements.containsKey(valeur) && !remplacements.get(valeur).equals(valeur)) {
         valeur = remplacements.get(valeur);
@@ -113,7 +113,7 @@ public class ReconciliateurArtistes {
             Map.of("sallesNorms", sallesNorms));
 
     final Map<String, List<ArtisteExistant>> indexExistants = new HashMap<>();
-    for (Map<String, Object> e : existants) {
+    for (final Map<String, Object> e : existants) {
       final String cle = e.get("date") + "|" + e.get("salle_norm");
       indexExistants
           .computeIfAbsent(cle, _ -> new ArrayList<>())
@@ -160,11 +160,11 @@ public class ReconciliateurArtistes {
             Map.of("urls", urls));
 
     final Map<String, String> artisteNormParUrl = new HashMap<>();
-    for (Map<String, Object> ligne : existants) {
+    for (final Map<String, Object> ligne : existants) {
       artisteNormParUrl.put((String) ligne.get("url"), (String) ligne.get("artiste_norm"));
     }
 
-    for (ValeurConcert c : candidats) {
+    for (final ValeurConcert c : candidats) {
       final String artisteNormExistant = artisteNormParUrl.get(c.url());
       if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
         continue;
@@ -208,7 +208,7 @@ public class ReconciliateurArtistes {
   private Map<String, String> construireRemplacementsArtisteIntraLot(final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();
     final Map<String, List<String>> parGroupe = new LinkedHashMap<>();
-    for (ValeurConcert concert : lot) {
+    for (final ValeurConcert concert : lot) {
       final String cle = concert.date() + "|" + concert.salleNorm();
       parGroupe.computeIfAbsent(cle, _ -> new ArrayList<>());
       final List<String> groupe = parGroupe.get(cle);
@@ -216,7 +216,7 @@ public class ReconciliateurArtistes {
         groupe.add(concert.artisteNorm());
       }
     }
-    for (List<String> artistesNorm : parGroupe.values()) {
+    for (final List<String> artistesNorm : parGroupe.values()) {
       if (artistesNorm.size() > 1) {
         ajouterDoublonsArtiste(artistesNorm, remplacements);
       }
@@ -272,7 +272,7 @@ public class ReconciliateurArtistes {
       return concert;
     }
 
-    for (ArtisteExistant existant : artistesExistants) {
+    for (final ArtisteExistant existant : artistesExistants) {
       if (existant.artisteNorm().equals(concert.artisteNorm())) {
         if (concert.artisteId() == null && existant.artisteId() != null) {
           return concert.avecArtisteId(existant.artisteId());
@@ -280,7 +280,7 @@ public class ReconciliateurArtistes {
         return concert;
       }
     }
-    for (ArtisteExistant existant : artistesExistants) {
+    for (final ArtisteExistant existant : artistesExistants) {
       if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
         continue;
       }
@@ -379,7 +379,7 @@ public class ReconciliateurArtistes {
             Map.of("nomsNorm", nomsNormSansId));
 
     final Map<String, UUID> parNomNorm = new HashMap<>();
-    for (Map<String, Object> ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       parNomNorm.put((String) ligne.get("nom_norm"), (UUID) ligne.get("id"));
     }
     if (parNomNorm.isEmpty()) {
@@ -415,7 +415,7 @@ public class ReconciliateurArtistes {
   private void persistersArtistesSources(
       final List<ValeurConcert> concerts, final java.util.Set<String> nomNormsResolus) {
     final List<SqlParameterSource> params = new ArrayList<>();
-    for (ValeurConcert c : concerts) {
+    for (final ValeurConcert c : concerts) {
       if (c.artisteId() == null
           || c.artisteSourceId() == null
           || !nomNormsResolus.contains(c.artisteNorm())) {

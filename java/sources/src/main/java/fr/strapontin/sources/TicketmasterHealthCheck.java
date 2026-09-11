@@ -105,7 +105,7 @@ final class TicketmasterHealthCheck {
         return List.of();
       }
       final List<CandidatVenueTM> resultat = new ArrayList<>();
-      for (var v : venues) {
+      for (final var v : venues) {
         final Object id = v.get("id");
         if (id != null) {
           resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));

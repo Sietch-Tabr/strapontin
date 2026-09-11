@@ -92,7 +92,7 @@ final class MapeurProduitEventim {
   static String extraireNomArtiste(final String titre) {
     Objects.requireNonNull(titre, "titre");
     final String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
-    for (String sep : new String[] {" - ", " : "}) {
+    for (final String sep : new String[] {" - ", " : "}) {
       final int idx = titreNormalise.indexOf(sep);
       if (idx > 0) {
         return titreNormalise.substring(0, idx).strip();

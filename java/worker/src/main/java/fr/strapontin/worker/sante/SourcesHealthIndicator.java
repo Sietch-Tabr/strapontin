@@ -67,7 +67,7 @@ public class SourcesHealthIndicator implements HealthIndicator {
             Map.of());
     if (!jobsEnErreur.isEmpty()) {
       final Map<String, Object> details = new LinkedHashMap<>();
-      for (Map<String, Object> ligne : jobsEnErreur) {
+      for (final Map<String, Object> ligne : jobsEnErreur) {
         details.put((String) ligne.get("type_job"), ligne.get("erreur"));
       }
       builder.down().withDetail("sourcesEnErreur", details);

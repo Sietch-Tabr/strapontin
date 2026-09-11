@@ -143,7 +143,7 @@ public class ArtisteService {
 
   private static void ajouterSuggestionsInedites(
       final List<SuggestionArtiste> cible, final Set<String> nomsDejaPresents, final List<SuggestionArtiste> source) {
-    for (SuggestionArtiste r : source) {
+    for (final SuggestionArtiste r : source) {
       final String norm = Normalisation.normaliserTexte(r.nom());
       if (!nomsDejaPresents.contains(norm)) {
         cible.add(r);
@@ -291,7 +291,7 @@ public class ArtisteService {
    */
   public UUID resoudreArtisteId(final String nom, final String normalise) {
     final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
-    for (Map<String, Object> candidat : artisteRepository.chercherCandidatsParTokens(tokens)) {
+    for (final Map<String, Object> candidat : artisteRepository.chercherCandidatsParTokens(tokens)) {
       final String nomNormCandidat = (String) candidat.get("nom_norm");
       if (nomNormCandidat.equals(normalise)) {
         return artisteRepository.upsertArtiste(nom, normalise);
@@ -395,7 +395,7 @@ public class ArtisteService {
         return resultats;
       }
 
-      for (Map<String, Object> item : search) {
+      for (final Map<String, Object> item : search) {
         final String label = (String) item.get("label");
         final String id = (String) item.get("id");
         if (label == null || label.isBlank() || id == null) {

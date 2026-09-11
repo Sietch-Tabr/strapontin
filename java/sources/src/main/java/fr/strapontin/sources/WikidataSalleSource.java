@@ -142,7 +142,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     final List<SalleAEnrichir> aDecouvrir = salles.stream().filter(s -> s.wikidataId() == null).toList();
 
     final List<SalleAEnrichir> nonCachees = new ArrayList<>();
-    for (SalleAEnrichir s : connues) {
+    for (final SalleAEnrichir s : connues) {
       final EnrichissementSalle depuisCache = cache.getIfPresent(s.wikidataId());
       if (depuisCache != null) {
         resultats.put(s.id(), depuisCache);
@@ -157,7 +157,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       resultats.putAll(enrichirLotConnu(lot));
     }
 
-    for (SalleAEnrichir salle : aDecouvrir) {
+    for (final SalleAEnrichir salle : aDecouvrir) {
       decouvrir(salle).ifPresent(e -> resultats.put(salle.id(), e));
     }
 
@@ -168,7 +168,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
 
   private Map<UUID, EnrichissementSalle> enrichirLotConnu(final List<SalleAEnrichir> lot) {
     final Map<String, UUID> qidVersUuid = new HashMap<>();
-    for (SalleAEnrichir s : lot) {
+    for (final SalleAEnrichir s : lot) {
       qidVersUuid.put(s.wikidataId(), s.id());
     }
 
@@ -214,7 +214,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       return resultats;
     }
 
-    for (var binding : bindings) {
+    for (final var binding : bindings) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) {
         continue;
@@ -273,7 +273,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     if (bindings == null) {
       return invalides;
     }
-    for (var binding : bindings) {
+    for (final var binding : bindings) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) {
         continue;
@@ -414,7 +414,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
       return Optional.empty();
     }
 
-    for (var binding : ClientSparqlWikidata.extraireBindings(data)) {
+    for (final var binding : ClientSparqlWikidata.extraireBindings(data)) {
       final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
       if (itemUri == null) {
         continue;
@@ -558,7 +558,7 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     if (aliases == null || aliases.isBlank()) {
       return null;
     }
-    for (String alias : aliases.split("\\|")) {
+    for (final String alias : aliases.split("\\|")) {
       if (estCorrespondanceAsymetrique(
           nomNormCible, Normalisation.normaliserTexte(alias), localisationConnue)) {
         return alias;

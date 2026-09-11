@@ -83,7 +83,7 @@ public class SuiviSanteSourcesService {
    */
   public void enregistrerResultatArtistesLot(
       final List<String> attractionIds, final List<ConcertBrut> concertsLot) {
-    for (String attractionId : attractionIds) {
+    for (final String attractionId : attractionIds) {
       final String artisteSourceId = "ticketmaster:" + attractionId;
       final boolean succes =
           concertsLot.stream().anyMatch(c -> artisteSourceId.equals(c.artisteSourceId()));

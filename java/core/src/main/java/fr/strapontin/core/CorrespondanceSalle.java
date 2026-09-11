@@ -167,7 +167,7 @@ public final class CorrespondanceSalle {
     if (specCourt.isEmpty() || specLong.isEmpty()) {
       return false;
     }
-    for (String tokenCourt : specCourt) {
+    for (final String tokenCourt : specCourt) {
       if (tokenCourt.length() < LONGUEUR_MIN_CONTAINMENT_TOKEN) {
         return false;
       }

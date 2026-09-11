@@ -160,7 +160,7 @@ public class NotificationPushService {
     // webpush-java peut lancer une exception avec le code HTTP dans le message
     try {
       final String[] parties = msg.split("\\s+");
-      for (String p : parties) {
+      for (final String p : parties) {
         final int code = Integer.parseInt(p);
         if (code >= 400 && code < 600) {
           return code;

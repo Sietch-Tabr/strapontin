@@ -268,7 +268,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
 
     final List<ConcertBrut> concerts = new ArrayList<>();
-    for (var p : produits) {
+    for (final var p : produits) {
       final ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
       if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) {
         concerts.add(c);
@@ -313,7 +313,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       final String termeNorm = Normalisation.normaliserTexte(terme);
       Map<String, Object> exact = null;
       Map<String, Object> parContainment = null;
-      for (var a : attractions) {
+      for (final var a : attractions) {
         final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
         // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
         // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
@@ -431,7 +431,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .queryParam("in_stock", "true")
                 .queryParam("top", TAILLE_PAGE)
                 .queryParam("page", page);
-        for (String c : classifications) {
+        for (final String c : classifications) {
           uriBuilder = uriBuilder.queryParam("categories", c);
         }
         final java.net.URI uri = uriBuilder.build().encode().toUri();
@@ -509,7 +509,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     final List<String> categories = CATEGORIES_REGION;
     final List<ConcertBrut> tous = new ArrayList<>();
 
-    for (String dept : depts) {
+    for (final String dept : depts) {
       final List<ConcertBrut> concerts = fetchProduitsParRegion(dept, categories);
       tous.addAll(concerts);
       if (!attendreEntrePagesEventim()) {

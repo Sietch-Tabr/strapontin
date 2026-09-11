@@ -165,7 +165,7 @@ class ResolveurSalleParConcert {
                 + " WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
                 + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)",
             new MapSqlParameterSource().addValue("dept", dept, Types.VARCHAR));
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final Double latitude = (Double) ligne.get("latitude");
       final Double longitude = (Double) ligne.get("longitude");
       if (FusionSallesClePorteeService.coordonneesConnuesEtProches(
@@ -269,7 +269,7 @@ class ResolveurSalleParConcert {
     UUID meilleurUuid = null;
     String meilleurNomNorm = null;
     double meilleurScore = -1;
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final UUID uuid = (UUID) ligne.get("id");
       final String nomCandidat = (String) ligne.get("nom");
       final String nomNormCandidat = (String) ligne.get("nom_norm");
@@ -421,7 +421,7 @@ class ResolveurSalleParConcert {
    */
   private UUID premierCandidatGeographiquementCoherent(final List<UUID> candidats, final String deptEntrant) {
     final Map<UUID, String> depts = deptsConnus(new HashSet<>(candidats));
-    for (UUID candidat : candidats) {
+    for (final UUID candidat : candidats) {
       final String deptConnu = depts.get(candidat);
       if (deptConnu == null || deptConnu.equals(deptEntrant)) {
         return candidat;
@@ -457,7 +457,7 @@ class ResolveurSalleParConcert {
    */
   List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {
     final Set<UUID> salleIdsExistants = new HashSet<>();
-    for (ValeurConcert c : concerts) {
+    for (final ValeurConcert c : concerts) {
       if (c.salleId() != null) {
         salleIdsExistants.add(c.salleId());
       }
@@ -498,7 +498,7 @@ class ResolveurSalleParConcert {
               if (candidats == null) {
                 return c;
               }
-              for (Map<String, Object> candidat : candidats) {
+              for (final Map<String, Object> candidat : candidats) {
                 final String deptEffectif = (String) candidat.get("dept_effectif");
                 if (c.dept() == null || deptEffectif == null || deptEffectif.equals(c.dept())) {
                   return c.avecSalleId((UUID) candidat.get("id"));
@@ -537,7 +537,7 @@ class ResolveurSalleParConcert {
         jdbc.queryForList(
             "SELECT id, nom_norm FROM salles WHERE id IN (:ids)", Map.of("ids", salleIds));
     final Map<UUID, String> resultat = new HashMap<>();
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       resultat.put((UUID) ligne.get("id"), (String) ligne.get("nom_norm"));
     }
     return resultat;
@@ -564,7 +564,7 @@ class ResolveurSalleParConcert {
                 + " FROM salles s WHERE s.id IN (:ids)",
             Map.of("ids", salleIds));
     final Map<UUID, String> resultat = new HashMap<>();
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final String dept = (String) ligne.get("dept");
       if (dept != null) {
         resultat.put((UUID) ligne.get("id"), dept);

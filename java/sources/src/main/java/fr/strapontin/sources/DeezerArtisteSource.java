@@ -91,7 +91,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   @Override
   public Map<UUID, EnrichissementArtiste> enrichirLot(final List<ArtisteAEnrichir> artistes) {
     final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
-    for (ArtisteAEnrichir artiste : artistes) {
+    for (final ArtisteAEnrichir artiste : artistes) {
       final Optional<EnrichissementArtiste> enrichissement =
           artiste.deezerId() != null ? confirmerNom(artiste) : decouvrirParNom(artiste);
       enrichissement.ifPresent(e -> resultats.put(artiste.id(), e));
@@ -113,7 +113,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
         return Optional.empty();
       }
 
-      for (var candidat : dataList) {
+      for (final var candidat : dataList) {
         final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null
             || !Normalisation.normaliserTexte(nomCandidat).equals(artiste.nomNorm())) {

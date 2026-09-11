@@ -396,7 +396,7 @@ public class ReferentielArtistesService {
                 """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
-    for (Map<String, Object> conflit : conflits) {
+    for (final Map<String, Object> conflit : conflits) {
       final boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
       final Map<String, Object> paramsSuppression = new HashMap<>();
       paramsSuppression.put("source", conflit.get("source"));

@@ -147,7 +147,7 @@ public class AccueilService {
                     rs.getBoolean("est_nouveau")));
 
     final Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
-    for (ConcertAccueil c : lignes) {
+    for (final ConcertAccueil c : lignes) {
       groupes.computeIfAbsent(c.artiste(), _ -> new ArrayList<>()).add(c);
     }
 

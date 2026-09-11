@@ -173,7 +173,7 @@ final class EmailTemplates {
   static String digestConcerts(final String sujet, final List<LigneConcert> lignes, final String baseUrl) {
     final StringBuilder lignesHtml = new StringBuilder();
     String artistePrecedent = null;
-    for (LigneConcert c : lignes) {
+    for (final LigneConcert c : lignes) {
       final String urlBillets =
           c.url() != null
               ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"

@@ -63,7 +63,7 @@ public final class Normalisation {
    */
   public static String normaliserTexte(final String texte) {
     String s = texte.toLowerCase();
-    for (Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
+    for (final Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
       s = s.replace(String.valueOf(e.getKey()), e.getValue());
     }
     s = Normalizer.normalize(s, Normalizer.Form.NFD);

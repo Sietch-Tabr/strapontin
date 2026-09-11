@@ -250,7 +250,7 @@ public class UserConfigService {
     final Map<String, Object> params = new HashMap<>(champs);
     params.put("userId", userId);
 
-    for (String cle : champs.keySet()) {
+    for (final String cle : champs.keySet()) {
       if (setClauses.length() > 0) {
         setClauses.append(", ");
       }

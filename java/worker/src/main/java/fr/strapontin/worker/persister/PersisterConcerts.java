@@ -150,7 +150,7 @@ public class PersisterConcerts {
    */
   public static List<ConcertBrut> deduplicerParCleConflit(final List<ConcertBrut> liste) {
     final Map<String, ConcertBrut> parCle = new LinkedHashMap<>();
-    for (ConcertBrut c : liste) {
+    for (final ConcertBrut c : liste) {
       final String cle =
           Normalisation.normaliserTexte(c.artiste())
               + "|"
@@ -185,7 +185,7 @@ public class PersisterConcerts {
    */
   public static List<ValeurConcert> deduplicerLotReconcilie(final List<ValeurConcert> lot) {
     final Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
-    for (ValeurConcert v : lot) {
+    for (final ValeurConcert v : lot) {
       final String salleId = v.salleId() != null ? v.salleId().toString() : v.salleNorm();
       final String cle =
           v.artisteNorm()
@@ -233,7 +233,7 @@ public class PersisterConcerts {
     final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
     reconciliateurSalles.absorberRenommagesSalles(concerts, cachesSalles);
 
-    for (ValeurConcert c : concerts) {
+    for (final ValeurConcert c : concerts) {
       if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
         final UUID uuid = reconciliateurSalles.upsertSalleSource(c);
         if (uuid != null) {
@@ -253,7 +253,7 @@ public class PersisterConcerts {
     final Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
 
     final Map<String, UUID> cachesSallesParNom = new HashMap<>();
-    for (ValeurConcert c : concerts) {
+    for (final ValeurConcert c : concerts) {
       final UUID salleMappee = c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
       if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
         logsAdminWorker.inserer(

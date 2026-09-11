@@ -66,7 +66,7 @@ public class ClientController {
     final Map<String, Object> meta = new HashMap<>();
     meta.put("url", url != null ? url : "");
     meta.put("userAgent", userAgent != null ? userAgent : "");
-    for (var entree : corps.entrySet()) {
+    for (final var entree : corps.entrySet()) {
       if (meta.size() >= MAX_CLES_META) {
         break;
       }

@@ -306,7 +306,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       }
 
       final List<ConcertBrut> concerts = new ArrayList<>();
-      for (var evt : evts) {
+      for (final var evt : evts) {
         final ConcertBrut c = mapEvenement(evt, artisteFallback);
         if (c != null) {
           concerts.add(c);
@@ -515,7 +515,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         return null;
       }
       final String nomNorm = Normalisation.normaliserTexte(nom);
-      for (var attraction : attractions) {
+      for (final var attraction : attractions) {
         final String nomAttraction = (String) attraction.getOrDefault("name", "");
         if (Normalisation.normaliserTexte(nomAttraction).equals(nomNorm)) {
           return (String) attraction.get("id");

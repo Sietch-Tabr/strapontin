@@ -106,7 +106,7 @@ public class EnrichissementArtistesService {
    * EnrichissementSallesService#remonterBilans}.
    */
   private void remonterBilans() {
-    for (SourceEnrichissementArtiste source : sources) {
+    for (final SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) {
         continue;
       }
@@ -129,11 +129,11 @@ public class EnrichissementArtistesService {
    * non-découverte ordinaire, pour permettre un traitement différencié.
    */
   private void remonterAmbiguites() {
-    for (SourceEnrichissementArtiste source : sources) {
+    for (final SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) {
         continue;
       }
-      for (UUID artisteId : avecAmbiguites.preleverAmbiguites()) {
+      for (final UUID artisteId : avecAmbiguites.preleverAmbiguites()) {
         signalementMatchingService.signaler(
             "wikidata_ambiguite", "artiste", artisteId, "basse", null);
       }
@@ -145,9 +145,9 @@ public class EnrichissementArtistesService {
 
     final Map<UUID, EnrichissementArtiste> accumule = new HashMap<>();
     List<ArtisteAEnrichir> courant = lot;
-    for (SourceEnrichissementArtiste source : sources) {
+    for (final SourceEnrichissementArtiste source : sources) {
       final Map<UUID, EnrichissementArtiste> resultat = source.enrichirLot(courant);
-      for (var entree : resultat.entrySet()) {
+      for (final var entree : resultat.entrySet()) {
         accumule.merge(
             entree.getKey(), entree.getValue(), EnrichissementArtistesService::fusionner);
       }
@@ -155,7 +155,7 @@ public class EnrichissementArtistesService {
     }
 
     int nbEnrichis = 0;
-    for (ArtisteAEnrichir artiste : lot) {
+    for (final ArtisteAEnrichir artiste : lot) {
       final EnrichissementArtiste enrichissement = accumule.get(artiste.id());
       if (enrichissement == null) {
         continue;
@@ -201,7 +201,7 @@ public class EnrichissementArtistesService {
                 """,
             Map.of("ids", ids));
     final Map<UUID, String> resultat = new HashMap<>();
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       resultat.put((UUID) ligne.get("artiste_id"), (String) ligne.get("identifiant_externe"));
     }
     return resultat;

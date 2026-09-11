@@ -63,7 +63,7 @@ class ReconciliationNomsSalles {
    * @param remplacements table de remplacement à résoudre sur place
    */
   private static void resoudreChaines(final Map<String, String> remplacements) {
-    for (String cle : new ArrayList<>(remplacements.keySet())) {
+    for (final String cle : new ArrayList<>(remplacements.keySet())) {
       String valeur = cle;
       while (remplacements.containsKey(valeur) && !remplacements.get(valeur).equals(valeur)) {
         valeur = remplacements.get(valeur);
@@ -104,7 +104,7 @@ class ReconciliationNomsSalles {
             Map.of("artistesNorms", artistesNorms));
 
     final Map<String, List<String>> indexExistants = new HashMap<>();
-    for (Map<String, Object> e : existants) {
+    for (final Map<String, Object> e : existants) {
       final String cle =
           cleReconciliation(e.get("artiste_norm"), e.get("date"), e.get("heure"), e.get("dept"));
       indexExistants.computeIfAbsent(cle, _ -> new ArrayList<>()).add((String) e.get("salle_norm"));
@@ -149,7 +149,7 @@ class ReconciliationNomsSalles {
   private Map<String, String> construireRemplacementsIntraLot(final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();
     final Map<String, List<String>> parGroupe = new LinkedHashMap<>();
-    for (ValeurConcert concert : lot) {
+    for (final ValeurConcert concert : lot) {
       final String cle =
           cleReconciliation(
               concert.artisteNorm(),
@@ -162,7 +162,7 @@ class ReconciliationNomsSalles {
         groupe.add(concert.salleNorm());
       }
     }
-    for (List<String> sallesNorm : parGroupe.values()) {
+    for (final List<String> sallesNorm : parGroupe.values()) {
       if (sallesNorm.size() > 1) {
         ajouterDoublonsSalle(sallesNorm, remplacements);
       }
@@ -223,7 +223,7 @@ class ReconciliationNomsSalles {
     if (sallesExistantes == null || sallesExistantes.contains(concert.salleNorm())) {
       return concert;
     }
-    for (String salleNormExistante : sallesExistantes) {
+    for (final String salleNormExistante : sallesExistantes) {
       if (CorrespondanceSalle.estDoublonSalle(concert.salleNorm(), salleNormExistante)) {
         log.debug(
             "doublon salle inter-jobs réconcilié entrant={} existant={}",
@@ -244,7 +244,7 @@ class ReconciliationNomsSalles {
   void absorberRenommagesSalles(final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     final Map<UUID, String> meilleurNom = new HashMap<>();
     final Map<UUID, Integer> meilleurScore = new HashMap<>();
-    for (ValeurConcert c : concerts) {
+    for (final ValeurConcert c : concerts) {
       if (c.salleSourceId() == null) {
         continue;
       }
@@ -258,7 +258,7 @@ class ReconciliationNomsSalles {
         meilleurScore.put(salleId, score);
       }
     }
-    for (var entree : meilleurNom.entrySet()) {
+    for (final var entree : meilleurNom.entrySet()) {
       final String nouveauNom = entree.getValue();
       final int modifies =
           jdbc.update(

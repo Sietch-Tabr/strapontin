@@ -232,7 +232,7 @@ public class PreferencesService {
     final int restant = Math.max(0, 500 - (nbExistants != null ? nbExistants : 0));
     int traites = 0;
     int rejetes = 0;
-    for (ArtisteExport a : artistes) {
+    for (final ArtisteExport a : artistes) {
       if (a.nom() == null || a.nom().isBlank()) {
         rejetes++;
         continue;
@@ -273,7 +273,7 @@ public class PreferencesService {
     final int restant = Math.max(0, 200 - (nbExistants != null ? nbExistants : 0));
     int traites = 0;
     int rejetes = 0;
-    for (SalleExport s : salles) {
+    for (final SalleExport s : salles) {
       final String nomSalle = s.nom() != null && !s.nom().isBlank() ? s.nom().strip() : s.salleId();
       if (nomSalle == null || nomSalle.isBlank()) {
         rejetes++;

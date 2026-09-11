@@ -114,7 +114,7 @@ public class WikidataArtisteSource
       resultats.putAll(enrichirLotConnu(lot));
     }
 
-    for (ArtisteAEnrichir artiste : aDecouvrir) {
+    for (final ArtisteAEnrichir artiste : aDecouvrir) {
       decouvrir(artiste).ifPresent(e -> resultats.put(artiste.id(), e));
     }
 
@@ -125,7 +125,7 @@ public class WikidataArtisteSource
 
   private Map<UUID, EnrichissementArtiste> enrichirLotConnu(final List<ArtisteAEnrichir> lot) {
     final Map<String, UUID> qidVersUuid = new HashMap<>();
-    for (ArtisteAEnrichir a : lot) {
+    for (final ArtisteAEnrichir a : lot) {
       qidVersUuid.put(a.wikidataId(), a.id());
     }
 
@@ -136,7 +136,7 @@ public class WikidataArtisteSource
     }
 
     final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
-    for (Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
+    for (final Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
       final String qid = extraireQid(binding);
       if (qid == null) {
         continue;

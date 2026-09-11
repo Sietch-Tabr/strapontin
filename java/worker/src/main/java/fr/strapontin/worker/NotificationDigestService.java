@@ -193,7 +193,7 @@ public class NotificationDigestService {
       }
 
       final Timestamp maintenant = Timestamp.from(Instant.now());
-      for (Map.Entry<String, List<ConcertNotif>> entree : groupes.parUtilisateur().entrySet()) {
+      for (final Map.Entry<String, List<ConcertNotif>> entree : groupes.parUtilisateur().entrySet()) {
         final String userId = entree.getKey();
         final List<ConcertNotif> concerts = entree.getValue();
         final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
@@ -343,7 +343,7 @@ public class NotificationDigestService {
     final Map<String, String> emailsUtilisateurs = new LinkedHashMap<>();
     final Map<String, ConfigNotifUser> configsUtilisateurs = new LinkedHashMap<>();
     final Map<String, List<ConcertNotif>> parUtilisateur = new LinkedHashMap<>();
-    for (Map<String, Object> ligne : lignes) {
+    for (final Map<String, Object> ligne : lignes) {
       final String userId = (String) ligne.get("user_id");
       emailsUtilisateurs.putIfAbsent(userId, (String) ligne.get("email"));
       configsUtilisateurs.putIfAbsent(
@@ -513,7 +513,7 @@ public class NotificationDigestService {
 
     final String payload = construirePayloadPush(concerts, baseUrl);
     int nbEnvoyes = 0;
-    for (Map<String, Object> ab : abonnements) {
+    for (final Map<String, Object> ab : abonnements) {
       compteurPush.enregistrerAppel();
       try {
         final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
@@ -600,7 +600,7 @@ public class NotificationDigestService {
   private static String construireLignesPreventePush(final List<ConcertNotif> concerts) {
     final StringBuilder corps = new StringBuilder();
     String artistePrecedent = null;
-    for (ConcertNotif c : concerts) {
+    for (final ConcertNotif c : concerts) {
       if (artistePrecedent != null && !artistePrecedent.equals(c.artiste())) {
         corps.append('\n');
       }
@@ -625,7 +625,7 @@ public class NotificationDigestService {
       final String sujet, final List<ConcertNotif> concerts, final String baseUrl) {
     final StringBuilder lignes = new StringBuilder();
     String artistePrecedent = null;
-    for (ConcertNotif c : concerts) {
+    for (final ConcertNotif c : concerts) {
       final String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
       final String lien =
           c.url() != null

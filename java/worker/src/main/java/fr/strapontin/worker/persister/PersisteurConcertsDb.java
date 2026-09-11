@@ -59,7 +59,7 @@ public class PersisteurConcertsDb {
    */
   Map<String, UUID> resoudreUuidsParSource(final List<ValeurConcert> concerts, final String type) {
     final Map<String, List<String>> parSource = new HashMap<>();
-    for (ValeurConcert c : concerts) {
+    for (final ValeurConcert c : concerts) {
       final String sourceId = "salle".equals(type) ? c.salleSourceId() : c.artisteSourceId();
       if (sourceId != null) {
         final int sep = sourceId.indexOf(':');
@@ -81,12 +81,12 @@ public class PersisteurConcertsDb {
     final String colUuid = estSalle ? "salle_id" : "artiste_id";
 
     final Map<String, UUID> cache = new HashMap<>();
-    for (var entry : parSource.entrySet()) {
+    for (final var entry : parSource.entrySet()) {
       final String source = entry.getKey();
       final List<String> ids = entry.getValue().stream().distinct().toList();
       final List<Map<String, Object>> lignes =
           jdbc.queryForList(sql, Map.of("source", source, "ids", ids));
-      for (var ligne : lignes) {
+      for (final var ligne : lignes) {
         final String cle = source + ":" + ligne.get("identifiant_externe");
         cache.put(cle, (UUID) ligne.get(colUuid));
       }
@@ -135,7 +135,7 @@ public class PersisteurConcertsDb {
     record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
 
     final Map<CleUrl, Map<String, Object>> index = new HashMap<>();
-    for (Map<String, Object> l : lignesExistantes) {
+    for (final Map<String, Object> l : lignesExistantes) {
       final java.sql.Date sqlDate = (java.sql.Date) l.get("date");
       final java.sql.Time sqlHeure = (java.sql.Time) l.get("heure");
       final CleUrl cle =
@@ -225,14 +225,14 @@ public class PersisteurConcertsDb {
 
     record CleUrlDate(String url, LocalDate date) {}
     final Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
-    for (Map<String, Object> ligne : existants) {
+    for (final Map<String, Object> ligne : existants) {
       final CleUrlDate cle =
           new CleUrlDate(
               (String) ligne.get("url"), ((java.sql.Date) ligne.get("date")).toLocalDate());
       parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
     }
 
-    for (ValeurConcert c : reports) {
+    for (final ValeurConcert c : reports) {
       final List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
       if (candidats == null) {
         continue;
@@ -332,7 +332,7 @@ public class PersisteurConcertsDb {
                   """,
               Map.of("salleId", v.salleId().toString(), "date", v.date()));
       final boolean entrantPackage = estPackage(v.url());
-      for (var c : candidats) {
+      for (final var c : candidats) {
         final UUID candArtisteId = (UUID) c.get("artiste_id");
         final String candArtisteNorm = (String) c.get("artiste_norm");
         final boolean artisteCorrespond =
@@ -485,7 +485,7 @@ public class PersisteurConcertsDb {
 
     int inserts = 0;
     int updates = 0;
-    for (ValeurConcert v : valeurs) {
+    for (final ValeurConcert v : valeurs) {
       final ResolutionEvenement resolution = resoudreOuCreerEvenement(v);
       upsertObservation(resolution.id(), v);
       if (!resolution.nouveau()) {

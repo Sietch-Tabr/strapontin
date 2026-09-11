@@ -285,7 +285,7 @@ class SalleRepository {
       return null;
     }
     final List<String> ids = new ArrayList<>();
-    for (Map<String, Object> l : lignes) {
+    for (final Map<String, Object> l : lignes) {
       final String source = (String) l.get("source");
       final String prefixe =
           "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;

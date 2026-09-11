@@ -61,7 +61,7 @@ class ReconciliateurSallesOrphelines {
     final List<CandidatSalleMatching> candidats = chargerCandidatsMatching();
 
     int resolus = 0;
-    for (Map<String, Object> orphelin : orphelins) {
+    for (final Map<String, Object> orphelin : orphelins) {
       final String salle = (String) orphelin.get("salle");
       final String dept = (String) orphelin.get("dept");
       final UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
@@ -124,7 +124,7 @@ class ReconciliateurSallesOrphelines {
     final String nomNorm = Normalisation.normaliserTexte(nom);
     UUID meilleurUuid = null;
     double meilleurScore = -1;
-    for (CandidatSalleMatching candidat : candidats) {
+    for (final CandidatSalleMatching candidat : candidats) {
       if (dept != null
           && candidat.deptEffectif() != null
           && !candidat.deptEffectif().equals(dept)) {

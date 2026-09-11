@@ -89,7 +89,7 @@ public class CoherenceWikidataSalleService {
     final Map<UUID, String> signaturesDejaSignalees = chargerSignaturesDejaSignalees(salleIds);
 
     int incoherences = 0;
-    for (SalleAEnrichir salle : candidats) {
+    for (final SalleAEnrichir salle : candidats) {
       final EnrichissementSalle enrichissement = resultats.get(salle.id());
       if (enrichissement == null) {
         continue;
@@ -139,7 +139,7 @@ public class CoherenceWikidataSalleService {
     }
 
     final Set<String> invalides = wikidata.typesInvalides(wikidataIds);
-    for (String qid : invalides) {
+    for (final String qid : invalides) {
       invaliderWikidataId(qid);
     }
     log.info(

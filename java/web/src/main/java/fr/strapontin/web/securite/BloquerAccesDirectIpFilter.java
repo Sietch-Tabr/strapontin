@@ -72,7 +72,7 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
   }
 
   private boolean estStatique(final String chemin) {
-    for (String prefixe : PREFIXES_STATIQUES) {
+    for (final String prefixe : PREFIXES_STATIQUES) {
       if (chemin.startsWith(prefixe)) {
         return true;
       }

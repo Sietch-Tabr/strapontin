@@ -165,7 +165,7 @@ public class TotpService {
     final StringBuilder sb = new StringBuilder();
     int tampon = 0;
     int bitsRestants = 0;
-    for (byte b : data) {
+    for (final byte b : data) {
       tampon = (tampon << 8) | (b & 0xFF);
       bitsRestants += 8;
       while (bitsRestants >= 5) {
@@ -185,7 +185,7 @@ public class TotpService {
     int tampon = 0;
     int bitsRestants = 0;
     int idx = 0;
-    for (char c : norm.toCharArray()) {
+    for (final char c : norm.toCharArray()) {
       final int val = BASE32.indexOf(c);
       if (val < 0) {
         continue;

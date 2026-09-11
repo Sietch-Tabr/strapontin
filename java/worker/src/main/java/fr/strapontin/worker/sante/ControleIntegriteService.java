@@ -69,12 +69,12 @@ public class ControleIntegriteService {
    */
   private int verifierCyclesSalleParent() {
     final Map<UUID, UUID> parentParSalle = new HashMap<>();
-    for (var ligne : jdbc.queryForList("SELECT id, salle_parent_id FROM salles", Map.of())) {
+    for (final var ligne : jdbc.queryForList("SELECT id, salle_parent_id FROM salles", Map.of())) {
       parentParSalle.put((UUID) ligne.get("id"), (UUID) ligne.get("salle_parent_id"));
     }
 
     int signalees = 0;
-    for (var entree : parentParSalle.entrySet()) {
+    for (final var entree : parentParSalle.entrySet()) {
       final UUID salleId = entree.getKey();
       final UUID parentId = entree.getValue();
       if (parentId == null) {
@@ -115,7 +115,7 @@ public class ControleIntegriteService {
             Map.of());
 
     int signalees = 0;
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       signalementMatchingService.signaler(
           "incoherence_dept_salle",
@@ -140,7 +140,7 @@ public class ControleIntegriteService {
             Map.of("seuilJours", SEUIL_JOURS_EVENEMENT_ORPHELIN),
             (rs, _) -> rs.getObject("id", UUID.class));
 
-    for (UUID id : ids) {
+    for (final UUID id : ids) {
       signalementMatchingService.signaler(
           "evenement_orphelin_ancien", "evenement", id, "basse", null);
     }
@@ -176,7 +176,7 @@ public class ControleIntegriteService {
 
     final List<Map<String, Object>> lignes = jdbc.queryForList(sql, Map.of());
     int signalees = 0;
-    for (var ligne : lignes) {
+    for (final var ligne : lignes) {
       final UUID entiteId = (UUID) ligne.get("entite_id");
       signalementMatchingService.signaler(
           "source_orpheline",

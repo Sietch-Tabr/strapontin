@@ -158,7 +158,7 @@ public class EnrichissementSallesService {
    * {@code logs_admin}.
    */
   private void remonterBilans() {
-    for (SourceEnrichissementSalle source : sources) {
+    for (final SourceEnrichissementSalle source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) {
         continue;
       }
@@ -188,16 +188,16 @@ public class EnrichissementSallesService {
   private int enrichirEtPersisterLot(final List<SalleAEnrichir> lot) {
     final Map<UUID, EnrichissementSalle> accumule = new HashMap<>();
     List<SalleAEnrichir> courant = lot;
-    for (SourceEnrichissementSalle source : sources) {
+    for (final SourceEnrichissementSalle source : sources) {
       final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(courant);
-      for (var entree : resultat.entrySet()) {
+      for (final var entree : resultat.entrySet()) {
         accumule.merge(entree.getKey(), entree.getValue(), EnrichissementSallesService::fusionner);
       }
       courant = appliquerWikidataIdConnu(courant, accumule);
     }
 
     int nbEnrichis = 0;
-    for (SalleAEnrichir salle : lot) {
+    for (final SalleAEnrichir salle : lot) {
       final EnrichissementSalle enrichissement = accumule.get(salle.id());
       if (enrichissement == null) {
         continue;

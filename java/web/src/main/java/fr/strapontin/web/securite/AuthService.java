@@ -186,7 +186,7 @@ public class AuthService {
     final byte[] octets = new byte[nbOctets];
     rng.nextBytes(octets);
     final StringBuilder sb = new StringBuilder();
-    for (byte b : octets) {
+    for (final byte b : octets) {
       sb.append(String.format("%02x", b));
     }
     return sb.toString();

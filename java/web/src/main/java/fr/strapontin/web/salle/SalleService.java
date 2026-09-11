@@ -166,7 +166,7 @@ public class SalleService {
         final var futureTm = CompletableFuture.supplyAsync(() -> rechercherSallesTM(recherche));
         final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
         resultatsExternes.addAll(futureTm.join());
-        for (ResultatSalle r : resultatsExternes) {
+        for (final ResultatSalle r : resultatsExternes) {
           if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) {
             continue;
           }
@@ -378,7 +378,7 @@ public class SalleService {
             .filter(t -> t.length() >= 3)
             .collect(Collectors.toSet());
     final String nomNormCible = Normalisation.normaliserTexte(nom);
-    for (Map<String, Object> candidat : salleRepository.chercherCandidatsParCle(tokens)) {
+    for (final Map<String, Object> candidat : salleRepository.chercherCandidatsParCle(tokens)) {
       final String cleCandidate = (String) candidat.get("salle_cle");
       if (cleCandidate.equals(salleCle)) {
         return salleRepository.upsertSalle(salleCle, nom);
@@ -579,7 +579,7 @@ public class SalleService {
     final List<ResultatSalle> resultats = new ArrayList<>();
     try {
       final List<Map<String, Object>> items = objectMapper.readValue(json, List.class);
-      for (Map<String, Object> item : items) {
+      for (final Map<String, Object> item : items) {
         final String type = (String) item.get("type");
         final Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
         final String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
@@ -617,7 +617,7 @@ public class SalleService {
     if (address == null) {
       return null;
     }
-    for (String cle : List.of("city", "town", "village", "municipality")) {
+    for (final String cle : List.of("city", "town", "village", "municipality")) {
       final Object valeur = address.get(cle);
       if (valeur instanceof String s && !s.isBlank()) {
         return s;

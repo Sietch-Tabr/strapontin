@@ -56,7 +56,7 @@ public class TriggerController {
   @GetMapping("/prochaines-exec")
   public ResponseEntity<Map<String, Long>> prochainesExec() {
     final Map<String, Long> resultat = new HashMap<>();
-    for (Map.Entry<String, String> entree : NomsJobs.PAR_CLE_QUARTZ.entrySet()) {
+    for (final Map.Entry<String, String> entree : NomsJobs.PAR_CLE_QUARTZ.entrySet()) {
       try {
         scheduler.getTriggersOfJob(JobKey.jobKey(entree.getKey())).stream()
             .map(Trigger::getNextFireTime)

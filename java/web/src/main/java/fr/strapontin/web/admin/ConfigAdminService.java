@@ -111,7 +111,7 @@ public class ConfigAdminService {
   public List<ConfigStatut> lireConfigStatuts() {
     final Set<String> presentes = configService.lireConfigsPresentes();
     final List<ConfigStatut> statuts = new ArrayList<>();
-    for (String cle : CLES_AUTORISEES) {
+    for (final String cle : CLES_AUTORISEES) {
       final boolean presente = presentes.contains(cle);
       final String valeur =
           (presente && CLES_EN_CLAIR.contains(cle))
