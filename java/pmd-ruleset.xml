@@ -9,7 +9,14 @@
     (y compris codestyle/documentation) — aucune exclusion sans mesure réelle préalable.
   </description>
 
-  <rule ref="category/java/bestpractices.xml"/>
+  <!-- GuardLogStatement exclue après mesure : 156 sites, tous des appels SLF4J paramétrés
+       (méthode {}) dont l'argument est trivial à évaluer (accesseur simple, ternaire de
+       littéraux, entier/UUID) — aucun n'implique de calcul réellement coûteux (stream, boucle,
+       sérialisation JSON, concaténation lourde). Un garde isXxxEnabled() n'apporterait aucun gain
+       de performance mesurable, seulement du bruit visuel systématique. -->
+  <rule ref="category/java/bestpractices.xml">
+    <exclude name="GuardLogStatement"/>
+  </rule>
   <rule ref="category/java/codestyle.xml"/>
   <rule ref="category/java/documentation.xml"/>
   <rule ref="category/java/errorprone.xml"/>
