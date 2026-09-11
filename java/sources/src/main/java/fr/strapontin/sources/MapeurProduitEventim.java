@@ -30,7 +30,10 @@ final class MapeurProduitEventim {
   /// @param ville ville brute renvoyée par Eventim
   /// @param dept département dérivé du code postal, peut être `null`
   /// @param salle nom de la salle, utilisé comme source alternative de la commune
-  /// @return ville corrigée, ou la ville d'origine si aucune incohérence ou correction possible
+  /// @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
+  ///   une incohérence est détectée sans pouvoir être corrigée — une valeur qu'on vient soi-même de
+  ///   qualifier d'incohérente ne doit jamais écraser une valeur déjà connue en base ({@code
+  ///   COALESCE(:ville, ville)} à la persistance)
   static String corrigerVilleEventim(String ville, String dept, String salle) {
     if (ville == null || dept == null) return ville;
     if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) return ville;
@@ -43,7 +46,7 @@ final class MapeurProduitEventim {
 
     log.warn(
         "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
-    return ville;
+    return null;
   }
 
   /// Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.

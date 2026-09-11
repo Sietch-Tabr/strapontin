@@ -70,9 +70,10 @@ class EventimSourceTest {
   }
 
   @Test
-  void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_conserveParisEtJournalise() {
-    // ticket — Stade de France, dept=93, aucune commune extractible du nom de salle
-    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
+  void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_retourneNullEtJournalise() {
+    // Stade de France, dept=93, aucune commune extractible du nom de salle — une valeur qu'on
+    // vient soi-même de qualifier d'incohérente ne doit jamais écraser une valeur déjà en base.
+    assertNull(EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
   }
 
   @Test

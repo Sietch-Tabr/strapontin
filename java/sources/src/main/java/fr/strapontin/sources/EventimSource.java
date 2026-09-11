@@ -142,12 +142,15 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /// pour les salles de la petite couronne (ex. La Seine Musicale à Boulogne-Billancourt, Stade de
   /// France à Saint-Denis), alors que `dept` (dérivé du code postal) reste fiable. Si une
   /// incohérence est détectée, tente d'extraire la commune depuis le nom de la salle (forme "Salle
-  /// - Commune") ; sinon journalise et conserve la ville telle que reçue.
+  /// - Commune") ; sinon journalise et retourne `null` plutôt que la valeur incohérente — une
+  ///   valeur qu'on vient soi-même de qualifier d'incohérente ne doit jamais écraser une valeur
+  ///   déjà connue en base.
   ///
   /// @param ville ville brute renvoyée par Eventim, peut être `null`
   /// @param dept département dérivé du code postal, peut être `null`
   /// @param salle nom de la salle, utilisé comme source alternative de la commune
-  /// @return ville corrigée, ou la ville d'origine si aucune incohérence ou correction possible
+  /// @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
+  ///   incohérence détectée sans correction possible
   public static String corrigerVilleEventim(String ville, String dept, String salle) {
     return MapeurProduitEventim.corrigerVilleEventim(ville, dept, salle);
   }
