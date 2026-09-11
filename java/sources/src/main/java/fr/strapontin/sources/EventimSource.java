@@ -275,10 +275,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       Map<String, Object> parContainment = null;
       for (var a : attractions) {
         String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
-        // Egalité sans espaces (pas seulement stricte) : couvre une contraction de nom propre que
-        // normaliserTexte remplace par une espace ("N'Dour" → "n dour") alors qu'une source omet
-        // totalement l'apostrophe ("NDour" → "ndour"). Non gaté par identiteConfirmee — plus strict
-        // que le containment ci-dessous, donc sûr même quand l'identité est déjà confirmée.
+        // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
+        // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
         if (nomNorm.equals(termeNorm)
             || UtilitairesChaine.estEgaliteSansEspaces(nomNorm, termeNorm)) {
           exact = a;

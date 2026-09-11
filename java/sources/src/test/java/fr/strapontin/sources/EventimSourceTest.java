@@ -384,10 +384,8 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
-  // régression : normaliserTexte remplace l'apostrophe de "N'Dour" par une espace ("n dour") alors
-  // qu'Eventim omet totalement l'apostrophe ("NDour" → "ndour") — ni égalité stricte ni
-  // containment ne matchaient. L'égalité sans espaces doit accepter ce cas même identité confirmée
-  // (deezerId), contrairement au containment testé ci-dessus.
+  // "Youssou N'Dour" ("n dour" normalisé) / "Youssou NDour" ("ndour") : ni égalité stricte ni
+  // containment ne matchaient. L'égalité sans espaces doit accepter ce cas, identité confirmée.
   @Test
   void fetchArtiste_apostropheOmiseParSourceIdentiteConfirmee_egaliteSansEspacesAcceptee() {
     RestClient.Builder builder = RestClient.builder();
