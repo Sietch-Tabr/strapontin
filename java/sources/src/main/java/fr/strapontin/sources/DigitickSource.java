@@ -58,9 +58,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /**
-   * Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
-   */
+  /** Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé. */
   public DigitickSource() {
     this(creerRestClient());
   }
@@ -164,24 +162,13 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   private static ConcertBrut parserEvenement(final Element ev, final String slug) {
-    // Filtre genre : uniquement les concerts
-    final Element genreEl = ev.selectFirst(SEL_GENRE);
-    if (genreEl == null || !GENRE_CONCERT.equalsIgnoreCase(genreEl.ownText().trim())) {
-      return null;
-    }
-
-    // Filtre CP : exclut packs multi-dates sans salle fixe
-    final Element cpEl = ev.selectFirst(SEL_CODE_POSTAL);
-    if (cpEl == null || cpEl.text().isBlank()) {
+    if (!estConcertValide(ev)) {
       return null;
     }
 
     // Date et heure depuis l'attribut datetime ISO 8601
     final Element timeEl = ev.selectFirst(SEL_DATETIME);
-    if (timeEl == null) {
-      return null;
-    }
-    final String[] datHeure = parserDatetime(timeEl.attr("datetime"));
+    final String[] datHeure = timeEl != null ? parserDatetime(timeEl.attr("datetime")) : null;
     if (datHeure == null) {
       return null;
     }
@@ -193,6 +180,27 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     }
     final String artiste = normaliserCasse(nomEl.text().trim());
 
+    return construireConcertDigitick(ev, slug, datHeure, artiste);
+  }
+
+  /**
+   * Filtre genre (uniquement les concerts) et code postal (exclut les packs multi-dates sans salle
+   * fixe).
+   *
+   * @param ev élément HTML de l'événement
+   * @return {@code true} si l'événement passe les deux filtres
+   */
+  private static boolean estConcertValide(final Element ev) {
+    final Element genreEl = ev.selectFirst(SEL_GENRE);
+    if (genreEl == null || !GENRE_CONCERT.equalsIgnoreCase(genreEl.ownText().trim())) {
+      return false;
+    }
+    final Element cpEl = ev.selectFirst(SEL_CODE_POSTAL);
+    return cpEl != null && !cpEl.text().isBlank();
+  }
+
+  private static ConcertBrut construireConcertDigitick(
+      final Element ev, final String slug, final String[] datHeure, final String artiste) {
     // Salle
     final Element salleNomEl = ev.selectFirst(SEL_SALLE_NOM);
     final String salle = salleNomEl != null ? salleNomEl.text().trim() : "Salle inconnue";
@@ -201,8 +209,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     final Elements villeEls = ev.select(SEL_VILLE);
     final String ville = villeEls.size() >= 2 ? villeEls.get(1).text().trim() : null;
 
-    // Département depuis code postal
-    final String cp = cpEl.text().trim();
+    // Département depuis code postal (déjà validé non vide par estConcertValide)
+    final String cp = ev.selectFirst(SEL_CODE_POSTAL).text().trim();
     final String dept = Normalisation.extraireDeptFrancais(cp);
 
     // URL d'achat

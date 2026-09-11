@@ -21,7 +21,7 @@ import org.springframework.web.client.RestClient;
 /**
  * Résolution des noms canoniques d'artistes via Deezer.
  *
- * Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache Caffeine
+ * <p>Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache Caffeine
  * TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le nom inchangé
  * (Deezer ne référence pas les salles).
  *
@@ -48,9 +48,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // de les comparer entre eux plutôt que de prendre le premier venu.
   private static final int LIMITE_CANDIDATS_DEEZER = 5;
 
-  /**
-   * Source de résolution utilisée pour un nom canonique.
-   */
+  /** Source de résolution utilisée pour un nom canonique. */
   public enum SourceResolution {
     DEEZER,
     INCHANGE
@@ -111,37 +109,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
         return null;
       }
 
-      final String nomNormalise = Normalisation.normaliserTexte(nom);
-      Map<String, Object> meilleurCandidat = null;
-      Map<String, Object> meilleurCandidatExact = null;
-      double meilleurePopularite = -1;
-      double meilleurePopulariteExacte = -1;
-      for (final Map<String, Object> candidat : dataList) {
-        final String nomCandidat = (String) candidat.get("name");
-        if (nomCandidat == null) {
-          continue;
-        }
-        final String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
-        final double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
-        if (similarite < SEUIL_CONFIANCE_DEEZER) {
-          continue;
-        }
-        final double popularite = popularite(candidat);
-        if (meilleurCandidat == null || popularite > meilleurePopularite) {
-          meilleurCandidat = candidat;
-          meilleurePopularite = popularite;
-        }
-        // Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus
-        // populaire ; la popularité ne départage qu'entre candidats eux-mêmes exacts.
-        if (nomCandidatNormalise.equals(nomNormalise)
-            && (meilleurCandidatExact == null || popularite > meilleurePopulariteExacte)) {
-          meilleurCandidatExact = candidat;
-          meilleurePopulariteExacte = popularite;
-        }
-      }
-      if (meilleurCandidatExact != null) {
-        meilleurCandidat = meilleurCandidatExact;
-      }
+      final Map<String, Object> meilleurCandidat = trouverMeilleurCandidatDeezer(dataList, nom);
       if (meilleurCandidat == null) {
         return null;
       }
@@ -158,14 +126,57 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
+  /**
+   * Sélectionne le meilleur candidat Deezer parmi les résultats de recherche : une correspondance
+   * exacte (nom normalisé identique) l'emporte toujours sur un homonyme approximatif mieux
+   * référencé, la popularité ne départageant qu'entre candidats eux-mêmes exacts.
+   *
+   * @param dataList résultats bruts de la recherche Deezer
+   * @param nom nom recherché (non normalisé)
+   * @return le candidat retenu, ou {@code null} si aucun ne dépasse {@value
+   *     #SEUIL_CONFIANCE_DEEZER}
+   */
+  private Map<String, Object> trouverMeilleurCandidatDeezer(
+      final List<Map<String, Object>> dataList, final String nom) {
+    final String nomNormalise = Normalisation.normaliserTexte(nom);
+    Map<String, Object> meilleurCandidat = null;
+    Map<String, Object> meilleurCandidatExact = null;
+    double meilleurePopularite = -1;
+    double meilleurePopulariteExacte = -1;
+    for (final Map<String, Object> candidat : dataList) {
+      final String nomCandidat = (String) candidat.get("name");
+      if (nomCandidat == null) {
+        continue;
+      }
+      final String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
+      final double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
+      if (similarite < SEUIL_CONFIANCE_DEEZER) {
+        continue;
+      }
+      final double popularite = popularite(candidat);
+      if (meilleurCandidat == null || popularite > meilleurePopularite) {
+        meilleurCandidat = candidat;
+        meilleurePopularite = popularite;
+      }
+      // Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus
+      // populaire ; la popularité ne départage qu'entre candidats eux-mêmes exacts.
+      if (nomCandidatNormalise.equals(nomNormalise)
+          && (meilleurCandidatExact == null || popularite > meilleurePopulariteExacte)) {
+        meilleurCandidatExact = candidat;
+        meilleurePopulariteExacte = popularite;
+      }
+    }
+    return meilleurCandidatExact != null ? meilleurCandidatExact : meilleurCandidat;
+  }
+
   private static double popularite(final Map<String, Object> candidat) {
     final Object nbFan = candidat.get("nb_fan");
     return nbFan instanceof Number nombre ? nombre.doubleValue() : 0;
   }
 
   /**
-   * Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet les
-   * compteurs à zéro.
+   * Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet les compteurs
+   * à zéro.
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -181,8 +192,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   /**
    * Résout le nom canonique d'un artiste ou d'une salle.
    *
-   * Les résultats sont mis en cache par clé {@code "type:nom"}. La résolution de salle retourne toujours
-   * {@code INCHANGE} (Deezer ne référence pas les salles).
+   * <p>Les résultats sont mis en cache par clé {@code "type:nom"}. La résolution de salle retourne
+   * toujours {@code INCHANGE} (Deezer ne référence pas les salles).
    *
    * @param type {@code "artiste"} ou {@code "salle"}
    * @param nom nom brut à résoudre

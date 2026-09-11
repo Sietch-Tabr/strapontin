@@ -424,59 +424,76 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
     }
 
     for (final Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
-      final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
-      if (itemUri == null) {
-        continue;
+      final Optional<EnrichissementSalle> candidat =
+          evaluerCandidatDecouverte(salle, binding, nomRecherche);
+      if (candidat.isPresent()) {
+        return candidat;
       }
-      final String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
-      final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
-      final String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
-      final String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
-      final double[] coord =
-          parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
-      final boolean localisationConnue =
-          (communeLabel != null && !communeLabel.isBlank())
-              || (codePostal != null && !codePostal.isBlank());
-      final String labelCorrespondant =
-          trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases, localisationConnue);
-      if (labelCorrespondant == null) {
-        continue;
-      }
-
-      if (villeIncompatible(salle.ville(), communeLabel)) {
-        LOG.info(
-            "Wikidata découverte salle — rejet commune incompatible nom={} villeSalle={}"
-                + " communeCandidat={}",
-            nomRecherche,
-            salle.ville(),
-            communeLabel);
-        continue;
-      }
-      if (deptIncompatible(salle.dept(), codePostal)) {
-        LOG.info(
-            "Wikidata découverte salle — rejet département incompatible nom={} deptSalle={}"
-                + " codePostalCandidat={}",
-            nomRecherche,
-            salle.dept(),
-            codePostal);
-        continue;
-      }
-
-      final String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
-      final EnrichissementSalle enrichissement =
-          new EnrichissementSalle(
-              qid,
-              labelCorrespondant,
-              communeLabel,
-              null,
-              null,
-              coord != null ? coord[1] : null,
-              coord != null ? coord[0] : null);
-      cache.put(qid, enrichissement);
-      return Optional.of(enrichissement);
     }
     LOG.info("Wikidata découverte salle — aucun candidat exact nom={}", nomRecherche);
     return Optional.empty();
+  }
+
+  /**
+   * Évalue un binding SPARQL candidat pour {@link #decouvrirParNom} : nom correspondant, cohérence
+   * ville/dept, puis construction de l'enrichissement et mise en cache si accepté.
+   *
+   * @param salle salle recherchée
+   * @param binding binding SPARQL brut
+   * @param nomRecherche nom utilisé pour la requête (pour les logs de rejet)
+   * @return l'enrichissement si ce candidat est accepté, vide sinon
+   */
+  private Optional<EnrichissementSalle> evaluerCandidatDecouverte(
+      final SalleAEnrichir salle, final Map<String, Object> binding, final String nomRecherche) {
+    final String itemUri = ClientSparqlWikidata.valeurBinding(binding, "item");
+    if (itemUri == null) {
+      return Optional.empty();
+    }
+    final String itemLabel = ClientSparqlWikidata.valeurBinding(binding, "itemLabel");
+    final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
+    final String communeLabel = ClientSparqlWikidata.valeurBinding(binding, "communeLabel");
+    final String codePostal = ClientSparqlWikidata.valeurBinding(binding, "codePostal");
+    final double[] coord = parserCoordonnees(ClientSparqlWikidata.valeurBinding(binding, "coord"));
+    final boolean localisationConnue =
+        (communeLabel != null && !communeLabel.isBlank())
+            || (codePostal != null && !codePostal.isBlank());
+    final String labelCorrespondant =
+        trouverLabelCorrespondant(salle.nomNorm(), itemLabel, aliases, localisationConnue);
+    if (labelCorrespondant == null) {
+      return Optional.empty();
+    }
+
+    if (villeIncompatible(salle.ville(), communeLabel)) {
+      LOG.info(
+          "Wikidata découverte salle — rejet commune incompatible nom={} villeSalle={}"
+              + " communeCandidat={}",
+          nomRecherche,
+          salle.ville(),
+          communeLabel);
+      return Optional.empty();
+    }
+    if (deptIncompatible(salle.dept(), codePostal)) {
+      LOG.info(
+          "Wikidata découverte salle — rejet département incompatible nom={} deptSalle={}"
+              + " codePostalCandidat={}",
+          nomRecherche,
+          salle.dept(),
+          codePostal);
+      return Optional.empty();
+    }
+
+    final String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
+    final EnrichissementSalle enrichissement =
+        new EnrichissementSalle(
+            qid,
+            labelCorrespondant,
+            communeLabel,
+            null,
+            null,
+            coord != null ? coord[1] : null,
+            coord != null ? coord[0] : null);
+    cache.put(qid, enrichissement);
+    return Optional.of(enrichissement);
   }
 
   /**

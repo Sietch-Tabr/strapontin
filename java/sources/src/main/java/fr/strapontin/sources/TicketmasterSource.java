@@ -261,65 +261,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   private record ResultatMultiPage(List<ConcertBrut> concerts, boolean succes) {}
 
-  @SuppressWarnings("unchecked")
   private ResultatPage fetchPage(
       UriComponentsBuilder uriBase, int numPage, String artisteFallback) {
     cadenceur.attendre();
-    final String uri =
-        uriBase
-            .cloneBuilder()
-            .queryParam("apikey", apiKey)
-            .queryParam("locale", "fr,en,*")
-            .queryParam("countryCode", "FR")
-            .queryParam("includeTBA", "no")
-            .queryParam("includeTBD", "no")
-            .queryParam("page", numPage)
-            .build()
-            .toUriString();
+    final String uri = construireUriFetchPage(uriBase, numPage);
 
     compteurBilan.enregistrerAppel();
     final Instant avantAppelHttp = Instant.now();
     try {
       final ResponseEntity<Map> response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
-
-      QuotaTM quota = null;
-      final HttpHeaders headers = response.getHeaders();
-      if (headers.get("Rate-Limit-Available") != null) {
-        quota =
-            new QuotaTM(
-                Integer.parseInt(headers.getFirst("Rate-Limit-Available")),
-                Integer.parseInt(headers.getOrEmpty("Rate-Limit").stream().findFirst().orElse("0")),
-                Long.parseLong(
-                    headers.getOrEmpty("Rate-Limit-Reset").stream().findFirst().orElse("0")),
-                Instant.now().toString());
-      }
-
-      final Map data = response.getBody();
-      if (data == null) {
-        return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
-      }
-
-      final Map<String, Object> page = (Map<String, Object>) data.get("page");
-      final int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
-      final int totalPages =
-          page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
-
-      final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      final List<Map<String, Object>> evts =
-          embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
-      if (evts == null) {
-        return new ResultatPage(List.of(), total, totalPages, quota, true);
-      }
-
-      final List<ConcertBrut> concerts = new ArrayList<>();
-      for (final Map<String, Object> evt : evts) {
-        final ConcertBrut c = mapEvenement(evt, artisteFallback);
-        if (c != null) {
-          concerts.add(c);
-        }
-      }
-      return new ResultatPage(concerts, total, totalPages, quota, true);
-
+      final QuotaTM quota = extraireQuotaTm(response.getHeaders());
+      return construireResultatPage(response.getBody(), quota, artisteFallback);
     } catch (Exception e) {
       final String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
       final long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
@@ -336,6 +288,59 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       compteurBilan.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
     }
+  }
+
+  private String construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
+    return uriBase
+        .cloneBuilder()
+        .queryParam("apikey", apiKey)
+        .queryParam("locale", "fr,en,*")
+        .queryParam("countryCode", "FR")
+        .queryParam("includeTBA", "no")
+        .queryParam("includeTBD", "no")
+        .queryParam("page", numPage)
+        .build()
+        .toUriString();
+  }
+
+  private static QuotaTM extraireQuotaTm(final HttpHeaders headers) {
+    if (headers.get("Rate-Limit-Available") == null) {
+      return null;
+    }
+    return new QuotaTM(
+        Integer.parseInt(headers.getFirst("Rate-Limit-Available")),
+        Integer.parseInt(headers.getOrEmpty("Rate-Limit").stream().findFirst().orElse("0")),
+        Long.parseLong(headers.getOrEmpty("Rate-Limit-Reset").stream().findFirst().orElse("0")),
+        Instant.now().toString());
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatPage construireResultatPage(
+      final Map data, final QuotaTM quota, final String artisteFallback) {
+    if (data == null) {
+      return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
+    }
+
+    final Map<String, Object> page = (Map<String, Object>) data.get("page");
+    final int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
+    final int totalPages =
+        page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
+
+    final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+    final List<Map<String, Object>> evts =
+        embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
+    if (evts == null) {
+      return new ResultatPage(List.of(), total, totalPages, quota, true);
+    }
+
+    final List<ConcertBrut> concerts = new ArrayList<>();
+    for (final Map<String, Object> evt : evts) {
+      final ConcertBrut c = mapEvenement(evt, artisteFallback);
+      if (c != null) {
+        concerts.add(c);
+      }
+    }
+    return new ResultatPage(concerts, total, totalPages, quota, true);
   }
 
   /**

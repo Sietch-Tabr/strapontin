@@ -301,14 +301,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   @SuppressWarnings("unchecked")
   private String rechercherAttractionId(final String terme, final boolean identiteConfirmee) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
-            .queryParam(PARAM_WEB_ID, WEB_ID)
-            .queryParam(PARAM_LANGUE, "fr")
-            .queryParam("search_term", terme)
-            .queryParam("top", 5)
-            .build()
-            .toUriString();
+    final String uri = construireUriRechercheAttractions(terme);
 
     compteurBilan.enregistrerAppel();
     try {
@@ -322,58 +315,107 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         return null;
       }
 
-      final String termeNorm = Normalisation.normaliserTexte(terme);
-      Map<String, Object> exact = null;
-      Map<String, Object> parContainment = null;
-      for (final Map<String, Object> a : attractions) {
-        final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
-        // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
-        // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
-        if (nomNorm.equals(termeNorm)
-            || UtilitairesChaine.estEgaliteSansEspaces(nomNorm, termeNorm)) {
-          exact = a;
-          break;
-        }
-        // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid") —
-        // seulement si l'identité n'est pas déjà confirmée par ailleurs : sinon ce repli
-        // approximatif a fini par accepter à répétition un mauvais rapprochement (ex. "Furies"
-        // dans "Love & Furies", deux entités distinctes). Seuil sur la longueur brute pour éviter
-        // les faux positifs sur un seul caractère.
-        if (!identiteConfirmee
-            && parContainment == null
-            && terme.length() >= 2
-            && !termeNorm.isEmpty()
-            && nomNorm.contains(termeNorm)) {
-          parContainment = a;
-        }
-      }
-      if (exact == null && parContainment != null) {
-        final String nomRetourne = (String) parContainment.getOrDefault("name", "");
-        LOG.info(
-            "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
-            terme,
-            nomRetourne);
-        containmentsAcceptes.add("terme=" + terme + " → resultat=" + nomRetourne);
-        exact = parContainment;
-      }
-      if (exact == null) {
-        final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
-        LOG.warn(
-            "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
-            terme,
-            nomRetourne);
-        return null;
-      }
-      Object id = exact.get("attractionId");
-      if (id == null) {
-        id = exact.get("id");
-      }
-      return id != null ? String.valueOf(id) : null;
+      final Map<String, Object> exact =
+          selectionnerAttraction(attractions, terme, identiteConfirmee);
+      return exact != null ? extraireAttractionId(exact) : null;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       LOG.warn("Eventim attractions erreur terme={}", terme, e);
       return null;
     }
+  }
+
+  private String construireUriRechercheAttractions(final String terme) {
+    return UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
+        .queryParam(PARAM_WEB_ID, WEB_ID)
+        .queryParam(PARAM_LANGUE, "fr")
+        .queryParam("search_term", terme)
+        .queryParam("top", 5)
+        .build()
+        .toUriString();
+  }
+
+  /**
+   * Sélectionne la meilleure correspondance parmi les attractions retournées : égalité exacte
+   * (normalisée ou sans espaces) en priorité, repli sur un containment du terme dans le nom si
+   * l'identité n'est pas déjà confirmée par ailleurs.
+   *
+   * @param attractions résultats bruts de l'API attractions Eventim
+   * @param terme terme recherché
+   * @param identiteConfirmee désactive le repli par containment si vrai
+   * @return l'attraction retenue, ou {@code null} si aucune correspondance acceptable
+   */
+  private Map<String, Object> selectionnerAttraction(
+      final List<Map<String, Object>> attractions,
+      final String terme,
+      final boolean identiteConfirmee) {
+    final String termeNorm = Normalisation.normaliserTexte(terme);
+    Map<String, Object> parContainment = null;
+    for (final Map<String, Object> a : attractions) {
+      final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
+      if (estCorrespondanceExacte(nomNorm, termeNorm)) {
+        return a;
+      }
+      if (parContainment == null
+          && estContainmentEligible(terme, termeNorm, nomNorm, identiteConfirmee)) {
+        parContainment = a;
+      }
+    }
+    if (parContainment != null) {
+      journaliserContainmentAccepte(terme, parContainment);
+      return parContainment;
+    }
+    journaliserAucuneCorrespondance(terme, attractions);
+    return null;
+  }
+
+  // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
+  // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
+  private static boolean estCorrespondanceExacte(final String nomNorm, final String termeNorm) {
+    return nomNorm.equals(termeNorm) || UtilitairesChaine.estEgaliteSansEspaces(nomNorm, termeNorm);
+  }
+
+  // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid") —
+  // seulement si l'identité n'est pas déjà confirmée par ailleurs : sinon ce repli approximatif a
+  // fini par accepter à répétition un mauvais rapprochement (ex. "Furies" dans "Love & Furies",
+  // deux entités distinctes). Seuil sur la longueur brute pour éviter les faux positifs sur un
+  // seul caractère.
+  private static boolean estContainmentEligible(
+      final String terme,
+      final String termeNorm,
+      final String nomNorm,
+      final boolean identiteConfirmee) {
+    return !identiteConfirmee
+        && terme.length() >= 2
+        && !termeNorm.isEmpty()
+        && nomNorm.contains(termeNorm);
+  }
+
+  private void journaliserContainmentAccepte(
+      final String terme, final Map<String, Object> attraction) {
+    final String nomRetourne = (String) attraction.getOrDefault("name", "");
+    LOG.info(
+        "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
+        terme,
+        nomRetourne);
+    containmentsAcceptes.add("terme=" + terme + " → resultat=" + nomRetourne);
+  }
+
+  private void journaliserAucuneCorrespondance(
+      final String terme, final List<Map<String, Object>> attractions) {
+    final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
+    LOG.warn(
+        "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
+        terme,
+        nomRetourne);
+  }
+
+  private static String extraireAttractionId(final Map<String, Object> attraction) {
+    Object id = attraction.get("attractionId");
+    if (id == null) {
+      id = attraction.get("id");
+    }
+    return id != null ? String.valueOf(id) : null;
   }
 
   /**

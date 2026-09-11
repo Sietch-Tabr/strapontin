@@ -16,8 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Mappe un événement Ticketmaster brut (JSON désérialisé) vers un [ConcertBrut] — extrait de
- * {@link TicketmasterSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+ * Mappe un événement Ticketmaster brut (JSON désérialisé) vers un [ConcertBrut] — extrait de {@link
+ * TicketmasterSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
  */
 final class MapeurEvenementTM {
 
@@ -40,7 +40,7 @@ final class MapeurEvenementTM {
   /**
    * Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
    *
-   * L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
+   * <p>L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
    * événements sans heure précise, symétrique au comportement d'Eventim.
    *
    * @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
@@ -68,8 +68,7 @@ final class MapeurEvenementTM {
    * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
    *
    * @param evt événement TM sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
-   *   null
+   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être null
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
   static ConcertBrut mapper(final Map<String, Object> evt, final String artisteFallback) {
@@ -156,16 +155,28 @@ final class MapeurEvenementTM {
 
   private record InfosVenueTM(String salle, String ville, String dept, String salleSourceId) {}
 
-  @SuppressWarnings("unchecked")
   private static InfosVenueTM extraireInfosVenueTM(final Map<String, Object> venue) {
-    final String salle =
-        Normalisation.normaliserCasse(
-            venue != null && venue.get("name") != null
-                ? (String) venue.get("name")
-                : "Salle inconnue");
+    return new InfosVenueTM(
+        extraireNomSalleTM(venue),
+        extraireVilleTM(venue),
+        extraireDeptTM(venue),
+        extraireSalleSourceIdTM(venue));
+  }
+
+  private static String extraireNomSalleTM(final Map<String, Object> venue) {
+    return Normalisation.normaliserCasse(
+        venue != null && venue.get("name") != null ? (String) venue.get("name") : "Salle inconnue");
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String extraireVilleTM(final Map<String, Object> venue) {
     final Map<String, String> cityMap =
         venue != null ? (Map<String, String>) venue.get("city") : null;
-    final String ville = cityMap != null ? cityMap.get("name") : null;
+    return cityMap != null ? cityMap.get("name") : null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static String extraireDeptTM(final Map<String, Object> venue) {
     // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
     // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
     // plausible mais faux — countryCode absent traité comme française par défaut (comportement
@@ -173,14 +184,15 @@ final class MapeurEvenementTM {
     final Map<String, String> countryMap =
         venue != null ? (Map<String, String>) venue.get("country") : null;
     final String countryCode = countryMap != null ? countryMap.get("countryCode") : null;
-    final String dept =
-        countryCode == null || "FR".equals(countryCode)
-            ? Normalisation.extraireDeptFrancais(
-                venue != null ? (String) venue.get("postalCode") : null)
-            : null;
+    return countryCode == null || "FR".equals(countryCode)
+        ? Normalisation.extraireDeptFrancais(
+            venue != null ? (String) venue.get("postalCode") : null)
+        : null;
+  }
+
+  private static String extraireSalleSourceIdTM(final Map<String, Object> venue) {
     final Object venueIdObj = venue != null ? venue.get("id") : null;
-    final String salleSourceId = venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
-    return new InfosVenueTM(salle, ville, dept, salleSourceId);
+    return venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
   }
 
   private record InfosVenteTM(String statut, String presaleDebut, String presaleNom) {}
@@ -213,18 +225,37 @@ final class MapeurEvenementTM {
     final String presaleNom = presale != null ? (String) presale.get("name") : null;
 
     if ("offsale".equals(statut)) {
-      final Map<String, Object> ventePublique =
-          sales != null ? (Map<String, Object>) sales.get("public") : null;
-      final String ouverturePublique =
-          ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
-      if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
+      final String presaleRequalifiee = requalifierOffsaleEnPresale(sales, presaleDebut);
+      if (presaleRequalifiee != null) {
         statut = "presale";
-      } else if (ouverturePublique != null && estDansLeFutur(ouverturePublique)) {
-        statut = "presale";
-        presaleDebut = ouverturePublique;
+        presaleDebut = presaleRequalifiee;
       }
     }
     return new InfosVenteTM(statut, presaleDebut, presaleNom);
+  }
+
+  /**
+   * Détermine si un statut "offsale" doit en réalité être requalifié "presale" — prévente connue
+   * encore à venir, ou à défaut vente publique connue encore à venir.
+   *
+   * @param sales bloc "sales" brut de l'event TM
+   * @param presaleDebut date de début de la prévente déjà extraite, ou {@code null}
+   * @return la date de début à utiliser pour la prévente si une requalification s'applique, {@code
+   *     null} sinon (le statut "offsale" reste inchangé)
+   */
+  @SuppressWarnings("unchecked")
+  private static String requalifierOffsaleEnPresale(
+      final Map<String, Object> sales, final String presaleDebut) {
+    if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
+      return presaleDebut;
+    }
+    final Map<String, Object> ventePublique =
+        sales != null ? (Map<String, Object>) sales.get("public") : null;
+    final String ouverturePublique =
+        ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
+    return ouverturePublique != null && estDansLeFutur(ouverturePublique)
+        ? ouverturePublique
+        : null;
   }
 
   @SuppressWarnings("unchecked")
