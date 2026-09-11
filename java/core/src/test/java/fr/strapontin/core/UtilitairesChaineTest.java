@@ -10,9 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link UtilitairesChaine} — échappement JSON manuel (notifications push) et
-/// critère de containment ratio partagé par {@link CorrespondanceSalle}/{@link
-/// CorrespondanceArtiste}.
+/**
+ * Tests unitaires de {@link UtilitairesChaine} — échappement JSON manuel (notifications push) et
+ * critère de containment ratio partagé par {@link CorrespondanceSalle}/{@link
+ * CorrespondanceArtiste}.
+ */
 class UtilitairesChaineTest {
 
   // --- echapperJson ---

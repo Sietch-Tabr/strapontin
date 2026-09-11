@@ -6,14 +6,16 @@ package fr.strapontin.web.accueil;
 
 import fr.strapontin.web.utils.Dates;
 
-/// Concert dans la vue accueil d'un utilisateur.
-///
-/// @param artisteId UUID stable de l'artiste dans le référentiel — utilisé pour le
-///     masquage/démasquage par groupe, contrairement à {@code artisteNorm} (texte par source,
-///     conservé pour les ancres de navigation) qui peut diverger entre concerts d'un même artiste
-///     réel selon la source de fetch.
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Concert dans la vue accueil d'un utilisateur.
+ *
+ * @param artisteId UUID stable de l'artiste dans le référentiel — utilisé pour le
+ *     masquage/démasquage par groupe, contrairement à {@code artisteNorm} (texte par source,
+ *     conservé pour les ancres de navigation) qui peut diverger entre concerts d'un même artiste
+ *     réel selon la source de fetch.
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record ConcertAccueil(
     String id,
     String artiste,
@@ -27,17 +29,23 @@ public record ConcertAccueil(
     String statut,
     boolean estNew) {
 
-  /// @return date courte formatée (ex. "sam. 12 avr.")
+  /**
+   * @return date courte formatée (ex. "sam. 12 avr.")
+   */
   public String dateFormatee() {
     return Dates.formater(date, false);
   }
 
-  /// @return date longue formatée (ex. "samedi 12 avril 2025")
+  /**
+   * @return date longue formatée (ex. "samedi 12 avril 2025")
+   */
   public String dateLongue() {
     return Dates.formater(date, true);
   }
 
-  /// @return date et heure formatées
+  /**
+   * @return date et heure formatées
+   */
   public String dateHeureFormatee() {
     return Dates.formaterAvecHeure(date, heure);
   }

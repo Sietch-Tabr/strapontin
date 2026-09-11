@@ -26,12 +26,14 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-/// Tests unitaires de {@link GlobalExceptionHandler}.
-///
-/// <p>Vérifie que chaque handler retourne le code HTTP et le message attendus.
-///
-/// @since 2.1.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link GlobalExceptionHandler}.
+ *
+ * <p>Vérifie que chaque handler retourne le code HTTP et le message attendus.
+ *
+ * @since 2.1.2
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 

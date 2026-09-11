@@ -13,14 +13,16 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
-///
-/// <p>Le {@code wikidataId} est concaténé dans un appel API Wikidata sortant
-/// ({@link ArtisteService#resoudreDeezerId}) — sans contrainte de format, une valeur arbitraire
-/// pouvait y transiter.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
+ *
+ * <p>Le {@code wikidataId} est concaténé dans un appel API Wikidata sortant
+ * ({@link ArtisteService#resoudreDeezerId}) — sans contrainte de format, une valeur arbitraire
+ * pouvait y transiter.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class RequeteAjouterValidationTest {
 
   private static final Validator VALIDATOR =

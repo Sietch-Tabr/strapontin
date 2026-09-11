@@ -20,12 +20,14 @@ import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link TriggerController} — focus sur l'endpoint générique
-/// {@code POST /trigger/job} (ajouté pour donner un bouton « Relancer » à chaque
-/// job de maintenance dans l'onglet admin Tableau de bord, sans dupliquer un endpoint par job).
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link TriggerController} — focus sur l'endpoint générique
+ * {@code POST /trigger/job} (ajouté pour donner un bouton « Relancer » à chaque
+ * job de maintenance dans l'onglet admin Tableau de bord, sans dupliquer un endpoint par job).
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class TriggerControllerTest {
 
   @Test

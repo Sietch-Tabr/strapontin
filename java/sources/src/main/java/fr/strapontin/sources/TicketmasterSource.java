@@ -28,29 +28,35 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/// Client HTTP pour l'API Ticketmaster Discovery v2.
-///
-/// Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds et
-/// par région (géolocalisation département). Respecte le rate limit de 5 req/s via des pauses entre
-/// les pages. Le quota journalier est extrait des headers `Rate-Limit-*` de chaque réponse.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Client HTTP pour l'API Ticketmaster Discovery v2.
+ *
+ * Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds et
+ * par région (géolocalisation département). Respecte le rate limit de 5 req/s via des pauses entre
+ * les pages. Le quota journalier est extrait des headers {@code Rate-Limit-*} de chaque réponse.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(TicketmasterSource.class);
 
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 
-  /// Classifications Ticketmaster filtrées lors des fetchs (musique, opéra, comédie musicale).
-  /// Valeur canonique partagée — référencée par le worker plutôt que redéfinie.
+  /**
+   * Classifications Ticketmaster filtrées lors des fetchs (musique, opéra, comédie musicale).
+   * Valeur canonique partagée — référencée par le worker plutôt que redéfinie.
+   */
   public static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
 
-  /// Préfixe abrégé attendu par {@link #accepteIdentifiantSalle}/{@link #fetchSalle}, distinct de
-  /// {@link #nom()} ({@code "ticketmaster"}, valeur canonique stockée dans {@code
-  /// salle_sources.source}). Référencée par les appelants qui construisent l'identifiant préfixé à
-  /// partir de cette colonne — sans cette traduction, {@code fetchSalle} n'est jamais invoqué
-  /// (mismatch de préfixe silencieux, aucune exception).
+  /**
+   * Préfixe abrégé attendu par {@link #accepteIdentifiantSalle}/{@link #fetchSalle}, distinct de
+   * {@link #nom()} ({@code "ticketmaster"}, valeur canonique stockée dans {@code
+   * salle_sources.source}). Référencée par les appelants qui construisent l'identifiant préfixé à
+   * partir de cette colonne — sans cette traduction, {@code fetchSalle} n'est jamais invoqué
+   * (mismatch de préfixe silencieux, aucune exception).
+   */
   public static final String PREFIXE_IDENTIFIANT = "tm";
 
   private static final int TAILLE_PAGE_REGION = 200;
@@ -83,21 +89,25 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   // cycle pour le même nom déjà classé introuvable.
   private final Cache<String, Boolean> avertissementsAttractionIntrouvable;
 
-  /// Crée une instance avec la clé API fournie, un RestClient par défaut (timeout connexion 10s,
-  /// lecture 30s) et un cadenceur en mémoire (mono-processus).
-  ///
-  /// @param apiKey clé API Ticketmaster Discovery v2
+  /**
+   * Crée une instance avec la clé API fournie, un RestClient par défaut (timeout connexion 10s,
+   * lecture 30s) et un cadenceur en mémoire (mono-processus).
+   *
+   * @param apiKey clé API Ticketmaster Discovery v2
+   */
   public TicketmasterSource(String apiKey) {
     this(apiKey, new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
   }
 
-  /// Crée une instance avec la clé API et un cadenceur personnalisé (RestClient par défaut) —
-  /// utilisé en production pour injecter un cadenceur partagé inter-processus, voir {@link
-  /// CadenceurAppels} (Ticketmaster est aussi appelé directement par le module web, hors de ce
-  /// processus worker).
-  ///
-  /// @param apiKey clé API Ticketmaster Discovery v2
-  /// @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+  /**
+   * Crée une instance avec la clé API et un cadenceur personnalisé (RestClient par défaut) —
+   * utilisé en production pour injecter un cadenceur partagé inter-processus, voir {@link
+   * CadenceurAppels} (Ticketmaster est aussi appelé directement par le module web, hors de ce
+   * processus worker).
+   *
+   * @param apiKey clé API Ticketmaster Discovery v2
+   * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+   */
   public TicketmasterSource(String apiKey, CadenceurAppels cadenceur) {
     this(
         apiKey,
@@ -109,21 +119,25 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         cadenceur);
   }
 
-  /// Crée une instance avec la clé API et un RestClient personnalisé (injection de test), cadencée
-  /// en mémoire.
-  ///
-  /// @param apiKey clé API Ticketmaster Discovery v2
-  /// @param restClient client HTTP Spring à utiliser
+  /**
+   * Crée une instance avec la clé API et un RestClient personnalisé (injection de test), cadencée
+   * en mémoire.
+   *
+   * @param apiKey clé API Ticketmaster Discovery v2
+   * @param restClient client HTTP Spring à utiliser
+   */
   public TicketmasterSource(String apiKey, RestClient restClient) {
     this(apiKey, restClient, new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
   }
 
-  /// Crée une instance avec la clé API, le RestClient et le cadenceur personnalisés (injection de
-  /// test).
-  ///
-  /// @param apiKey clé API Ticketmaster Discovery v2
-  /// @param restClient client HTTP Spring à utiliser
-  /// @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+  /**
+   * Crée une instance avec la clé API, le RestClient et le cadenceur personnalisés (injection de
+   * test).
+   *
+   * @param apiKey clé API Ticketmaster Discovery v2
+   * @param restClient client HTTP Spring à utiliser
+   * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+   */
   TicketmasterSource(String apiKey, RestClient restClient, CadenceurAppels cadenceur) {
     this(
         apiKey,
@@ -132,12 +146,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         cadenceur);
   }
 
-  /// Crée une instance avec la clé API, le RestClient et le cache de throttle des avertissements
-  /// personnalisés (injection de test), cadencée en mémoire.
-  ///
-  /// @param apiKey clé API Ticketmaster Discovery v2
-  /// @param restClient client HTTP Spring à utiliser
-  /// @param avertissementsAttractionIntrouvable cache de throttle à utiliser
+  /**
+   * Crée une instance avec la clé API, le RestClient et le cache de throttle des avertissements
+   * personnalisés (injection de test), cadencée en mémoire.
+   *
+   * @param apiKey clé API Ticketmaster Discovery v2
+   * @param restClient client HTTP Spring à utiliser
+   * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
+   */
   TicketmasterSource(
       String apiKey,
       RestClient restClient,
@@ -149,13 +165,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
   }
 
-  /// Crée une instance en spécifiant individuellement chacune de ses dépendances (injection de test
-  /// complète).
-  ///
-  /// @param apiKey clé API Ticketmaster Discovery v2
-  /// @param restClient client HTTP Spring à utiliser
-  /// @param avertissementsAttractionIntrouvable cache de throttle à utiliser
-  /// @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+  /**
+   * Crée une instance en spécifiant individuellement chacune de ses dépendances (injection de test
+   * complète).
+   *
+   * @param apiKey clé API Ticketmaster Discovery v2
+   * @param restClient client HTTP Spring à utiliser
+   * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
+   * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
+   */
   TicketmasterSource(
       String apiKey,
       RestClient restClient,
@@ -170,58 +188,72 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur);
   }
 
-  /// Retourne le dernier quota TM extrait des headers HTTP, ou `null` si aucun appel n'a été fait.
-  ///
-  /// @return quota courant ou null
+  /**
+   * Retourne le dernier quota TM extrait des headers HTTP, ou {@code null} si aucun appel n'a été fait.
+   *
+   * @return quota courant ou null
+   */
   public QuotaTM obtenirQuota() {
     return dernierQuota.get();
   }
 
-  /// Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement et remet les
-  /// compteurs à zéro. Le nombre de concerts manqués (pagination plafonnée) reste distinct, voir
-  /// {@link #preleverConcertsManques()}.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement et remet les
+   * compteurs à zéro. Le nombre de concerts manqués (pagination plafonnée) reste distinct, voir
+   * {@link #preleverConcertsManques()}.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   @Override
   public BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
 
-  /// Retourne le nombre cumulé de concerts non récupérés par plafonnement de la pagination
-  /// (pagination bornée à {@code NB_PAGES_MAX}) depuis le dernier prélèvement, et remet le compteur
-  /// à zéro. Métrique spécifique à TM, distincte du bilan appels/erreurs commun.
-  ///
-  /// @return le nombre de concerts manqués depuis le dernier prélèvement
+  /**
+   * Retourne le nombre cumulé de concerts non récupérés par plafonnement de la pagination
+   * (pagination bornée à {@code NB_PAGES_MAX}) depuis le dernier prélèvement, et remet le compteur
+   * à zéro. Métrique spécifique à TM, distincte du bilan appels/erreurs commun.
+   *
+   * @return le nombre de concerts manqués depuis le dernier prélèvement
+   */
   public int preleverConcertsManques() {
     return concertsManquesCumules.getAndSet(0);
   }
 
-  /// Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
-  ///
-  /// @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
-  /// @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
-  /// @return tableau à deux éléments : [date, heure] où heure peut être null
+  /**
+   * Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
+   *
+   * @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
+   * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
+   * @return tableau à deux éléments : [date, heure] où heure peut être null
+   */
   public static String[] parseDateTM(String dateStr, String heureStr) {
     return MapeurEvenementTM.parseDateTM(dateStr, heureStr);
   }
 
-  /// Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
-  ///
-  /// @param evt événement TM sous forme de Map imbriquée
-  /// @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
-  ///   null
-  /// @return concert extrait, ou null si l'événement est invalide ou hors périmètre
+  /**
+   * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
+   *
+   * @param evt événement TM sous forme de Map imbriquée
+   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
+   *   null
+   * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
+   */
   public static ConcertBrut mapEvenement(Map<String, Object> evt, String artisteFallback) {
     return MapeurEvenementTM.mapper(evt, artisteFallback);
   }
 
-  /// @param succes {@code false} si l'appel HTTP a échoué (voir {@link #fetchPage}) — distingue une
-  ///   page réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi
-  ///   les deux se traduisent identiquement par {@code concerts} vide et {@code total=0}.
+  /**
+   * @param succes {@code false} si l'appel HTTP a échoué (voir {@link #fetchPage}) — distingue une
+   *   page réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi
+   *   les deux se traduisent identiquement par {@code concerts} vide et {@code total=0}.
+   */
   private record ResultatPage(
       List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota, boolean succes) {}
 
-  /// @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPage#succes}).
+  /**
+   * @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPage#succes}).
+   */
   private record ResultatMultiPage(List<ConcertBrut> concerts, boolean succes) {}
 
   @SuppressWarnings("unchecked")
@@ -294,13 +326,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
   }
 
-  /// Retire toute clé API Ticketmaster (paramètre {@code apikey=...}) d'un message avant
-  /// journalisation. Sur une panne réseau bas niveau, l'exception Spring ({@code
-  /// ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son
-  /// propre message, contournant toute rédaction faite en amont sur l'URI seule.
-  ///
-  /// @param message message à assainir, peut être {@code null}
-  /// @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
+  /**
+   * Retire toute clé API Ticketmaster (paramètre {@code apikey=...}) d'un message avant
+   * journalisation. Sur une panne réseau bas niveau, l'exception Spring ({@code
+   * ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son
+   * propre message, contournant toute rédaction faite en amont sur l'URI seule.
+   *
+   * @param message message à assainir, peut être {@code null}
+   * @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
+   */
   static String redigerApiKey(String message) {
     return message == null ? null : message.replaceAll("apikey=[^&\\s\"]+", "apikey=***");
   }
@@ -315,15 +349,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return new FenetreTemps(fmt.format(maintenant), fmt.format(dans6Mois));
   }
 
-  /// Récupère toutes les pages disponibles (bornées à {@link #NB_PAGES_MAX}) pour une requête TM.
-  ///
-  /// @param uriBase URI de base de la requête, sans pagination
-  /// @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
-  /// @param contexte identifiant du centre de recherche (ex. {@code "dept=75"}) inclus dans le log
-  ///   de plafonnement de pagination, pour distinguer les départements/salles chroniquement
-  ///   affectés
-  /// @return les concerts récupérés sur toutes les pages parcourues, et si toutes les pages ont été
-  ///   récupérées avec succès (voir {@link ResultatPage#succes})
+  /**
+   * Récupère toutes les pages disponibles (bornées à {@link #NB_PAGES_MAX}) pour une requête TM.
+   *
+   * @param uriBase URI de base de la requête, sans pagination
+   * @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
+   * @param contexte identifiant du centre de recherche (ex. {@code "dept=75"}) inclus dans le log
+   *   de plafonnement de pagination, pour distinguer les départements/salles chroniquement
+   *   affectés
+   * @return les concerts récupérés sur toutes les pages parcourues, et si toutes les pages ont été
+   *   récupérées avec succès (voir {@link ResultatPage#succes})
+   */
   private ResultatMultiPage fetchToutesPages(
       UriComponentsBuilder uriBase, String artisteFallback, String contexte) {
     List<ConcertBrut> tousLesEvents = new ArrayList<>();
@@ -374,10 +410,12 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return identifiant != null && identifiant.startsWith(PREFIXE_IDENTIFIANT + ":");
   }
 
-  /// Récupère les concerts d'un artiste par mot-clé (une seule page TM).
-  ///
-  /// @param nom nom de l'artiste recherché
-  /// @return liste des concerts trouvés
+  /**
+   * Récupère les concerts d'un artiste par mot-clé (une seule page TM).
+   *
+   * @param nom nom de l'artiste recherché
+   * @return liste des concerts trouvés
+   */
   @Override
   public List<ConcertBrut> fetchArtiste(String nom) {
     FenetreTemps fenetre = obtenirFenetreTemps();
@@ -399,13 +437,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return resultat.concerts();
   }
 
-  /// Récupère les concerts d'une salle TM par identifiant préfixé ou brut.
-  ///
-  /// <p>Accepte un identifiant préfixé ({@code "tm:rZFSnyZdFvA"}) ou un venueId brut ({@code
-  /// "rZFSnyZdFvA"}).
-  ///
-  /// @param identifiant identifiant de la salle (préfixé {@code "tm:"} ou brut)
-  /// @return liste des concerts à venir dans cette salle
+  /**
+   * Récupère les concerts d'une salle TM par identifiant préfixé ou brut.
+   *
+   * <p>Accepte un identifiant préfixé ({@code "tm:rZFSnyZdFvA"}) ou un venueId brut ({@code
+   * "rZFSnyZdFvA"}).
+   *
+   * @param identifiant identifiant de la salle (préfixé {@code "tm:"} ou brut)
+   * @return liste des concerts à venir dans cette salle
+   */
   @Override
   public List<ConcertBrut> fetchSalle(String identifiant) {
     String venueId =
@@ -430,14 +470,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return resultat.concerts();
   }
 
-  /// Recherche l'identifiant TM (attractionId) pour un artiste par son nom.
-  ///
-  /// <p>Parcourt jusqu'à 10 résultats pour trouver la première correspondance exacte normalisée. TM
-  /// peut trier par popularité et retourner un artiste similaire avant l'artiste recherché (ex:
-  /// "Shy" avant "Shy'm").
-  ///
-  /// @param nom nom de l'artiste
-  /// @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
+  /**
+   * Recherche l'identifiant TM (attractionId) pour un artiste par son nom.
+   *
+   * <p>Parcourt jusqu'à 10 résultats pour trouver la première correspondance exacte normalisée. TM
+   * peut trier par popularité et retourner un artiste similaire avant l'artiste recherché (ex:
+   * "Shy" avant "Shy'm").
+   *
+   * @param nom nom de l'artiste
+   * @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
+   */
   @SuppressWarnings("unchecked")
   public String rechercherAttractionId(String nom) {
     String uri =
@@ -478,10 +520,12 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     }
   }
 
-  /// Récupère les concerts d'un lot d'artistes TM par leurs attractionIds.
-  ///
-  /// @param attractionIds liste d'identifiants TM d'attractions
-  /// @return liste des concerts trouvés pour tous les artistes du lot
+  /**
+   * Récupère les concerts d'un lot d'artistes TM par leurs attractionIds.
+   *
+   * @param attractionIds liste d'identifiants TM d'attractions
+   * @return liste des concerts trouvés pour tous les artistes du lot
+   */
   @Override
   public List<ConcertBrut> fetchArtistesLot(List<String> attractionIds) {
     if (attractionIds.isEmpty()) return List.of();
@@ -507,65 +551,81 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     return resultat.concerts();
   }
 
-  /// Statut de vivacité d'un identifiant TM (phase 1).
+  /**
+   * Statut de vivacité d'un identifiant TM (phase 1).
+   */
   public enum StatutIdTM {
     VIVANT,
     MORT
   }
 
-  /// Candidat de redécouverte pour une salle TM disparue.
-  ///
-  /// @param id venueId TM candidat
-  /// @param nom nom de la salle chez TM
+  /**
+   * Candidat de redécouverte pour une salle TM disparue.
+   *
+   * @param id venueId TM candidat
+   * @param nom nom de la salle chez TM
+   */
   public record CandidatVenueTM(String id, String nom) {}
 
-  /// Vérifie qu'un venueId TM existe toujours.
-  ///
-  /// @param venueId identifiant de salle TM
-  /// @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+  /**
+   * Vérifie qu'un venueId TM existe toujours.
+   *
+   * @param venueId identifiant de salle TM
+   * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+   */
   public StatutIdTM verifierVenue(String venueId) {
     return healthCheck.verifierVenue(venueId);
   }
 
-  /// Vérifie qu'un attractionId TM existe toujours.
-  ///
-  /// @param attractionId identifiant d'artiste TM
-  /// @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+  /**
+   * Vérifie qu'un attractionId TM existe toujours.
+   *
+   * @param attractionId identifiant d'artiste TM
+   * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+   */
   public StatutIdTM verifierAttraction(String attractionId) {
     return healthCheck.verifierAttraction(attractionId);
   }
 
-  /// Récupère le nom actuel d'une attraction TM (health-check du rattachement — distinct de {@link
-  /// #verifierAttraction}, qui ne vérifie que la vivacité HTTP de l'identifiant, jamais que le nom
-  /// retourné correspond toujours à l'artiste suivi).
-  ///
-  /// @param attractionId identifiant TM de l'attraction
-  /// @return nom actuel retourné par TM, ou {@code null} si introuvable ou en cas d'erreur réseau
+  /**
+   * Récupère le nom actuel d'une attraction TM (health-check du rattachement — distinct de {@link
+   * #verifierAttraction}, qui ne vérifie que la vivacité HTTP de l'identifiant, jamais que le nom
+   * retourné correspond toujours à l'artiste suivi).
+   *
+   * @param attractionId identifiant TM de l'attraction
+   * @return nom actuel retourné par TM, ou {@code null} si introuvable ou en cas d'erreur réseau
+   */
   public String recupererNomAttraction(String attractionId) {
     return healthCheck.recupererNomAttraction(attractionId);
   }
 
-  /// Recherche des salles TM candidates par nom (redécouverte active, phase 1).
-  ///
-  /// @param nom nom de la salle recherchée
-  /// @return candidats trouvés (peut être vide)
+  /**
+   * Recherche des salles TM candidates par nom (redécouverte active, phase 1).
+   *
+   * @param nom nom de la salle recherchée
+   * @return candidats trouvés (peut être vide)
+   */
   public List<CandidatVenueTM> rechercherVenuesParNom(String nom) {
     return healthCheck.rechercherVenuesParNom(nom);
   }
 
-  /// Compte les événements à venir d'une salle TM (validation d'un candidat de redécouverte).
-  ///
-  /// @param venueId identifiant de salle TM
-  /// @return nombre d'événements trouvés, 0 en cas d'erreur
+  /**
+   * Compte les événements à venir d'une salle TM (validation d'un candidat de redécouverte).
+   *
+   * @param venueId identifiant de salle TM
+   * @return nombre d'événements trouvés, 0 en cas d'erreur
+   */
   public int compterEventsVenue(String venueId) {
     return healthCheck.compterEventsVenue(venueId);
   }
 
-  /// Récupère les concerts par région (géolocalisation centre de département).
-  ///
-  /// @param depts liste de codes département (ex: ["75", "92"])
-  /// @param classifs classifications TM à inclure ; par défaut music, opera, musical
-  /// @return liste des concerts trouvés pour tous les départements
+  /**
+   * Récupère les concerts par région (géolocalisation centre de département).
+   *
+   * @param depts liste de codes département (ex: ["75", "92"])
+   * @param classifs classifications TM à inclure ; par défaut music, opera, musical
+   * @return liste des concerts trouvés pour tous les départements
+   */
   @Override
   public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
     if (classifs == null) classifs = CLASSIFICATIONS;

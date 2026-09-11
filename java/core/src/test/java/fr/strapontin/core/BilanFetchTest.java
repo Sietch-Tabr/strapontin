@@ -11,10 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link BilanFetch}.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link BilanFetch}.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class BilanFetchTest {
 
   private static final int SEUIL = BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT;

@@ -22,10 +22,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link AppareilsService}.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AppareilsService}.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 class AppareilsServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

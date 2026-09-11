@@ -20,26 +20,28 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Détecte et fusionne automatiquement, en cycle nocturne, des paires de salles déjà établies
-/// (chacune avec ses propres concerts déjà résolus) qui désignent en réalité le même bâtiment
-/// physique — repérées par un concert partageant exactement artiste+date+heure+dept entre les deux,
-/// et validées par {@link CorrespondanceSalle#estDoublonSalle} sur leurs noms. Le seul critère
-/// artiste+date+heure+dept, sans comparaison de nom, s'est révélé insuffisant en production : un
-/// concert coïncidant par erreur upstream (ex. un mapping {@code salle_sources} corrompu) suffisait
-/// à fusionner deux salles réellement distinctes.
-///
-/// Complète {@link ReconciliateurSalles#chercherSalleParCleForte}, qui n'agit qu'au moment de la
-/// résolution d'un nouveau concert entrant : deux salles déjà établies sous des identités
-/// distinctes (chacune avec ses propres {@code salle_sources}, éventuellement un {@code
-/// wikidata_id}) n'étaient jamais reconsidérées après coup, laissant la scission s'accumuler à
-/// chaque nouveau concert de la même série.
-///
-/// Porte le même gabarit de fusion que {@code ReferentielSallesService.fusionner} (module web, non
-/// accessible depuis le worker) : dédoublonnage des {@code salle_sources} en conflit avant
-/// réassignation, puis concerts, puis abonnements utilisateurs.
-///
-/// @since 2.8.4
-/// @author Kwaite
+/**
+ * Détecte et fusionne automatiquement, en cycle nocturne, des paires de salles déjà établies
+ * (chacune avec ses propres concerts déjà résolus) qui désignent en réalité le même bâtiment
+ * physique — repérées par un concert partageant exactement artiste+date+heure+dept entre les deux,
+ * et validées par {@link CorrespondanceSalle#estDoublonSalle} sur leurs noms. Le seul critère
+ * artiste+date+heure+dept, sans comparaison de nom, s'est révélé insuffisant en production : un
+ * concert coïncidant par erreur upstream (ex. un mapping {@code salle_sources} corrompu) suffisait
+ * à fusionner deux salles réellement distinctes.
+ *
+ * Complète {@link ReconciliateurSalles#chercherSalleParCleForte}, qui n'agit qu'au moment de la
+ * résolution d'un nouveau concert entrant : deux salles déjà établies sous des identités
+ * distinctes (chacune avec ses propres {@code salle_sources}, éventuellement un {@code
+ * wikidata_id}) n'étaient jamais reconsidérées après coup, laissant la scission s'accumuler à
+ * chaque nouveau concert de la même série.
+ *
+ * Porte le même gabarit de fusion que {@code ReferentielSallesService.fusionner} (module web, non
+ * accessible depuis le worker) : dédoublonnage des {@code salle_sources} en conflit avant
+ * réassignation, puis concerts, puis abonnements utilisateurs.
+ *
+ * @since 2.8.4
+ * @author Kwaite
+ */
 @Service
 public class FusionSallesClePorteeService {
 
@@ -56,12 +58,14 @@ public class FusionSallesClePorteeService {
 
   private record PaireSalles(UUID a, UUID b) {}
 
-  /// Détecte puis fusionne les paires de salles distinctes partageant un concert à venir identique
-  /// (artiste+date+heure+dept). Une paire dont l'une des deux salles a déjà disparu (fusionnée plus
-  /// tôt dans le même cycle) est ignorée silencieusement — elle est nécessairement redondante avec
-  /// une fusion déjà effectuée.
-  ///
-  /// @return nombre de fusions effectuées
+  /**
+   * Détecte puis fusionne les paires de salles distinctes partageant un concert à venir identique
+   * (artiste+date+heure+dept). Une paire dont l'une des deux salles a déjà disparu (fusionnée plus
+   * tôt dans le même cycle) est ignorée silencieusement — elle est nécessairement redondante avec
+   * une fusion déjà effectuée.
+   *
+   * @return nombre de fusions effectuées
+   */
   public int fusionner() {
     List<PaireSalles> paires = detecterPaires();
     Set<UUID> dejaAbsorbees = new HashSet<>();
@@ -77,13 +81,15 @@ public class FusionSallesClePorteeService {
     return fusions;
   }
 
-  /// Repère, parmi les concerts à venir, les paires de {@code salle_id} distincts partageant
-  /// exactement le même artiste, la même date, la même heure et le même département — même clé que
-  /// {@link ReconciliateurSalles#chercherSalleParCleForte}, appliquée ici rétroactivement à des
-  /// salles déjà résolues chacune de leur côté plutôt qu'au moment de l'insertion — puis filtrées
-  /// par {@link CorrespondanceSalle#estDoublonSalle} sur les noms des deux salles : un seul concert
-  /// coïncidant par erreur upstream ne doit jamais suffire à fusionner deux salles sans rapport
-  /// réel (voir le rationale de classe).
+  /**
+   * Repère, parmi les concerts à venir, les paires de {@code salle_id} distincts partageant
+   * exactement le même artiste, la même date, la même heure et le même département — même clé que
+   * {@link ReconciliateurSalles#chercherSalleParCleForte}, appliquée ici rétroactivement à des
+   * salles déjà résolues chacune de leur côté plutôt qu'au moment de l'insertion — puis filtrées
+   * par {@link CorrespondanceSalle#estDoublonSalle} sur les noms des deux salles : un seul concert
+   * coïncidant par erreur upstream ne doit jamais suffire à fusionner deux salles sans rapport
+   * réel (voir le rationale de classe).
+   */
   private List<PaireSalles> detecterPaires() {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -123,9 +129,11 @@ public class FusionSallesClePorteeService {
   // deux halls physiquement distincts de plusieurs centaines de mètres.
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
 
-  /// @return {@code true} si les deux salles ont toutes deux des coordonnées connues et que leur
-  ///   distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
-  ///   coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
+  /**
+   * @return {@code true} si les deux salles ont toutes deux des coordonnées connues et que leur
+   *   distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
+   *   coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
+   */
   private static boolean distanceExcessive(Map<String, Object> ligne) {
     Double latA = (Double) ligne.get("lat_a");
     Double lonA = (Double) ligne.get("lon_a");
@@ -135,15 +143,17 @@ public class FusionSallesClePorteeService {
     return distanceHaversineMetres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
   }
 
-  /// Vérifie que deux salles ont chacune des coordonnées connues et suffisamment proches pour
-  /// justifier une fusion automatique sans aucun autre signal positif — contrairement à {@link
-  /// #distanceExcessive}, qui reste permissif quand une coordonnée manque (nom+dept déjà validés
-  /// par ailleurs), une collision {@code wikidata_id} seule n'a aucun autre garde-fou géographique
-  /// : l'absence de preuve positive doit alors empêcher la fusion plutôt que l'autoriser par
-  /// défaut.
-  ///
-  /// @return {@code true} si les deux salles ont des coordonnées connues et sont à moins de {@value
-  ///   #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
+  /**
+   * Vérifie que deux salles ont chacune des coordonnées connues et suffisamment proches pour
+   * justifier une fusion automatique sans aucun autre signal positif — contrairement à {@link
+   * #distanceExcessive}, qui reste permissif quand une coordonnée manque (nom+dept déjà validés
+   * par ailleurs), une collision {@code wikidata_id} seule n'a aucun autre garde-fou géographique
+   * : l'absence de preuve positive doit alors empêcher la fusion plutôt que l'autoriser par
+   * défaut.
+   *
+   * @return {@code true} si les deux salles ont des coordonnées connues et sont à moins de {@value
+   *   #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
+   */
   public static boolean coordonneesConnuesEtProches(
       Double latA, Double lonA, Double latB, Double lonB) {
     if (latA == null || lonA == null || latB == null || lonB == null) return false;
@@ -168,12 +178,14 @@ public class FusionSallesClePorteeService {
     return RAYON_TERRE_METRES * c;
   }
 
-  /// Choisit la salle à conserver (cible) entre les deux membres de la paire : priorité au {@code
-  /// wikidata_id} déjà connu (donnée la plus coûteuse à reconstituer), puis au nombre de concerts
-  /// déjà rattachés (établissement le plus riche), puis à l'UUID le plus petit pour un résultat
-  /// déterministe entre deux cycles.
-  ///
-  /// @return {@code [cible, source]}, ou {@code null} si l'une des deux salles n'existe plus
+  /**
+   * Choisit la salle à conserver (cible) entre les deux membres de la paire : priorité au {@code
+   * wikidata_id} déjà connu (donnée la plus coûteuse à reconstituer), puis au nombre de concerts
+   * déjà rattachés (établissement le plus riche), puis à l'UUID le plus petit pour un résultat
+   * déterministe entre deux cycles.
+   *
+   * @return {@code [cible, source]}, ou {@code null} si l'une des deux salles n'existe plus
+   */
   private UUID[] choisirCibleEtSource(UUID a, UUID b) {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -199,13 +211,15 @@ public class FusionSallesClePorteeService {
     return a.compareTo(b) <= 0 ? new UUID[] {a, b} : new UUID[] {b, a};
   }
 
-  /// Fusionne deux salles déjà établies : réassigne concerts/abonnements/sources externes/
-  /// sous-salles de la source vers la cible, récupère les métadonnées manquantes, puis supprime la
-  /// source. Rendu public pour être réutilisé par {@code EnrichissementSallesService} (collision
-  /// {@code wikidata_id}, #1189) — appelant distinct du cycle nocturne de cette classe.
-  ///
-  /// @param cibleId salle à conserver
-  /// @param sourceId salle à absorber puis supprimer
+  /**
+   * Fusionne deux salles déjà établies : réassigne concerts/abonnements/sources externes/
+   * sous-salles de la source vers la cible, récupère les métadonnées manquantes, puis supprime la
+   * source. Rendu public pour être réutilisé par {@code EnrichissementSallesService} (collision
+   * {@code wikidata_id}, #1189) — appelant distinct du cycle nocturne de cette classe.
+   *
+   * @param cibleId salle à conserver
+   * @param sourceId salle à absorber puis supprimer
+   */
   @Transactional
   public void fusionnerUnePaire(UUID cibleId, UUID sourceId) {
     Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
@@ -313,12 +327,14 @@ public class FusionSallesClePorteeService {
         Map.of("salleCible", cibleId.toString(), "salleSource", sourceId.toString()));
   }
 
-  /// Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
-  /// celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-  /// cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
-  /// plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
-  /// revue manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct
-  /// déjà géré à l'étape 6.
+  /**
+   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
+   * celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
+   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
+   * plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
+   * revue manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct
+   * déjà géré à l'étape 6.
+   */
   private void reassignerSousSallesSansCycle(UUID cibleId, UUID sourceId) {
     List<UUID> enfants =
         jdbc.query(
@@ -392,11 +408,13 @@ public class FusionSallesClePorteeService {
     }
   }
 
-  /// Même comparateur que {@code ReferentielSallesService.laSourceEstPlusSaine} (module web) : une
-  /// ligne non suspecte l'emporte toujours sur une ligne suspecte, à égalité de statut la ligne
-  /// avec le moins d'échecs consécutifs l'emporte.
-  ///
-  /// @return {@code true} si la ligne côté source doit être conservée
+  /**
+   * Même comparateur que {@code ReferentielSallesService.laSourceEstPlusSaine} (module web) : une
+   * ligne non suspecte l'emporte toujours sur une ligne suspecte, à égalité de statut la ligne
+   * avec le moins d'échecs consécutifs l'emporte.
+   *
+   * @return {@code true} si la ligne côté source doit être conservée
+   */
   private static boolean laSourceEstPlusSaine(Map<String, Object> conflit) {
     boolean suspectSource = Boolean.TRUE.equals(conflit.get("suspect_source"));
     boolean suspectCible = Boolean.TRUE.equals(conflit.get("suspect_cible"));

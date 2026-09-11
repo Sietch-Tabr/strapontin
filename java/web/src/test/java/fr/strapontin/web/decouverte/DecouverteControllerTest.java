@@ -23,14 +23,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link DecouverteController#decouvrir}.
-///
-/// <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}.
-/// Les tests du filtre mois et du comportement global de {@code decouvrir} au niveau service
-/// vivent dans {@link DecouverteServiceTest}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link DecouverteController#decouvrir}.
+ *
+ * <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}.
+ * Les tests du filtre mois et du comportement global de {@code decouvrir} au niveau service
+ * vivent dans {@link DecouverteServiceTest}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class DecouverteControllerTest {
 

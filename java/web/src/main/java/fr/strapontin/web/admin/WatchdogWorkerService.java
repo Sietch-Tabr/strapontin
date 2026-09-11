@@ -15,16 +15,18 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-/// Watchdog surveille l'activité du module worker toutes les heures.
-///
-/// <p>Si aucun job réussi n'est enregistré depuis {@value #SEUIL_HEURES} heures,
-/// un email d'alerte est envoyé à l'adresse retournée par
-/// {@link EmailAlerteService#obtenirDestinataireAlerte}.
-/// Une nouvelle alerte ne peut être envoyée qu'après {@value #SEUIL_HEURES} heures
-/// depuis la dernière, pour éviter le spam en cas de panne prolongée.
-///
-/// @since 2.2.5
-/// @author Kwaite
+/**
+ * Watchdog surveille l'activité du module worker toutes les heures.
+ *
+ * <p>Si aucun job réussi n'est enregistré depuis {@value #SEUIL_HEURES} heures,
+ * un email d'alerte est envoyé à l'adresse retournée par
+ * {@link EmailAlerteService#obtenirDestinataireAlerte}.
+ * Une nouvelle alerte ne peut être envoyée qu'après {@value #SEUIL_HEURES} heures
+ * depuis la dernière, pour éviter le spam en cas de panne prolongée.
+ *
+ * @since 2.2.5
+ * @author Kwaite
+ */
 @Service
 public class WatchdogWorkerService {
 
@@ -44,7 +46,9 @@ public class WatchdogWorkerService {
     this.emailAlerteService = emailAlerteService;
   }
 
-  /// Vérifie l'activité du worker toutes les heures et envoie une alerte si inactif.
+  /**
+   * Vérifie l'activité du worker toutes les heures et envoie une alerte si inactif.
+   */
   @Scheduled(cron = "0 0 * * * *")
   public void verifier() {
     Instant derniereExec = lireDerniereExecReussie();

@@ -20,19 +20,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de configuration chiffrée (portage de `config.ts`).
-///
-/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt (paramètres par défaut Node.js :
-/// N=16 384, r=8, p=1, dkLen=32).
-///
-/// Format de stockage : `base64(IV(12) || TAG(16) || données_chiffrées)`. Compatible avec les
-/// valeurs chiffrées par le module TypeScript.
-///
-/// Les valeurs sont mises en cache Caffeine 5 minutes. [sauvegarderConfig] invalide immédiatement
-/// le cache de la clé modifiée.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Service de configuration chiffrée (portage de {@code config.ts}).
+ *
+ * La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut Node.js :
+ * N=16 384, r=8, p=1, dkLen=32).
+ *
+ * Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec les
+ * valeurs chiffrées par le module TypeScript.
+ *
+ * Les valeurs sont mises en cache Caffeine 5 minutes. [sauvegarderConfig] invalide immédiatement
+ * le cache de la clé modifiée.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class ConfigService {
 
@@ -50,21 +52,25 @@ public class ConfigService {
         Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(200).build();
   }
 
-  /// Lit une valeur de configuration depuis le cache ou la base de données.
-  ///
-  /// @param cle la clé de configuration
-  /// @return la valeur déchiffrée, ou vide si la clé n'existe pas
+  /**
+   * Lit une valeur de configuration depuis le cache ou la base de données.
+   *
+   * @param cle la clé de configuration
+   * @return la valeur déchiffrée, ou vide si la clé n'existe pas
+   */
   public Optional<String> lireConfig(String cle) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     return cache.get(cle, this::chargerDepuisDb);
   }
 
-  /// Sauvegarde une valeur de configuration chiffrée en base de données.
-  ///
-  /// Si `valeur` est vide, la clé est supprimée.
-  ///
-  /// @param cle la clé de configuration
-  /// @param valeur la valeur en clair, ou `null` pour supprimer
+  /**
+   * Sauvegarde une valeur de configuration chiffrée en base de données.
+   *
+   * Si {@code valeur} est vide, la clé est supprimée.
+   *
+   * @param cle la clé de configuration
+   * @param valeur la valeur en clair, ou {@code null} pour supprimer
+   */
   public void sauvegarderConfig(String cle, String valeur) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     cache.invalidate(cle);
@@ -85,9 +91,11 @@ public class ConfigService {
     jdbc.update(sql, Map.of("cle", cle, "valeur", valeurChiffree));
   }
 
-  /// Retourne l'ensemble des clés présentes en base de données.
-  ///
-  /// @return les clés configurées
+  /**
+   * Retourne l'ensemble des clés présentes en base de données.
+   *
+   * @return les clés configurées
+   */
   public Set<String> lireConfigsPresentes() {
     List<String> cles =
         jdbc.query("SELECT cle FROM app_config", Map.of(), (rs, _) -> rs.getString("cle"));

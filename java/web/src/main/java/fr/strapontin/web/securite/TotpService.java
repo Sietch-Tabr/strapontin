@@ -21,14 +21,16 @@ import uk.org.okapibarcode.backend.QrCode;
 import uk.org.okapibarcode.graphics.Color;
 import uk.org.okapibarcode.output.SvgRenderer;
 
-/// Service TOTP (Time-based One-Time Password, RFC 6238) — implémentation Java pur.
-///
-/// <p>Secret : 20 octets aléatoires encodés en Base32 (160 bits, conforme RFC 4648). Code :
-/// HMAC-SHA1 tronqué à 6 chiffres toutes les 30 secondes. Vérification : tolérance ±1 fenêtre (30
-/// s) pour la dérive d'horloge.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Service TOTP (Time-based One-Time Password, RFC 6238) — implémentation Java pur.
+ *
+ * <p>Secret : 20 octets aléatoires encodés en Base32 (160 bits, conforme RFC 4648). Code :
+ * HMAC-SHA1 tronqué à 6 chiffres toutes les 30 secondes. Vérification : tolérance ±1 fenêtre (30
+ * s) pour la dérive d'horloge.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class TotpService {
 
@@ -48,20 +50,24 @@ public class TotpService {
               .maximumSize(10_000)
               .build();
 
-  /// Génère un nouveau secret TOTP encodé en Base32.
-  ///
-  /// @return le secret Base32 (32 caractères pour 20 octets)
+  /**
+   * Génère un nouveau secret TOTP encodé en Base32.
+   *
+   * @return le secret Base32 (32 caractères pour 20 octets)
+   */
   public String genererSecret() {
     byte[] octets = new byte[TAILLE_SECRET_OCTETS];
     rng.nextBytes(octets);
     return base32Encoder(octets);
   }
 
-  /// Construit l'URI {@code otpauth://} compatible Google Authenticator / Aegis.
-  ///
-  /// @param secret le secret Base32 du compte
-  /// @param identifiant le nom d'utilisateur affiché dans l'app TOTP
-  /// @return l'URI otpauth://totp/...
+  /**
+   * Construit l'URI {@code otpauth://} compatible Google Authenticator / Aegis.
+   *
+   * @param secret le secret Base32 du compte
+   * @param identifiant le nom d'utilisateur affiché dans l'app TOTP
+   * @return l'URI otpauth://totp/...
+   */
   public String genererUriOtpAuth(String secret, String identifiant) {
     String label = URLEncoder.encode("Strapontin:" + identifiant, StandardCharsets.UTF_8);
     String issuer = URLEncoder.encode(ISSUER, StandardCharsets.UTF_8);
@@ -74,10 +80,12 @@ public class TotpService {
         + "&algorithm=SHA1&digits=6&period=30";
   }
 
-  /// Génère un QR code SVG embarquable pour l'URI {@code otpauth://} fournie.
-  ///
-  /// @param otpUri l'URI otpauth:// à encoder
-  /// @return le contenu SVG (sans déclaration XML), ou {@code null} en cas d'erreur
+  /**
+   * Génère un QR code SVG embarquable pour l'URI {@code otpauth://} fournie.
+   *
+   * @param otpUri l'URI otpauth:// à encoder
+   * @return le contenu SVG (sans déclaration XML), ou {@code null} en cas d'erreur
+   */
   public String genererQrCodeSvg(String otpUri) {
     try {
       QrCode qrCode = new QrCode();
@@ -92,15 +100,17 @@ public class TotpService {
     }
   }
 
-  /// Vérifie un code TOTP saisi par l'utilisateur.
-  ///
-  /// <p>Accepte une dérive de ±1 fenêtre (30 s) pour la tolérance réseau/horloge. Un code valide ne
-  /// peut être accepté qu'une seule fois dans sa fenêtre (prévention du rejeu).
-  ///
-  /// @param secret le secret Base32 du compte
-  /// @param code le code à 6 chiffres saisi
-  /// @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
-  ///   utilisé
+  /**
+   * Vérifie un code TOTP saisi par l'utilisateur.
+   *
+   * <p>Accepte une dérive de ±1 fenêtre (30 s) pour la tolérance réseau/horloge. Un code valide ne
+   * peut être accepté qu'une seule fois dans sa fenêtre (prévention du rejeu).
+   *
+   * @param secret le secret Base32 du compte
+   * @param code le code à 6 chiffres saisi
+   * @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
+   *   utilisé
+   */
   public boolean verifierCode(String secret, String code) {
     if (secret == null || code == null) return false;
     // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme

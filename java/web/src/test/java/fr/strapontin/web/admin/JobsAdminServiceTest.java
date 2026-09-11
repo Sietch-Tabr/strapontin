@@ -11,10 +11,12 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link JobsAdminService} (extrait de {@code AdminService}).
-///
-/// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link JobsAdminService} (extrait de {@code AdminService}).
+ *
+ * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class JobsAdminServiceTest {
 
   @Test

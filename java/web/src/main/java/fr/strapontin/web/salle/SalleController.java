@@ -29,12 +29,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour la gestion des salles suivies (portage de {@code salles/+page.server.ts}).
-///
-/// <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link SalleService}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Contrôleur REST pour la gestion des salles suivies (portage de {@code salles/+page.server.ts}).
+ *
+ * <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link SalleService}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/salles")
 public class SalleController {
@@ -50,18 +52,22 @@ public class SalleController {
           .maximumSize(10_000)
           .build();
 
-  /// @param salleService service de gestion des salles
-  /// @param emailService service d'envoi d'emails
+  /**
+   * @param salleService service de gestion des salles
+   * @param emailService service d'envoi d'emails
+   */
   public SalleController(SalleService salleService, EmailService emailService) {
     this.salleService = salleService;
     this.emailService = emailService;
   }
 
-  /// Liste les salles suivies, avec suggestions de recherche si {@code q} est fourni.
-  ///
-  /// @param q terme de recherche (optionnel, min 2 caractères)
-  /// @param auth contexte d'authentification
-  /// @return la liste des salles et les suggestions
+  /**
+   * Liste les salles suivies, avec suggestions de recherche si {@code q} est fourni.
+   *
+   * @param q terme de recherche (optionnel, min 2 caractères)
+   * @param auth contexte d'authentification
+   * @return la liste des salles et les suggestions
+   */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(
       @RequestParam(required = false, defaultValue = "") String q, Authentication auth) {
@@ -69,12 +75,14 @@ public class SalleController {
     return ResponseEntity.ok(salleService.lister(userId, q));
   }
 
-  /// Ajoute une salle à la liste de suivi.
-  ///
-  /// @param requete corps JSON avec le nom et l'ID TM optionnel
-  /// @param auth contexte d'authentification
-  /// @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link
-  ///   GlobalExceptionHandler})
+  /**
+   * Ajoute une salle à la liste de suivi.
+   *
+   * @param requete corps JSON avec le nom et l'ID TM optionnel
+   * @param auth contexte d'authentification
+   * @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link
+   *   GlobalExceptionHandler})
+   */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
       @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
@@ -98,11 +106,13 @@ public class SalleController {
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
-  /// Supprime une salle de la liste de suivi.
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param auth contexte d'authentification
-  /// @return 204 si supprimée
+  /**
+   * Supprime une salle de la liste de suivi.
+   *
+   * @param salleId UUID stable de la salle
+   * @param auth contexte d'authentification
+   * @return 204 si supprimée
+   */
   @DeleteMapping("/{salleId}")
   public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleId, Authentication auth) {
     String userId = utilisateur(auth).id();
@@ -110,15 +120,17 @@ public class SalleController {
     return ResponseEntity.noContent().build();
   }
 
-  /// Enregistre le signalement d'une salle absente du référentiel.
-  ///
-  /// <p>Envoie un email à l'administrateur et un email de confirmation à l'utilisateur. Rate-limité
-  /// à 3 signalements par heure par IP.
-  ///
-  /// @param requete corps JSON avec nom, ville, urlSite, commentaire
-  /// @param auth contexte d'authentification
-  /// @param request la requête HTTP (pour rate limiting par IP)
-  /// @return 204 si transmis, 400 si validation échoue, 429 si rate limit atteint
+  /**
+   * Enregistre le signalement d'une salle absente du référentiel.
+   *
+   * <p>Envoie un email à l'administrateur et un email de confirmation à l'utilisateur. Rate-limité
+   * à 3 signalements par heure par IP.
+   *
+   * @param requete corps JSON avec nom, ville, urlSite, commentaire
+   * @param auth contexte d'authentification
+   * @param request la requête HTTP (pour rate limiting par IP)
+   * @return 204 si transmis, 400 si validation échoue, 429 si rate limit atteint
+   */
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
       @Valid @RequestBody RequeteSignalementSalle requete,
@@ -144,11 +156,13 @@ public class SalleController {
     return ResponseEntity.noContent().build();
   }
 
-  /// Réinitialise tous les buckets de signalement (actif uniquement sur le profil {@code dev}).
-  ///
-  /// <p>Appelé par le global-setup E2E avant chaque suite de tests pour repartir d'un quota plein.
-  ///
-  /// @return 204
+  /**
+   * Réinitialise tous les buckets de signalement (actif uniquement sur le profil {@code dev}).
+   *
+   * <p>Appelé par le global-setup E2E avant chaque suite de tests pour repartir d'un quota plein.
+   *
+   * @return 204
+   */
   @Profile("dev")
   @DeleteMapping("/rate-limits/signalement")
   public ResponseEntity<Void> reinitialiserBucketsSignalement() {

@@ -17,16 +17,20 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Gestion du quota journalier Ticketmaster stocké dans `app_config`.
-///
-/// Seuils de protection :
-///
-/// - `SEUIL_QUOTA_CRON = 500` : les jobs cron sont suspendus en dessous.
-/// - `SEUIL_QUOTA_ABORT = 50` : tous les jobs TM sont annulés en dessous.
-/// - `SEUIL_QUOTA_WARN = 200` : un avertissement est émis en dessous.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Gestion du quota journalier Ticketmaster stocké dans {@code app_config}.
+ *
+ * <p>Seuils de protection :
+ *
+ * <ul>
+ *   <li>{@code SEUIL_QUOTA_CRON = 500} : les jobs cron sont suspendus en dessous.
+ *   <li>{@code SEUIL_QUOTA_ABORT = 50} : tous les jobs TM sont annulés en dessous.
+ *   <li>{@code SEUIL_QUOTA_WARN = 200} : un avertissement est émis en dessous.
+ * </ul>
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class GestionQuotaTM {
 
@@ -48,13 +52,15 @@ public class GestionQuotaTM {
     this.objectMapper = objectMapper;
   }
 
-  /// Lit le quota courant depuis {@code app_config}.
-  ///
-  /// <p>Si le timestamp {@code Rate-Limit-Reset} (en ms) est dépassé, retourne un quota
-  /// synthétique {@code dispo = total} et persiste la mise à jour pour débloquer les jobs cron.
-  /// Le premier vrai appel TM réécrira la valeur réelle depuis les headers.
-  ///
-  /// @return quota lu, ou vide si absent ou malformé
+  /**
+   * Lit le quota courant depuis {@code app_config}.
+   *
+   * <p>Si le timestamp {@code Rate-Limit-Reset} (en ms) est dépassé, retourne un quota synthétique
+   * {@code dispo = total} et persiste la mise à jour pour débloquer les jobs cron. Le premier vrai
+   * appel TM réécrira la valeur réelle depuis les headers.
+   *
+   * @return quota lu, ou vide si absent ou malformé
+   */
   public Optional<QuotaTM> lireQuota() {
     try {
       String json =
@@ -79,9 +85,11 @@ public class GestionQuotaTM {
     }
   }
 
-  /// Persiste le quota en base dans {@code app_config}.
-  ///
-  /// @param quota quota à sauvegarder
+  /**
+   * Persiste le quota en base dans {@code app_config}.
+   *
+   * @param quota quota à sauvegarder
+   */
   public void ecrireQuota(QuotaTM quota) {
     try {
       String json = objectMapper.writeValueAsString(quota);
@@ -97,10 +105,12 @@ public class GestionQuotaTM {
     }
   }
 
-  /// Vérifie le quota avant un job TM. Retourne `false` si le job doit être annulé.
-  ///
-  /// @param nomJob nom du job pour les logs
-  /// @return `true` si le job peut continuer
+  /**
+   * Vérifie le quota avant un job TM. Retourne {@code false} si le job doit être annulé.
+   *
+   * @param nomJob nom du job pour les logs
+   * @return {@code true} si le job peut continuer
+   */
   public boolean verifier(String nomJob) {
     Optional<QuotaTM> quotaOpt = lireQuota();
     if (quotaOpt.isEmpty()) return true;
@@ -128,9 +138,11 @@ public class GestionQuotaTM {
     return true;
   }
 
-  /// Vérifie si les jobs cron sont autorisés (quota ≥ 500).
-  ///
-  /// @return `true` si le cron peut s'exécuter
+  /**
+   * Vérifie si les jobs cron sont autorisés (quota ≥ 500).
+   *
+   * @return {@code true} si le cron peut s'exécuter
+   */
   public boolean cronAutorise() {
     Optional<QuotaTM> quotaOpt = lireQuota();
     if (quotaOpt.isEmpty()) return true;

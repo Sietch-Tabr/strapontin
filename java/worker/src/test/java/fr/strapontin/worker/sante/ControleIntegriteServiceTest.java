@@ -22,10 +22,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ControleIntegriteService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ControleIntegriteService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ControleIntegriteServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

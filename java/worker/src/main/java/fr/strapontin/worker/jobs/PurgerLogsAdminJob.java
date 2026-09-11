@@ -9,11 +9,13 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : suppression des entrées de `logs_admin` plus anciennes que 30 jours, tous les
-/// jours.
-///
-/// @since 2.2.4
-/// @author Kwaite
+/**
+ * Job Quartz : suppression des entrées de {@code logs_admin} plus anciennes que 30 jours, tous les
+ * jours.
+ *
+ * @since 2.2.4
+ * @author Kwaite
+ */
 public class PurgerLogsAdminJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;

@@ -15,11 +15,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link AdminController#publierBanniere} et {@link
-/// AdminController#effacerBanniere}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AdminController#publierBanniere} et {@link
+ * AdminController#effacerBanniere}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class AdminControllerBanniereTest {
 
   private BanniereService banniereService;

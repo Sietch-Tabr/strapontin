@@ -24,14 +24,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
-/// Tests unitaires pour les beans de sécurité de {@link SecurityConfiguration}.
-///
-/// <p>Couvre les propriétés des cookies de session et l'encodeur de mots de passe. Les règles
-/// d'autorisation ({@code securityFilterChain}) sont vérifiées par les tests E2E Playwright
-/// (auth.spec.js).
-///
-/// @since 2.2.5
-/// @author Kwaite
+/**
+ * Tests unitaires pour les beans de sécurité de {@link SecurityConfiguration}.
+ *
+ * <p>Couvre les propriétés des cookies de session et l'encodeur de mots de passe. Les règles
+ * d'autorisation ({@code securityFilterChain}) sont vérifiées par les tests E2E Playwright
+ * (auth.spec.js).
+ *
+ * @since 2.2.5
+ * @author Kwaite
+ */
 class SecurityConfigurationTest {
 
   private final SecurityConfiguration config = new SecurityConfiguration();

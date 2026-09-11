@@ -20,12 +20,14 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.UnknownContentTypeException;
 
-/// Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link
-/// WikidataArtisteSource} : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff
-/// exponentiel) et erreurs transitoires 502/503/content-type inattendu (×3).
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link
+ * WikidataArtisteSource} : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff
+ * exponentiel) et erreurs transitoires 502/503/content-type inattendu (×3).
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 final class ClientSparqlWikidata {
 
   private static final Logger log = LoggerFactory.getLogger(ClientSparqlWikidata.class);
@@ -52,14 +54,18 @@ final class ClientSparqlWikidata {
       new fr.strapontin.core.CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
-  /// Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
+  /**
+   * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
+   */
   ClientSparqlWikidata() {
     this(construireRestClientParDefaut());
   }
 
-  /// Crée un client avec un RestClient personnalisé (injection de test).
-  ///
-  /// @param restClient client HTTP à utiliser
+  /**
+   * Crée un client avec un RestClient personnalisé (injection de test).
+   *
+   * @param restClient client HTTP à utiliser
+   */
   ClientSparqlWikidata(RestClient restClient) {
     this.restClient = restClient;
   }
@@ -84,12 +90,14 @@ final class ClientSparqlWikidata {
         .body(java.util.Map.class);
   }
 
-  /// Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503 (×3).
-  /// Retourne `null` si toutes les tentatives échouent — l'appelant traite cela comme une absence
-  /// de résultat, sans lever d'exception.
-  ///
-  /// @param sparql corps de la requête SPARQL
-  /// @return corps JSON désérialisé, ou null en cas d'échec définitif
+  /**
+   * Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503 (×3).
+   * Retourne {@code null} si toutes les tentatives échouent — l'appelant traite cela comme une absence
+   * de résultat, sans lever d'exception.
+   *
+   * @param sparql corps de la requête SPARQL
+   * @return corps JSON désérialisé, ou null en cas d'échec définitif
+   */
   java.util.Map<String, Object> executer(String sparql) {
     // un appel logique = un executer, quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
@@ -129,12 +137,14 @@ final class ClientSparqlWikidata {
     return null;
   }
 
-  /// Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement et remet les
-  /// compteurs à zéro — client partagé entre {@link WikidataSalleSource} et {@link
-  /// WikidataArtisteSource}, mais une instance par source (non partagée) : chacune prélève son
-  /// propre bilan sans interférer avec l'autre.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement et remet les
+   * compteurs à zéro — client partagé entre {@link WikidataSalleSource} et {@link
+   * WikidataArtisteSource}, mais une instance par source (non partagée) : chacune prélève son
+   * propre bilan sans interférer avec l'autre.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   fr.strapontin.core.BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
@@ -158,23 +168,27 @@ final class ClientSparqlWikidata {
     }
   }
 
-  /// Extrait la valeur d'une variable SPARQL dans un binding de résultat.
-  ///
-  /// @param binding binding JSON d'une ligne de résultat
-  /// @param cle nom de la variable SPARQL
-  /// @return valeur textuelle, ou null si absente
+  /**
+   * Extrait la valeur d'une variable SPARQL dans un binding de résultat.
+   *
+   * @param binding binding JSON d'une ligne de résultat
+   * @param cle nom de la variable SPARQL
+   * @return valeur textuelle, ou null si absente
+   */
   @SuppressWarnings("unchecked")
   static String valeurBinding(java.util.Map<String, Object> binding, String cle) {
     var v = (java.util.Map<String, Object>) binding.get(cle);
     return v != null ? (String) v.get("value") : null;
   }
 
-  /// Extrait la liste des bindings d'une réponse SPARQL JSON — partagé entre {@link
-  /// WikidataSalleSource} et {@link WikidataArtisteSource}, jusqu'ici dupliqué à l'identique dans
-  /// les deux classes.
-  ///
-  /// @param data réponse JSON désérialisée d'une requête SPARQL
-  /// @return la liste des bindings, vide si absente
+  /**
+   * Extrait la liste des bindings d'une réponse SPARQL JSON — partagé entre {@link
+   * WikidataSalleSource} et {@link WikidataArtisteSource}, jusqu'ici dupliqué à l'identique dans
+   * les deux classes.
+   *
+   * @param data réponse JSON désérialisée d'une requête SPARQL
+   * @return la liste des bindings, vide si absente
+   */
   @SuppressWarnings("unchecked")
   static List<Map<String, Object>> extraireBindings(Map<String, Object> data) {
     var results = (Map<String, Object>) data.get("results");
@@ -183,12 +197,14 @@ final class ClientSparqlWikidata {
     return bindings != null ? bindings : List.of();
   }
 
-  /// Échappe une chaîne pour insertion sûre dans un littéral SPARQL délimité par des guillemets
-  /// doubles (ex. {@code mwapi:search "..."}). L'antislash est échappé avant le guillemet, sinon le
-  /// {@code \"} produit par l'échappement du guillemet serait lui-même ré-échappé.
-  ///
-  /// @param s la chaîne à insérer dans le littéral
-  /// @return la chaîne échappée
+  /**
+   * Échappe une chaîne pour insertion sûre dans un littéral SPARQL délimité par des guillemets
+   * doubles (ex. {@code mwapi:search "..."}). L'antislash est échappé avant le guillemet, sinon le
+   * {@code \"} produit par l'échappement du guillemet serait lui-même ré-échappé.
+   *
+   * @param s la chaîne à insérer dans le littéral
+   * @return la chaîne échappée
+   */
   static String echapperLitteral(String s) {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
@@ -196,12 +212,14 @@ final class ClientSparqlWikidata {
   private static final java.util.regex.Pattern MOTIF_Q_ID =
       java.util.regex.Pattern.compile("^Q[0-9]+$");
 
-  /// Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la
-  /// concaténer nue (sans guillemets) dans une clause {@code VALUES ?item { wd:... }} —
-  /// contrairement à {@link #echapperLitteral}, qui ne protège que les littéraux entre guillemets.
-  ///
-  /// @param qId identifiant à vérifier
-  /// @return {@code true} si le format est un Q-ID valide
+  /**
+   * Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la
+   * concaténer nue (sans guillemets) dans une clause {@code VALUES ?item { wd:... }} —
+   * contrairement à {@link #echapperLitteral}, qui ne protège que les littéraux entre guillemets.
+   *
+   * @param qId identifiant à vérifier
+   * @return {@code true} si le format est un Q-ID valide
+   */
   static boolean estQIdValide(String qId) {
     return qId != null && MOTIF_Q_ID.matcher(qId).matches();
   }

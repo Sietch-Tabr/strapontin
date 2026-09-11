@@ -24,27 +24,33 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour les spectacles (portage de {@code spectacles/+page.server.ts}).
-///
-/// <p>HTTP pur — délègue toute la logique à {@link SpectacleService}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Contrôleur REST pour les spectacles (portage de {@code spectacles/+page.server.ts}).
+ *
+ * <p>HTTP pur — délègue toute la logique à {@link SpectacleService}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/spectacles")
 public class SpectacleController {
 
   private final SpectacleService spectacleService;
 
-  /// @param spectacleService service de gestion des spectacles
+  /**
+   * @param spectacleService service de gestion des spectacles
+   */
   public SpectacleController(SpectacleService spectacleService) {
     this.spectacleService = spectacleService;
   }
 
-  /// Liste les spectacles selon les filtres fournis.
-  ///
-  /// @param auth contexte d'authentification
-  /// @return la liste paginée des spectacles
+  /**
+   * Liste les spectacles selon les filtres fournis.
+   *
+   * @param auth contexte d'authentification
+   * @return la liste paginée des spectacles
+   */
   @GetMapping
   public ResponseEntity<ReponseSpectacles> listerSpectacles(
       @RequestParam(required = false, defaultValue = "") String q,
@@ -75,12 +81,14 @@ public class SpectacleController {
     return ResponseEntity.ok(spectacleService.listerSpectacles(userId, filtre));
   }
 
-  /// Masque ou démasque un concert pour l'utilisateur courant.
-  ///
-  /// @param concertId identifiant UUID du concert
-  /// @param requete corps JSON avec {@code masquer}
-  /// @param auth contexte d'authentification
-  /// @return 200 si mis à jour
+  /**
+   * Masque ou démasque un concert pour l'utilisateur courant.
+   *
+   * @param concertId identifiant UUID du concert
+   * @param requete corps JSON avec {@code masquer}
+   * @param auth contexte d'authentification
+   * @return 200 si mis à jour
+   */
   @PatchMapping("/matches/{concertId}")
   public ResponseEntity<Map<String, Object>> modifierMatch(
       @PathVariable String concertId,
@@ -90,11 +98,13 @@ public class SpectacleController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
-  ///
-  /// @param requete corps JSON avec {@code artisteId}
-  /// @param auth contexte d'authentification
-  /// @return 200 si mis à jour, 400 si artisteId manquant ou invalide
+  /**
+   * Masque tous les concerts d'un artiste pour l'utilisateur courant.
+   *
+   * @param requete corps JSON avec {@code artisteId}
+   * @param auth contexte d'authentification
+   * @return 200 si mis à jour, 400 si artisteId manquant ou invalide
+   */
   @PostMapping("/masquer-artiste")
   public ResponseEntity<Map<String, Object>> masquerArtiste(
       @Valid @RequestBody RequeteMasquerArtiste requete, Authentication auth) {
@@ -106,11 +116,13 @@ public class SpectacleController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
-  ///
-  /// @param requete corps JSON avec {@code artisteId}
-  /// @param auth contexte d'authentification
-  /// @return 200 si mis à jour, 400 si artisteId manquant ou invalide
+  /**
+   * Démasque tous les concerts d'un artiste pour l'utilisateur courant.
+   *
+   * @param requete corps JSON avec {@code artisteId}
+   * @param auth contexte d'authentification
+   * @return 200 si mis à jour, 400 si artisteId manquant ou invalide
+   */
   @PostMapping("/demasquer-artiste")
   public ResponseEntity<Map<String, Object>> demasquerArtiste(
       @Valid @RequestBody RequeteMasquerArtiste requete, Authentication auth) {

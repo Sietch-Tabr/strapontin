@@ -10,10 +10,12 @@ import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/// Configuration Spring MVC — ressources statiques.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Configuration Spring MVC — ressources statiques.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 

@@ -16,18 +16,20 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/// Garde-fou quota d'envoi Resend jour/mois (suite de l'incident — boucle de bounces
-/// ayant épuisé le quota Resend en 14 minutes sans garde-fou local).
-///
-/// <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé
-/// {@code RESEND_QUOTA_JSON}) — même pattern que {@code worker.quota.GestionQuotaTM} pour
-/// {@code TM_QUOTA_JSON}. Compteur partagé avec le worker
-/// ({@code worker.quota.GestionQuotaResendWorker}, même clé) : une race read-increment-write non
-/// atomique entre les deux JVM peut sous-compter, jamais sur-bloquer dangereusement — risque
-/// assumé, proportionné à un projet mono-instance.
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Garde-fou quota d'envoi Resend jour/mois (suite de l'incident — boucle de bounces
+ * ayant épuisé le quota Resend en 14 minutes sans garde-fou local).
+ *
+ * <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé
+ * {@code RESEND_QUOTA_JSON}) — même pattern que {@code worker.quota.GestionQuotaTM} pour
+ * {@code TM_QUOTA_JSON}. Compteur partagé avec le worker
+ * ({@code worker.quota.GestionQuotaResendWorker}, même clé) : une race read-increment-write non
+ * atomique entre les deux JVM peut sous-compter, jamais sur-bloquer dangereusement — risque
+ * assumé, proportionné à un projet mono-instance.
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 @Component
 class GestionQuotaResend {
 
@@ -97,11 +99,13 @@ class GestionQuotaResend {
         moisChange ? false : c.alerteMoisEnvoyee());
   }
 
-  /// Lit le compteur courant, en appliquant le rollover jour/mois si nécessaire (sans persister
-  /// — la persistance n'a lieu que sur un changement d'état réel, via {@link #reserverEnvoi()}
-  /// ou {@link #marquerAlerteEnvoyee(CompteurEnvoisResend)}).
-  ///
-  /// @return le compteur courant, ou un compteur initial à zéro si absent de la base
+  /**
+   * Lit le compteur courant, en appliquant le rollover jour/mois si nécessaire (sans persister
+   * — la persistance n'a lieu que sur un changement d'état réel, via {@link #reserverEnvoi()}
+   * ou {@link #marquerAlerteEnvoyee(CompteurEnvoisResend)}).
+   *
+   * @return le compteur courant, ou un compteur initial à zéro si absent de la base
+   */
   CompteurEnvoisResend lireCompteurCourant() {
     String jour = jourCourant();
     String mois = moisCourant(jour);
@@ -110,11 +114,13 @@ class GestionQuotaResend {
         .orElse(new CompteurEnvoisResend(jour, 0, mois, 0, false, false));
   }
 
-  /// Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
-  ///
-  /// @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté),
-  ///     {@code false} si le quota jour ou mois est atteint (rollover éventuel tout de même
-  ///     persisté, pour que le prochain appel reparte d'un état à jour)
+  /**
+   * Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
+   *
+   * @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté),
+   *     {@code false} si le quota jour ou mois est atteint (rollover éventuel tout de même
+   *     persisté, pour que le prochain appel reparte d'un état à jour)
+   */
   boolean reserverEnvoi() {
     CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
@@ -138,11 +144,13 @@ class GestionQuotaResend {
     return true;
   }
 
-  /// Indique si le seuil d'alerte (80%) est franchi et pas encore signalé pour la fenêtre
-  /// courante (jour ou mois).
-  ///
-  /// @param compteur le compteur courant (voir {@link #lireCompteurCourant()})
-  /// @return {@code true} si une alerte doit être envoyée
+  /**
+   * Indique si le seuil d'alerte (80%) est franchi et pas encore signalé pour la fenêtre
+   * courante (jour ou mois).
+   *
+   * @param compteur le compteur courant (voir {@link #lireCompteurCourant()})
+   * @return {@code true} si une alerte doit être envoyée
+   */
   boolean seuilFranchiNonSignale(CompteurEnvoisResend compteur) {
     boolean jourSeuil =
         compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE && !compteur.alerteJourEnvoyee();
@@ -151,10 +159,12 @@ class GestionQuotaResend {
     return jourSeuil || moisSeuil;
   }
 
-  /// Marque l'alerte de seuil comme envoyée pour la ou les fenêtres actuellement en dépassement,
-  /// afin de ne pas la renvoyer avant le prochain rollover jour/mois.
-  ///
-  /// @param compteur le compteur courant au moment de l'envoi de l'alerte
+  /**
+   * Marque l'alerte de seuil comme envoyée pour la ou les fenêtres actuellement en dépassement,
+   * afin de ne pas la renvoyer avant le prochain rollover jour/mois.
+   *
+   * @param compteur le compteur courant au moment de l'envoi de l'alerte
+   */
   void marquerAlerteEnvoyee(CompteurEnvoisResend compteur) {
     boolean jourSeuil = compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE;
     boolean moisSeuil = compteur.envoyesMois() >= LIMITE_MOIS * SEUIL_ALERTE;

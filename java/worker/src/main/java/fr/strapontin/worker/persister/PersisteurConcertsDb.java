@@ -21,16 +21,18 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de persistance SQL pur pour les concerts, sur le modèle événement canonique ({@code
-/// evenements}) + observations par source ({@code observations}) — un événement réel est résolu (ou
-/// créé) avant toute écriture, jamais choisi après coup par suppression d'une source perdante
-/// (ancien modèle, trois mécanismes de suppression de doublon distincts).
-///
-/// <p>Résout les UUIDs internes depuis les identifiants sources préfixés ({@code salle_sources},
-/// {@code artiste_sources}).
-///
-/// @since 2.5.7
-/// @author Kwaite
+/**
+ * Service de persistance SQL pur pour les concerts, sur le modèle événement canonique ({@code
+ * evenements}) + observations par source ({@code observations}) — un événement réel est résolu (ou
+ * créé) avant toute écriture, jamais choisi après coup par suppression d'une source perdante
+ * (ancien modèle, trois mécanismes de suppression de doublon distincts).
+ *
+ * <p>Résout les UUIDs internes depuis les identifiants sources préfixés ({@code salle_sources},
+ * {@code artiste_sources}).
+ *
+ * @since 2.5.7
+ * @author Kwaite
+ */
 @Service
 public class PersisteurConcertsDb {
 
@@ -38,19 +40,23 @@ public class PersisteurConcertsDb {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /// @param jdbc template JDBC injecté par Spring
+  /**
+   * @param jdbc template JDBC injecté par Spring
+   */
   public PersisteurConcertsDb(NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
-  /// Résout les UUIDs internes depuis les identifiants sources préfixés.
-  ///
-  /// <p>Consulte {@code salle_sources} et {@code artiste_sources} par lot pour chaque source
-  /// distincte. Retourne un cache {@code "source:identifiant" → UUID}.
-  ///
-  /// @param concerts concerts à résoudre
-  /// @param type {@code "salle"} ou {@code "artiste"}
-  /// @return cache des UUIDs résolus par identifiant préfixé
+  /**
+   * Résout les UUIDs internes depuis les identifiants sources préfixés.
+   *
+   * <p>Consulte {@code salle_sources} et {@code artiste_sources} par lot pour chaque source
+   * distincte. Retourne un cache {@code "source:identifiant" → UUID}.
+   *
+   * @param concerts concerts à résoudre
+   * @param type {@code "salle"} ou {@code "artiste"}
+   * @return cache des UUIDs résolus par identifiant préfixé
+   */
   Map<String, UUID> resoudreUuidsParSource(List<ValeurConcert> concerts, String type) {
     Map<String, List<String>> parSource = new HashMap<>();
     for (ValeurConcert c : concerts) {
@@ -88,20 +94,22 @@ public class PersisteurConcertsDb {
     return cache;
   }
 
-  /// Résout les concerts Eventim dont l'URL existe déjà en base (via une observation) sous un
-  /// {@code artiste_norm} différent.
-  ///
-  /// <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
-  /// différents selon le fetch. Sans cette résolution, deux événements coexisteraient en base avec
-  /// le même {@code (source, url, date)} mais des {@code artiste_norm} différents.
-  ///
-  /// <p>Restreint à Eventim (seule source concernée par le cas documenté ci-dessus) : appliqué à
-  /// toutes les sources, ce mécanisme empêcherait toute guérison d'une corruption de {@code
-  /// artiste_norm} déjà persistée une fois sa cause racine corrigée en amont.
-  ///
-  /// @param concerts concerts après résolution des identités sources
-  /// @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour
-  ///   Eventim uniquement
+  /**
+   * Résout les concerts Eventim dont l'URL existe déjà en base (via une observation) sous un
+   * {@code artiste_norm} différent.
+   *
+   * <p>Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes
+   * différents selon le fetch. Sans cette résolution, deux événements coexisteraient en base avec
+   * le même {@code (source, url, date)} mais des {@code artiste_norm} différents.
+   *
+   * <p>Restreint à Eventim (seule source concernée par le cas documenté ci-dessus) : appliqué à
+   * toutes les sources, ce mécanisme empêcherait toute guérison d'une corruption de {@code
+   * artiste_norm} déjà persistée une fois sa cause racine corrigée en amont.
+   *
+   * @param concerts concerts après résolution des identités sources
+   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour
+   *   Eventim uniquement
+   */
   List<ValeurConcert> resoudreParUrl(List<ValeurConcert> concerts) {
     List<ValeurConcert> avecUrl =
         concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();
@@ -157,26 +165,30 @@ public class PersisteurConcertsDb {
         .toList();
   }
 
-  /// Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
-  /// annulation) plutôt qu'une représentation supplémentaire.
+  /**
+   * Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
+   * annulation) plutôt qu'une représentation supplémentaire.
+   */
   private static final java.util.Set<String> STATUTS_REPORT_TM =
       java.util.Set.of("rescheduled", "cancelled", "postponed");
 
-  /// Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
-  /// ses observations partage la même {@code url}, même {@code date}, heure différente, nouveau
-  /// statut {@link #STATUTS_REPORT_TM}).
-  ///
-  /// <p>Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
-  /// heure — sans cette étape, la résolution par clé (qui inclut l'heure) créerait un nouvel
-  /// événement à côté de l'ancien au lieu de le mettre à jour.
-  ///
-  /// <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
-  /// date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
-  /// un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en
-  /// présence de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un
-  /// nouvel événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
-  ///
-  /// @param concerts concerts après réconciliation, avant upsert
+  /**
+   * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
+   * ses observations partage la même {@code url}, même {@code date}, heure différente, nouveau
+   * statut {@link #STATUTS_REPORT_TM}).
+   *
+   * <p>Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
+   * heure — sans cette étape, la résolution par clé (qui inclut l'heure) créerait un nouvel
+   * événement à côté de l'ancien au lieu de le mettre à jour.
+   *
+   * <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
+   * date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
+   * un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en
+   * présence de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un
+   * nouvel événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
+   *
+   * @param concerts concerts après réconciliation, avant upsert
+   */
   void alignerHeureReportTM(List<ValeurConcert> concerts) {
     List<ValeurConcert> reports =
         concerts.stream()
@@ -232,9 +244,11 @@ public class PersisteurConcertsDb {
     }
   }
 
-  /// Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais accessible à un achat de
-  /// billetterie standard, ne doit jamais empêcher le rapprochement avec la fiche normale du même
-  /// événement réel.
+  /**
+   * Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais accessible à un achat de
+   * billetterie standard, ne doit jamais empêcher le rapprochement avec la fiche normale du même
+   * événement réel.
+   */
   private static boolean estPackage(String url) {
     return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
   }
@@ -253,17 +267,19 @@ public class PersisteurConcertsDb {
 
   private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
-  /// Résout l'événement canonique correspondant à un concert entrant, ou en crée un nouveau — point
-  /// unique de dédoublonnage (#1192), remplaçant les trois mécanismes de suppression a posteriori
-  /// de l'ancien modèle.
-  ///
-  /// <p>Trois niveaux : correspondance exacte sur la clé {@code (artiste_norm, date, heure,
-  /// salle_id)} (NULLS NOT DISTINCT) ; à défaut, repli flou parmi les événements de la même salle à
-  /// la même date, avec tolérance d'heure package/normal ({@link #heuresCompatibles}) et
-  /// comparaison floue de l'artiste ({@link CorrespondanceArtiste#estDoublonArtiste}) quand aucun
-  /// {@code artiste_id} n'est résolu des deux côtés — mêmes critères que les anciens {@code
-  /// supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant
-  /// l'écriture plutôt qu'en nettoyage après coup ; sinon, création.
+  /**
+   * Résout l'événement canonique correspondant à un concert entrant, ou en crée un nouveau — point
+   * unique de dédoublonnage (#1192), remplaçant les trois mécanismes de suppression a posteriori
+   * de l'ancien modèle.
+   *
+   * <p>Trois niveaux : correspondance exacte sur la clé {@code (artiste_norm, date, heure,
+   * salle_id)} (NULLS NOT DISTINCT) ; à défaut, repli flou parmi les événements de la même salle à
+   * la même date, avec tolérance d'heure package/normal ({@link #heuresCompatibles}) et
+   * comparaison floue de l'artiste ({@link CorrespondanceArtiste#estDoublonArtiste}) quand aucun
+   * {@code artiste_id} n'est résolu des deux côtés — mêmes critères que les anciens {@code
+   * supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant
+   * l'écriture plutôt qu'en nettoyage après coup ; sinon, création.
+   */
   private ResolutionEvenement resoudreOuCreerEvenement(ValeurConcert v) {
     MapSqlParameterSource paramsExact =
         new MapSqlParameterSource()
@@ -346,16 +362,18 @@ public class PersisteurConcertsDb {
         .addValue("artisteId", v.artisteId() != null ? v.artisteId().toString() : null);
   }
 
-  /// Met à jour les champs dénormalisés d'un événement déjà résolu — jamais {@code artiste_norm} ni
-  /// {@code heure} (identité stable une fois l'événement résolu) — priorité à la valeur entrante,
-  /// repli sur la valeur déjà connue si absente, même politique que l'ancien {@code
-  /// SQL_UPSERT_CONFLIT}. {@code statut} ne recule jamais depuis un état terminal ({@code
-  /// cancelled}/{@code rescheduled}/{@code postponed}). {@code salle_norm} est resynchronisé sur la
-  /// même observation que la vue {@code concerts} retiendrait comme référence ({@link
-  /// #meilleurSalleBrut}) — utile quand {@code salle_id} n'est pas encore résolu (l'identité repose
-  /// alors sur {@code artiste_norm}+date+heure seuls, {@code salle_norm} restant purement
-  /// informatif) ; appelé après {@link #upsertObservation} pour refléter l'observation qui vient
-  /// d'être upsertée.
+  /**
+   * Met à jour les champs dénormalisés d'un événement déjà résolu — jamais {@code artiste_norm} ni
+   * {@code heure} (identité stable une fois l'événement résolu) — priorité à la valeur entrante,
+   * repli sur la valeur déjà connue si absente, même politique que l'ancien {@code
+   * SQL_UPSERT_CONFLIT}. {@code statut} ne recule jamais depuis un état terminal ({@code
+   * cancelled}/{@code rescheduled}/{@code postponed}). {@code salle_norm} est resynchronisé sur la
+   * même observation que la vue {@code concerts} retiendrait comme référence ({@link
+   * #meilleurSalleBrut}) — utile quand {@code salle_id} n'est pas encore résolu (l'identité repose
+   * alors sur {@code artiste_norm}+date+heure seuls, {@code salle_norm} restant purement
+   * informatif) ; appelé après {@link #upsertObservation} pour refléter l'observation qui vient
+   * d'être upsertée.
+   */
   private void mettreAJourChampsEvenement(UUID evenementId, ValeurConcert v) {
     String salleBrutReference = meilleurSalleBrut(evenementId);
     String salleNormReference =
@@ -403,10 +421,12 @@ public class PersisteurConcertsDb {
             .addValue("salle", v.salle()));
   }
 
-  /// Retrouve, parmi les observations déjà attachées à un événement, le {@code salle_brut} de celle
-  /// qui servirait de référence dans la vue {@code concerts} — même priorité (package puis TM &gt;
-  /// Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm}
-  /// cohérent avec ce que {@code concerts.salle} affichera.
+  /**
+   * Retrouve, parmi les observations déjà attachées à un événement, le {@code salle_brut} de celle
+   * qui servirait de référence dans la vue {@code concerts} — même priorité (package puis TM &gt;
+   * Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm}
+   * cohérent avec ce que {@code concerts.salle} affichera.
+   */
   private String meilleurSalleBrut(UUID evenementId) {
     List<String> resultat =
         jdbc.query(
@@ -423,14 +443,16 @@ public class PersisteurConcertsDb {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
-  /// Résout ou crée l'événement canonique de chaque concert du lot, upsert l'observation de sa
-  /// source puis met à jour les champs dénormalisés de l'événement — un aller-retour par concert
-  /// plutôt qu'un unique {@code INSERT} multi-lignes (volume trivial en production, ~4000
-  /// événements), en échange d'une résolution correcte avant écriture plutôt qu'un nettoyage après
-  /// coup.
-  ///
-  /// @param valeurs concerts réconciliés et dédupliqués du lot
-  /// @return décompte des événements créés et mis à jour du lot
+  /**
+   * Résout ou crée l'événement canonique de chaque concert du lot, upsert l'observation de sa
+   * source puis met à jour les champs dénormalisés de l'événement — un aller-retour par concert
+   * plutôt qu'un unique {@code INSERT} multi-lignes (volume trivial en production, ~4000
+   * événements), en échange d'une résolution correcte avant écriture plutôt qu'un nettoyage après
+   * coup.
+   *
+   * @param valeurs concerts réconciliés et dédupliqués du lot
+   * @return décompte des événements créés et mis à jour du lot
+   */
   PersisterConcerts.ResultatPersistance upsertLot(List<ValeurConcert> valeurs) {
     if (valeurs.isEmpty()) return new PersisterConcerts.ResultatPersistance(0, 0);
 

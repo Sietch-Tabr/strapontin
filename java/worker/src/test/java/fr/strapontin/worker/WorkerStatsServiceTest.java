@@ -29,10 +29,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerStatsService} (extrait de {@code WorkerService}).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerStatsService} (extrait de {@code WorkerService}).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class WorkerStatsServiceTest {
 
   private TicketmasterSource tm;

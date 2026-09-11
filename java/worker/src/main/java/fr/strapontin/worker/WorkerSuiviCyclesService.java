@@ -13,19 +13,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Détecte, par type de job planifié, une absence prolongée et inexpliquée d'exécution — un cycle
-/// silencieusement perdu (reboot brutal de l'hôte, OOM, crash) plutôt qu'un ralentissement normal
-/// de cadence.
-///
-/// Délégué par le job Quartz {@code SuiviCyclesJobsJob}, cadencé toutes les heures.
-///
-/// <p>Complète {@code WatchdogWorkerService} (module web) : celui-ci n'alerte que sur l'inactivité
-/// globale du worker, tous types de job confondus — un type de job resté silencieusement bloqué
-/// alors que les autres continuent de s'exécuter normalement ne déclenche jamais cette alerte
-/// globale.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Détecte, par type de job planifié, une absence prolongée et inexpliquée d'exécution — un cycle
+ * silencieusement perdu (reboot brutal de l'hôte, OOM, crash) plutôt qu'un ralentissement normal
+ * de cadence.
+ *
+ * Délégué par le job Quartz {@code SuiviCyclesJobsJob}, cadencé toutes les heures.
+ *
+ * <p>Complète {@code WatchdogWorkerService} (module web) : celui-ci n'alerte que sur l'inactivité
+ * globale du worker, tous types de job confondus — un type de job resté silencieusement bloqué
+ * alors que les autres continuent de s'exécuter normalement ne déclenche jamais cette alerte
+ * globale.
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 @Service
 public class WorkerSuiviCyclesService {
 
@@ -62,8 +64,10 @@ public class WorkerSuiviCyclesService {
     this.workerStatsService = workerStatsService;
   }
 
-  /// Compare, pour chaque type de job connu, la dernière exécution enregistrée à la fraîcheur
-  /// attendue et journalise un warn pour chaque type resté silencieux au-delà.
+  /**
+   * Compare, pour chaque type de job connu, la dernière exécution enregistrée à la fraîcheur
+   * attendue et journalise un warn pour chaque type resté silencieux au-delà.
+   */
   public void executerSuiviCycles() {
     log.info("suivi:cycles-jobs démarré");
     workerStatsService.executerAvecStats(
@@ -76,7 +80,9 @@ public class WorkerSuiviCyclesService {
         });
   }
 
-  /// @return nombre de types de job détectés en retard
+  /**
+   * @return nombre de types de job détectés en retard
+   */
   int verifier() {
     Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;

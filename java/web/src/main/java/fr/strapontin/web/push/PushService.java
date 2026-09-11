@@ -21,12 +21,14 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Service de gestion des abonnements Web Push.
-///
-/// <p>Limite à 10 abonnements par utilisateur. Vérifie la clé VAPID avant d'abonner.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service de gestion des abonnements Web Push.
+ *
+ * <p>Limite à 10 abonnements par utilisateur. Vérifie la clé VAPID avant d'abonner.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class PushService {
 
@@ -40,9 +42,11 @@ public class PushService {
   private final LogAdminService logAdminService;
   private PushService self;
 
-  /// @param configService lecture de la clé VAPID publique
-  /// @param jdbc accès JDBC
-  /// @param logAdminService service de logs admin
+  /**
+   * @param configService lecture de la clé VAPID publique
+   * @param jdbc accès JDBC
+   * @param logAdminService service de logs admin
+   */
   public PushService(
       ConfigService configService,
       NamedParameterJdbcTemplate jdbc,
@@ -52,21 +56,25 @@ public class PushService {
     this.logAdminService = logAdminService;
   }
 
-  /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-  /// éviter le problème d'auto-référence à la construction — l'appel à {@link
-  /// #abonnerTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de l'isolation {@code
-  /// SERIALIZABLE} (même pattern que {@code AdminService}, v2.6.3). En dehors d'un contexte Spring
-  /// (tests unitaires), {@code self} peut être positionné manuellement.
-  ///
-  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  /**
+   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
+   * éviter le problème d'auto-référence à la construction — l'appel à {@link
+   * #abonnerTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de l'isolation {@code
+   * SERIALIZABLE} (même pattern que {@code AdminService}, v2.6.3). En dehors d'un contexte Spring
+   * (tests unitaires), {@code self} peut être positionné manuellement.
+   *
+   * @param self référence proxifiée de ce bean ({@code @Lazy})
+   */
   @Autowired
   public void setSelf(@Lazy PushService self) {
     this.self = self;
   }
 
-  /// Retourne la clé VAPID publique si configurée.
-  ///
-  /// @return réponse avec clé ou {@code disponible: false}
+  /**
+   * Retourne la clé VAPID publique si configurée.
+   *
+   * @return réponse avec clé ou {@code disponible: false}
+   */
   public ReponseVapid obtenirCleVapid() {
     String clePublique = configService.lireConfig("VAPID_PUBLIC_KEY").orElse(null);
     return clePublique != null
@@ -74,16 +82,18 @@ public class PushService {
         : new ReponseVapid(false, null);
   }
 
-  /// Enregistre un nouvel abonnement push.
-  ///
-  /// <p>Le COUNT+INSERT est rendu atomique via une transaction {@code SERIALIZABLE} avec retry
-  /// (même pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux abonnements
-  /// concurrents lisant tous deux {@code count = 9 < 10} avant qu'aucun des deux {@code INSERT} ne
-  /// soit committé pouvaient tous deux réussir, dépassant le cap documenté comme une limite dure.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param requete données de l'abonnement
-  /// @throws ErreurMetier 400 si données incomplètes/invalides, 429 si cap atteint
+  /**
+   * Enregistre un nouvel abonnement push.
+   *
+   * <p>Le COUNT+INSERT est rendu atomique via une transaction {@code SERIALIZABLE} avec retry
+   * (même pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux abonnements
+   * concurrents lisant tous deux {@code count = 9 < 10} avant qu'aucun des deux {@code INSERT} ne
+   * soit committé pouvaient tous deux réussir, dépassant le cap documenté comme une limite dure.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param requete données de l'abonnement
+   * @throws ErreurMetier 400 si données incomplètes/invalides, 429 si cap atteint
+   */
   public void abonner(String userId, RequeteAbonnement requete) {
     if (requete.endpoint() == null
         || requete.keys() == null
@@ -104,12 +114,14 @@ public class PushService {
         () -> self.abonnerTransactionnel(userId, requete));
   }
 
-  /// Partie transactionnelle et isolée de {@link #abonner}. {@code REQUIRES_NEW} garantit une
-  /// transaction dédiée même si appelée depuis une transaction déjà ouverte.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param requete données de l'abonnement (déjà validées)
-  /// @throws ErreurMetier 429 si le cap est atteint
+  /**
+   * Partie transactionnelle et isolée de {@link #abonner}. {@code REQUIRES_NEW} garantit une
+   * transaction dédiée même si appelée depuis une transaction déjà ouverte.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param requete données de l'abonnement (déjà validées)
+   * @throws ErreurMetier 429 si le cap est atteint
+   */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
   void abonnerTransactionnel(String userId, RequeteAbonnement requete) {
     int total =
@@ -142,10 +154,12 @@ public class PushService {
     logAdminService.logAdmin("info", "push", "abonnement push créé", Map.of(CLE_USER_ID, userId));
   }
 
-  /// Supprime un abonnement push.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param endpoint URL de l'endpoint push à supprimer
+  /**
+   * Supprime un abonnement push.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param endpoint URL de l'endpoint push à supprimer
+   */
   public void desabonner(String userId, String endpoint) {
     jdbc.update(
         "DELETE FROM push_abonnements WHERE user_id = :userId AND endpoint = :endpoint",
@@ -154,10 +168,12 @@ public class PushService {
         "info", "push", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
   }
 
-  /// Liste les abonnements push de l'utilisateur, pour affichage dans /parametres.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return les abonnements actifs, le plus récent en premier
+  /**
+   * Liste les abonnements push de l'utilisateur, pour affichage dans /parametres.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return les abonnements actifs, le plus récent en premier
+   */
   public List<AbonnementDto> listerAbonnements(String userId) {
     return jdbc.query(
         "SELECT endpoint, cree_le FROM push_abonnements WHERE user_id = :userId"
@@ -167,9 +183,11 @@ public class PushService {
             new AbonnementDto(rs.getString("endpoint"), rs.getTimestamp("cree_le").toInstant()));
   }
 
-  /// Abonnement push exposé côté client.
-  ///
-  /// @param endpoint URL de l'endpoint push (identifiant de révocation)
-  /// @param creeLe date de création de l'abonnement
+  /**
+   * Abonnement push exposé côté client.
+   *
+   * @param endpoint URL de l'endpoint push (identifiant de révocation)
+   * @param creeLe date de création de l'abonnement
+   */
   public record AbonnementDto(String endpoint, java.time.Instant creeLe) {}
 }

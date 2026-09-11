@@ -15,11 +15,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link AdminController#genererVapid} (le résultat de
-/// {@link VapidService#genererVapid()} doit être exposé dans la réponse, pas seulement loggé).
-///
-/// @since 2.6.5
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AdminController#genererVapid} (le résultat de
+ * {@link VapidService#genererVapid()} doit être exposé dans la réponse, pas seulement loggé).
+ *
+ * @since 2.6.5
+ * @author Kwaite
+ */
 class AdminControllerGenererVapidTest {
 
   private VapidService vapidService;

@@ -8,10 +8,12 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/// Corps JSON de la requête POST /api/setup.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Corps JSON de la requête POST /api/setup.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record RequeteSetup(
     @NotBlank(message = "L'identifiant est requis.")
         @Size(min = 3, message = "L'identifiant doit contenir au moins 3 caractères.")

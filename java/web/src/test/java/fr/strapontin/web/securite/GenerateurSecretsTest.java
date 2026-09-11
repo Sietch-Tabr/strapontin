@@ -11,10 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link GenerateurSecrets}.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link GenerateurSecrets}.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class GenerateurSecretsTest {
 
   @Test

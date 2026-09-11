@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteDepartements}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteDepartements}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class RequeteDepartementsValidationTest {
 
   private static final Validator VALIDATOR =

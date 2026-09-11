@@ -18,11 +18,13 @@ import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link ChangelogRestController} — badge "nouveautés" piloté par {@code
-/// changelog_version_vue} comparé à la version courante lue via {@link BuildProperties}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ChangelogRestController} — badge "nouveautés" piloté par {@code
+ * changelog_version_vue} comparé à la version courante lue via {@link BuildProperties}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class ChangelogRestControllerTest {
 
   private ChangelogService changelogService;

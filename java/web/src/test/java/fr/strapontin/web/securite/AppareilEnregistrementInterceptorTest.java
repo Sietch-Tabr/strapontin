@@ -21,10 +21,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-/// Tests unitaires pour {@link AppareilEnregistrementInterceptor}.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AppareilEnregistrementInterceptor}.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 class AppareilEnregistrementInterceptorTest {
 
   private AppareilsService appareilsService;

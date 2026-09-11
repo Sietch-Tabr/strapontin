@@ -21,10 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link ParametresRestController}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ParametresRestController}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class ParametresRestControllerTest {
 
   private ParametresService parametresService;

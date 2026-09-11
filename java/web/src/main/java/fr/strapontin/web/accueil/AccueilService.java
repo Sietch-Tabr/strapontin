@@ -15,10 +15,12 @@ import java.util.Objects;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de la page d'accueil — concerts groupés par artiste suivi.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service de la page d'accueil — concerts groupés par artiste suivi.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class AccueilService {
 
@@ -27,21 +29,25 @@ public class AccueilService {
   private final NamedParameterJdbcTemplate jdbc;
   private final UserConfigService userConfigService;
 
-  /// @param jdbc              accès JDBC
-  /// @param userConfigService lecture du filtre de disponibilité
+  /**
+   * @param jdbc              accès JDBC
+   * @param userConfigService lecture du filtre de disponibilité
+   */
   public AccueilService(NamedParameterJdbcTemplate jdbc, UserConfigService userConfigService) {
     this.jdbc = jdbc;
     this.userConfigService = userConfigService;
   }
 
-  /// Marque comme vus les matches artiste non encore vus pour l'utilisateur.
-  ///
-  /// <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation. Restreint aux
-  /// matchs artiste — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}),
-  /// donc marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur
-  /// {@code /spectacles} avant même que l'utilisateur n'ait visité cette page.
-  ///
-  /// @param userId identifiant de l'utilisateur
+  /**
+   * Marque comme vus les matches artiste non encore vus pour l'utilisateur.
+   *
+   * <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation. Restreint aux
+   * matchs artiste — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}),
+   * donc marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur
+   * {@code /spectacles} avant même que l'utilisateur n'ait visité cette page.
+   *
+   * @param userId identifiant de l'utilisateur
+   */
   public void marquerVus(String userId) {
     jdbc.update(
         """
@@ -59,14 +65,16 @@ public class AccueilService {
         Map.of(CLE_USER_ID, userId));
   }
 
-  /// Retourne les prochains concerts des artistes suivis, groupés par artiste.
-  ///
-  /// @param userId            identifiant de l'utilisateur
-  /// @param masques           {@code true} pour afficher les concerts masqués
-  /// @param indisponibles     {@code "1"} pour inclure les concerts non disponibles
-  /// @param nouveau           {@code true} pour afficher uniquement les concerts ajoutés
-  ///                          en base depuis moins de 7 jours
-  /// @return groupes artiste/concerts avec compteurs
+  /**
+   * Retourne les prochains concerts des artistes suivis, groupés par artiste.
+   *
+   * @param userId            identifiant de l'utilisateur
+   * @param masques           {@code true} pour afficher les concerts masqués
+   * @param indisponibles     {@code "1"} pour inclure les concerts non disponibles
+   * @param nouveau           {@code true} pour afficher uniquement les concerts ajoutés
+   *                          en base depuis moins de 7 jours
+   * @return groupes artiste/concerts avec compteurs
+   */
   public ReponseAccueil accueil(
       String userId, boolean masques, String indisponibles, boolean nouveau) {
     LocalDate aujourd8 = LocalDate.now();

@@ -13,16 +13,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-/// Alerte l'administrateur par email digest sur les nouvelles entrées {@code logs_admin} de
-/// niveau {@code error}, toutes les 15 minutes.
-///
-/// <p>Même pattern que {@link WatchdogWorkerService} (alerte proactive sur incident), mais
-/// curseur persisté en {@code app_config} plutôt qu'en mémoire — nécessaire pour survivre aux
-/// redéploiements fréquents du projet, contrairement au watchdog worker dont le pire cas (une
-/// alerte manquée après redéploiement) est sans conséquence.
-///
-/// @since 2.6.1
-/// @author Kwaite
+/**
+ * Alerte l'administrateur par email digest sur les nouvelles entrées {@code logs_admin} de
+ * niveau {@code error}, toutes les 15 minutes.
+ *
+ * <p>Même pattern que {@link WatchdogWorkerService} (alerte proactive sur incident), mais
+ * curseur persisté en {@code app_config} plutôt qu'en mémoire — nécessaire pour survivre aux
+ * redéploiements fréquents du projet, contrairement au watchdog worker dont le pire cas (une
+ * alerte manquée après redéploiement) est sans conséquence.
+ *
+ * @since 2.6.1
+ * @author Kwaite
+ */
 @Service
 public class AlerteLogsAdminService {
 
@@ -33,9 +35,11 @@ public class AlerteLogsAdminService {
   private final ConfigService configService;
   private final EmailAlerteService emailAlerteService;
 
-  /// @param logAdminService   lecture des entrées d'erreur depuis le curseur
-  /// @param configService     lecture/écriture du curseur
-  /// @param emailAlerteService envoi du digest et résolution du destinataire d'alerte
+  /**
+   * @param logAdminService   lecture des entrées d'erreur depuis le curseur
+   * @param configService     lecture/écriture du curseur
+   * @param emailAlerteService envoi du digest et résolution du destinataire d'alerte
+   */
   public AlerteLogsAdminService(
       LogAdminService logAdminService,
       ConfigService configService,
@@ -45,10 +49,12 @@ public class AlerteLogsAdminService {
     this.emailAlerteService = emailAlerteService;
   }
 
-  /// Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest agrégé.
-  ///
-  /// <p>Le curseur n'avance qu'après envoi réussi — un échec temporaire de Resend ou l'absence
-  /// de {@code CONTACT_EMAIL} laisse les erreurs disponibles pour le prochain cycle.
+  /**
+   * Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest agrégé.
+   *
+   * <p>Le curseur n'avance qu'après envoi réussi — un échec temporaire de Resend ou l'absence
+   * de {@code CONTACT_EMAIL} laisse les erreurs disponibles pour le prochain cycle.
+   */
   @Scheduled(cron = "0 */15 * * * *")
   public void verifier() {
     long curseur = lireCurseur();

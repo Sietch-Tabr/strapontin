@@ -6,18 +6,22 @@ package fr.strapontin.sources;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-/// Implémentation en mémoire de {@link CadenceurAppels} : verrou sur l'instance, coordonne les
-/// appels d'un seul processus quel que soit le nombre de jobs Quartz en parallèle. Une instance par
-/// source ayant son propre rythme de cadence.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Implémentation en mémoire de {@link CadenceurAppels} : verrou sur l'instance, coordonne les
+ * appels d'un seul processus quel que soit le nombre de jobs Quartz en parallèle. Une instance par
+ * source ayant son propre rythme de cadence.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 final class CadenceurAppelsMemoire implements CadenceurAppels {
 
   private final long delaiMinMs;
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
 
-  /// @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
+  /**
+   * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
+   */
   CadenceurAppelsMemoire(long delaiMinMs) {
     this.delaiMinMs = delaiMinMs;
   }

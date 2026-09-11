@@ -19,12 +19,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de gestion de la configuration utilisateur ({@code user_config}).
-///
-/// <p>Couvre la lecture, la mise à jour des départements, notifications, filtres et thème.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Service de gestion de la configuration utilisateur ({@code user_config}).
+ *
+ * <p>Couvre la lecture, la mise à jour des départements, notifications, filtres et thème.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class UserConfigService {
 
@@ -37,9 +39,11 @@ public class UserConfigService {
   private final ConfigService configService;
   private final LogAdminService logAdminService;
 
-  /// @param jdbc accès JDBC
-  /// @param configService lecture des clés applicatives (RESEND_API_KEY)
-  /// @param logAdminService journalisation des actions utilisateur
+  /**
+   * @param jdbc accès JDBC
+   * @param configService lecture des clés applicatives (RESEND_API_KEY)
+   * @param logAdminService journalisation des actions utilisateur
+   */
   public UserConfigService(
       NamedParameterJdbcTemplate jdbc,
       ConfigService configService,
@@ -49,10 +53,12 @@ public class UserConfigService {
     this.logAdminService = logAdminService;
   }
 
-  /// Lit le filtre "concerts disponibles uniquement" de l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return {@code true} si seuls les concerts disponibles doivent être affichés (défaut)
+  /**
+   * Lit le filtre "concerts disponibles uniquement" de l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si seuls les concerts disponibles doivent être affichés (défaut)
+   */
   public boolean lireFiltreDisponibles(String userId) {
     List<Boolean> lignes =
         jdbc.queryForList(
@@ -62,10 +68,12 @@ public class UserConfigService {
     return lignes.isEmpty() || lignes.get(0);
   }
 
-  /// Retourne la configuration complète de l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return la configuration, ou les valeurs par défaut si absente
+  /**
+   * Retourne la configuration complète de l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return la configuration, ou les valeurs par défaut si absente
+   */
   public ConfigUtilisateur lireConfig(String userId) {
     List<ConfigUtilisateur> lignes =
         jdbc.query(
@@ -109,13 +117,15 @@ public class UserConfigService {
         resendDisponible);
   }
 
-  /// Met à jour les départements de l'utilisateur.
-  ///
-  /// <p>Les codes non reconnus sont retournés dans la liste {@code ignores}.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param bruts liste brute des codes département (peuvent être invalides)
-  /// @return résultat avec la liste des codes ignorés
+  /**
+   * Met à jour les départements de l'utilisateur.
+   *
+   * <p>Les codes non reconnus sont retournés dans la liste {@code ignores}.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param bruts liste brute des codes département (peuvent être invalides)
+   * @return résultat avec la liste des codes ignorés
+   */
   public ResultatMajDepartements majDepartements(String userId, List<String> bruts) {
     List<String> depts =
         bruts.stream()
@@ -130,11 +140,13 @@ public class UserConfigService {
     return new ResultatMajDepartements(ignores);
   }
 
-  /// Met à jour les préférences de notification.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param requete données de la requête
-  /// @throws ErreurMetier si la fréquence est invalide ou aucun canal de notification sélectionné
+  /**
+   * Met à jour les préférences de notification.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param requete données de la requête
+   * @throws ErreurMetier si la fréquence est invalide ou aucun canal de notification sélectionné
+   */
   public void majNotifications(String userId, RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
       throw new ErreurMetier("Valeur invalide.");
@@ -179,10 +191,12 @@ public class UserConfigService {
             "notifSallesPush", requete.notifSallesPush()));
   }
 
-  /// Indique si l'utilisateur n'a pas encore vu la modale d'onboarding.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return {@code true} si la modale doit être affichée (absence de ligne = jamais vue)
+  /**
+   * Indique si l'utilisateur n'a pas encore vu la modale d'onboarding.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si la modale doit être affichée (absence de ligne = jamais vue)
+   */
   public boolean onboardingNonVu(String userId) {
     List<Boolean> lignes =
         jdbc.queryForList(
@@ -192,26 +206,32 @@ public class UserConfigService {
     return lignes.isEmpty() || !lignes.get(0);
   }
 
-  /// Marque la modale d'onboarding comme vue pour l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
+  /**
+   * Marque la modale d'onboarding comme vue pour l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   */
   public void marquerOnboardingVu(String userId) {
     upsertConfig(userId, Map.of("onboardingVu", true));
   }
 
-  /// Met à jour le filtre de disponibilité.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param filtreDisponibles nouvelle valeur du filtre
+  /**
+   * Met à jour le filtre de disponibilité.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param filtreDisponibles nouvelle valeur du filtre
+   */
   public void majFiltres(String userId, boolean filtreDisponibles) {
     upsertConfig(userId, Map.of("filtreDisponibles", filtreDisponibles));
   }
 
-  /// Met à jour le thème de l'interface.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param valeur nouvelle valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
-  /// @throws ErreurMetier si la valeur du thème est invalide
+  /**
+   * Met à jour le thème de l'interface.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param valeur nouvelle valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
+   * @throws ErreurMetier si la valeur du thème est invalide
+   */
   public void majTheme(String userId, String valeur) {
     if (!THEMES_VALIDES.contains(valeur)) {
       throw new ErreurMetier("Valeur de thème invalide.");
@@ -284,6 +304,8 @@ public class UserConfigService {
     return null;
   }
 
-  /// Résultat de la mise à jour des départements.
+  /**
+   * Résultat de la mise à jour des départements.
+   */
   public record ResultatMajDepartements(List<String> ignores) {}
 }

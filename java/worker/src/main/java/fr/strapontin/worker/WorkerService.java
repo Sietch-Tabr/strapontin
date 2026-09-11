@@ -12,16 +12,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-/// Orchestration des jobs de recalcul de matches et de réconciliation nocturne.
-///
-/// <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir {@link
-/// WorkerPurgeService}) et la révocation admin (voir {@link WorkerRevocationService}) ont été
-/// extraits dans des services dédiés — cette classe reste le point d'entrée fin délégué par les
-/// jobs Quartz {@code RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux seules
-/// méthodes ne partageant pas de logique privée substantielle avec les autres familles.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Orchestration des jobs de recalcul de matches et de réconciliation nocturne.
+ *
+ * <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir {@link
+ * WorkerPurgeService}) et la révocation admin (voir {@link WorkerRevocationService}) ont été
+ * extraits dans des services dédiés — cette classe reste le point d'entrée fin délégué par les
+ * jobs Quartz {@code RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux seules
+ * méthodes ne partageant pas de logique privée substantielle avec les autres familles.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class WorkerService {
 
@@ -43,9 +45,11 @@ public class WorkerService {
     this.workerStatsService = workerStatsService;
   }
 
-  /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
-  ///
-  /// @param userIds IDs à recalculer, ou `null` pour tous
+  /**
+   * Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
+   *
+   * @param userIds IDs à recalculer, ou {@code null} pour tous
+   */
   public void executerRecalculerMatches(List<String> userIds) {
     log.info("recalculer:matches démarré userIds={}", userIds);
     workerStatsService.executerAvecStats(
@@ -59,8 +63,10 @@ public class WorkerService {
         });
   }
 
-  /// Job nocturne de réconciliation des sources salles/artistes : health-check et redécouverte des
-  /// identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
+  /**
+   * Job nocturne de réconciliation des sources salles/artistes : health-check et redécouverte des
+   * identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
+   */
   public void executerReconciliationNocturne() {
     log.info("reconciliation:nocturne démarré");
     workerStatsService.executerAvecStats(

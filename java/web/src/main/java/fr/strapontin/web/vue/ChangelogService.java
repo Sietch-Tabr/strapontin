@@ -9,25 +9,31 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Suivi de la version du changelog vue par chaque utilisateur.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Suivi de la version du changelog vue par chaque utilisateur.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 @Service
 class ChangelogService {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /// @param jdbc template JDBC nommé
+  /**
+   * @param jdbc template JDBC nommé
+   */
   ChangelogService(NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
-  /// Indique si l'utilisateur n'a pas encore vu le changelog de la version donnée.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param versionCourante version actuelle de l'application
-  /// @return {@code true} si la dernière version vue diffère de {@code versionCourante}
+  /**
+   * Indique si l'utilisateur n'a pas encore vu le changelog de la version donnée.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param versionCourante version actuelle de l'application
+   * @return {@code true} si la dernière version vue diffère de {@code versionCourante}
+   */
   boolean estNonVu(String userId, String versionCourante) {
     List<String> lignes =
         jdbc.queryForList(
@@ -38,15 +44,17 @@ class ChangelogService {
     return !versionCourante.equals(versionVue);
   }
 
-  /// Marque une version du changelog comme vue pour l'utilisateur.
-  ///
-  /// <p>Upsert plutôt qu'une simple mise à jour : un utilisateur qui n'a encore jamais écrit dans
-  /// {@code user_config} (aucun changement de thème, de préférences...) n'y a pas encore de ligne —
-  /// un {@code UPDATE} seul ne ferait alors rien, laissant le badge "nouveautés" affiché
-  /// indéfiniment malgré un appel réussi.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param versionCourante version actuelle de l'application
+  /**
+   * Marque une version du changelog comme vue pour l'utilisateur.
+   *
+   * <p>Upsert plutôt qu'une simple mise à jour : un utilisateur qui n'a encore jamais écrit dans
+   * {@code user_config} (aucun changement de thème, de préférences...) n'y a pas encore de ligne —
+   * un {@code UPDATE} seul ne ferait alors rien, laissant le badge "nouveautés" affiché
+   * indéfiniment malgré un appel réussi.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param versionCourante version actuelle de l'application
+   */
   void marquerVue(String userId, String versionCourante) {
     jdbc.update(
         """

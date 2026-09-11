@@ -14,7 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.PessimisticLockingFailureException;
 
-/// Tests unitaires de {@link RetrySerialisable}.
+/**
+ * Tests unitaires de {@link RetrySerialisable}.
+ */
 class RetrySerialisableTest {
 
   private static final Logger log = LoggerFactory.getLogger(RetrySerialisableTest.class);

@@ -15,14 +15,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Endpoint de remontée des erreurs JavaScript côté client.
-///
-/// <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs JS non catchées
-/// et les rejections de promesses. Les entrées sont stockées dans {@code logs_admin} avec la source
-/// {@code client-js}.
-///
-/// @since 2.1.2
-/// @author Kwaite
+/**
+ * Endpoint de remontée des erreurs JavaScript côté client.
+ *
+ * <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs JS non catchées
+ * et les rejections de promesses. Les entrées sont stockées dans {@code logs_admin} avec la source
+ * {@code client-js}.
+ *
+ * @since 2.1.2
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/client")
 public class ClientController {
@@ -38,11 +40,13 @@ public class ClientController {
     this.logAdminService = logAdminService;
   }
 
-  /// Signale une erreur JavaScript depuis le navigateur.
-  ///
-  /// @param corps corps JSON de l'erreur
-  /// @param request requête HTTP (pour récupérer le User-Agent)
-  /// @return 201 Created avec {@code {"succes": true}}
+  /**
+   * Signale une erreur JavaScript depuis le navigateur.
+   *
+   * @param corps corps JSON de l'erreur
+   * @param request requête HTTP (pour récupérer le User-Agent)
+   * @return 201 Created avec {@code {"succes": true}}
+   */
   @PostMapping("/erreur")
   public ResponseEntity<Map<String, Object>> signalerErreur(
       @RequestBody Map<String, Object> corps, HttpServletRequest request) {

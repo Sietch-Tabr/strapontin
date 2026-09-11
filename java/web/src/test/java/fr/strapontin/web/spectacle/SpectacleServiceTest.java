@@ -23,10 +23,12 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link SpectacleService}.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SpectacleService}.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class SpectacleServiceTest {
 

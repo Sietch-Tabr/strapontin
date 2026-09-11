@@ -19,10 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link SuiviChroniciteService}.
-///
-/// @since 2.8.2
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SuiviChroniciteService}.
+ *
+ * @since 2.8.2
+ * @author Kwaite
+ */
 class SuiviChroniciteServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

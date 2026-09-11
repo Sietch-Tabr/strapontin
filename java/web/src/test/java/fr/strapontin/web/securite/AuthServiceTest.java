@@ -26,10 +26,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 
-/// Tests unitaires pour {@link AuthService}.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AuthService}.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 class AuthServiceTest {
 
   private VerificationRepository verificationRepository;

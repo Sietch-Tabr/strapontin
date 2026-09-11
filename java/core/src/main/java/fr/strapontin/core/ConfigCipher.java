@@ -15,20 +15,22 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.crypto.generators.SCrypt;
 
-/// Chiffrement/déchiffrement AES-256-GCM de `app_config`, clé dérivée via SCrypt.
-///
-/// Extrait de `web.ConfigService`/`worker.ConfigServiceWorker` — les deux modules dérivaient et
-/// utilisaient une clé strictement identique, dupliquée verbatim ; un correctif de sécurité
-/// appliqué à un seul module ne se serait jamais répercuté dans l'autre.
-///
-/// La clé AES-256 est dérivée de `APP_CONFIG_SECRET` via SCrypt (paramètres par défaut Node.js :
-/// N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de `BetterAuthPasswordEncoder` (r=16, Better-Auth).
-///
-/// Format de stockage : `base64(IV(12) || TAG(16) || données_chiffrées)`. Compatible avec les
-/// valeurs chiffrées par l'ancien module TypeScript.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Chiffrement/déchiffrement AES-256-GCM de {@code app_config}, clé dérivée via SCrypt.
+ *
+ * Extrait de {@code web.ConfigService}/{@code worker.ConfigServiceWorker} — les deux modules dérivaient et
+ * utilisaient une clé strictement identique, dupliquée verbatim ; un correctif de sécurité
+ * appliqué à un seul module ne se serait jamais répercuté dans l'autre.
+ *
+ * La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut Node.js :
+ * N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de {@code BetterAuthPasswordEncoder} (r=16, Better-Auth).
+ *
+ * Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec les
+ * valeurs chiffrées par l'ancien module TypeScript.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 public final class ConfigCipher {
 
   private static final SecureRandom rng = new SecureRandom();
@@ -40,9 +42,11 @@ public final class ConfigCipher {
 
   private final byte[] cleChiffrement;
 
-  /// Dérive la clé AES-256 depuis le secret applicatif.
-  ///
-  /// @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
+  /**
+   * Dérive la clé AES-256 depuis le secret applicatif.
+   *
+   * @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
+   */
   public ConfigCipher(String secret) {
     Objects.requireNonNull(secret, "secret");
     this.cleChiffrement =
@@ -55,12 +59,14 @@ public final class ConfigCipher {
             DK_LEN);
   }
 
-  /// Chiffre une valeur en AES-256-GCM.
-  ///
-  /// Format de sortie : `base64(IV(12) || TAG(16) || données_chiffrées)`
-  ///
-  /// @param valeur valeur en clair
-  /// @return valeur chiffrée encodée en base64
+  /**
+   * Chiffre une valeur en AES-256-GCM.
+   *
+   * Format de sortie : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
+   *
+   * @param valeur valeur en clair
+   * @return valeur chiffrée encodée en base64
+   */
   public String chiffrer(String valeur) {
     try {
       byte[] iv = new byte[12];
@@ -87,12 +93,14 @@ public final class ConfigCipher {
     }
   }
 
-  /// Déchiffre une valeur AES-256-GCM.
-  ///
-  /// Format attendu : `base64(IV(12) || TAG(16) || données_chiffrées)`
-  ///
-  /// @param chiffre valeur chiffrée encodée en base64
-  /// @return valeur en clair
+  /**
+   * Déchiffre une valeur AES-256-GCM.
+   *
+   * Format attendu : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
+   *
+   * @param chiffre valeur chiffrée encodée en base64
+   * @return valeur en clair
+   */
   public String dechiffrer(String chiffre) {
     try {
       byte[] buf = Base64.getDecoder().decode(chiffre);

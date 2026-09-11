@@ -6,10 +6,12 @@ package fr.strapontin.web.utilisateur;
 
 import java.util.List;
 
-/// Configuration d'un utilisateur (réponse GET /api/user/config).
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Configuration d'un utilisateur (réponse GET /api/user/config).
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record ConfigUtilisateur(
     List<String> departements,
     boolean filtreDisponibles,

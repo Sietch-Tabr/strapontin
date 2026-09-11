@@ -20,12 +20,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires de {@link SetupController}.
-///
-/// <p>Vérifie la délégation au service et les codes HTTP retournés.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SetupController}.
+ *
+ * <p>Vérifie la délégation au service et les codes HTTP retournés.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class SetupControllerTest {
 

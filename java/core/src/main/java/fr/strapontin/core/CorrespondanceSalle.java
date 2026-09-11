@@ -8,14 +8,16 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-/// Détermine si deux noms de salle normalisés désignent la même salle.
-///
-/// Extrait de `worker/persister/ReconciliateurSalles` (v2.5.7) vers `core` pour être réutilisable
-/// par le module `sources` (découverte Wikidata par nom, v2.6.0) sans dépendance circulaire
-/// `sources` → `worker`.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Détermine si deux noms de salle normalisés désignent la même salle.
+ *
+ * Extrait de {@code worker/persister/ReconciliateurSalles} (v2.5.7) vers {@code core} pour être réutilisable
+ * par le module {@code sources} (découverte Wikidata par nom, v2.6.0) sans dépendance circulaire
+ * {@code sources} → {@code worker}.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 public final class CorrespondanceSalle {
 
   // Seuils Levenshtein ≥ 0.75 + containment ratio court/long ≥ 0.5.
@@ -84,37 +86,43 @@ public final class CorrespondanceSalle {
         && UtilitairesChaine.estContainmentRatio(a, b, longueurMinContainment, ratioMinContainment);
   }
 
-  /// Découpe une chaîne normalisée en tokens significatifs (filtre les mots de moins de {@value
-  /// #LONGUEUR_MIN_TOKEN_JACCARD} caractères — articles "le", "de", "la"…).
-  ///
-  /// @param s chaîne normalisée
-  /// @return ensemble des tokens significatifs
+  /**
+   * Découpe une chaîne normalisée en tokens significatifs (filtre les mots de moins de {@value
+   * #LONGUEUR_MIN_TOKEN_JACCARD} caractères — articles "le", "de", "la"…).
+   *
+   * @param s chaîne normalisée
+   * @return ensemble des tokens significatifs
+   */
   public static Set<String> tokensSignificatifs(String s) {
     Set<String> tokens = new HashSet<>(Arrays.asList(s.split("\\s+")));
     tokens.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
     return tokens;
   }
 
-  /// Découpe une chaîne normalisée en tokens significatifs, en excluant les mots-types de salle
-  /// génériques — un token comme "theatre" ou "palais" ne prouve rien seul sur l'identité d'une
-  /// salle, partagé nationalement par des centaines de lieux distincts.
-  ///
-  /// @param s chaîne normalisée
-  /// @return ensemble des tokens significatifs et spécifiques (hors mots-types génériques)
+  /**
+   * Découpe une chaîne normalisée en tokens significatifs, en excluant les mots-types de salle
+   * génériques — un token comme "theatre" ou "palais" ne prouve rien seul sur l'identité d'une
+   * salle, partagé nationalement par des centaines de lieux distincts.
+   *
+   * @param s chaîne normalisée
+   * @return ensemble des tokens significatifs et spécifiques (hors mots-types génériques)
+   */
   private static Set<String> tokensSpecifiques(String s) {
     Set<String> tokens = new HashSet<>(tokensSignificatifs(s));
     tokens.removeAll(MOTS_GENERIQUES_SALLE);
     return tokens;
   }
 
-  /// Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
-  ///
-  /// <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
-  /// compte (filtre les articles "le", "de", "la"…). Retourne 1.0 si les deux unions sont vides.
-  ///
-  /// @param a première chaîne normalisée
-  /// @param b deuxième chaîne normalisée
-  /// @return coefficient de Jaccard entre 0.0 et 1.0
+  /**
+   * Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
+   *
+   * <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
+   * compte (filtre les articles "le", "de", "la"…). Retourne 1.0 si les deux unions sont vides.
+   *
+   * @param a première chaîne normalisée
+   * @param b deuxième chaîne normalisée
+   * @return coefficient de Jaccard entre 0.0 et 1.0
+   */
   public static double jaccardTokens(String a, String b) {
     Set<String> tokensA = tokensSignificatifs(a);
     Set<String> tokensB = tokensSignificatifs(b);
@@ -131,20 +139,22 @@ public final class CorrespondanceSalle {
   // asymétrique — évite un containment trivial sur un token déjà très court.
   private static final int LONGUEUR_MIN_CONTAINMENT_TOKEN = 4;
 
-  /// Vérifie si chaque token spécifique du nom le plus court est contenu (au sens sous-chaîne) dans
-  /// au moins un token spécifique du nom le plus long.
-  ///
-  /// <p>Couvre le cas d'un mot inséré <em>au milieu</em> d'un autre plutôt qu'en préfixe/suffixe
-  /// séparé par un espace (ex. "Accor Arena" / "Accorhotels Arena" — "hotels" concaténé sans espace
-  /// forme un unique token "accorhotels", jamais égal ni partagé avec "accor"). Chaque token du nom
-  /// court doit trouver une correspondance — pas un seul pivot isolé — ce qui limite le risque de
-  /// faux positif par rapport à un simple partage d'un mot : contrairement au critère pivot, aucune
-  /// longueur minimale de 7 caractères n'est requise ici, la couverture intégrale des tokens
-  /// spécifiques du nom court sert de garde-fou à la place.
-  ///
-  /// @param specCourt tokens spécifiques du nom le plus court
-  /// @param specLong tokens spécifiques du nom le plus long
-  /// @return {@code true} si tous les tokens de {@code specCourt} sont couverts
+  /**
+   * Vérifie si chaque token spécifique du nom le plus court est contenu (au sens sous-chaîne) dans
+   * au moins un token spécifique du nom le plus long.
+   *
+   * <p>Couvre le cas d'un mot inséré <em>au milieu</em> d'un autre plutôt qu'en préfixe/suffixe
+   * séparé par un espace (ex. "Accor Arena" / "Accorhotels Arena" — "hotels" concaténé sans espace
+   * forme un unique token "accorhotels", jamais égal ni partagé avec "accor"). Chaque token du nom
+   * court doit trouver une correspondance — pas un seul pivot isolé — ce qui limite le risque de
+   * faux positif par rapport à un simple partage d'un mot : contrairement au critère pivot, aucune
+   * longueur minimale de 7 caractères n'est requise ici, la couverture intégrale des tokens
+   * spécifiques du nom court sert de garde-fou à la place.
+   *
+   * @param specCourt tokens spécifiques du nom le plus court
+   * @param specLong tokens spécifiques du nom le plus long
+   * @return {@code true} si tous les tokens de {@code specCourt} sont couverts
+   */
   private static boolean estContainmentTokensPartiel(Set<String> specCourt, Set<String> specLong) {
     if (specCourt.isEmpty() || specLong.isEmpty()) return false;
     for (String tokenCourt : specCourt) {
@@ -161,45 +171,49 @@ public final class CorrespondanceSalle {
     return true;
   }
 
-  /// Vérifie si deux noms de salle normalisés désignent la même salle.
-  ///
-  /// <p>Cinq critères en union :
-  ///
-  /// <ol>
-  ///   <li>Levenshtein ≥ 0.75 ou containment (via {@link Normalisation#similarite})
-  ///   <li>Jaccard sur tokens <strong>spécifiques</strong> (hors mots-types génériques) strict
-  ///       {@code > 0.5} — insensible à l'ordre des mots
-  ///   <li>Token pivot spécifique — token commun ≥ {@value #LONGUEUR_MIN_PIVOT} chars parmi les
-  ///       tokens spécifiques et Jaccard spécifique {@code > }{@value #SEUIL_JACCARD_PIVOT}
-  ///   <li>Égalité sans espaces — {@link Normalisation#normaliserTexte} remplace l'apostrophe par
-  ///       une espace ("L'Olympia" → "l olympia"), mais une source qui omet totalement l'apostrophe
-  ///       ("LOlympia") ne produit aucune espace à substituer ("lolympia") : sans ce critère, les
-  ///       deux formes ne partagent aucun token commun
-  ///   <li>Containment de tokens spécifiques partiel asymétrique — couvre un mot inséré au milieu
-  ///       d'un token plutôt qu'ajouté en tant que mot séparé (« Accor Arena » / « Accorhotels
-  ///       Arena ») </ol>
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les salles sont considérées identiques
+  /**
+   * Vérifie si deux noms de salle normalisés désignent la même salle.
+   *
+   * <p>Cinq critères en union :
+   *
+   * <ol>
+   *   <li>Levenshtein ≥ 0.75 ou containment (via {@link Normalisation#similarite})
+   *   <li>Jaccard sur tokens <strong>spécifiques</strong> (hors mots-types génériques) strict
+   *       {@code > 0.5} — insensible à l'ordre des mots
+   *   <li>Token pivot spécifique — token commun ≥ {@value #LONGUEUR_MIN_PIVOT} chars parmi les
+   *       tokens spécifiques et Jaccard spécifique {@code > }{@value #SEUIL_JACCARD_PIVOT}
+   *   <li>Égalité sans espaces — {@link Normalisation#normaliserTexte} remplace l'apostrophe par
+   *       une espace ("L'Olympia" → "l olympia"), mais une source qui omet totalement l'apostrophe
+   *       ("LOlympia") ne produit aucune espace à substituer ("lolympia") : sans ce critère, les
+   *       deux formes ne partagent aucun token commun
+   *   <li>Containment de tokens spécifiques partiel asymétrique — couvre un mot inséré au milieu
+   *       d'un token plutôt qu'ajouté en tant que mot séparé (« Accor Arena » / « Accorhotels
+   *       Arena ») </ol>
+   *
+   * @param a premier nom normalisé
+   * @param b deuxième nom normalisé
+   * @return {@code true} si les salles sont considérées identiques
+   */
   public static boolean estDoublonSalle(String a, String b) {
     return estDoublonSalle(a, b, true);
   }
 
-  /// Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver, en plus du
-  /// critère pivot, le containment de caractères du premier critère (les deux plus faibles des
-  /// cinq) — un adjectif générique français très courant (ex. "nouvelle") peut satisfaire le pivot
-  /// sans pouvoir discriminant réel, et un nom court peut se retrouver préfixe strict d'un nom plus
-  /// long sans rapport (ex. "la prade" / "la pradella") ; les deux cas constatés en production sur
-  /// un rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
-  /// indépendant. Les trois autres critères restent inchangés dans les deux cas.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @param pivotAutorise {@code false} pour exclure le pivot et le containment de caractères de
-  ///   l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
-  ///   confirmer un candidat validé sur l'un de ces deux seuls critères
-  /// @return {@code true} si les salles sont considérées identiques
+  /**
+   * Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver, en plus du
+   * critère pivot, le containment de caractères du premier critère (les deux plus faibles des
+   * cinq) — un adjectif générique français très courant (ex. "nouvelle") peut satisfaire le pivot
+   * sans pouvoir discriminant réel, et un nom court peut se retrouver préfixe strict d'un nom plus
+   * long sans rapport (ex. "la prade" / "la pradella") ; les deux cas constatés en production sur
+   * un rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
+   * indépendant. Les trois autres critères restent inchangés dans les deux cas.
+   *
+   * @param a premier nom normalisé
+   * @param b deuxième nom normalisé
+   * @param pivotAutorise {@code false} pour exclure le pivot et le containment de caractères de
+   *   l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
+   *   confirmer un candidat validé sur l'un de ces deux seuls critères
+   * @return {@code true} si les salles sont considérées identiques
+   */
   public static boolean estDoublonSalle(String a, String b, boolean pivotAutorise) {
     if (estDoublonTexte(
         a,
@@ -277,12 +291,14 @@ public final class CorrespondanceSalle {
     return qualif.isEmpty() ? null : qualif;
   }
 
-  /// Extrait la partie complexe/base d'un nom de salle brut qualifié (ex. "La Seine Musicale -
-  /// Grande Seine" → "La Seine Musicale"), pour résoudre la salle du complexe avant de créer ou
-  /// retrouver la sous-salle correspondant au qualificatif.
-  ///
-  /// @param nomBrut nom brut (non normalisé)
-  /// @return le nom de base, ou {@code null} si {@code nomBrut} ne porte aucun qualificatif
+  /**
+   * Extrait la partie complexe/base d'un nom de salle brut qualifié (ex. "La Seine Musicale -
+   * Grande Seine" → "La Seine Musicale"), pour résoudre la salle du complexe avant de créer ou
+   * retrouver la sous-salle correspondant au qualificatif.
+   *
+   * @param nomBrut nom brut (non normalisé)
+   * @return le nom de base, ou {@code null} si {@code nomBrut} ne porte aucun qualificatif
+   */
   public static String extraireBase(String nomBrut) {
     int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
     if (idx <= 0) return null;
@@ -290,14 +306,16 @@ public final class CorrespondanceSalle {
     return base.isEmpty() ? null : base;
   }
 
-  /// Indique si deux noms de salle bruts (non normalisés) portent chacun un qualificatif de
-  /// sous-salle distinct (ex. "La Seine Musicale - Grande Seine" / "Seine Musicale - Auditorium
-  /// P.devedjian") — un complexe multi-salles ne doit jamais fusionner deux halls physiquement
-  /// distincts au seul motif qu'ils partagent le nom du complexe.
-  ///
-  /// @param nomBrutA premier nom, non normalisé
-  /// @param nomBrutB second nom, non normalisé
-  /// @return {@code true} si les deux portent un qualificatif et que ceux-ci ne correspondent pas
+  /**
+   * Indique si deux noms de salle bruts (non normalisés) portent chacun un qualificatif de
+   * sous-salle distinct (ex. "La Seine Musicale - Grande Seine" / "Seine Musicale - Auditorium
+   * P.devedjian") — un complexe multi-salles ne doit jamais fusionner deux halls physiquement
+   * distincts au seul motif qu'ils partagent le nom du complexe.
+   *
+   * @param nomBrutA premier nom, non normalisé
+   * @param nomBrutB second nom, non normalisé
+   * @return {@code true} si les deux portent un qualificatif et que ceux-ci ne correspondent pas
+   */
   public static boolean qualificatifsDivergents(String nomBrutA, String nomBrutB) {
     String qualifA = extraireQualificatif(nomBrutA);
     String qualifB = extraireQualificatif(nomBrutB);

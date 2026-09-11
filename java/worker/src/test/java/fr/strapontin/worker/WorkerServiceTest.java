@@ -27,12 +27,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerService} — depuis, ne porte plus que le recalcul de matches et
-/// la réconciliation nocturne (fetch, purge et révocation admin sont désormais dans leurs propres
-/// services, testés séparément).
-///
-/// @since 2.2.3
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerService} — depuis, ne porte plus que le recalcul de matches et
+ * la réconciliation nocturne (fetch, purge et révocation admin sont désormais dans leurs propres
+ * services, testés séparément).
+ *
+ * @since 2.2.3
+ * @author Kwaite
+ */
 class WorkerServiceTest {
 
   private RecalculerMatchesService recalculerMatchesService;

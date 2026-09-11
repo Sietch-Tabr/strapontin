@@ -23,16 +23,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client de scraping pour la billetterie Digitick (web.digitick.com).
-///
-/// <p>Scrape la page de billetterie d'une salle identifiée par son slug Digitick. L'identifiant
-/// préfixé attendu est {@code "digitick:{slug}"}, ex. {@code "digitick:lempreinte"}.
-///
-/// <p>Filtre appliqué : genre {@code "Concert"} et code postal présent (exclut les adhésions et
-/// packs multi-dates sans salle fixe).
-///
-/// @since 2.4.0
-/// @author Kwaite
+/**
+ * Client de scraping pour la billetterie Digitick (web.digitick.com).
+ *
+ * <p>Scrape la page de billetterie d'une salle identifiée par son slug Digitick. L'identifiant
+ * préfixé attendu est {@code "digitick:{slug}"}, ex. {@code "digitick:lempreinte"}.
+ *
+ * <p>Filtre appliqué : genre {@code "Concert"} et code postal présent (exclut les adhésions et
+ * packs multi-dates sans salle fixe).
+ *
+ * @since 2.4.0
+ * @author Kwaite
+ */
 public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(DigitickSource.class);
@@ -55,7 +57,9 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /// Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
+  /**
+   * Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
+   */
   public DigitickSource() {
     this(creerRestClient());
   }
@@ -75,9 +79,11 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
         .build();
   }
 
-  /// Crée une instance avec un RestClient personnalisé (injection de test).
-  ///
-  /// @param restClient client HTTP à utiliser
+  /**
+   * Crée une instance avec un RestClient personnalisé (injection de test).
+   *
+   * @param restClient client HTTP à utiliser
+   */
   public DigitickSource(RestClient restClient) {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
   }
@@ -92,10 +98,12 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     return identifiant != null && identifiant.startsWith(PREFIXE);
   }
 
-  /// Récupère les concerts d'une salle Digitick par son identifiant préfixé.
-  ///
-  /// @param identifiant identifiant de la forme {@code "digitick:{slug}"}
-  /// @return liste des concerts trouvés, vide si la salle est inaccessible ou sans concert
+  /**
+   * Récupère les concerts d'une salle Digitick par son identifiant préfixé.
+   *
+   * @param identifiant identifiant de la forme {@code "digitick:{slug}"}
+   * @return liste des concerts trouvés, vide si la salle est inaccessible ou sans concert
+   */
   @Override
   public List<ConcertBrut> fetchSalle(String identifiant) {
     String slug = identifiant.substring(PREFIXE.length());
@@ -121,20 +129,24 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
-  /// Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement et remet les
-  /// compteurs à zéro.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement et remet les
+   * compteurs à zéro.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   @Override
   public BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
 
-  /// Parse le HTML Digitick et extrait les concerts.
-  ///
-  /// @param html HTML brut (ISO-8859-1 déjà décodé en String)
-  /// @param slug slug de la salle, utilisé pour construire le {@code salleSourceId}
-  /// @return liste de concerts filtrés
+  /**
+   * Parse le HTML Digitick et extrait les concerts.
+   *
+   * @param html HTML brut (ISO-8859-1 déjà décodé en String)
+   * @param slug slug de la salle, utilisé pour construire le {@code salleSourceId}
+   * @return liste de concerts filtrés
+   */
   static List<ConcertBrut> parserConcerts(String html, String slug) {
     Document doc = Jsoup.parse(html);
     Elements evenements = doc.select(SEL_EVENEMENTS);
@@ -201,13 +213,15 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
         null);
   }
 
-  /// Convertit un nom Digitick en ALL CAPS vers une casse lisible.
-  ///
-  /// <p>Capitalise la première lettre de chaque mot ; un mot commence après tout caractère
-  /// non-alphabétique (espace, tiret, {@code +}, {@code :}, etc.).
-  ///
-  /// @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
-  /// @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
+  /**
+   * Convertit un nom Digitick en ALL CAPS vers une casse lisible.
+   *
+   * <p>Capitalise la première lettre de chaque mot ; un mot commence après tout caractère
+   * non-alphabétique (espace, tiret, {@code +}, {@code :}, etc.).
+   *
+   * @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
+   * @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
+   */
   static String normaliserCasse(String nom) {
     if (nom == null || nom.isBlank()) return nom;
     String lower = nom.toLowerCase(Locale.FRENCH);
@@ -225,12 +239,14 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     return sb.toString();
   }
 
-  /// Parse un datetime ISO 8601 Digitick et retourne {@code [date, heure]}.
-  ///
-  /// <p>L'heure {@code "00:00"} est considérée absente (Digitick utilise minuit par défaut).
-  ///
-  /// @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
-  /// @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
+  /**
+   * Parse un datetime ISO 8601 Digitick et retourne {@code [date, heure]}.
+   *
+   * <p>L'heure {@code "00:00"} est considérée absente (Digitick utilise minuit par défaut).
+   *
+   * @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
+   * @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
+   */
   static String[] parserDatetime(String datetime) {
     if (datetime == null || datetime.length() < 10) return null;
     String date = datetime.substring(0, 10);

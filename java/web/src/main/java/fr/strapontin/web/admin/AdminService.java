@@ -35,15 +35,17 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Service d'administration : gestion des comptes utilisateurs.
-///
-/// <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs. {@link
-/// AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des clés
-/// VAPID est déléguée à {@link VapidService}, la configuration applicative à {@link
-/// ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service d'administration : gestion des comptes utilisateurs.
+ *
+ * <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs. {@link
+ * AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des clés
+ * VAPID est déléguée à {@link VapidService}, la configuration applicative à {@link
+ * ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService}.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class AdminService {
 
@@ -60,10 +62,12 @@ public class AdminService {
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
   private AdminService self;
 
-  /// @param jdbc accès JDBC
-  /// @param emailService service d'envoi d'emails
-  /// @param logAdminService service de logs admin
-  /// @param verificationRepository accès aux tokens de vérification
+  /**
+   * @param jdbc accès JDBC
+   * @param emailService service d'envoi d'emails
+   * @param logAdminService service de logs admin
+   * @param verificationRepository accès aux tokens de vérification
+   */
   public AdminService(
       NamedParameterJdbcTemplate jdbc,
       EmailService emailService,
@@ -75,22 +79,26 @@ public class AdminService {
     this.verificationRepository = verificationRepository;
   }
 
-  /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-  /// éviter le problème d'auto-référence à la construction — l'appel à {@link
-  /// #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de
-  /// l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code
-  /// self} peut être positionné manuellement sur l'instance elle-même.
-  ///
-  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  /**
+   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
+   * éviter le problème d'auto-référence à la construction — l'appel à {@link
+   * #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de
+   * l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code
+   * self} peut être positionné manuellement sur l'instance elle-même.
+   *
+   * @param self référence proxifiée de ce bean ({@code @Lazy})
+   */
   @Autowired
   public void setSelf(@Lazy AdminService self) {
     this.self = self;
   }
 
-  /// Retourne une page d'utilisateurs avec leur dernière activité et compteurs de suivi.
-  ///
-  /// @param page numéro de page (0-indexé)
-  /// @return page d'utilisateurs triés par date de création
+  /**
+   * Retourne une page d'utilisateurs avec leur dernière activité et compteurs de suivi.
+   *
+   * @param page numéro de page (0-indexé)
+   * @return page d'utilisateurs triés par date de création
+   */
   public ReponseUtilisateursAdmin listerUtilisateurs(int page) {
     int pageNum = Math.max(0, page);
     Map<String, Object> paramsPage =
@@ -167,12 +175,14 @@ public class AdminService {
     return total != null ? total : 0;
   }
 
-  /// Crée un compte utilisateur et envoie un email d'invitation (atomique).
-  ///
-  /// @param email email du nouvel utilisateur
-  /// @param adminId identifiant de l'admin demandeur
-  /// @param baseUrl URL de base pour construire le lien d'invitation
-  /// @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
+  /**
+   * Crée un compte utilisateur et envoie un email d'invitation (atomique).
+   *
+   * @param email email du nouvel utilisateur
+   * @param adminId identifiant de l'admin demandeur
+   * @param baseUrl URL de base pour construire le lien d'invitation
+   * @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
+   */
   @Transactional
   public Optional<ResultatCreation> creerUtilisateur(String email, String adminId, String baseUrl) {
     boolean emailExistant =
@@ -226,21 +236,23 @@ public class AdminService {
     return Optional.of(new ResultatCreation(email, usernameTemp, lienReset));
   }
 
-  /// Valide et met à jour les champs d'un utilisateur.
-  ///
-  /// <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
-  ///
-  /// <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
-  /// rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est déléguée à
-  /// {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et la même
-  /// garde « dernier admin » que le bouton dédié — sans quoi ce chemin `PATCH` permettait de
-  /// contourner intégralement les deux protections.
-  ///
-  /// @param userId identifiant de l'utilisateur cible
-  /// @param requete champs à modifier (nom, email, role — tous optionnels)
-  /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
-  ///   (rétrogradation d'un admin) si c'est le seul admin restant (409)
+  /**
+   * Valide et met à jour les champs d'un utilisateur.
+   *
+   * <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
+   *
+   * <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
+   * rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est déléguée à
+   * {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et la même
+   * garde « dernier admin » que le bouton dédié — sans quoi ce chemin {@code PATCH} permettait de
+   * contourner intégralement les deux protections.
+   *
+   * @param userId identifiant de l'utilisateur cible
+   * @param requete champs à modifier (nom, email, role — tous optionnels)
+   * @param adminId identifiant de l'admin demandeur
+   * @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
+   *   (rétrogradation d'un admin) si c'est le seul admin restant (409)
+   */
   @Transactional
   public void modifierUtilisateur(
       String userId, RequeteModifierUtilisateur requete, String adminId) {
@@ -354,17 +366,19 @@ public class AdminService {
     }
   }
 
-  /// Initie une révocation différée du rôle admin (effective dans 7 jours).
-  ///
-  /// <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
-  /// (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se révoquant
-  /// mutuellement au même instant pourraient tous deux passer la garde « dernier admin » avant
-  /// qu'aucun des deux `UPDATE` ne soit committé.
-  ///
-  /// @param userId identifiant de l'administrateur à révoquer
-  /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
-  ///   n'est pas admin (400)
+  /**
+   * Initie une révocation différée du rôle admin (effective dans 7 jours).
+   *
+   * <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
+   * (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se révoquant
+   * mutuellement au même instant pourraient tous deux passer la garde « dernier admin » avant
+   * qu'aucun des deux {@code UPDATE} ne soit committé.
+   *
+   * @param userId identifiant de l'administrateur à révoquer
+   * @param adminId identifiant de l'admin demandeur
+   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
+   *   n'est pas admin (400)
+   */
   public void initierRevocationAdmin(String userId, String adminId) {
     RetrySerialisable.executer(
         MAX_TENTATIVES_REVOCATION,
@@ -373,17 +387,19 @@ public class AdminService {
         () -> self.initierRevocationAdminTransactionnel(userId, adminId));
   }
 
-  /// Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
-  ///
-  /// <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action. {@code
-  /// REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction déjà
-  /// ouverte (ex. {@link #modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE serait ignorée
-  /// en cas d'imbrication dans une transaction moins stricte.
-  ///
-  /// @param userId identifiant de l'administrateur à révoquer
-  /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
-  ///   n'est pas admin (400)
+  /**
+   * Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
+   *
+   * <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action. {@code
+   * REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction déjà
+   * ouverte (ex. {@link #modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE serait ignorée
+   * en cas d'imbrication dans une transaction moins stricte.
+   *
+   * @param userId identifiant de l'administrateur à révoquer
+   * @param adminId identifiant de l'admin demandeur
+   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
+   *   n'est pas admin (400)
+   */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
   void initierRevocationAdminTransactionnel(String userId, String adminId) {
     List<Map<String, Object>> cible =
@@ -421,11 +437,13 @@ public class AdminService {
         Map.of("userId", userId, "dateEffective", dateFormatee, "parAdmin", adminId));
   }
 
-  /// Annule une révocation admin en cours (remet revocation_admin_le à NULL).
-  ///
-  /// @param userId identifiant de l'administrateur concerné
-  /// @param adminId identifiant de l'admin demandeur
-  /// @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
+  /**
+   * Annule une révocation admin en cours (remet revocation_admin_le à NULL).
+   *
+   * @param userId identifiant de l'administrateur concerné
+   * @param adminId identifiant de l'admin demandeur
+   * @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
+   */
   public void annulerRevocationAdmin(String userId, String adminId) {
     int miseAJour =
         jdbc.update(
@@ -439,10 +457,12 @@ public class AdminService {
         "info", "admin", "révocation admin annulée", Map.of("userId", userId, "parAdmin", adminId));
   }
 
-  /// Supprime un compte utilisateur et notifie l'utilisateur par email.
-  ///
-  /// @param userId identifiant de l'utilisateur à supprimer
-  /// @param adminId identifiant de l'admin demandeur
+  /**
+   * Supprime un compte utilisateur et notifie l'utilisateur par email.
+   *
+   * @param userId identifiant de l'utilisateur à supprimer
+   * @param adminId identifiant de l'admin demandeur
+   */
   @Transactional
   public void supprimerUtilisateur(String userId, String adminId) {
     List<Map<String, Object>> cible =
@@ -455,17 +475,19 @@ public class AdminService {
     }
   }
 
-  /// Envoie un email de réinitialisation de mot de passe à un utilisateur.
-  ///
-  /// <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
-  /// comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à l'admin selon
-  /// la disponibilité de Resend, pour garder un filet de secours si l'email n'atteint jamais
-  /// l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur cible
-  /// @param adminId identifiant de l'admin demandeur
-  /// @param baseUrl URL de base pour construire le lien
-  /// @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
+  /**
+   * Envoie un email de réinitialisation de mot de passe à un utilisateur.
+   *
+   * <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
+   * comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à l'admin selon
+   * la disponibilité de Resend, pour garder un filet de secours si l'email n'atteint jamais
+   * l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur cible
+   * @param adminId identifiant de l'admin demandeur
+   * @param baseUrl URL de base pour construire le lien
+   * @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
+   */
   @Transactional
   public Optional<ResultatReset> reinitialiserMdp(String userId, String adminId, String baseUrl) {
     List<Map<String, Object>> cible =
@@ -493,14 +515,16 @@ public class AdminService {
     return Optional.of(new ResultatReset(email, lienReset));
   }
 
-  /// Réinitialise la 2FA TOTP d'un utilisateur : efface le secret et désactive la 2FA.
-  ///
-  /// <p>Utilisé quand un utilisateur perd l'accès à son application d'authentification (ou que son
-  /// secret est désynchronisé) : il pourra se reconnecter sans code, puis ré-enrôler son TOTP.
-  ///
-  /// @param userId identifiant de l'utilisateur cible
-  /// @param adminId identifiant de l'admin à l'origine de l'action
-  /// @return {@code true} si l'utilisateur existait, {@code false} sinon
+  /**
+   * Réinitialise la 2FA TOTP d'un utilisateur : efface le secret et désactive la 2FA.
+   *
+   * <p>Utilisé quand un utilisateur perd l'accès à son application d'authentification (ou que son
+   * secret est désynchronisé) : il pourra se reconnecter sans code, puis ré-enrôler son TOTP.
+   *
+   * @param userId identifiant de l'utilisateur cible
+   * @param adminId identifiant de l'admin à l'origine de l'action
+   * @return {@code true} si l'utilisateur existait, {@code false} sinon
+   */
   public boolean reinitialiserTotp(String userId, String adminId) {
     List<Map<String, Object>> cible =
         jdbc.queryForList("SELECT email FROM users WHERE id = :userId", Map.of("userId", userId));
@@ -516,13 +540,15 @@ public class AdminService {
     return true;
   }
 
-  /// Révoque immédiatement toutes les sessions actives d'un utilisateur (ex. compte compromis,
-  /// départ, demande explicite de l'utilisateur) — indépendant de la révocation admin ({@link
-  /// #initierRevocationAdmin}), qui ne concerne que la rétrogradation d'un rôle.
-  ///
-  /// @param userId identifiant de l'utilisateur cible
-  /// @param adminId identifiant de l'admin à l'origine de l'action
-  /// @return {@code true} si l'utilisateur existait, {@code false} sinon
+  /**
+   * Révoque immédiatement toutes les sessions actives d'un utilisateur (ex. compte compromis,
+   * départ, demande explicite de l'utilisateur) — indépendant de la révocation admin ({@link
+   * #initierRevocationAdmin}), qui ne concerne que la rétrogradation d'un rôle.
+   *
+   * @param userId identifiant de l'utilisateur cible
+   * @param adminId identifiant de l'admin à l'origine de l'action
+   * @return {@code true} si l'utilisateur existait, {@code false} sinon
+   */
   public boolean revoquerToutesSessions(String userId, String adminId) {
     List<Map<String, Object>> cible =
         jdbc.queryForList(
@@ -541,9 +567,11 @@ public class AdminService {
     return true;
   }
 
-  /// Retourne les N derniers logs admin.
-  ///
-  /// @return liste des entrées de log
+  /**
+   * Retourne les N derniers logs admin.
+   *
+   * @return liste des entrées de log
+   */
   public List<LogAdminService.EntreeLogAdmin> lireLogsAdmin() {
     return logAdminService.lireLogs(200);
   }

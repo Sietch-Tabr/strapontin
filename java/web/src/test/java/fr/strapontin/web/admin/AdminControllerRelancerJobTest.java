@@ -15,11 +15,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires ciblés pour {@link AdminController#relancerJob} (v2.6.0) — bouton
-/// « Relancer » par job de maintenance dans l'onglet admin Tableau de bord.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires ciblés pour {@link AdminController#relancerJob} (v2.6.0) — bouton
+ * « Relancer » par job de maintenance dans l'onglet admin Tableau de bord.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class AdminControllerRelancerJobTest {
 
   private WorkerProxyService workerProxyService;

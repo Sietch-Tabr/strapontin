@@ -22,25 +22,27 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Orchestrateur d'enrichissement des artistes (étape 3 +).
-///
-/// Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
-/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
-/// EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré avant
-/// {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est propagé aux
-/// sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
-///
-/// Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM pour
-/// l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto, identique →
-/// rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
-///
-/// Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
-/// découverte Wikidata sans Q-ID connu est séquentielle (une requête par artiste, rate-limitée) —
-/// persister uniquement à la toute fin perdrait tout le travail déjà résolu en cas d'interruption
-/// avant la fin du cycle.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Orchestrateur d'enrichissement des artistes (étape 3 +).
+ *
+ * Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
+ * Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
+ * EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré avant
+ * {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est propagé aux
+ * sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
+ *
+ * Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM pour
+ * l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto, identique →
+ * rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
+ *
+ * Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
+ * découverte Wikidata sans Q-ID connu est séquentielle (une requête par artiste, rate-limitée) —
+ * persister uniquement à la toute fin perdrait tout le travail déjà résolu en cas d'interruption
+ * avant la fin du cycle.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 @Service
 public class EnrichissementArtistesService {
 
@@ -68,12 +70,14 @@ public class EnrichissementArtistesService {
     this.signalementMatchingService = signalementMatchingService;
   }
 
-  /// Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
-  /// courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit), priorisés par
-  /// nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code
-  /// nom_affiche} déjà présent (override manuel admin).
-  ///
-  /// @return nombre d'artistes effectivement mis à jour
+  /**
+   * Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
+   * courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit), priorisés par
+   * nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code
+   * nom_affiche} déjà présent (override manuel admin).
+   *
+   * @return nombre d'artistes effectivement mis à jour
+   */
   public int enrichir() {
     List<ArtisteAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
@@ -93,10 +97,12 @@ public class EnrichissementArtistesService {
     return nbEnrichis;
   }
 
-  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
-  /// {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
-  /// que {@code WorkerStatsService.remonterBilan} et {@link
-  /// EnrichissementSallesService#remonterBilans}.
+  /**
+   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
+   * {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
+   * que {@code WorkerStatsService.remonterBilan} et {@link
+   * EnrichissementSallesService#remonterBilans}.
+   */
   private void remonterBilans() {
     for (SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
@@ -114,8 +120,10 @@ public class EnrichissementArtistesService {
     remonterAmbiguites();
   }
 
-  /// Signale chaque ambiguïté de découverte prélevée depuis le dernier cycle — distinct d'une
-  /// non-découverte ordinaire, pour permettre un traitement différencié.
+  /**
+   * Signale chaque ambiguïté de découverte prélevée depuis le dernier cycle — distinct d'une
+   * non-découverte ordinaire, pour permettre un traitement différencié.
+   */
   private void remonterAmbiguites() {
     for (SourceEnrichissementArtiste source : sources) {
       if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) continue;
@@ -214,14 +222,16 @@ public class EnrichissementArtistesService {
         !b.aliasWikidata().isEmpty() ? b.aliasWikidata() : a.aliasWikidata());
   }
 
-  /// @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
-  ///   découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
-  ///   — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
-  ///   est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
-  ///   le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
-  ///   (basée sur le même enrichissement). Jamais de fusion automatique — contrairement aux salles,
-  ///   aucun signal géographique de cross-validation n'existe pour départager un homonyme réel d'un
-  ///   doublon.
+  /**
+   * @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
+   *   découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
+   *   — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
+   *   est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
+   *   le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
+   *   (basée sur le même enrichissement). Jamais de fusion automatique — contrairement aux salles,
+   *   aucun signal géographique de cross-validation n'existe pour départager un homonyme réel d'un
+   *   doublon.
+   */
   private boolean mettreAJourArtiste(UUID artisteId, String nom, EnrichissementArtiste e) {
     Map<String, Object> params = new HashMap<>();
     params.put("wikidataId", e.wikidataId());
@@ -262,7 +272,9 @@ public class EnrichissementArtistesService {
     }
   }
 
-  /// P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé.
+  /**
+   * P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé.
+   */
   private void traiterCrossValidationP6262(
       ArtisteAEnrichir artiste, EnrichissementArtiste enrichissement, String attractionIdExistant) {
     String tmIdWikidata = enrichissement.ticketmasterAttractionId();

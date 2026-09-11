@@ -19,10 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link AppareilsController}.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AppareilsController}.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 class AppareilsControllerTest {
 
   private AppareilsService appareilsService;

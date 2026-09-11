@@ -13,10 +13,12 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link FiltreConcertsBuilder}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link FiltreConcertsBuilder}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class FiltreConcertsBuilderTest {
 
   @Test

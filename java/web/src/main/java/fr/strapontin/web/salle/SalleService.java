@@ -37,13 +37,15 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
 
-/// Service de gestion des salles suivies.
-///
-/// <p>Orchestration : recherche en base + API Ticketmaster, vérification du cap, déclenchement du
-/// worker.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service de gestion des salles suivies.
+ *
+ * <p>Orchestration : recherche en base + API Ticketmaster, vérification du cap, déclenchement du
+ * worker.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class SalleService {
 
@@ -74,14 +76,16 @@ public class SalleService {
   private final LogAdminService logAdminService;
   private SalleService self;
 
-  /// @param salleRepository accès aux données salles
-  /// @param configService lecture de la clé API Ticketmaster
-  /// @param objectMapper désérialiseur JSON (pour l'API Ticketmaster)
-  /// @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
-  ///   fr.strapontin.web.WebConfiguration})
-  /// @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
-  ///   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
-  /// @param logAdminService journalisation des suppressions dans {@code logs_admin}
+  /**
+   * @param salleRepository accès aux données salles
+   * @param configService lecture de la clé API Ticketmaster
+   * @param objectMapper désérialiseur JSON (pour l'API Ticketmaster)
+   * @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
+   *   fr.strapontin.web.WebConfiguration})
+   * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
+   *   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
+   * @param logAdminService journalisation des suppressions dans {@code logs_admin}
+   */
   public SalleService(
       SalleRepository salleRepository,
       ConfigService configService,
@@ -97,27 +101,31 @@ public class SalleService {
     this.logAdminService = logAdminService;
   }
 
-  /// Injection par setter de la référence proxifiée de ce bean — nécessaire pour que {@link
-  /// #mettreAJourWikidataIdEnSavepoint} bénéficie réellement de la propagation {@code NESTED}
-  /// (l'appel doit passer par le proxy AOP Spring, un appel direct via {@code this} l'ignorerait
-  /// silencieusement). En dehors d'un contexte Spring (tests unitaires), {@code self} peut être
-  /// positionné manuellement.
-  ///
-  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  /**
+   * Injection par setter de la référence proxifiée de ce bean — nécessaire pour que {@link
+   * #mettreAJourWikidataIdEnSavepoint} bénéficie réellement de la propagation {@code NESTED}
+   * (l'appel doit passer par le proxy AOP Spring, un appel direct via {@code this} l'ignorerait
+   * silencieusement). En dehors d'un contexte Spring (tests unitaires), {@code self} peut être
+   * positionné manuellement.
+   *
+   * @param self référence proxifiée de ce bean ({@code @Lazy})
+   */
   @Autowired
   public void setSelf(@Lazy SalleService self) {
     this.self = self;
   }
 
-  /// Liste les salles suivies, avec suggestions si {@code q} est fourni.
-  ///
-  /// <p>Complète la base avec Nominatim si moins de 3 résultats locaux, puis avec l'API
-  /// Ticketmaster si Nominatim retourne moins de 2 résultats. Une salle retournée par les deux
-  /// sources externes est fusionnée en une seule suggestion (osmId + tmVenueId).
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param q terme de recherche (optionnel, min 2 caractères)
-  /// @return la liste des salles et les suggestions
+  /**
+   * Liste les salles suivies, avec suggestions si {@code q} est fourni.
+   *
+   * <p>Complète la base avec Nominatim si moins de 3 résultats locaux, puis avec l'API
+   * Ticketmaster si Nominatim retourne moins de 2 résultats. Une salle retournée par les deux
+   * sources externes est fusionnée en une seule suggestion (osmId + tmVenueId).
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param q terme de recherche (optionnel, min 2 caractères)
+   * @return la liste des salles et les suggestions
+   */
   public ReponseSalles lister(String userId, String q) {
     String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
 
@@ -172,22 +180,24 @@ public class SalleService {
     return new ReponseSalles(salles, resultats, dejaLaSuivie);
   }
 
-  /// Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle ({@link
-  /// CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
-  ///
-  /// <p>Utilise le même algorithme que {@link #resoudreSalleId} — avant correctif, {@code
-  /// fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale ({@code
-  /// estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors qu'un clic
-  /// sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleId} — un seul
-  /// algorithme de dédoublonnage salle dans tout le projet.
-  ///
-  /// <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
-  /// tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées.
-  ///
-  /// <p>Package-private (plutôt que {@code private}) pour être testable directement.
-  ///
-  /// @param liste suggestions déjà collectées (modifiée en place)
-  /// @param candidat nouveau résultat externe à intégrer
+  /**
+   * Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle ({@link
+   * CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
+   *
+   * <p>Utilise le même algorithme que {@link #resoudreSalleId} — avant correctif, {@code
+   * fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale ({@code
+   * estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors qu'un clic
+   * sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleId} — un seul
+   * algorithme de dédoublonnage salle dans tout le projet.
+   *
+   * <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
+   * tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées.
+   *
+   * <p>Package-private (plutôt que {@code private}) pour être testable directement.
+   *
+   * @param liste suggestions déjà collectées (modifiée en place)
+   * @param candidat nouveau résultat externe à intégrer
+   */
   static void fusionnerOuAjouter(List<ResultatSalle> liste, ResultatSalle candidat) {
     for (int i = 0; i < liste.size(); i++) {
       ResultatSalle existant = liste.get(i);
@@ -210,43 +220,47 @@ public class SalleService {
     liste.add(candidat);
   }
 
-  /// Ajoute une salle à la liste de suivi dans une transaction atomique.
-  ///
-  /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
-  /// résolution de la salle dans le référentiel global tolère les variantes orthographiques
-  /// mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle
-  /// déjà présente sous une graphie légèrement différente.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param nom nom de la salle (non-vide, max 200 car.)
-  /// @param tmVenueId identifiant Ticketmaster (nullable)
-  /// @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
-  /// @throws RessourceDejaExistante si la salle est déjà suivie
+  /**
+   * Ajoute une salle à la liste de suivi dans une transaction atomique.
+   *
+   * <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
+   * résolution de la salle dans le référentiel global tolère les variantes orthographiques
+   * mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle
+   * déjà présente sous une graphie légèrement différente.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param nom nom de la salle (non-vide, max 200 car.)
+   * @param tmVenueId identifiant Ticketmaster (nullable)
+   * @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
+   * @throws RessourceDejaExistante si la salle est déjà suivie
+   */
   @Transactional
   public void ajouter(String userId, String nom, String tmVenueId) {
     ajouter(userId, nom, tmVenueId, null, null);
   }
 
-  /// Ajoute une salle à la liste de suivi dans une transaction atomique.
-  ///
-  /// <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
-  /// résolution de la salle dans le référentiel global tolère les variantes orthographiques
-  /// mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle
-  /// déjà présente sous une graphie légèrement différente.
-  ///
-  /// <p>Si {@code osmId}/{@code wikidataId} sont fournis (l'utilisateur a choisi une suggestion
-  /// Nominatim), les IDs stables sont persistés immédiatement sans attendre le job d'enrichissement
-  /// nocturne. Un conflit sur l'index unique {@code idx_salles_wikidata_id} (Q-ID déjà porté par
-  /// une autre salle) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que
-  /// {@code EnrichissementSallesService} (jalon 2.6.0).
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param nom nom de la salle (non-vide, max 200 car.)
-  /// @param tmVenueId identifiant Ticketmaster (nullable)
-  /// @param osmId identifiant OSM {@code "type/id"} (nullable)
-  /// @param wikidataId Q-ID Wikidata (nullable)
-  /// @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
-  /// @throws RessourceDejaExistante si la salle est déjà suivie
+  /**
+   * Ajoute une salle à la liste de suivi dans une transaction atomique.
+   *
+   * <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
+   * résolution de la salle dans le référentiel global tolère les variantes orthographiques
+   * mineures (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle
+   * déjà présente sous une graphie légèrement différente.
+   *
+   * <p>Si {@code osmId}/{@code wikidataId} sont fournis (l'utilisateur a choisi une suggestion
+   * Nominatim), les IDs stables sont persistés immédiatement sans attendre le job d'enrichissement
+   * nocturne. Un conflit sur l'index unique {@code idx_salles_wikidata_id} (Q-ID déjà porté par
+   * une autre salle) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que
+   * {@code EnrichissementSallesService} (jalon 2.6.0).
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param nom nom de la salle (non-vide, max 200 car.)
+   * @param tmVenueId identifiant Ticketmaster (nullable)
+   * @param osmId identifiant OSM {@code "type/id"} (nullable)
+   * @param wikidataId Q-ID Wikidata (nullable)
+   * @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
+   * @throws RessourceDejaExistante si la salle est déjà suivie
+   */
   @Transactional
   public void ajouter(
       String userId, String nom, String tmVenueId, String osmId, String wikidataId) {
@@ -284,16 +298,18 @@ public class SalleService {
     executerApresCommit(salleId);
   }
 
-  /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction.
-  ///
-  /// <p>Sans cela, le déclenchement synchrone (thread virtuel, appel HTTP immédiat vers le worker)
-  /// pouvait s'exécuter avant que l'{@code INSERT}/{@code UPDATE} ne soit visible en base
-  /// (isolation {@code READ COMMITTED}), faisant manquer la salle tout juste ajoutée au cycle de
-  /// fetch qu'elle vient elle-même de déclencher — même correctif que {@code
-  /// ArtisteService#executerApresCommit}. Exécute immédiatement si aucune transaction n'est active
-  /// (ex. tests unitaires sans contexte Spring).
-  ///
-  /// @param salleId UUID de la salle ajoutée/créée dans la transaction en cours
+  /**
+   * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction.
+   *
+   * <p>Sans cela, le déclenchement synchrone (thread virtuel, appel HTTP immédiat vers le worker)
+   * pouvait s'exécuter avant que l'{@code INSERT}/{@code UPDATE} ne soit visible en base
+   * (isolation {@code READ COMMITTED}), faisant manquer la salle tout juste ajoutée au cycle de
+   * fetch qu'elle vient elle-même de déclencher — même correctif que {@code
+   * ArtisteService#executerApresCommit}. Exécute immédiatement si aucune transaction n'est active
+   * (ex. tests unitaires sans contexte Spring).
+   *
+   * @param salleId UUID de la salle ajoutée/créée dans la transaction en cours
+   */
   private void executerApresCommit(UUID salleId) {
     Runnable action = () -> declencherWorkerParSources(salleId);
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -309,46 +325,50 @@ public class SalleService {
     }
   }
 
-  /// Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index unique
-  /// {@code idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
-  ///
-  /// <p>{@code Propagation.NESTED} isole ce conflit du reste de {@link #ajouter} via un savepoint
-  /// sur la connexion existante (pas une nouvelle transaction/connexion, contrairement à {@code
-  /// REQUIRES_NEW}) : sans ce savepoint, PostgreSQL marque toute la transaction englobante «
-  /// annulée » dès la violation de contrainte, faisant échouer le {@code INSERT INTO user_salles}
-  /// suivant même si l'exception est capturée côté Java (constaté en E2E réel — invisible en test
-  /// unitaire, `salleRepository` y étant mocké).
-  ///
-  /// <p>L'exception doit se propager en dehors de cette méthode (pas de try/catch ici) pour que
-  /// l'intercepteur transactionnel Spring exécute un {@code ROLLBACK TO SAVEPOINT} — la capturer
-  /// ici ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
-  /// échec, provoquant un second échec (`TransactionSystemException`). Capturée par l'appelant.
-  ///
-  /// @param salleId UUID de la salle
-  /// @param wikidataId Q-ID Wikidata à attribuer
-  /// @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
+  /**
+   * Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index unique
+   * {@code idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
+   *
+   * <p>{@code Propagation.NESTED} isole ce conflit du reste de {@link #ajouter} via un savepoint
+   * sur la connexion existante (pas une nouvelle transaction/connexion, contrairement à {@code
+   * REQUIRES_NEW}) : sans ce savepoint, PostgreSQL marque toute la transaction englobante «
+   * annulée » dès la violation de contrainte, faisant échouer le {@code INSERT INTO user_salles}
+   * suivant même si l'exception est capturée côté Java (constaté en E2E réel — invisible en test
+   * unitaire, {@code salleRepository} y étant mocké).
+   *
+   * <p>L'exception doit se propager en dehors de cette méthode (pas de try/catch ici) pour que
+   * l'intercepteur transactionnel Spring exécute un {@code ROLLBACK TO SAVEPOINT} — la capturer
+   * ici ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
+   * échec, provoquant un second échec ({@code TransactionSystemException}). Capturée par l'appelant.
+   *
+   * @param salleId UUID de la salle
+   * @param wikidataId Q-ID Wikidata à attribuer
+   * @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
+   */
   @Transactional(propagation = Propagation.NESTED)
   void mettreAJourWikidataIdEnSavepoint(UUID salleId, String wikidataId) {
     salleRepository.mettreAJourWikidataId(salleId, wikidataId);
   }
 
-  /// Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante dont
-  /// le nom est un doublon flou plutôt que d'en créer une nouvelle. La comparaison floue utilise
-  /// {@link CorrespondanceSalle#estDoublonSalle} sur le nom normalisé au sens de {@link
-  /// Normalisation#normaliserTexte} — même algorithme que {@code ReconciliateurSalles} côté worker,
-  /// {@code WikidataSalleSource} côté enrichissement, et {@link #fusionnerOuAjouter} côté
-  /// suggestions (un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
-  /// correspondance exacte de {@code salle_cle}, passe par {@code upsertSalle} pour conserver le
-  /// comportement existant de mise à jour du nom affiché ; en cas de correspondance floue
-  /// seulement, réutilise l'UUID existant sans toucher au nom déjà établi.
-  ///
-  /// <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par {@code
-  /// PreferencesService.importerSalles} pour que l'import de préférences applique la même dédup
-  /// floue que l'ajout interactif, plutôt qu'une égalité stricte sur {@code salle_cle}.
-  ///
-  /// @param nom nom affiché tel que saisi
-  /// @param salleCle clé normalisée ({@link #normaliserSalleCle})
-  /// @return UUID de la salle existante ou nouvellement créée
+  /**
+   * Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante dont
+   * le nom est un doublon flou plutôt que d'en créer une nouvelle. La comparaison floue utilise
+   * {@link CorrespondanceSalle#estDoublonSalle} sur le nom normalisé au sens de {@link
+   * Normalisation#normaliserTexte} — même algorithme que {@code ReconciliateurSalles} côté worker,
+   * {@code WikidataSalleSource} côté enrichissement, et {@link #fusionnerOuAjouter} côté
+   * suggestions (un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
+   * correspondance exacte de {@code salle_cle}, passe par {@code upsertSalle} pour conserver le
+   * comportement existant de mise à jour du nom affiché ; en cas de correspondance floue
+   * seulement, réutilise l'UUID existant sans toucher au nom déjà établi.
+   *
+   * <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par {@code
+   * PreferencesService.importerSalles} pour que l'import de préférences applique la même dédup
+   * floue que l'ajout interactif, plutôt qu'une égalité stricte sur {@code salle_cle}.
+   *
+   * @param nom nom affiché tel que saisi
+   * @param salleCle clé normalisée ({@link #normaliserSalleCle})
+   * @return UUID de la salle existante ou nouvellement créée
+   */
   public UUID resoudreSalleId(String nom, String salleCle) {
     Set<String> tokens =
         Arrays.stream(nom.split("\\s+"))
@@ -370,12 +390,14 @@ public class SalleService {
     return salleRepository.upsertSalle(salleCle, nom);
   }
 
-  /// Déclenche immédiatement un fetch pour une salle identifiée par son UUID.
-  ///
-  /// <p>Lit toutes les sources configurées dans {@code salle_sources} (TM, Digitick…) et les
-  /// transmet au worker en une seule requête.
-  ///
-  /// @param salleId UUID de la salle
+  /**
+   * Déclenche immédiatement un fetch pour une salle identifiée par son UUID.
+   *
+   * <p>Lit toutes les sources configurées dans {@code salle_sources} (TM, Digitick…) et les
+   * transmet au worker en une seule requête.
+   *
+   * @param salleId UUID de la salle
+   */
   public void declencherWorkerParSources(UUID salleId) {
     String identifiants = salleRepository.lireIdentifiantsSources(salleId);
     if (identifiants != null) {
@@ -383,10 +405,12 @@ public class SalleService {
     }
   }
 
-  /// Supprime une salle de la liste de suivi.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
+  /**
+   * Supprime une salle de la liste de suivi.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   */
   public void supprimer(String userId, UUID salleId) {
     if (salleRepository.supprimerPourUtilisateur(userId, salleId) == 0) {
       return;
@@ -396,22 +420,24 @@ public class SalleService {
         "warn", "web", "salle supprimée", Map.of("userId", userId, "salleId", salleId.toString()));
   }
 
-  /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
-  ///
-  /// <p>Upsert sur {@code salle_cle}, enregistre le slug dans {@code salle_sources}, puis déclenche
-  /// le worker.
-  ///
-  /// <p>Si le slug est déjà attribué à une autre salle, lève une erreur 409 plutôt que de créer une
-  /// salle sans source Digitick fonctionnelle — {@code enregistrerSalleSource} fait un {@code ON
-  /// CONFLICT DO NOTHING} silencieux, qui laissait auparavant la nouvelle salle créée avec un 201
-  /// "succès" trompeur mais aucune source réelle.
-  ///
-  /// @param nom nom affiché de la salle
-  /// @param slug slug Digitick
-  /// @param ville ville (peut être {@code null})
-  /// @param dept numéro de département (peut être {@code null})
-  /// @return UUID stable de la salle créée ou retrouvée
-  /// @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
+  /**
+   * Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
+   *
+   * <p>Upsert sur {@code salle_cle}, enregistre le slug dans {@code salle_sources}, puis déclenche
+   * le worker.
+   *
+   * <p>Si le slug est déjà attribué à une autre salle, lève une erreur 409 plutôt que de créer une
+   * salle sans source Digitick fonctionnelle — {@code enregistrerSalleSource} fait un {@code ON
+   * CONFLICT DO NOTHING} silencieux, qui laissait auparavant la nouvelle salle créée avec un 201
+   * "succès" trompeur mais aucune source réelle.
+   *
+   * @param nom nom affiché de la salle
+   * @param slug slug Digitick
+   * @param ville ville (peut être {@code null})
+   * @param dept numéro de département (peut être {@code null})
+   * @return UUID stable de la salle créée ou retrouvée
+   * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
+   */
   @Transactional
   public UUID creerSalleDigitick(String nom, String slug, String ville, String dept) {
     String salleCle = normaliserSalleCle(nom);
@@ -427,70 +453,82 @@ public class SalleService {
     return salleId;
   }
 
-  /// Met à jour les métadonnées d'une salle (nom, ville, département).
-  ///
-  /// @param salleId UUID de la salle
-  /// @param nom nouveau nom (null = inchangé)
-  /// @param ville nouvelle ville (null = inchangée)
-  /// @param dept nouveau numéro de département (null = inchangé)
+  /**
+   * Met à jour les métadonnées d'une salle (nom, ville, département).
+   *
+   * @param salleId UUID de la salle
+   * @param nom nouveau nom (null = inchangé)
+   * @param ville nouvelle ville (null = inchangée)
+   * @param dept nouveau numéro de département (null = inchangé)
+   */
   public void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
     salleRepository.mettreAJourSalle(salleId, nom, ville, dept);
   }
 
-  /// Retourne les identifiants sources CSV d'une salle (ex. {@code
-  /// "digitick:lempreinte,tm:rZ..."}).
-  ///
-  /// @param salleId UUID de la salle
-  /// @return CSV d'identifiants ou {@code null} si aucun
+  /**
+   * Retourne les identifiants sources CSV d'une salle (ex. {@code
+   * "digitick:lempreinte,tm:rZ..."}).
+   *
+   * @param salleId UUID de la salle
+   * @return CSV d'identifiants ou {@code null} si aucun
+   */
   public String lireIdentifiantsSources(UUID salleId) {
     return salleRepository.lireIdentifiantsSources(salleId);
   }
 
-  /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
-  ///
-  /// @param salleId UUID de la salle
-  /// @return {@code true} si supprimée, {@code false} si des contraintes bloquent
+  /**
+   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+   *
+   * @param salleId UUID de la salle
+   * @return {@code true} si supprimée, {@code false} si des contraintes bloquent
+   */
   public boolean supprimerSalleDigitick(UUID salleId) {
     return salleRepository.supprimerSalleDigitick(salleId);
   }
 
-  /// Normalise un nom de salle en retirant accents, ponctuation et espaces (clé stable).
-  ///
-  /// @param nom nom brut de la salle
-  /// @return identifiant normalisé (ex. {@code "olympia"})
+  /**
+   * Normalise un nom de salle en retirant accents, ponctuation et espaces (clé stable).
+   *
+   * @param nom nom brut de la salle
+   * @return identifiant normalisé (ex. {@code "olympia"})
+   */
   public static String normaliserSalleCle(String nom) {
     String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
     return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
   }
 
-  /// Indique si une recherche correspond, même partiellement, à une salle déjà suivie.
-  ///
-  /// <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
-  /// terme partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été
-  /// trouvée puis exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun signal
-  /// expliquant l'absence de résultat.
-  ///
-  /// <p>Package-private (plutôt que {@code private}) pour être testable directement.
-  ///
-  /// @param rechercheNorm clé normalisée de la recherche ({@link #normaliserSalleCle})
-  /// @param clesNorm clés normalisées des salles déjà suivies
-  /// @return {@code true} si une salle déjà suivie contient la recherche
+  /**
+   * Indique si une recherche correspond, même partiellement, à une salle déjà suivie.
+   *
+   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un
+   * terme partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été
+   * trouvée puis exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun signal
+   * expliquant l'absence de résultat.
+   *
+   * <p>Package-private (plutôt que {@code private}) pour être testable directement.
+   *
+   * @param rechercheNorm clé normalisée de la recherche ({@link #normaliserSalleCle})
+   * @param clesNorm clés normalisées des salles déjà suivies
+   * @return {@code true} si une salle déjà suivie contient la recherche
+   */
   static boolean contientCorrespondancePartielle(String rechercheNorm, Set<String> clesNorm) {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
   }
 
-  /// Recherche des salles par nom via Nominatim (OSM).
-  ///
-  /// <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire
-  /// selon la politique d'usage Nominatim.
-  ///
-  /// @param terme terme de recherche saisi par l'utilisateur
-  /// @return suggestions filtrées par type de lieu pertinent, vide si aucune ou en cas d'échec
-  ///   réseau
-  ///
-  ///   <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
-  ///   ({@code Mockito.spy}) évitant un appel réseau réel — même motif que {@code
-  ///   ArtisteService#rechercherWikidata}.
+  /**
+   * Recherche des salles par nom via Nominatim (OSM).
+   *
+   * <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire
+   * selon la politique d'usage Nominatim.
+   *
+   * @param terme terme de recherche saisi par l'utilisateur
+   * @return suggestions filtrées par type de lieu pertinent, vide si aucune ou en cas d'échec
+   *   réseau
+   *
+   *   <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
+   *   ({@code Mockito.spy}) évitant un appel réseau réel — même motif que {@code
+   *   ArtisteService#rechercherWikidata}.
+   */
   List<ResultatSalle> rechercherSallesNominatim(String terme) {
     try {
       String contact = configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
@@ -519,19 +557,21 @@ public class SalleService {
     }
   }
 
-  /// Filtre et convertit les résultats bruts Nominatim en suggestions de salle.
-  ///
-  /// <p>Un résultat est pertinent si son {@code type} de premier niveau ou son {@code
-  /// extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} — {@code
-  /// class=amenity} seul n'est plus suffisant (trop large : laissait passer des bornes de recharge
-  /// électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un stade avec
-  /// {@code extratags.amenity=music_venue}) n'est plus rejetée à tort.
-  ///
-  /// <p>Package-private (plutôt que {@code private}) pour être testable directement, sans appel
-  /// réseau réel.
-  ///
-  /// @param json corps de la réponse Nominatim (tableau JSON)
-  /// @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
+  /**
+   * Filtre et convertit les résultats bruts Nominatim en suggestions de salle.
+   *
+   * <p>Un résultat est pertinent si son {@code type} de premier niveau ou son {@code
+   * extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} — {@code
+   * class=amenity} seul n'est plus suffisant (trop large : laissait passer des bornes de recharge
+   * électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un stade avec
+   * {@code extratags.amenity=music_venue}) n'est plus rejetée à tort.
+   *
+   * <p>Package-private (plutôt que {@code private}) pour être testable directement, sans appel
+   * réseau réel.
+   *
+   * @param json corps de la réponse Nominatim (tableau JSON)
+   * @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
+   */
   @SuppressWarnings("unchecked")
   List<ResultatSalle> parseNominatimResultats(String json) {
     List<ResultatSalle> resultats = new ArrayList<>();
@@ -576,11 +616,13 @@ public class SalleService {
     return null;
   }
 
-  /// @param terme terme de recherche saisi par l'utilisateur
-  /// @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en cas d'échec réseau
-  ///
-  ///   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
-  ///   que {@link #rechercherSallesNominatim}.
+  /**
+   * @param terme terme de recherche saisi par l'utilisateur
+   * @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en cas d'échec réseau
+   *
+   *   <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même motif
+   *   que {@link #rechercherSallesNominatim}.
+   */
   @SuppressWarnings("unchecked")
   List<ResultatSalle> rechercherSallesTM(String terme) {
     Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");

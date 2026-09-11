@@ -4,24 +4,36 @@
  */
 package fr.strapontin.web.securite;
 
-/// Résultat d'une vérification de challenge TOTP ({@link TotpChallengeService#verifier}).
-///
-/// @param statut         issue du challenge
-/// @param essaisRestants nombre d'essais restants avant verrouillage (uniquement pertinent pour
-///                       {@link Statut#ECHEC})
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Résultat d'une vérification de challenge TOTP ({@link TotpChallengeService#verifier}).
+ *
+ * @param statut         issue du challenge
+ * @param essaisRestants nombre d'essais restants avant verrouillage (uniquement pertinent pour
+ *                       {@link Statut#ECHEC})
+ * @since 2.7.0
+ * @author Kwaite
+ */
 public record ResultatTotp(Statut statut, int essaisRestants) {
 
-  /// Issue possible d'un challenge TOTP.
+  /**
+   * Issue possible d'un challenge TOTP.
+   */
   public enum Statut {
-    /// Le compte était déjà verrouillé avant même la tentative (aucune vérification effectuée).
+    /**
+     * Le compte était déjà verrouillé avant même la tentative (aucune vérification effectuée).
+     */
     DEJA_VERROUILLE,
-    /// Code correct — challenge validé, compteur d'échecs remis à zéro.
+    /**
+     * Code correct — challenge validé, compteur d'échecs remis à zéro.
+     */
     SUCCES,
-    /// Code incorrect — au moins un essai restant avant verrouillage.
+    /**
+     * Code incorrect — au moins un essai restant avant verrouillage.
+     */
     ECHEC,
-    /// Code incorrect et ce dernier échec vient de franchir le seuil de verrouillage.
+    /**
+     * Code incorrect et ce dernier échec vient de franchir le seuil de verrouillage.
+     */
     VERROUILLE_MAINTENANT
   }
 

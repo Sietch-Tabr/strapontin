@@ -23,17 +23,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/// Service de recalcul des correspondances utilisateurs (table `user_matches`).
-///
-/// Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis et les concerts
-/// futurs. Met à jour `user_matches` en conséquence. Les concerts indisponibles sont marqués
-/// `notification_envoyee_le = now()` immédiatement pour ne pas déclencher de badge "Nouveau".
-///
-/// <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels, chacun dans sa
-/// propre transaction ({@link TransactionTemplate}).
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Service de recalcul des correspondances utilisateurs (table {@code user_matches}).
+ *
+ * Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis et les concerts
+ * futurs. Met à jour {@code user_matches} en conséquence. Les concerts indisponibles sont marqués
+ * {@code notification_envoyee_le = now()} immédiatement pour ne pas déclencher de badge "Nouveau".
+ *
+ * <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels, chacun dans sa
+ * propre transaction ({@link TransactionTemplate}).
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class RecalculerMatchesService {
 
@@ -43,21 +45,25 @@ public class RecalculerMatchesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final TransactionTemplate txParUser;
 
-  /// @param jdbc accès JDBC
-  /// @param txManager gestionnaire de transactions (transaction par utilisateur)
+  /**
+   * @param jdbc accès JDBC
+   * @param txManager gestionnaire de transactions (transaction par utilisateur)
+   */
   public RecalculerMatchesService(
       NamedParameterJdbcTemplate jdbc, PlatformTransactionManager txManager) {
     this.jdbc = jdbc;
     this.txParUser = new TransactionTemplate(txManager);
   }
 
-  /// Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
-  ///
-  /// <p>Les recalculs sont exécutés en parallèle via des threads virtuels. Chaque utilisateur est
-  /// traité dans sa propre transaction : un échec isolé n'interrompt pas les autres recalculs.
-  ///
-  /// @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
-  /// @return nombre d'utilisateurs traités
+  /**
+   * Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
+   *
+   * <p>Les recalculs sont exécutés en parallèle via des threads virtuels. Chaque utilisateur est
+   * traité dans sa propre transaction : un échec isolé n'interrompt pas les autres recalculs.
+   *
+   * @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
+   * @return nombre d'utilisateurs traités
+   */
   public int recalculerMatches(List<String> userIds) {
     Set<String> usersAvecArtistes =
         new LinkedHashSet<>(
@@ -155,10 +161,12 @@ public class RecalculerMatchesService {
     }
   }
 
-  /// Exclut une fiche package Ticketmaster (voir {@code PersisteurConcertsDb.SQL_EST_PACKAGE`) tant
-  /// qu'aucune fiche normale du même événement réel (même artiste/salle/date) n'existe — elle
-  /// redevient visible dès qu'une fiche normale apparaît et que {@code supprimerDoublonsParSalleId}
-  /// les fusionne.
+  /**
+   * Exclut une fiche package Ticketmaster (voir {@code PersisteurConcertsDb.SQL_EST_PACKAGE`) tant
+   * qu'aucune fiche normale du même événement réel (même artiste/salle/date) n'existe — elle
+   * redevient visible dès qu'une fiche normale apparaît et que {@code supprimerDoublonsParSalleId}
+   * les fusionne.
+   */
   private static final String SQL_PAS_PACKAGE_ISOLE =
       " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
           + "   SELECT 1 FROM concerts c2"

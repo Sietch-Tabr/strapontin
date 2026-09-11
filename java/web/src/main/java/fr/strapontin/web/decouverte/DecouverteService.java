@@ -24,13 +24,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-/// Service de découverte de concerts par département.
-///
-/// <p>Les requêtes indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via {@link
-/// CompletableFuture} sur les threads virtuels Spring.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service de découverte de concerts par département.
+ *
+ * <p>Les requêtes indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via {@link
+ * CompletableFuture} sur les threads virtuels Spring.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class DecouverteService {
 
@@ -40,21 +42,25 @@ public class DecouverteService {
   private final NamedParameterJdbcTemplate jdbc;
   private final RestClient restClient;
 
-  /// @param jdbc accès JDBC
-  /// @param restClient client HTTP partagé (module web), pour déclencher le worker
+  /**
+   * @param jdbc accès JDBC
+   * @param restClient client HTTP partagé (module web), pour déclencher le worker
+   */
   public DecouverteService(NamedParameterJdbcTemplate jdbc, RestClient restClient) {
     this.jdbc = jdbc;
     this.restClient = restClient;
   }
 
-  /// Retourne les concerts filtrés par département et critères.
-  ///
-  /// <p>COUNT(*), filtres disponibles et données de synchronisation sont calculés en parallèle avec
-  /// la requête principale pour réduire les round-trips séquentiels.
-  ///
-  /// @param userId identifiant de l'utilisateur (pour lire ses départements par défaut)
-  /// @param filtre critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
-  /// @return réponse paginée avec filtres disponibles
+  /**
+   * Retourne les concerts filtrés par département et critères.
+   *
+   * <p>COUNT(*), filtres disponibles et données de synchronisation sont calculés en parallèle avec
+   * la requête principale pour réduire les round-trips séquentiels.
+   *
+   * @param userId identifiant de l'utilisateur (pour lire ses départements par défaut)
+   * @param filtre critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
+   * @return réponse paginée avec filtres disponibles
+   */
   public ReponseDecouverte decouvrir(String userId, FiltreConcerts filtre) {
     LocalDate aujourd8 = LocalDate.now();
     int pageNum = Math.max(0, filtre.page());
@@ -147,9 +153,11 @@ public class DecouverteService {
         syncParDept);
   }
 
-  /// Déclenche un fetch régional via le worker.
-  ///
-  /// @return 200 si déclenché, 503 si le worker est inaccessible
+  /**
+   * Déclenche un fetch régional via le worker.
+   *
+   * @return 200 si déclenché, 503 si le worker est inaccessible
+   */
   public ResponseEntity<Map<String, Object>> fetcher() {
     try {
       restClient.post().uri("http://localhost:8081/trigger/tout").retrieve().toBodilessEntity();

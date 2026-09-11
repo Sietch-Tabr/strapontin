@@ -25,15 +25,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [WorkerFetchService] avec PostgreSQL réel (Testcontainers).
-///
-/// <p>Couvre spécifiquement la restriction de {@code fetch:salles:all} aux salles suivies le filtre
-/// {@code EXISTS (... FROM user_salles...)} de la requête SQL ne peut être vérifié qu'avec une
-/// vraie base, les tests unitaires de {@link WorkerFetchServiceTest} mockant {@code jdbc} avec un
-/// matcher {@code anyString()} qui ne distingue pas les variantes de la requête.
-///
-/// @since 2.7.3
-/// @author Kwaite
+/**
+ * Tests d'intégration de [WorkerFetchService] avec PostgreSQL réel (Testcontainers).
+ *
+ * <p>Couvre spécifiquement la restriction de {@code fetch:salles:all} aux salles suivies le filtre
+ * {@code EXISTS (... FROM user_salles...)} de la requête SQL ne peut être vérifié qu'avec une
+ * vraie base, les tests unitaires de {@link WorkerFetchServiceTest} mockant {@code jdbc} avec un
+ * matcher {@code anyString()} qui ne distingue pas les variantes de la requête.
+ *
+ * @since 2.7.3
+ * @author Kwaite
+ */
 class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private TicketmasterSource ticketmasterSource;

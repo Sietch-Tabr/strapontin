@@ -23,10 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires pour {@link CoherenceMultiSalleService}.
-///
-/// @since 2.8.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link CoherenceMultiSalleService}.
+ *
+ * @since 2.8.8
+ * @author Kwaite
+ */
 class CoherenceMultiSalleServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

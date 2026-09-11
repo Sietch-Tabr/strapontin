@@ -15,11 +15,13 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link ManifestController} ({@code id} stable via
-/// {@code PUBLIC_BASE_URL}, indépendant de l'hôte de la requête entrante).
-///
-/// @since 2.6.5
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ManifestController} ({@code id} stable via
+ * {@code PUBLIC_BASE_URL}, indépendant de l'hôte de la requête entrante).
+ *
+ * @since 2.6.5
+ * @author Kwaite
+ */
 class ManifestControllerTest {
 
   private static HttpServletRequest requetePour(String scheme, String host, int port) {

@@ -22,10 +22,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link ReconciliationNomsSalles} — priorité exacte avant flou.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ReconciliationNomsSalles} — priorité exacte avant flou.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ReconciliationNomsSallesTest {
 
   private static ValeurConcert concert(String artisteNorm, LocalDate date, String salleNorm) {

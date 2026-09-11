@@ -21,10 +21,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link ReconciliateurArtistes} — priorité exacte avant flou.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ReconciliateurArtistes} — priorité exacte avant flou.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ReconciliateurArtistesTest {
 
   private static ValeurConcert concert(String artisteNorm, LocalDate date, String salleNorm) {

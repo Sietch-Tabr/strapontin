@@ -19,10 +19,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [RecalculerMatchesService] avec PostgreSQL réel (Testcontainers).
-///
-/// @since 2.0.1
-/// @author Kwaite
+/**
+ * Tests d'intégration de [RecalculerMatchesService] avec PostgreSQL réel (Testcontainers).
+ *
+ * @since 2.0.1
+ * @author Kwaite
+ */
 class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean TicketmasterSource ticketmasterSource;

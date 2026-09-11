@@ -22,13 +22,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WatchdogWorkerService}.
-///
-/// <p>Couvre la résolution du destinataire via {@link EmailAlerteService#obtenirDestinataireAlerte()}
-/// (plus de lecture directe de CONTACT_EMAIL).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WatchdogWorkerService}.
+ *
+ * <p>Couvre la résolution du destinataire via {@link EmailAlerteService#obtenirDestinataireAlerte()}
+ * (plus de lecture directe de CONTACT_EMAIL).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class WatchdogWorkerServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

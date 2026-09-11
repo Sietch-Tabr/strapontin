@@ -21,10 +21,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link ReconciliateurSallesOrphelines}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ReconciliateurSallesOrphelines}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ReconciliateurSallesOrphelinesTest {
 
   // Un concert sans salle_id (TM a omis venue.id, aucune salle suffisamment proche au moment de

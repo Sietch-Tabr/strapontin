@@ -13,13 +13,15 @@ import org.springframework.security.authentication.event.AuthenticationSuccessEv
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 
-/// Écoute les événements Spring Security et les consigne dans `logs_admin`.
-///
-/// Couvre : connexion réussie (info), échec d'authentification (warn).
-/// Le rate-limit est géré séparément par [RateLimitingLoginFilter].
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Écoute les événements Spring Security et les consigne dans {@code logs_admin}.
+ *
+ * Couvre : connexion réussie (info), échec d'authentification (warn).
+ * Le rate-limit est géré séparément par [RateLimitingLoginFilter].
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class AuthEvenementListener {
 
@@ -29,9 +31,11 @@ public class AuthEvenementListener {
     this.logAdminService = logAdminService;
   }
 
-  /// Consigne une connexion réussie.
-  ///
-  /// @param event l'événement Spring Security
+  /**
+   * Consigne une connexion réussie.
+   *
+   * @param event l'événement Spring Security
+   */
   @EventListener
   public void surSuccesAuthentification(AuthenticationSuccessEvent event) {
     String identifiant = event.getAuthentication().getName();
@@ -45,9 +49,11 @@ public class AuthEvenementListener {
     logAdminService.logAdmin("info", "auth", "Connexion réussie : " + identifiant, meta);
   }
 
-  /// Consigne un échec d'authentification.
-  ///
-  /// @param event l'événement Spring Security
+  /**
+   * Consigne un échec d'authentification.
+   *
+   * @param event l'événement Spring Security
+   */
   @EventListener
   public void surEchecAuthentification(AbstractAuthenticationFailureEvent event) {
     String identifiant = event.getAuthentication().getName();

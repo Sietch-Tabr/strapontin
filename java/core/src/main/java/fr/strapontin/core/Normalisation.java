@@ -10,11 +10,13 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/// Normalisation de texte partagée par le dédoublonnage et les sources externes (TM, Eventim,
-/// Digitick, Wikidata) : mise en forme d'un nom d'artiste/salle en clé comparable, extraction de
-/// département, distances de similarité (Levenshtein, Jaro).
-///
-/// @author Kwaite
+/**
+ * Normalisation de texte partagée par le dédoublonnage et les sources externes (TM, Eventim,
+ * Digitick, Wikidata) : mise en forme d'un nom d'artiste/salle en clé comparable, extraction de
+ * département, distances de similarité (Levenshtein, Jaro).
+ *
+ * @author Kwaite
+ */
 public final class Normalisation {
 
   private static final Pattern ACCENTS = Pattern.compile("[\\u0300-\\u036f]");
@@ -29,28 +31,36 @@ public final class Normalisation {
           "de", "du", "des", "d'", "le", "la", "les", "l'", "en", "au", "aux", "et", "à", "sur",
           "sous");
 
-  /// Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex. "Chri$tian").
-  /// Supprimé sans espace pour éviter un artiste_norm parasite ("chri tian" au lieu de
-  // "christian").
+  /**
+   * Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex. "Chri$tian").
+   * Supprimé sans espace pour éviter un artiste_norm parasite ("chri tian" au lieu de
+   * "christian").
+   */
   private static final Pattern DOLLAR = Pattern.compile("\\$");
 
-  /// Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and Marielle").
-  /// Harmonise avec la version littérale pour que les deux fetches TM produisent le même norm.
+  /**
+   * Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and Marielle").
+   * Harmonise avec la version littérale pour que les deux fetches TM produisent le même norm.
+   */
   private static final Pattern ESPERLUETTE = Pattern.compile(" & ");
 
-  /// Caractères non décomposables par NFD : NFD retourne le même codepoint, le pattern NON_ALPHANUM
-  /// les supprime entièrement. Ces substitutions les remplacent avant NFD.
+  /**
+   * Caractères non décomposables par NFD : NFD retourne le même codepoint, le pattern NON_ALPHANUM
+   * les supprime entièrement. Ces substitutions les remplacent avant NFD.
+   */
   private static final Map<Character, String> SUBSTITUTIONS_NFD =
       Map.of('ø', "o", 'Ø', "o", 'ł', "l", 'Ł', "l", 'đ', "d", 'Đ', "d", 'ŋ', "n", 'Ŋ', "n");
 
   private Normalisation() {}
 
-  /// Normalise un texte libre (artiste, ville) en clé de comparaison : minuscules, sans accents,
-  /// apostrophes/tirets remplacés par une espace, `$` et `&amp;` harmonisés, ponctuation retirée,
-  /// espaces multiples réduits.
-  ///
-  /// @param texte le texte à normaliser
-  /// @return le texte normalisé, éventuellement vide
+  /**
+   * Normalise un texte libre (artiste, ville) en clé de comparaison : minuscules, sans accents,
+   * apostrophes/tirets remplacés par une espace, {@code $} et {@code &amp;} harmonisés, ponctuation retirée,
+   * espaces multiples réduits.
+   *
+   * @param texte le texte à normaliser
+   * @return le texte normalisé, éventuellement vide
+   */
   public static String normaliserTexte(String texte) {
     String s = texte.toLowerCase();
     for (Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
@@ -66,33 +76,39 @@ public final class Normalisation {
     return ESPACES_MULTIPLES.matcher(s).replaceAll(" ").trim();
   }
 
-  /// Normalise un nom de salle en clé alphanumérique minuscule sans accents.
-  ///
-  /// @param nom le nom de la salle
-  /// @return clé alphanumérique (peut être vide si le nom ne contient aucun caractère valide)
+  /**
+   * Normalise un nom de salle en clé alphanumérique minuscule sans accents.
+   *
+   * @param nom le nom de la salle
+   * @return clé alphanumérique (peut être vide si le nom ne contient aucun caractère valide)
+   */
   public static String normaliserSalleCle(String nom) {
     String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
     return NON_ALPHANUM_STRICT.matcher(ACCENTS.matcher(nfd).replaceAll("")).replaceAll("");
   }
 
-  /// Normalise un nom de ville : {@link #normaliserTexte}, puis contracte "saint"/"sainte" en
-  /// "st"/"ste" pour aligner les formes abrégées et complètes d'une même commune.
-  ///
-  /// @param ville le nom de la ville
-  /// @return la ville normalisée, éventuellement vide
+  /**
+   * Normalise un nom de ville : {@link #normaliserTexte}, puis contracte "saint"/"sainte" en
+   * "st"/"ste" pour aligner les formes abrégées et complètes d'une même commune.
+   *
+   * @param ville le nom de la ville
+   * @return la ville normalisée, éventuellement vide
+   */
   public static String normaliserVille(String ville) {
     return normaliserTexte(ville).replaceAll("\\bsaint\\b", "st").replaceAll("\\bsainte\\b", "ste");
   }
 
-  /// Calcule la similarité Jaro entre deux chaînes.
-  ///
-  /// Jaro est empiriquement meilleur que Levenshtein normalisé pour les noms propres courts : il
-  /// pondère les correspondances positionnelles sans over-pénaliser les transpositions. Utilisé à
-  /// la place de {@link #similarite} dans la réconciliation des artistes.
-  ///
-  /// @param a première chaîne
-  /// @param b deuxième chaîne
-  /// @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
+  /**
+   * Calcule la similarité Jaro entre deux chaînes.
+   *
+   * Jaro est empiriquement meilleur que Levenshtein normalisé pour les noms propres courts : il
+   * pondère les correspondances positionnelles sans over-pénaliser les transpositions. Utilisé à
+   * la place de {@link #similarite} dans la réconciliation des artistes.
+   *
+   * @param a première chaîne
+   * @param b deuxième chaîne
+   * @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
+   */
   public static double jaro(String a, String b) {
     if (a.equals(b)) return 1.0;
     int m = a.length();
@@ -145,11 +161,13 @@ public final class Normalisation {
     return transpositions;
   }
 
-  /// Calcule la similarité Levenshtein normalisée entre deux chaînes.
-  ///
-  /// @param a première chaîne
-  /// @param b deuxième chaîne
-  /// @return score entre 0.0 (aucune ressemblance) et 1.0 (identique)
+  /**
+   * Calcule la similarité Levenshtein normalisée entre deux chaînes.
+   *
+   * @param a première chaîne
+   * @param b deuxième chaîne
+   * @return score entre 0.0 (aucune ressemblance) et 1.0 (identique)
+   */
   public static double similarite(String a, String b) {
     if (a.equals(b)) return 1.0;
     if (a.isEmpty() || b.isEmpty()) return 0.0;
@@ -157,13 +175,15 @@ public final class Normalisation {
     return 1.0 - (double) levenshtein(a, b) / longueur;
   }
 
-  /// Extrait le code département depuis un code postal français.
-  ///
-  /// Les DOM-TOM commençant par 97 retournent les 3 premiers chiffres. La Corse (2A/2B) est déjà
-  /// normalisée en "20" à la saisie.
-  ///
-  /// @param codePostal code postal (peut être null, vide, ou contenir des espaces superflus)
-  /// @return code département à 2 ou 3 chiffres, ou null si absent/invalide
+  /**
+   * Extrait le code département depuis un code postal français.
+   *
+   * Les DOM-TOM commençant par 97 retournent les 3 premiers chiffres. La Corse (2A/2B) est déjà
+   * normalisée en "20" à la saisie.
+   *
+   * @param codePostal code postal (peut être null, vide, ou contenir des espaces superflus)
+   * @return code département à 2 ou 3 chiffres, ou null si absent/invalide
+   */
   public static String extraireDeptFrancais(String codePostal) {
     if (codePostal == null || codePostal.isBlank()) return null;
     String cp = codePostal.trim();
@@ -172,13 +192,15 @@ public final class Normalisation {
     return dept.isEmpty() ? null : dept;
   }
 
-  /// Convertit un nom tout-majuscule en title case français.
-  ///
-  /// Les articles courants restent en minuscules sauf en début de chaîne. Si la chaîne n'est pas
-  /// entièrement en majuscules, elle est retournée sans modification.
-  ///
-  /// @param nom nom à normaliser
-  /// @return nom en title case ou nom inchangé
+  /**
+   * Convertit un nom tout-majuscule en title case français.
+   *
+   * Les articles courants restent en minuscules sauf en début de chaîne. Si la chaîne n'est pas
+   * entièrement en majuscules, elle est retournée sans modification.
+   *
+   * @param nom nom à normaliser
+   * @return nom en title case ou nom inchangé
+   */
   public static String normaliserCasse(String nom) {
     if (!nom.equals(nom.toUpperCase())) return nom;
     Matcher m = SEP_NORMALISER_CASSE.matcher(nom);

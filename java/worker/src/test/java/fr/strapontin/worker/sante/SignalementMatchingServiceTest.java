@@ -17,10 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires pour {@link SignalementMatchingService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SignalementMatchingService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SignalementMatchingServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

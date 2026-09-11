@@ -6,8 +6,10 @@ package fr.strapontin.sources;
 
 import java.util.Map;
 
-/// Correspondance département → centre géographique (Nominatim/OSM, stable), utilisée pour les
-/// requêtes par région de {@link TicketmasterSource} et {@link OverpassSalleSource}.
+/**
+ * Correspondance département → centre géographique (Nominatim/OSM, stable), utilisée pour les
+ * requêtes par région de {@link TicketmasterSource} et {@link OverpassSalleSource}.
+ */
 final class CentresDepartement {
 
   static final Map<String, CentreDept> PAR_DEPT =

@@ -23,10 +23,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link ResendWebhooksAdminService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ResendWebhooksAdminService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ResendWebhooksAdminServiceTest {
 
   private static final String ENDPOINT = "https://exemple.fr/api/webhooks/resend";

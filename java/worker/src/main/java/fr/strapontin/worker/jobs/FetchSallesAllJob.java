@@ -12,18 +12,20 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : fetch périodique de toutes les salles ayant des sources configurées.
-///
-/// <p>Alimente le même pipeline que [FetchSalleJob] mais boucle sur toutes les salles de {@code
-/// salle_sources} plutôt que d'attendre un déclenchement manuel. Exécuté au même rythme adaptatif
-/// que {@code fetch:region}.
-///
-/// <p>Un retry ciblé ({@code RetryLotsService}) transmet via la {@code JobDataMap} du trigger la
-/// liste (virgule-séparée) des {@code salles.id} en échec du cycle précédent, au format {@link
-/// #CLE_IDS_RETRY} — sinon le cycle complet s'exécute normalement.
-///
-/// @since 2.4.0
-/// @author Kwaite
+/**
+ * Job Quartz : fetch périodique de toutes les salles ayant des sources configurées.
+ *
+ * <p>Alimente le même pipeline que [FetchSalleJob] mais boucle sur toutes les salles de {@code
+ * salle_sources} plutôt que d'attendre un déclenchement manuel. Exécuté au même rythme adaptatif
+ * que {@code fetch:region}.
+ *
+ * <p>Un retry ciblé ({@code RetryLotsService}) transmet via la {@code JobDataMap} du trigger la
+ * liste (virgule-séparée) des {@code salles.id} en échec du cycle précédent, au format {@link
+ * #CLE_IDS_RETRY} — sinon le cycle complet s'exécute normalement.
+ *
+ * @since 2.4.0
+ * @author Kwaite
+ */
 @DisallowConcurrentExecution
 public class FetchSallesAllJob extends QuartzJobBean {
 

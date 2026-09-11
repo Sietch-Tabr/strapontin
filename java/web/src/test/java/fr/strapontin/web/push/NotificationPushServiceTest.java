@@ -24,11 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link NotificationPushService} — focus sur le ciblage d'abonnement de
-/// {@code envoyerNotificationTest}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link NotificationPushService} — focus sur le ciblage d'abonnement de
+ * {@code envoyerNotificationTest}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class NotificationPushServiceTest {
 
   private ConfigService configService;

@@ -22,13 +22,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour l'onglet admin « Sources ».
-///
-/// <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}. Accessible uniquement
-/// aux utilisateurs avec le rôle {@code ADMIN}.
-///
-/// @since 2.3.0
-/// @author Kwaite
+/**
+ * Contrôleur REST pour l'onglet admin « Sources ».
+ *
+ * <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}. Accessible uniquement
+ * aux utilisateurs avec le rôle {@code ADMIN}.
+ *
+ * @since 2.3.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/admin")
 public class SourcesController {
@@ -36,28 +38,34 @@ public class SourcesController {
   private final SourcesService sourcesService;
   private final WorkerProxyService workerProxyService;
 
-  /// @param sourcesService service de gestion des sources
-  /// @param workerProxyService proxy HTTP vers le worker
+  /**
+   * @param sourcesService service de gestion des sources
+   * @param workerProxyService proxy HTTP vers le worker
+   */
   public SourcesController(SourcesService sourcesService, WorkerProxyService workerProxyService) {
     this.sourcesService = sourcesService;
     this.workerProxyService = workerProxyService;
   }
 
-  /// Retourne les statuts agrégés de toutes les sources.
-  ///
-  /// @return 200 avec {@code {sources: [...]}}
+  /**
+   * Retourne les statuts agrégés de toutes les sources.
+   *
+   * @return 200 avec {@code {sources: [...]}}
+   */
   @GetMapping("/sources")
   public ResponseEntity<Map<String, Object>> lireSources() {
     return ResponseEntity.ok(sourcesService.lireSources());
   }
 
-  /// Liste paginée des salles pour l'onglet admin « Sources ».
-  ///
-  /// @param digitick {@code true} pour les salles avec un slug Digitick configuré, {@code false}
-  ///   (défaut) pour celles sans identifiant Ticketmaster ni Eventim
-  /// @param page numéro de page (0-indexé, défaut 0)
-  /// @param nom filtre nom partiel
-  /// @return 200 avec la page de résultats
+  /**
+   * Liste paginée des salles pour l'onglet admin « Sources ».
+   *
+   * @param digitick {@code true} pour les salles avec un slug Digitick configuré, {@code false}
+   *   (défaut) pour celles sans identifiant Ticketmaster ni Eventim
+   * @param page numéro de page (0-indexé, défaut 0)
+   * @param nom filtre nom partiel
+   * @return 200 avec la page de résultats
+   */
   @GetMapping("/sources/salles")
   public ResponseEntity<ReponseSallesSources> listerSalles(
       @RequestParam(defaultValue = "false") boolean digitick,
@@ -66,11 +74,13 @@ public class SourcesController {
     return ResponseEntity.ok(sourcesService.listerSalles(digitick, page, nom));
   }
 
-  /// Met à jour le slug Digitick d'une salle.
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param corps corps JSON avec {@code slug} (vide pour supprimer)
-  /// @return 200 si mis à jour, 400 si UUID invalide
+  /**
+   * Met à jour le slug Digitick d'une salle.
+   *
+   * @param salleId UUID stable de la salle
+   * @param corps corps JSON avec {@code slug} (vide pour supprimer)
+   * @return 200 si mis à jour, 400 si UUID invalide
+   */
   @PutMapping("/salles/{salleId}/digitick-slug")
   public ResponseEntity<Map<String, Object>> mettreAJourDigitickSlug(
       @PathVariable String salleId, @Valid @RequestBody RequeteSlug corps) {
@@ -80,11 +90,13 @@ public class SourcesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Teste un slug Digitick : vérifie l'accessibilité et compte les concerts disponibles.
-  ///
-  /// @param salleId UUID de la salle (pour cohérence d'URL)
-  /// @param corps corps JSON avec {@code slug}
-  /// @return 200 avec {@code {accessible: true, nbConcerts: N}}, 404 si inaccessible
+  /**
+   * Teste un slug Digitick : vérifie l'accessibilité et compte les concerts disponibles.
+   *
+   * @param salleId UUID de la salle (pour cohérence d'URL)
+   * @param corps corps JSON avec {@code slug}
+   * @return 200 avec {@code {accessible: true, nbConcerts: N}}, 404 si inaccessible
+   */
   @PostMapping("/salles/{salleId}/tester-digitick")
   public ResponseEntity<Map<String, Object>> testerDigitickSlug(
       @PathVariable String salleId, @Valid @RequestBody RequeteSlug corps) {
@@ -94,10 +106,12 @@ public class SourcesController {
         : ResponseEntity.status(404).body(Map.of("accessible", false, "nbConcerts", 0));
   }
 
-  /// Déclenche immédiatement un {@code FetchSalleJob} pour la salle donnée.
-  ///
-  /// @param salleId UUID de la salle
-  /// @return 200 si planifié, 404 si aucun identifiant connu, 503 si worker inaccessible
+  /**
+   * Déclenche immédiatement un {@code FetchSalleJob} pour la salle donnée.
+   *
+   * @param salleId UUID de la salle
+   * @return 200 si planifié, 404 si aucun identifiant connu, 503 si worker inaccessible
+   */
   @PostMapping("/salles/{salleId}/fetch")
   public ResponseEntity<Map<String, Object>> fetchSalle(@PathVariable String salleId) {
     UUID uuid = parseUuid(salleId);
@@ -112,11 +126,13 @@ public class SourcesController {
         : ResponseEntity.status(503).body(Map.of("erreur", "Worker inaccessible."));
   }
 
-  /// Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
-  ///
-  /// @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code dept}
-  ///   (opt.)
-  /// @return 201 avec {@code {salleId}} si créée, 400 si invalide
+  /**
+   * Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
+   *
+   * @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code dept}
+   *   (opt.)
+   * @return 201 avec {@code {salleId}} si créée, 400 si invalide
+   */
   @PostMapping("/digitick-salles")
   public ResponseEntity<Map<String, Object>> creerSalleDigitick(
       @Valid @RequestBody RequeteDigitickSalle requete) {
@@ -132,11 +148,13 @@ public class SourcesController {
     return ResponseEntity.status(201).body(Map.of("salleId", salleId.toString()));
   }
 
-  /// Met à jour les métadonnées d'une salle Digitick (nom, ville, département).
-  ///
-  /// @param salleId UUID de la salle
-  /// @param requete corps JSON avec les champs à modifier (null = inchangé)
-  /// @return 200 si mis à jour, 400 si UUID invalide
+  /**
+   * Met à jour les métadonnées d'une salle Digitick (nom, ville, département).
+   *
+   * @param salleId UUID de la salle
+   * @param requete corps JSON avec les champs à modifier (null = inchangé)
+   * @return 200 si mis à jour, 400 si UUID invalide
+   */
   @PatchMapping("/digitick-salles/{salleId}")
   public ResponseEntity<Map<String, Object>> modifierSalleDigitick(
       @PathVariable String salleId, @Valid @RequestBody RequeteDigitickSalle requete) {
@@ -151,11 +169,13 @@ public class SourcesController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
-  ///
-  /// @param salleId UUID de la salle
-  /// @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID
-  ///   invalide
+  /**
+   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+   *
+   * @param salleId UUID de la salle
+   * @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID
+   *   invalide
+   */
   @DeleteMapping("/digitick-salles/{salleId}")
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable String salleId) {
     UUID uuid = parseUuid(salleId);

@@ -9,12 +9,14 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : suppression des concerts passés depuis plus de 7 jours, des concerts futurs jamais
-/// reconfirmés depuis très longtemps, et des concerts hors de toute portée de fetch, tous les jours
-/// à minuit.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Job Quartz : suppression des concerts passés depuis plus de 7 jours, des concerts futurs jamais
+ * reconfirmés depuis très longtemps, et des concerts hors de toute portée de fetch, tous les jours
+ * à minuit.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 public class PurgerConcertsJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;

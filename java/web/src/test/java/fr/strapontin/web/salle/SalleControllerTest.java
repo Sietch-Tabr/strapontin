@@ -26,14 +26,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link SalleController}.
-///
-/// <p>Vérifie la délégation à {@link SalleService} et la validation manuelle du contrôleur
-/// (nom vide/trop long, conversions blank→null des identifiants externes). Les tests de
-/// {@code signalerManquante} vivent dans {@link SalleSignalementControllerTest}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SalleController}.
+ *
+ * <p>Vérifie la délégation à {@link SalleService} et la validation manuelle du contrôleur
+ * (nom vide/trop long, conversions blank→null des identifiants externes). Les tests de
+ * {@code signalerManquante} vivent dans {@link SalleSignalementControllerTest}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class SalleControllerTest {
 

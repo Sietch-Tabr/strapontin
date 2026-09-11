@@ -8,10 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link CompteurBilanFetch}.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link CompteurBilanFetch}.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class CompteurBilanFetchTest {
 
   @Test

@@ -26,12 +26,14 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
 
-/// Service d'import/export des préférences utilisateur.
-///
-/// <p>L'import est atomique ({@code @Transactional}) — un échec partiel annule toute l'opération.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service d'import/export des préférences utilisateur.
+ *
+ * <p>L'import est atomique ({@code @Transactional}) — un échec partiel annule toute l'opération.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class PreferencesService {
 
@@ -46,12 +48,14 @@ public class PreferencesService {
   private final ArtisteService artisteService;
   private final SalleService salleService;
 
-  /// @param jdbc accès JDBC
-  /// @param objectMapper désérialiseur JSON
-  /// @param restClient client HTTP partagé (module web), pour déclencher le worker
-  /// @param logAdminService journalisation des actions admin
-  /// @param artisteService résolution d'UUID artiste avec dédup floue
-  /// @param salleService résolution d'UUID salle avec dédup floue
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper désérialiseur JSON
+   * @param restClient client HTTP partagé (module web), pour déclencher le worker
+   * @param logAdminService journalisation des actions admin
+   * @param artisteService résolution d'UUID artiste avec dédup floue
+   * @param salleService résolution d'UUID salle avec dédup floue
+   */
   public PreferencesService(
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper objectMapper,
@@ -67,10 +71,12 @@ public class PreferencesService {
     this.salleService = salleService;
   }
 
-  /// Désérialise et valide un fichier d'export.
-  ///
-  /// @param contenu octets du fichier JSON
-  /// @return l'export désérialisé, ou {@code null} si invalide
+  /**
+   * Désérialise et valide un fichier d'export.
+   *
+   * @param contenu octets du fichier JSON
+   * @return l'export désérialisé, ou {@code null} si invalide
+   */
   public ExportComplet deserialiserExport(byte[] contenu) {
     try {
       return objectMapper.readValue(contenu, ExportComplet.class);
@@ -80,13 +86,15 @@ public class PreferencesService {
     }
   }
 
-  /// Importe les préférences dans une transaction atomique.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param export export désérialisé
-  /// @param ecraser {@code true} pour remplacer artistes et salles existants
-  /// @param importerConfig {@code true} pour remplacer toute la config
-  /// @return résultat de l'import (artistes et salles traités/rejetés)
+  /**
+   * Importe les préférences dans une transaction atomique.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param export export désérialisé
+   * @param ecraser {@code true} pour remplacer artistes et salles existants
+   * @param importerConfig {@code true} pour remplacer toute la config
+   * @return résultat de l'import (artistes et salles traités/rejetés)
+   */
   @Transactional
   public ResultatImportComplet importer(
       String userId, ExportComplet export, boolean ecraser, boolean importerConfig) {
@@ -149,10 +157,12 @@ public class PreferencesService {
     return resultat;
   }
 
-  /// Exporte les préférences de l'utilisateur (artistes, salles, config).
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return l'export complet
+  /**
+   * Exporte les préférences de l'utilisateur (artistes, salles, config).
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return l'export complet
+   */
   public ExportComplet exporter(String userId) {
     List<ArtisteExport> artistes =
         jdbc.query(
@@ -352,14 +362,16 @@ public class PreferencesService {
   private static final java.util.regex.Pattern VENUE_ID_PATTERN =
       java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
-  /// Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import
-  /// (même pattern que {@code ArtisteService.executerApresCommit}).
-  ///
-  /// <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne
-  /// soient visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout
-  /// juste effectué au cycle de fetch qu'il vient lui-même de déclencher.
-  ///
-  /// @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
+  /**
+   * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import
+   * (même pattern que {@code ArtisteService.executerApresCommit}).
+   *
+   * <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne
+   * soient visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout
+   * juste effectué au cycle de fetch qu'il vient lui-même de déclencher.
+   *
+   * @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
+   */
   private void declencherWorkerApresImport(List<SalleExport> salles) {
     Runnable action =
         () -> {
@@ -390,12 +402,16 @@ public class PreferencesService {
         restClient, log, url, "Déclenchement worker impossible : " + url);
   }
 
-  /// Résultat d'un import de préférences.
+  /**
+   * Résultat d'un import de préférences.
+   */
   public record ResultatImportComplet(int artistes, int salles, int rejetes) {}
 
-  /// Nom du fichier d'export pour le téléchargement.
-  ///
-  /// @return nom avec la date du jour
+  /**
+   * Nom du fichier d'export pour le téléchargement.
+   *
+   * @return nom avec la date du jour
+   */
   public static String nomFichierExport() {
     return "strapontin-preferences-" + LocalDate.now() + ".json";
   }

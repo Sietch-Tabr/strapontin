@@ -4,8 +4,10 @@
  */
 package fr.strapontin.web.spectacle;
 
-/// Corps JSON de la requête PATCH /api/spectacles/matches/{concertId}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Corps JSON de la requête PATCH /api/spectacles/matches/{concertId}.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record RequeteMasque(boolean masquer) {}

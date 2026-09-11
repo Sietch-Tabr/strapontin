@@ -14,17 +14,19 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché,
-/// fusion de doublons.
-///
-/// L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad hoc
-/// passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
-/// V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec dédoublonnage
-/// préalable des conflits, puis des abonnements utilisateurs, puis des sources externes, avant
-/// suppression de la salle source.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché,
+ * fusion de doublons.
+ *
+ * L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad hoc
+ * passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
+ * V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec dédoublonnage
+ * préalable des conflits, puis des abonnements utilisateurs, puis des sources externes, avant
+ * suppression de la salle source.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 @Service
 public class ReferentielSallesService {
 
@@ -39,18 +41,20 @@ public class ReferentielSallesService {
     this.logAdminService = logAdminService;
   }
 
-  /// Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
-  ///
-  /// @param page numéro de page (0-indexé)
-  /// @param nom filtre nom partiel (insensible à la casse), peut être null
-  /// @param ville filtre ville partielle, peut être null
-  /// @param dept filtre département exact, peut être null
-  /// @param statut filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut être null
-  /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id} —
-  ///   facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-  ///   pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
-  ///   si elle a déjà un {@code wikidata_id})
-  /// @return page de résultats
+  /**
+   * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
+   *
+   * @param page numéro de page (0-indexé)
+   * @param nom filtre nom partiel (insensible à la casse), peut être null
+   * @param ville filtre ville partielle, peut être null
+   * @param dept filtre département exact, peut être null
+   * @param statut filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut être null
+   * @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id} —
+   *   facilite le repérage des candidats à corriger manuellement sans parcourir toute la
+   *   pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
+   *   si elle a déjà un {@code wikidata_id})
+   * @return page de résultats
+   */
   public ReponseReferentielSalles lister(
       int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {
     int pageNum = Math.max(0, page);
@@ -140,13 +144,15 @@ public class ReferentielSallesService {
       )
       """;
 
-  /// Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},
-  /// {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle nocturne
-  /// — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme
-  /// international, l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
-  ///
-  /// @param salleId UUID de la salle
-  /// @return {@code true} si la salle existe et a été réinitialisée
+  /**
+   * Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},
+   * {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle nocturne
+   * — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme
+   * international, l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
+   *
+   * @param salleId UUID de la salle
+   * @return {@code true} si la salle existe et a été réinitialisée
+   */
   public boolean reinitialiserEnrichissement(UUID salleId) {
     int nb =
         jdbc.update(
@@ -165,11 +171,13 @@ public class ReferentielSallesService {
     return nb > 0;
   }
 
-  /// Modifie le nom affiché d'une salle (override manuel prioritaire sur l'enrichissement auto).
-  ///
-  /// @param salleId UUID de la salle
-  /// @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
-  /// @return {@code true} si la salle existe et a été mise à jour
+  /**
+   * Modifie le nom affiché d'une salle (override manuel prioritaire sur l'enrichissement auto).
+   *
+   * @param salleId UUID de la salle
+   * @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
+   * @return {@code true} si la salle existe et a été mise à jour
+   */
   public boolean modifierNomAffiche(UUID salleId, String nomAffiche) {
     String valeur = nomAffiche == null || nomAffiche.isBlank() ? null : nomAffiche.strip();
     Map<String, Object> params = new HashMap<>();
@@ -181,12 +189,14 @@ public class ReferentielSallesService {
     return nb > 0;
   }
 
-  /// Fusionne deux salles : la salle source est absorbée par la salle cible (concerts, abonnements,
-  /// sources externes réassignés), puis supprimée.
-  ///
-  /// @param cibleId UUID de la salle à conserver
-  /// @param sourceId UUID de la salle à absorber
-  /// @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
+  /**
+   * Fusionne deux salles : la salle source est absorbée par la salle cible (concerts, abonnements,
+   * sources externes réassignés), puis supprimée.
+   *
+   * @param cibleId UUID de la salle à conserver
+   * @param sourceId UUID de la salle à absorber
+   * @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
+   */
   @Transactional
   public boolean fusionner(UUID cibleId, UUID sourceId) {
     if (cibleId.equals(sourceId)) return false;
@@ -293,11 +303,13 @@ public class ReferentielSallesService {
     return true;
   }
 
-  /// Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
-  /// celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-  /// cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
-  /// plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
-  /// revue manuelle.
+  /**
+   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
+   * celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
+   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
+   * plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
+   * revue manuelle.
+   */
   private void reassignerSousSallesSansCycle(UUID cibleId, UUID sourceId) {
     List<UUID> enfants =
         jdbc.query(
@@ -339,15 +351,17 @@ public class ReferentielSallesService {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
-  /// Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
-  /// sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante de {@code
-  /// salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants {@code
-  /// ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans jamais
-  /// entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis {@code
-  /// nb_zero_consecutifs} le plus bas) et supprime l'autre.
-  ///
-  /// @param cibleId UUID de la salle à conserver
-  /// @param sourceId UUID de la salle à absorber
+  /**
+   * Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
+   * sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante de {@code
+   * salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants {@code
+   * ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans jamais
+   * entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis {@code
+   * nb_zero_consecutifs} le plus bas) et supprime l'autre.
+   *
+   * @param cibleId UUID de la salle à conserver
+   * @param sourceId UUID de la salle à absorber
+   */
   private void dedupliquerSallesSourcesAvantFusion(UUID cibleId, UUID sourceId) {
     List<Map<String, Object>> conflits =
         jdbc.queryForList(

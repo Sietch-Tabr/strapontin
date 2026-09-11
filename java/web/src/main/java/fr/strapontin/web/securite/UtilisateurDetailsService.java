@@ -13,14 +13,16 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-/// Chargement des utilisateurs depuis la base de données pour Spring Security.
-///
-/// <p>Charge l'utilisateur depuis la table {@code users} jointe à {@code accounts}
-/// (provider {@code credential}). Le login est insensible à la casse
-/// (correspondance sur {@code lower(username)}).
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Chargement des utilisateurs depuis la base de données pour Spring Security.
+ *
+ * <p>Charge l'utilisateur depuis la table {@code users} jointe à {@code accounts}
+ * (provider {@code credential}). Le login est insensible à la casse
+ * (correspondance sur {@code lower(username)}).
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class UtilisateurDetailsService implements UserDetailsService {
 
@@ -32,11 +34,13 @@ public class UtilisateurDetailsService implements UserDetailsService {
     this.jdbc = jdbc;
   }
 
-  /// Charge un utilisateur par son identifiant (insensible à la casse).
-  ///
-  /// @param identifiant le nom d'utilisateur
-  /// @return les détails Spring Security de l'utilisateur
-  /// @throws UsernameNotFoundException si aucun compte n'est trouvé
+  /**
+   * Charge un utilisateur par son identifiant (insensible à la casse).
+   *
+   * @param identifiant le nom d'utilisateur
+   * @return les détails Spring Security de l'utilisateur
+   * @throws UsernameNotFoundException si aucun compte n'est trouvé
+   */
   @Override
   public UserDetails loadUserByUsername(String identifiant) throws UsernameNotFoundException {
     String sql =

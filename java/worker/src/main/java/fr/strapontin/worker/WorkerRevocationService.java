@@ -12,12 +12,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Job de révocation des admins dont le préavis est écoulé — extrait de {@code WorkerService}.
-///
-/// Délégué par le job Quartz {@code RevoquerAdminsJob}.
-///
-/// @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Job de révocation des admins dont le préavis est écoulé — extrait de {@code WorkerService}.
+ *
+ * Délégué par le job Quartz {@code RevoquerAdminsJob}.
+ *
+ * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 @Service
 public class WorkerRevocationService {
 
@@ -32,15 +34,17 @@ public class WorkerRevocationService {
     this.workerStatsService = workerStatsService;
   }
 
-  /// Révoque les admins dont le délai de préavis est écoulé.
-  ///
-  /// <p>Passe de `admin` à `user` tous les comptes dont `revocation_admin_le` est dans le passé,
-  /// puis révoque leurs sessions actives — sans cela, un admin rétrogradé resterait authentifié
-  /// avec son ancien rôle `admin` (chargé en session à la connexion, jamais rafraîchi) jusqu'à
-  /// expiration naturelle de sa session (30 jours). Le module worker n'a pas le bean {@code
-  /// FindByIndexNameSessionRepository} (spécifique à Spring Session côté web) : suppression directe
-  /// des lignes {@code SPRING_SESSION} par {@code PRINCIPAL_NAME}, table déjà lue en lecture seule
-  /// ailleurs (voir {@code AdminService.listerUtilisateurs}). Loggue le bilan dans `logs_admin`.
+  /**
+   * Révoque les admins dont le délai de préavis est écoulé.
+   *
+   * <p>Passe de {@code admin} à {@code user} tous les comptes dont {@code revocation_admin_le} est dans le passé,
+   * puis révoque leurs sessions actives — sans cela, un admin rétrogradé resterait authentifié
+   * avec son ancien rôle {@code admin} (chargé en session à la connexion, jamais rafraîchi) jusqu'à
+   * expiration naturelle de sa session (30 jours). Le module worker n'a pas le bean {@code
+   * FindByIndexNameSessionRepository} (spécifique à Spring Session côté web) : suppression directe
+   * des lignes {@code SPRING_SESSION} par {@code PRINCIPAL_NAME}, table déjà lue en lecture seule
+   * ailleurs (voir {@code AdminService.listerUtilisateurs}). Loggue le bilan dans {@code logs_admin}.
+   */
   public void executerRevoquerAdmins() {
     log.info("revoquer:admins démarré");
     workerStatsService.executerAvecStats(
@@ -79,9 +83,11 @@ public class WorkerRevocationService {
         });
   }
 
-  /// Supprime les sessions Spring Session actives pour les identifiants fournis.
-  ///
-  /// @param usernames identifiants (colonne {@code username}) des comptes venant d'être rétrogradés
+  /**
+   * Supprime les sessions Spring Session actives pour les identifiants fournis.
+   *
+   * @param usernames identifiants (colonne {@code username}) des comptes venant d'être rétrogradés
+   */
   private void revoquerSessions(List<String> usernames) {
     if (usernames.isEmpty()) return;
     try {

@@ -24,16 +24,18 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link SetupService} — isolation SERIALIZABLE et retry.
-///
-/// <p>Sans isolation SERIALIZABLE, deux appels concurrents à {@code POST /api/setup} pouvaient
-/// tous deux passer la garde {@link SetupService#estDejaConfiguree} avant qu'aucun ne committe,
-/// créant deux comptes admin. Le retry gère le conflit de sérialisation levé par PostgreSQL dans
-/// ce cas, pour que le perdant de la course échoue proprement sur {@link RessourceDejaExistante}
-/// plutôt que de remonter une exception technique.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SetupService} — isolation SERIALIZABLE et retry.
+ *
+ * <p>Sans isolation SERIALIZABLE, deux appels concurrents à {@code POST /api/setup} pouvaient
+ * tous deux passer la garde {@link SetupService#estDejaConfiguree} avant qu'aucun ne committe,
+ * créant deux comptes admin. Le retry gère le conflit de sérialisation levé par PostgreSQL dans
+ * ce cas, pour que le perdant de la course échoue proprement sur {@link RessourceDejaExistante}
+ * plutôt que de remonter une exception technique.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class SetupServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

@@ -26,10 +26,12 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires de {@link ResolveurSalleParConcert}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ResolveurSalleParConcert}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ResolveurSalleParConcertTest {
 
   private static ValeurConcert concert(

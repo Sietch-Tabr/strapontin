@@ -13,14 +13,16 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
-///
-/// <p>Le {@code wikidataId} est concaténé dans une requête SPARQL exécutée par le job
-/// d'enrichissement nocturne ({@code WikidataSalleSource}) — sans contrainte de format, une valeur
-/// arbitraire pouvait casser la requête exécutée contre {@code query.wikidata.org}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
+ *
+ * <p>Le {@code wikidataId} est concaténé dans une requête SPARQL exécutée par le job
+ * d'enrichissement nocturne ({@code WikidataSalleSource}) — sans contrainte de format, une valeur
+ * arbitraire pouvait casser la requête exécutée contre {@code query.wikidata.org}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class RequeteAjouterValidationTest {
 
   private static final Validator VALIDATOR =

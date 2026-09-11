@@ -16,14 +16,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-/// Proxy HTTP vers le worker (port 8081) pour les opérations admin.
-///
-/// <p>Centralise les appels internes vers le worker (jobs en cours, prochaines
-/// exécutions, relance des fetches) en réutilisant le {@link RestClient} partagé
-/// plutôt que d'instancier un {@code HttpClient} jetable par appel.
-///
-/// @since 2.2.3
-/// @author Kwaite
+/**
+ * Proxy HTTP vers le worker (port 8081) pour les opérations admin.
+ *
+ * <p>Centralise les appels internes vers le worker (jobs en cours, prochaines
+ * exécutions, relance des fetches) en réutilisant le {@link RestClient} partagé
+ * plutôt que d'instancier un {@code HttpClient} jetable par appel.
+ *
+ * @since 2.2.3
+ * @author Kwaite
+ */
 @Service
 public class WorkerProxyService {
 
@@ -36,9 +38,11 @@ public class WorkerProxyService {
   private final ObjectMapper objectMapper;
   private final LogAdminService logAdminService;
 
-  /// @param restClient      client HTTP partagé
-  /// @param objectMapper    désérialiseur JSON des réponses worker
-  /// @param logAdminService service de logs admin
+  /**
+   * @param restClient      client HTTP partagé
+   * @param objectMapper    désérialiseur JSON des réponses worker
+   * @param logAdminService service de logs admin
+   */
   public WorkerProxyService(
       RestClient restClient, ObjectMapper objectMapper, LogAdminService logAdminService) {
     this.restClient = restClient;
@@ -46,21 +50,25 @@ public class WorkerProxyService {
     this.logAdminService = logAdminService;
   }
 
-  /// Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante
-  /// courante — pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors
-  /// contexte de requête HTTP (ex. depuis un thread Quartz).
-  ///
-  /// @param requete requête en cours de construction
-  /// @return la même requête, avec le header ajouté si un correlationId est disponible
+  /**
+   * Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante
+   * courante — pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors
+   * contexte de requête HTTP (ex. depuis un thread Quartz).
+   *
+   * @param requete requête en cours de construction
+   * @return la même requête, avec le header ajouté si un correlationId est disponible
+   */
   private RestClient.RequestHeadersSpec<?> ajouterCorrelationId(
       RestClient.RequestHeadersSpec<?> requete) {
     String correlationId = MDC.get(CLE_MDC_CORRELATION_ID);
     return correlationId != null ? requete.header(HEADER_CORRELATION_ID, correlationId) : requete;
   }
 
-  /// Retourne les identifiants des jobs Quartz actuellement en cours d'exécution.
-  ///
-  /// @return la liste des jobs actifs, ou une liste vide si le worker est inaccessible
+  /**
+   * Retourne les identifiants des jobs Quartz actuellement en cours d'exécution.
+   *
+   * @return la liste des jobs actifs, ou une liste vide si le worker est inaccessible
+   */
   public List<String> obtenirJobsEnCours() {
     try {
       String corps =
@@ -79,9 +87,11 @@ public class WorkerProxyService {
     return List.of();
   }
 
-  /// Retourne les prochaines dates d'exécution planifiées par type de job.
-  ///
-  /// @return map type de job vers prochaine exécution, vide si le worker est inaccessible
+  /**
+   * Retourne les prochaines dates d'exécution planifiées par type de job.
+   *
+   * @return map type de job vers prochaine exécution, vide si le worker est inaccessible
+   */
   public Map<String, Instant> obtenirProchainesExec() {
     try {
       String corps =
@@ -102,10 +112,12 @@ public class WorkerProxyService {
     return Map.of();
   }
 
-  /// Déclenche un {@code FetchSalleJob} immédiat pour les identifiants donnés.
-  ///
-  /// @param identifiants identifiants préfixés par source (ex. {@code "tm:rZFSnyZdFvA"})
-  /// @return {@code true} si planifié, {@code false} si le worker est inaccessible
+  /**
+   * Déclenche un {@code FetchSalleJob} immédiat pour les identifiants donnés.
+   *
+   * @param identifiants identifiants préfixés par source (ex. {@code "tm:rZFSnyZdFvA"})
+   * @return {@code true} si planifié, {@code false} si le worker est inaccessible
+   */
   public boolean relancerSalle(String identifiants) {
     try {
       ajouterCorrelationId(
@@ -123,10 +135,12 @@ public class WorkerProxyService {
     }
   }
 
-  /// Déclenche immédiatement tous les fetches via le worker.
-  ///
-  /// @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause —
-  ///)
+  /**
+   * Déclenche immédiatement tous les fetches via le worker.
+   *
+   * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause —
+   * )
+   */
   public ResultatRelance relancerFetches() {
     try {
       ajouterCorrelationId(restClient.post().uri(WORKER_BASE_URL + "/trigger/tout"))
@@ -143,17 +157,19 @@ public class WorkerProxyService {
     }
   }
 
-  /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
-  /// (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique
-  /// du worker (v2.6.0).
-  ///
-  /// <p>Distingue trois causes d'échec plutôt que de toutes les renvoyer en 503 : le
-  /// worker répond 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre
-  /// code d'erreur si Quartz échoue en interne, ou aucune réponse si le worker est réellement
-  /// injoignable.
-  ///
-  /// @param typeJob identifiant lisible du job à relancer
-  /// @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
+  /**
+   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
+   * (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique
+   * du worker (v2.6.0).
+   *
+   * <p>Distingue trois causes d'échec plutôt que de toutes les renvoyer en 503 : le
+   * worker répond 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre
+   * code d'erreur si Quartz échoue en interne, ou aucune réponse si le worker est réellement
+   * injoignable.
+   *
+   * @param typeJob identifiant lisible du job à relancer
+   * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
+   */
   public ResultatRelance relancerJob(String typeJob) {
     try {
       ajouterCorrelationId(

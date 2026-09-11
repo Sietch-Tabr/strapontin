@@ -18,10 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#revoquerSessions}.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Tests unitaires ciblés pour {@link AdminController#revoquerSessions}.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 class AdminControllerRevoquerSessionsTest {
 
   private AdminService adminService;

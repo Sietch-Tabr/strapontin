@@ -22,10 +22,12 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires de {@link ResendWebhookController}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ResendWebhookController}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ResendWebhookControllerTest {
 
   private ConfigService configService;

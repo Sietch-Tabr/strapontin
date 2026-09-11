@@ -27,13 +27,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// API interne de déclenchement manuel des jobs Quartz.
-///
-/// Accessible uniquement depuis `localhost` (filtrée par le pare-feu ou le proxy web). N'expose pas
-/// de données sensibles.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * API interne de déclenchement manuel des jobs Quartz.
+ *
+ * Accessible uniquement depuis {@code localhost} (filtrée par le pare-feu ou le proxy web). N'expose pas
+ * de données sensibles.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/trigger")
 public class TriggerController {
@@ -46,9 +48,11 @@ public class TriggerController {
     this.scheduler = scheduler;
   }
 
-  /// Retourne la prochaine date d'exécution de chaque job planifié.
-  ///
-  /// @return map typeJob → epoch ms de la prochaine exécution
+  /**
+   * Retourne la prochaine date d'exécution de chaque job planifié.
+   *
+   * @return map typeJob → epoch ms de la prochaine exécution
+   */
   @GetMapping("/prochaines-exec")
   public ResponseEntity<Map<String, Long>> prochainesExec() {
     Map<String, Long> resultat = new HashMap<>();
@@ -67,9 +71,11 @@ public class TriggerController {
     return ResponseEntity.ok(resultat);
   }
 
-  /// Retourne les noms traduits des jobs Quartz en cours d'exécution.
-  ///
-  /// @return les noms traduits (ex. {@code "fetch:artistes:batch"}) des jobs actifs
+  /**
+   * Retourne les noms traduits des jobs Quartz en cours d'exécution.
+   *
+   * @return les noms traduits (ex. {@code "fetch:artistes:batch"}) des jobs actifs
+   */
   @GetMapping("/actif")
   public ResponseEntity<Map<String, Object>> jobsActifs() {
     try {
@@ -88,10 +94,12 @@ public class TriggerController {
     }
   }
 
-  /// Déclenche immédiatement {@code fetch:artistes:batch} et {@code fetch:region}, uniquement si
-  /// aucun des deux n'est déjà en cours d'exécution.
-  ///
-  /// @return 200 si déclenchés ou déjà en cours, 500 en cas d'erreur Quartz
+  /**
+   * Déclenche immédiatement {@code fetch:artistes:batch} et {@code fetch:region}, uniquement si
+   * aucun des deux n'est déjà en cours d'exécution.
+   *
+   * @return 200 si déclenchés ou déjà en cours, 500 en cas d'erreur Quartz
+   */
   @PostMapping("/tout")
   public ResponseEntity<Map<String, String>> relancerTout() {
     try {
@@ -110,11 +118,13 @@ public class TriggerController {
     }
   }
 
-  /// Déclenche immédiatement {@code fetch:artistes:batch} uniquement si aucun n'est déjà en cours.
-  ///
-  /// <p>Appelé automatiquement par le web après l'ajout d'un artiste.
-  ///
-  /// @return 200 si déclenché ou déjà en cours, 500 en cas d'erreur Quartz
+  /**
+   * Déclenche immédiatement {@code fetch:artistes:batch} uniquement si aucun n'est déjà en cours.
+   *
+   * <p>Appelé automatiquement par le web après l'ajout d'un artiste.
+   *
+   * @return 200 si déclenché ou déjà en cours, 500 en cas d'erreur Quartz
+   */
   @PostMapping("/artiste")
   public ResponseEntity<Map<String, String>> relancerArtistes() {
     try {
@@ -132,13 +142,15 @@ public class TriggerController {
     }
   }
 
-  /// Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible (ex.
-  /// {@code "purger:salles"}, {@code "reconciliation:nocturne"}), uniquement si aucune instance
-  /// n'est déjà en cours. Un seul endpoint générique pour tous les jobs à bouton « Relancer » de
-  /// l'onglet admin Tableau de bord — éviter d'en dupliquer un par job.
-  ///
-  /// @param typeJob identifiant lisible du job (clé de {@link NomsJobs#PAR_CLE_QUARTZ})
-  /// @return 200 si déclenché ou déjà en cours, 400 si job inconnu, 500 en cas d'erreur Quartz
+  /**
+   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible (ex.
+   * {@code "purger:salles"}, {@code "reconciliation:nocturne"}), uniquement si aucune instance
+   * n'est déjà en cours. Un seul endpoint générique pour tous les jobs à bouton « Relancer » de
+   * l'onglet admin Tableau de bord — éviter d'en dupliquer un par job.
+   *
+   * @param typeJob identifiant lisible du job (clé de {@link NomsJobs#PAR_CLE_QUARTZ})
+   * @return 200 si déclenché ou déjà en cours, 400 si job inconnu, 500 en cas d'erreur Quartz
+   */
   @PostMapping("/job")
   public ResponseEntity<Map<String, String>> relancerJob(@RequestParam String typeJob) {
     String cle = NomsJobs.CLE_QUARTZ_PAR_TYPE_JOB.get(typeJob);
@@ -166,13 +178,15 @@ public class TriggerController {
         .anyMatch(jd -> nomJob.equals(jd.getKey().getName()));
   }
 
-  /// Planifie un {@code FetchSalleJob} immédiat pour les identifiants donnés, uniquement si aucune
-  /// instance n'est déjà en cours pour ce jeu d'identifiants.
-  ///
-  /// <p>Appelé automatiquement par le web après l'ajout d'une salle.
-  ///
-  /// @param identifiants identifiants préfixés des sources (ex. {@code "tm:rZFSnyZdFvA"})
-  /// @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
+  /**
+   * Planifie un {@code FetchSalleJob} immédiat pour les identifiants donnés, uniquement si aucune
+   * instance n'est déjà en cours pour ce jeu d'identifiants.
+   *
+   * <p>Appelé automatiquement par le web après l'ajout d'une salle.
+   *
+   * @param identifiants identifiants préfixés des sources (ex. {@code "tm:rZFSnyZdFvA"})
+   * @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
+   */
   @PostMapping("/salle")
   public ResponseEntity<Map<String, String>> relancerSalle(@RequestParam String identifiants) {
     try {

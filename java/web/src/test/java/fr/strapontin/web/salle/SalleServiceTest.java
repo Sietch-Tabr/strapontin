@@ -34,10 +34,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour les méthodes Digitick de {@link SalleService}.
-///
-/// @since 2.4.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour les méthodes Digitick de {@link SalleService}.
+ *
+ * @since 2.4.0
+ * @author Kwaite
+ */
 class SalleServiceTest {
 
   private SalleRepository salleRepository;

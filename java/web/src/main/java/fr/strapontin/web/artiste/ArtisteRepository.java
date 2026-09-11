@@ -15,13 +15,15 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/// Accès aux données pour les artistes suivis ({@code user_artistes}).
-///
-/// <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité) appartiennent à
-/// {@link ArtisteService}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Accès aux données pour les artistes suivis ({@code user_artistes}).
+ *
+ * <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité) appartiennent à
+ * {@link ArtisteService}.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Repository
 class ArtisteRepository {
 
@@ -33,10 +35,12 @@ class ArtisteRepository {
     this.jdbc = jdbc;
   }
 
-  /// Retourne les artistes suivis par l'utilisateur, triés par nom.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return liste des artistes suivis
+  /**
+   * Retourne les artistes suivis par l'utilisateur, triés par nom.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return liste des artistes suivis
+   */
   List<ArtisteUtilisateur> listerPourUtilisateur(String userId) {
     return jdbc.query(
         """
@@ -53,10 +57,12 @@ class ArtisteRepository {
                 rs.getTimestamp("created_at").toInstant()));
   }
 
-  /// Recherche des artistes dans les concerts existants par pattern normalisé.
-  ///
-  /// @param pattern valeur LIKE (ex. {@code "%pattern%"})
-  /// @return noms d'artistes distincts (max 5)
+  /**
+   * Recherche des artistes dans les concerts existants par pattern normalisé.
+   *
+   * @param pattern valeur LIKE (ex. {@code "%pattern%"})
+   * @return noms d'artistes distincts (max 5)
+   */
   List<String> rechercherEnBase(String pattern) {
     return jdbc.queryForList(
         """
@@ -69,11 +75,13 @@ class ArtisteRepository {
         String.class);
   }
 
-  /// Vérifie si un artiste est déjà suivi par l'utilisateur.
-  ///
-  /// @param userId    identifiant de l'utilisateur
-  /// @param artisteId UUID stable de l'artiste
-  /// @return {@code true} si déjà présent
+  /**
+   * Vérifie si un artiste est déjà suivi par l'utilisateur.
+   *
+   * @param userId    identifiant de l'utilisateur
+   * @param artisteId UUID stable de l'artiste
+   * @return {@code true} si déjà présent
+   */
   boolean existePourUtilisateur(String userId, UUID artisteId) {
     return !jdbc.queryForList(
             """
@@ -85,10 +93,12 @@ class ArtisteRepository {
         .isEmpty();
   }
 
-  /// Compte les artistes suivis par l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return nombre d'artistes suivis
+  /**
+   * Compte les artistes suivis par l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return nombre d'artistes suivis
+   */
   int compterPourUtilisateur(String userId) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
@@ -98,12 +108,14 @@ class ArtisteRepository {
         0);
   }
 
-  /// Recherche les artistes du référentiel dont le {@code nom_norm} partage au moins un des
-  /// tokens fournis — pré-filtre SQL avant application de la correspondance floue
-  /// ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
-  ///
-  /// @param tokens tokens significatifs (≥3 caractères) du nom recherché
-  /// @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
+  /**
+   * Recherche les artistes du référentiel dont le {@code nom_norm} partage au moins un des
+   * tokens fournis — pré-filtre SQL avant application de la correspondance floue
+   * ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
+   *
+   * @param tokens tokens significatifs (≥3 caractères) du nom recherché
+   * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
+   */
   List<Map<String, Object>> chercherCandidatsParTokens(Set<String> tokens) {
     if (tokens.isEmpty()) return List.of();
 
@@ -124,11 +136,13 @@ class ArtisteRepository {
         "SELECT id, nom_norm FROM artistes WHERE " + whereTokens + " LIMIT 50", params);
   }
 
-  /// Insère ou récupère un artiste dans le référentiel global et retourne son UUID stable.
-  ///
-  /// @param nom      nom affiché
-  /// @param nomNorm  nom normalisé (clé unique)
-  /// @return UUID stable de l'artiste (existant ou nouvellement créé)
+  /**
+   * Insère ou récupère un artiste dans le référentiel global et retourne son UUID stable.
+   *
+   * @param nom      nom affiché
+   * @param nomNorm  nom normalisé (clé unique)
+   * @return UUID stable de l'artiste (existant ou nouvellement créé)
+   */
   UUID upsertArtiste(String nom, String nomNorm) {
     return jdbc.queryForObject(
         """
@@ -141,11 +155,13 @@ class ArtisteRepository {
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  /// Insère un artiste dans la liste de suivi.
-  ///
-  /// @param userId    identifiant de l'utilisateur
-  /// @param nom       nom affiché
-  /// @param artisteId UUID stable de l'artiste dans le référentiel global
+  /**
+   * Insère un artiste dans la liste de suivi.
+   *
+   * @param userId    identifiant de l'utilisateur
+   * @param nom       nom affiché
+   * @param artisteId UUID stable de l'artiste dans le référentiel global
+   */
   void ajouter(String userId, String nom, UUID artisteId) {
     jdbc.update(
         """
@@ -155,11 +171,13 @@ class ArtisteRepository {
         Map.of(CLE_USER_ID, userId, "nom", nom, "artisteId", artisteId.toString()));
   }
 
-  /// Enregistre une correspondance source externe → artiste interne.
-  ///
-  /// @param artisteId          UUID stable de l'artiste
-  /// @param source             nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
-  /// @param identifiantExterne identifiant dans la source externe
+  /**
+   * Enregistre une correspondance source externe → artiste interne.
+   *
+   * @param artisteId          UUID stable de l'artiste
+   * @param source             nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
+   * @param identifiantExterne identifiant dans la source externe
+   */
   void enregistrerArtisteSource(UUID artisteId, String source, String identifiantExterne) {
     jdbc.update(
         """
@@ -173,15 +191,17 @@ class ArtisteRepository {
             "identifiantExterne", identifiantExterne));
   }
 
-  /// Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents — ne
-  /// touche jamais une valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
-  /// {@link org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) —
-  /// à la charge de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon
-  /// 2.6.0).
-  ///
-  /// @param artisteId UUID stable de l'artiste
-  /// @param wikidataId Q-ID Wikidata (peut être {@code null})
-  /// @param deezerId   identifiant Deezer (peut être {@code null})
+  /**
+   * Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents — ne
+   * touche jamais une valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
+   * {@link org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) —
+   * à la charge de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon
+   * 2.6.0).
+   *
+   * @param artisteId UUID stable de l'artiste
+   * @param wikidataId Q-ID Wikidata (peut être {@code null})
+   * @param deezerId   identifiant Deezer (peut être {@code null})
+   */
   void mettreAJourIdsWikidata(UUID artisteId, String wikidataId, String deezerId) {
     Map<String, Object> params = new HashMap<>();
     params.put("id", artisteId.toString());
@@ -197,11 +217,13 @@ class ArtisteRepository {
         params);
   }
 
-  /// Supprime un artiste de la liste de suivi.
-  ///
-  /// @param userId    identifiant de l'utilisateur
-  /// @param artisteId UUID stable de l'artiste à supprimer
-  /// @return le nombre de lignes réellement supprimées (0 si l'artiste n'était pas suivi)
+  /**
+   * Supprime un artiste de la liste de suivi.
+   *
+   * @param userId    identifiant de l'utilisateur
+   * @param artisteId UUID stable de l'artiste à supprimer
+   * @return le nombre de lignes réellement supprimées (0 si l'artiste n'était pas suivi)
+   */
   int supprimer(String userId, UUID artisteId) {
     return jdbc.update(
         """

@@ -10,10 +10,12 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : recalcul des correspondances utilisateurs, toutes les 2 heures.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Job Quartz : recalcul des correspondances utilisateurs, toutes les 2 heures.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @DisallowConcurrentExecution
 public class RecalculerMatchesJob extends QuartzJobBean {
 

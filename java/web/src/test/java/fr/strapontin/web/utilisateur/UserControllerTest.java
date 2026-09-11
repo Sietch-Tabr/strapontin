@@ -23,13 +23,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 
-/// Tests unitaires de {@link UserController}.
-///
-/// <p>Couvre principalement la garde "dernier admin" sur la suppression de compte, et la
-/// révocation multi-sessions au changement de mot de passe.
-///
-/// @since 2.2.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link UserController}.
+ *
+ * <p>Couvre principalement la garde "dernier admin" sur la suppression de compte, et la
+ * révocation multi-sessions au changement de mot de passe.
+ *
+ * @since 2.2.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 

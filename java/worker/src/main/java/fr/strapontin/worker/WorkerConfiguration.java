@@ -16,50 +16,60 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Beans applicatifs : sources de données et résolveur de noms canoniques.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Beans applicatifs : sources de données et résolveur de noms canoniques.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Configuration
 public class WorkerConfiguration {
 
-  /// Sérialiseur JSON (quota TM dans `app_config`).
-  ///
-  /// @return instance partagée
+  /**
+   * Sérialiseur JSON (quota TM dans {@code app_config}).
+   *
+   * @return instance partagée
+   */
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper();
   }
 
-  /// Enregistre [LogAdminJobListener] comme listener global sur tous les jobs Quartz.
-  ///
-  /// @param listener le listener à enregistrer
-  /// @return le customizer Spring Boot
+  /**
+   * Enregistre [LogAdminJobListener] comme listener global sur tous les jobs Quartz.
+   *
+   * @param listener le listener à enregistrer
+   * @return le customizer Spring Boot
+   */
   @Bean
   SchedulerFactoryBeanCustomizer globalJobListeners(LogAdminJobListener listener) {
     return factory -> factory.setGlobalJobListeners(listener);
   }
 
-  /// Cadenceur des appels Ticketmaster partagé avec le module web (recherche interactive de salle,
-  /// test de clé API admin) — un verrou en mémoire ne coordonnerait pas deux processus
-  /// indépendants, voir {@link CadenceurAppelsPartage}.
-  ///
-  /// @param jdbc accès à la base partagée entre web et worker
-  /// @return cadenceur adossé à Postgres
+  /**
+   * Cadenceur des appels Ticketmaster partagé avec le module web (recherche interactive de salle,
+   * test de clé API admin) — un verrou en mémoire ne coordonnerait pas deux processus
+   * indépendants, voir {@link CadenceurAppelsPartage}.
+   *
+   * @param jdbc accès à la base partagée entre web et worker
+   * @return cadenceur adossé à Postgres
+   */
   @Bean
   CadenceurAppels cadenceurTicketmaster(NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
   }
 
-  /// Client Ticketmaster Discovery v2.
-  ///
-  /// Lit `TICKETMASTER_API_KEY` depuis `app_config` (AES-256-GCM). Lève une `IllegalStateException`
-  /// au démarrage si la clé est absente.
-  ///
-  /// @param configService service de configuration chiffrée
-  /// @param cadenceurTicketmaster cadenceur partagé inter-processus
-  /// @return instance configurée avec la clé API
+  /**
+   * Client Ticketmaster Discovery v2.
+   *
+   * Lit {@code TICKETMASTER_API_KEY} depuis {@code app_config} (AES-256-GCM). Lève une {@code IllegalStateException}
+   * au démarrage si la clé est absente.
+   *
+   * @param configService service de configuration chiffrée
+   * @param cadenceurTicketmaster cadenceur partagé inter-processus
+   * @return instance configurée avec la clé API
+   */
   @Bean
   TicketmasterSource ticketmasterSource(
       ConfigServiceWorker configService, CadenceurAppels cadenceurTicketmaster) {
@@ -73,34 +83,42 @@ public class WorkerConfiguration {
     return new TicketmasterSource(apiKey, cadenceurTicketmaster);
   }
 
-  /// Client Eventim France.
-  ///
-  /// @return instance avec User-Agent par défaut
+  /**
+   * Client Eventim France.
+   *
+   * @return instance avec User-Agent par défaut
+   */
   @Bean
   EventimSource eventimSource() {
     return new EventimSource();
   }
 
-  /// Client de scraping Digitick.
-  ///
-  /// @return instance avec User-Agent par défaut
+  /**
+   * Client de scraping Digitick.
+   *
+   * @return instance avec User-Agent par défaut
+   */
   @Bean
   DigitickSource digitickSource() {
     return new DigitickSource();
   }
 
-  /// Résolveur de noms canoniques (Deezer) avec cache Caffeine 7 jours.
-  ///
-  /// @return instance configurée
+  /**
+   * Résolveur de noms canoniques (Deezer) avec cache Caffeine 7 jours.
+   *
+   * @return instance configurée
+   */
   @Bean
   ResolveurNomCanonique resolveurNomCanonique() {
     return new ResolveurNomCanonique();
   }
 
-  /// Client de géocodage Nominatim, réservé au dernier recours de résolution de salle (voir {@code
-  /// persister.ResolveurSalleParConcert}) — jamais sur le chemin courant de résolution.
-  ///
-  /// @return instance avec RestClient et cadenceur (1 req/s) par défaut
+  /**
+   * Client de géocodage Nominatim, réservé au dernier recours de résolution de salle (voir {@code
+   * persister.ResolveurSalleParConcert}) — jamais sur le chemin courant de résolution.
+   *
+   * @return instance avec RestClient et cadenceur (1 req/s) par défaut
+   */
   @Bean
   ClientNominatim clientNominatim() {
     return new ClientNominatim();

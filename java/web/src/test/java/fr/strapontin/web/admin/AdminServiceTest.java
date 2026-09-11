@@ -30,14 +30,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link AdminService} (logique métier de gestion des utilisateurs,
-/// dépendances mockées).
-///
-/// <p>Depuis, la configuration applicative et les statistiques de jobs sont testées dans {@code
-/// ConfigAdminServiceTest}/{@code JobsAdminServiceTest}.
-///
-/// @since 2.2.3
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AdminService} (logique métier de gestion des utilisateurs,
+ * dépendances mockées).
+ *
+ * <p>Depuis, la configuration applicative et les statistiques de jobs sont testées dans {@code
+ * ConfigAdminServiceTest}/{@code JobsAdminServiceTest}.
+ *
+ * @since 2.2.3
+ * @author Kwaite
+ */
 class AdminServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

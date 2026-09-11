@@ -21,10 +21,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link PersisteurConcertsDb#alignerHeureReportTM}.
-///
-/// @since 2.8.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link PersisteurConcertsDb#alignerHeureReportTM}.
+ *
+ * @since 2.8.6
+ * @author Kwaite
+ */
 class PersisteurConcertsDbTest {
 
   private static ValeurConcert concert(String url, LocalTime heure, String statut) {

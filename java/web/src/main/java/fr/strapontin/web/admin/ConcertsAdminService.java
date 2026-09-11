@@ -12,13 +12,15 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Revue manuelle des concerts flagués par la purge nocturne (`suppression_suggeree_le`) pour
-/// l'onglet admin Concerts — la suppression définitive reste une action manuelle plutôt
-/// qu'automatique, un concert réel peut être flagué à tort (doublon de salle jamais fusionné entre
-/// sources, concert catalogué sous une autre attraction que l'artiste suivi).
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Revue manuelle des concerts flagués par la purge nocturne ({@code suppression_suggeree_le}) pour
+ * l'onglet admin Concerts — la suppression définitive reste une action manuelle plutôt
+ * qu'automatique, un concert réel peut être flagué à tort (doublon de salle jamais fusionné entre
+ * sources, concert catalogué sous une autre attraction que l'artiste suivi).
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 @Service
 public class ConcertsAdminService {
 
@@ -32,10 +34,12 @@ public class ConcertsAdminService {
     this.logAdminService = logAdminService;
   }
 
-  /// Liste paginée des concerts flagués, du plus récemment flagué au plus ancien.
-  ///
-  /// @param page numéro de page (0-indexé)
-  /// @return page de concerts en attente de revue
+  /**
+   * Liste paginée des concerts flagués, du plus récemment flagué au plus ancien.
+   *
+   * @param page numéro de page (0-indexé)
+   * @return page de concerts en attente de revue
+   */
   public ReponseConcertsAConfirmer lister(int page) {
     int pageNum = Math.max(0, page);
     Map<String, Object> paramsPage =
@@ -80,10 +84,12 @@ public class ConcertsAdminService {
     return new ReponseConcertsAConfirmer(concerts, pageNum, totalPages, total[0]);
   }
 
-  /// Supprime définitivement un concert flagué.
-  ///
-  /// @param id UUID du concert
-  /// @return {@code true} si un concert flagué correspondant a été supprimé
+  /**
+   * Supprime définitivement un concert flagué.
+   *
+   * @param id UUID du concert
+   * @return {@code true} si un concert flagué correspondant a été supprimé
+   */
   public boolean confirmerSuppression(UUID id) {
     int lignes =
         jdbc.update(
@@ -100,11 +106,13 @@ public class ConcertsAdminService {
     return lignes > 0;
   }
 
-  /// Annule le flag de suppression d'un concert (faux positif) — remet aussi le compteur d'absences
-  /// à zéro pour éviter un re-flag immédiat au cycle de purge suivant.
-  ///
-  /// @param id UUID du concert
-  /// @return {@code true} si un concert flagué correspondant a été restauré
+  /**
+   * Annule le flag de suppression d'un concert (faux positif) — remet aussi le compteur d'absences
+   * à zéro pour éviter un re-flag immédiat au cycle de purge suivant.
+   *
+   * @param id UUID du concert
+   * @return {@code true} si un concert flagué correspondant a été restauré
+   */
   public boolean annulerSuppression(UUID id) {
     int lignes =
         jdbc.update(

@@ -18,11 +18,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link SignalementsAdminService} avec PostgreSQL réel (Testcontainers) —
-/// la requête UNION ALL sur 4 tables distinctes n'est pas exerçable avec un jdbc mocké.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Test d'intégration de {@link SignalementsAdminService} avec PostgreSQL réel (Testcontainers) —
+ * la requête UNION ALL sur 4 tables distinctes n'est pas exerçable avec un jdbc mocké.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;

@@ -31,13 +31,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
-///
-/// <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans {@code
-/// WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
-///
-/// @since 2.2.3 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
+ *
+ * <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans {@code
+ * WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
+ *
+ * @since 2.2.3 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class WorkerFetchServiceTest {
 
   private TicketmasterSource tm;

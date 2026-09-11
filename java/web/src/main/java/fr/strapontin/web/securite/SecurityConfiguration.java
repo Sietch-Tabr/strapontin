@@ -40,44 +40,50 @@ import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
-/// Configuration Spring Security 7 pour le mode SPA Vue 3.
-///
-/// <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login via {@link
-/// RateLimitingLoginFilter} (intercepte {@code /api/auth/login}). Accès direct par IP bloqué via
-/// {@link BloquerAccesDirectIpFilter}. CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code
-/// Strict}, compatibilité Safari sur navigation entrante, voir {@link #cookieSerializer} — + {@code
-/// form-action 'self'} en CSP). Login via {@code POST /api/auth/login}, logout via {@code POST
-/// /api/auth/logout}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Configuration Spring Security 7 pour le mode SPA Vue 3.
+ *
+ * <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login via {@link
+ * RateLimitingLoginFilter} (intercepte {@code /api/auth/login}). Accès direct par IP bloqué via
+ * {@link BloquerAccesDirectIpFilter}. CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code
+ * Strict}, compatibilité Safari sur navigation entrante, voir {@link #cookieSerializer} — + {@code
+ * form-action 'self'} en CSP). Login via {@code POST /api/auth/login}, logout via {@code POST
+ * /api/auth/logout}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
 
   private static final Logger log = LoggerFactory.getLogger(SecurityConfiguration.class);
 
-  /// Registre de sessions persisté en JDBC — survit aux redémarrages.
-  ///
-  /// @param sessionRepository le dépôt de sessions Spring Session JDBC
-  /// @return le registre de sessions
+  /**
+   * Registre de sessions persisté en JDBC — survit aux redémarrages.
+   *
+   * @param sessionRepository le dépôt de sessions Spring Session JDBC
+   * @return le registre de sessions
+   */
   @Bean
   SpringSessionBackedSessionRegistry<? extends Session> sessionRegistry(
       FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
     return new SpringSessionBackedSessionRegistry<>(sessionRepository);
   }
 
-  /// Chaîne de filtres de sécurité principale.
-  ///
-  /// @param http le constructeur de configuration Spring Security
-  /// @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
-  /// @param rateLimitingFilter le filtre de rate limiting sur le login
-  /// @param bloquerIpFilter le filtre de blocage d'accès direct par IP
-  /// @param totpGuardFilter le filtre de garde TOTP post-login
-  /// @param sessionRegistry le registre de sessions persisté en JDBC
-  /// @param logAdminService le service de journalisation admin
-  /// @return la SecurityFilterChain configurée
-  /// @throws Exception en cas d'erreur de configuration
+  /**
+   * Chaîne de filtres de sécurité principale.
+   *
+   * @param http le constructeur de configuration Spring Security
+   * @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
+   * @param rateLimitingFilter le filtre de rate limiting sur le login
+   * @param bloquerIpFilter le filtre de blocage d'accès direct par IP
+   * @param totpGuardFilter le filtre de garde TOTP post-login
+   * @param sessionRegistry le registre de sessions persisté en JDBC
+   * @param logAdminService le service de journalisation admin
+   * @return la SecurityFilterChain configurée
+   * @throws Exception en cas d'erreur de configuration
+   */
   @Bean
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
@@ -237,26 +243,30 @@ public class SecurityConfiguration {
     return http.build();
   }
 
-  /// Encodeur de mots de passe bcrypt.
-  ///
-  /// @return l'encodeur de mots de passe
+  /**
+   * Encodeur de mots de passe bcrypt.
+   *
+   * @return l'encodeur de mots de passe
+   */
   @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }
 
-  /// Gestionnaire d'authentification avec chargement depuis la base de données.
-  ///
-  /// <p>Attache un {@link AuthenticationEventPublisher} explicitement : un {@link ProviderManager}
-  /// construit à la main, hors du chemin d'auto-configuration Spring Boot standard, n'en reçoit
-  /// aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/ {@code
-  /// AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link AuthEvenementListener}
-  /// reste du code mort.
-  ///
-  /// @param userDetailsService le service de chargement des utilisateurs
-  /// @param passwordEncoder l'encodeur de mots de passe
-  /// @param eventPublisher l'éditeur d'événements applicatif Spring
-  /// @return l'AuthenticationManager configuré
+  /**
+   * Gestionnaire d'authentification avec chargement depuis la base de données.
+   *
+   * <p>Attache un {@link AuthenticationEventPublisher} explicitement : un {@link ProviderManager}
+   * construit à la main, hors du chemin d'auto-configuration Spring Boot standard, n'en reçoit
+   * aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/ {@code
+   * AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link AuthEvenementListener}
+   * reste du code mort.
+   *
+   * @param userDetailsService le service de chargement des utilisateurs
+   * @param passwordEncoder l'encodeur de mots de passe
+   * @param eventPublisher l'éditeur d'événements applicatif Spring
+   * @return l'AuthenticationManager configuré
+   */
   @Bean
   AuthenticationManager authenticationManager(
       UserDetailsService userDetailsService,
@@ -270,39 +280,45 @@ public class SecurityConfiguration {
     return providerManager;
   }
 
-  /// Force le timeout d'inactivité des sessions JDBC à 30 jours.
-  ///
-  /// <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 — ce customizer
-  /// le remplace de façon programmatique. La session est prolongée à chaque requête ; elle expire
-  /// uniquement après 30 jours sans activité.
-  ///
-  /// @return le customizer de dépôt de sessions
+  /**
+   * Force le timeout d'inactivité des sessions JDBC à 30 jours.
+   *
+   * <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 — ce customizer
+   * le remplace de façon programmatique. La session est prolongée à chaque requête ; elle expire
+   * uniquement après 30 jours sans activité.
+   *
+   * @return le customizer de dépôt de sessions
+   */
   @Bean
   SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionTimeoutCustomizer() {
     return repository -> repository.setDefaultMaxInactiveInterval(Duration.ofDays(30));
   }
 
-  /// Publie les événements de session HTTP (requis pour le suivi des sessions actives).
-  ///
-  /// @return le publisher d'événements de session
+  /**
+   * Publie les événements de session HTTP (requis pour le suivi des sessions actives).
+   *
+   * @return le publisher d'événements de session
+   */
   @Bean
   HttpSessionEventPublisher httpSessionEventPublisher() {
     return new HttpSessionEventPublisher();
   }
 
-  /// Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax} et {@code
-  /// max-age} 30 jours.
-  ///
-  /// <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
-  /// JDBC ; ce bean prend le relais.
-  ///
-  /// <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome
-  /// et bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
-  /// site, retour d'une autre app iOS). Lax autorise le cookie sur les navigations GET entrantes
-  /// tout en le bloquant sur les requêtes cross-site non-GET — protection CSRF équivalente.
-  ///
-  /// @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
-  /// @return le sérialiseur de cookies configuré
+  /**
+   * Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax} et {@code
+   * max-age} 30 jours.
+   *
+   * <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session
+   * JDBC ; ce bean prend le relais.
+   *
+   * <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome
+   * et bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
+   * site, retour d'une autre app iOS). Lax autorise le cookie sur les navigations GET entrantes
+   * tout en le bloquant sur les requêtes cross-site non-GET — protection CSRF équivalente.
+   *
+   * @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
+   * @return le sérialiseur de cookies configuré
+   */
   @Bean
   CookieSerializer cookieSerializer(@Value("${app.cookie.secure:true}") boolean cookieSecure) {
     DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();

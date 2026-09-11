@@ -14,14 +14,16 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre posant un identifiant de corrélation dans le {@link MDC} Logback.
-///
-/// <p>Si la requête entrante contient un header {@code X-Correlation-ID}, il est réutilisé.
-/// Sinon, un UUID aléatoire est généré. L'identifiant est retourné dans la réponse
-/// via le même header, et retiré du MDC après traitement.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Filtre posant un identifiant de corrélation dans le {@link MDC} Logback.
+ *
+ * <p>Si la requête entrante contient un header {@code X-Correlation-ID}, il est réutilisé.
+ * Sinon, un UUID aléatoire est généré. L'identifiant est retourné dans la réponse
+ * via le même header, et retiré du MDC après traitement.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class CorrelationIdFilter extends OncePerRequestFilter {
 

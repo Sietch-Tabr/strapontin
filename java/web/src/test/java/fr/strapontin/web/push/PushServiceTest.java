@@ -21,10 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link PushService}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link PushService}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class PushServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

@@ -16,10 +16,12 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link SuiviSanteSourcesService} (phase 1).
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SuiviSanteSourcesService} (phase 1).
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class SuiviSanteSourcesServiceTest {
 
   private static ConcertBrut concertAvecArtisteSourceId(String artisteSourceId) {

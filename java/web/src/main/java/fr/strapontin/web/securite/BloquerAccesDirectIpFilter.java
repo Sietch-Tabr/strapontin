@@ -17,16 +17,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre bloquant les accès directs par adresse IP.
-///
-/// Rejette les requêtes dont le header `Host` est une adresse IP
-/// (IPv4 avec port optionnel, ou IPv6 entre crochets).
-///
-/// En profil `dev`, la vérification est ignorée pour faciliter le
-/// développement local et les tests E2E depuis une IP privée.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Filtre bloquant les accès directs par adresse IP.
+ *
+ * Rejette les requêtes dont le header {@code Host} est une adresse IP
+ * (IPv4 avec port optionnel, ou IPv6 entre crochets).
+ *
+ * En profil {@code dev}, la vérification est ignorée pour faciliter le
+ * développement local et les tests E2E depuis une IP privée.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
 

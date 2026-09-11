@@ -9,10 +9,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/// Corps JSON de la requête POST /api/push (abonnement push).
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Corps JSON de la requête POST /api/push (abonnement push).
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record RequeteAbonnement(
     @NotBlank(message = "Abonnement incomplet.")
         @Size(max = 2048, message = "Données d'abonnement invalides.")

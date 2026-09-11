@@ -25,29 +25,31 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
-/// Client Overpass (OSM) pour l'enrichissement initial des salles par nom.
-///
-/// Recherche par lot les salles de spectacle taguées `amenity=music_venue|arts_centre|theatre`.
-/// Utilisé en première étape : les salles sans {@code wikidataId} connu sont recherchées ici ; si
-/// le tag `wikidata=Qxxx` est présent, il alimente directement l'enrichissement Wikidata par Q-ID.
-/// Les salles qu'Overpass ne trouve pas (nom absent d'OSM, service indisponible) restent éligibles
-/// à la recherche Wikidata directe par nom, voir {@link WikidataSalleSource} — Overpass n'est donc
-/// plus un passage obligé.
-///
-/// Chaque lot interroge une zone géographique <strong>par département</strong> (rayon `around:`
-/// centré sur {@link CentresDepartement#PAR_DEPT}) plutôt qu'une bounding box couvrant la France
-/// entière : une requête sur tout le territoire échoue quasi systématiquement par timeout sur les
-/// instances publiques Overpass (surchargées), alors que la même requête restreinte à un
-/// département répond en 2-3s. Un basculement précédent vers `overpass.osm.ch` (association OSM
-/// suisse) s'est révélé une impasse — cette instance ne couvre en réalité que la Suisse (+ 10 km de
-/// frontière), confirmé en test direct (0 résultat sur des salles françaises pourtant bien
-/// référencées sur OSM) : un succès HTTP `200 OK` avec un tableau d'éléments vide avait été
-/// confondu avec un succès fonctionnel, masquant 12 jours de contribution nulle sans la moindre
-/// erreur journalisée. Les salles sans département connu ne sont pas interrogées (aucune zone à
-/// requêter) — elles restent éligibles à la découverte Wikidata par nom, indépendante d'Overpass.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Client Overpass (OSM) pour l'enrichissement initial des salles par nom.
+ *
+ * Recherche par lot les salles de spectacle taguées {@code amenity=music_venue|arts_centre|theatre}.
+ * Utilisé en première étape : les salles sans {@code wikidataId} connu sont recherchées ici ; si
+ * le tag {@code wikidata=Qxxx} est présent, il alimente directement l'enrichissement Wikidata par Q-ID.
+ * Les salles qu'Overpass ne trouve pas (nom absent d'OSM, service indisponible) restent éligibles
+ * à la recherche Wikidata directe par nom, voir {@link WikidataSalleSource} — Overpass n'est donc
+ * plus un passage obligé.
+ *
+ * Chaque lot interroge une zone géographique <strong>par département</strong> (rayon {@code around:}
+ * centré sur {@link CentresDepartement#PAR_DEPT}) plutôt qu'une bounding box couvrant la France
+ * entière : une requête sur tout le territoire échoue quasi systématiquement par timeout sur les
+ * instances publiques Overpass (surchargées), alors que la même requête restreinte à un
+ * département répond en 2-3s. Un basculement précédent vers {@code overpass.osm.ch} (association OSM
+ * suisse) s'est révélé une impasse — cette instance ne couvre en réalité que la Suisse (+ 10 km de
+ * frontière), confirmé en test direct (0 résultat sur des salles françaises pourtant bien
+ * référencées sur OSM) : un succès HTTP {@code 200 OK} avec un tableau d'éléments vide avait été
+ * confondu avec un succès fonctionnel, masquant 12 jours de contribution nulle sans la moindre
+ * erreur journalisée. Les salles sans département connu ne sont pas interrogées (aucune zone à
+ * requêter) — elles restent éligibles à la découverte Wikidata par nom, indépendante d'Overpass.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(OverpassSalleSource.class);
@@ -59,10 +61,12 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   // appelé une seule fois par cycle, pour se réarmer automatiquement au cycle suivant.
   private final AtomicInteger echecsConsecutifsCycle = new AtomicInteger();
 
-  /// Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement et remet les
-  /// compteurs à zéro — réarme aussi le disjoncteur pour le prochain cycle.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé des appels HTTP Overpass depuis le dernier prélèvement et remet les
+   * compteurs à zéro — réarme aussi le disjoncteur pour le prochain cycle.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   @Override
   public BilanFetch preleverBilan() {
     echecsConsecutifsCycle.set(0);
@@ -122,7 +126,9 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   private final RestClient restClient;
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
-  /// Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 35s).
+  /**
+   * Crée une instance avec un RestClient par défaut (timeout connexion 5s, lecture 35s).
+   */
   public OverpassSalleSource() {
     this(construireRestClientParDefaut());
   }
@@ -134,9 +140,11 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return RestClient.builder().requestFactory(factory).build();
   }
 
-  /// Crée une instance avec un RestClient personnalisé (injection de test).
-  ///
-  /// @param restClient client HTTP à utiliser
+  /**
+   * Crée une instance avec un RestClient personnalisé (injection de test).
+   *
+   * @param restClient client HTTP à utiliser
+   */
   public OverpassSalleSource(RestClient restClient) {
     this.restClient = restClient;
   }
@@ -191,8 +199,10 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return resultats;
   }
 
-  /// Résultat d'un lot Overpass, distinguant un échec définitif (retries épuisés) d'un succès — une
-  /// réponse réussie sans le moindre élément trouvé n'est pas un échec.
+  /**
+   * Résultat d'un lot Overpass, distinguant un échec définitif (retries épuisés) d'un succès — une
+   * réponse réussie sans le moindre élément trouvé n'est pas un échec.
+   */
   private record ResultatLot(Map<UUID, EnrichissementSalle> resultats, boolean succes) {}
 
   private ResultatLot enrichirUnLot(List<SalleAEnrichir> lot, CentreDept centre) {
@@ -225,11 +235,13 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     return new ResultatLot(Map.of(), false);
   }
 
-  /// Détermine le délai avant retry selon la nature de l'échec — accessible aux tests sans
-  /// déclencher d'attente réelle.
-  ///
-  /// @param e exception levée par l'appel HTTP
-  /// @return délai en millisecondes avant le prochain essai
+  /**
+   * Détermine le délai avant retry selon la nature de l'échec — accessible aux tests sans
+   * déclencher d'attente réelle.
+   *
+   * @param e exception levée par l'appel HTTP
+   * @return délai en millisecondes avant le prochain essai
+   */
   static long delaiAvantRetry(Exception e) {
     return e instanceof HttpClientErrorException.TooManyRequests
         ? DELAI_APRES_429_MS

@@ -32,10 +32,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires de [NotificationDigestService] avec mocks Mockito.
-///
-/// @since 2.0.1
-/// @author Kwaite
+/**
+ * Tests unitaires de [NotificationDigestService] avec mocks Mockito.
+ *
+ * @since 2.0.1
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class NotificationDigestServiceTest {
 

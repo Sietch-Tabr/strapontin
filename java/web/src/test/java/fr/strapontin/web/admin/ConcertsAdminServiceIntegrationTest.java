@@ -19,16 +19,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link ConcertsAdminService} avec PostgreSQL réel (Testcontainers).
-///
-/// <p>{@code ConcertsAdminServiceTest} (mocks) fait transiter le `RowMapper` par un {@code
-/// jdbc.query} entièrement mocké — il ne l'exerce jamais contre un vrai {@code ResultSet}, ce qui a
-/// laissé passer une conversion `timestamptz` → `Instant` non supportée par le driver PostgreSQL
-/// (`rs.getObject(col, Instant.class)`), invisible tant qu'aucune ligne réelle n'avait {@code
-/// suppression_suggeree_le} renseigné.
-///
-/// @since 2.8.4
-/// @author Kwaite
+/**
+ * Test d'intégration de {@link ConcertsAdminService} avec PostgreSQL réel (Testcontainers).
+ *
+ * <p>{@code ConcertsAdminServiceTest} (mocks) fait transiter le {@code RowMapper} par un {@code
+ * jdbc.query} entièrement mocké — il ne l'exerce jamais contre un vrai {@code ResultSet}, ce qui a
+ * laissé passer une conversion {@code timestamptz} → {@code Instant} non supportée par le driver PostgreSQL
+ * ({@code rs.getObject(col, Instant.class)}), invisible tant qu'aucune ligne réelle n'avait {@code
+ * suppression_suggeree_le} renseigné.
+ *
+ * @since 2.8.4
+ * @author Kwaite
+ */
 class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;

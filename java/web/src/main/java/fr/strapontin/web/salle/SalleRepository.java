@@ -18,13 +18,15 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/// Accès aux données pour les salles suivies ({@code salles}, {@code user_salles}).
-///
-/// <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité, normalisation)
-/// appartiennent à {@link SalleService}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Accès aux données pour les salles suivies ({@code salles}, {@code user_salles}).
+ *
+ * <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité, normalisation)
+ * appartiennent à {@link SalleService}.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Repository
 class SalleRepository {
 
@@ -36,13 +38,15 @@ class SalleRepository {
     this.jdbc = jdbc;
   }
 
-  /// Retourne les salles suivies par l'utilisateur, triées par nom.
-  ///
-  /// <p>Le champ {@code aDigitick} est {@code true} si la salle possède un slug Digitick configuré
-  /// dans {@code salle_sources}.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return liste des salles suivies
+  /**
+   * Retourne les salles suivies par l'utilisateur, triées par nom.
+   *
+   * <p>Le champ {@code aDigitick} est {@code true} si la salle possède un slug Digitick configuré
+   * dans {@code salle_sources}.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return liste des salles suivies
+   */
   List<SalleUtilisateur> listerPourUtilisateur(String userId) {
     return jdbc.query(
         """
@@ -65,17 +69,19 @@ class SalleRepository {
                 rs.getBoolean("a_digitick")));
   }
 
-  /// Recherche des salles dans les concerts existants, le référentiel Digitick et les salles
-  /// connues avec concerts.
-  ///
-  /// <p>Union de trois sources : <ol>
-  ///   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern
-  ///   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern
-  ///   <li>Salles connues avec concerts ({@code salle_id IS NOT NULL}) — évite un appel TM inutile
-  ///       et permet à {@code estMemeSalle} de filtrer les doublons de venueId </ol>
-  ///
-  /// @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
-  /// @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
+  /**
+   * Recherche des salles dans les concerts existants, le référentiel Digitick et les salles
+   * connues avec concerts.
+   *
+   * <p>Union de trois sources : <ol>
+   *   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern
+   *   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern
+   *   <li>Salles connues avec concerts ({@code salle_id IS NOT NULL}) — évite un appel TM inutile
+   *       et permet à {@code estMemeSalle} de filtrer les doublons de venueId </ol>
+   *
+   * @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
+   * @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
+   */
   List<Map<String, Object>> rechercherEnBase(String pattern) {
     return jdbc.queryForList(
         """
@@ -101,11 +107,13 @@ class SalleRepository {
         Map.of("pattern", pattern));
   }
 
-  /// Vérifie si une salle est déjà suivie par l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
-  /// @return {@code true} si déjà présente
+  /**
+   * Vérifie si une salle est déjà suivie par l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   * @return {@code true} si déjà présente
+   */
   boolean existePourUtilisateur(String userId, UUID salleId) {
     return !jdbc.queryForList(
             """
@@ -117,10 +125,12 @@ class SalleRepository {
         .isEmpty();
   }
 
-  /// Compte les salles suivies par l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return nombre de salles suivies
+  /**
+   * Compte les salles suivies par l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return nombre de salles suivies
+   */
   int compterPourUtilisateur(String userId) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
@@ -130,13 +140,15 @@ class SalleRepository {
         0);
   }
 
-  /// Recherche les salles du référentiel dont la {@code salle_cle} partage au moins un des tokens
-  /// fournis — pré-filtre SQL avant application de la correspondance floue ({@code
-  /// CorrespondanceSalle.estDoublonSalle} sur {@code nom}, non exprimable en SQL).
-  ///
-  /// @param tokens clés normalisées ({@code SalleService.normaliserSalleCle}) des mots du nom
-  ///   recherché, filtrées aux tokens d'au moins 3 caractères
-  /// @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
+  /**
+   * Recherche les salles du référentiel dont la {@code salle_cle} partage au moins un des tokens
+   * fournis — pré-filtre SQL avant application de la correspondance floue ({@code
+   * CorrespondanceSalle.estDoublonSalle} sur {@code nom}, non exprimable en SQL).
+   *
+   * @param tokens clés normalisées ({@code SalleService.normaliserSalleCle}) des mots du nom
+   *   recherché, filtrées aux tokens d'au moins 3 caractères
+   * @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
+   */
   List<Map<String, Object>> chercherCandidatsParCle(Set<String> tokens) {
     if (tokens.isEmpty()) return List.of();
 
@@ -157,11 +169,13 @@ class SalleRepository {
         "SELECT id, salle_cle, nom FROM salles WHERE " + whereTokens + " LIMIT 50", params);
   }
 
-  /// Insère ou met à jour une salle dans le référentiel et retourne son UUID stable.
-  ///
-  /// @param salleCle clé naturelle normalisée (ex. {@code "olympia"})
-  /// @param nom nom affiché
-  /// @return UUID stable de la salle (existant ou nouvellement créé)
+  /**
+   * Insère ou met à jour une salle dans le référentiel et retourne son UUID stable.
+   *
+   * @param salleCle clé naturelle normalisée (ex. {@code "olympia"})
+   * @param nom nom affiché
+   * @return UUID stable de la salle (existant ou nouvellement créé)
+   */
   UUID upsertSalle(String salleCle, String nom) {
     Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
@@ -178,15 +192,17 @@ class SalleRepository {
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  /// Insère ou met à jour une salle avec ville et code postal (usage admin Digitick).
-  ///
-  /// <p>En cas de conflit sur {@code salle_cle}, met à jour le nom, la ville et le CP si fournis.
-  ///
-  /// @param salleCle clé naturelle normalisée
-  /// @param nom nom affiché
-  /// @param ville ville (null si inconnue)
-  /// @param dept numéro de département (null si inconnu)
-  /// @return UUID stable de la salle
+  /**
+   * Insère ou met à jour une salle avec ville et code postal (usage admin Digitick).
+   *
+   * <p>En cas de conflit sur {@code salle_cle}, met à jour le nom, la ville et le CP si fournis.
+   *
+   * @param salleCle clé naturelle normalisée
+   * @param nom nom affiché
+   * @param ville ville (null si inconnue)
+   * @param dept numéro de département (null si inconnu)
+   * @return UUID stable de la salle
+   */
   UUID upsertSalleAvecLoc(String salleCle, String nom, String ville, String dept) {
     Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
@@ -208,16 +224,18 @@ class SalleRepository {
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  /// Met à jour le nom, la ville et le CP d'une salle existante.
-  ///
-  /// <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via cette
-  /// méthode laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching
-  /// Wikidata/Overpass pour cette salle.
-  ///
-  /// @param salleId UUID de la salle
-  /// @param nom nouveau nom (null = inchangé)
-  /// @param ville nouvelle ville (null = inchangée)
-  /// @param dept nouveau numéro de département (null = inchangé)
+  /**
+   * Met à jour le nom, la ville et le CP d'une salle existante.
+   *
+   * <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via cette
+   * méthode laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching
+   * Wikidata/Overpass pour cette salle.
+   *
+   * @param salleId UUID de la salle
+   * @param nom nouveau nom (null = inchangé)
+   * @param ville nouvelle ville (null = inchangée)
+   * @param dept nouveau numéro de département (null = inchangé)
+   */
   void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
     MapSqlParameterSource params = new MapSqlParameterSource();
     params.addValue("uuid", salleId.toString());
@@ -237,16 +255,18 @@ class SalleRepository {
         params);
   }
 
-  /// Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
-  ///
-  /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
-  /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur canonique
-  /// de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle}
-  /// n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait
-  /// jamais rien (mismatch silencieux, aucune exception).
-  ///
-  /// @param salleId UUID de la salle
-  /// @return CSV d'identifiants ou {@code null} si aucune source connue
+  /**
+   * Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
+   *
+   * <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
+   * préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur canonique
+   * de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle}
+   * n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait
+   * jamais rien (mismatch silencieux, aucune exception).
+   *
+   * @param salleId UUID de la salle
+   * @return CSV d'identifiants ou {@code null} si aucune source connue
+   */
   String lireIdentifiantsSources(UUID salleId) {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -268,10 +288,12 @@ class SalleRepository {
     return String.join(",", ids);
   }
 
-  /// Supprime une salle uniquement si aucun utilisateur ne la suit et si elle n'a pas de concerts.
-  ///
-  /// @param salleId UUID de la salle
-  /// @return {@code true} si supprimée, {@code false} si des contraintes empêchent la suppression
+  /**
+   * Supprime une salle uniquement si aucun utilisateur ne la suit et si elle n'a pas de concerts.
+   *
+   * @param salleId UUID de la salle
+   * @return {@code true} si supprimée, {@code false} si des contraintes empêchent la suppression
+   */
   boolean supprimerSalleDigitick(UUID salleId) {
     int nb =
         jdbc.update(
@@ -287,13 +309,15 @@ class SalleRepository {
     return nb > 0;
   }
 
-  /// Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur déjà
-  /// résolue par le job nocturne ({@code COALESCE}). Peut lever {@link
-  /// org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à la charge
-  /// de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param wikidataId Q-ID Wikidata
+  /**
+   * Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur déjà
+   * résolue par le job nocturne ({@code COALESCE}). Peut lever {@link
+   * org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à la charge
+   * de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
+   *
+   * @param salleId UUID stable de la salle
+   * @param wikidataId Q-ID Wikidata
+   */
   void mettreAJourWikidataId(UUID salleId, String wikidataId) {
     jdbc.update(
         """
@@ -303,13 +327,15 @@ class SalleRepository {
         Map.of("uuid", salleId.toString(), "wikidataId", wikidataId));
   }
 
-  /// Recherche une salle différente de {@code exclureSalleId} déjà associée à un slug Digitick
-  /// permet de détecter un conflit avant l'attribution plutôt que d'échouer silencieusement sur
-  /// {@code ON CONFLICT DO NOTHING}.
-  ///
-  /// @param slug slug Digitick à vérifier
-  /// @param exclureSalleId salle en cours d'attribution, exclue de la recherche
-  /// @return le nom affiché de la salle en conflit, si elle existe
+  /**
+   * Recherche une salle différente de {@code exclureSalleId} déjà associée à un slug Digitick
+   * permet de détecter un conflit avant l'attribution plutôt que d'échouer silencieusement sur
+   * {@code ON CONFLICT DO NOTHING}.
+   *
+   * @param slug slug Digitick à vérifier
+   * @param exclureSalleId salle en cours d'attribution, exclue de la recherche
+   * @return le nom affiché de la salle en conflit, si elle existe
+   */
   Optional<String> trouverConflitDigitickSlug(String slug, UUID exclureSalleId) {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -324,11 +350,13 @@ class SalleRepository {
     return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get("nom"));
   }
 
-  /// Enregistre une correspondance source externe → salle interne.
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param source nom de la source (ex. {@code "ticketmaster"})
-  /// @param identifiantExterne identifiant dans la source externe
+  /**
+   * Enregistre une correspondance source externe → salle interne.
+   *
+   * @param salleId UUID stable de la salle
+   * @param source nom de la source (ex. {@code "ticketmaster"})
+   * @param identifiantExterne identifiant dans la source externe
+   */
   void enregistrerSalleSource(UUID salleId, String source, String identifiantExterne) {
     jdbc.update(
         """
@@ -342,10 +370,12 @@ class SalleRepository {
             "identifiantExterne", identifiantExterne));
   }
 
-  /// Lie une salle à un utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
+  /**
+   * Lie une salle à un utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   */
   void ajouterPourUtilisateur(String userId, UUID salleId) {
     jdbc.update(
         """
@@ -355,11 +385,13 @@ class SalleRepository {
         Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
   }
 
-  /// Supprime la relation utilisateur–salle.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
-  /// @return le nombre de lignes réellement supprimées (0 si la salle n'était pas suivie)
+  /**
+   * Supprime la relation utilisateur–salle.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   * @return le nombre de lignes réellement supprimées (0 si la salle n'était pas suivie)
+   */
   int supprimerPourUtilisateur(String userId, UUID salleId) {
     return jdbc.update(
         """

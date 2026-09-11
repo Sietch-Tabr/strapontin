@@ -17,14 +17,16 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link ReconciliateurSalles} — façade de délégation pure vers {@link
-/// ReconciliationNomsSalles}, {@link ResolveurSalleParConcert} et {@link
-/// ReconciliateurSallesOrphelines} (v2.8.7). Le comportement propre à chaque responsabilité est
-/// testé dans {@code ReconciliationNomsSallesTest}, {@code ResolveurSalleParConcertTest} et {@code
-/// ReconciliateurSallesOrphelinesTest}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ReconciliateurSalles} — façade de délégation pure vers {@link
+ * ReconciliationNomsSalles}, {@link ResolveurSalleParConcert} et {@link
+ * ReconciliateurSallesOrphelines} (v2.8.7). Le comportement propre à chaque responsabilité est
+ * testé dans {@code ReconciliationNomsSallesTest}, {@code ResolveurSalleParConcertTest} et {@code
+ * ReconciliateurSallesOrphelinesTest}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ReconciliateurSallesTest {
 
   private ReconciliationNomsSalles reconciliationNoms;

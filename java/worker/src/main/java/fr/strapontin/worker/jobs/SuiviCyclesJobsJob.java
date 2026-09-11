@@ -9,10 +9,12 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : détection des types de job planifiés silencieusement en retard, toutes les heures.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Job Quartz : détection des types de job planifiés silencieusement en retard, toutes les heures.
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 public class SuiviCyclesJobsJob extends QuartzJobBean {
 
   private WorkerSuiviCyclesService workerSuiviCyclesService;

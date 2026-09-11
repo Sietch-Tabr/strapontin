@@ -6,9 +6,11 @@ package fr.strapontin.web.admin;
 
 import java.util.List;
 
-/// Réponse paginée de l'endpoint GET /api/admin/artistes.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Réponse paginée de l'endpoint GET /api/admin/artistes.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 public record ReponseReferentielArtistes(
     List<ArtisteReferentiel> artistes, int page, int totalPages, long totalArtistes) {}

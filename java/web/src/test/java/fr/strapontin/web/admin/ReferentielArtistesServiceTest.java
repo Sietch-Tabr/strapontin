@@ -25,10 +25,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ReferentielArtistesService}.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ReferentielArtistesService}.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class ReferentielArtistesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

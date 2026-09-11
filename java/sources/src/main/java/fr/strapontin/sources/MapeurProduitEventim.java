@@ -11,8 +11,10 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut] — extrait de {@link
-/// EventimSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+/**
+ * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut] — extrait de {@link
+ * EventimSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+ */
 final class MapeurProduitEventim {
 
   private static final Logger log = LoggerFactory.getLogger(MapeurProduitEventim.class);
@@ -22,18 +24,20 @@ final class MapeurProduitEventim {
 
   private MapeurProduitEventim() {}
 
-  /// Corrige une incohérence connue d'Eventim : certaines salles de banlieue parisienne (ex. Accor
-  /// Arena, Zénith de Paris) sont taguées ville="Paris" alors que leur code postal n'est pas dans
-  /// le 75 — on retombe sur la commune extraite du nom de salle Eventim (forme "Nom de la salle -
-  /// Commune"), quand disponible.
-  ///
-  /// @param ville ville brute renvoyée par Eventim
-  /// @param dept département dérivé du code postal, peut être `null`
-  /// @param salle nom de la salle, utilisé comme source alternative de la commune
-  /// @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
-  ///   une incohérence est détectée sans pouvoir être corrigée — une valeur qu'on vient soi-même de
-  ///   qualifier d'incohérente ne doit jamais écraser une valeur déjà connue en base ({@code
-  ///   COALESCE(:ville, ville)} à la persistance)
+  /**
+   * Corrige une incohérence connue d'Eventim : certaines salles de banlieue parisienne (ex. Accor
+   * Arena, Zénith de Paris) sont taguées ville="Paris" alors que leur code postal n'est pas dans
+   * le 75 — on retombe sur la commune extraite du nom de salle Eventim (forme "Nom de la salle -
+   * Commune"), quand disponible.
+   *
+   * @param ville ville brute renvoyée par Eventim
+   * @param dept département dérivé du code postal, peut être {@code null}
+   * @param salle nom de la salle, utilisé comme source alternative de la commune
+   * @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
+   *   une incohérence est détectée sans pouvoir être corrigée — une valeur qu'on vient soi-même de
+   *   qualifier d'incohérente ne doit jamais écraser une valeur déjà connue en base ({@code
+   *   COALESCE(:ville, ville)} à la persistance)
+   */
   static String corrigerVilleEventim(String ville, String dept, String salle) {
     if (ville == null || dept == null) return ville;
     if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) return ville;
@@ -49,12 +53,14 @@ final class MapeurProduitEventim {
     return null;
   }
 
-  /// Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
-  ///
-  /// L'heure "00:00" est considérée comme absente (Eventim utilise minuit par défaut).
-  ///
-  /// @param dateStr chaîne de date ISO 8601
-  /// @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
+  /**
+   * Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
+   *
+   * L'heure "00:00" est considérée comme absente (Eventim utilise minuit par défaut).
+   *
+   * @param dateStr chaîne de date ISO 8601
+   * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
+   */
   static String[] parseDateEventim(String dateStr) {
     Objects.requireNonNull(dateStr, "dateStr");
     String datePart = dateStr.substring(0, 10);
@@ -65,14 +71,16 @@ final class MapeurProduitEventim {
     return new String[] {datePart, heure};
   }
 
-  /// Extrait le nom de l'artiste depuis un titre d'événement Eventim.
-  ///
-  /// Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle". On extrait la
-  /// partie avant le premier séparateur " - " ou " : ", après normalisation des espaces
-  /// insécables/fines (U+00A0, U+202F) qu'Eventim place parfois autour du tiret.
-  ///
-  /// @param titre titre de l'événement Eventim
-  /// @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
+  /**
+   * Extrait le nom de l'artiste depuis un titre d'événement Eventim.
+   *
+   * Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle". On extrait la
+   * partie avant le premier séparateur " - " ou " : ", après normalisation des espaces
+   * insécables/fines (U+00A0, U+202F) qu'Eventim place parfois autour du tiret.
+   *
+   * @param titre titre de l'événement Eventim
+   * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
+   */
   static String extraireNomArtiste(String titre) {
     Objects.requireNonNull(titre, "titre");
     String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
@@ -83,13 +91,15 @@ final class MapeurProduitEventim {
     return titre;
   }
 
-  /// Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
-  ///
-  /// @param produit produit Eventim sous forme de Map imbriquée
-  /// @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
-  /// @param artisteSourceId identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
-  ///   null si inconnu (fetch région ou salle)
-  /// @return concert extrait, ou null si le produit est invalide
+  /**
+   * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
+   *
+   * @param produit produit Eventim sous forme de Map imbriquée
+   * @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
+   * @param artisteSourceId identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
+   *   null si inconnu (fetch région ou salle)
+   * @return concert extrait, ou null si le produit est invalide
+   */
   @SuppressWarnings("unchecked")
   static ConcertBrut mapper(
       Map<String, Object> produit, String artisteFallback, String artisteSourceId) {

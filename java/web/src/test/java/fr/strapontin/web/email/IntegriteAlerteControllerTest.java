@@ -19,10 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link IntegriteAlerteController}.
-///
-/// @since 2.7.3
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link IntegriteAlerteController}.
+ *
+ * @since 2.7.3
+ * @author Kwaite
+ */
 class IntegriteAlerteControllerTest {
 
   private static final String SECRET = "secret-de-test";

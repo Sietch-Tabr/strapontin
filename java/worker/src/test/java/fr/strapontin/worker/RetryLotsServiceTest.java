@@ -23,10 +23,12 @@ import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.Trigger;
 
-/// Tests unitaires pour {@link RetryLotsService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link RetryLotsService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class RetryLotsServiceTest {
 
   private Scheduler scheduler;

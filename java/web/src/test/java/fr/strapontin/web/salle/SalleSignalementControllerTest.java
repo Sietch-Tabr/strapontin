@@ -18,12 +18,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de l'endpoint POST /api/salles/signaler de {@link SalleController}.
-///
-/// <p>Couvre le rate limiting (3/h par IP), la validation des champs, et la délégation email.
-///
-/// @since 2.2.5
-/// @author Kwaite
+/**
+ * Tests unitaires de l'endpoint POST /api/salles/signaler de {@link SalleController}.
+ *
+ * <p>Couvre le rate limiting (3/h par IP), la validation des champs, et la délégation email.
+ *
+ * @since 2.2.5
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class SalleSignalementControllerTest {
 

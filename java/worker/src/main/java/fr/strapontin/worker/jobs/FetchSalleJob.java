@@ -11,13 +11,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : fetch d'une salle par ses identifiants préfixés, toutes les 2 heures.
-///
-/// <p>Les identifiants sont transmis via la `JobDataMap` lors de la planification,
-/// au format virgule-séparé : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Job Quartz : fetch d'une salle par ses identifiants préfixés, toutes les 2 heures.
+ *
+ * <p>Les identifiants sont transmis via la {@code JobDataMap} lors de la planification,
+ * au format virgule-séparé : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 public class FetchSalleJob extends QuartzJobBean {
 
   public static final String CLE_IDENTIFIANTS = "identifiants";

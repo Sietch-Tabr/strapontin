@@ -29,10 +29,12 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link SourcesService}.
-///
-/// @since 2.3.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SourcesService}.
+ *
+ * @since 2.3.0
+ * @author Kwaite
+ */
 class SourcesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

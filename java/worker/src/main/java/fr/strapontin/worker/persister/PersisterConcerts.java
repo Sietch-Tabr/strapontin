@@ -25,26 +25,28 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Orchestrateur de persistance des concerts dédoublonnés.
-///
-/// <p>Délègue les responsabilités spécialisées à trois services : <ul>
-///   <li>{@link ReconciliateurSalles} — réconciliation des noms de salle
-///   <li>{@link ReconciliateurArtistes} — réconciliation des noms d'artiste
-///   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID) </ul>
-///
-/// <p>Traitement par lots de 500. Pour chaque lot : <ol>
-///   <li>Résolution des UUIDs par identifiants sources ({@code salle_sources}, {@code
-///       artiste_sources})
-///   <li>Première réconciliation des noms de salle (intra-lot puis contre la base)
-///   <li>Réconciliation des noms d'artiste (intra-lot puis contre la base)
-///   <li>Deuxième réconciliation des noms de salle (couvre les variantes simultanées)
-///   <li>Déduplication sur la clé de conflit finale
-///   <li>Rattachement des salles par {@code nom_norm} exact
-///   <li>Résolution de l'événement canonique (existant ou nouveau) puis upsert de l'observation de
-///       la source (#1192, plus de suppression a posteriori) </ol>
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Orchestrateur de persistance des concerts dédoublonnés.
+ *
+ * <p>Délègue les responsabilités spécialisées à trois services : <ul>
+ *   <li>{@link ReconciliateurSalles} — réconciliation des noms de salle
+ *   <li>{@link ReconciliateurArtistes} — réconciliation des noms d'artiste
+ *   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID) </ul>
+ *
+ * <p>Traitement par lots de 500. Pour chaque lot : <ol>
+ *   <li>Résolution des UUIDs par identifiants sources ({@code salle_sources}, {@code
+ *       artiste_sources})
+ *   <li>Première réconciliation des noms de salle (intra-lot puis contre la base)
+ *   <li>Réconciliation des noms d'artiste (intra-lot puis contre la base)
+ *   <li>Deuxième réconciliation des noms de salle (couvre les variantes simultanées)
+ *   <li>Déduplication sur la clé de conflit finale
+ *   <li>Rattachement des salles par {@code nom_norm} exact
+ *   <li>Résolution de l'événement canonique (existant ou nouveau) puis upsert de l'observation de
+ *       la source (#1192, plus de suppression a posteriori) </ol>
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class PersisterConcerts {
 
@@ -58,10 +60,12 @@ public class PersisterConcerts {
   private final LogsAdminWorker logsAdminWorker;
   private PersisterConcerts self;
 
-  /// @param db service de persistance SQL
-  /// @param reconciliateurSalles service de réconciliation des salles
-  /// @param reconciliateurArtistes service de réconciliation des artistes
-  /// @param logsAdminWorker journalisation admin
+  /**
+   * @param db service de persistance SQL
+   * @param reconciliateurSalles service de réconciliation des salles
+   * @param reconciliateurArtistes service de réconciliation des artistes
+   * @param logsAdminWorker journalisation admin
+   */
   public PersisterConcerts(
       PersisteurConcertsDb db,
       ReconciliateurSalles reconciliateurSalles,
@@ -73,45 +77,53 @@ public class PersisterConcerts {
     this.logsAdminWorker = logsAdminWorker;
   }
 
-  /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-  /// éviter le problème d'auto-référence à la construction — l'appel à {@link
-  /// #persisterLotTransactionnel} passe ainsi par le proxy AOP Spring et commit sa propre
-  /// transaction par sous-lot, plutôt qu'une transaction unique englobant toute la boucle. En
-  /// dehors d'un contexte Spring (tests unitaires n'exerçant pas ce chemin), {@code self} reste
-  /// {@code null} sans effet — seul {@link #persisterConcerts} avec une liste non vide l'exerce.
-  ///
-  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  /**
+   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
+   * éviter le problème d'auto-référence à la construction — l'appel à {@link
+   * #persisterLotTransactionnel} passe ainsi par le proxy AOP Spring et commit sa propre
+   * transaction par sous-lot, plutôt qu'une transaction unique englobant toute la boucle. En
+   * dehors d'un contexte Spring (tests unitaires n'exerçant pas ce chemin), {@code self} reste
+   * {@code null} sans effet — seul {@link #persisterConcerts} avec une liste non vide l'exerce.
+   *
+   * @param self référence proxifiée de ce bean ({@code @Lazy})
+   */
   @Autowired
   public void setSelf(@Lazy PersisterConcerts self) {
     this.self = self;
   }
 
-  /// Vérifie si deux noms de salle normalisés désignent la même salle.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les salles sont considérées identiques
-  /// @see ReconciliateurSalles#estDoublonSalle
+  /**
+   * Vérifie si deux noms de salle normalisés désignent la même salle.
+   *
+   * @param a premier nom normalisé
+   * @param b deuxième nom normalisé
+   * @return {@code true} si les salles sont considérées identiques
+   * @see ReconciliateurSalles#estDoublonSalle
+   */
   public static boolean estDoublonSalle(String a, String b) {
     return ReconciliateurSalles.estDoublonSalle(a, b);
   }
 
-  /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les artistes sont considérés identiques
-  /// @see ReconciliateurArtistes#estDoublonArtiste
+  /**
+   * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
+   *
+   * @param a premier nom normalisé
+   * @param b deuxième nom normalisé
+   * @return {@code true} si les artistes sont considérés identiques
+   * @see ReconciliateurArtistes#estDoublonArtiste
+   */
   public static boolean estDoublonArtiste(String a, String b) {
     return ReconciliateurArtistes.estDoublonArtiste(a, b);
   }
 
-  /// Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
-  ///
-  /// @param a première chaîne normalisée
-  /// @param b deuxième chaîne normalisée
-  /// @return coefficient de Jaccard entre 0.0 et 1.0
-  /// @see ReconciliateurSalles#jaccardTokens
+  /**
+   * Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
+   *
+   * @param a première chaîne normalisée
+   * @param b deuxième chaîne normalisée
+   * @return coefficient de Jaccard entre 0.0 et 1.0
+   * @see ReconciliateurSalles#jaccardTokens
+   */
   public static double jaccardTokens(String a, String b) {
     return ReconciliateurSalles.jaccardTokens(a, b);
   }
@@ -125,15 +137,17 @@ public class PersisterConcerts {
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
   }
 
-  /// Dédoublonne par clé de conflit {@code (artiste_norm, date, heure, salle_norm)}.
-  ///
-  /// <p>Deux concerts du même artiste dans la même salle le même jour avec des heures différentes
-  /// (matinée + soirée) sont considérés distincts. Deux concerts sans heure (null) sont considérés
-  /// identiques et fusionnés. En cas de doublon, conserve la version avec le meilleur score
-  /// (diacritiques et casse mixte préférés).
-  ///
-  /// @param liste concerts bruts à dédoublonner
-  /// @return liste sans doublons
+  /**
+   * Dédoublonne par clé de conflit {@code (artiste_norm, date, heure, salle_norm)}.
+   *
+   * <p>Deux concerts du même artiste dans la même salle le même jour avec des heures différentes
+   * (matinée + soirée) sont considérés distincts. Deux concerts sans heure (null) sont considérés
+   * identiques et fusionnés. En cas de doublon, conserve la version avec le meilleur score
+   * (diacritiques et casse mixte préférés).
+   *
+   * @param liste concerts bruts à dédoublonner
+   * @return liste sans doublons
+   */
   public static List<ConcertBrut> deduplicerParCleConflit(List<ConcertBrut> liste) {
     Map<String, ConcertBrut> parCle = new LinkedHashMap<>();
     for (ConcertBrut c : liste) {
@@ -155,18 +169,20 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleId)}.
-  ///
-  /// <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id}
-  /// (NULLS NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même
-  /// salle différemment ont le même {@code salle_id} après résolution — ils conflicteraient au sein
-  /// d'un même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
-  ///
-  /// <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que
-  /// tous les {@code salle_id} soient résolus.
-  ///
-  /// @param lot valeurs de concerts après réconciliation complète des salles
-  /// @return lot sans doublons
+  /**
+   * Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleId)}.
+   *
+   * <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id}
+   * (NULLS NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même
+   * salle différemment ont le même {@code salle_id} après résolution — ils conflicteraient au sein
+   * d'un même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
+   *
+   * <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que
+   * tous les {@code salle_id} soient résolus.
+   *
+   * @param lot valeurs de concerts après réconciliation complète des salles
+   * @return lot sans doublons
+   */
   public static List<ValeurConcert> deduplicerLotReconcilie(List<ValeurConcert> lot) {
     Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
     for (ValeurConcert v : lot) {
@@ -189,27 +205,29 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Résout les UUIDs internes depuis les identifiants sources préfixés.
-  ///
-  /// <p>Pour chaque concert portant un {@code salleSourceId} ou {@code artisteSourceId}, consulte
-  /// {@code salle_sources} et {@code artiste_sources} pour trouver l'UUID stable. En cas de
-  /// renommage de salle, met à jour {@code salles.nom}.
-  ///
-  /// <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
-  /// effectue un upsert dans {@code salles} et {@code salle_sources}.
-  ///
-  /// <p>Pour les concerts sans {@code salleSourceId} du tout (TM omet parfois {@code venue.id} pour
-  /// un événement donné, sans identifiant source exploitable), tente un repli par correspondance
-  /// floue ({@link ReconciliateurSalles#chercherSalleParTokens}) plutôt que de laisser {@code
-  /// salle_id} indéfiniment {@code null} — sans identifiant source fiable, aucune salle n'est créée
-  /// si le repli échoue (pas de salle fantôme).
-  ///
-  /// <p>Pour les concerts sans {@code artiste_id} après résolution par source (y compris les
-  /// concerts Digitick sans {@code artisteSourceId}), effectue un lookup batch par {@code nom_norm}
-  /// dans la table {@code artistes}.
-  ///
-  /// @param concerts valeurs normalisées avant upsert
-  /// @return liste enrichie avec les UUIDs résolus
+  /**
+   * Résout les UUIDs internes depuis les identifiants sources préfixés.
+   *
+   * <p>Pour chaque concert portant un {@code salleSourceId} ou {@code artisteSourceId}, consulte
+   * {@code salle_sources} et {@code artiste_sources} pour trouver l'UUID stable. En cas de
+   * renommage de salle, met à jour {@code salles.nom}.
+   *
+   * <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
+   * effectue un upsert dans {@code salles} et {@code salle_sources}.
+   *
+   * <p>Pour les concerts sans {@code salleSourceId} du tout (TM omet parfois {@code venue.id} pour
+   * un événement donné, sans identifiant source exploitable), tente un repli par correspondance
+   * floue ({@link ReconciliateurSalles#chercherSalleParTokens}) plutôt que de laisser {@code
+   * salle_id} indéfiniment {@code null} — sans identifiant source fiable, aucune salle n'est créée
+   * si le repli échoue (pas de salle fantôme).
+   *
+   * <p>Pour les concerts sans {@code artiste_id} après résolution par source (y compris les
+   * concerts Digitick sans {@code artisteSourceId}), effectue un lookup batch par {@code nom_norm}
+   * dans la table {@code artistes}.
+   *
+   * @param concerts valeurs normalisées avant upsert
+   * @return liste enrichie avec les UUIDs résolus
+   */
   private List<ValeurConcert> resoudreIdentitesSources(List<ValeurConcert> concerts) {
     Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
     Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
@@ -281,14 +299,16 @@ public class PersisterConcerts {
     return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
   }
 
-  /// Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de
-  /// la salle qu'il désigne.
-  ///
-  /// @param salleMappee salle résolue via le mapping source, ou {@code null} si non résolue
-  /// @param deptEntrant département du concert entrant, ou {@code null} si inconnu
-  /// @param deptsConnus départements connus par salle (voir {@link
-  ///   ReconciliateurSalles#deptsConnus})
-  /// @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
+  /**
+   * Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de
+   * la salle qu'il désigne.
+   *
+   * @param salleMappee salle résolue via le mapping source, ou {@code null} si non résolue
+   * @param deptEntrant département du concert entrant, ou {@code null} si inconnu
+   * @param deptsConnus départements connus par salle (voir {@link
+   *   ReconciliateurSalles#deptsConnus})
+   * @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
+   */
   private static boolean mappingSalleIncoherent(
       UUID salleMappee, String deptEntrant, Map<UUID, String> deptsConnus) {
     if (salleMappee == null || deptEntrant == null) return false;
@@ -296,22 +316,26 @@ public class PersisterConcerts {
     return deptConnu != null && !deptConnu.equals(deptEntrant);
   }
 
-  /// Résultat de la persistance d'un lot de concerts.
-  ///
-  /// @param nbInseres nombre de concerts insérés
-  /// @param nbMisAJour nombre de concerts mis à jour
+  /**
+   * Résultat de la persistance d'un lot de concerts.
+   *
+   * @param nbInseres nombre de concerts insérés
+   * @param nbMisAJour nombre de concerts mis à jour
+   */
   public record ResultatPersistance(int nbInseres, int nbMisAJour) {}
 
-  /// Persiste les concerts dédoublonnés en base via upsert par lots de {@value #TAILLE_LOT}.
-  ///
-  /// <p>Chaque sous-lot est persisté dans sa propre transaction ({@link
-  /// #persisterLotTransactionnel}) plutôt que dans une transaction unique englobant toute la boucle
-  /// — une interruption (exception sur un sous-lot) ne perd ainsi que le sous-lot en cours, pas les
-  /// sous-lots déjà committés, conformément au motif de résilience "persistance par lot" déjà
-  /// appliqué ailleurs dans le worker (enrichissement, fetch).
-  ///
-  /// @param liste concerts à persister
-  /// @return résultat avec nombre d'insertions et de mises à jour
+  /**
+   * Persiste les concerts dédoublonnés en base via upsert par lots de {@value #TAILLE_LOT}.
+   *
+   * <p>Chaque sous-lot est persisté dans sa propre transaction ({@link
+   * #persisterLotTransactionnel}) plutôt que dans une transaction unique englobant toute la boucle
+   * — une interruption (exception sur un sous-lot) ne perd ainsi que le sous-lot en cours, pas les
+   * sous-lots déjà committés, conformément au motif de résilience "persistance par lot" déjà
+   * appliqué ailleurs dans le worker (enrichissement, fetch).
+   *
+   * @param liste concerts à persister
+   * @return résultat avec nombre d'insertions et de mises à jour
+   */
   public ResultatPersistance persisterConcerts(List<ConcertBrut> liste) {
     if (liste.isEmpty()) return new ResultatPersistance(0, 0);
 
@@ -351,10 +375,12 @@ public class PersisterConcerts {
     return new ResultatPersistance(totalInserts, totalUpdates);
   }
 
-  /// Partie transactionnelle et isolée d'un sous-lot de {@link #persisterConcerts}.
-  ///
-  /// @param lot sous-lot de concerts bruts (au plus {@value #TAILLE_LOT})
-  /// @return résultat du sous-lot
+  /**
+   * Partie transactionnelle et isolée d'un sous-lot de {@link #persisterConcerts}.
+   *
+   * @param lot sous-lot de concerts bruts (au plus {@value #TAILLE_LOT})
+   * @return résultat du sous-lot
+   */
   @Transactional
   ResultatPersistance persisterLotTransactionnel(List<ConcertBrut> lot) {
     List<ValeurConcert> valeursBrutes =

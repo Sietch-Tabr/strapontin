@@ -10,13 +10,15 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 
-/// Génération de secrets et de hachages pour l'invitation et la réinitialisation de comptes.
-///
-/// <p>Primitives techniques : identifiants temporaires, tokens d'invitation/reset et
-/// empreinte SHA-256 des tokens persistés. Le {@link SecureRandom} est partagé (thread-safe).
-///
-/// @since 2.2.3
-/// @author Kwaite
+/**
+ * Génération de secrets et de hachages pour l'invitation et la réinitialisation de comptes.
+ *
+ * <p>Primitives techniques : identifiants temporaires, tokens d'invitation/reset et
+ * empreinte SHA-256 des tokens persistés. Le {@link SecureRandom} est partagé (thread-safe).
+ *
+ * @since 2.2.3
+ * @author Kwaite
+ */
 public final class GenerateurSecrets {
 
   private static final SecureRandom RNG = new SecureRandom();
@@ -25,10 +27,12 @@ public final class GenerateurSecrets {
     // Classe utilitaire — pas d'instanciation
   }
 
-  /// Génère une chaîne hexadécimale aléatoire.
-  ///
-  /// @param nbOctets nombre d'octets aléatoires (la chaîne fait {@code 2 * nbOctets} caractères)
-  /// @return la chaîne hexadécimale
+  /**
+   * Génère une chaîne hexadécimale aléatoire.
+   *
+   * @param nbOctets nombre d'octets aléatoires (la chaîne fait {@code 2 * nbOctets} caractères)
+   * @return la chaîne hexadécimale
+   */
   public static String genererHex(int nbOctets) {
     byte[] octets = new byte[nbOctets];
     RNG.nextBytes(octets);
@@ -37,21 +41,25 @@ public final class GenerateurSecrets {
     return sb.toString();
   }
 
-  /// Génère un token aléatoire encodé en Base64 URL (sans padding).
-  ///
-  /// @param nbOctets nombre d'octets aléatoires
-  /// @return le token encodé
+  /**
+   * Génère un token aléatoire encodé en Base64 URL (sans padding).
+   *
+   * @param nbOctets nombre d'octets aléatoires
+   * @return le token encodé
+   */
   public static String genererToken(int nbOctets) {
     byte[] octets = new byte[nbOctets];
     RNG.nextBytes(octets);
     return Base64.getUrlEncoder().withoutPadding().encodeToString(octets);
   }
 
-  /// Calcule l'empreinte SHA-256 d'une chaîne, en hexadécimal.
-  ///
-  /// @param entree la chaîne à hacher
-  /// @return l'empreinte hexadécimale
-  /// @throws IllegalStateException si l'algorithme SHA-256 est indisponible
+  /**
+   * Calcule l'empreinte SHA-256 d'une chaîne, en hexadécimal.
+   *
+   * @param entree la chaîne à hacher
+   * @return l'empreinte hexadécimale
+   * @throws IllegalStateException si l'algorithme SHA-256 est indisponible
+   */
   public static String sha256Hex(String entree) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");

@@ -24,10 +24,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerRevocationService} (extrait de {@code WorkerService}).
-///
-/// @since 2.2.6 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerRevocationService} (extrait de {@code WorkerService}).
+ *
+ * @since 2.2.6 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class WorkerRevocationServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

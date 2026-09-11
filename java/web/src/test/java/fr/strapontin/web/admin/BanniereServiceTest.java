@@ -11,10 +11,12 @@ import fr.strapontin.web.config.ConfigService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link BanniereService}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link BanniereService}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class BanniereServiceTest {
 
   private ConfigService configService;

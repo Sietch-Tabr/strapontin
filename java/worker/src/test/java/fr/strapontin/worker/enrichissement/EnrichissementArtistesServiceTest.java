@@ -33,11 +33,13 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link EnrichissementArtistesService} — orchestration multi-sources et
-/// cross-validation P6262.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link EnrichissementArtistesService} — orchestration multi-sources et
+ * cross-validation P6262.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class EnrichissementArtistesServiceTest {
 
   @SuppressWarnings("unchecked")

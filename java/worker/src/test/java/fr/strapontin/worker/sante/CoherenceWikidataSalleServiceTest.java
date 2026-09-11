@@ -32,10 +32,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link CoherenceWikidataSalleService}.
-///
-/// @since 2.7.5
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link CoherenceWikidataSalleService}.
+ *
+ * @since 2.7.5
+ * @author Kwaite
+ */
 class CoherenceWikidataSalleServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -60,10 +62,12 @@ class CoherenceWikidataSalleServiceTest {
         .thenReturn(candidats);
   }
 
-  /// Simule le résultat de `chargerVillesConcertsReelles` en pilotant directement le {@link
-  /// RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel n'est jamais
-  /// déclenché en test (Mockito no-op par défaut sur un `void`), ce qui correspond au cas « aucun
-  /// concert réel connu » (repli sur `salles.ville`, comportement historique).
+  /**
+   * Simule le résultat de {@code chargerVillesConcertsReelles} en pilotant directement le {@link
+   * RowCallbackHandler} avec un {@link ResultSet} mocké — sans ce stub, l'appel réel n'est jamais
+   * déclenché en test (Mockito no-op par défaut sur un {@code void}), ce qui correspond au cas « aucun
+   * concert réel connu » (repli sur {@code salles.ville}, comportement historique).
+   */
   private void simulerVillesConcertsReelles(Map<UUID, List<String>> villesParSalle) {
     doAnswer(
             invocation -> {
@@ -85,9 +89,11 @@ class CoherenceWikidataSalleServiceTest {
             any(RowCallbackHandler.class));
   }
 
-  /// Simule le résultat de `chargerSignaturesDejaSignalees`, distinct de {@link
-  /// #simulerVillesConcertsReelles} par le texte SQL (`coherence_wikidata_signalee` vs `FROM
-  /// concerts`) pour ne pas router les deux `RowCallbackHandler` sur le même stub.
+  /**
+   * Simule le résultat de {@code chargerSignaturesDejaSignalees}, distinct de {@link
+   * #simulerVillesConcertsReelles} par le texte SQL ({@code coherence_wikidata_signalee} vs {@code FROM
+   * concerts}) pour ne pas router les deux {@code RowCallbackHandler} sur le même stub.
+   */
   private void simulerSignaturesDejaSignalees(Map<UUID, String> signaturesParSalle) {
     doAnswer(
             invocation -> {

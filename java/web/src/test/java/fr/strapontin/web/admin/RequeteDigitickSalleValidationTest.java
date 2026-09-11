@@ -13,13 +13,15 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteDigitickSalle}.
-///
-/// <p>Le caractère obligatoire de {@code nom}/{@code slug} est vérifié séparément par chaque
-/// contrôleur (diffère entre création et modification) — ce record ne porte que des bornes.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteDigitickSalle}.
+ *
+ * <p>Le caractère obligatoire de {@code nom}/{@code slug} est vérifié séparément par chaque
+ * contrôleur (diffère entre création et modification) — ce record ne porte que des bornes.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class RequeteDigitickSalleValidationTest {
 
   private static final Validator VALIDATOR =

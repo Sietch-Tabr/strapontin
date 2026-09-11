@@ -23,12 +23,14 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link AccueilService}.
-///
-/// <p>Couvre la restriction aux matchs artiste de {@link AccueilService#marquerVus}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link AccueilService}.
+ *
+ * <p>Couvre la restriction aux matchs artiste de {@link AccueilService#marquerVus}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class AccueilServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

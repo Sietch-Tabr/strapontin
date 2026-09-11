@@ -10,13 +10,15 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de gestion des clés VAPID pour les notifications push PWA.
-///
-/// <p>Génère une paire de clés EC P-256 (secp256r1) encodées en Base64 URL-safe, les persiste dans
-/// {@code app_config} et invalide tous les abonnements push existants.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Service de gestion des clés VAPID pour les notifications push PWA.
+ *
+ * <p>Génère une paire de clés EC P-256 (secp256r1) encodées en Base64 URL-safe, les persiste dans
+ * {@code app_config} et invalide tous les abonnements push existants.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 @Service
 public class VapidService {
 
@@ -24,9 +26,11 @@ public class VapidService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
-  /// @param configService lecture/écriture de la configuration applicative
-  /// @param jdbc accès JDBC pour supprimer les abonnements push
-  /// @param logAdminService audit des actions admin
+  /**
+   * @param configService lecture/écriture de la configuration applicative
+   * @param jdbc accès JDBC pour supprimer les abonnements push
+   * @param logAdminService audit des actions admin
+   */
   public VapidService(
       ConfigService configService,
       NamedParameterJdbcTemplate jdbc,
@@ -36,10 +40,12 @@ public class VapidService {
     this.logAdminService = logAdminService;
   }
 
-  /// Génère une paire de clés VAPID EC P-256, les persiste et supprime les abonnements push.
-  ///
-  /// @return paire de clés encodées en Base64 URL-safe et nombre d'abonnements supprimés
-  /// @throws Exception si la génération de clés échoue
+  /**
+   * Génère une paire de clés VAPID EC P-256, les persiste et supprime les abonnements push.
+   *
+   * @return paire de clés encodées en Base64 URL-safe et nombre d'abonnements supprimés
+   * @throws Exception si la génération de clés échoue
+   */
   public ResultatVapid genererVapid() throws Exception {
     VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
 
@@ -56,9 +62,11 @@ public class VapidService {
     return new ResultatVapid(paire.clePublique(), nbSupprimes);
   }
 
-  /// Résultat de la génération des clés VAPID.
-  ///
-  /// @param clePublique clé publique EC P-256 en Base64 URL-safe
-  /// @param nbAbonnementsSupprimes nombre d'abonnements push invalidés
+  /**
+   * Résultat de la génération des clés VAPID.
+   *
+   * @param clePublique clé publique EC P-256 en Base64 URL-safe
+   * @param nbAbonnementsSupprimes nombre d'abonnements push invalidés
+   */
   public record ResultatVapid(String clePublique, int nbAbonnementsSupprimes) {}
 }

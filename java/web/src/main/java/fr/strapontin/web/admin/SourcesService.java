@@ -21,13 +21,15 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-/// Service de gestion de l'onglet admin « Sources ».
-///
-/// <p>Agrège les statuts des sources de données et gère la configuration des slugs Digitick par
-/// salle.
-///
-/// @since 2.3.0
-/// @author Kwaite
+/**
+ * Service de gestion de l'onglet admin « Sources ».
+ *
+ * <p>Agrège les statuts des sources de données et gère la configuration des slugs Digitick par
+ * salle.
+ *
+ * @since 2.3.0
+ * @author Kwaite
+ */
 @Service
 public class SourcesService {
 
@@ -41,10 +43,12 @@ public class SourcesService {
   private final RestClient restClient;
   private final SalleService salleService;
 
-  /// @param jdbc accès JDBC
-  /// @param objectMapper désérialiseur JSON (quota TM)
-  /// @param restClient client HTTP partagé (test connexion Digitick)
-  /// @param salleService service salle (upsert, mise à jour, déclenchement worker)
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper désérialiseur JSON (quota TM)
+   * @param restClient client HTTP partagé (test connexion Digitick)
+   * @param salleService service salle (upsert, mise à jour, déclenchement worker)
+   */
   public SourcesService(
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper objectMapper,
@@ -56,72 +60,86 @@ public class SourcesService {
     this.salleService = salleService;
   }
 
-  /// Retourne les statuts agrégés de toutes les sources.
-  ///
-  /// <p>Les deux listes de salles (sans TM ni Eventim / avec Digitick) sont paginées séparément via
-  /// {@link #listerSalles}, désormais consommées par un endpoint dédié.
-  ///
-  /// @return map {@code {sources}}
+  /**
+   * Retourne les statuts agrégés de toutes les sources.
+   *
+   * <p>Les deux listes de salles (sans TM ni Eventim / avec Digitick) sont paginées séparément via
+   * {@link #listerSalles}, désormais consommées par un endpoint dédié.
+   *
+   * @return map {@code {sources}}
+   */
   public Map<String, Object> lireSources() {
     return Map.of("sources", construireSources());
   }
 
-  /// Retourne le quota TM et l'état du quota pour réutilisation dans d'autres endpoints.
-  ///
-  /// @return map {@code {quotaTM, etatQuota}} — valeurs null si quota absent
+  /**
+   * Retourne le quota TM et l'état du quota pour réutilisation dans d'autres endpoints.
+   *
+   * @return map {@code {quotaTM, etatQuota}} — valeurs null si quota absent
+   */
   public Map<String, Object> lireQuotaTM() {
     QuotaTM quota = lireQuotaTMDepuisBase();
     String etat = calculerEtatQuota(quota);
     return Map.of("quotaTM", quota != null ? quota : "null", "etatQuota", etat);
   }
 
-  /// Construit la chaîne d'identifiants préfixés pour une salle (ex. {@code "tm:rZFSnyZdFvA"}).
-  ///
-  /// @param salleId UUID de la salle
-  /// @return identifiants CSV ou {@code null} si aucun identifiant connu
+  /**
+   * Construit la chaîne d'identifiants préfixés pour une salle (ex. {@code "tm:rZFSnyZdFvA"}).
+   *
+   * @param salleId UUID de la salle
+   * @return identifiants CSV ou {@code null} si aucun identifiant connu
+   */
   public String obtenirIdentifiantsSalle(UUID salleId) {
     return salleService.lireIdentifiantsSources(salleId);
   }
 
-  /// Crée une salle Digitick dans le référentiel et déclenche immédiatement un fetch.
-  ///
-  /// @param nom nom affiché de la salle
-  /// @param slug slug Digitick (ex. {@code "lempreinte"})
-  /// @param ville ville (peut être {@code null})
-  /// @param cp code postal 5 chiffres (peut être {@code null})
-  /// @return UUID stable de la salle créée ou retrouvée
+  /**
+   * Crée une salle Digitick dans le référentiel et déclenche immédiatement un fetch.
+   *
+   * @param nom nom affiché de la salle
+   * @param slug slug Digitick (ex. {@code "lempreinte"})
+   * @param ville ville (peut être {@code null})
+   * @param cp code postal 5 chiffres (peut être {@code null})
+   * @return UUID stable de la salle créée ou retrouvée
+   */
   public UUID creerSalleDigitick(String nom, String slug, String ville, String cp) {
     return salleService.creerSalleDigitick(nom, slug, ville, cp);
   }
 
-  /// Met à jour les métadonnées d'une salle Digitick (nom, ville, CP).
-  ///
-  /// @param salleId UUID de la salle
-  /// @param nom nouveau nom (null = inchangé)
-  /// @param ville nouvelle ville (null = inchangée)
-  /// @param cp nouveau code postal (null = inchangé)
+  /**
+   * Met à jour les métadonnées d'une salle Digitick (nom, ville, CP).
+   *
+   * @param salleId UUID de la salle
+   * @param nom nouveau nom (null = inchangé)
+   * @param ville nouvelle ville (null = inchangée)
+   * @param cp nouveau code postal (null = inchangé)
+   */
   public void modifierSalleDigitick(UUID salleId, String nom, String ville, String cp) {
     salleService.mettreAJourSalle(salleId, nom, ville, cp);
   }
 
-  /// Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
-  ///
-  /// @param salleId UUID de la salle
-  /// @return {@code true} si supprimée, {@code false} si des contraintes bloquent la suppression
+  /**
+   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+   *
+   * @param salleId UUID de la salle
+   * @return {@code true} si supprimée, {@code false} si des contraintes bloquent la suppression
+   */
   public boolean supprimerSalleDigitick(UUID salleId) {
     return salleService.supprimerSalleDigitick(salleId);
   }
 
-  /// Met à jour le slug Digitick d'une salle dans {@code salle_sources}.
-  ///
-  /// <p>Si le slug est vide, supprime l'entrée existante. Si le slug est déjà attribué à une autre
-  /// salle, lève une erreur 409 plutôt que de le voler silencieusement à cette autre salle le
-  /// conflit est vérifié avant toute suppression pour ne pas perdre la configuration existante si
-  /// l'opération échoue.
-  ///
-  /// @param salleId UUID de la salle
-  /// @param slug nouveau slug Digitick (peut être vide pour supprimer)
-  /// @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
+  /**
+   * Met à jour le slug Digitick d'une salle dans {@code salle_sources}.
+   *
+   * <p>Si le slug est vide, supprime l'entrée existante. Si le slug est déjà attribué à une autre
+   * salle, lève une erreur 409 plutôt que de le voler silencieusement à cette autre salle le
+   * conflit est vérifié avant toute suppression pour ne pas perdre la configuration existante si
+   * l'opération échoue.
+   *
+   * @param salleId UUID de la salle
+   * @param slug nouveau slug Digitick (peut être vide pour supprimer)
+   * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
+   */
   public void mettreAJourDigitickSlug(UUID salleId, String slug) {
     String slugStrip = slug == null ? "" : slug.strip();
     if (!slugStrip.isEmpty()) {
@@ -144,11 +162,13 @@ public class SourcesService {
     }
   }
 
-  /// Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que {@code salleId}.
-  ///
-  /// @param salleId salle pour laquelle le slug est en cours d'attribution
-  /// @param slug slug à vérifier
-  /// @throws ErreurMetier 409 si le slug est déjà utilisé par une autre salle
+  /**
+   * Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que {@code salleId}.
+   *
+   * @param salleId salle pour laquelle le slug est en cours d'attribution
+   * @param slug slug à vérifier
+   * @throws ErreurMetier 409 si le slug est déjà utilisé par une autre salle
+   */
   private void verifierSlugDigitickLibre(UUID salleId, String slug) {
     List<Map<String, Object>> conflits =
         jdbc.queryForList(
@@ -166,16 +186,18 @@ public class SourcesService {
     }
   }
 
-  /// Teste un slug Digitick et retourne le nombre de concerts trouvés.
-  ///
-  /// <p>Fait un GET sur l'endpoint AJAX Digitick et compte les {@code dl} portant une classe {@code
-  /// evenementN} (chiffre immédiatement après "evenement"), même critère que {@code DigitickSource}
-  /// avec {@code dl[class~=evenement\\d+]}. Les sous-éléments ({@code evenementNom}, {@code
-  /// evenementDate}…) sont exclus car non suivis d'un chiffre. Retourne -1 si le slug est invalide
-  /// ou inaccessible.
-  ///
-  /// @param slug slug à tester
-  /// @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
+  /**
+   * Teste un slug Digitick et retourne le nombre de concerts trouvés.
+   *
+   * <p>Fait un GET sur l'endpoint AJAX Digitick et compte les {@code dl} portant une classe {@code
+   * evenementN} (chiffre immédiatement après "evenement"), même critère que {@code DigitickSource}
+   * avec {@code dl[class~=evenement\\d+]}. Les sous-éléments ({@code evenementNom}, {@code
+   * evenementDate}…) sont exclus car non suivis d'un chiffre. Retourne -1 si le slug est invalide
+   * ou inaccessible.
+   *
+   * @param slug slug à tester
+   * @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
+   */
   public int testerDigitickSlug(String slug) {
     if (slug == null || slug.isBlank()) return -1;
     try {
@@ -278,10 +300,12 @@ public class SourcesService {
     }
   }
 
-  /// Compte les salles reliées à une source externe donnée.
-  ///
-  /// @param source identifiant de la source (ex. {@code "ticketmaster"}, {@code "digitick"})
-  /// @return nombre de salles avec un identifiant pour cette source, 0 en cas d'échec
+  /**
+   * Compte les salles reliées à une source externe donnée.
+   *
+   * @param source identifiant de la source (ex. {@code "ticketmaster"}, {@code "digitick"})
+   * @return nombre de salles avec un identifiant pour cette source, 0 en cas d'échec
+   */
   private Integer compterSallesParSource(String source) {
     return compterAvecFallback(
         "SELECT COUNT(*) FROM salle_sources WHERE source = :source",
@@ -289,10 +313,12 @@ public class SourcesService {
         "les salles pour la source " + source);
   }
 
-  /// Compte les artistes reliés à une source externe donnée.
-  ///
-  /// @param source identifiant de la source (ex. {@code "ticketmaster"})
-  /// @return nombre d'artistes avec un identifiant pour cette source, 0 en cas d'échec
+  /**
+   * Compte les artistes reliés à une source externe donnée.
+   *
+   * @param source identifiant de la source (ex. {@code "ticketmaster"})
+   * @return nombre d'artistes avec un identifiant pour cette source, 0 en cas d'échec
+   */
   private Integer compterArtistesParSource(String source) {
     return compterAvecFallback(
         "SELECT COUNT(*) FROM artiste_sources WHERE source = :source",
@@ -300,10 +326,12 @@ public class SourcesService {
         "les artistes pour la source " + source);
   }
 
-  /// Compte les artistes avec un identifiant Deezer — colonne directe sur {@code artistes}, pas
-  /// d'entrée dans {@code artiste_sources} pour cette source.
-  ///
-  /// @return nombre d'artistes avec {@code deezer_id} renseigné, 0 en cas d'échec
+  /**
+   * Compte les artistes avec un identifiant Deezer — colonne directe sur {@code artistes}, pas
+   * d'entrée dans {@code artiste_sources} pour cette source.
+   *
+   * @return nombre d'artistes avec {@code deezer_id} renseigné, 0 en cas d'échec
+   */
   private Integer compterArtistesDeezer() {
     return compterAvecFallback(
         "SELECT COUNT(*) FROM artistes WHERE deezer_id IS NOT NULL",
@@ -325,14 +353,16 @@ public class SourcesService {
         "les artistes Wikidata");
   }
 
-  /// Exécute un {@code COUNT(*)} avec repli sur 0 en cas d'échec — motif partagé par les 5 méthodes
-  /// de comptage ci-dessus, jusqu'ici dupliqué à l'identique dans chacune.
-  ///
-  /// @param sql requête {@code SELECT COUNT(*)} paramétrée
-  /// @param params paramètres nommés de la requête
-  /// @param descriptionEchec description de ce qui est compté, pour le message de log en cas
-  ///   d'échec
-  /// @return le compte, ou 0 en cas d'échec
+  /**
+   * Exécute un {@code COUNT(*)} avec repli sur 0 en cas d'échec — motif partagé par les 5 méthodes
+   * de comptage ci-dessus, jusqu'ici dupliqué à l'identique dans chacune.
+   *
+   * @param sql requête {@code SELECT COUNT(*)} paramétrée
+   * @param params paramètres nommés de la requête
+   * @param descriptionEchec description de ce qui est compté, pour le message de log en cas
+   *   d'échec
+   * @return le compte, ou 0 en cas d'échec
+   */
   private Integer compterAvecFallback(
       String sql, Map<String, Object> params, String descriptionEchec) {
     try {
@@ -344,14 +374,16 @@ public class SourcesService {
     }
   }
 
-  /// Liste paginée des salles pour l'onglet admin « Sources ».
-  ///
-  /// @param digitick {@code true} pour les salles déjà configurées avec un slug Digitick, {@code
-  ///   false} pour celles sans identifiant Ticketmaster ni Eventim (candidates à une configuration
-  ///   manuelle)
-  /// @param page numéro de page (0-indexé)
-  /// @param nom filtre nom partiel (insensible à la casse), peut être null
-  /// @return page de résultats
+  /**
+   * Liste paginée des salles pour l'onglet admin « Sources ».
+   *
+   * @param digitick {@code true} pour les salles déjà configurées avec un slug Digitick, {@code
+   *   false} pour celles sans identifiant Ticketmaster ni Eventim (candidates à une configuration
+   *   manuelle)
+   * @param page numéro de page (0-indexé)
+   * @param nom filtre nom partiel (insensible à la casse), peut être null
+   * @return page de résultats
+   */
   public ReponseSallesSources listerSalles(boolean digitick, int page, String nom) {
     return digitick ? listerSallesAvecDigitick(page, nom) : listerSallesSansTmNiEventim(page, nom);
   }

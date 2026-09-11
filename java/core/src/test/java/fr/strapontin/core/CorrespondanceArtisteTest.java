@@ -10,10 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link CorrespondanceArtiste#estDoublonArtiste} — dédoublonnage d'artistes.
-///
-/// <p>Noms passés déjà normalisés (via {@link Normalisation#normaliserTexte}), comme les
-/// consommateurs réels de cette classe ({@code ReconciliateurArtistes}, {@code ArtisteService}).
+/**
+ * Tests unitaires de {@link CorrespondanceArtiste#estDoublonArtiste} — dédoublonnage d'artistes.
+ *
+ * <p>Noms passés déjà normalisés (via {@link Normalisation#normaliserTexte}), comme les
+ * consommateurs réels de cette classe ({@code ReconciliateurArtistes}, {@code ArtisteService}).
+ */
 class CorrespondanceArtisteTest {
 
   @Test

@@ -21,12 +21,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link ArtisteController}.
-///
-/// <p>Vérifie la délégation au service et les codes HTTP retournés.
-///
-/// @since 2.1.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ArtisteController}.
+ *
+ * <p>Vérifie la délégation au service et les codes HTTP retournés.
+ *
+ * @since 2.1.2
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class ArtisteControllerTest {
 

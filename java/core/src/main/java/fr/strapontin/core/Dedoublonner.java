@@ -9,10 +9,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/// Dédoublonne des concerts issus de plusieurs sources (TM, Eventim, Digitick) en trois passes de
-/// rapprochement progressivement plus tolérantes.
-///
-/// @author Kwaite
+/**
+ * Dédoublonne des concerts issus de plusieurs sources (TM, Eventim, Digitick) en trois passes de
+ * rapprochement progressivement plus tolérantes.
+ *
+ * @author Kwaite
+ */
 public final class Dedoublonner {
 
   private static final double SEUIL_SIMILARITE = 0.85;
@@ -37,12 +39,14 @@ public final class Dedoublonner {
     return new ConcertEnrichi(c, Normalisation.normaliserTexte(c.artiste()), villeNorm, salleNorm);
   }
 
-  /// Dédoublonne une liste de concerts en trois passes progressivement plus tolérantes : égalité
-  /// exacte (artiste/date/heure/ville normalisés), similarité floue de l'artiste à date et ville
-  /// identiques, puis repli sur la salle pour les concerts dont la ville diverge entre sources.
-  ///
-  /// @param concerts les concerts bruts, éventuellement en double entre sources
-  /// @return les concerts dédoublonnés, chaque doublon fusionné vers sa version la plus complète
+  /**
+   * Dédoublonne une liste de concerts en trois passes progressivement plus tolérantes : égalité
+   * exacte (artiste/date/heure/ville normalisés), similarité floue de l'artiste à date et ville
+   * identiques, puis repli sur la salle pour les concerts dont la ville diverge entre sources.
+   *
+   * @param concerts les concerts bruts, éventuellement en double entre sources
+   * @return les concerts dédoublonnés, chaque doublon fusionné vers sa version la plus complète
+   */
   public static List<ConcertBrut> dedoublonner(List<ConcertBrut> concerts) {
     if (concerts.isEmpty()) return List.of();
     List<ConcertEnrichi> enrichis = concerts.stream().map(Dedoublonner::enrichir).toList();
@@ -129,17 +133,19 @@ public final class Dedoublonner {
   // dessous de tout écart matinée/soirée réel (toujours de l'ordre de l'heure).
   private static final int TOLERANCE_HEURE_MINUTES = 3;
 
-  /// Indique si deux concerts peuvent fusionner du point de vue de l'heure.
-  ///
-  /// <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux concerts
-  /// que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures renseignées et
-  /// distantes de plus de {@value #TOLERANCE_HEURE_MINUTES} minutes signent deux concerts
-  /// distincts, une heure absente d'un côté (ou des deux) ne permet ni de confirmer ni d'exclure la
-  /// fusion.
-  ///
-  /// @param a premier concert enrichi
-  /// @param b second concert enrichi
-  /// @return {@code true} si les heures ne s'opposent pas à une fusion
+  /**
+   * Indique si deux concerts peuvent fusionner du point de vue de l'heure.
+   *
+   * <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux concerts
+   * que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures renseignées et
+   * distantes de plus de {@value #TOLERANCE_HEURE_MINUTES} minutes signent deux concerts
+   * distincts, une heure absente d'un côté (ou des deux) ne permet ni de confirmer ni d'exclure la
+   * fusion.
+   *
+   * @param a premier concert enrichi
+   * @param b second concert enrichi
+   * @return {@code true} si les heures ne s'opposent pas à une fusion
+   */
   private static boolean heuresCompatibles(ConcertEnrichi a, ConcertEnrichi b) {
     var heureA = a.concert().heure();
     var heureB = b.concert().heure();

@@ -24,10 +24,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link GestionQuotaResendWorker} (suite de l'incident).
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link GestionQuotaResendWorker} (suite de l'incident).
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 class GestionQuotaResendWorkerTest {
 
   private NamedParameterJdbcTemplate jdbc;

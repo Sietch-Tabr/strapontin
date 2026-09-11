@@ -8,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link CadenceurAppelsMemoire}.
+/**
+ * Tests unitaires de {@link CadenceurAppelsMemoire}.
+ */
 class CadenceurAppelsMemoireTest {
 
   @Test

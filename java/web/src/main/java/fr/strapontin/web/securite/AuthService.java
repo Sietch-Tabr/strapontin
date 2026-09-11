@@ -19,13 +19,15 @@ import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Service d'authentification et de réinitialisation de mot de passe.
-///
-/// <p>Orchestration atomique des flux mot de passe oublié et réinitialisation, via {@link
-/// VerificationRepository} et {@link EmailService}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service d'authentification et de réinitialisation de mot de passe.
+ *
+ * <p>Orchestration atomique des flux mot de passe oublié et réinitialisation, via {@link
+ * VerificationRepository} et {@link EmailService}.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class AuthService {
 
@@ -37,10 +39,12 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
 
-  /// @param verificationRepository accès aux tokens de vérification
-  /// @param emailService service d'envoi d'emails
-  /// @param passwordEncoder encodeur bcrypt
-  /// @param sessionRepository dépôt de sessions JDBC (révocation après reset de mdp)
+  /**
+   * @param verificationRepository accès aux tokens de vérification
+   * @param emailService service d'envoi d'emails
+   * @param passwordEncoder encodeur bcrypt
+   * @param sessionRepository dépôt de sessions JDBC (révocation après reset de mdp)
+   */
   public AuthService(
       VerificationRepository verificationRepository,
       EmailService emailService,
@@ -52,12 +56,14 @@ public class AuthService {
     this.sessionRepository = sessionRepository;
   }
 
-  /// Déclenche un email de réinitialisation de mot de passe.
-  ///
-  /// <p>Ne fait rien (sans erreur) si l'email est inconnu — prévention de l'énumération de comptes.
-  ///
-  /// @param email adresse email (déjà normalisée)
-  /// @param baseUrl URL de base de l'application pour construire le lien de reset
+  /**
+   * Déclenche un email de réinitialisation de mot de passe.
+   *
+   * <p>Ne fait rien (sans erreur) si l'email est inconnu — prévention de l'énumération de comptes.
+   *
+   * @param email adresse email (déjà normalisée)
+   * @param baseUrl URL de base de l'application pour construire le lien de reset
+   */
   @Transactional
   public void motDePasseOublie(String email, String baseUrl) {
     if (!verificationRepository.utilisateurExistePourEmail(email)) {
@@ -78,10 +84,12 @@ public class AuthService {
     log.debug("Email reset MDP envoyé pour email hashé {}", email.hashCode());
   }
 
-  /// Indique si un token est de type invitation, sans le consommer.
-  ///
-  /// @param token token brut (non hashé)
-  /// @return {@code true} si le token est de type {@code invite:}
+  /**
+   * Indique si un token est de type invitation, sans le consommer.
+   *
+   * @param token token brut (non hashé)
+   * @return {@code true} si le token est de type {@code invite:}
+   */
   public boolean estTokenInvite(String token) {
     return verificationRepository
         .lireIdentifiantParTokenHash(GenerateurSecrets.sha256Hex(token))
@@ -89,13 +97,15 @@ public class AuthService {
         .orElse(false);
   }
 
-  /// Active un compte invité : définit identifiant et mot de passe en une seule opération.
-  ///
-  /// @param token token brut (non hashé), doit être de type {@code invite:}
-  /// @param identifiant identifiant choisi (déjà normalisé en minuscules, format validé)
-  /// @param motDePasse mot de passe en clair (longueur validée)
-  /// @return l'identifiant normalisé, pour l'auto-login en aval
-  /// @throws ErreurMetier si le token est invalide, expiré, non-invite ou l'identifiant pris
+  /**
+   * Active un compte invité : définit identifiant et mot de passe en une seule opération.
+   *
+   * @param token token brut (non hashé), doit être de type {@code invite:}
+   * @param identifiant identifiant choisi (déjà normalisé en minuscules, format validé)
+   * @param motDePasse mot de passe en clair (longueur validée)
+   * @return l'identifiant normalisé, pour l'auto-login en aval
+   * @throws ErreurMetier si le token est invalide, expiré, non-invite ou l'identifiant pris
+   */
   @Transactional
   public String activerCompteInvite(String token, String identifiant, String motDePasse) {
     String tokenHash = GenerateurSecrets.sha256Hex(token);
@@ -130,11 +140,13 @@ public class AuthService {
     return identifiant;
   }
 
-  /// Réinitialise le mot de passe via un token de vérification.
-  ///
-  /// @param token token brut (non hashé)
-  /// @param motDePasse nouveau mot de passe en clair
-  /// @throws ErreurMetier si le token est invalide ou expiré
+  /**
+   * Réinitialise le mot de passe via un token de vérification.
+   *
+   * @param token token brut (non hashé)
+   * @param motDePasse nouveau mot de passe en clair
+   * @throws ErreurMetier si le token est invalide ou expiré
+   */
   @Transactional
   public void reinitialiserMotDePasse(String token, String motDePasse) {
     String tokenHash = GenerateurSecrets.sha256Hex(token);

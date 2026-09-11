@@ -15,8 +15,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/// Vérification de vivacité et redécouverte active des identifiants Ticketmaster (salles et
-/// artistes) — extrait de {@link TicketmasterSource} pour séparer ce concern du fetch principal.
+/**
+ * Vérification de vivacité et redécouverte active des identifiants Ticketmaster (salles et
+ * artistes) — extrait de {@link TicketmasterSource} pour séparer ce concern du fetch principal.
+ */
 final class TicketmasterHealthCheck {
 
   private static final Logger log = LoggerFactory.getLogger(TicketmasterHealthCheck.class);

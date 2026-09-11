@@ -13,27 +13,33 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECPoint;
 import java.util.Base64;
 
-/// Génération d'une paire de clés VAPID EC P-256 (secp256r1) pour les notifications push PWA,
-/// encodées en Base64 URL-safe (point non compressé pour la clé publique) — partagée entre {@link
-/// fr.strapontin.web.admin.VapidService} (régénération admin) et {@link
-/// fr.strapontin.web.setup.SetupService} (première génération au setup initial).
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Génération d'une paire de clés VAPID EC P-256 (secp256r1) pour les notifications push PWA,
+ * encodées en Base64 URL-safe (point non compressé pour la clé publique) — partagée entre {@link
+ * fr.strapontin.web.admin.VapidService} (régénération admin) et {@link
+ * fr.strapontin.web.setup.SetupService} (première génération au setup initial).
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 public final class VapidKeyGenerator {
 
   private VapidKeyGenerator() {}
 
-  /// Paire de clés VAPID encodées en Base64 URL-safe.
-  ///
-  /// @param clePublique clé publique EC P-256, point non compressé
-  /// @param clePrivee clé privée EC P-256
+  /**
+   * Paire de clés VAPID encodées en Base64 URL-safe.
+   *
+   * @param clePublique clé publique EC P-256, point non compressé
+   * @param clePrivee clé privée EC P-256
+   */
   public record PaireVapid(String clePublique, String clePrivee) {}
 
-  /// Génère une nouvelle paire de clés VAPID EC P-256.
-  ///
-  /// @return la paire de clés encodées
-  /// @throws Exception si la génération de clés échoue
+  /**
+   * Génère une nouvelle paire de clés VAPID EC P-256.
+   *
+   * @return la paire de clés encodées
+   * @throws Exception si la génération de clés échoue
+   */
   public static PaireVapid genererPaire() throws Exception {
     KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
     kpg.initialize(new ECGenParameterSpec("secp256r1"));

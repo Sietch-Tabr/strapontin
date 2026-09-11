@@ -20,12 +20,14 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link AlerteLogsAdminService}.
-///
-/// <p>Couvre le curseur persisté : n'avance qu'après envoi réussi, pas de re-notification.
-///
-/// @since 2.6.1
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AlerteLogsAdminService}.
+ *
+ * <p>Couvre le curseur persisté : n'avance qu'après envoi réussi, pas de re-notification.
+ *
+ * @since 2.6.1
+ * @author Kwaite
+ */
 class AlerteLogsAdminServiceTest {
 
   private static final String CLE_CURSEUR = "ALERTE_LOGS_ADMIN_CURSEUR";

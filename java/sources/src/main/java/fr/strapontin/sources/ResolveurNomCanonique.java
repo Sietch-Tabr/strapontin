@@ -17,14 +17,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Résolution des noms canoniques d'artistes via Deezer.
-///
-/// Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache Caffeine
-/// TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le nom inchangé
-/// (Deezer ne référence pas les salles).
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Résolution des noms canoniques d'artistes via Deezer.
+ *
+ * Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache Caffeine
+ * TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le nom inchangé
+ * (Deezer ne référence pas les salles).
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(ResolveurNomCanonique.class);
@@ -45,16 +47,20 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // de les comparer entre eux plutôt que de prendre le premier venu.
   private static final int LIMITE_CANDIDATS_DEEZER = 5;
 
-  /// Source de résolution utilisée pour un nom canonique.
+  /**
+   * Source de résolution utilisée pour un nom canonique.
+   */
   public enum SourceResolution {
     DEEZER,
     INCHANGE
   }
 
-  /// Résultat de la résolution : nom canonique et source utilisée.
-  ///
-  /// @param nom nom canonique résolu
-  /// @param source source ayant fourni le nom
+  /**
+   * Résultat de la résolution : nom canonique et source utilisée.
+   *
+   * @param nom nom canonique résolu
+   * @param source source ayant fourni le nom
+   */
   public record ResultatResolution(String nom, SourceResolution source) {}
 
   private final RestClient restClient;
@@ -62,9 +68,11 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /// Crée une instance avec les URLs distantes, un RestClient borné (timeout connexion 10s, lecture
-  /// 30s — sans borne, un hoquet réseau ferait pendre indéfiniment un thread worker, même classe
-  /// d'incident que celle déjà corrigée pour TM/Eventim, #887) et un cache TTL 7 jours.
+  /**
+   * Crée une instance avec les URLs distantes, un RestClient borné (timeout connexion 10s, lecture
+   * 30s — sans borne, un hoquet réseau ferait pendre indéfiniment un thread worker, même classe
+   * d'incident que celle déjà corrigée pour TM/Eventim, #887) et un cache TTL 7 jours.
+   */
   public ResolveurNomCanonique() {
     this(
         RestClient.builder()
@@ -75,10 +83,12 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
         Caffeine.newBuilder().expireAfterWrite(7, TimeUnit.DAYS).maximumSize(10_000).build());
   }
 
-  /// Crée une instance avec un RestClient et un cache personnalisés (injection de test).
-  ///
-  /// @param restClient client HTTP à utiliser
-  /// @param cache cache Caffeine à utiliser
+  /**
+   * Crée une instance avec un RestClient et un cache personnalisés (injection de test).
+   *
+   * @param restClient client HTTP à utiliser
+   * @param cache cache Caffeine à utiliser
+   */
   public ResolveurNomCanonique(RestClient restClient, Cache<String, ResultatResolution> cache) {
     this.restClient = restClient;
     this.cache = cache;
@@ -139,10 +149,12 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     return nbFan instanceof Number nombre ? nombre.doubleValue() : 0;
   }
 
-  /// Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet les
-  /// compteurs à zéro.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet les
+   * compteurs à zéro.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   @Override
   public BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
@@ -152,14 +164,16 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
   }
 
-  /// Résout le nom canonique d'un artiste ou d'une salle.
-  ///
-  /// Les résultats sont mis en cache par clé `"type:nom"`. La résolution de salle retourne toujours
-  /// `INCHANGE` (Deezer ne référence pas les salles).
-  ///
-  /// @param type {@code "artiste"} ou {@code "salle"}
-  /// @param nom nom brut à résoudre
-  /// @return résultat contenant le nom canonique et la source utilisée
+  /**
+   * Résout le nom canonique d'un artiste ou d'une salle.
+   *
+   * Les résultats sont mis en cache par clé {@code "type:nom"}. La résolution de salle retourne toujours
+   * {@code INCHANGE} (Deezer ne référence pas les salles).
+   *
+   * @param type {@code "artiste"} ou {@code "salle"}
+   * @param nom nom brut à résoudre
+   * @return résultat contenant le nom canonique et la source utilisée
+   */
   public ResultatResolution resoudreNomCanonique(String type, String nom) {
     String cleCache = type + ":" + nom;
     ResultatResolution cached = cache.getIfPresent(cleCache);

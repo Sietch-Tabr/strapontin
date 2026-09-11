@@ -19,10 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-/// Tests unitaires pour {@link ClientController} (plafonnement du nombre de clés meta).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ClientController} (plafonnement du nombre de clés meta).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class ClientControllerTest {
 
   private LogAdminService logAdminService;

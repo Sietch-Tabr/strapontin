@@ -21,10 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 
-/// Tests unitaires pour {@link RateLimitingLoginFilter}.
-///
-/// @since 2.5.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link RateLimitingLoginFilter}.
+ *
+ * @since 2.5.0
+ * @author Kwaite
+ */
 class RateLimitingLoginFilterTest {
 
   private RateLimitingLoginFilter filtre;

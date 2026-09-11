@@ -26,14 +26,16 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires de {@link DecouverteService}.
-///
-/// <p>Couvre le filtre mois via bornes de dates (correction du {@code to_char()} non indexable,
-/// méthode privée testée par réflexion) et le comportement global de {@link
-/// DecouverteService#decouvrir}.
-///
-/// @since 2.0.5
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link DecouverteService}.
+ *
+ * <p>Couvre le filtre mois via bornes de dates (correction du {@code to_char()} non indexable,
+ * méthode privée testée par réflexion) et le comportement global de {@link
+ * DecouverteService#decouvrir}.
+ *
+ * @since 2.0.5
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class DecouverteServiceTest {
 

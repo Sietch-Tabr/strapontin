@@ -12,13 +12,15 @@ import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour les interfaces {@link SourceConcerts} et {@link SourceAvecFetchLot}.
-///
-/// Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource},
-/// {@link EventimSource} et {@link DigitickSource}.
-///
-/// @since 2.3.1
-/// @author Kwaite
+/**
+ * Tests unitaires pour les interfaces {@link SourceConcerts} et {@link SourceAvecFetchLot}.
+ *
+ * Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource},
+ * {@link EventimSource} et {@link DigitickSource}.
+ *
+ * @since 2.3.1
+ * @author Kwaite
+ */
 class SourceConcertsTest {
 
   @Test

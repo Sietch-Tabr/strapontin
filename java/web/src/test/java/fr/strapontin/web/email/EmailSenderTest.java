@@ -22,13 +22,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/// Tests unitaires pour {@link EmailSender} (extrait d'{@code EmailService}).
-///
-/// <p>Couvre {@link EmailSender#obtenirDestinataireAlerte} (ne se replie jamais sur
-/// l'expéditeur/CONTACT_EMAIL).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link EmailSender} (extrait d'{@code EmailService}).
+ *
+ * <p>Couvre {@link EmailSender#obtenirDestinataireAlerte} (ne se replie jamais sur
+ * l'expéditeur/CONTACT_EMAIL).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class EmailSenderTest {
 
   private ConfigService configService;

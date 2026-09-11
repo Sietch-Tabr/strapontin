@@ -14,10 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link TotpChallengeService} (extrait d'{@code AuthController}).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link TotpChallengeService} (extrait d'{@code AuthController}).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class TotpChallengeServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

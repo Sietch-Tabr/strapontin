@@ -21,10 +21,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link DigitickSource}.
-///
-/// @since 2.4.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link DigitickSource}.
+ *
+ * @since 2.4.0
+ * @author Kwaite
+ */
 class DigitickSourceTest {
 
   private static final String HTML_CONCERTS =

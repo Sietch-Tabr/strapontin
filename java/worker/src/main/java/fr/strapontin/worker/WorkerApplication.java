@@ -9,14 +9,16 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/// Point d'entrée du worker Strapontin.
-///
-/// Application Spring Boot non-web. Exécute les jobs Quartz planifiés :
-/// fetch concerts (artistes, régions, salles), dédoublonnage, persistance,
-/// recalcul des matches et notifications.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Point d'entrée du worker Strapontin.
+ *
+ * Application Spring Boot non-web. Exécute les jobs Quartz planifiés :
+ * fetch concerts (artistes, régions, salles), dédoublonnage, persistance,
+ * recalcul des matches et notifications.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @SpringBootApplication
 public class WorkerApplication {
 

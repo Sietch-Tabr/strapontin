@@ -17,10 +17,12 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link TotpGuardFilter}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link TotpGuardFilter}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class TotpGuardFilterTest {
 
   private final TotpGuardFilter filtre = new TotpGuardFilter();

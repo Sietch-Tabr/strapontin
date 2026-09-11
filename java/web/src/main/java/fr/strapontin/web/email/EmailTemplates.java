@@ -14,20 +14,22 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-/// Génération des corps HTML de tous les emails transactionnels Strapontin.
-///
-/// <p>Chaque méthode publique retourne un document HTML complet, prêt à être transmis à l'API
-/// Resend. Le contenu variable est systématiquement passé par {@link #e(Object)} pour prévenir
-/// toute injection HTML.
-///
-/// <p>Structure commune factorisée : <ul>
-///   <li>{@link #envelopper} — cadre centré blanc + footer "Gérer mes préférences"
-///   <li>{@link #enveloppErreur} — idem avec titre en rouge
-///   <li>{@link #bouton} — CTA noir réutilisé dans la majorité des emails
-///   <li>{@link #e} — échappement HTML des valeurs variables </ul>
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Génération des corps HTML de tous les emails transactionnels Strapontin.
+ *
+ * <p>Chaque méthode publique retourne un document HTML complet, prêt à être transmis à l'API
+ * Resend. Le contenu variable est systématiquement passé par {@link #e(Object)} pour prévenir
+ * toute injection HTML.
+ *
+ * <p>Structure commune factorisée : <ul>
+ *   <li>{@link #envelopper} — cadre centré blanc + footer "Gérer mes préférences"
+ *   <li>{@link #enveloppErreur} — idem avec titre en rouge
+ *   <li>{@link #bouton} — CTA noir réutilisé dans la majorité des emails
+ *   <li>{@link #e} — échappement HTML des valeurs variables </ul>
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 final class EmailTemplates {
 
   private EmailTemplates() {}
@@ -40,11 +42,13 @@ final class EmailTemplates {
 
   // ---- Emails transactionnels ----
 
-  /// Invitation d'un nouvel utilisateur.
-  ///
-  /// @param lienReset le lien de création de compte (valable 7 jours)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email d'invitation
+  /**
+   * Invitation d'un nouvel utilisateur.
+   *
+   * @param lienReset le lien de création de compte (valable 7 jours)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email d'invitation
+   */
   static String invitation(String lienReset, String baseUrl) {
     String corps =
         """
@@ -61,11 +65,13 @@ final class EmailTemplates {
     return envelopper("Bienvenue sur Strapontin", corps, baseUrl);
   }
 
-  /// Réinitialisation du mot de passe.
-  ///
-  /// @param lienReset le lien de réinitialisation (valable 1 heure)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de réinitialisation
+  /**
+   * Réinitialisation du mot de passe.
+   *
+   * @param lienReset le lien de réinitialisation (valable 1 heure)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de réinitialisation
+   */
   static String resetMotDePasse(String lienReset, String baseUrl) {
     String corps =
         """
@@ -82,10 +88,12 @@ final class EmailTemplates {
     return envelopper("Réinitialisation du mot de passe", corps, baseUrl);
   }
 
-  /// Notification de réinitialisation de la double authentification par un administrateur.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de notification
+  /**
+   * Notification de réinitialisation de la double authentification par un administrateur.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de notification
+   */
   static String reinitialisation2fa(String baseUrl) {
     String corps =
         """
@@ -105,11 +113,13 @@ final class EmailTemplates {
     return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
   }
 
-  /// Confirmation de changement d'adresse email.
-  ///
-  /// @param lien le lien de confirmation (valable 24 heures)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de confirmation
+  /**
+   * Confirmation de changement d'adresse email.
+   *
+   * @param lien le lien de confirmation (valable 24 heures)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de confirmation
+   */
   static String confirmationEmail(String lien, String baseUrl) {
     String corps =
         """
@@ -127,13 +137,15 @@ final class EmailTemplates {
     return envelopper("Confirmez votre nouvelle adresse email", corps, baseUrl);
   }
 
-  /// Signalement utilisateur transmis à l'adresse de contact.
-  ///
-  /// @param typeLabel le libellé du type ("Bug", "Amélioration", "Question")
-  /// @param expediteurEmail l'adresse email de l'expéditeur
-  /// @param message le corps du signalement
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de signalement
+  /**
+   * Signalement utilisateur transmis à l'adresse de contact.
+   *
+   * @param typeLabel le libellé du type ("Bug", "Amélioration", "Question")
+   * @param expediteurEmail l'adresse email de l'expéditeur
+   * @param message le corps du signalement
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de signalement
+   */
   static String signalement(
       String typeLabel, String expediteurEmail, String message, String baseUrl) {
     String corps =
@@ -150,12 +162,14 @@ final class EmailTemplates {
     return envelopper("Signalement — " + typeLabel, corps, baseUrl);
   }
 
-  /// Digest de nouveaux concerts.
-  ///
-  /// @param sujet le sujet de l'email (aussi utilisé comme titre H2)
-  /// @param lignes la liste des concerts à afficher
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML du digest
+  /**
+   * Digest de nouveaux concerts.
+   *
+   * @param sujet le sujet de l'email (aussi utilisé comme titre H2)
+   * @param lignes la liste des concerts à afficher
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML du digest
+   */
   static String digestConcerts(String sujet, List<LigneConcert> lignes, String baseUrl) {
     StringBuilder lignesHtml = new StringBuilder();
     String artistePrecedent = null;
@@ -195,12 +209,14 @@ final class EmailTemplates {
     return envelopper(sujet, corps, baseUrl);
   }
 
-  /// Alerte d'échec du backup nocturne.
-  ///
-  /// @param horodatage l'horodatage YYYYMMDD_HHMMSS, ou chaîne vide si inconnu
-  /// @param raison la commande ayant échoué, ou chaîne vide
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte backup
+  /**
+   * Alerte d'échec du backup nocturne.
+   *
+   * @param horodatage l'horodatage YYYYMMDD_HHMMSS, ou chaîne vide si inconnu
+   * @param raison la commande ayant échoué, ou chaîne vide
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'alerte backup
+   */
   static String alerteBackup(String horodatage, String raison, String baseUrl) {
     String horodatageHtml =
         (horodatage != null && !horodatage.isBlank())
@@ -233,12 +249,14 @@ final class EmailTemplates {
     return enveloppErreur("Échec du backup nocturne", corps, baseUrl);
   }
 
-  /// Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur un
-  /// LXC prod/dev.
-  ///
-  /// @param detail sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte
+  /**
+   * Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur un
+   * LXC prod/dev.
+   *
+   * @param detail sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'alerte
+   */
   static String alerteIntegrite(String detail, String baseUrl) {
     String corps =
         """
@@ -254,11 +272,13 @@ final class EmailTemplates {
     return enveloppErreur("Alerte contrôle d'intégrité", corps, baseUrl);
   }
 
-  /// Alerte de bounce email (rejet définitif par le serveur destinataire).
-  ///
-  /// @param emailBouncee l'adresse email ayant produit le bounce
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte bounce
+  /**
+   * Alerte de bounce email (rejet définitif par le serveur destinataire).
+   *
+   * @param emailBouncee l'adresse email ayant produit le bounce
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'alerte bounce
+   */
   static String alerteBounce(String emailBouncee, String baseUrl) {
     String corps =
         """
@@ -282,11 +302,13 @@ final class EmailTemplates {
     return enveloppErreur("Bounce email", corps, baseUrl);
   }
 
-  /// Alerte de plainte spam (destinataire ayant signalé un email Strapontin comme indésirable).
-  ///
-  /// @param emailPlaignant l'adresse email à l'origine de la plainte
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte plainte spam
+  /**
+   * Alerte de plainte spam (destinataire ayant signalé un email Strapontin comme indésirable).
+   *
+   * @param emailPlaignant l'adresse email à l'origine de la plainte
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'alerte plainte spam
+   */
   static String alertePlainteSpam(String emailPlaignant, String baseUrl) {
     String corps =
         """
@@ -311,11 +333,13 @@ final class EmailTemplates {
     return enveloppErreur("Plainte spam email", corps, baseUrl);
   }
 
-  /// Alerte de worker inactif (aucun job depuis plus de 3 heures).
-  ///
-  /// @param detail description de la dernière activité (jamais null)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte worker
+  /**
+   * Alerte de worker inactif (aucun job depuis plus de 3 heures).
+   *
+   * @param detail description de la dernière activité (jamais null)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'alerte worker
+   */
   static String alerteWorker(String detail, String baseUrl) {
     String corps =
         """
@@ -333,14 +357,16 @@ final class EmailTemplates {
     return enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
-  /// Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (suite de l'incident).
-  ///
-  /// @param envoyesJour nombre d'envois comptabilisés pour le jour courant
-  /// @param limiteJour limite journalière Resend (tier gratuit : 100)
-  /// @param envoyesMois nombre d'envois comptabilisés pour le mois courant
-  /// @param limiteMois limite mensuelle Resend (tier gratuit : 3000)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte quota Resend
+  /**
+   * Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (suite de l'incident).
+   *
+   * @param envoyesJour nombre d'envois comptabilisés pour le jour courant
+   * @param limiteJour limite journalière Resend (tier gratuit : 100)
+   * @param envoyesMois nombre d'envois comptabilisés pour le mois courant
+   * @param limiteMois limite mensuelle Resend (tier gratuit : 3000)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'alerte quota Resend
+   */
   static String alerteQuotaResend(
       int envoyesJour, int limiteJour, int envoyesMois, int limiteMois, String baseUrl) {
     String corps =
@@ -365,11 +391,13 @@ final class EmailTemplates {
     return enveloppErreur("Quota Resend proche de la limite", corps, baseUrl);
   }
 
-  /// Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur.
-  ///
-  /// @param erreurs liste des entrées d'erreur à afficher (non vide)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML du digest d'erreurs
+  /**
+   * Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur.
+   *
+   * @param erreurs liste des entrées d'erreur à afficher (non vide)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML du digest d'erreurs
+   */
   static String alerteLogsAdmin(List<EntreeLogAdmin> erreurs, String baseUrl) {
     String lignesHtml =
         erreurs.stream()
@@ -406,10 +434,12 @@ final class EmailTemplates {
     return enveloppErreur("Nouvelles erreurs — logs admin", corps, baseUrl);
   }
 
-  /// Notification de suppression de compte par un administrateur.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de notification
+  /**
+   * Notification de suppression de compte par un administrateur.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de notification
+   */
   static String suppressionCompte(String baseUrl) {
     String corps =
         """
@@ -425,15 +455,17 @@ final class EmailTemplates {
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
   }
 
-  /// Signalement d'une salle manquante transmis à l'administrateur.
-  ///
-  /// @param nom le nom de la salle signalée
-  /// @param ville la ville/code postal (peut être vide)
-  /// @param urlSite l'URL du site ou de la billetterie (peut être vide)
-  /// @param commentaire le commentaire libre (peut être vide)
-  /// @param emailUtilisateur l'adresse email de l'utilisateur
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de signalement admin
+  /**
+   * Signalement d'une salle manquante transmis à l'administrateur.
+   *
+   * @param nom le nom de la salle signalée
+   * @param ville la ville/code postal (peut être vide)
+   * @param urlSite l'URL du site ou de la billetterie (peut être vide)
+   * @param commentaire le commentaire libre (peut être vide)
+   * @param emailUtilisateur l'adresse email de l'utilisateur
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de signalement admin
+   */
   static String signalementSalleManquante(
       String nom,
       String ville,
@@ -484,11 +516,13 @@ final class EmailTemplates {
     return envelopper("Salle manquante signalée", corps, baseUrl);
   }
 
-  /// Confirmation de signalement de salle manquante envoyée à l'utilisateur.
-  ///
-  /// @param nom le nom de la salle signalée
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de confirmation
+  /**
+   * Confirmation de signalement de salle manquante envoyée à l'utilisateur.
+   *
+   * @param nom le nom de la salle signalée
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de confirmation
+   */
   static String confirmationSignalementSalle(String nom, String baseUrl) {
     String corps =
         """
@@ -503,10 +537,12 @@ final class EmailTemplates {
     return envelopper("Votre signalement a été transmis", corps, baseUrl);
   }
 
-  /// Notification de promotion au rôle administrateur.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de promotion
+  /**
+   * Notification de promotion au rôle administrateur.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de promotion
+   */
   static String promotionAdmin(String baseUrl) {
     String corps =
         """
@@ -520,11 +556,13 @@ final class EmailTemplates {
     return envelopper("Vous êtes maintenant administrateur Strapontin", corps, baseUrl);
   }
 
-  /// Préavis de révocation du rôle administrateur (délai de 7 jours).
-  ///
-  /// @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de préavis
+  /**
+   * Préavis de révocation du rôle administrateur (délai de 7 jours).
+   *
+   * @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de préavis
+   */
   static String preavisRevocationAdmin(String dateEffective, String baseUrl) {
     String corps =
         """
@@ -540,10 +578,12 @@ final class EmailTemplates {
     return enveloppErreur("Préavis de révocation admin", corps, baseUrl);
   }
 
-  /// Email de test de configuration Resend.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de test
+  /**
+   * Email de test de configuration Resend.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de test
+   */
   static String emailTest(String baseUrl) {
     String corps =
         """
@@ -598,10 +638,12 @@ final class EmailTemplates {
         .formatted(e(href), C_NOIR, e(texte));
   }
 
-  /// Échappe les caractères HTML spéciaux d'une valeur variable.
-  ///
-  /// @param valeur la valeur à échapper (null retourne une chaîne vide)
-  /// @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
+  /**
+   * Échappe les caractères HTML spéciaux d'une valeur variable.
+   *
+   * @param valeur la valeur à échapper (null retourne une chaîne vide)
+   * @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
+   */
   static String e(Object valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }

@@ -15,12 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de {@link CadenceurAppelsPartage} — vérifie la coordination via une vraie
-/// base Postgres, y compris entre deux instances distinctes simulant deux processus indépendants
-/// (web et worker) partageant la même clé.
-///
-/// @since 2.8.1
-/// @author Kwaite
+/**
+ * Tests d'intégration de {@link CadenceurAppelsPartage} — vérifie la coordination via une vraie
+ * base Postgres, y compris entre deux instances distinctes simulant deux processus indépendants
+ * (web et worker) partageant la même clé.
+ *
+ * @since 2.8.1
+ * @author Kwaite
+ */
 class CadenceurAppelsPartageIntegrationTest extends AbstractWorkerIntegrationTest {
 
   private static final String CLE_TEST = "cadenceur-test";

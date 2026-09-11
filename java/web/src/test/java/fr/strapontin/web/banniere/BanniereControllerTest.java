@@ -14,10 +14,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link BanniereController}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link BanniereController}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class BanniereControllerTest {
 
   private ConfigService configService;

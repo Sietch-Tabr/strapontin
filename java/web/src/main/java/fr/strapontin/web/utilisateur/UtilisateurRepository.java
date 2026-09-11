@@ -14,13 +14,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/// Accès aux données pour les utilisateurs ({@code users}, {@code accounts}).
-///
-/// <p>SQL pur — aucune logique métier. Les validations (format, unicité métier) appartiennent aux
-/// couches supérieures.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Accès aux données pour les utilisateurs ({@code users}, {@code accounts}).
+ *
+ * <p>SQL pur — aucune logique métier. Les validations (format, unicité métier) appartiennent aux
+ * couches supérieures.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Repository
 class UtilisateurRepository {
 
@@ -36,10 +38,12 @@ class UtilisateurRepository {
     this.cipher = new ConfigCipher(secretConfig);
   }
 
-  /// Lit email et pending_email depuis la base.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return emails, ou {@link Optional#empty()} si l'utilisateur n'existe pas
+  /**
+   * Lit email et pending_email depuis la base.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return emails, ou {@link Optional#empty()} si l'utilisateur n'existe pas
+   */
   Optional<EmailsUtilisateur> lireEmails(String userId) {
     return jdbc
         .query(
@@ -50,11 +54,13 @@ class UtilisateurRepository {
         .findFirst();
   }
 
-  /// Vérifie si un identifiant est déjà pris par un autre utilisateur.
-  ///
-  /// @param identifiant identifiant à vérifier (en minuscules)
-  /// @param userId identifiant de l'utilisateur courant (exclu)
-  /// @return {@code true} si l'identifiant est pris
+  /**
+   * Vérifie si un identifiant est déjà pris par un autre utilisateur.
+   *
+   * @param identifiant identifiant à vérifier (en minuscules)
+   * @param userId identifiant de l'utilisateur courant (exclu)
+   * @return {@code true} si l'identifiant est pris
+   */
   boolean identifiantDejaUtilise(String identifiant, String userId) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE lower(username) = :ident AND id != :userId",
@@ -63,15 +69,17 @@ class UtilisateurRepository {
         .isEmpty();
   }
 
-  /// Met à jour l'identifiant (username).
-  ///
-  /// <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais été
-  /// personnalisé par un admin — sinon un nom affiché personnalisé ({@link
-  /// fr.strapontin.web.admin.AdminService}, champ {@code nom}) serait écrasé silencieusement à
-  /// chaque changement d'identifiant par l'utilisateur lui-même.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param identifiant nouvel identifiant (déjà validé, en minuscules)
+  /**
+   * Met à jour l'identifiant (username).
+   *
+   * <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais été
+   * personnalisé par un admin — sinon un nom affiché personnalisé ({@link
+   * fr.strapontin.web.admin.AdminService}, champ {@code nom}) serait écrasé silencieusement à
+   * chaque changement d'identifiant par l'utilisateur lui-même.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param identifiant nouvel identifiant (déjà validé, en minuscules)
+   */
   void majIdentifiant(String userId, String identifiant) {
     jdbc.update(
         """
@@ -85,10 +93,12 @@ class UtilisateurRepository {
         Map.of("ident", identifiant, CLE_USER_ID, userId));
   }
 
-  /// Met à jour le hash du mot de passe dans {@code accounts}.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param nouveauHash hash bcrypt du nouveau mot de passe
+  /**
+   * Met à jour le hash du mot de passe dans {@code accounts}.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param nouveauHash hash bcrypt du nouveau mot de passe
+   */
   void changerMotDePasse(String userId, String nouveauHash) {
     jdbc.update(
         "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
@@ -96,26 +106,30 @@ class UtilisateurRepository {
         Map.of("hash", nouveauHash, CLE_USER_ID, userId));
   }
 
-  /// Active le TOTP en persistant le secret, chiffré (AES-256-GCM, même clé que {@code
-  /// app_config}).
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param secret secret Base32 TOTP en clair
+  /**
+   * Active le TOTP en persistant le secret, chiffré (AES-256-GCM, même clé que {@code
+   * app_config}).
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param secret secret Base32 TOTP en clair
+   */
   void activerTotp(String userId, String secret) {
     jdbc.update(
         "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
         Map.of("secret", cipher.chiffrer(secret), "id", userId));
   }
 
-  /// Retourne le secret TOTP stocké en base, déchiffré.
-  ///
-  /// <p>Tolère un secret encore stocké en clair (valeurs activées avant l'introduction du
-  /// chiffrement) : le déchiffrement échoue proprement sur une valeur non chiffrée (échec
-  /// d'authentification GCM ou base64 invalide), auquel cas la valeur brute est retournée telle
-  /// quelle plutôt que de bloquer la vérification TOTP de l'utilisateur concerné.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return secret Base32 en clair, ou {@code null} si absent
+  /**
+   * Retourne le secret TOTP stocké en base, déchiffré.
+   *
+   * <p>Tolère un secret encore stocké en clair (valeurs activées avant l'introduction du
+   * chiffrement) : le déchiffrement échoue proprement sur une valeur non chiffrée (échec
+   * d'authentification GCM ou base64 invalide), auquel cas la valeur brute est retournée telle
+   * quelle plutôt que de bloquer la vérification TOTP de l'utilisateur concerné.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return secret Base32 en clair, ou {@code null} si absent
+   */
   String lireSecretTotp(String userId) {
     List<String> lignes =
         jdbc.queryForList(
@@ -134,10 +148,12 @@ class UtilisateurRepository {
     }
   }
 
-  /// Retourne le nombre d'échecs TOTP consécutifs de l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return nombre d'échecs, ou 0 si l'utilisateur n'existe pas
+  /**
+   * Retourne le nombre d'échecs TOTP consécutifs de l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return nombre d'échecs, ou 0 si l'utilisateur n'existe pas
+   */
   int lireEchecsTotp(String userId) {
     Integer echecs =
         jdbc.queryForObject(
@@ -147,18 +163,22 @@ class UtilisateurRepository {
     return echecs == null ? 0 : echecs;
   }
 
-  /// Désactive le TOTP (efface le secret).
-  ///
-  /// @param userId identifiant de l'utilisateur
+  /**
+   * Désactive le TOTP (efface le secret).
+   *
+   * @param userId identifiant de l'utilisateur
+   */
   void desactiverTotp(String userId) {
     jdbc.update(
         "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
         Map.of("id", userId));
   }
 
-  /// Retourne le nombre total d'administrateurs sur l'instance.
-  ///
-  /// @return nombre d'utilisateurs ayant le rôle {@code admin}
+  /**
+   * Retourne le nombre total d'administrateurs sur l'instance.
+   *
+   * @return nombre d'utilisateurs ayant le rôle {@code admin}
+   */
   int compterAdmins() {
     Integer n =
         jdbc.queryForObject(
@@ -166,20 +186,24 @@ class UtilisateurRepository {
     return n == null ? 0 : n;
   }
 
-  /// Supprime un utilisateur (cascade sur toutes ses données).
-  ///
-  /// @param userId identifiant de l'utilisateur à supprimer
+  /**
+   * Supprime un utilisateur (cascade sur toutes ses données).
+   *
+   * @param userId identifiant de l'utilisateur à supprimer
+   */
   void supprimer(String userId) {
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
   }
 
-  /// Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
-  ///
-  /// <p>Extrait de {@code securite.SessionController} — le contrôleur exécutait ce SQL directement,
-  /// en violation du pattern Controller (HTTP pur) → Service → Repository.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return nombre de concerts non vus pour les artistes suivis
+  /**
+   * Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
+   *
+   * <p>Extrait de {@code securite.SessionController} — le contrôleur exécutait ce SQL directement,
+   * en violation du pattern Controller (HTTP pur) → Service → Repository.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return nombre de concerts non vus pour les artistes suivis
+   */
   int compterNouveauxMatchesArtistes(String userId) {
     Integer count =
         jdbc.queryForObject(
@@ -200,6 +224,8 @@ class UtilisateurRepository {
     return count != null ? count : 0;
   }
 
-  /// Données email lues depuis la base (utilisées pour construire {@link ProfilUtilisateur}).
+  /**
+   * Données email lues depuis la base (utilisées pour construire {@link ProfilUtilisateur}).
+   */
   record EmailsUtilisateur(String email, String pendingEmail) {}
 }

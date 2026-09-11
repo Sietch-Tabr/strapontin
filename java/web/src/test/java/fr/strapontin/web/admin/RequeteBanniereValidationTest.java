@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteBanniere}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteBanniere}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class RequeteBanniereValidationTest {
 
   private static final Validator VALIDATOR =

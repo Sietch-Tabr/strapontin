@@ -9,10 +9,12 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : envoi du digest de notifications, tous les jours à 8h.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Job Quartz : envoi du digest de notifications, tous les jours à 8h.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 public class NotifierDigestJob extends QuartzJobBean {
 
   private NotificationDigestService notificationDigestService;

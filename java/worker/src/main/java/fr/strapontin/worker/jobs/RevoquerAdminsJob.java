@@ -9,10 +9,12 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : révocation des admins dont le préavis de 7 jours est écoulé, chaque heure.
-///
-/// @since 2.2.6
-/// @author Kwaite
+/**
+ * Job Quartz : révocation des admins dont le préavis de 7 jours est écoulé, chaque heure.
+ *
+ * @since 2.2.6
+ * @author Kwaite
+ */
 public class RevoquerAdminsJob extends QuartzJobBean {
 
   private WorkerRevocationService workerRevocationService;

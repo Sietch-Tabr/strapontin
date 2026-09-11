@@ -19,15 +19,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de notifications Web Push VAPID (portage de {@code push.ts}).
-///
-/// <p>Envoie des notifications aux abonnements enregistrés dans {@code push_abonnements}.
-/// Sur réponse 404 ou 410 de l'endpoint push, l'abonnement est automatiquement supprimé.
-///
-/// <p>Les clés VAPID sont lues depuis la configuration chiffrée (Caffeine 5 min).
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Service de notifications Web Push VAPID (portage de {@code push.ts}).
+ *
+ * <p>Envoie des notifications aux abonnements enregistrés dans {@code push_abonnements}.
+ * Sur réponse 404 ou 410 de l'endpoint push, l'abonnement est automatiquement supprimé.
+ *
+ * <p>Les clés VAPID sont lues depuis la configuration chiffrée (Caffeine 5 min).
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class NotificationPushService {
 
@@ -47,9 +49,11 @@ public class NotificationPushService {
     this.logAdminService = logAdminService;
   }
 
-  /// Retourne la clé VAPID publique pour l'inscription côté navigateur.
-  ///
-  /// @return la clé VAPID publique encodée, ou vide si non configurée
+  /**
+   * Retourne la clé VAPID publique pour l'inscription côté navigateur.
+   *
+   * @return la clé VAPID publique encodée, ou vide si non configurée
+   */
   public Optional<String> obtenirCleVapidPublique() {
     return configService.lireConfig("VAPID_PUBLIC_KEY");
   }
@@ -80,18 +84,20 @@ public class NotificationPushService {
     }
   }
 
-  /// Envoie une notification de test à l'abonnement de l'utilisateur courant.
-  ///
-  /// <p>Si {@code endpoint} est fourni (l'appareil demandeur, disponible côté client via
-  /// {@code PushManager.getSubscription()}), cible précisément cet abonnement plutôt que de
-  /// sélectionner arbitrairement le plus récent par {@code id} — un utilisateur abonné sur
-  /// plusieurs appareils cliquant "Test" depuis l'un d'eux recevait auparavant la notification
-  /// sur un autre appareil, sans lien garanti avec la session courante (un UUID v4 n'a pas de
-  /// corrélation temporelle). Repli sur le plus récent si {@code endpoint} absent.
-  ///
-  /// @param userId   l'identifiant de l'utilisateur
-  /// @param endpoint l'endpoint de l'abonnement de l'appareil demandeur, ou {@code null}
-  /// @return {@code true} si la notification a été envoyée
+  /**
+   * Envoie une notification de test à l'abonnement de l'utilisateur courant.
+   *
+   * <p>Si {@code endpoint} est fourni (l'appareil demandeur, disponible côté client via
+   * {@code PushManager.getSubscription()}), cible précisément cet abonnement plutôt que de
+   * sélectionner arbitrairement le plus récent par {@code id} — un utilisateur abonné sur
+   * plusieurs appareils cliquant "Test" depuis l'un d'eux recevait auparavant la notification
+   * sur un autre appareil, sans lien garanti avec la session courante (un UUID v4 n'a pas de
+   * corrélation temporelle). Repli sur le plus récent si {@code endpoint} absent.
+   *
+   * @param userId   l'identifiant de l'utilisateur
+   * @param endpoint l'endpoint de l'abonnement de l'appareil demandeur, ou {@code null}
+   * @return {@code true} si la notification a été envoyée
+   */
   public boolean envoyerNotificationTest(String userId, String endpoint) {
     Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");

@@ -11,10 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link VapidKeyGenerator}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link VapidKeyGenerator}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class VapidKeyGeneratorTest {
 
   @Test

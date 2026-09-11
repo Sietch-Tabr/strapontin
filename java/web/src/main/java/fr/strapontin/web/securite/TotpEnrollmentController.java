@@ -20,13 +20,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Endpoints REST pour l'enrollment et la désactivation TOTP depuis la SPA Vue.
-///
-/// <p>HTTP pur — délègue la cryptographie à {@link TotpService} et la persistance à {@link
-/// UserController}.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Endpoints REST pour l'enrollment et la désactivation TOTP depuis la SPA Vue.
+ *
+ * <p>HTTP pur — délègue la cryptographie à {@link TotpService} et la persistance à {@link
+ * UserController}.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/totp")
 public class TotpEnrollmentController {
@@ -37,9 +39,11 @@ public class TotpEnrollmentController {
   private final UserController userController;
   private final LogAdminService logAdminService;
 
-  /// @param totpService service TOTP (génération, vérification)
-  /// @param userController contrôleur utilisateur (activation/désactivation TOTP)
-  /// @param logAdminService journal d'administration
+  /**
+   * @param totpService service TOTP (génération, vérification)
+   * @param userController contrôleur utilisateur (activation/désactivation TOTP)
+   * @param logAdminService journal d'administration
+   */
   public TotpEnrollmentController(
       TotpService totpService, UserController userController, LogAdminService logAdminService) {
     this.totpService = totpService;
@@ -47,11 +51,13 @@ public class TotpEnrollmentController {
     this.logAdminService = logAdminService;
   }
 
-  /// Génère un nouveau secret TOTP, le stocke en session, et retourne le QR code SVG.
-  ///
-  /// @param session la session HTTP courante (stocke le secret)
-  /// @param auth contexte d'authentification
-  /// @return `{otpUri, totpSecret, qrCodeSvg}`
+  /**
+   * Génère un nouveau secret TOTP, le stocke en session, et retourne le QR code SVG.
+   *
+   * @param session la session HTTP courante (stocke le secret)
+   * @param auth contexte d'authentification
+   * @return {@code {otpUri, totpSecret, qrCodeSvg}}
+   */
   @GetMapping("/setup")
   public ResponseEntity<Map<String, Object>> setup(HttpSession session, Authentication auth) {
     UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
@@ -74,12 +80,14 @@ public class TotpEnrollmentController {
     return ResponseEntity.ok(rep);
   }
 
-  /// Confirme l'enrollment TOTP en vérifiant le premier code saisi.
-  ///
-  /// @param corps corps JSON avec `code` (6 chiffres)
-  /// @param session la session HTTP courante (lit le secret)
-  /// @param auth contexte d'authentification
-  /// @return 200 `{succes: true}` ou 400 `{erreur: "..."}`
+  /**
+   * Confirme l'enrollment TOTP en vérifiant le premier code saisi.
+   *
+   * @param corps corps JSON avec {@code code} (6 chiffres)
+   * @param session la session HTTP courante (lit le secret)
+   * @param auth contexte d'authentification
+   * @return 200 {@code {succes: true}} ou 400 {@code {erreur: "..."}}
+   */
   @PostMapping("/confirmer")
   public ResponseEntity<Map<String, Object>> confirmer(
       @Valid @RequestBody TotpChallengeRequest corps, HttpSession session, Authentication auth) {
@@ -104,11 +112,13 @@ public class TotpEnrollmentController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Désactive le TOTP après vérification du code courant.
-  ///
-  /// @param corps corps JSON avec `code` (6 chiffres)
-  /// @param auth contexte d'authentification
-  /// @return 200 `{succes: true}` ou 400 `{erreur: "..."}`
+  /**
+   * Désactive le TOTP après vérification du code courant.
+   *
+   * @param corps corps JSON avec {@code code} (6 chiffres)
+   * @param auth contexte d'authentification
+   * @return 200 {@code {succes: true}} ou 400 {@code {erreur: "..."}}
+   */
   @PostMapping("/desactiver")
   public ResponseEntity<Map<String, Object>> desactiver(
       @Valid @RequestBody TotpChallengeRequest corps, Authentication auth) {

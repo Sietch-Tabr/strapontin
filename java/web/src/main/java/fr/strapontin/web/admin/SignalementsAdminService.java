@@ -9,13 +9,15 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Vue unifiée des signalements de matching pour l'onglet admin (#1193) : agrège en lecture la
-/// nouvelle table {@code signalements_matching} et les mécanismes déjà établis ({@code
-/// necessite_intervention_le}, {@code contamination_signalee}, {@code doublon_signale}) — ces
-/// derniers restent résolvables depuis les onglets Salles/Artistes existants, pas ici.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Vue unifiée des signalements de matching pour l'onglet admin (#1193) : agrège en lecture la
+ * nouvelle table {@code signalements_matching} et les mécanismes déjà établis ({@code
+ * necessite_intervention_le}, {@code contamination_signalee}, {@code doublon_signale}) — ces
+ * derniers restent résolvables depuis les onglets Salles/Artistes existants, pas ici.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 @Service
 public class SignalementsAdminService {
 
@@ -30,16 +32,18 @@ public class SignalementsAdminService {
     this.logAdminService = logAdminService;
   }
 
-  /// Liste paginée des signalements actifs, du plus récemment détecté au plus ancien (les entrées
-  /// des mécanismes établis, sans horodatage dédié, apparaissent en dernier).
-  ///
-  /// <p>Le total est calculé par une requête séparée plutôt que {@code COUNT(*) OVER()} : les 4
-  /// sous-requêtes de l'union portent sur des tables différentes, un seul {@code COUNT(*) OVER()}
-  /// sur le résultat combiné ne poserait pas de difficulté technique particulière mais une requête
-  /// de comptage dédiée reste plus lisible ici.
-  ///
-  /// @param page numéro de page (0-indexé)
-  /// @return page de signalements actifs
+  /**
+   * Liste paginée des signalements actifs, du plus récemment détecté au plus ancien (les entrées
+   * des mécanismes établis, sans horodatage dédié, apparaissent en dernier).
+   *
+   * <p>Le total est calculé par une requête séparée plutôt que {@code COUNT(*) OVER()} : les 4
+   * sous-requêtes de l'union portent sur des tables différentes, un seul {@code COUNT(*) OVER()}
+   * sur le résultat combiné ne poserait pas de difficulté technique particulière mais une requête
+   * de comptage dédiée reste plus lisible ici.
+   *
+   * @param page numéro de page (0-indexé)
+   * @return page de signalements actifs
+   */
   public ReponseSignalements lister(int page) {
     int pageNum = Math.max(0, page);
     Map<String, Object> paramsPage =
@@ -103,10 +107,12 @@ public class SignalementsAdminService {
     return total != null ? total : 0;
   }
 
-  /// Marque un signalement de la table {@code signalements_matching} comme résolu manuellement.
-  ///
-  /// @param id identifiant numérique du signalement
-  /// @return {@code true} si un signalement actif correspondant a été résolu
+  /**
+   * Marque un signalement de la table {@code signalements_matching} comme résolu manuellement.
+   *
+   * @param id identifiant numérique du signalement
+   * @return {@code true} si un signalement actif correspondant a été résolu
+   */
   public boolean resoudre(long id) {
     int lignes =
         jdbc.update(

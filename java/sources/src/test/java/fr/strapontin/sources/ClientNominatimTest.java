@@ -15,10 +15,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link ClientNominatim}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ClientNominatim}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ClientNominatimTest {
 
   private static ClientNominatim source(RestClient restClient, CadenceurAppels cadenceur) {

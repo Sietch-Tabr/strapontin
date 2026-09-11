@@ -15,17 +15,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-/// Service d'email transactionnel via Resend.
-///
-/// <p>Si `RESEND_API_KEY` est absent de la configuration, toutes les méthodes retournent
-/// silencieusement sans erreur.
-///
-/// <p>Les corps HTML sont générés par {@link EmailTemplates}. Les alertes système
-/// (bounce/spam/backup/watchdog/logs-admin) sont dans {@link EmailAlerteService}; l'infrastructure
-/// d'envoi Resend partagée par les deux est dans {@link EmailSender}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Service d'email transactionnel via Resend.
+ *
+ * <p>Si {@code RESEND_API_KEY} est absent de la configuration, toutes les méthodes retournent
+ * silencieusement sans erreur.
+ *
+ * <p>Les corps HTML sont générés par {@link EmailTemplates}. Les alertes système
+ * (bounce/spam/backup/watchdog/logs-admin) sont dans {@link EmailAlerteService}; l'infrastructure
+ * d'envoi Resend partagée par les deux est dans {@link EmailSender}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class EmailService {
 
@@ -39,20 +41,24 @@ public class EmailService {
     this.emailSender = emailSender;
   }
 
-  /// Paramètres d'un concert pour le digest email.
-  ///
-  /// @param artiste le nom de l'artiste
-  /// @param date la date ISO (yyyy-MM-dd)
-  /// @param salle le nom de la salle
-  /// @param ville la ville (peut être nulle)
-  /// @param url l'URL de billetterie (peut être nulle)
+  /**
+   * Paramètres d'un concert pour le digest email.
+   *
+   * @param artiste le nom de l'artiste
+   * @param date la date ISO (yyyy-MM-dd)
+   * @param salle le nom de la salle
+   * @param ville la ville (peut être nulle)
+   * @param url l'URL de billetterie (peut être nulle)
+   */
   public record ConcertDigest(
       String artiste, String date, String salle, String ville, String url) {}
 
-  /// Envoie un email d'invitation à un nouvel utilisateur.
-  ///
-  /// @param email l'adresse email du destinataire
-  /// @param lienReset le lien de création de compte (valable 7 jours)
+  /**
+   * Envoie un email d'invitation à un nouvel utilisateur.
+   *
+   * @param email l'adresse email du destinataire
+   * @param lienReset le lien de création de compte (valable 7 jours)
+   */
   public void envoyerInvitation(String email, String lienReset) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -82,10 +88,12 @@ public class EmailService {
     }
   }
 
-  /// Envoie un email de réinitialisation de mot de passe.
-  ///
-  /// @param email l'adresse email du destinataire
-  /// @param lienReset le lien de réinitialisation (valable 1 heure)
+  /**
+   * Envoie un email de réinitialisation de mot de passe.
+   *
+   * @param email l'adresse email du destinataire
+   * @param lienReset le lien de réinitialisation (valable 1 heure)
+   */
   public void envoyerResetMotDePasse(String email, String lienReset) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -121,9 +129,11 @@ public class EmailService {
     }
   }
 
-  /// Notifie un utilisateur que sa double authentification a été réinitialisée par un admin.
-  ///
-  /// @param email l'adresse de l'utilisateur concerné
+  /**
+   * Notifie un utilisateur que sa double authentification a été réinitialisée par un admin.
+   *
+   * @param email l'adresse de l'utilisateur concerné
+   */
   public void envoyer2faReinitialisee(String email) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -160,10 +170,12 @@ public class EmailService {
     }
   }
 
-  /// Envoie un email de confirmation de changement d'adresse email.
-  ///
-  /// @param email le nouvel email destinataire
-  /// @param lien le lien de confirmation (valable 24 heures)
+  /**
+   * Envoie un email de confirmation de changement d'adresse email.
+   *
+   * @param email le nouvel email destinataire
+   * @param lien le lien de confirmation (valable 24 heures)
+   */
   public void envoyerConfirmationEmail(String email, String lien) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -199,20 +211,24 @@ public class EmailService {
     }
   }
 
-  /// Indique si le service email est disponible (clé Resend configurée).
-  ///
-  /// @return `true` si `RESEND_API_KEY` est présent en configuration
+  /**
+   * Indique si le service email est disponible (clé Resend configurée).
+   *
+   * @return {@code true} si {@code RESEND_API_KEY} est présent en configuration
+   */
   public boolean estDisponible() {
     return configService.lireConfig("RESEND_API_KEY").isPresent();
   }
 
-  /// Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
-  ///
-  /// @param nom le nom de la salle signalée
-  /// @param ville la ville/code postal (peut être vide)
-  /// @param urlSite l'URL du site ou de la billetterie (peut être vide)
-  /// @param commentaire le commentaire libre (peut être vide)
-  /// @param emailUtilisateur l'adresse email de l'utilisateur connecté
+  /**
+   * Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
+   *
+   * @param nom le nom de la salle signalée
+   * @param ville la ville/code postal (peut être vide)
+   * @param urlSite l'URL du site ou de la billetterie (peut être vide)
+   * @param commentaire le commentaire libre (peut être vide)
+   * @param emailUtilisateur l'adresse email de l'utilisateur connecté
+   */
   public void envoyerSignalementSalleManquante(
       String nom, String ville, String urlSite, String commentaire, String emailUtilisateur) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
@@ -265,11 +281,13 @@ public class EmailService {
     }
   }
 
-  /// Envoie un signalement d'utilisateur à l'adresse de contact.
-  ///
-  /// @param type le type (`bug`, `suggestion`, `question`)
-  /// @param message le message
-  /// @param expediteurEmail l'email de l'expéditeur
+  /**
+   * Envoie un signalement d'utilisateur à l'adresse de contact.
+   *
+   * @param type le type ({@code bug}, {@code suggestion}, {@code question})
+   * @param message le message
+   * @param expediteurEmail l'email de l'expéditeur
+   */
   public void envoyerSignalement(String type, String message, String expediteurEmail) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -305,11 +323,13 @@ public class EmailService {
     }
   }
 
-  /// Envoie un digest de nouveaux concerts à un utilisateur.
-  ///
-  /// @param email l'adresse email du destinataire
-  /// @param concerts la liste des concerts à notifier (doit être non vide)
-  /// @return `true` si l'email a été envoyé avec succès
+  /**
+   * Envoie un digest de nouveaux concerts à un utilisateur.
+   *
+   * @param email l'adresse email du destinataire
+   * @param concerts la liste des concerts à notifier (doit être non vide)
+   * @return {@code true} si l'email a été envoyé avec succès
+   */
   public boolean envoyerDigestConcerts(String email, List<ConcertDigest> concerts) {
     if (concerts.isEmpty()) return false;
 
@@ -347,9 +367,11 @@ public class EmailService {
     }
   }
 
-  /// Notifie un utilisateur que son compte a été supprimé par un administrateur.
-  ///
-  /// @param email l'adresse de l'utilisateur supprimé
+  /**
+   * Notifie un utilisateur que son compte a été supprimé par un administrateur.
+   *
+   * @param email l'adresse de l'utilisateur supprimé
+   */
   public void envoyerSuppressionCompte(String email) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -383,10 +405,12 @@ public class EmailService {
     }
   }
 
-  /// Envoie un email de test pour vérifier la configuration Resend.
-  ///
-  /// @param emailAdmin l'adresse email de l'administrateur destinataire
-  /// @return {@code true} si l'email a été envoyé avec succès
+  /**
+   * Envoie un email de test pour vérifier la configuration Resend.
+   *
+   * @param emailAdmin l'adresse email de l'administrateur destinataire
+   * @return {@code true} si l'email a été envoyé avec succès
+   */
   public boolean envoyerEmailTest(String emailAdmin) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -410,9 +434,11 @@ public class EmailService {
     }
   }
 
-  /// Notifie un utilisateur qu'il a été promu au rôle administrateur.
-  ///
-  /// @param email l'adresse de l'utilisateur promu
+  /**
+   * Notifie un utilisateur qu'il a été promu au rôle administrateur.
+   *
+   * @param email l'adresse de l'utilisateur promu
+   */
   public void envoyerPromotionAdmin(String email) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
@@ -445,10 +471,12 @@ public class EmailService {
     }
   }
 
-  /// Envoie un préavis de révocation du rôle administrateur (délai de 7 jours).
-  ///
-  /// @param email l'adresse de l'administrateur concerné
-  /// @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+  /**
+   * Envoie un préavis de révocation du rôle administrateur (délai de 7 jours).
+   *
+   * @param email l'adresse de l'administrateur concerné
+   * @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+   */
   public void envoyerPreavisRevocationAdmin(String email, String dateEffective) {
     Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {

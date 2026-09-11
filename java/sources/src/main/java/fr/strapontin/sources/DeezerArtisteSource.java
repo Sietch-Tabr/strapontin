@@ -17,22 +17,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client Deezer pour l'enrichissement des artistes (étape 3).
-///
-/// Deux modes, indépendants l'un de l'autre :
-/// - `deezerId` connu (renseigné au préalable par {@link WikidataArtisteSource} via P2722) →
-///   confirmation directe du nom canonique par `GET /artist/{id}`.
-/// - `deezerId` absent → recherche par nom (`GET /search/artist?q=`). Le P2722 Wikidata est
-///   fréquemment absent en pratique (constaté en production sur Yelle, Mademoiselle K, Ycare —
-///   Deezer référence pourtant bien ces artistes) : ne pas dépendre uniquement de Wikidata pour
-///   peupler {@code deezer_id} reviendrait à ignorer une source de données déjà exploitée ailleurs
-///   dans le projet. Seule une correspondance exacte de nom normalisé est retenue (pas de seuil de
-///   similarité comme dans {@link ResolveurNomCanonique}) : cette découverte assigne un identifiant
-///   persistant, un enjeu plus élevé qu'une simple confirmation cosmétique de nom affiché — même
-///   prudence que {@code TicketmasterSource.rechercherAttractionId} (anti- JAIN/ANUV JAIN).
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Client Deezer pour l'enrichissement des artistes (étape 3).
+ *
+ * <p>Deux modes, indépendants l'un de l'autre :
+ *
+ * <ul>
+ *   <li>{@code deezerId} connu (renseigné au préalable par {@link WikidataArtisteSource} via P2722)
+ *       → confirmation directe du nom canonique par {@code GET /artist/{id}}.
+ *   <li>{@code deezerId} absent → recherche par nom ({@code GET /search/artist?q=}). Le P2722
+ *       Wikidata est fréquemment absent en pratique (constaté en production sur Yelle, Mademoiselle
+ *       K, Ycare — Deezer référence pourtant bien ces artistes) : ne pas dépendre uniquement de
+ *       Wikidata pour peupler {@code deezer_id} reviendrait à ignorer une source de données déjà
+ *       exploitée ailleurs dans le projet.
+ * </ul>
+ *
+ * Seule une correspondance exacte de nom normalisé est retenue (pas de seuil de similarité comme
+ * dans {@link ResolveurNomCanonique}) : cette découverte assigne un identifiant persistant, un
+ * enjeu plus élevé qu'une simple confirmation cosmétique de nom affiché — même prudence que {@code
+ * TicketmasterSource.rechercherAttractionId} (anti- JAIN/ANUV JAIN).
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
 
   private static final Logger log = LoggerFactory.getLogger(DeezerArtisteSource.class);
@@ -43,17 +50,21 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
 
-  /// Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   @Override
   public fr.strapontin.core.BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
 
-  /// Crée une instance avec un RestClient par défaut (timeout connexion 10s, lecture 30s) — sans
-  /// borne, un hoquet réseau ou une réponse lente de l'API Deezer ferait pendre indéfiniment un
-  /// thread worker (même classe d'incident que celle déjà corrigée pour TM/Eventim, #887).
+  /**
+   * Crée une instance avec un RestClient par défaut (timeout connexion 10s, lecture 30s) — sans
+   * borne, un hoquet réseau ou une réponse lente de l'API Deezer ferait pendre indéfiniment un
+   * thread worker (même classe d'incident que celle déjà corrigée pour TM/Eventim, #887).
+   */
   public DeezerArtisteSource() {
     this(
         RestClient.builder()
@@ -63,9 +74,11 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
             .build());
   }
 
-  /// Crée une instance avec un RestClient personnalisé (injection de test).
-  ///
-  /// @param restClient client HTTP à utiliser
+  /**
+   * Crée une instance avec un RestClient personnalisé (injection de test).
+   *
+   * @param restClient client HTTP à utiliser
+   */
   public DeezerArtisteSource(RestClient restClient) {
     this.restClient = restClient;
   }

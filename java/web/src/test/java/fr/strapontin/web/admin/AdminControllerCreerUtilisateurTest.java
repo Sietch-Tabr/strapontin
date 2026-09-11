@@ -22,12 +22,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#creerUtilisateur} — le lien d'invitation ne
-/// doit plus jamais être construit depuis le header {@code Host} de la requête entrante quand
-/// {@code PUBLIC_BASE_URL} n'est pas configurée (Host Header Injection).
-///
-/// @since 2.8.2
-/// @author Kwaite
+/**
+ * Tests unitaires ciblés pour {@link AdminController#creerUtilisateur} — le lien d'invitation ne
+ * doit plus jamais être construit depuis le header {@code Host} de la requête entrante quand
+ * {@code PUBLIC_BASE_URL} n'est pas configurée (Host Header Injection).
+ *
+ * @since 2.8.2
+ * @author Kwaite
+ */
 class AdminControllerCreerUtilisateurTest {
 
   private AdminService adminService;

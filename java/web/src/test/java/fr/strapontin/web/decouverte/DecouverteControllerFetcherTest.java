@@ -16,12 +16,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires de {@link DecouverteController#fetcher} — rate-limite le
-/// déclenchement du fetch global, accessible à tout utilisateur authentifié sans garde-fou
-/// auparavant.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link DecouverteController#fetcher} — rate-limite le
+ * déclenchement du fetch global, accessible à tout utilisateur authentifié sans garde-fou
+ * auparavant.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class DecouverteControllerFetcherTest {
 
   private DecouverteService decouverteService;

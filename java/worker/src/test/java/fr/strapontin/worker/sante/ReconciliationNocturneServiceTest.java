@@ -31,10 +31,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ReconciliationNocturneService}.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ReconciliationNocturneService}.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class ReconciliationNocturneServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

@@ -25,13 +25,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [EnrichissementSallesService] avec PostgreSQL réel (Testcontainers) —
-/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, qui ne peut être vérifiée
-/// qu'avec une vraie base (l'expression SQL {@code EXTRACT(ISODOW FROM CURRENT_DATE)} n'est jamais
-/// évaluée avec un {@code NamedParameterJdbcTemplate} mocké).
-///
-/// @since 2.7.3
-/// @author Kwaite
+/**
+ * Tests d'intégration de [EnrichissementSallesService] avec PostgreSQL réel (Testcontainers) —
+ * couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, qui ne peut être vérifiée
+ * qu'avec une vraie base (l'expression SQL {@code EXTRACT(ISODOW FROM CURRENT_DATE)} n'est jamais
+ * évaluée avec un {@code NamedParameterJdbcTemplate} mocké).
+ *
+ * @since 2.7.3
+ * @author Kwaite
+ */
 class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private OverpassSalleSource overpassSalleSource;

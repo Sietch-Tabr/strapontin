@@ -12,8 +12,10 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/// Mappe un événement Ticketmaster brut (JSON désérialisé) vers un [ConcertBrut] — extrait de
-/// {@link TicketmasterSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+/**
+ * Mappe un événement Ticketmaster brut (JSON désérialisé) vers un [ConcertBrut] — extrait de
+ * {@link TicketmasterSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+ */
 final class MapeurEvenementTM {
 
   private static final Logger log = LoggerFactory.getLogger(MapeurEvenementTM.class);
@@ -32,14 +34,16 @@ final class MapeurEvenementTM {
 
   private MapeurEvenementTM() {}
 
-  /// Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
-  ///
-  /// L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
-  /// événements sans heure précise, symétrique au comportement d'Eventim.
-  ///
-  /// @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
-  /// @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
-  /// @return tableau à deux éléments : [date, heure] où heure peut être null
+  /**
+   * Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
+   *
+   * L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
+   * événements sans heure précise, symétrique au comportement d'Eventim.
+   *
+   * @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
+   * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
+   * @return tableau à deux éléments : [date, heure] où heure peut être null
+   */
   static String[] parseDateTM(String dateStr, String heureStr) {
     Objects.requireNonNull(dateStr, "dateStr");
     String date = dateStr.substring(0, 10);
@@ -53,12 +57,14 @@ final class MapeurEvenementTM {
     return CLASSIFICATION_MAP.getOrDefault(nom, nom);
   }
 
-  /// Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
-  ///
-  /// @param evt événement TM sous forme de Map imbriquée
-  /// @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
-  ///   null
-  /// @return concert extrait, ou null si l'événement est invalide ou hors périmètre
+  /**
+   * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
+   *
+   * @param evt événement TM sous forme de Map imbriquée
+   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être
+   *   null
+   * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
+   */
   static ConcertBrut mapper(Map<String, Object> evt, String artisteFallback) {
     try {
       return parseEvenementTM(evt, artisteFallback);
@@ -68,10 +74,12 @@ final class MapeurEvenementTM {
     }
   }
 
-  /// Indique si un horodatage ISO 8601 (avec offset ou {@code Z}) est dans le futur.
-  ///
-  /// @param iso horodatage à analyser
-  /// @return {@code true} si postérieur à maintenant, {@code false} si passé ou illisible
+  /**
+   * Indique si un horodatage ISO 8601 (avec offset ou {@code Z}) est dans le futur.
+   *
+   * @param iso horodatage à analyser
+   * @return {@code true} si postérieur à maintenant, {@code false} si passé ou illisible
+   */
   private static boolean estDansLeFutur(String iso) {
     try {
       return java.time.OffsetDateTime.parse(iso).toInstant().isAfter(java.time.Instant.now());

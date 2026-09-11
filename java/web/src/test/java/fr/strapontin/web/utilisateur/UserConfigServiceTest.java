@@ -23,10 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link UserConfigService}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link UserConfigService}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class UserConfigServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

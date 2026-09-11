@@ -22,35 +22,41 @@ import java.util.concurrent.CompletableFuture;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Service de gestion des spectacles suivis par un utilisateur.
-///
-/// <p>Requêtes SQL dynamiques avec filtres multiples. Pagination à 100 concerts par page. Les
-/// requêtes indépendantes (COUNT, filtres disponibles, suivi) sont parallélisées via {@link
-/// CompletableFuture} sur les threads virtuels Spring.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service de gestion des spectacles suivis par un utilisateur.
+ *
+ * <p>Requêtes SQL dynamiques avec filtres multiples. Pagination à 100 concerts par page. Les
+ * requêtes indépendantes (COUNT, filtres disponibles, suivi) sont parallélisées via {@link
+ * CompletableFuture} sur les threads virtuels Spring.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class SpectacleService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final UserConfigService userConfigService;
 
-  /// @param jdbc accès JDBC
-  /// @param userConfigService lecture du filtre de disponibilité
+  /**
+   * @param jdbc accès JDBC
+   * @param userConfigService lecture du filtre de disponibilité
+   */
   public SpectacleService(NamedParameterJdbcTemplate jdbc, UserConfigService userConfigService) {
     this.jdbc = jdbc;
     this.userConfigService = userConfigService;
   }
 
-  /// Liste les spectacles selon les filtres fournis, paginés à 100 par page.
-  ///
-  /// <p>COUNT(*), filtres disponibles et nbSuivi sont calculés en parallèle avec la requête
-  /// principale pour réduire le nombre de round-trips séquentiels.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param filtre critères de filtrage et de pagination
-  /// @return réponse paginée avec filtres disponibles
+  /**
+   * Liste les spectacles selon les filtres fournis, paginés à 100 par page.
+   *
+   * <p>COUNT(*), filtres disponibles et nbSuivi sont calculés en parallèle avec la requête
+   * principale pour réduire le nombre de round-trips séquentiels.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param filtre critères de filtrage et de pagination
+   * @return réponse paginée avec filtres disponibles
+   */
   public ReponseSpectacles listerSpectacles(String userId, FiltreConcerts filtre) {
     LocalDate aujourd8 = LocalDate.now();
     int pageNum = Math.max(0, filtre.page());
@@ -109,15 +115,17 @@ public class SpectacleService {
         nbSuivi > 0);
   }
 
-  /// Construit la clause WHERE de la requête principale et remplit les paramètres nommés.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param filtre critères de filtrage
-  /// @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
-  /// @param inclureIndisponibles inclut les concerts non disponibles
-  /// @param aujourd8 date du jour
-  /// @param params paramètres nommés à remplir
-  /// @return la clause WHERE construite
+  /**
+   * Construit la clause WHERE de la requête principale et remplit les paramètres nommés.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param filtre critères de filtrage
+   * @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
+   * @param inclureIndisponibles inclut les concerts non disponibles
+   * @param aujourd8 date du jour
+   * @param params paramètres nommés à remplir
+   * @return la clause WHERE construite
+   */
   private StringBuilder construireWhere(
       String userId,
       FiltreConcerts filtre,
@@ -158,12 +166,14 @@ public class SpectacleService {
     return where;
   }
 
-  /// Restreint les résultats aux concerts des artistes ou salles suivis selon les sources actives.
-  ///
-  /// @param where clause WHERE en construction
-  /// @param params paramètres nommés
-  /// @param userId identifiant de l'utilisateur
-  /// @param sources sources actives ({@code "artistes"}, {@code "salles"})
+  /**
+   * Restreint les résultats aux concerts des artistes ou salles suivis selon les sources actives.
+   *
+   * @param where clause WHERE en construction
+   * @param params paramètres nommés
+   * @param userId identifiant de l'utilisateur
+   * @param sources sources actives ({@code "artistes"}, {@code "salles"})
+   */
   private void appliquerFiltreSources(
       StringBuilder where, Map<String, Object> params, String userId, List<String> sources) {
     boolean sourceArtistes = sources == null || sources.isEmpty() || sources.contains("artistes");
@@ -194,11 +204,13 @@ public class SpectacleService {
     }
   }
 
-  /// Compte le nombre total de matches correspondant aux filtres (pour la pagination).
-  ///
-  /// @param whereClause clause WHERE de la requête principale
-  /// @param params paramètres nommés
-  /// @return le nombre total de concerts
+  /**
+   * Compte le nombre total de matches correspondant aux filtres (pour la pagination).
+   *
+   * @param whereClause clause WHERE de la requête principale
+   * @param params paramètres nommés
+   * @return le nombre total de concerts
+   */
   private int compterTotal(StringBuilder whereClause, Map<String, Object> params) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
@@ -210,10 +222,12 @@ public class SpectacleService {
         0);
   }
 
-  /// Compte le nombre d'artistes et salles suivis par l'utilisateur.
-  ///
-  /// @param baseParams paramètres de base ({@code userId})
-  /// @return le nombre total de suivis
+  /**
+   * Compte le nombre d'artistes et salles suivis par l'utilisateur.
+   *
+   * @param baseParams paramètres de base ({@code userId})
+   * @return le nombre total de suivis
+   */
   private int compterSuivi(Map<String, Object> baseParams) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
@@ -224,11 +238,13 @@ public class SpectacleService {
         0);
   }
 
-  /// Charge les valeurs distinctes de genre, mois et classification disponibles (CTE unique).
-  ///
-  /// @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
-  /// @param baseParams paramètres de base ({@code userId}, {@code aujourd8})
-  /// @return les filtres disponibles regroupés par type
+  /**
+   * Charge les valeurs distinctes de genre, mois et classification disponibles (CTE unique).
+   *
+   * @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
+   * @param baseParams paramètres de base ({@code userId}, {@code aujourd8})
+   * @return les filtres disponibles regroupés par type
+   */
   private FiltresDisponibles chargerFiltresDisponibles(
       String conditionMasque, Map<String, Object> baseParams) {
     String cteFiltresSql =
@@ -270,11 +286,13 @@ public class SpectacleService {
     return new FiltresDisponibles(genres, mois, classifications);
   }
 
-  /// Mappe une ligne de résultat vers un {@link SpectacleDto}.
-  ///
-  /// @param rs ligne de résultat positionnée
-  /// @return le DTO correspondant
-  /// @throws SQLException en cas d'erreur de lecture
+  /**
+   * Mappe une ligne de résultat vers un {@link SpectacleDto}.
+   *
+   * @param rs ligne de résultat positionnée
+   * @return le DTO correspondant
+   * @throws SQLException en cas d'erreur de lecture
+   */
   private SpectacleDto mapSpectacle(ResultSet rs) throws SQLException {
     java.time.Instant firstSeen =
         rs.getTimestamp("first_seen") != null ? rs.getTimestamp("first_seen").toInstant() : null;
@@ -299,11 +317,13 @@ public class SpectacleService {
         rs.getTimestamp("absence_detectee_le") != null);
   }
 
-  /// Masque ou démasque un concert pour l'utilisateur courant.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param concertId identifiant UUID du concert
-  /// @param masquer {@code true} pour masquer, {@code false} pour démasquer
+  /**
+   * Masque ou démasque un concert pour l'utilisateur courant.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param concertId identifiant UUID du concert
+   * @param masquer {@code true} pour masquer, {@code false} pour démasquer
+   */
   public void modifierMatch(String userId, String concertId, boolean masquer) {
     String sql =
         masquer
@@ -314,16 +334,18 @@ public class SpectacleService {
     jdbc.update(sql, Map.of("userId", userId, "concertId", concertId));
   }
 
-  /// Masque tous les concerts d'un artiste pour l'utilisateur courant.
-  ///
-  /// <p>Filtre sur {@code artiste_id} (référentiel, stable) plutôt que {@code artiste_norm} le
-  /// worker (réconciliation cross-sources) démontre que {@code artiste_norm} peut diverger pour un
-  /// même artiste réel selon la source/le lot de fetch ; un filtre sur ce champ texte ne couvrait
-  /// donc qu'un sous-ensemble des concerts du groupe visuellement affiché sur l'accueil (tous
-  /// partageant le même {@code artiste_id}, groupés par nom affiché).
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param artisteId UUID stable de l'artiste dans le référentiel
+  /**
+   * Masque tous les concerts d'un artiste pour l'utilisateur courant.
+   *
+   * <p>Filtre sur {@code artiste_id} (référentiel, stable) plutôt que {@code artiste_norm} le
+   * worker (réconciliation cross-sources) démontre que {@code artiste_norm} peut diverger pour un
+   * même artiste réel selon la source/le lot de fetch ; un filtre sur ce champ texte ne couvrait
+   * donc qu'un sous-ensemble des concerts du groupe visuellement affiché sur l'accueil (tous
+   * partageant le même {@code artiste_id}, groupés par nom affiché).
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param artisteId UUID stable de l'artiste dans le référentiel
+   */
   public void masquerArtiste(String userId, UUID artisteId) {
     jdbc.update(
         """
@@ -338,13 +360,15 @@ public class SpectacleService {
         Map.of("userId", userId, "artisteId", artisteId.toString(), "aujourd8", LocalDate.now()));
   }
 
-  /// Démasque tous les concerts d'un artiste pour l'utilisateur courant.
-  ///
-  /// <p>Filtre sur {@code artiste_id} plutôt que {@code artiste_norm} — voir {@link
-  /// #masquerArtiste}.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param artisteId UUID stable de l'artiste dans le référentiel
+  /**
+   * Démasque tous les concerts d'un artiste pour l'utilisateur courant.
+   *
+   * <p>Filtre sur {@code artiste_id} plutôt que {@code artiste_norm} — voir {@link
+   * #masquerArtiste}.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param artisteId UUID stable de l'artiste dans le référentiel
+   */
   public void demasquerArtiste(String userId, UUID artisteId) {
     jdbc.update(
         """
@@ -358,11 +382,13 @@ public class SpectacleService {
         Map.of("userId", userId, "artisteId", artisteId.toString(), "aujourd8", LocalDate.now()));
   }
 
-  /// Valeurs distinctes disponibles pour les filtres de la page spectacles.
-  ///
-  /// @param genres genres présents dans les matches
-  /// @param mois mois (YYYY-MM) présents
-  /// @param classifications classifications présentes
+  /**
+   * Valeurs distinctes disponibles pour les filtres de la page spectacles.
+   *
+   * @param genres genres présents dans les matches
+   * @param mois mois (YYYY-MM) présents
+   * @param classifications classifications présentes
+   */
   private record FiltresDisponibles(
       List<String> genres, List<String> mois, List<String> classifications) {}
 }

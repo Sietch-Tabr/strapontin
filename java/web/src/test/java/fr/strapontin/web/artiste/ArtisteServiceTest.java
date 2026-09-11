@@ -25,12 +25,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires de {@link ArtisteService}.
-///
-/// <p>Couvre la logique métier de {@code ajouter()} : détection de doublon, cap 500, insertion.
-///
-/// @since 2.1.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ArtisteService}.
+ *
+ * <p>Couvre la logique métier de {@code ajouter()} : détection de doublon, cap 500, insertion.
+ *
+ * @since 2.1.2
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class ArtisteServiceTest {
 

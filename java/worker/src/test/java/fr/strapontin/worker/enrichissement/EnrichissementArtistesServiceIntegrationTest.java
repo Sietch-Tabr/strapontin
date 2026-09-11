@@ -26,12 +26,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [EnrichissementArtistesService] avec PostgreSQL réel (Testcontainers) —
-/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, symétrique à {@link
-/// EnrichissementSallesServiceIntegrationTest}.
-///
-/// @since 2.7.3
-/// @author Kwaite
+/**
+ * Tests d'intégration de [EnrichissementArtistesService] avec PostgreSQL réel (Testcontainers) —
+ * couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, symétrique à {@link
+ * EnrichissementSallesServiceIntegrationTest}.
+ *
+ * @since 2.7.3
+ * @author Kwaite
+ */
 class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private WikidataArtisteSource wikidataArtisteSource;

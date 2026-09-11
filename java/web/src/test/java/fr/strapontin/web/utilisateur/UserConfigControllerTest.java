@@ -16,11 +16,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link UserConfigController} (limite de taille sur le champ départements
-/// brut, avant découpage).
-///
-/// @since 2.6.5
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link UserConfigController} (limite de taille sur le champ départements
+ * brut, avant découpage).
+ *
+ * @since 2.6.5
+ * @author Kwaite
+ */
 class UserConfigControllerTest {
 
   private UserConfigService userConfigService;

@@ -19,13 +19,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Statistiques des jobs Quartz et quota Ticketmaster pour l'onglet admin.
-///
-/// <p>Extrait d'{@code AdminService} — `AdminService` reste dédié à la seule gestion des
-/// comptes utilisateurs.
-///
-/// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Statistiques des jobs Quartz et quota Ticketmaster pour l'onglet admin.
+ *
+ * <p>Extrait d'{@code AdminService} — {@code AdminService} reste dédié à la seule gestion des
+ * comptes utilisateurs.
+ *
+ * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 @Service
 public class JobsAdminService {
 
@@ -35,9 +37,11 @@ public class JobsAdminService {
   private final ObjectMapper objectMapper;
   private final WorkerProxyService workerProxyService;
 
-  /// @param jdbc               accès JDBC
-  /// @param objectMapper       désérialiseur JSON (quota TM)
-  /// @param workerProxyService proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
+  /**
+   * @param jdbc               accès JDBC
+   * @param objectMapper       désérialiseur JSON (quota TM)
+   * @param workerProxyService proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
+   */
   public JobsAdminService(
       NamedParameterJdbcTemplate jdbc,
       ObjectMapper objectMapper,
@@ -47,9 +51,11 @@ public class JobsAdminService {
     this.workerProxyService = workerProxyService;
   }
 
-  /// Retourne les statistiques des jobs Quartz et le quota TM.
-  ///
-  /// @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
+  /**
+   * Retourne les statistiques des jobs Quartz et le quota TM.
+   *
+   * @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
+   */
   public Map<String, Object> lireJobs() {
     List<StatJob> statsJobs =
         jdbc.query(
@@ -132,17 +138,19 @@ public class JobsAdminService {
     return reponse;
   }
 
-  /// Complète les statistiques de jobs avec une entrée synthétique pour tout job Quartz planifié
-  /// ({@code prochainesExec}) mais n'ayant jamais écrit de ligne dans {@code fetch_jobs}.
-  ///
-  /// <p>Sans cette complétion, un job de maintenance tout juste ajouté (ex. {@code
-  /// reconciliation:nocturne}, cron 3h) reste invisible et non déclenchable manuellement depuis
-  /// l'admin tant que son premier passage cron automatique n'a pas eu lieu.
-  ///
-  /// @param statsConnus    statistiques déjà présentes en base, triées ou non
-  /// @param prochainesExec prochaines exécutions planifiées par {@code typeJob} (source de vérité
-  ///                       du worker sur les jobs existants)
-  /// @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
+  /**
+   * Complète les statistiques de jobs avec une entrée synthétique pour tout job Quartz planifié
+   * ({@code prochainesExec}) mais n'ayant jamais écrit de ligne dans {@code fetch_jobs}.
+   *
+   * <p>Sans cette complétion, un job de maintenance tout juste ajouté (ex. {@code
+   * reconciliation:nocturne}, cron 3h) reste invisible et non déclenchable manuellement depuis
+   * l'admin tant que son premier passage cron automatique n'a pas eu lieu.
+   *
+   * @param statsConnus    statistiques déjà présentes en base, triées ou non
+   * @param prochainesExec prochaines exécutions planifiées par {@code typeJob} (source de vérité
+   *                       du worker sur les jobs existants)
+   * @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
+   */
   static List<StatJob> completerAvecJobsJamaisExecutes(
       List<StatJob> statsConnus, Map<String, Instant> prochainesExec) {
     Set<String> typesConnus =

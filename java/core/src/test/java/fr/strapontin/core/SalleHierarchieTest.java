@@ -11,10 +11,12 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link SalleHierarchie#creeraitCycle}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SalleHierarchie#creeraitCycle}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SalleHierarchieTest {
 
   @Test

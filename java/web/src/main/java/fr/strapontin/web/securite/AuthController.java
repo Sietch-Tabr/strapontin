@@ -31,14 +31,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Endpoints d'authentification de l'API REST.
-///
-/// <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP (code +
-/// compteur d'échecs + verrouillage) à {@link TotpChallengeService}. Gère le login, logout,
-/// challenge TOTP, récupération de l'utilisateur courant et la réinitialisation de mot de passe.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Endpoints d'authentification de l'API REST.
+ *
+ * <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP (code +
+ * compteur d'échecs + verrouillage) à {@link TotpChallengeService}. Gère le login, logout,
+ * challenge TOTP, récupération de l'utilisateur courant et la réinitialisation de mot de passe.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @RestController
 public class AuthController {
 
@@ -51,11 +53,13 @@ public class AuthController {
   private final ConfigService configService;
   private final LogAdminService logAdminService;
 
-  /// @param authenticationManager gestionnaire d'authentification Spring Security
-  /// @param authService service de réinitialisation de mot de passe
-  /// @param totpChallengeService vérification du challenge TOTP (code + compteur d'échecs)
-  /// @param configService service de configuration pour lire PUBLIC_BASE_URL
-  /// @param logAdminService audit des tentatives bloquées faute de PUBLIC_BASE_URL configurée
+  /**
+   * @param authenticationManager gestionnaire d'authentification Spring Security
+   * @param authService service de réinitialisation de mot de passe
+   * @param totpChallengeService vérification du challenge TOTP (code + compteur d'échecs)
+   * @param configService service de configuration pour lire PUBLIC_BASE_URL
+   * @param logAdminService audit des tentatives bloquées faute de PUBLIC_BASE_URL configurée
+   */
   public AuthController(
       AuthenticationManager authenticationManager,
       AuthService authService,
@@ -69,11 +73,13 @@ public class AuthController {
     this.logAdminService = logAdminService;
   }
 
-  /// Authentifie un utilisateur et crée une session persistante.
-  ///
-  /// @param req les credentials ({@code identifiant} + {@code motDePasse})
-  /// @param httpRequest la requête HTTP (pour créer la session)
-  /// @return l'utilisateur authentifié ou 401 si les credentials sont invalides
+  /**
+   * Authentifie un utilisateur et crée une session persistante.
+   *
+   * @param req les credentials ({@code identifiant} + {@code motDePasse})
+   * @param httpRequest la requête HTTP (pour créer la session)
+   * @return l'utilisateur authentifié ou 401 si les credentials sont invalides
+   */
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(
       @Valid @RequestBody LoginRequest req, HttpServletRequest httpRequest) {
@@ -103,11 +109,13 @@ public class AuthController {
             totpRequis));
   }
 
-  /// Invalide la session courante, efface le cookie SESSION et déconnecte l'utilisateur.
-  ///
-  /// @param httpRequest la requête HTTP (pour invalider la session)
-  /// @param httpResponse la réponse HTTP (pour supprimer le cookie SESSION)
-  /// @return 204 No Content
+  /**
+   * Invalide la session courante, efface le cookie SESSION et déconnecte l'utilisateur.
+   *
+   * @param httpRequest la requête HTTP (pour invalider la session)
+   * @param httpResponse la réponse HTTP (pour supprimer le cookie SESSION)
+   * @return 204 No Content
+   */
   @PostMapping("/api/auth/logout")
   public ResponseEntity<Void> logout(
       HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
@@ -124,17 +132,19 @@ public class AuthController {
     return ResponseEntity.noContent().build();
   }
 
-  /// Vérifie le code TOTP soumis pendant le challenge post-login.
-  ///
-  /// <p>Le compteur d'échecs et la logique de verrouillage sont délégués à {@link
-  /// TotpChallengeService}. Un admin peut débloquer via {@code POST
-  /// /api/admin/utilisateurs/{id}/reset-totp}.
-  ///
-  /// @param req le corps contenant le code à 6 chiffres
-  /// @param httpRequest la requête HTTP (pour lire et modifier la session)
-  /// @param auth le contexte d'authentification Spring Security
-  /// @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
-  ///   trop d'échecs ou compte verrouillé
+  /**
+   * Vérifie le code TOTP soumis pendant le challenge post-login.
+   *
+   * <p>Le compteur d'échecs et la logique de verrouillage sont délégués à {@link
+   * TotpChallengeService}. Un admin peut débloquer via {@code POST
+   * /api/admin/utilisateurs/{id}/reset-totp}.
+   *
+   * @param req le corps contenant le code à 6 chiffres
+   * @param httpRequest la requête HTTP (pour lire et modifier la session)
+   * @param auth le contexte d'authentification Spring Security
+   * @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
+   *   trop d'échecs ou compte verrouillé
+   */
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
       @Valid @RequestBody TotpChallengeRequest req,
@@ -184,14 +194,16 @@ public class AuthController {
     };
   }
 
-  /// Retourne l'utilisateur actuellement authentifié.
-  ///
-  /// <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente
-  /// pour la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
-  ///
-  /// @param auth l'authentification Spring Security (injectée automatiquement)
-  /// @param httpRequest la requête HTTP (pour lire l'état TOTP de la session)
-  /// @return l'utilisateur courant ou 401 si non authentifié
+  /**
+   * Retourne l'utilisateur actuellement authentifié.
+   *
+   * <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente
+   * pour la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
+   *
+   * @param auth l'authentification Spring Security (injectée automatiquement)
+   * @param httpRequest la requête HTTP (pour lire l'état TOTP de la session)
+   * @return l'utilisateur courant ou 401 si non authentifié
+   */
   @GetMapping("/api/auth/me")
   public ResponseEntity<UtilisateurDto> moi(Authentication auth, HttpServletRequest httpRequest) {
     if (!(auth != null
@@ -214,13 +226,15 @@ public class AuthController {
             totpRequis));
   }
 
-  /// Déclenche l'envoi d'un email de réinitialisation de mot de passe.
-  ///
-  /// <p>Retourne toujours 200 pour éviter l'énumération de comptes.
-  ///
-  /// @param req le corps contenant l'adresse email
-  /// @param httpRequest la requête HTTP (pour construire l'URL de reset)
-  /// @return 200 dans tous les cas
+  /**
+   * Déclenche l'envoi d'un email de réinitialisation de mot de passe.
+   *
+   * <p>Retourne toujours 200 pour éviter l'énumération de comptes.
+   *
+   * @param req le corps contenant l'adresse email
+   * @param httpRequest la requête HTTP (pour construire l'URL de reset)
+   * @return 200 dans tous les cas
+   */
   @PostMapping("/api/auth/forgot-password")
   public ResponseEntity<Map<String, Object>> motDePasseOublie(
       @RequestBody ForgotPasswordRequest req) {
@@ -239,26 +253,30 @@ public class AuthController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Retourne le type d'un token de vérification sans le consommer.
-  ///
-  /// <p>Retourne toujours 200 — {@code "reset"} si le token est absent ou invalide (opacité).
-  ///
-  /// @param token token brut (non hashé)
-  /// @return {@code {type: "invite"}} ou {@code {type: "reset"}}
+  /**
+   * Retourne le type d'un token de vérification sans le consommer.
+   *
+   * <p>Retourne toujours 200 — {@code "reset"} si le token est absent ou invalide (opacité).
+   *
+   * @param token token brut (non hashé)
+   * @return {@code {type: "invite"}} ou {@code {type: "reset"}}
+   */
   @GetMapping("/api/auth/type-token")
   public ResponseEntity<Map<String, Object>> typeToken(@RequestParam String token) {
     boolean estInvite = authService.estTokenInvite(token);
     return ResponseEntity.ok(Map.of("type", estInvite ? "invite" : "reset"));
   }
 
-  /// Réinitialise le mot de passe via un token de vérification.
-  ///
-  /// <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni, active le
-  /// compte en une seule opération (identifiant + mot de passe) et ouvre une session.
-  ///
-  /// @param req le corps contenant le token, le mot de passe et optionnellement l'identifiant
-  /// @param httpRequest pour créer la session lors de l'activation d'une invitation
-  /// @return 200 si réinitialisé — 400 si invalide
+  /**
+   * Réinitialise le mot de passe via un token de vérification.
+   *
+   * <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni, active le
+   * compte en une seule opération (identifiant + mot de passe) et ouvre une session.
+   *
+   * @param req le corps contenant le token, le mot de passe et optionnellement l'identifiant
+   * @param httpRequest pour créer la session lors de l'activation d'une invitation
+   * @return 200 si réinitialisé — 400 si invalide
+   */
   @PostMapping("/api/auth/reset-password")
   public ResponseEntity<?> reinitialiserMotDePasse(
       @Valid @RequestBody ResetPasswordRequest req, HttpServletRequest httpRequest) {
@@ -296,27 +314,31 @@ public class AuthController {
     return ResponseEntity.ok(Map.of("succes", true));
   }
 
-  /// Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de
-  /// passe).
-  ///
-  /// <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
-  /// : un attaquant contrôlant ce header pourrait rediriger le lien de réinitialisation vers un
-  /// domaine sous son contrôle et voler le token dès qu'un utilisateur clique dessus (Host Header
-  /// Injection). {@link Optional#empty()} plutôt qu'un repli non sûr si {@code PUBLIC_BASE_URL}
-  /// n'est pas configurée — l'appelant doit alors refuser d'envoyer le lien.
-  ///
-  /// @return l'URL de base configurée, ou vide si absente
+  /**
+   * Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de
+   * passe).
+   *
+   * <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
+   * : un attaquant contrôlant ce header pourrait rediriger le lien de réinitialisation vers un
+   * domaine sous son contrôle et voler le token dès qu'un utilisateur clique dessus (Host Header
+   * Injection). {@link Optional#empty()} plutôt qu'un repli non sûr si {@code PUBLIC_BASE_URL}
+   * n'est pas configurée — l'appelant doit alors refuser d'envoyer le lien.
+   *
+   * @return l'URL de base configurée, ou vide si absente
+   */
   private Optional<String> resoudreBaseUrl() {
     return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
   }
 
-  /// Invalide toute session existante et en ouvre une nouvelle pour l'authentification donnée —
-  /// partagé entre {@link #login} et {@link #reinitialiserMotDePasse} (activation d'invitation).
-  ///
-  /// @param auth authentification déjà validée par {@link #authenticationManager}
-  /// @param httpRequest la requête HTTP (pour invalider/créer la session)
-  /// @param messageErreur message de l'exception si le principal n'est pas du type attendu
-  /// @return la session nouvellement créée et les détails de l'utilisateur authentifié
+  /**
+   * Invalide toute session existante et en ouvre une nouvelle pour l'authentification donnée —
+   * partagé entre {@link #login} et {@link #reinitialiserMotDePasse} (activation d'invitation).
+   *
+   * @param auth authentification déjà validée par {@link #authenticationManager}
+   * @param httpRequest la requête HTTP (pour invalider/créer la session)
+   * @param messageErreur message de l'exception si le principal n'est pas du type attendu
+   * @return la session nouvellement créée et les détails de l'utilisateur authentifié
+   */
   private SessionOuverte ouvrirSession(
       Authentication auth, HttpServletRequest httpRequest, String messageErreur) {
     HttpSession sessionExistante = httpRequest.getSession(false);
@@ -336,6 +358,8 @@ public class AuthController {
     return new SessionOuverte(session, details);
   }
 
-  /// Résultat de {@link #ouvrirSession} : la session nouvellement créée et l'utilisateur associé.
+  /**
+   * Résultat de {@link #ouvrirSession} : la session nouvellement créée et l'utilisateur associé.
+   */
   private record SessionOuverte(HttpSession session, UtilisateurDetails details) {}
 }

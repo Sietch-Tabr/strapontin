@@ -17,9 +17,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires de {@link ClientSparqlWikidata#echapperLitteral} — échappement des littéraux
-/// insérés dans une requête SPARQL construite par concaténation — et de {@link
-/// ClientSparqlWikidata#executer} — retry sur erreurs transitoires (502, content-type inattendu).
+/**
+ * Tests unitaires de {@link ClientSparqlWikidata#echapperLitteral} — échappement des littéraux
+ * insérés dans une requête SPARQL construite par concaténation — et de {@link
+ * ClientSparqlWikidata#executer} — retry sur erreurs transitoires (502, content-type inattendu).
+ */
 class ClientSparqlWikidataTest {
 
   @Test

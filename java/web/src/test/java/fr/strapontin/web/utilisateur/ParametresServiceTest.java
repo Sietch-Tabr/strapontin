@@ -20,10 +20,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link ParametresService}.
-///
-/// @since 2.5.4
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ParametresService}.
+ *
+ * @since 2.5.4
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class ParametresServiceTest {
 

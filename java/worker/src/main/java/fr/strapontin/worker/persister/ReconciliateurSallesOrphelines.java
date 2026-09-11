@@ -14,11 +14,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Retente la résolution des concerts orphelins (`salle_id IS NULL`) déjà persistés — extrait de
-/// {@link ReconciliateurSalles} (v2.8.7, dette de taille pure, aucun changement fonctionnel).
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Retente la résolution des concerts orphelins ({@code salle_id IS NULL}) déjà persistés — extrait de
+ * {@link ReconciliateurSalles} (v2.8.7, dette de taille pure, aucun changement fonctionnel).
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 @Service
 class ReconciliateurSallesOrphelines {
 
@@ -30,17 +32,19 @@ class ReconciliateurSallesOrphelines {
     this.jdbc = jdbc;
   }
 
-  /// Couvre le résidu structurel laissé par {@code upsertSalleSource} ({@link
-  /// ResolveurSalleParConcert}) : un concert sans {@code salleSourceId} (TM omet parfois {@code
-  /// venue.id}) et sans salle suffisamment proche par nom au moment de son insertion reste orphelin
-  /// indéfiniment, sans jamais être retenté — la salle correspondante peut pourtant apparaître plus
-  /// tard via une autre source (un autre événement TM avec {@code venue.id} renseigné, Eventim,
-  /// Digitick). Appelé une fois par nuit (voir {@code ReconciliationNocturneService}) plutôt qu'à
-  /// chaque cycle de fetch : le volume concerné reste faible (quelques dizaines de concerts) et une
-  /// résolution par nom n'a pas de raison de réussir plusieurs fois par jour si elle a échoué la
-  /// veille.
-  ///
-  /// @return nombre de concerts orphelins résolus
+  /**
+   * Couvre le résidu structurel laissé par {@code upsertSalleSource} ({@link
+   * ResolveurSalleParConcert}) : un concert sans {@code salleSourceId} (TM omet parfois {@code
+   * venue.id}) et sans salle suffisamment proche par nom au moment de son insertion reste orphelin
+   * indéfiniment, sans jamais être retenté — la salle correspondante peut pourtant apparaître plus
+   * tard via une autre source (un autre événement TM avec {@code venue.id} renseigné, Eventim,
+   * Digitick). Appelé une fois par nuit (voir {@code ReconciliationNocturneService}) plutôt qu'à
+   * chaque cycle de fetch : le volume concerné reste faible (quelques dizaines de concerts) et une
+   * résolution par nom n'a pas de raison de réussir plusieurs fois par jour si elle a échoué la
+   * veille.
+   *
+   * @return nombre de concerts orphelins résolus
+   */
   int retenterSallesOrphelines() {
     List<Map<String, Object>> orphelins =
         jdbc.queryForList(
@@ -72,15 +76,19 @@ class ReconciliateurSallesOrphelines {
     return resolus;
   }
 
-  /// Salle candidate pour {@link #meilleurCandidatEnMemoire} — {@code deptEffectif} incluant déjà
-  /// le repli sur le département d'un concert déjà rattaché ({@code salles.dept} n'étant écrit qu'à
-  /// la création).
+  /**
+   * Salle candidate pour {@link #meilleurCandidatEnMemoire} — {@code deptEffectif} incluant déjà
+   * le repli sur le département d'un concert déjà rattaché ({@code salles.dept} n'étant écrit qu'à
+   * la création).
+   */
   private record CandidatSalleMatching(UUID id, String nomNorm, String deptEffectif) {}
 
-  /// Charge en une seule requête l'ensemble des salles utilisables comme candidats de rapprochement
-  /// par nom.
-  ///
-  /// @return candidats de toutes les salles connues
+  /**
+   * Charge en une seule requête l'ensemble des salles utilisables comme candidats de rapprochement
+   * par nom.
+   *
+   * @return candidats de toutes les salles connues
+   */
   private List<CandidatSalleMatching> chargerCandidatsMatching() {
     return jdbc.query(
         "SELECT s.id AS id, s.nom_norm AS nom_norm,"
@@ -96,15 +104,17 @@ class ReconciliateurSallesOrphelines {
                 rs.getString("dept_effectif")));
   }
 
-  /// Équivalent en mémoire de {@code chercherSalleParTokens} ({@link ResolveurSalleParConcert}),
-  /// appliqué à des candidats déjà chargés — mêmes critères d'acceptation ({@link
-  /// CorrespondanceSalle#estDoublonSalle}, filtre dept, meilleur score Jaccard), sans requête SQL
-  /// par appel.
-  ///
-  /// @param nom nom brut de la salle à rapprocher
-  /// @param dept département connu du concert (nullable — désactive le filtre si absent)
-  /// @param candidats toutes les salles connues, préchargées
-  /// @return UUID de la meilleure salle candidate, ou {@code null} si aucune ne correspond
+  /**
+   * Équivalent en mémoire de {@code chercherSalleParTokens} ({@link ResolveurSalleParConcert}),
+   * appliqué à des candidats déjà chargés — mêmes critères d'acceptation ({@link
+   * CorrespondanceSalle#estDoublonSalle}, filtre dept, meilleur score Jaccard), sans requête SQL
+   * par appel.
+   *
+   * @param nom nom brut de la salle à rapprocher
+   * @param dept département connu du concert (nullable — désactive le filtre si absent)
+   * @param candidats toutes les salles connues, préchargées
+   * @return UUID de la meilleure salle candidate, ou {@code null} si aucune ne correspond
+   */
   private UUID meilleurCandidatEnMemoire(
       String nom, String dept, List<CandidatSalleMatching> candidats) {
     String nomNorm = Normalisation.normaliserTexte(nom);

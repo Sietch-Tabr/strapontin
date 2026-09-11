@@ -6,10 +6,12 @@ package fr.strapontin.web.admin;
 
 import java.time.Instant;
 
-/// Représentation admin d'un utilisateur (réponse GET /api/admin/utilisateurs).
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Représentation admin d'un utilisateur (réponse GET /api/admin/utilisateurs).
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record UtilisateurAdmin(
     String id,
     String email,

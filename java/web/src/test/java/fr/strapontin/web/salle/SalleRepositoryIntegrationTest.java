@@ -19,15 +19,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link SalleRepository} avec PostgreSQL réel (Testcontainers).
-///
-/// <p>Vérifie spécifiquement {@link SalleRepository#lireIdentifiantsSources} : le préfixe
-/// Ticketmaster construit à partir de {@code salle_sources.source} doit être abrégé ({@code "tm"})
-/// pour correspondre à ce qu'attend {@code TicketmasterSource.accepteIdentifiantSalle} — sans quoi
-/// le fetch déclenché à l'ajout d'une salle TM ne fait jamais rien.
-///
-/// @since 2.7.1
-/// @author Kwaite
+/**
+ * Test d'intégration de {@link SalleRepository} avec PostgreSQL réel (Testcontainers).
+ *
+ * <p>Vérifie spécifiquement {@link SalleRepository#lireIdentifiantsSources} : le préfixe
+ * Ticketmaster construit à partir de {@code salle_sources.source} doit être abrégé ({@code "tm"})
+ * pour correspondre à ce qu'attend {@code TicketmasterSource.accepteIdentifiantSalle} — sans quoi
+ * le fetch déclenché à l'ajout d'une salle TM ne fait jamais rien.
+ *
+ * @since 2.7.1
+ * @author Kwaite
+ */
 class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;

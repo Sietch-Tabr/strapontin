@@ -14,25 +14,29 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Contrôles d'intégrité généralistes du référentiel, indépendants de tout mécanisme de
-/// dédoublonnage ou d'enrichissement spécifique — journalisation seule via {@link
-/// SignalementMatchingService}, jamais de correction automatique.
-///
-/// Quatre invariants : cycles {@code salle_parent_id}, cohérence {@code salles.dept} vs le
-/// département majoritaire des événements rattachés, événements orphelins anciens (avant la purge à
-/// 30 jours de {@code WorkerPurgeService}), et {@code artiste_sources}/{@code salle_sources}
-/// référençant une entité sans aucun événement associé.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Contrôles d'intégrité généralistes du référentiel, indépendants de tout mécanisme de
+ * dédoublonnage ou d'enrichissement spécifique — journalisation seule via {@link
+ * SignalementMatchingService}, jamais de correction automatique.
+ *
+ * Quatre invariants : cycles {@code salle_parent_id}, cohérence {@code salles.dept} vs le
+ * département majoritaire des événements rattachés, événements orphelins anciens (avant la purge à
+ * 30 jours de {@code WorkerPurgeService}), et {@code artiste_sources}/{@code salle_sources}
+ * référençant une entité sans aucun événement associé.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 @Service
 public class ControleIntegriteService {
 
   private static final Logger log = LoggerFactory.getLogger(ControleIntegriteService.class);
 
-  /// Signale un événement futur sans {@code salle_id} ni {@code artiste_id} avant que {@code
-  /// WorkerPurgeService.executerPurgerConcertsHorsPortee} (seuil 30 jours) ne le suggère à la
-  /// suppression — un signal précoce distinct d'une action déjà en cours.
+  /**
+   * Signale un événement futur sans {@code salle_id} ni {@code artiste_id} avant que {@code
+   * WorkerPurgeService.executerPurgerConcertsHorsPortee} (seuil 30 jours) ne le suggère à la
+   * suppression — un signal précoce distinct d'une action déjà en cours.
+   */
   static final int SEUIL_JOURS_EVENEMENT_ORPHELIN = 14;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -44,9 +48,11 @@ public class ControleIntegriteService {
     this.signalementMatchingService = signalementMatchingService;
   }
 
-  /// Exécute les 4 invariants et retourne le nombre total de signalements nouvellement posés.
-  ///
-  /// @return nombre de signalements nouvellement posés, tous invariants confondus
+  /**
+   * Exécute les 4 invariants et retourne le nombre total de signalements nouvellement posés.
+   *
+   * @return nombre de signalements nouvellement posés, tous invariants confondus
+   */
   public int verifier() {
     int signales = 0;
     signales += verifierCyclesSalleParent();
@@ -57,8 +63,10 @@ public class ControleIntegriteService {
     return signales;
   }
 
-  /// Réutilise {@link SalleHierarchie#creeraitCycle} avec le lien de parenté réel déjà en base
-  /// (plutôt qu'un candidat hypothétique) pour détecter un cycle déjà présent dans les données.
+  /**
+   * Réutilise {@link SalleHierarchie#creeraitCycle} avec le lien de parenté réel déjà en base
+   * (plutôt qu'un candidat hypothétique) pour détecter un cycle déjà présent dans les données.
+   */
   private int verifierCyclesSalleParent() {
     Map<UUID, UUID> parentParSalle = new HashMap<>();
     for (var ligne : jdbc.queryForList("SELECT id, salle_parent_id FROM salles", Map.of())) {
@@ -83,9 +91,11 @@ public class ControleIntegriteService {
     return signalees;
   }
 
-  /// Compare {@code salles.dept} au département majoritaire des événements qui lui sont rattachés —
-  /// une divergence signe soit un {@code dept} obsolète (déménagement jamais répercuté), soit un
-  /// mauvais rattachement de concerts à cette salle.
+  /**
+   * Compare {@code salles.dept} au département majoritaire des événements qui lui sont rattachés —
+   * une divergence signe soit un {@code dept} obsolète (déménagement jamais répercuté), soit un
+   * mauvais rattachement de concerts à cette salle.
+   */
   private int verifierCoherenceDeptSalle() {
     List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -135,8 +145,10 @@ public class ControleIntegriteService {
     return ids.size();
   }
 
-  /// Une source référençant une entité sans le moindre événement associé (jamais un seul, pas
-  /// seulement une absence récente) signe un mapping erroné ou un identifiant mort dès l'origine.
+  /**
+   * Une source référençant une entité sans le moindre événement associé (jamais un seul, pas
+   * seulement une absence récente) signe un mapping erroné ou un identifiant mort dès l'origine.
+   */
   private int verifierSourcesOrphelines() {
     int signalees = 0;
     signalees += verifierSourcesOrphelines(TypeEntiteSource.ARTISTE);

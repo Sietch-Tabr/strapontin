@@ -15,10 +15,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires de {@link SourcesController}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SourcesController}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class SourcesControllerTest {
 
   private SourcesService sourcesService;

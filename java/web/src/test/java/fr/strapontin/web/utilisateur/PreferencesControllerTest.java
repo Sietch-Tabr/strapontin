@@ -22,10 +22,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link PreferencesController}.
-///
-/// @since 2.0.4
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link PreferencesController}.
+ *
+ * @since 2.0.4
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class PreferencesControllerTest {
 

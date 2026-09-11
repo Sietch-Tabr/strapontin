@@ -18,10 +18,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link ConcertsAdminController}.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ConcertsAdminController}.
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 class ConcertsAdminControllerTest {
 
   private ConcertsAdminService service;

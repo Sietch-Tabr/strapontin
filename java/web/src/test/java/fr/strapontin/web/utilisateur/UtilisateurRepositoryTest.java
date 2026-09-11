@@ -20,12 +20,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link UtilisateurRepository}.
-///
-/// <p>{@code compterNouveauxMatchesArtistes} extrait de {@code securite.SessionController} .
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link UtilisateurRepository}.
+ *
+ * <p>{@code compterNouveauxMatchesArtistes} extrait de {@code securite.SessionController} .
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class UtilisateurRepositoryTest {
 
   private static final String SECRET_CONFIG = "secret-de-test-utilisateur-repository";

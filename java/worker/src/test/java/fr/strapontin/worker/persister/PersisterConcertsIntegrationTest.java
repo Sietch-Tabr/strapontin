@@ -23,10 +23,12 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [PersisterConcerts] avec PostgreSQL réel (Testcontainers).
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Tests d'intégration de [PersisterConcerts] avec PostgreSQL réel (Testcontainers).
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   // Date relative à "aujourd'hui" (comme RecalculerMatchesServiceIntegrationTest#DATE_FUTURE) —
@@ -114,9 +116,11 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         artisteSourceId);
   }
 
-  /// Seed direct d'un événement + son observation (#1192) — contourne volontairement {@link
-  /// PersisterConcerts#persisterConcerts} pour reproduire un état déjà en base (résidu, concert
-  /// existant), équivalent du seed direct {@code INSERT INTO concerts} de l'ancien modèle.
+  /**
+   * Seed direct d'un événement + son observation (#1192) — contourne volontairement {@link
+   * PersisterConcerts#persisterConcerts} pour reproduire un état déjà en base (résidu, concert
+   * existant), équivalent du seed direct {@code INSERT INTO concerts} de l'ancien modèle.
+   */
   private UUID seedEvenementAvecObservation(
       String artiste,
       String artisteNorm,

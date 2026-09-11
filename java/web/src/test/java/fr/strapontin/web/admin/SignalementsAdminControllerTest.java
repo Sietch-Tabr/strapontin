@@ -15,10 +15,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link SignalementsAdminController}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SignalementsAdminController}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SignalementsAdminControllerTest {
 
   private SignalementsAdminService service;

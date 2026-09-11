@@ -22,12 +22,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de secours {@code
-/// lienReset} quand Resend n'est pas disponible, symétrique à {@link
-/// AdminController#creerUtilisateur}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de secours {@code
+ * lienReset} quand Resend n'est pas disponible, symétrique à {@link
+ * AdminController#creerUtilisateur}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class AdminControllerReinitialiserMdpTest {
 
   private AdminService adminService;

@@ -20,18 +20,20 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
 
-/// Service de réconciliation des noms d'artiste et de résolution des {@code artiste_id}.
-///
-/// <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis contre la base
-/// (variantes entre deux fetches). Utilise {@link CorrespondanceArtiste#estDoublonArtiste} (module
-/// {@code core}, partagé avec {@code web} — voir {@code ArtisteService.ajouter}) pour déterminer si
-/// deux noms désignent le même artiste.
-///
-/// <p>La résolution par nom ({@link #resoudreArtisteParNomNorm}) couvre toutes les sources sans
-/// {@code artiste_id}, y compris Digitick qui ne fournit pas d'identifiant artiste externe.
-///
-/// @since 2.5.7
-/// @author Kwaite
+/**
+ * Service de réconciliation des noms d'artiste et de résolution des {@code artiste_id}.
+ *
+ * <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis contre la base
+ * (variantes entre deux fetches). Utilise {@link CorrespondanceArtiste#estDoublonArtiste} (module
+ * {@code core}, partagé avec {@code web} — voir {@code ArtisteService.ajouter}) pour déterminer si
+ * deux noms désignent le même artiste.
+ *
+ * <p>La résolution par nom ({@link #resoudreArtisteParNomNorm}) couvre toutes les sources sans
+ * {@code artiste_id}, y compris Digitick qui ne fournit pas d'identifiant artiste externe.
+ *
+ * @since 2.5.7
+ * @author Kwaite
+ */
 @Service
 public class ReconciliateurArtistes {
 
@@ -41,24 +43,30 @@ public class ReconciliateurArtistes {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /// @param jdbc template JDBC injecté par Spring
+  /**
+   * @param jdbc template JDBC injecté par Spring
+   */
   public ReconciliateurArtistes(NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
-  /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les artistes sont considérés identiques
-  /// @see CorrespondanceArtiste#estDoublonArtiste
+  /**
+   * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
+   *
+   * @param a premier nom normalisé
+   * @param b deuxième nom normalisé
+   * @return {@code true} si les artistes sont considérés identiques
+   * @see CorrespondanceArtiste#estDoublonArtiste
+   */
   public static boolean estDoublonArtiste(String a, String b) {
     return CorrespondanceArtiste.estDoublonArtiste(a, b);
   }
 
-  /// Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour A→C.
-  ///
-  /// @param remplacements table de remplacement à résoudre sur place
+  /**
+   * Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour A→C.
+   *
+   * @param remplacements table de remplacement à résoudre sur place
+   */
   private static void resoudreChaines(Map<String, String> remplacements) {
     for (String cle : new ArrayList<>(remplacements.keySet())) {
       String valeur = cle;
@@ -69,17 +77,19 @@ public class ReconciliateurArtistes {
     }
   }
 
-  /// Réconcilie les variations mineures de nommage d'artiste dans un lot et contre la base.
-  ///
-  /// <p>Le regroupement se fait par {@code (date, salleNorm)} — déjà canonique à ce stade puisque
-  /// cette méthode s'exécute après {@code ReconciliateurSalles} — plutôt que par {@code
-  /// artisteNorm}, qui est précisément la valeur à corriger.
-  ///
-  /// <p>Filtre temporel : seuls les concerts à partir de 7 jours avant aujourd'hui sont chargés
-  /// depuis la base.
-  ///
-  /// @param lot valeurs de concerts après réconciliation des salles
-  /// @return lot avec {@code artisteNorm} réconcilié
+  /**
+   * Réconcilie les variations mineures de nommage d'artiste dans un lot et contre la base.
+   *
+   * <p>Le regroupement se fait par {@code (date, salleNorm)} — déjà canonique à ce stade puisque
+   * cette méthode s'exécute après {@code ReconciliateurSalles} — plutôt que par {@code
+   * artisteNorm}, qui est précisément la valeur à corriger.
+   *
+   * <p>Filtre temporel : seuls les concerts à partir de 7 jours avant aujourd'hui sont chargés
+   * depuis la base.
+   *
+   * @param lot valeurs de concerts après réconciliation des salles
+   * @return lot avec {@code artisteNorm} réconcilié
+   */
   List<ValeurConcert> reconcilierArtistes(List<ValeurConcert> lot) {
     Map<String, String> remplacementsIntraLot = construireRemplacementsArtisteIntraLot(lot);
     List<ValeurConcert> lotApresIntraLot =
@@ -113,18 +123,20 @@ public class ReconciliateurArtistes {
         .toList();
   }
 
-  /// Corrige un artiste corrompu déjà persisté en s'ancrant sur l'identité de l'URL de l'événement
-  /// plutôt que sur la similarité de nom.
-  ///
-  /// <p>{@link #reconcilierUnArtiste} ne guérit une ligne existante que si {@link
-  /// CorrespondanceArtiste#estDoublonArtiste} relie encore l'ancien nom corrompu au nouveau — un
-  /// mauvais rapprochement Deezer peut produire un nom sans aucune parenté textuelle avec
-  /// l'original (ex. "nino arial" → "nino arbol"), rendant cette guérison structurellement
-  /// impossible. Deux fiches de la même URL désignent nécessairement le même événement réel : cette
-  /// voie corrige donc la ligne existante indépendamment de toute similarité de nom, dès que
-  /// l'entrant est inéligible à la résolution Deezer (nom brut fiable par construction).
-  ///
-  /// @param lot concerts après résolution des identités sources
+  /**
+   * Corrige un artiste corrompu déjà persisté en s'ancrant sur l'identité de l'URL de l'événement
+   * plutôt que sur la similarité de nom.
+   *
+   * <p>{@link #reconcilierUnArtiste} ne guérit une ligne existante que si {@link
+   * CorrespondanceArtiste#estDoublonArtiste} relie encore l'ancien nom corrompu au nouveau — un
+   * mauvais rapprochement Deezer peut produire un nom sans aucune parenté textuelle avec
+   * l'original (ex. "nino arial" → "nino arbol"), rendant cette guérison structurellement
+   * impossible. Deux fiches de la même URL désignent nécessairement le même événement réel : cette
+   * voie corrige donc la ligne existante indépendamment de toute similarité de nom, dès que
+   * l'entrant est inéligible à la résolution Deezer (nom brut fiable par construction).
+   *
+   * @param lot concerts après résolution des identités sources
+   */
   void corrigerParUrl(List<ValeurConcert> lot) {
     List<ValeurConcert> candidats =
         lot.stream()
@@ -227,17 +239,19 @@ public class ReconciliateurArtistes {
     return c.avecArtisteNorm(canonique);
   }
 
-  /// Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
-  ///
-  /// <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur une
-  /// correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête
-  /// source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un candidat
-  /// exact dans le result set, faisant rattacher à tort le concert au mauvais artiste alors qu'une
-  /// correspondance exacte existait plus loin dans la même liste.
-  ///
-  /// @param concert concert à réconcilier
-  /// @param indexExistants candidats existants indexés par {@code date|salleNorm}
-  /// @return concert réconcilié (artisteNorm/artisteId propagés si un candidat correspond)
+  /**
+   * Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
+   *
+   * <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur une
+   * correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête
+   * source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un candidat
+   * exact dans le result set, faisant rattacher à tort le concert au mauvais artiste alors qu'une
+   * correspondance exacte existait plus loin dans la même liste.
+   *
+   * @param concert concert à réconcilier
+   * @param indexExistants candidats existants indexés par {@code date|salleNorm}
+   * @return concert réconcilié (artisteNorm/artisteId propagés si un candidat correspond)
+   */
   private ValeurConcert reconcilierUnArtiste(
       ValeurConcert concert, Map<String, List<ArtisteExistant>> indexExistants) {
     String cle = concert.date() + "|" + concert.salleNorm();
@@ -283,11 +297,13 @@ public class ReconciliateurArtistes {
     return concert;
   }
 
-  /// Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée,
-  /// désormais démentie par un fetch fiable (concert inéligible à la résolution Deezer).
-  ///
-  /// @param existant ancienne identité (erronée) à corriger
-  /// @param concert concert entrant portant l'identité corrigée
+  /**
+   * Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée,
+   * désormais démentie par un fetch fiable (concert inéligible à la résolution Deezer).
+   *
+   * @param existant ancienne identité (erronée) à corriger
+   * @param concert concert entrant portant l'identité corrigée
+   */
   private void corrigerArtisteExistantEnBase(ArtisteExistant existant, ValeurConcert concert) {
     MapSqlParameterSource params =
         new MapSqlParameterSource()
@@ -319,15 +335,17 @@ public class ReconciliateurArtistes {
     }
   }
 
-  /// Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.
-  ///
-  /// <p>Couvre toutes les sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
-  /// d'identifiant artiste externe ({@code artisteSourceId == null}). Les mappings trouvés pour les
-  /// sources avec identifiant externe sont persistés dans {@code artiste_sources} (ON CONFLICT DO
-  /// NOTHING) pour accélérer les fetches suivants.
-  ///
-  /// @param concerts concerts après résolution par source
-  /// @return liste enrichie avec les {@code artiste_id} résolus par nom
+  /**
+   * Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.
+   *
+   * <p>Couvre toutes les sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
+   * d'identifiant artiste externe ({@code artisteSourceId == null}). Les mappings trouvés pour les
+   * sources avec identifiant externe sont persistés dans {@code artiste_sources} (ON CONFLICT DO
+   * NOTHING) pour accélérer les fetches suivants.
+   *
+   * @param concerts concerts après résolution par source
+   * @return liste enrichie avec les {@code artiste_id} résolus par nom
+   */
   List<ValeurConcert> resoudreArtisteParNomNorm(List<ValeurConcert> concerts) {
     List<String> nomsNormSansId =
         concerts.stream()
@@ -362,14 +380,16 @@ public class ReconciliateurArtistes {
     return enrichis;
   }
 
-  /// Persiste dans {@code artiste_sources} les mappings nouvellement résolus par nom.
-  ///
-  /// <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent dans
-  /// {@code nomNormsResolus}) et dont la source externe est connue ({@code artisteSourceId != null}
-  /// — Digitick n'en a pas).
-  ///
-  /// @param concerts concerts après résolution par nom
-  /// @param nomNormsResolus noms normalisés effectivement résolus par le lookup
+  /**
+   * Persiste dans {@code artiste_sources} les mappings nouvellement résolus par nom.
+   *
+   * <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent dans
+   * {@code nomNormsResolus}) et dont la source externe est connue ({@code artisteSourceId != null}
+   * — Digitick n'en a pas).
+   *
+   * @param concerts concerts après résolution par nom
+   * @param nomNormsResolus noms normalisés effectivement résolus par le lookup
+   */
   private void persistersArtistesSources(
       List<ValeurConcert> concerts, java.util.Set<String> nomNormsResolus) {
     List<SqlParameterSource> params = new ArrayList<>();

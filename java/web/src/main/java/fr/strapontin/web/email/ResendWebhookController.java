@@ -22,16 +22,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Endpoint de réception des webhooks Resend.
-///
-/// Le endpoint est public (non authentifié) mais protégé par vérification HMAC via la librairie
-/// Svix embarquée dans le SDK resend-java.
-///
-/// La clé de signature doit être configurée dans `app_config` sous la clé `RESEND_WEBHOOK_SECRET`
-/// (visible depuis `/admin`).
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Endpoint de réception des webhooks Resend.
+ *
+ * Le endpoint est public (non authentifié) mais protégé par vérification HMAC via la librairie
+ * Svix embarquée dans le SDK resend-java.
+ *
+ * La clé de signature doit être configurée dans {@code app_config} sous la clé {@code RESEND_WEBHOOK_SECRET}
+ * (visible depuis {@code /admin}).
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @RestController
 public class ResendWebhookController {
 
@@ -53,16 +55,18 @@ public class ResendWebhookController {
     this.logAdminService = logAdminService;
   }
 
-  /// Reçoit et traite un événement webhook Resend.
-  ///
-  /// Retourne 400 si la clé `RESEND_WEBHOOK_SECRET` n'est pas configurée, 401 si la signature Svix
-  /// est invalide, 200 sinon.
-  ///
-  /// @param svixId header `svix-id` (identifiant unique de l'événement)
-  /// @param svixTimestamp header `svix-timestamp`
-  /// @param svixSignature header `svix-signature`
-  /// @param corpsRaw corps brut de la requête (sensible à la moindre modification)
-  /// @return réponse HTTP
+  /**
+   * Reçoit et traite un événement webhook Resend.
+   *
+   * Retourne 400 si la clé {@code RESEND_WEBHOOK_SECRET} n'est pas configurée, 401 si la signature Svix
+   * est invalide, 200 sinon.
+   *
+   * @param svixId header {@code svix-id} (identifiant unique de l'événement)
+   * @param svixTimestamp header {@code svix-timestamp}
+   * @param svixSignature header {@code svix-signature}
+   * @param corpsRaw corps brut de la requête (sensible à la moindre modification)
+   * @return réponse HTTP
+   */
   @PostMapping(value = "/api/webhooks/resend", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Void> recevoirEvenement(
       @RequestHeader(value = "svix-id", required = false) String svixId,
@@ -102,14 +106,16 @@ public class ResendWebhookController {
     return ResponseEntity.ok().build();
   }
 
-  /// Traite un événement webhook Resend déjà authentifié (signature Svix vérifiée).
-  ///
-  /// <p>Visibilité package-private pour permettre un test unitaire direct — la vérification de
-  /// signature Svix ({@link #recevoirEvenement}) ne peut pas être simulée simplement en test.
-  ///
-  /// @param corpsRaw corps JSON brut de l'événement
-  /// @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta
-  ///   {@code logs_admin} pour permettre un rejeu ciblé depuis l'admin
+  /**
+   * Traite un événement webhook Resend déjà authentifié (signature Svix vérifiée).
+   *
+   * <p>Visibilité package-private pour permettre un test unitaire direct — la vérification de
+   * signature Svix ({@link #recevoirEvenement}) ne peut pas être simulée simplement en test.
+   *
+   * @param corpsRaw corps JSON brut de l'événement
+   * @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta
+   *   {@code logs_admin} pour permettre un rejeu ciblé depuis l'admin
+   */
   void traiterEvenement(String corpsRaw, String svixId) {
     try {
       JsonNode racine = objectMapper.readTree(corpsRaw);
@@ -130,10 +136,12 @@ public class ResendWebhookController {
     }
   }
 
-  /// Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en clair
-  /// dans {@code logs_admin}, cohérent avec le hachage déjà appliqué côté SLF4J. Mémorise aussi
-  /// {@code svixId} : seul identifiant permettant de retrouver puis rejouer cet événement précis
-  /// via l'API Resend (cf. {@code ResendWebhooksAdminService}).
+  /**
+   * Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en clair
+   * dans {@code logs_admin}, cohérent avec le hachage déjà appliqué côté SLF4J. Mémorise aussi
+   * {@code svixId} : seul identifiant permettant de retrouver puis rejouer cet événement précis
+   * via l'API Resend (cf. {@code ResendWebhooksAdminService}).
+   */
   private void traiterIncidentEmail(
       String libelle, String messageLogAdmin, String email, String svixId) {
     String emailHash = String.valueOf(email.hashCode());

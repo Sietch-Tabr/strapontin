@@ -22,10 +22,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/// Tests unitaires de {@link GestionQuotaResend} (suite de l'incident).
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link GestionQuotaResend} (suite de l'incident).
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 class GestionQuotaResendTest {
 
   private JdbcTemplate jdbc;

@@ -10,10 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link FusionSourcesUtils}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link FusionSourcesUtils}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class FusionSourcesUtilsTest {
 
   @Test

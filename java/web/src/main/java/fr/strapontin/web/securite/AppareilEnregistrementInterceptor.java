@@ -12,18 +12,20 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/// Enregistre l'appareil courant dans {@code session_appareils}, au premier appel API qui suit la
-/// connexion — jamais pendant la requête de login elle-même.
-///
-/// <p>Spring Session (JDBC) ne persiste la session en base qu'à la toute fin de son propre filtre,
-/// après que le contrôleur de login a déjà rendu sa réponse : une écriture dans {@code
-/// session_appareils} (qui référence {@code SPRING_SESSION} par clé étrangère) tentée depuis le
-/// contrôleur de login viole systématiquement cette contrainte, la ligne n'existant pas encore. Cet
-/// intercepteur, exécuté par Spring MVC sur les requêtes API suivantes, s'exécute nécessairement
-/// après qu'une réponse précédente (donc la persistance de session qu'elle déclenche) est terminée.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Enregistre l'appareil courant dans {@code session_appareils}, au premier appel API qui suit la
+ * connexion — jamais pendant la requête de login elle-même.
+ *
+ * <p>Spring Session (JDBC) ne persiste la session en base qu'à la toute fin de son propre filtre,
+ * après que le contrôleur de login a déjà rendu sa réponse : une écriture dans {@code
+ * session_appareils} (qui référence {@code SPRING_SESSION} par clé étrangère) tentée depuis le
+ * contrôleur de login viole systématiquement cette contrainte, la ligne n'existant pas encore. Cet
+ * intercepteur, exécuté par Spring MVC sur les requêtes API suivantes, s'exécute nécessairement
+ * après qu'une réponse précédente (donc la persistance de session qu'elle déclenche) est terminée.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 @Component
 public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
 
@@ -31,7 +33,9 @@ public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
 
   private final AppareilsService appareilsService;
 
-  /// @param appareilsService service d'enregistrement des appareils
+  /**
+   * @param appareilsService service d'enregistrement des appareils
+   */
   public AppareilEnregistrementInterceptor(AppareilsService appareilsService) {
     this.appareilsService = appareilsService;
   }

@@ -19,12 +19,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link AideRestController}.
-///
-/// <p>Couvre le rate limiting par IP (3 signalements/h) et la validation du message.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link AideRestController}.
+ *
+ * <p>Couvre le rate limiting par IP (3 signalements/h) et la validation du message.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class AideRestControllerTest {
 

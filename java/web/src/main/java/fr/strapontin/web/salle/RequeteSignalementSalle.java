@@ -7,10 +7,12 @@ package fr.strapontin.web.salle;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/// Corps JSON de la requête POST /api/salles/signaler.
-///
-/// @since 2.2.5
-/// @author Kwaite
+/**
+ * Corps JSON de la requête POST /api/salles/signaler.
+ *
+ * @since 2.2.5
+ * @author Kwaite
+ */
 public record RequeteSignalementSalle(
     @NotBlank(message = "Le nom de la salle est requis.")
         @Size(max = 200, message = "Le nom ne peut pas dépasser 200 caractères.")

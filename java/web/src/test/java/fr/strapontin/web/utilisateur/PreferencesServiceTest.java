@@ -26,10 +26,12 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link PreferencesService} — focus sur la dédup floue de l'import.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link PreferencesService} — focus sur la dédup floue de l'import.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class PreferencesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

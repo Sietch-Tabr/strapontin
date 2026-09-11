@@ -22,15 +22,17 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link EmailAlerteService} (extrait d'{@code EmailService}).
-///
-/// <p>Couvre le garde-fou anti-boucle sur les notifications bounce/plainte spam. Les
-/// méthodes d'envoi réel (dépendant du SDK Resend, non injectable) ne sont testées que sur leurs
-/// branches de retour anticipé — le SDK n'effectue aucun appel réseau tant que
-/// {@code emails().send()} n'est pas invoqué.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link EmailAlerteService} (extrait d'{@code EmailService}).
+ *
+ * <p>Couvre le garde-fou anti-boucle sur les notifications bounce/plainte spam. Les
+ * méthodes d'envoi réel (dépendant du SDK Resend, non injectable) ne sont testées que sur leurs
+ * branches de retour anticipé — le SDK n'effectue aucun appel réseau tant que
+ * {@code emails().send()} n'est pas invoqué.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class EmailAlerteServiceTest {
 
   private ConfigService configService;

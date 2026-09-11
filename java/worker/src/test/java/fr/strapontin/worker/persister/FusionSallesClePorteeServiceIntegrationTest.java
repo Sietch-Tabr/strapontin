@@ -17,10 +17,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [FusionSallesClePorteeService] avec PostgreSQL réel (Testcontainers).
-///
-/// @since 2.8.4
-/// @author Kwaite
+/**
+ * Tests d'intégration de [FusionSallesClePorteeService] avec PostgreSQL réel (Testcontainers).
+ *
+ * @since 2.8.4
+ * @author Kwaite
+ */
 class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   private static final String DATE_FUTURE = LocalDate.now().plusMonths(2).toString();

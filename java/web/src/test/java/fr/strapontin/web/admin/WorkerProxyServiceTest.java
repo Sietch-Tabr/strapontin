@@ -20,11 +20,13 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link WorkerProxyService} — focus sur {@code relancerJob} (v2.6.0,
-/// bouton « Relancer » par job de maintenance).
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerProxyService} — focus sur {@code relancerJob} (v2.6.0,
+ * bouton « Relancer » par job de maintenance).
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class WorkerProxyServiceTest {
 
   @AfterEach

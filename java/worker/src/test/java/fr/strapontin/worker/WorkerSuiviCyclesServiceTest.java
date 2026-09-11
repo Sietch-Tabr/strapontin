@@ -28,10 +28,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link WorkerSuiviCyclesService}.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link WorkerSuiviCyclesService}.
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 class WorkerSuiviCyclesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

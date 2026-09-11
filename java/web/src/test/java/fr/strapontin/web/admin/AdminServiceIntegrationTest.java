@@ -24,20 +24,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers).
-///
-/// <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du
-/// pool HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie
-/// avec une vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation
-/// avant toute écriture, et que la rétrogradation seule s'applique normalement.
-///
-/// <p>Pas de {@code @SpringBootTest} : {@link AdminService} est construit manuellement (comme
-/// le permet son injection {@code self} par setter, prévue pour les tests hors contexte Spring),
-/// DataSource/Flyway montés à la main pour éviter la complexité d'un contexte web complet
-/// (sécurité, sessions JDBC, etc.) non nécessaire pour ce test ciblé.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers).
+ *
+ * <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du
+ * pool HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie
+ * avec une vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation
+ * avant toute écriture, et que la rétrogradation seule s'applique normalement.
+ *
+ * <p>Pas de {@code @SpringBootTest} : {@link AdminService} est construit manuellement (comme
+ * le permet son injection {@code self} par setter, prévue pour les tests hors contexte Spring),
+ * DataSource/Flyway montés à la main pour éviter la complexité d'un contexte web complet
+ * (sécurité, sessions JDBC, etc.) non nécessaire pour ce test ciblé.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;
