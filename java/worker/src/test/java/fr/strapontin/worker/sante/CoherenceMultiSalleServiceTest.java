@@ -105,6 +105,57 @@ class CoherenceMultiSalleServiceTest {
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 
+  @Test
+  void detecterContamination_nomComplenteDeVille_neJournalisePas() {
+    // "6mic" / "6mic aix en provence" — l'identifiant synthétique n'est que le nom complété d'une
+    // ville, pas une salle réellement différente.
+    UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(ligneContamination(salleId, "internal:6mic aix en provence", "6mic", null)));
+
+    int resultat = service.detecterContamination();
+
+    assertEquals(0, resultat);
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void detecterContamination_sigleInitiales_neJournalisePas() {
+    // "ed n" / "espace dollfus noack" — sigle formé des initiales de chaque mot du nom complet.
+    UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(ligneContamination(salleId, "internal:ed n", "espace dollfus noack", null)));
+
+    int resultat = service.detecterContamination();
+
+    assertEquals(0, resultat);
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void detecterContamination_divergenceReelleMalgreLongueurAsymetrique_journalise() {
+    // "theatre la boussole grande salle" / "theatre marigny grande salle" — ni nom+ville ni sigle,
+    // divergence réelle malgré des longueurs de mots proches, ne doit pas être écartée du même
+    // geste que les faux positifs nom+ville/sigle.
+    UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                ligneContamination(
+                    salleId,
+                    "internal:theatre la boussole grande salle",
+                    "theatre marigny grande salle",
+                    null)));
+
+    int resultat = service.detecterContamination();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker)
+        .inserer(org.mockito.ArgumentMatchers.eq("warn"), anyString(), anyString(), anyMap());
+  }
+
   private static Map<String, Object> ligneSalle(
       UUID id, String nomNorm, String dept, String doublonSignale) {
     Map<String, Object> ligne = new HashMap<>();

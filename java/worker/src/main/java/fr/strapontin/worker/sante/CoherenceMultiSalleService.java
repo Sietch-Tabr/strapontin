@@ -46,9 +46,10 @@ public class CoherenceMultiSalleService {
 
   /// Compare, pour chaque salle portant au moins une source Eventim/Digitick synthétique ({@code
   /// internal:<nom>}), le nom extrait de cette source à {@code salles.nom_norm} via {@link
-  /// CorrespondanceSalle#estDoublonSalle} — une mésentente signe un {@code salle_id} hébergeant
-  /// probablement plusieurs lieux réels distincts (résidu d'une fusion antérieure à un correctif de
-  /// dédoublonnage).
+  /// #estContaminationReelle} — une mésentente signe un {@code salle_id} hébergeant probablement
+  /// plusieurs lieux réels distincts (résidu d'une fusion antérieure à un correctif de
+  /// dédoublonnage), à l'exclusion des identifiants source qui ne sont que le nom de la salle
+  /// complété d'une ville ou d'un sigle.
   ///
   /// @return nombre de salles nouvellement signalées
   public int detecterContamination() {
@@ -83,7 +84,7 @@ public class CoherenceMultiSalleService {
       String nomNormSalle = nomNormParSalle.get(salleId);
       List<String> mesententes =
           entree.getValue().stream()
-              .filter(nomExtrait -> !CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle))
+              .filter(nomExtrait -> estContaminationReelle(nomExtrait, nomNormSalle))
               .distinct()
               .sorted()
               .toList();
@@ -116,6 +117,40 @@ public class CoherenceMultiSalleService {
     jdbc.update(
         "UPDATE salles SET contamination_signalee = :signature WHERE id = CAST(:id AS uuid)",
         params);
+  }
+
+  // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur une seule lettre.
+  private static final int LONGUEUR_MIN_SIGLE = 2;
+
+  /// Un identifiant source synthétique n'est pas une contamination réelle quand il n'est que le nom
+  /// de la salle complété d'une ville ({@link #nomContenuDansLAutre}, ex. "6mic" / "6mic aix en
+  /// provence") ou un sigle formé de ses initiales ({@link #estSigleDe}, ex. "ed n" / "espace
+  /// dollfus noack") — {@link CorrespondanceSalle#estDoublonSalle} seul rejette mécaniquement ces
+  /// deux cas dès qu'un côté est bien plus long ou bien plus court que l'autre.
+  private static boolean estContaminationReelle(String nomExtrait, String nomNormSalle) {
+    if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) return false;
+    if (nomContenuDansLAutre(nomExtrait, nomNormSalle)) return false;
+    return !estSigleDe(nomExtrait, nomNormSalle);
+  }
+
+  /// Vérifie si la plus courte des deux chaînes est le sigle de la plus longue — les initiales de
+  /// chaque mot de la plus longue, concaténées sans espace, égalent exactement la plus courte sans
+  /// espace (ex. "ed n" pour "espace dollfus noack" → initiales e, d, n).
+  private static boolean estSigleDe(String a, String b) {
+    String court = a.length() <= b.length() ? a : b;
+    String plusLong = a.length() <= b.length() ? b : a;
+    String sigleObserve = court.replace(" ", "");
+    if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) return false;
+
+    String[] mots = plusLong.split("\\s+");
+    if (mots.length != sigleObserve.length()) return false;
+
+    StringBuilder initiales = new StringBuilder();
+    for (String mot : mots) {
+      if (mot.isEmpty()) return false;
+      initiales.append(mot.charAt(0));
+    }
+    return initiales.toString().equals(sigleObserve);
   }
 
   /// Balayage pairwise de toutes les salles par containment de tokens de {@code nom_norm} et
