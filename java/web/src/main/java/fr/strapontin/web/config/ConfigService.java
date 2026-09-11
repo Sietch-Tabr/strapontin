@@ -23,13 +23,13 @@ import org.springframework.stereotype.Service;
 /**
  * Service de configuration chiffrée (portage de {@code config.ts}).
  *
- * La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut Node.js :
- * N=16 384, r=8, p=1, dkLen=32).
+ * <p>La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut
+ * Node.js : N=16 384, r=8, p=1, dkLen=32).
  *
- * Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec les
- * valeurs chiffrées par le module TypeScript.
+ * <p>Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec
+ * les valeurs chiffrées par le module TypeScript.
  *
- * Les valeurs sont mises en cache Caffeine 5 minutes. [sauvegarderConfig] invalide immédiatement
+ * <p>Les valeurs sont mises en cache Caffeine 5 minutes. [sauvegarderConfig] invalide immédiatement
  * le cache de la clé modifiée.
  *
  * @since 2.0.0
@@ -44,6 +44,10 @@ public class ConfigService {
   private final NamedParameterJdbcTemplate jdbc;
   private final Cache<String, Optional<String>> cache;
 
+  /**
+   * @param secret secret de chiffrement {@code APP_CONFIG_SECRET}
+   * @param jdbc accès JDBC
+   */
   public ConfigService(
       @Value("${app.config.secret}") final String secret, final NamedParameterJdbcTemplate jdbc) {
     this.cipher = new ConfigCipher(secret);
@@ -66,7 +70,7 @@ public class ConfigService {
   /**
    * Sauvegarde une valeur de configuration chiffrée en base de données.
    *
-   * Si {@code valeur} est vide, la clé est supprimée.
+   * <p>Si {@code valeur} est vide, la clé est supprimée.
    *
    * @param cle la clé de configuration
    * @param valeur la valeur en clair, ou {@code null} pour supprimer
@@ -82,12 +86,12 @@ public class ConfigService {
     final String valeurChiffree = cipher.chiffrer(valeur);
     final String sql =
         """
-            INSERT INTO app_config (cle, valeur_chiffree)
-            VALUES (:cle, :valeur)
-            ON CONFLICT (cle) DO UPDATE
-              SET valeur_chiffree = EXCLUDED.valeur_chiffree,
-                  mis_a_jour_le   = now()
-            """;
+        INSERT INTO app_config (cle, valeur_chiffree)
+        VALUES (:cle, :valeur)
+        ON CONFLICT (cle) DO UPDATE
+          SET valeur_chiffree = EXCLUDED.valeur_chiffree,
+              mis_a_jour_le   = now()
+        """;
     jdbc.update(sql, Map.of("cle", cle, "valeur", valeurChiffree));
   }
 

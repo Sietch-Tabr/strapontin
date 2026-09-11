@@ -62,7 +62,9 @@ class SpectacleControllerTest {
 
     final ResponseEntity<ReponseSpectacles> rep =
         controller.listerSpectacles(
-            "q", "2026-05", "concert", "Pop", false, "date", false, null, null, 0, auth);
+            new FiltreConcerts(
+                "q", "2026-05", "Pop", "concert", "date", 0, false, false, null, null, null),
+            auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertSame(attendu, rep.getBody());

@@ -25,17 +25,17 @@ import org.springframework.stereotype.Service;
 /**
  * Orchestrateur d'enrichissement des artistes (étape 3 +).
  *
- * Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
+ * <p>Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
  * Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
  * EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré avant
  * {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est propagé aux
  * sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
  *
- * Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM pour
+ * <p>Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM pour
  * l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto, identique →
  * rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
  *
- * Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
+ * <p>Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
  * découverte Wikidata sans Q-ID connu est séquentielle (une requête par artiste, rate-limitée) —
  * persister uniquement à la toute fin perdrait tout le travail déjà résolu en cas d'interruption
  * avant la fin du cycle.
@@ -59,6 +59,12 @@ public class EnrichissementArtistesService {
   private final LogsAdminWorker logsAdminWorker;
   private final SignalementMatchingService signalementMatchingService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param sources sources d'enrichissement injectées, dans leur ordre de déclaration Spring
+   * @param logsAdminWorker journalisation du bilan de cycle
+   * @param signalementMatchingService journalisation des ambiguïtés de découverte
+   */
   public EnrichissementArtistesService(
       final NamedParameterJdbcTemplate jdbc,
       final List<SourceEnrichissementArtiste> sources,
@@ -195,10 +201,10 @@ public class EnrichissementArtistesService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT artiste_id, identifiant_externe
-                FROM artiste_sources
-                WHERE source = 'ticketmaster' AND artiste_id IN (:ids)
-                """,
+            SELECT artiste_id, identifiant_externe
+            FROM artiste_sources
+            WHERE source = 'ticketmaster' AND artiste_id IN (:ids)
+            """,
             Map.of("ids", ids));
     final Map<UUID, String> resultat = new HashMap<>();
     for (final Map<String, Object> ligne : lignes) {
@@ -236,13 +242,13 @@ public class EnrichissementArtistesService {
 
   /**
    * @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
-   *   découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
-   *   — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
-   *   est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
-   *   le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
-   *   (basée sur le même enrichissement). Jamais de fusion automatique — contrairement aux salles,
-   *   aucun signal géographique de cross-validation n'existe pour départager un homonyme réel d'un
-   *   doublon.
+   *     découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
+   *     — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
+   *     est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
+   *     le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
+   *     (basée sur le même enrichissement). Jamais de fusion automatique — contrairement aux
+   *     salles, aucun signal géographique de cross-validation n'existe pour départager un homonyme
+   *     réel d'un doublon.
    */
   private boolean mettreAJourArtiste(
       final UUID artisteId, final String nom, final EnrichissementArtiste e) {
@@ -285,9 +291,7 @@ public class EnrichissementArtistesService {
     }
   }
 
-  /**
-   * P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé.
-   */
+  /** P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé. */
   private void traiterCrossValidationP6262(
       final ArtisteAEnrichir artiste,
       final EnrichissementArtiste enrichissement,
@@ -301,10 +305,10 @@ public class EnrichissementArtistesService {
       final int lignesInserees =
           jdbc.update(
               """
-                  INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
-                  VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
-                  ON CONFLICT DO NOTHING
-                  """,
+              INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
+              VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
+              ON CONFLICT DO NOTHING
+              """,
               Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
       if (lignesInserees > 0) {
         log.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);

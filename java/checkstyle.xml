@@ -18,8 +18,17 @@
       <property name="max" value="50"/>
       <property name="countEmpty" value="false"/>
     </module>
+    <!-- Seuil séparé pour les méthodes métier (7, java.md) et les constructeurs (15) — l'injection
+         de dépendances par constructeur Spring n'est pas un signe de mauvaise conception au même
+         titre qu'une longue liste de paramètres de méthode métier, dans une architecture en couches
+         où un orchestrateur accumule légitimement ses collaborateurs. -->
     <module name="ParameterNumber">
       <property name="max" value="7"/>
+      <property name="tokens" value="METHOD_DEF"/>
+    </module>
+    <module name="ParameterNumber">
+      <property name="max" value="15"/>
+      <property name="tokens" value="CTOR_DEF"/>
     </module>
 
     <!-- Javadoc obligatoire sur le public/protégé (java.md), syntaxe /** */ classique uniquement —

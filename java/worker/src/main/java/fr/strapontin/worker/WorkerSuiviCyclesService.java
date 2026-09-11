@@ -17,10 +17,10 @@ import org.springframework.stereotype.Service;
 
 /**
  * Détecte, par type de job planifié, une absence prolongée et inexpliquée d'exécution — un cycle
- * silencieusement perdu (reboot brutal de l'hôte, OOM, crash) plutôt qu'un ralentissement normal
- * de cadence.
+ * silencieusement perdu (reboot brutal de l'hôte, OOM, crash) plutôt qu'un ralentissement normal de
+ * cadence.
  *
- * Délégué par le job Quartz {@code SuiviCyclesJobsJob}, cadencé toutes les heures.
+ * <p>Délégué par le job Quartz {@code SuiviCyclesJobsJob}, cadencé toutes les heures.
  *
  * <p>Complète {@code WatchdogWorkerService} (module web) : celui-ci n'alerte que sur l'inactivité
  * globale du worker, tous types de job confondus — un type de job resté silencieusement bloqué
@@ -57,6 +57,11 @@ public class WorkerSuiviCyclesService {
   private final LogsAdminWorker logsAdminWorker;
   private final WorkerStatsService workerStatsService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation des cycles perdus détectés
+   * @param workerStatsService lecture de la dernière exécution par type de job
+   */
   public WorkerSuiviCyclesService(
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,

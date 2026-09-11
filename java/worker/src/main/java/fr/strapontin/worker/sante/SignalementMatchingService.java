@@ -15,9 +15,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Point d'entrée unique pour les nouveaux signalements de matching (#1193) — table
- * {@code signalements_matching}, complémentaire aux mécanismes déjà établis
- * ({@code necessite_intervention_le}, {@code contamination_signalee}, {@code doublon_signale}) plutôt qu'un
+ * Point d'entrée unique pour les nouveaux signalements de matching (#1193) — table {@code
+ * signalements_matching}, complémentaire aux mécanismes déjà établis ({@code
+ * necessite_intervention_le}, {@code contamination_signalee}, {@code doublon_signale}) plutôt qu'un
  * remplacement.
  *
  * @since 2.9.0
@@ -31,6 +31,10 @@ public class SignalementMatchingService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper sérialisation des détails en JSON
+   */
   public SignalementMatchingService(
       final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;

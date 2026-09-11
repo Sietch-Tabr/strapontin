@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  * échec de livraison, sans exposer directement l'API Resend au frontend.
  *
  * <p>HTTP pur — délègue toute la logique métier à {@link ResendWebhooksAdminService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
- * {@code /api/admin/**}).
+ * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
+ * /api/admin/**}).
  *
  * @since 2.9.0
  * @author Kwaite
@@ -33,6 +33,9 @@ public class ResendWebhooksAdminController {
 
   private final ResendWebhooksAdminService service;
 
+  /**
+   * @param service service de gestion des webhooks Resend
+   */
   public ResendWebhooksAdminController(final ResendWebhooksAdminService service) {
     this.service = service;
   }
@@ -52,7 +55,7 @@ public class ResendWebhooksAdminController {
    *
    * @param id identifiant de l'événement à rejouer
    * @return 200 si le rejeu a été accepté, 502 en cas d'échec (configuration absente, webhook
-   *   introuvable, erreur API Resend)
+   *     introuvable, erreur API Resend)
    */
   @PostMapping("/evenements/{id}/rejouer")
   public ResponseEntity<Map<String, Object>> rejouerEvenement(@PathVariable final String id) {

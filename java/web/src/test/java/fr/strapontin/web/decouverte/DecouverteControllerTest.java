@@ -26,9 +26,9 @@ import org.springframework.security.core.Authentication;
 /**
  * Tests unitaires de {@link DecouverteController#decouvrir}.
  *
- * <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}.
- * Les tests du filtre mois et du comportement global de {@code decouvrir} au niveau service
- * vivent dans {@link DecouverteServiceTest}.
+ * <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}. Les tests
+ * du filtre mois et du comportement global de {@code decouvrir} au niveau service vivent dans
+ * {@link DecouverteServiceTest}.
  *
  * @since 2.6.6
  * @author Kwaite
@@ -59,7 +59,19 @@ class DecouverteControllerTest {
 
     final ResponseEntity<ReponseDecouverte> rep =
         controller.decouvrir(
-            List.of("75", "92"), "zenith", "2026-05", "Pop", "concert", "nouveaute", 1, auth);
+            new FiltreConcerts(
+                "zenith",
+                "2026-05",
+                "Pop",
+                "concert",
+                "nouveaute",
+                1,
+                false,
+                false,
+                null,
+                null,
+                List.of("75", "92")),
+            auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertSame(attendu, rep.getBody());
@@ -72,7 +84,20 @@ class DecouverteControllerTest {
             List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
     when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(vide);
 
-    controller.decouvrir(List.of("75"), "q", "2026-05", "Pop", "concert", "nouveaute", 2, auth);
+    controller.decouvrir(
+        new FiltreConcerts(
+            "q",
+            "2026-05",
+            "Pop",
+            "concert",
+            "nouveaute",
+            2,
+            false,
+            false,
+            null,
+            null,
+            List.of("75")),
+        auth);
 
     final org.mockito.ArgumentCaptor<FiltreConcerts> captor =
         org.mockito.ArgumentCaptor.forClass(FiltreConcerts.class);

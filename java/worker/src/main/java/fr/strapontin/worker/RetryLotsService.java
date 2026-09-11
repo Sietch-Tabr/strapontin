@@ -22,15 +22,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Retry ciblé pour les 3 jobs multi-lots ({@code fetch:artistes:batch}/{@code fetch:region}/
- * {@code fetch:salles:all}) : sur échec partiel d'un cycle, planifie un déclenchement Quartz ponctuel
- * (+15 min) portant uniquement les identifiants en échec, plutôt que d'attendre le prochain cycle
+ * Retry ciblé pour les 3 jobs multi-lots ({@code fetch:artistes:batch}/{@code fetch:region}/ {@code
+ * fetch:salles:all}) : sur échec partiel d'un cycle, planifie un déclenchement Quartz ponctuel (+15
+ * min) portant uniquement les identifiants en échec, plutôt que d'attendre le prochain cycle
  * complet ou de marteler indéfiniment un échec déterministe.
  *
- * Le trigger de retry cible la {@link JobKey} déjà enregistrée du job cron normal ({@code storeDurably},
- * voir {@code Planificateur}) plutôt que de créer un nouveau {@code JobDetail} — sans cela, un
- * retry planifié sous une identité distincte contournerait {@code @DisallowConcurrentExecution} et
- * pourrait s'exécuter en parallèle du prochain cycle cron normal.
+ * <p>Le trigger de retry cible la {@link JobKey} déjà enregistrée du job cron normal ({@code
+ * storeDurably}, voir {@code Planificateur}) plutôt que de créer un nouveau {@code JobDetail} —
+ * sans cela, un retry planifié sous une identité distincte contournerait
+ * {@code @DisallowConcurrentExecution} et pourrait s'exécuter en parallèle du prochain cycle cron
+ * normal.
  *
  * @since 2.9.0
  * @author Kwaite
@@ -58,6 +59,11 @@ public class RetryLotsService {
   private final SuiviChroniciteService suiviChronicite;
   private final LogsAdminWorker logsAdminWorker;
 
+  /**
+   * @param scheduler planificateur Quartz portant le job cron normal à re-déclencher
+   * @param suiviChronicite comptage des cycles consécutifs en échec, pour l'abandon après 2 retries
+   * @param logsAdminWorker journalisation des retries planifiés
+   */
   public RetryLotsService(
       final Scheduler scheduler,
       final SuiviChroniciteService suiviChronicite,
@@ -72,9 +78,9 @@ public class RetryLotsService {
    * simplement remettre à zéro le compteur de tentatives (cycle propre).
    *
    * @param typeJob type de job (ex. {@code "fetch:region"}) — ignoré si non concerné par le retry
-   *   ciblé (jobs hors des 3 jobs multi-lots)
+   *     ciblé (jobs hors des 3 jobs multi-lots)
    * @param identifiantsEnEchec identifiants des entités des lots en échec de ce cycle, vide si le
-   *   cycle est propre
+   *     cycle est propre
    */
   public void gererResultat(final String typeJob, final List<String> identifiantsEnEchec) {
     final ConfigRetry config = CONFIGS_PAR_TYPE_JOB.get(typeJob);

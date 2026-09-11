@@ -27,10 +27,10 @@ import org.springframework.stereotype.Service;
  * encore couvert par cette liste — sans jamais l'y ajouter automatiquement (l'ajout reste une
  * décision humaine, un faux positif dégraderait le dédoublonnage pour toutes les salles).
  *
- * Un mot déjà suggéré n'est jamais re-signalé (liste persistée dans {@code app_config}, même
+ * <p>Un mot déjà suggéré n'est jamais re-signalé (liste persistée dans {@code app_config}, même
  * mécanisme que {@code SuiviChroniciteService}) — pas d'entité unique naturelle à rattacher à ce
- * signalement (contrairement aux signalements de {@code signalements_matching}), d'où
- * l'utilisation de {@code logs_admin} plutôt que la nouvelle table dédiée.
+ * signalement (contrairement aux signalements de {@code signalements_matching}), d'où l'utilisation
+ * de {@code logs_admin} plutôt que la nouvelle table dédiée.
  *
  * @since 2.9.0
  * @author Kwaite
@@ -43,8 +43,8 @@ public class SuggestionMotsGenericsService {
   private static final String CLE_CONFIG = "MOTS_GENERIQUES_SUGGERES_JSON";
 
   /**
-   * Seuil en occurrences brutes (pas en pourcentage du référentiel, dont le volume total varie
-   * trop peu jalon après jalon pour qu'un pourcentage soit discriminant) au-delà duquel un token
+   * Seuil en occurrences brutes (pas en pourcentage du référentiel, dont le volume total varie trop
+   * peu jalon après jalon pour qu'un pourcentage soit discriminant) au-delà duquel un token
    * spécifique est suspecté d'être en réalité un mot-type générique national.
    */
   public static final int SEUIL_OCCURRENCES_MOT_GENERIQUE = 15;
@@ -53,6 +53,11 @@ public class SuggestionMotsGenericsService {
   private final LogsAdminWorker logsAdminWorker;
   private final ObjectMapper objectMapper;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation des mots suggérés
+   * @param objectMapper sérialisation de la liste des mots déjà suggérés
+   */
   public SuggestionMotsGenericsService(
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,

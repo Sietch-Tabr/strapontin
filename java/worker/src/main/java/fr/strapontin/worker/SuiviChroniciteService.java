@@ -20,10 +20,10 @@ import org.springframework.stereotype.Service;
  * consécutifs en échec partiel ou total — persisté dans {@code app_config} (même mécanisme que
  * {@code GestionQuotaTM}/{@code TM_QUOTA_JSON}, survit aux redémarrages) plutôt qu'en mémoire.
  *
- * Un taux de 429 Ticketmaster ou d'échec Overpass répété à quasiment chaque cycle avait été
+ * <p>Un taux de 429 Ticketmaster ou d'échec Overpass répété à quasiment chaque cycle avait été
  * documenté à plusieurs reprises comme un événement isolé/ponctuel, faute d'un signal automatique
- * distinguant une occurrence isolée d'une dégradation persistante — seul un dépouillement manuel
- * de plusieurs jours de {@code logs_admin} avait permis de la caractériser.
+ * distinguant une occurrence isolée d'une dégradation persistante — seul un dépouillement manuel de
+ * plusieurs jours de {@code logs_admin} avait permis de la caractériser.
  *
  * @since 2.8.2
  * @author Kwaite
@@ -45,6 +45,10 @@ public class SuiviChroniciteService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper sérialisation des compteurs de série en JSON
+   */
   public SuiviChroniciteService(
       final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
@@ -55,11 +59,11 @@ public class SuiviChroniciteService {
    * Enregistre le résultat du cycle courant pour {@code cle} : incrémente le compteur de série si
    * en échec, le remet à zéro sinon.
    *
-   * @param cle identifiant stable du couple job/source (ex. {@code
-   *   "fetch:salles:all|Ticketmaster"} ou {@code "reconciliation:nocturne|Overpass"})
+   * @param cle identifiant stable du couple job/source (ex. {@code "fetch:salles:all|Ticketmaster"}
+   *     ou {@code "reconciliation:nocturne|Overpass"})
    * @param cycleEnEchec {@code true} si ce cycle a rencontré au moins une erreur
    * @return le nombre de cycles consécutifs en échec après cet enregistrement (0 si ce cycle est
-   *   propre)
+   *     propre)
    */
   public int enregistrerCycle(final String cle, final boolean cycleEnEchec) {
     final Map<String, Integer> streaks = lireStreaks();

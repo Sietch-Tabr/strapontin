@@ -20,11 +20,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Filtre bloquant les accès directs par adresse IP.
  *
- * Rejette les requêtes dont le header {@code Host} est une adresse IP
- * (IPv4 avec port optionnel, ou IPv6 entre crochets).
+ * <p>Rejette les requêtes dont le header {@code Host} est une adresse IP (IPv4 avec port optionnel,
+ * ou IPv6 entre crochets).
  *
- * En profil {@code dev}, la vérification est ignorée pour faciliter le
- * développement local et les tests E2E depuis une IP privée.
+ * <p>En profil {@code dev}, la vérification est ignorée pour faciliter le développement local et
+ * les tests E2E depuis une IP privée.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -43,6 +43,9 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
 
   private final boolean actif;
 
+  /**
+   * @param env environnement Spring, pour détecter le profil {@code dev}
+   */
   public BloquerAccesDirectIpFilter(final Environment env) {
     this.actif = Arrays.stream(env.getActiveProfiles()).noneMatch("dev"::equals);
   }

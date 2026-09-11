@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Contrôleur REST pour l'onglet admin « Salles » du référentiel.
  *
  * <p>HTTP pur — délègue toute la logique métier à {@link ReferentielSallesService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
- * {@code /api/admin/**}).
+ * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
+ * /api/admin/**}).
  *
  * @since 2.6.0
  * @author Kwaite
@@ -36,6 +36,9 @@ public class ReferentielSallesController {
 
   private final ReferentielSallesService service;
 
+  /**
+   * @param service service de gestion du référentiel salles
+   */
   public ReferentielSallesController(final ReferentielSallesService service) {
     this.service = service;
   }

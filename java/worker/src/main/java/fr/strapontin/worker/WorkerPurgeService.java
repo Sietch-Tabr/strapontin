@@ -35,6 +35,10 @@ public class WorkerPurgeService {
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param workerStatsService journalisation du bilan de purge
+   */
   public WorkerPurgeService(
       final NamedParameterJdbcTemplate jdbc, final WorkerStatsService workerStatsService) {
     this.jdbc = jdbc;
@@ -159,14 +163,14 @@ public class WorkerPurgeService {
           final List<UUID> candidats =
               jdbc.query(
                   """
-                      SELECT id FROM salles
-                      WHERE NOT EXISTS (
-                          SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
-                        AND NOT EXISTS (
-                          SELECT 1 FROM user_salles WHERE salle_id = salles.id)
-                        AND NOT EXISTS (
-                          SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
-                      """,
+                  SELECT id FROM salles
+                  WHERE NOT EXISTS (
+                      SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM user_salles WHERE salle_id = salles.id)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
+                  """,
                   Map.of(),
                   (rs, _) -> rs.getObject("id", UUID.class));
 
@@ -209,12 +213,12 @@ public class WorkerPurgeService {
           final int supprimes =
               jdbc.update(
                   """
-                      DELETE FROM artistes
-                      WHERE NOT EXISTS (
-                          SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
-                        AND NOT EXISTS (
-                          SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
-                      """,
+                  DELETE FROM artistes
+                  WHERE NOT EXISTS (
+                      SELECT 1 FROM concerts WHERE artiste_id = artistes.id AND date >= CURRENT_DATE)
+                    AND NOT EXISTS (
+                      SELECT 1 FROM user_artistes WHERE artiste_id = artistes.id)
+                  """,
                   Map.of());
           log.info("purger:artistes terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);

@@ -13,7 +13,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  * Job Quartz : suppression des salles orphelines (sans concerts futurs, sans utilisateurs et sans
  * slug Digitick configuré), tous les jours à 0h05.
  *
- * S'exécute après {@link PurgerConcertsJob} pour travailler sur un jeu de données cohérent.
+ * <p>S'exécute après {@link PurgerConcertsJob} pour travailler sur un jeu de données cohérent.
  *
  * @since 2.3.2
  * @author Kwaite
@@ -22,6 +22,9 @@ public class PurgerSallesJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;
 
+  /**
+   * @param workerPurgeService service de purge injecté par Spring
+   */
   @Autowired
   public void setWorkerPurgeService(final WorkerPurgeService workerPurgeService) {
     this.workerPurgeService = workerPurgeService;

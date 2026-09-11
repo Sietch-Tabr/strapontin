@@ -19,6 +19,9 @@ public class BanniereController {
 
   private final ConfigService configService;
 
+  /**
+   * @param configService lecture de la configuration de la bannière
+   */
   public BanniereController(final ConfigService configService) {
     this.configService = configService;
   }
@@ -45,8 +48,8 @@ public class BanniereController {
    * DTO de bannière pour le layout Vue.
    *
    * @param message le texte de la bannière
-   * @param type    le type ({@code info}, {@code warning}, {@code error})
-   * @param id      l'identifiant unique (timestamp ISO de publication)
+   * @param type le type ({@code info}, {@code warning}, {@code error})
+   * @param id l'identifiant unique (timestamp ISO de publication)
    */
   public record BanniereDto(String message, String type, String id) {}
 }

@@ -18,10 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Endpoint interne appelé par backup-local.sh pour signaler le statut du backup nocturne.
  *
- * <p>Protégé par un secret partagé : l'appelant doit présenter le header
- * {@code Authorization: Bearer <BACKUP_INTERNAL_SECRET>}. Si la variable
- * {@code BACKUP_INTERNAL_SECRET} est absente ou que le token ne correspond pas, l'accès est refusé
- * (403). Enregistre le statut dans {@code logs_admin} et envoie un email d'alerte sur échec.
+ * <p>Protégé par un secret partagé : l'appelant doit présenter le header {@code Authorization:
+ * Bearer <BACKUP_INTERNAL_SECRET>}. Si la variable {@code BACKUP_INTERNAL_SECRET} est absente ou
+ * que le token ne correspond pas, l'accès est refusé (403). Enregistre le statut dans {@code
+ * logs_admin} et envoie un email d'alerte sur échec.
  *
  * @since 2.1.1
  * @author Kwaite
@@ -33,6 +33,11 @@ public class BackupAlerteController {
   private final LogAdminService logAdminService;
   private final String backupSecret;
 
+  /**
+   * @param emailAlerteService résolution du destinataire d'alerte
+   * @param logAdminService journalisation du statut reçu
+   * @param backupSecret secret partagé attendu dans l'en-tête {@code Authorization}
+   */
   public BackupAlerteController(
       final EmailAlerteService emailAlerteService,
       final LogAdminService logAdminService,
@@ -45,13 +50,13 @@ public class BackupAlerteController {
   /**
    * Notifie l'app du statut du backup nocturne.
    *
-   * <p>Sur {@code statut=echec} : log warn dans {@code logs_admin} + email admin.
-   * Sur {@code statut=succes} : log info dans {@code logs_admin}.
+   * <p>Sur {@code statut=echec} : log warn dans {@code logs_admin} + email admin. Sur {@code
+   * statut=succes} : log info dans {@code logs_admin}.
    *
-   * @param statut        {@code succes} ou {@code echec}
-   * @param horodatage    l'horodatage du backup (format YYYYMMDD_HHMMSS)
-   * @param raison        la commande ayant échoué (optionnel, échec uniquement)
-   * @param archive       le chemin de l'archive créée (optionnel, succès uniquement)
+   * @param statut {@code succes} ou {@code echec}
+   * @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS)
+   * @param raison la commande ayant échoué (optionnel, échec uniquement)
+   * @param archive le chemin de l'archive créée (optionnel, succès uniquement)
    * @param authorization header {@code Authorization: Bearer <BACKUP_INTERNAL_SECRET>}
    * @return 200 si traité, 403 si le token est absent ou invalide
    */

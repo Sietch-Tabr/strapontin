@@ -47,6 +47,10 @@ public class GestionQuotaTM {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper sérialisation du quota en JSON
+   */
   public GestionQuotaTM(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;

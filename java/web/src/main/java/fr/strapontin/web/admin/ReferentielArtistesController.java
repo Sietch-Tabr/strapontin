@@ -24,8 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Contrôleur REST pour l'onglet admin « Artistes » du référentiel.
  *
  * <p>HTTP pur — délègue toute la logique métier à {@link ReferentielArtistesService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
- * {@code /api/admin/**}).
+ * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
+ * /api/admin/**}).
  *
  * @since 2.6.0
  * @author Kwaite
@@ -36,6 +36,9 @@ public class ReferentielArtistesController {
 
   private final ReferentielArtistesService service;
 
+  /**
+   * @param service service de gestion du référentiel artistes
+   */
   public ReferentielArtistesController(final ReferentielArtistesService service) {
     this.service = service;
   }
@@ -80,9 +83,9 @@ public class ReferentielArtistesController {
   }
 
   /**
-   * Réinitialise l'enrichissement automatique d'un artiste ({@code wikidata_id}, {@code
-   * deezer_id}, {@code nom_affiche}) — corrige une mauvaise correspondance automatique en le
-   * remettant candidat à une nouvelle découverte.
+   * Réinitialise l'enrichissement automatique d'un artiste ({@code wikidata_id}, {@code deezer_id},
+   * {@code nom_affiche}) — corrige une mauvaise correspondance automatique en le remettant candidat
+   * à une nouvelle découverte.
    *
    * @param uuid UUID de l'artiste
    * @return 200 si réinitialisé, 400 si UUID invalide, 404 si artiste inconnu
@@ -128,7 +131,7 @@ public class ReferentielArtistesController {
    * @param uuid UUID de l'artiste
    * @param corps corps JSON avec {@code identifiantExterne} (non vide)
    * @return 200 si mis à jour, 400 si UUID invalide ou identifiant vide, 404 si l'artiste n'a pas
-   *   de source Ticketmaster, 409 si l'identifiant est déjà attribué à un autre artiste
+   *     de source Ticketmaster, 409 si l'identifiant est déjà attribué à un autre artiste
    */
   @PatchMapping("/artistes/{uuid}/identifiant-tm")
   public ResponseEntity<Map<String, Object>> corrigerIdentifiantTm(

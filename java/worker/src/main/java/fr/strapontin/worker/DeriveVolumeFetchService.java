@@ -27,9 +27,7 @@ public class DeriveVolumeFetchService {
 
   private static final Logger log = LoggerFactory.getLogger(DeriveVolumeFetchService.class);
 
-  /**
-   * Nombre d'exécutions réussies récentes sur lesquelles porte la moyenne glissante.
-   */
+  /** Nombre d'exécutions réussies récentes sur lesquelles porte la moyenne glissante. */
   static final int NB_EXECUTIONS_MOYENNE = 5;
 
   /**
@@ -40,14 +38,18 @@ public class DeriveVolumeFetchService {
   static final double SEUIL_DERIVE = 0.30;
 
   /**
-   * Sous cette moyenne, l'écart relatif n'est plus discriminant (ex. 1 -> 0 concert est un repli
-   * de 100% sans rien d'anormal) — aucune comparaison n'est faite en dessous de ce volume moyen.
+   * Sous cette moyenne, l'écart relatif n'est plus discriminant (ex. 1 -> 0 concert est un repli de
+   * 100% sans rien d'anormal) — aucune comparaison n'est faite en dessous de ce volume moyen.
    */
   static final int VOLUME_MOYEN_MIN_SIGNIFICATIF = 5;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation d'un repli de volume détecté
+   */
   public DeriveVolumeFetchService(
       final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
@@ -55,13 +57,13 @@ public class DeriveVolumeFetchService {
   }
 
   /**
-   * Compare le volume (insertions + mises à jour) du cycle qui vient de réussir à la moyenne de
-   * ses {@value #NB_EXECUTIONS_MOYENNE} dernières exécutions réussies antérieures à {@code avant}.
+   * Compare le volume (insertions + mises à jour) du cycle qui vient de réussir à la moyenne de ses
+   * {@value #NB_EXECUTIONS_MOYENNE} dernières exécutions réussies antérieures à {@code avant}.
    *
    * @param typeJob type de job (ex. {@code "fetch:region"})
    * @param volumeCourant nombre total d'insertions + mises à jour du cycle qui vient de réussir
-   * @param avant horodatage du cycle courant — exclut structurellement sa propre ligne
-   *   d'historique de la moyenne, que celle-ci ait déjà été insérée ou non au moment de l'appel
+   * @param avant horodatage du cycle courant — exclut structurellement sa propre ligne d'historique
+   *     de la moyenne, que celle-ci ait déjà été insérée ou non au moment de l'appel
    */
   public void verifier(final String typeJob, final int volumeCourant, final Timestamp avant) {
     final List<Integer> historique = lireVolumesRecents(typeJob, avant);

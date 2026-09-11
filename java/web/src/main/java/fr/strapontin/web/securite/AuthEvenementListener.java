@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component;
 /**
  * Écoute les événements Spring Security et les consigne dans {@code logs_admin}.
  *
- * Couvre : connexion réussie (info), échec d'authentification (warn).
- * Le rate-limit est géré séparément par [RateLimitingLoginFilter].
+ * <p>Couvre : connexion réussie (info), échec d'authentification (warn). Le rate-limit est géré
+ * séparément par [RateLimitingLoginFilter].
  *
  * @since 2.0.0
  * @author Kwaite
@@ -28,6 +28,9 @@ public class AuthEvenementListener {
 
   private final LogAdminService logAdminService;
 
+  /**
+   * @param logAdminService journalisation des événements d'authentification
+   */
   public AuthEvenementListener(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }

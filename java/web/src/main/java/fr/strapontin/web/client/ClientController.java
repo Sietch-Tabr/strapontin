@@ -36,6 +36,9 @@ public class ClientController {
 
   private final LogAdminService logAdminService;
 
+  /**
+   * @param logAdminService journalisation des erreurs signalées
+   */
   public ClientController(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }

@@ -29,6 +29,10 @@ public class ConcertsAdminService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logAdminService journalisation des actions de revue
+   */
   public ConcertsAdminService(
       final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
@@ -49,13 +53,13 @@ public class ConcertsAdminService {
     final List<ConcertSuppressionSuggeree> concerts =
         jdbc.query(
             """
-                SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
-                       c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre
-                FROM concerts c
-                WHERE c.suppression_suggeree_le IS NOT NULL
-                ORDER BY c.suppression_suggeree_le DESC
-                LIMIT :taille OFFSET :offset
-                """,
+            SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
+                   c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre
+            FROM concerts c
+            WHERE c.suppression_suggeree_le IS NOT NULL
+            ORDER BY c.suppression_suggeree_le DESC
+            LIMIT :taille OFFSET :offset
+            """,
             paramsPage,
             (rs, _) -> {
               total[0] = rs.getLong("total_filtre");
@@ -118,10 +122,10 @@ public class ConcertsAdminService {
     final int lignes =
         jdbc.update(
             """
-                UPDATE evenements
-                SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL
-                WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT NULL
-                """,
+            UPDATE evenements
+            SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL
+            WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT NULL
+            """,
             Map.of("id", id.toString()));
     if (lignes > 0) {
       logAdminService.logAdmin(

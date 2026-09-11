@@ -53,6 +53,11 @@ public class GestionQuotaResendWorker {
   private final LogsAdminWorker logsAdminWorker;
   private GestionQuotaResendWorker self;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper sérialisation du quota en JSON
+   * @param logsAdminWorker journalisation du blocage en cas de quota épuisé
+   */
   public GestionQuotaResendWorker(
       final NamedParameterJdbcTemplate jdbc,
       final ObjectMapper objectMapper,
@@ -141,14 +146,14 @@ public class GestionQuotaResendWorker {
    * Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
    *
    * <p>Sur blocage, insère un {@code logs_admin} niveau {@code error} (capté par {@code
-   * AlerteLogsAdminService}, digest 15 min). Le COUNT+INSERT est rendu atomique via une
-   * transaction {@code SERIALIZABLE} avec retry (même pattern que {@code
-   * web.push.PushService.abonner}) — sans cela, deux cycles de digest concurrents lisant tous deux
-   * le même compteur avant qu'aucune des deux écritures ne soit committée pouvaient tous deux
-   * réserver un envoi, dépassant le quota réel Resend.
+   * AlerteLogsAdminService}, digest 15 min). Le COUNT+INSERT est rendu atomique via une transaction
+   * {@code SERIALIZABLE} avec retry (même pattern que {@code web.push.PushService.abonner}) — sans
+   * cela, deux cycles de digest concurrents lisant tous deux le même compteur avant qu'aucune des
+   * deux écritures ne soit committée pouvaient tous deux réserver un envoi, dépassant le quota réel
+   * Resend.
    *
    * @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté), {@code false}
-   *   si le quota jour ou mois est atteint
+   *     si le quota jour ou mois est atteint
    */
   public boolean reserverEnvoi() {
     return RetrySerialisable.executer(

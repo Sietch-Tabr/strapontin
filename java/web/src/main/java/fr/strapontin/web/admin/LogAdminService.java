@@ -20,8 +20,8 @@ import org.springframework.stereotype.Service;
  * Service de journalisation admin (portage de {@code log-admin.ts}).
  *
  * <p>Remplace la liste Redis {@code strapontin:admin:logs} par la table PostgreSQL {@code
- * logs_admin}. La rétention est temporelle : la purge des entrées de plus de 30 jours est
- * planifiée côté worker ({@code PurgerLogsAdminJob}).
+ * logs_admin}. La rétention est temporelle : la purge des entrées de plus de 30 jours est planifiée
+ * côté worker ({@code PurgerLogsAdminJob}).
  *
  * @since 2.0.0
  * @author Kwaite
@@ -35,6 +35,10 @@ public class LogAdminService {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param jackson sérialisation des métadonnées en JSON
+   */
   public LogAdminService(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
     this.jackson = jackson;

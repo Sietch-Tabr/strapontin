@@ -20,6 +20,9 @@ public class SessionController {
 
   private final ParametresService parametresService;
 
+  /**
+   * @param parametresService lecture du compteur de nouveaux matches
+   */
   public SessionController(final ParametresService parametresService) {
     this.parametresService = parametresService;
   }
@@ -43,7 +46,7 @@ public class SessionController {
   /**
    * DTO de session pour le layout Vue.
    *
-   * @param role      le rôle ({@code user} ou {@code admin})
+   * @param role le rôle ({@code user} ou {@code admin})
    * @param nbNouveau le nombre de concerts non encore vus
    */
   public record SessionDto(String role, int nbNouveau) {}

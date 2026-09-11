@@ -26,8 +26,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /**
  * Gestionnaire centralisé des exceptions pour tous les contrôleurs REST.
  *
- * <p>Retourne systématiquement {@code {"erreur": "..."}}, cohérent avec le format d'erreur de l'API.
- * L'ordre de résolution Spring choisit automatiquement le handler le plus spécifique ({@link
+ * <p>Retourne systématiquement {@code {"erreur": "..."}}, cohérent avec le format d'erreur de
+ * l'API. L'ordre de résolution Spring choisit automatiquement le handler le plus spécifique ({@link
  * DuplicateKeyException} avant {@link DataAccessException}, etc.). Les erreurs 500 sont aussi
  * consignées dans {@code logs_admin} (source {@code web}).
  *
@@ -41,6 +41,9 @@ public class GlobalExceptionHandler {
 
   private final LogAdminService logAdminService;
 
+  /**
+   * @param logAdminService journalisation des erreurs 500
+   */
   public GlobalExceptionHandler(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }

@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Résultat d'enrichissement d'un artiste par une {@link SourceEnrichissementArtiste}.
  *
- * Tous les champs sont nullable (sauf {@code aliasWikidata}, jamais {@code null} — liste vide si
+ * <p>Tous les champs sont nullable (sauf {@code aliasWikidata}, jamais {@code null} — liste vide si
  * absent) — une source ne renseigne que ce qu'elle sait produire. {@code ticketmasterAttractionId}
  * porte le P6262 Wikidata, une cross-validation indépendante de TM plutôt qu'un enrichissement
  * cosmétique.
@@ -29,6 +29,7 @@ public record EnrichissementArtiste(
     String ticketmasterAttractionId,
     List<String> aliasWikidata) {
 
+  /** Remplace un {@code aliasWikidata} {@code null} par une liste vide. */
   public EnrichissementArtiste {
     if (aliasWikidata == null) {
       aliasWikidata = List.of();

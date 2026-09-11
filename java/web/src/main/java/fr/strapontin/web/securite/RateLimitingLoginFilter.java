@@ -27,17 +27,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Filtre de rate limiting sur les endpoints d'authentification publics.
  *
  * <p>Limites par endpoint :
+ *
  * <ul>
  *   <li>{@code /api/auth/login} : 15 tentatives / 15 minutes par IP
  *   <li>{@code /api/auth/forgot-password} : 15 tentatives / 15 minutes par IP
  *   <li>{@code /api/auth/reset-password} : 30 tentatives / heure par IP
  * </ul>
  *
- * <p><b>Persistance :</b> les buckets sont stockés en mémoire Caffeine et perdus au redémarrage
- * de l'application. Les tentatives bloquées (HTTP 429) sont loguées dans {@code logs_admin}
- * (source {@code auth}, niveau {@code warn}) pour permettre leur surveillance. Le risque résiduel
- * est acceptable pour un système invite-only ; migration vers un stockage persistant
- * (PostgreSQL) à envisager si l'exposition publique évolue.
+ * <p><b>Persistance :</b> les buckets sont stockés en mémoire Caffeine et perdus au redémarrage de
+ * l'application. Les tentatives bloquées (HTTP 429) sont loguées dans {@code logs_admin} (source
+ * {@code auth}, niveau {@code warn}) pour permettre leur surveillance. Le risque résiduel est
+ * acceptable pour un système invite-only ; migration vers un stockage persistant (PostgreSQL) à
+ * envisager si l'exposition publique évolue.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -63,6 +64,9 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
           .maximumSize(10_000)
           .build();
 
+  /**
+   * @param logAdminService journalisation des tentatives bloquées
+   */
   public RateLimitingLoginFilter(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }

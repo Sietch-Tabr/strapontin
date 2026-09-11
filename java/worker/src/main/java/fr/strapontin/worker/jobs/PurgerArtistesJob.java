@@ -13,7 +13,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  * Job Quartz : suppression des artistes orphelins (sans concerts futurs ni utilisateurs), tous les
  * jours à 0h06.
  *
- * S'exécute après {@link PurgerSallesJob} pour éviter de laisser des salles fantômes référencées
+ * <p>S'exécute après {@link PurgerSallesJob} pour éviter de laisser des salles fantômes référencées
  * par des concerts orphelins déjà supprimés.
  *
  * @since 2.3.2
@@ -23,6 +23,9 @@ public class PurgerArtistesJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;
 
+  /**
+   * @param workerPurgeService service de purge injecté par Spring
+   */
   @Autowired
   public void setWorkerPurgeService(final WorkerPurgeService workerPurgeService) {
     this.workerPurgeService = workerPurgeService;

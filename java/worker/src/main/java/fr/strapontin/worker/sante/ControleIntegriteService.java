@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
  * dédoublonnage ou d'enrichissement spécifique — journalisation seule via {@link
  * SignalementMatchingService}, jamais de correction automatique.
  *
- * Quatre invariants : cycles {@code salle_parent_id}, cohérence {@code salles.dept} vs le
+ * <p>Quatre invariants : cycles {@code salle_parent_id}, cohérence {@code salles.dept} vs le
  * département majoritaire des événements rattachés, événements orphelins anciens (avant la purge à
  * 30 jours de {@code WorkerPurgeService}), et {@code artiste_sources}/{@code salle_sources}
  * référençant une entité sans aucun événement associé.
@@ -42,6 +42,10 @@ public class ControleIntegriteService {
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalementMatchingService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param signalementMatchingService journalisation des invariants violés
+   */
   public ControleIntegriteService(
       final NamedParameterJdbcTemplate jdbc,
       final SignalementMatchingService signalementMatchingService) {
@@ -104,16 +108,16 @@ public class ControleIntegriteService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT salle_id, dept_salle FROM (
-                  SELECT s.id AS salle_id, s.dept AS dept_salle, e.dept AS dept_majoritaire,
-                         ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY COUNT(*) DESC) AS rang
-                  FROM salles s
-                  JOIN evenements e ON e.salle_id = s.id AND e.dept IS NOT NULL
-                  WHERE s.dept IS NOT NULL
-                  GROUP BY s.id, s.dept, e.dept
-                ) t
-                WHERE rang = 1 AND dept_salle != dept_majoritaire
-                """,
+            SELECT salle_id, dept_salle FROM (
+              SELECT s.id AS salle_id, s.dept AS dept_salle, e.dept AS dept_majoritaire,
+                     ROW_NUMBER() OVER (PARTITION BY s.id ORDER BY COUNT(*) DESC) AS rang
+              FROM salles s
+              JOIN evenements e ON e.salle_id = s.id AND e.dept IS NOT NULL
+              WHERE s.dept IS NOT NULL
+              GROUP BY s.id, s.dept, e.dept
+            ) t
+            WHERE rang = 1 AND dept_salle != dept_majoritaire
+            """,
             Map.of());
 
     int signalees = 0;
@@ -134,11 +138,11 @@ public class ControleIntegriteService {
     final List<UUID> ids =
         jdbc.query(
             """
-                SELECT id FROM evenements
-                WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE
-                  AND updated_at < now() - make_interval(days => :seuilJours)
-                  AND suppression_suggeree_le IS NULL
-                """,
+            SELECT id FROM evenements
+            WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE
+              AND updated_at < now() - make_interval(days => :seuilJours)
+              AND suppression_suggeree_le IS NULL
+            """,
             Map.of("seuilJours", SEUIL_JOURS_EVENEMENT_ORPHELIN),
             (rs, _) -> rs.getObject("id", UUID.class));
 

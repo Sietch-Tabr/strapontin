@@ -14,8 +14,8 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 /**
  * Job Quartz : fetch d'une salle par ses identifiants préfixés, toutes les 2 heures.
  *
- * <p>Les identifiants sont transmis via la {@code JobDataMap} lors de la planification,
- * au format virgule-séparé : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
+ * <p>Les identifiants sont transmis via la {@code JobDataMap} lors de la planification, au format
+ * virgule-séparé : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -28,6 +28,9 @@ public class FetchSalleJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
+  /**
+   * @param workerFetchService service de fetch injecté par Spring
+   */
   @Autowired
   public void setWorkerFetchService(final WorkerFetchService workerFetchService) {
     this.workerFetchService = workerFetchService;

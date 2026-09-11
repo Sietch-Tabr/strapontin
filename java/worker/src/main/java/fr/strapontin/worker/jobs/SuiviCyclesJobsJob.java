@@ -19,6 +19,9 @@ public class SuiviCyclesJobsJob extends QuartzJobBean {
 
   private WorkerSuiviCyclesService workerSuiviCyclesService;
 
+  /**
+   * @param workerSuiviCyclesService service de suivi de cycles injecté par Spring
+   */
   @Autowired
   public void setWorkerSuiviCyclesService(final WorkerSuiviCyclesService workerSuiviCyclesService) {
     this.workerSuiviCyclesService = workerSuiviCyclesService;

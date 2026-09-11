@@ -16,9 +16,8 @@ import org.springframework.stereotype.Service;
 /**
  * Chargement des utilisateurs depuis la base de données pour Spring Security.
  *
- * <p>Charge l'utilisateur depuis la table {@code users} jointe à {@code accounts}
- * (provider {@code credential}). Le login est insensible à la casse
- * (correspondance sur {@code lower(username)}).
+ * <p>Charge l'utilisateur depuis la table {@code users} jointe à {@code accounts} (provider {@code
+ * credential}). Le login est insensible à la casse (correspondance sur {@code lower(username)}).
  *
  * @since 2.0.0
  * @author Kwaite
@@ -30,6 +29,9 @@ public class UtilisateurDetailsService implements UserDetailsService {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /**
+   * @param jdbc accès JDBC
+   */
   public UtilisateurDetailsService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -45,13 +47,13 @@ public class UtilisateurDetailsService implements UserDetailsService {
   public UserDetails loadUserByUsername(final String identifiant) throws UsernameNotFoundException {
     final String sql =
         """
-            SELECT u.id, u.username, u.email, u.role,
-                   u.two_factor_enabled, u.must_change_credentials,
-                   a.password
-            FROM users u
-            JOIN accounts a ON a.user_id = u.id AND a.provider_id = 'credential'
-            WHERE lower(u.username) = lower(:identifiant)
-            """;
+        SELECT u.id, u.username, u.email, u.role,
+               u.two_factor_enabled, u.must_change_credentials,
+               a.password
+        FROM users u
+        JOIN accounts a ON a.user_id = u.id AND a.provider_id = 'credential'
+        WHERE lower(u.username) = lower(:identifiant)
+        """;
 
     return jdbc.query(
         sql,

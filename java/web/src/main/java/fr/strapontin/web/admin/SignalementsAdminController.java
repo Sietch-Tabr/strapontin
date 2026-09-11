@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Contrôleur REST pour l'onglet admin « Signalements » (vue unifiée du matching, #1193).
  *
  * <p>HTTP pur — délègue toute la logique métier à {@link SignalementsAdminService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
- * {@code /api/admin/**}).
+ * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
+ * /api/admin/**}).
  *
  * @since 2.9.0
  * @author Kwaite
@@ -31,6 +31,9 @@ public class SignalementsAdminController {
 
   private final SignalementsAdminService service;
 
+  /**
+   * @param service service de gestion des signalements
+   */
   public SignalementsAdminController(final SignalementsAdminService service) {
     this.service = service;
   }

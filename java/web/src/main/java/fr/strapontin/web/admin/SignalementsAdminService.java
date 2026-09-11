@@ -27,6 +27,10 @@ public class SignalementsAdminService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logAdminService lecture des mécanismes de signalement non migrés
+   */
   public SignalementsAdminService(
       final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;

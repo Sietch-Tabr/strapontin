@@ -18,9 +18,8 @@ import org.springframework.stereotype.Component;
 /**
  * HealthIndicator custom exposant l'état du quota TM et le statut des sources de fetch via {@code
  * /actuator/health} — un incident métier critique (quota épuisé, source bloquée en amont par un
- * blocage réseau, boucle d'envois défaillante) n'était visible jusqu'ici que via {@code
- * logs_admin} ou email, jamais interrogeable par un outil de monitoring externe sondant l'endpoint
- * standard.
+ * blocage réseau, boucle d'envois défaillante) n'était visible jusqu'ici que via {@code logs_admin}
+ * ou email, jamais interrogeable par un outil de monitoring externe sondant l'endpoint standard.
  *
  * <p>Implémentation volontairement minimale : ne remplace pas {@code SuiviSanteSourcesService}
  * (compteurs d'échecs par salle/artiste, health-check applicatif complet), juste un reflet agrégé
@@ -39,6 +38,10 @@ public class SourcesHealthIndicator implements HealthIndicator {
   private final GestionQuotaTM gestionQuotaTM;
   private final NamedParameterJdbcTemplate jdbc;
 
+  /**
+   * @param gestionQuotaTM état du quota Ticketmaster
+   * @param jdbc accès JDBC
+   */
   public SourcesHealthIndicator(
       final GestionQuotaTM gestionQuotaTM, final NamedParameterJdbcTemplate jdbc) {
     this.gestionQuotaTM = gestionQuotaTM;
@@ -62,9 +65,9 @@ public class SourcesHealthIndicator implements HealthIndicator {
     final List<Map<String, Object>> jobsEnErreur =
         jdbc.queryForList(
             """
-                SELECT type_job, erreur FROM fetch_jobs
-                WHERE type_job LIKE 'fetch:%' AND erreur IS NOT NULL
-                """,
+            SELECT type_job, erreur FROM fetch_jobs
+            WHERE type_job LIKE 'fetch:%' AND erreur IS NOT NULL
+            """,
             Map.of());
     if (!jobsEnErreur.isEmpty()) {
       final Map<String, Object> details = new LinkedHashMap<>();

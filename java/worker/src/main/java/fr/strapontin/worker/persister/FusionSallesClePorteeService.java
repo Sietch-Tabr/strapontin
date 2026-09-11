@@ -29,14 +29,14 @@ import org.springframework.transaction.annotation.Transactional;
  * concert coïncidant par erreur upstream (ex. un mapping {@code salle_sources} corrompu) suffisait
  * à fusionner deux salles réellement distinctes.
  *
- * Complète {@link ReconciliateurSalles#chercherSalleParCleForte}, qui n'agit qu'au moment de la
- * résolution d'un nouveau concert entrant : deux salles déjà établies sous des identités
- * distinctes (chacune avec ses propres {@code salle_sources}, éventuellement un {@code
- * wikidata_id}) n'étaient jamais reconsidérées après coup, laissant la scission s'accumuler à
- * chaque nouveau concert de la même série.
+ * <p>Complète {@link ReconciliateurSalles#chercherSalleParCleForte}, qui n'agit qu'au moment de la
+ * résolution d'un nouveau concert entrant : deux salles déjà établies sous des identités distinctes
+ * (chacune avec ses propres {@code salle_sources}, éventuellement un {@code wikidata_id}) n'étaient
+ * jamais reconsidérées après coup, laissant la scission s'accumuler à chaque nouveau concert de la
+ * même série.
  *
- * Porte le même gabarit de fusion que {@code ReferentielSallesService.fusionner} (module web, non
- * accessible depuis le worker) : dédoublonnage des {@code salle_sources} en conflit avant
+ * <p>Porte le même gabarit de fusion que {@code ReferentielSallesService.fusionner} (module web,
+ * non accessible depuis le worker) : dédoublonnage des {@code salle_sources} en conflit avant
  * réassignation, puis concerts, puis abonnements utilisateurs.
  *
  * @since 2.8.4
@@ -50,6 +50,10 @@ public class FusionSallesClePorteeService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation de chaque fusion effectuée
+   */
   public FusionSallesClePorteeService(
       final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
@@ -91,30 +95,30 @@ public class FusionSallesClePorteeService {
    * {@link ReconciliateurSalles#chercherSalleParCleForte}, appliquée ici rétroactivement à des
    * salles déjà résolues chacune de leur côté plutôt qu'au moment de l'insertion — puis filtrées
    * par {@link CorrespondanceSalle#estDoublonSalle} sur les noms des deux salles : un seul concert
-   * coïncidant par erreur upstream ne doit jamais suffire à fusionner deux salles sans rapport
-   * réel (voir le rationale de classe).
+   * coïncidant par erreur upstream ne doit jamais suffire à fusionner deux salles sans rapport réel
+   * (voir le rationale de classe).
    */
   private List<PaireSalles> detecterPaires() {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
-                       sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
-                       sa.latitude AS lat_a, sa.longitude AS lon_a,
-                       sb.latitude AS lat_b, sb.longitude AS lon_b
-                FROM concerts c1
-                JOIN concerts c2
-                  ON c1.artiste_norm = c2.artiste_norm
-                 AND c1.date = c2.date
-                 AND c1.heure = c2.heure
-                 AND c1.dept = c2.dept
-                 AND c1.salle_id < c2.salle_id
-                JOIN salles sa ON sa.id = c1.salle_id
-                JOIN salles sb ON sb.id = c2.salle_id
-                WHERE c1.salle_id IS NOT NULL AND c2.salle_id IS NOT NULL
-                  AND c1.heure IS NOT NULL AND c1.dept IS NOT NULL
-                  AND c1.date >= CURRENT_DATE
-                """,
+            SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
+                   sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
+                   sa.latitude AS lat_a, sa.longitude AS lon_a,
+                   sb.latitude AS lat_b, sb.longitude AS lon_b
+            FROM concerts c1
+            JOIN concerts c2
+              ON c1.artiste_norm = c2.artiste_norm
+             AND c1.date = c2.date
+             AND c1.heure = c2.heure
+             AND c1.dept = c2.dept
+             AND c1.salle_id < c2.salle_id
+            JOIN salles sa ON sa.id = c1.salle_id
+            JOIN salles sb ON sb.id = c2.salle_id
+            WHERE c1.salle_id IS NOT NULL AND c2.salle_id IS NOT NULL
+              AND c1.heure IS NOT NULL AND c1.dept IS NOT NULL
+              AND c1.date >= CURRENT_DATE
+            """,
             Map.of());
     final List<PaireSalles> paires = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
@@ -139,8 +143,8 @@ public class FusionSallesClePorteeService {
 
   /**
    * @return {@code true} si les deux salles ont toutes deux des coordonnées connues et que leur
-   *   distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
-   *   coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
+   *     distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
+   *     coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
    */
   private static boolean distanceExcessive(final Map<String, Object> ligne) {
     final Double latA = (Double) ligne.get("lat_a");
@@ -156,13 +160,12 @@ public class FusionSallesClePorteeService {
   /**
    * Vérifie que deux salles ont chacune des coordonnées connues et suffisamment proches pour
    * justifier une fusion automatique sans aucun autre signal positif — contrairement à {@link
-   * #distanceExcessive}, qui reste permissif quand une coordonnée manque (nom+dept déjà validés
-   * par ailleurs), une collision {@code wikidata_id} seule n'a aucun autre garde-fou géographique
-   * : l'absence de preuve positive doit alors empêcher la fusion plutôt que l'autoriser par
-   * défaut.
+   * #distanceExcessive}, qui reste permissif quand une coordonnée manque (nom+dept déjà validés par
+   * ailleurs), une collision {@code wikidata_id} seule n'a aucun autre garde-fou géographique :
+   * l'absence de preuve positive doit alors empêcher la fusion plutôt que l'autoriser par défaut.
    *
    * @return {@code true} si les deux salles ont des coordonnées connues et sont à moins de {@value
-   *   #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
+   *     #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
    */
   public static boolean coordonneesConnuesEtProches(
       final Double latA, final Double lonA, final Double latB, final Double lonB) {
@@ -202,10 +205,10 @@ public class FusionSallesClePorteeService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT s.id AS id, s.wikidata_id AS wikidata_id,
-                       (SELECT COUNT(*) FROM concerts c WHERE c.salle_id = s.id) AS nb_concerts
-                FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
-                """,
+            SELECT s.id AS id, s.wikidata_id AS wikidata_id,
+                   (SELECT COUNT(*) FROM concerts c WHERE c.salle_id = s.id) AS nb_concerts
+            FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
+            """,
             Map.of("a", a.toString(), "b", b.toString()));
     if (lignes.size() < 2) {
       return null;
@@ -351,10 +354,10 @@ public class FusionSallesClePorteeService {
   /**
    * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
    * celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
-   * plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
-   * revue manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct
-   * déjà géré à l'étape 6.
+   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL}) plutôt
+   * que laissée pointer vers la source sur le point d'être supprimée, et signalée pour revue
+   * manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct déjà
+   * géré à l'étape 6.
    */
   private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
     final List<UUID> enfants =
@@ -402,17 +405,17 @@ public class FusionSallesClePorteeService {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
-                SELECT src.source AS source,
-                       src.identifiant_externe AS id_source,
-                       dst.identifiant_externe AS id_cible,
-                       src.nb_zero_consecutifs AS sante_source,
-                       dst.nb_zero_consecutifs AS sante_cible,
-                       (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                       (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-                FROM salle_sources src
-                JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
-                WHERE src.salle_id = CAST(:source AS uuid)
-                """,
+            SELECT src.source AS source,
+                   src.identifiant_externe AS id_source,
+                   dst.identifiant_externe AS id_cible,
+                   src.nb_zero_consecutifs AS sante_source,
+                   dst.nb_zero_consecutifs AS sante_cible,
+                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+            FROM salle_sources src
+            JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
+            WHERE src.salle_id = CAST(:source AS uuid)
+            """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (final Map<String, Object> conflit : conflits) {
@@ -431,8 +434,8 @@ public class FusionSallesClePorteeService {
 
   /**
    * Même comparateur que {@code ReferentielSallesService.laSourceEstPlusSaine} (module web) : une
-   * ligne non suspecte l'emporte toujours sur une ligne suspecte, à égalité de statut la ligne
-   * avec le moins d'échecs consécutifs l'emporte.
+   * ligne non suspecte l'emporte toujours sur une ligne suspecte, à égalité de statut la ligne avec
+   * le moins d'échecs consécutifs l'emporte.
    *
    * @return {@code true} si la ligne côté source doit être conservée
    */

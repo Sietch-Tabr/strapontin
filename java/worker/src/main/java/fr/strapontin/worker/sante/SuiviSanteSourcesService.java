@@ -17,12 +17,12 @@ import org.springframework.stereotype.Service;
 /**
  * Suivi de santé des identifiants externes (phase 1).
  *
- * Chaque fetch (salle ou artiste) enregistre son résultat : 0 résultat incrémente le compteur
+ * <p>Chaque fetch (salle ou artiste) enregistre son résultat : 0 résultat incrémente le compteur
  * d'échecs consécutifs, un résultat positif le remet à zéro. Au 3e échec consécutif (~6h à la
  * cadence 11 fetch/jour), l'identifiant devient "suspect" et sera traité par {@link
  * ReconciliationNocturneService} au prochain cycle nocturne.
  *
- * Ce compteur passif reste volontairement générique aux deux tables, mais génère trop de faux
+ * <p>Ce compteur passif reste volontairement générique aux deux tables, mais génère trop de faux
  * positifs pour être exposé tel quel côté statut admin artistes (65% de faux positifs observés) :
  * {@code artiste_sources.necessite_intervention_le}, posée uniquement par {@link
  * ReconciliationNocturneService} en cas d'échec confirmé de la vérification active, fait désormais
@@ -40,16 +40,20 @@ public class SuiviSanteSourcesService {
   static final int SEUIL_SUSPECT = 3;
 
   /**
-   * Préfixes abrégés utilisés par le déclenchement manuel (voir {@code TriggerController},
-   * {@code "tm:venueId"}) vers la valeur canonique stockée dans {@code salle_sources.source}/
-   * {@code artiste_sources.source} ({@code source_concert} enum). Normalisation défensive uniquement pour ce
-   * suivi — ne corrige pas {@code TicketmasterSource.accepteIdentifiantSalle} (hors périmètre).
+   * Préfixes abrégés utilisés par le déclenchement manuel (voir {@code TriggerController}, {@code
+   * "tm:venueId"}) vers la valeur canonique stockée dans {@code salle_sources.source}/ {@code
+   * artiste_sources.source} ({@code source_concert} enum). Normalisation défensive uniquement pour
+   * ce suivi — ne corrige pas {@code TicketmasterSource.accepteIdentifiantSalle} (hors périmètre).
    */
   private static final Map<String, String> PREFIXES_ABREGES = Map.of("tm", "ticketmaster");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param tm revérification du nom TM avant effacement d'une intervention requise
+   */
   public SuiviSanteSourcesService(
       final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
     this.jdbc = jdbc;
@@ -76,8 +80,8 @@ public class SuiviSanteSourcesService {
   /**
    * Enregistre le résultat d'un fetch TM par lot d'artistes : pour chaque attractionId du lot,
    * détermine s'il a produit au moins un concert en cherchant sa présence dans {@link
-   * ConcertBrut#artisteSourceId()} des résultats retournés (TM ne renvoie pas de compte
-   * par-artiste dans un fetch groupé).
+   * ConcertBrut#artisteSourceId()} des résultats retournés (TM ne renvoie pas de compte par-artiste
+   * dans un fetch groupé).
    *
    * @param attractionIds identifiants TM (bruts, sans préfixe) du lot envoyé à TM
    * @param concertsLot concerts retournés par ce lot
@@ -136,11 +140,11 @@ public class SuiviSanteSourcesService {
 
   /**
    * N'autorise l'effacement de {@code necessite_intervention_le} que si le nom TM revérifié
-   * correspond toujours à l'artiste suivi — un fetch positif seul (au moins un concert renvoyé
-   * pour cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un
-   * tribute/homonyme mal rattaché peut se remettre à programmer des concerts sans que le mauvais
-   * rapprochement soit corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement posé
-   * — sinon rien à revérifier, comportement inchangé.
+   * correspond toujours à l'artiste suivi — un fetch positif seul (au moins un concert renvoyé pour
+   * cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un tribute/homonyme mal
+   * rattaché peut se remettre à programmer des concerts sans que le mauvais rapprochement soit
+   * corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement posé — sinon rien à
+   * revérifier, comportement inchangé.
    *
    * @param source source de l'{@code artiste_sources} concerné
    * @param identifiant identifiant externe (TM : attractionId brut, sans préfixe)
@@ -153,10 +157,10 @@ public class SuiviSanteSourcesService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT asrc.necessite_intervention_le, a.nom
-                FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
-                WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
-                """,
+            SELECT asrc.necessite_intervention_le, a.nom
+            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
+            WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
+            """,
             Map.of("source", source, "identifiant", identifiant));
     if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) {
       return true;

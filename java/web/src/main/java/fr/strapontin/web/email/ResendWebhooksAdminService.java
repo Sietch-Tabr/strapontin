@@ -19,8 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Liste et rejoue les événements du webhook Resend configuré ({@code RESEND_API_KEY}) — capacité admin
- * exposée par le SDK resend-java 4.23.0 ({@code Webhooks.listEvents}/{@code replayEvent}).
+ * Liste et rejoue les événements du webhook Resend configuré ({@code RESEND_API_KEY}) — capacité
+ * admin exposée par le SDK resend-java 4.23.0 ({@code Webhooks.listEvents}/{@code replayEvent}).
  *
  * <p>Le {@code webhookId} n'est jamais configuré explicitement : résolu à chaque appel en filtrant
  * {@code webhooks().list()} sur l'endpoint déjà connu ({@code PUBLIC_BASE_URL +
@@ -38,6 +38,9 @@ public class ResendWebhooksAdminService {
   private final ConfigService configService;
   private final Function<String, Resend> fabriqueResend;
 
+  /**
+   * @param configService lecture de la clé API Resend
+   */
   @Autowired
   public ResendWebhooksAdminService(final ConfigService configService) {
     this(configService, Resend::new);
@@ -60,7 +63,7 @@ public class ResendWebhooksAdminService {
    * @param id identifiant de l'événement (svix-id)
    * @param type type d'événement (ex. {@code "email.bounced"})
    * @param statut statut de livraison ({@code pending}/{@code attempting}/{@code success}/{@code
-   *   failed}), ou {@code null} si inconnu
+   *     failed}), ou {@code null} si inconnu
    * @param creeLe horodatage de création (format ISO renvoyé par l'API Resend)
    */
   public record EvenementWebhook(String id, String type, String statut, String creeLe) {}
@@ -68,8 +71,8 @@ public class ResendWebhooksAdminService {
   /**
    * Liste les événements récents du webhook configuré.
    *
-   * @return la liste des événements, vide si {@code RESEND_API_KEY}/{@code PUBLIC_BASE_URL} absent, aucun
-   *   webhook ne correspond, ou en cas d'erreur API (journalisée, jamais propagée)
+   * @return la liste des événements, vide si {@code RESEND_API_KEY}/{@code PUBLIC_BASE_URL} absent,
+   *     aucun webhook ne correspond, ou en cas d'erreur API (journalisée, jamais propagée)
    */
   public List<EvenementWebhook> listerEvenements() {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
@@ -109,7 +112,7 @@ public class ResendWebhooksAdminService {
    *
    * @param eventId identifiant de l'événement à rejouer
    * @return {@code true} si le rejeu a été accepté par Resend, {@code false} sinon (configuration
-   *   absente, webhook introuvable, erreur API)
+   *     absente, webhook introuvable, erreur API)
    */
   public boolean rejouerEvenement(final String eventId) {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");

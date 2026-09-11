@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 /**
  * Listener Quartz global : alimente {@code logs_admin} à chaque démarrage et fin de job.
  *
- * Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration, au même
+ * <p>Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration, au même
  * titre que les actions manuelles de l'interface web.
  *
  * @since 2.0.0
@@ -34,6 +34,10 @@ public class LogAdminJobListener implements JobListener {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param jackson sérialisation des métadonnées de job en JSON
+   */
   public LogAdminJobListener(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
     this.jackson = jackson;

@@ -20,10 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>La fusion dédoublonne désormais les concerts en conflit avant remapping, à l'image de {@link
  * ReferentielSallesService#fusionner} : même si la contrainte unique {@code
  * uq_concerts_artiste_date_heure_salle} porte sur {@code artiste_norm} (texte, jamais en conflit
- * lors d'un remapping d'{@code artiste_id}), deux artistes distincts fusionnés peuvent chacun
- * avoir enregistré le même concert réel (même salle, même date/heure) sous un {@code artiste_norm}
- * textuel différent selon la source — sans ce nettoyage, les deux lignes subsistaient après
- * fusion, dupliquant le concert sur la fiche de l'artiste cible.
+ * lors d'un remapping d'{@code artiste_id}), deux artistes distincts fusionnés peuvent chacun avoir
+ * enregistré le même concert réel (même salle, même date/heure) sous un {@code artiste_norm}
+ * textuel différent selon la source — sans ce nettoyage, les deux lignes subsistaient après fusion,
+ * dupliquant le concert sur la fiche de l'artiste cible.
  *
  * <p>Le statut affiché est binaire ({@code a_jour}/{@code invalide}) : contrairement à {@link
  * ReferentielSallesService} (3 états basés sur {@code suspect_depuis}, compteur passif jugé fiable
@@ -43,6 +43,10 @@ public class ReferentielArtistesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logAdminService journalisation des fusions effectuées
+   */
   public ReferentielArtistesService(
       final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
@@ -54,11 +58,11 @@ public class ReferentielArtistesService {
    *
    * @param page numéro de page (0-indexé)
    * @param nom filtre nom partiel (insensible à la casse), peut être null
-   * @param statut filtre {@code "a_jour"}/{@code "invalide"} (statut binaire — {@code
-   *   "a_verifier"} n'est jamais retourné pour un artiste), peut être null
+   * @param statut filtre {@code "a_jour"}/{@code "invalide"} (statut binaire — {@code "a_verifier"}
+   *     n'est jamais retourné pour un artiste), peut être null
    * @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
-   *   — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-   *   pagination
+   *     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
+   *     pagination
    * @return page de résultats
    */
   public ReponseReferentielArtistes lister(
@@ -159,9 +163,9 @@ public class ReferentielArtistesService {
     final int nb =
         jdbc.update(
             """
-                UPDATE artistes SET wikidata_id = NULL, deezer_id = NULL, nom_affiche = NULL
-                WHERE id = CAST(:id AS uuid)
-                """,
+            UPDATE artistes SET wikidata_id = NULL, deezer_id = NULL, nom_affiche = NULL
+            WHERE id = CAST(:id AS uuid)
+            """,
             Map.of("id", artisteId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -190,10 +194,10 @@ public class ReferentielArtistesService {
     final int nb =
         jdbc.update(
             """
-                UPDATE artiste_sources
-                SET necessite_intervention_le = NULL, nom_tm_ignore = nom_tm_incoherent
-                WHERE artiste_id = CAST(:id AS uuid)
-                """,
+            UPDATE artiste_sources
+            SET necessite_intervention_le = NULL, nom_tm_ignore = nom_tm_incoherent
+            WHERE artiste_id = CAST(:id AS uuid)
+            """,
             Map.of("id", artisteId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -211,8 +215,8 @@ public class ReferentielArtistesService {
    * compteur de santé et efface {@code necessite_intervention_le} : un admin qui corrige
    * manuellement l'identifiant confirme lui-même la nouvelle identité, il n'y a rien de plus à
    * revérifier. Un conflit sur la PK {@code (source, identifiant_externe)} (identifiant déjà
-   * attribué à un autre artiste) remonte {@code DuplicateKeyException} vers l'appelant, traduite
-   * en 409 par {@code GlobalExceptionHandler}.
+   * attribué à un autre artiste) remonte {@code DuplicateKeyException} vers l'appelant, traduite en
+   * 409 par {@code GlobalExceptionHandler}.
    *
    * @param artisteId UUID de l'artiste
    * @param identifiantExterne nouvel attractionId Ticketmaster (non vide)
@@ -222,11 +226,11 @@ public class ReferentielArtistesService {
     final int nb =
         jdbc.update(
             """
-                UPDATE artiste_sources
-                SET identifiant_externe = :identifiant, nb_zero_consecutifs = 0,
-                    suspect_depuis = NULL, necessite_intervention_le = NULL
-                WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'
-                """,
+            UPDATE artiste_sources
+            SET identifiant_externe = :identifiant, nb_zero_consecutifs = 0,
+                suspect_depuis = NULL, necessite_intervention_le = NULL
+            WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'
+            """,
             Map.of("id", artisteId.toString(), "identifiant", identifiantExterne.strip()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -384,17 +388,17 @@ public class ReferentielArtistesService {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
-                SELECT src.source AS source,
-                       src.identifiant_externe AS id_source,
-                       dst.identifiant_externe AS id_cible,
-                       src.nb_zero_consecutifs AS sante_source,
-                       dst.nb_zero_consecutifs AS sante_cible,
-                       (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                       (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-                FROM artiste_sources src
-                JOIN artiste_sources dst ON dst.source = src.source AND dst.artiste_id = CAST(:cible AS uuid)
-                WHERE src.artiste_id = CAST(:source AS uuid)
-                """,
+            SELECT src.source AS source,
+                   src.identifiant_externe AS id_source,
+                   dst.identifiant_externe AS id_cible,
+                   src.nb_zero_consecutifs AS sante_source,
+                   dst.nb_zero_consecutifs AS sante_cible,
+                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+            FROM artiste_sources src
+            JOIN artiste_sources dst ON dst.source = src.source AND dst.artiste_id = CAST(:cible AS uuid)
+            WHERE src.artiste_id = CAST(:source AS uuid)
+            """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (final Map<String, Object> conflit : conflits) {

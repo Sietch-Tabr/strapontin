@@ -35,6 +35,12 @@ public class WorkerService {
   private final ReconciliationNocturneService reconciliationNocturneService;
   private final WorkerStatsService workerStatsService;
 
+  /**
+   * @param recalculerMatchesService recalcul des matches utilisateur
+   * @param notificationDigestService envoi du digest de notifications
+   * @param reconciliationNocturneService réconciliation nocturne des identifiants suspects
+   * @param workerStatsService journalisation des bilans de job
+   */
   public WorkerService(
       final RecalculerMatchesService recalculerMatchesService,
       final NotificationDigestService notificationDigestService,

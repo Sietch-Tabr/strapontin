@@ -30,8 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * API interne de déclenchement manuel des jobs Quartz.
  *
- * Accessible uniquement depuis {@code localhost} (filtrée par le pare-feu ou le proxy web). N'expose pas
- * de données sensibles.
+ * <p>Accessible uniquement depuis {@code localhost} (filtrée par le pare-feu ou le proxy web).
+ * N'expose pas de données sensibles.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -44,6 +44,9 @@ public class TriggerController {
 
   private final Scheduler scheduler;
 
+  /**
+   * @param scheduler planificateur Quartz portant les jobs déclenchables
+   */
   public TriggerController(final Scheduler scheduler) {
     this.scheduler = scheduler;
   }

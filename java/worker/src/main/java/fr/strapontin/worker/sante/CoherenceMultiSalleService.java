@@ -40,6 +40,10 @@ public class CoherenceMultiSalleService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation des incohérences détectées
+   */
   public CoherenceMultiSalleService(
       final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
@@ -60,12 +64,12 @@ public class CoherenceMultiSalleService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
-                       s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
-                FROM salle_sources ss
-                JOIN salles s ON s.id = ss.salle_id
-                WHERE ss.identifiant_externe LIKE :prefixe
-                """,
+            SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
+                   s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
+            FROM salle_sources ss
+            JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.identifiant_externe LIKE :prefixe
+            """,
             Map.of("prefixe", PREFIXE_INTERNAL + "%"));
     if (lignes.isEmpty()) {
       return 0;

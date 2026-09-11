@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Contrôleur REST pour l'onglet admin « Concerts » (revue des concerts flagués pour suppression).
  *
  * <p>HTTP pur — délègue toute la logique métier à {@link ConcertsAdminService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration},
- * {@code /api/admin/**}).
+ * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
+ * /api/admin/**}).
  *
  * @since 2.8.3
  * @author Kwaite
@@ -33,6 +33,9 @@ public class ConcertsAdminController {
 
   private final ConcertsAdminService service;
 
+  /**
+   * @param service service de revue des concerts flagués
+   */
   public ConcertsAdminController(final ConcertsAdminService service) {
     this.service = service;
   }

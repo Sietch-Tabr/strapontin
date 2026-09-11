@@ -15,11 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché,
- * fusion de doublons.
+ * Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché, fusion
+ * de doublons.
  *
- * L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad hoc
- * passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
+ * <p>L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad
+ * hoc passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
  * V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec dédoublonnage
  * préalable des conflits, puis des abonnements utilisateurs, puis des sources externes, avant
  * suppression de la salle source.
@@ -35,6 +35,10 @@ public class ReferentielSallesService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logAdminService journalisation des fusions effectuées
+   */
   public ReferentielSallesService(
       final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
@@ -50,9 +54,9 @@ public class ReferentielSallesService {
    * @param dept filtre département exact, peut être null
    * @param statut filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut être null
    * @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id} —
-   *   facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-   *   pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
-   *   si elle a déjà un {@code wikidata_id})
+   *     facilite le repérage des candidats à corriger manuellement sans parcourir toute la
+   *     pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
+   *     si elle a déjà un {@code wikidata_id})
    * @return page de résultats
    */
   public ReponseReferentielSalles lister(
@@ -154,8 +158,8 @@ public class ReferentielSallesService {
   /**
    * Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},
    * {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle nocturne
-   * — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme
-   * international, l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
+   * — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme international,
+   * l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
    *
    * @param salleId UUID de la salle
    * @return {@code true} si la salle existe et a été réinitialisée
@@ -164,9 +168,9 @@ public class ReferentielSallesService {
     final int nb =
         jdbc.update(
             """
-                UPDATE salles SET wikidata_id = NULL, nom_affiche = NULL, ville = NULL
-                WHERE id = CAST(:id AS uuid)
-                """,
+            UPDATE salles SET wikidata_id = NULL, nom_affiche = NULL, ville = NULL
+            WHERE id = CAST(:id AS uuid)
+            """,
             Map.of("id", salleId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
@@ -318,9 +322,9 @@ public class ReferentielSallesService {
   /**
    * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
    * celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
-   * plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
-   * revue manuelle.
+   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL}) plutôt
+   * que laissée pointer vers la source sur le point d'être supprimée, et signalée pour revue
+   * manuelle.
    */
   private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
     final List<UUID> enfants =
@@ -378,17 +382,17 @@ public class ReferentielSallesService {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
-                SELECT src.source AS source,
-                       src.identifiant_externe AS id_source,
-                       dst.identifiant_externe AS id_cible,
-                       src.nb_zero_consecutifs AS sante_source,
-                       dst.nb_zero_consecutifs AS sante_cible,
-                       (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                       (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-                FROM salle_sources src
-                JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
-                WHERE src.salle_id = CAST(:source AS uuid)
-                """,
+            SELECT src.source AS source,
+                   src.identifiant_externe AS id_source,
+                   dst.identifiant_externe AS id_cible,
+                   src.nb_zero_consecutifs AS sante_source,
+                   dst.nb_zero_consecutifs AS sante_cible,
+                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
+                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
+            FROM salle_sources src
+            JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
+            WHERE src.salle_id = CAST(:source AS uuid)
+            """,
             Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
 
     for (final Map<String, Object> conflit : conflits) {

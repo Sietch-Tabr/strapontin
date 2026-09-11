@@ -10,18 +10,17 @@ import static fr.strapontin.web.ControllerUtils.parseUuid;
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -48,36 +47,14 @@ public class SpectacleController {
   /**
    * Liste les spectacles selon les filtres fournis.
    *
+   * @param filtre critères de filtrage (liés depuis les paramètres de requête)
    * @param auth contexte d'authentification
    * @return la liste paginée des spectacles
    */
   @GetMapping
   public ResponseEntity<ReponseSpectacles> listerSpectacles(
-      @RequestParam(required = false, defaultValue = "") final String q,
-      @RequestParam(required = false, defaultValue = "") final String mois,
-      @RequestParam(required = false, defaultValue = "") final String classification,
-      @RequestParam(required = false, defaultValue = "") final String genre,
-      @RequestParam(required = false, defaultValue = "false") final boolean quinzaine,
-      @RequestParam(required = false, defaultValue = "date") final String tri,
-      @RequestParam(required = false, defaultValue = "false") final boolean masques,
-      @RequestParam(name = "source", required = false) final List<String> sources,
-      @RequestParam(required = false) final String indisponibles,
-      @RequestParam(required = false, defaultValue = "0") final int page,
-      final Authentication auth) {
+      @ModelAttribute final FiltreConcerts filtre, final Authentication auth) {
     final String userId = utilisateur(auth).id();
-    final FiltreConcerts filtre =
-        new FiltreConcerts(
-            q,
-            mois,
-            genre,
-            classification,
-            tri,
-            page,
-            quinzaine,
-            masques,
-            sources,
-            indisponibles,
-            null);
     return ResponseEntity.ok(spectacleService.listerSpectacles(userId, filtre));
   }
 

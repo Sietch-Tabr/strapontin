@@ -60,6 +60,19 @@ public class ReconciliationNocturneService {
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
   private final ControleIntegriteService controleIntegrite;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param tm health-check et redécouverte des identifiants TM suspects
+   * @param logsAdminWorker journalisation du bilan de cycle
+   * @param enrichissementSalles enrichissement Wikidata/OSM des salles (phase 2)
+   * @param enrichissementArtistes enrichissement Wikidata/Deezer des artistes (phase 2)
+   * @param coherenceWikidataSalle revalidation ville/wikidata_id des salles déjà enrichies
+   * @param reconciliateurSalles réconciliation des noms de salles intra-lot/inter-jobs
+   * @param fusionSallesClePortee fusion nocturne des salles détectées comme doublons
+   * @param coherenceMultiSalle détection de contamination/doublon multi-salles
+   * @param suggestionMotsGenerics suggestion de mots-types de salle génériques non couverts
+   * @param controleIntegrite contrôles d'intégrité généralistes du référentiel
+   */
   public ReconciliationNocturneService(
       final NamedParameterJdbcTemplate jdbc,
       final TicketmasterSource tm,
@@ -150,11 +163,11 @@ public class ReconciliationNocturneService {
     final List<Map<String, Object>> lies =
         jdbc.queryForList(
             """
-                SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le,
-                       asrc.nom_tm_ignore, a.nom
-                FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
-                WHERE asrc.source = 'ticketmaster'
-                """,
+            SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le,
+                   asrc.nom_tm_ignore, a.nom
+            FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
+            WHERE asrc.source = 'ticketmaster'
+            """,
             Map.of());
 
     int incoherences = 0;
@@ -280,10 +293,10 @@ public class ReconciliationNocturneService {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
             """
-                SELECT ss.salle_id, ss.identifiant_externe, s.nom
-                FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-                WHERE ss.source = 'ticketmaster' AND ss.suspect_depuis IS NOT NULL
-                """,
+            SELECT ss.salle_id, ss.identifiant_externe, s.nom
+            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'ticketmaster' AND ss.suspect_depuis IS NOT NULL
+            """,
             Map.of());
 
     int verifiees = 0;
@@ -361,10 +374,10 @@ public class ReconciliationNocturneService {
     final List<Map<String, Object>> suspects =
         jdbc.queryForList(
             """
-                SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
-                FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
-                WHERE asrc.source = 'ticketmaster' AND asrc.suspect_depuis IS NOT NULL
-                """,
+            SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
+            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
+            WHERE asrc.source = 'ticketmaster' AND asrc.suspect_depuis IS NOT NULL
+            """,
             Map.of());
 
     for (final Map<String, Object> ligne : suspects) {
@@ -448,10 +461,10 @@ public class ReconciliationNocturneService {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
             """
-                SELECT ss.identifiant_externe, s.nom
-                FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-                WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
-                """,
+            SELECT ss.identifiant_externe, s.nom
+            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
+            """,
             Map.of());
     if (suspectes.isEmpty()) {
       return;

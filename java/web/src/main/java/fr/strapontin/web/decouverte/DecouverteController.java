@@ -10,15 +10,14 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.validation.Valid;
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -60,23 +59,14 @@ public class DecouverteController {
   /**
    * Retourne les concerts filtrés par département.
    *
+   * @param filtre critères de filtrage (liés depuis les paramètres de requête)
    * @param auth contexte d'authentification
    * @return les concerts et les filtres disponibles
    */
   @GetMapping
   public ResponseEntity<ReponseDecouverte> decouvrir(
-      @RequestParam(name = "dept", required = false) final List<String> depts,
-      @RequestParam(required = false, defaultValue = "") final String q,
-      @RequestParam(required = false, defaultValue = "") final String mois,
-      @RequestParam(required = false, defaultValue = "") final String genre,
-      @RequestParam(required = false, defaultValue = "") final String classification,
-      @RequestParam(required = false, defaultValue = "date") final String tri,
-      @RequestParam(required = false, defaultValue = "0") final int page,
-      final Authentication auth) {
+      @ModelAttribute final FiltreConcerts filtre, final Authentication auth) {
     final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
-    final FiltreConcerts filtre =
-        new FiltreConcerts(
-            q, mois, genre, classification, tri, page, false, false, null, null, depts);
     return ResponseEntity.ok(decouverteService.decouvrir(userId, filtre));
   }
 

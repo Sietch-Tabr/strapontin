@@ -26,19 +26,19 @@ import org.springframework.stereotype.Service;
 /**
  * Orchestrateur d'enrichissement des salles (étapes 1-2).
  *
- * Boucle sur les {@link SourceEnrichissementSalle} injectées (une nouvelle source = un bean
+ * <p>Boucle sur les {@link SourceEnrichissementSalle} injectées (une nouvelle source = un bean
  * Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
- * EnrichissementConfiguration} importe : {@code OverpassSalleSource} doit être déclaré avant
- * {@code WikidataSalleSource} — le Q-ID découvert par Overpass est propagé aux sources suivantes
- * dans la même passe pour que Wikidata puisse enrichir sur cette base. Pour les salles qu'Overpass
- * n'a pas trouvées (nom absent d'OSM, instance publique surchargée), {@code WikidataSalleSource}
- * tente ensuite sa propre recherche par nom — Overpass n'est donc plus un passage obligé.
+ * EnrichissementConfiguration} importe : {@code OverpassSalleSource} doit être déclaré avant {@code
+ * WikidataSalleSource} — le Q-ID découvert par Overpass est propagé aux sources suivantes dans la
+ * même passe pour que Wikidata puisse enrichir sur cette base. Pour les salles qu'Overpass n'a pas
+ * trouvées (nom absent d'OSM, instance publique surchargée), {@code WikidataSalleSource} tente
+ * ensuite sa propre recherche par nom — Overpass n'est donc plus un passage obligé.
  *
- * Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : avec
+ * <p>Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : avec
  * Overpass en incident de surcharge, un cycle complet peut prendre plusieurs dizaines de minutes
- * (chaque lot épuise son timeout avant d'abandonner) — persister uniquement à la toute fin
- * perdrait tout le travail déjà résolu en cas d'interruption (redéploiement, crash, arrêt du job)
- * avant la fin du cycle.
+ * (chaque lot épuise son timeout avant d'abandonner) — persister uniquement à la toute fin perdrait
+ * tout le travail déjà résolu en cas d'interruption (redéploiement, crash, arrêt du job) avant la
+ * fin du cycle.
  *
  * @since 2.6.0
  * @author Kwaite
@@ -61,6 +61,14 @@ public class EnrichissementSallesService {
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final SignalementMatchingService signalementMatchingService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param sources sources d'enrichissement injectées, dans leur ordre de déclaration Spring
+   * @param logsAdminWorker journalisation du bilan de cycle
+   * @param suiviChronicite comptage des cycles consécutifs en échec par source
+   * @param fusionSallesClePortee fusion nocturne des salles détectées comme doublons
+   * @param signalementMatchingService journalisation des ambiguïtés de découverte
+   */
   public EnrichissementSallesService(
       final NamedParameterJdbcTemplate jdbc,
       final List<SourceEnrichissementSalle> sources,
@@ -79,9 +87,9 @@ public class EnrichissementSallesService {
   /**
    * Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
    * courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit, qui laissait une
-   * entité en échec systématique éternellement prioritaire, cf.), priorisées par nombre de
-   * concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code nom_affiche} déjà
-   * présent (override manuel admin).
+   * entité en échec systématique éternellement prioritaire, cf.), priorisées par nombre de concerts
+   * liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code nom_affiche} déjà présent
+   * (override manuel admin).
    *
    * @return nombre de salles effectivement mises à jour
    */
@@ -120,8 +128,8 @@ public class EnrichissementSallesService {
 
   /**
    * Alerte si un cycle avec un nombre significatif de candidats a un taux de réussite chronique
-   * trop bas — un bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas
-   * ce cas : une source répondant {@code 200 OK} avec un contenu systématiquement vide (aucune
+   * trop bas — un bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas ce
+   * cas : une source répondant {@code 200 OK} avec un contenu systématiquement vide (aucune
    * correspondance, jamais une erreur HTTP) ne remonte jamais rien via ce mécanisme, alors qu'elle
    * peut être structurellement inopérante. Un seuil strict à 0 salle enrichie (avant 2.7.9) ne
    * détectait qu'une panne totale, jamais une dégradation chronique mais non totale (constaté en
@@ -153,9 +161,9 @@ public class EnrichissementSallesService {
   /**
    * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
    * {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
-   * que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur les sources
-   * d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré la moindre entrée
-   * {@code logs_admin}.
+   * que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur les sources d'enrichissement
+   * : la panne Overpass de 3+ mois n'avait ainsi jamais généré la moindre entrée {@code
+   * logs_admin}.
    */
   private void remonterBilans() {
     for (final SourceEnrichissementSalle source : sources) {
@@ -264,10 +272,10 @@ public class EnrichissementSallesService {
 
   /**
    * @return {@code true} si la mise à jour a été appliquée (directement, ou via une fusion
-   *   automatique en cas de collision {@code wikidata_id} avec une autre salle déjà établie),
-   *   {@code false} si le conflit n'a pu être résolu automatiquement — auquel cas il est signalé
-   *   ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout le
-   *   cycle de réconciliation.
+   *     automatique en cas de collision {@code wikidata_id} avec une autre salle déjà établie),
+   *     {@code false} si le conflit n'a pu être résolu automatiquement — auquel cas il est signalé
+   *     ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout
+   *     le cycle de réconciliation.
    */
   private boolean mettreAJourSalle(
       final UUID salleId, final String nom, final EnrichissementSalle e) {
