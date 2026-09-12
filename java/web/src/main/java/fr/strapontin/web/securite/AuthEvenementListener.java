@@ -64,7 +64,12 @@ public class AuthEvenementListener {
     final String identifiant = event.getAuthentication().getName();
     final String ip = obtenirIp(event.getAuthentication());
     final String raison =
-        event.getException().getClass().getSimpleName().replace("Exception", "").toLowerCase(Locale.ROOT);
+        event
+            .getException()
+            .getClass()
+            .getSimpleName()
+            .replace("Exception", "")
+            .toLowerCase(Locale.ROOT);
     final Map<String, Object> meta = new HashMap<>();
     meta.put("identifiant", identifiant);
     meta.put("ip", ip != null ? ip : "?");

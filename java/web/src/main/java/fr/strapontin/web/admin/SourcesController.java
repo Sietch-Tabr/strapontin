@@ -7,6 +7,7 @@ package fr.strapontin.web.admin;
 import static fr.strapontin.web.ControllerUtils.erreur;
 import static fr.strapontin.web.ControllerUtils.parseUuid;
 
+import fr.strapontin.web.salle.SalleService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -154,7 +155,9 @@ public class SourcesController {
     }
     final String ville = videOuNull(requete.ville());
     final String dept = videOuNull(requete.dept());
-    final UUID salleId = sourcesService.creerSalleDigitick(nom, slug, ville, dept);
+    final UUID salleId =
+        sourcesService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick(nom, slug, ville, dept));
     return ResponseEntity.status(201).body(Map.of("salleId", salleId.toString()));
   }
 

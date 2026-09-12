@@ -146,7 +146,8 @@ public class AuthController {
 
     final ResultatTotp resultat =
         totpChallengeService.verifier(
-            principal.id(), principal.identifiant(), req.code(), httpRequest.getRemoteAddr());
+            new TotpChallengeService.ChallengeTotp(
+                principal.id(), principal.identifiant(), req.code(), httpRequest.getRemoteAddr()));
 
     return construireReponseTotp(resultat, session, principal);
   }

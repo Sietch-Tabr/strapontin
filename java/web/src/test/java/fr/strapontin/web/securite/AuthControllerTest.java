@@ -97,7 +97,8 @@ class AuthControllerTest {
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-    when(totpChallengeService.verifier("u1", "alice", "123456", "127.0.0.1"))
+    when(totpChallengeService.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "123456", "127.0.0.1")))
         .thenReturn(ResultatTotp.succes());
 
     final var reponse =
@@ -120,7 +121,8 @@ class AuthControllerTest {
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-    when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
+    when(totpChallengeService.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "000000", "127.0.0.1")))
         .thenReturn(ResultatTotp.echec(3));
 
     final var reponse =
@@ -143,7 +145,8 @@ class AuthControllerTest {
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-    when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
+    when(totpChallengeService.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "000000", "127.0.0.1")))
         .thenReturn(ResultatTotp.verrouilleMaintenant());
 
     final var reponse =
@@ -166,7 +169,8 @@ class AuthControllerTest {
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
-    when(totpChallengeService.verifier("u1", "alice", "000000", "127.0.0.1"))
+    when(totpChallengeService.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "000000", "127.0.0.1")))
         .thenReturn(ResultatTotp.dejaVerrouille());
 
     final var reponse =

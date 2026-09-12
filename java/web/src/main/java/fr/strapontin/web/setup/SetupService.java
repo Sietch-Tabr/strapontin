@@ -123,7 +123,8 @@ public class SetupService {
 
     final String identifiant =
         requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase(Locale.ROOT);
-    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
+    final String email =
+        requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
     final String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
     validerRequeteSetup(identifiant, email, motDePasse);
 

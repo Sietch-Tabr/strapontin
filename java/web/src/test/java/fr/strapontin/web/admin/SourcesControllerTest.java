@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.web.salle.SalleService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,8 +92,7 @@ class SourcesControllerTest {
         controller.creerSalleDigitick(new RequeteDigitickSalle(" ", "slug-x", null, null));
 
     assertEquals(400, reponse.getStatusCode().value());
-    verify(sourcesService, org.mockito.Mockito.never())
-        .creerSalleDigitick(any(), any(), any(), any());
+    verify(sourcesService, org.mockito.Mockito.never()).creerSalleDigitick(any());
   }
 
   @Test
@@ -101,14 +101,15 @@ class SourcesControllerTest {
         controller.creerSalleDigitick(new RequeteDigitickSalle("Salle X", " ", null, null));
 
     assertEquals(400, reponse.getStatusCode().value());
-    verify(sourcesService, org.mockito.Mockito.never())
-        .creerSalleDigitick(any(), any(), any(), any());
+    verify(sourcesService, org.mockito.Mockito.never()).creerSalleDigitick(any());
   }
 
   @Test
   void creerSalleDigitick_nominal_retourne201AvecSalleId() {
     final UUID id = UUID.randomUUID();
-    when(sourcesService.creerSalleDigitick("Salle X", "slug-x", "Nancy", "54")).thenReturn(id);
+    when(sourcesService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("Salle X", "slug-x", "Nancy", "54")))
+        .thenReturn(id);
 
     final var reponse =
         controller.creerSalleDigitick(new RequeteDigitickSalle("Salle X", "slug-x", "Nancy", "54"));

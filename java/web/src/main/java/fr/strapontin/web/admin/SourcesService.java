@@ -100,15 +100,12 @@ public class SourcesService {
   /**
    * Crée une salle Digitick dans le référentiel et déclenche immédiatement un fetch.
    *
-   * @param nom nom affiché de la salle
-   * @param slug slug Digitick (ex. {@code "lempreinte"})
-   * @param ville ville (peut être {@code null})
-   * @param cp code postal 5 chiffres (peut être {@code null})
+   * @param donnees données de la salle Digitick à créer (voir {@link
+   *     SalleService.DonneesSalleDigitick})
    * @return UUID stable de la salle créée ou retrouvée
    */
-  public UUID creerSalleDigitick(
-      final String nom, final String slug, final String ville, final String cp) {
-    return salleService.creerSalleDigitick(nom, slug, ville, cp);
+  public UUID creerSalleDigitick(final SalleService.DonneesSalleDigitick donnees) {
+    return salleService.creerSalleDigitick(donnees);
   }
 
   /**

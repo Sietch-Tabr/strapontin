@@ -38,14 +38,19 @@ class ReferentielSallesControllerTest {
 
   @Test
   void lister_delegueAuServiceAvecLesParametres() {
-    when(service.lister(0, "Zenith", null, null, null, false))
+    when(service.lister(
+            new ReferentielSallesService.FiltresRechercheSalles(
+                0, "Zenith", null, null, null, false)))
         .thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
 
     final ResponseEntity<ReponseReferentielSalles> reponse =
         controller.lister(0, "Zenith", null, null, null, false);
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(service).lister(0, "Zenith", null, null, null, false);
+    verify(service)
+        .lister(
+            new ReferentielSallesService.FiltresRechercheSalles(
+                0, "Zenith", null, null, null, false));
   }
 
   @Test

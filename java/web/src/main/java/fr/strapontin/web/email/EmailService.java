@@ -221,20 +221,28 @@ public class EmailService {
   }
 
   /**
-   * Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
+   * Signalement d'une salle manquante par un utilisateur.
    *
    * @param nom le nom de la salle signalée
-   * @param ville la ville/code postal (peut être vide)
-   * @param urlSite l'URL du site ou de la billetterie (peut être vide)
-   * @param commentaire le commentaire libre (peut être vide)
+   * @param ville la ville/code postal, peut être vide
+   * @param urlSite l'URL du site ou de la billetterie, peut être vide
+   * @param commentaire le commentaire libre, peut être vide
    * @param emailUtilisateur l'adresse email de l'utilisateur connecté
    */
-  public void envoyerSignalementSalleManquante(
-      final String nom,
-      final String ville,
-      final String urlSite,
-      final String commentaire,
-      final String emailUtilisateur) {
+  public record SignalementSalleManquante(
+      String nom, String ville, String urlSite, String commentaire, String emailUtilisateur) {}
+
+  /**
+   * Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
+   *
+   * @param signalement le signalement à envoyer (voir {@link SignalementSalleManquante})
+   */
+  public void envoyerSignalementSalleManquante(final SignalementSalleManquante signalement) {
+    final String nom = signalement.nom();
+    final String ville = signalement.ville();
+    final String urlSite = signalement.urlSite();
+    final String commentaire = signalement.commentaire();
+    final String emailUtilisateur = signalement.emailUtilisateur();
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       LOG.warn("RESEND_API_KEY absent — signalement salle manquante non envoyé");

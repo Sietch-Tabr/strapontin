@@ -43,7 +43,9 @@ class TotpChallengeServiceTest {
     when(userController.lireSecretTotp("u1")).thenReturn("SECRETBASE32");
     when(totpService.verifierCode("SECRETBASE32", "123456")).thenReturn(true);
 
-    final ResultatTotp resultat = service.verifier("u1", "alice", "123456", "127.0.0.1");
+    final ResultatTotp resultat =
+        service.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "123456", "127.0.0.1"));
 
     assertEquals(ResultatTotp.Statut.SUCCES, resultat.statut());
     verify(jdbc).update(contains("totp_failure_count = 0"), anyMap());
@@ -56,7 +58,9 @@ class TotpChallengeServiceTest {
     when(userController.lireSecretTotp("u1")).thenReturn("SECRETBASE32");
     when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
 
-    final ResultatTotp resultat = service.verifier("u1", "alice", "000000", "127.0.0.1");
+    final ResultatTotp resultat =
+        service.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "000000", "127.0.0.1"));
 
     assertEquals(ResultatTotp.Statut.ECHEC, resultat.statut());
     assertEquals(4, resultat.essaisRestants());
@@ -71,7 +75,9 @@ class TotpChallengeServiceTest {
     when(userController.lireSecretTotp("u1")).thenReturn("SECRETBASE32");
     when(totpService.verifierCode("SECRETBASE32", "000000")).thenReturn(false);
 
-    final ResultatTotp resultat = service.verifier("u1", "alice", "000000", "127.0.0.1");
+    final ResultatTotp resultat =
+        service.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "000000", "127.0.0.1"));
 
     assertEquals(ResultatTotp.Statut.VERROUILLE_MAINTENANT, resultat.statut());
   }
@@ -81,7 +87,9 @@ class TotpChallengeServiceTest {
     // Compte déjà verrouillé en base (≥ MAX_ECHECS_TOTP) — aucun code ne doit être vérifié
     when(userController.lireEchecsTotp("u1")).thenReturn(5);
 
-    final ResultatTotp resultat = service.verifier("u1", "alice", "000000", "127.0.0.1");
+    final ResultatTotp resultat =
+        service.verifier(
+            new TotpChallengeService.ChallengeTotp("u1", "alice", "000000", "127.0.0.1"));
 
     assertEquals(ResultatTotp.Statut.DEJA_VERROUILLE, resultat.statut());
     verify(totpService, never()).verifierCode(anyString(), anyString());

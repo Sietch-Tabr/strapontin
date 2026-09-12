@@ -193,8 +193,20 @@ public class SalleService {
    */
   @Transactional
   public void ajouter(final String userId, final String nom, final String tmVenueId) {
-    ajouter(userId, nom, tmVenueId, null, null);
+    ajouter(new DonneesAjoutSalle(userId, nom, tmVenueId, null, null));
   }
+
+  /**
+   * Données d'ajout d'une salle à la liste de suivi.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param nom nom de la salle (non-vide, max 200 car.)
+   * @param tmVenueId identifiant Ticketmaster, peut être {@code null}
+   * @param osmId identifiant OSM {@code "type/id"}, peut être {@code null}
+   * @param wikidataId Q-ID Wikidata, peut être {@code null}
+   */
+  public record DonneesAjoutSalle(
+      String userId, String nom, String tmVenueId, String osmId, String wikidataId) {}
 
   /**
    * Ajoute une salle à la liste de suivi dans une transaction atomique.
@@ -210,30 +222,22 @@ public class SalleService {
    * autre salle) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que
    * {@code EnrichissementSallesService} (jalon 2.6.0).
    *
-   * @param userId identifiant de l'utilisateur
-   * @param nom nom de la salle (non-vide, max 200 car.)
-   * @param tmVenueId identifiant Ticketmaster (nullable)
-   * @param osmId identifiant OSM {@code "type/id"} (nullable)
-   * @param wikidataId Q-ID Wikidata (nullable)
+   * @param donnees données d'ajout (voir {@link DonneesAjoutSalle})
    * @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
    * @throws RessourceDejaExistante si la salle est déjà suivie
    */
   @Transactional
-  public void ajouter(
-      final String userId,
-      final String nom,
-      final String tmVenueId,
-      final String osmId,
-      final String wikidataId) {
-    final String salleCle = normaliserSalleCle(nom);
+  public void ajouter(final DonneesAjoutSalle donnees) {
+    final String salleCle = normaliserSalleCle(donnees.nom());
     if (salleCle.isEmpty()) {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    final UUID salleId = resoudreSalleId(nom, salleCle);
-    validerAjoutSalle(userId, salleId);
-    enregistrerSourcesSalle(salleId, nom, tmVenueId, osmId, wikidataId);
-    salleRepository.ajouterPourUtilisateur(userId, salleId);
+    final UUID salleId = resoudreSalleId(donnees.nom(), salleCle);
+    validerAjoutSalle(donnees.userId(), salleId);
+    enregistrerSourcesSalle(
+        salleId, donnees.nom(), donnees.tmVenueId(), donnees.osmId(), donnees.wikidataId());
+    salleRepository.ajouterPourUtilisateur(donnees.userId(), salleId);
 
     executerApresCommit(salleId);
   }
@@ -407,23 +411,29 @@ public class SalleService {
    *
    * @param nom nom affiché de la salle
    * @param slug slug Digitick
-   * @param ville ville (peut être {@code null})
-   * @param dept numéro de département (peut être {@code null})
+   * @param ville ville, peut être {@code null}
+   * @param dept numéro de département, peut être {@code null}
+   */
+  public record DonneesSalleDigitick(String nom, String slug, String ville, String dept) {}
+
+  /**
+   * @param donnees données de la salle Digitick à créer (voir {@link DonneesSalleDigitick})
    * @return UUID stable de la salle créée ou retrouvée
    * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
    */
   @Transactional
-  public UUID creerSalleDigitick(
-      final String nom, final String slug, final String ville, final String dept) {
-    final String salleCle = normaliserSalleCle(nom);
-    final UUID salleId = salleRepository.upsertSalleAvecLoc(salleCle, nom, ville, dept);
+  public UUID creerSalleDigitick(final DonneesSalleDigitick donnees) {
+    final String salleCle = normaliserSalleCle(donnees.nom());
+    final UUID salleId =
+        salleRepository.upsertSalleAvecLoc(
+            salleCle, donnees.nom(), donnees.ville(), donnees.dept());
     salleRepository
-        .trouverConflitDigitickSlug(slug, salleId)
+        .trouverConflitDigitickSlug(donnees.slug(), salleId)
         .ifPresent(
             nomConflit -> {
               throw new ErreurMetier("Slug déjà utilisé par la salle " + nomConflit + ".", 409);
             });
-    salleRepository.enregistrerSalleSource(salleId, "digitick", slug);
+    salleRepository.enregistrerSalleSource(salleId, "digitick", donnees.slug());
     executerApresCommit(salleId);
     return salleId;
   }

@@ -54,6 +54,9 @@ public class ReferentielSallesController {
    * @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
    * @return 200 avec la page de résultats
    */
+  // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP GET), pas par choix
+  // de conception — hors de la convention DTO du projet, réservée aux endpoints @RequestBody.
+  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @GetMapping("/salles")
   public ResponseEntity<ReponseReferentielSalles> lister(
       @RequestParam(defaultValue = "0") final int page,
@@ -62,7 +65,10 @@ public class ReferentielSallesController {
       @RequestParam(required = false) final String dept,
       @RequestParam(required = false) final String statut,
       @RequestParam(defaultValue = "false") final boolean wikidataManquant) {
-    return ResponseEntity.ok(service.lister(page, nom, ville, dept, statut, wikidataManquant));
+    return ResponseEntity.ok(
+        service.lister(
+            new ReferentielSallesService.FiltresRechercheSalles(
+                page, nom, ville, dept, statut, wikidataManquant)));
   }
 
   /**

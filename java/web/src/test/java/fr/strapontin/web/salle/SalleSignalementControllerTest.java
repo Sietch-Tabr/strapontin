@@ -52,7 +52,9 @@ class SalleSignalementControllerTest {
             requete("10.1.0.1"));
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(emailService)
-        .envoyerSignalementSalleManquante("La Cigale", "Paris 75018", "", "", "k@test.fr");
+        .envoyerSignalementSalleManquante(
+            new EmailService.SignalementSalleManquante(
+                "La Cigale", "Paris 75018", "", "", "k@test.fr"));
   }
 
   @Test
@@ -102,7 +104,9 @@ class SalleSignalementControllerTest {
         controller.signalerManquante(
             new RequeteSignalementSalle("Salle", "  ", "  ", "  "), auth, requete("10.1.0.10"));
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
-    verify(emailService).envoyerSignalementSalleManquante("Salle", "", "", "", "k@test.fr");
+    verify(emailService)
+        .envoyerSignalementSalleManquante(
+            new EmailService.SignalementSalleManquante("Salle", "", "", "", "k@test.fr"));
   }
 
   private static MockHttpServletRequest requete(final String ip) {

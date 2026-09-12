@@ -93,7 +93,8 @@ public class AdminController {
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
       @Valid @RequestBody final RequeteCreerUtilisateur requete, final Authentication auth) {
     final String adminId = utilisateur(auth).id();
-    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
+    final String email =
+        requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
 
     if (email.isEmpty()) {
       return erreur(400, "Format d'email invalide.");

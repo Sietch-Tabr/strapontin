@@ -71,7 +71,9 @@ class SalleServiceTest {
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(attendu);
 
     final UUID resultat =
-        salleService.creerSalleDigitick("L'Empreinte", "lempreinte", "Savigny-le-Temple", "77176");
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick(
+                "L'Empreinte", "lempreinte", "Savigny-le-Temple", "77176"));
 
     assertEquals(attendu, resultat);
     verify(salleRepository)
@@ -84,7 +86,9 @@ class SalleServiceTest {
     final UUID attendu = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(attendu);
 
-    final UUID resultat = salleService.creerSalleDigitick("L'Olympia", "olympia", null, null);
+    final UUID resultat =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("L'Olympia", "olympia", null, null));
 
     assertNotNull(resultat);
     verify(salleRepository).upsertSalleAvecLoc("lolympia", "L'Olympia", null, null);
@@ -95,8 +99,12 @@ class SalleServiceTest {
     final UUID existant = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(existant);
 
-    final UUID r1 = salleService.creerSalleDigitick("L'Empreinte", "lempreinte", null, null);
-    final UUID r2 = salleService.creerSalleDigitick("L'Empreinte", "lempreinte", null, null);
+    final UUID r1 =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("L'Empreinte", "lempreinte", null, null));
+    final UUID r2 =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("L'Empreinte", "lempreinte", null, null));
 
     assertEquals(r1, r2);
   }
@@ -113,7 +121,9 @@ class SalleServiceTest {
     final ErreurMetier erreur =
         assertThrows(
             ErreurMetier.class,
-            () -> salleService.creerSalleDigitick("Doublon", "lempreinte", null, null));
+            () ->
+                salleService.creerSalleDigitick(
+                    new SalleService.DonneesSalleDigitick("Doublon", "lempreinte", null, null)));
 
     assertEquals(409, erreur.getStatus());
     verify(salleRepository, never()).enregistrerSalleSource(any(), any(), any());
@@ -184,7 +194,8 @@ class SalleServiceTest {
     when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
     when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
 
-    salleService.ajouter("u1", "Rockstore", null, "way/12345", "Q3438008");
+    salleService.ajouter(
+        new SalleService.DonneesAjoutSalle("u1", "Rockstore", null, "way/12345", "Q3438008"));
 
     verify(salleRepository).enregistrerSalleSource(uuid, "osm", "way/12345");
     verify(salleRepository).mettreAJourWikidataId(uuid, "Q3438008");
@@ -205,7 +216,9 @@ class SalleServiceTest {
         .mettreAJourWikidataId(uuid, "Q3438008");
 
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(
-        () -> salleService.ajouter("u1", "Rockstore", null, null, "Q3438008"));
+        () ->
+            salleService.ajouter(
+                new SalleService.DonneesAjoutSalle("u1", "Rockstore", null, null, "Q3438008")));
 
     verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
   }

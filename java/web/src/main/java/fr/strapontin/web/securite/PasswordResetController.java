@@ -78,7 +78,9 @@ public class PasswordResetController {
     if (req.email() != null && !req.email().isBlank()) {
       resoudreBaseUrl()
           .ifPresentOrElse(
-              baseUrl -> authService.motDePasseOublie(req.email().strip().toLowerCase(Locale.ROOT), baseUrl),
+              baseUrl ->
+                  authService.motDePasseOublie(
+                      req.email().strip().toLowerCase(Locale.ROOT), baseUrl),
               () ->
                   logAdminService.logAdmin(
                       "error",

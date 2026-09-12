@@ -16,6 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.web.admin.ReferentielSallesService.FiltresRechercheSalles;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +66,8 @@ class ReferentielSallesServiceTest {
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    final ReponseReferentielSalles reponse = service.lister(0, null, null, null, null, false);
+    final ReponseReferentielSalles reponse =
+        service.lister(new FiltresRechercheSalles(0, null, null, null, null, false));
 
     assertEquals(1, reponse.salles().size());
     assertEquals(3L, reponse.totalSalles());
@@ -79,7 +81,7 @@ class ReferentielSallesServiceTest {
   void lister_nominal_requeteUtiliseLesNouvellesValeursDeStatut() {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
-    service.lister(0, null, null, null, null, false);
+    service.lister(new FiltresRechercheSalles(0, null, null, null, null, false));
 
     verify(jdbc)
         .query(
@@ -99,7 +101,7 @@ class ReferentielSallesServiceTest {
   void lister_wikidataManquantVrai_filtreSurWikidataIdNull() {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
-    service.lister(0, null, null, null, null, true);
+    service.lister(new FiltresRechercheSalles(0, null, null, null, null, true));
 
     verify(jdbc).query(contains("wikidata_id IS NULL"), anyMap(), any(RowMapper.class));
   }
@@ -112,7 +114,8 @@ class ReferentielSallesServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(3L);
 
-    final ReponseReferentielSalles reponse = service.lister(5, null, null, null, null, false);
+    final ReponseReferentielSalles reponse =
+        service.lister(new FiltresRechercheSalles(5, null, null, null, null, false));
 
     assertEquals(3L, reponse.totalSalles());
     assertTrue(reponse.salles().isEmpty());

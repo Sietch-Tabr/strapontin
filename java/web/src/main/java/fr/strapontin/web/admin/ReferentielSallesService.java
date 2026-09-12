@@ -67,7 +67,7 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
+   * Filtres de recherche du référentiel salles.
    *
    * @param page numéro de page (0-indexé)
    * @param nom filtre nom partiel (insensible à la casse), peut être null
@@ -78,18 +78,19 @@ public class ReferentielSallesService {
    *     facilite le repérage des candidats à corriger manuellement sans parcourir toute la
    *     pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
    *     si elle a déjà un {@code wikidata_id})
+   */
+  public record FiltresRechercheSalles(
+      int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {}
+
+  /**
+   * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
+   *
+   * @param filtresRecherche filtres de recherche (voir {@link FiltresRechercheSalles})
    * @return page de résultats
    */
-  public ReponseReferentielSalles lister(
-      final int page,
-      final String nom,
-      final String ville,
-      final String dept,
-      final String statut,
-      final boolean wikidataManquant) {
-    final int pageNum = Math.max(0, page);
-    final FiltresSalles filtres =
-        construireFiltresSalles(nom, ville, dept, statut, wikidataManquant);
+  public ReponseReferentielSalles lister(final FiltresRechercheSalles filtresRecherche) {
+    final int pageNum = Math.max(0, filtresRecherche.page());
+    final FiltresSalles filtres = construireFiltresSalles(filtresRecherche);
 
     final Map<String, Object> paramsPage = new HashMap<>(filtres.params());
     paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
@@ -109,19 +110,14 @@ public class ReferentielSallesService {
 
   private record FiltresSalles(StringBuilder where, Map<String, Object> params) {}
 
-  private FiltresSalles construireFiltresSalles(
-      final String nom,
-      final String ville,
-      final String dept,
-      final String statut,
-      final boolean wikidataManquant) {
+  private FiltresSalles construireFiltresSalles(final FiltresRechercheSalles filtresRecherche) {
     final StringBuilder where = new StringBuilder(60).append(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
-    ajouterFiltreLike(where, params, "nom", nom);
-    ajouterFiltreLike(where, params, "ville", ville);
-    ajouterFiltreExact(where, params, "dept", dept);
-    ajouterFiltreExact(where, params, "statut", statut);
-    if (wikidataManquant) {
+    ajouterFiltreLike(where, params, "nom", filtresRecherche.nom());
+    ajouterFiltreLike(where, params, "ville", filtresRecherche.ville());
+    ajouterFiltreExact(where, params, "dept", filtresRecherche.dept());
+    ajouterFiltreExact(where, params, "statut", filtresRecherche.statut());
+    if (filtresRecherche.wikidataManquant()) {
       where.append(" AND wikidata_id IS NULL ");
     }
     return new FiltresSalles(where, params);

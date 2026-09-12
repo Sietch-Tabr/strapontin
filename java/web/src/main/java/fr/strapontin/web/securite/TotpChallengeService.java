@@ -34,7 +34,7 @@ public class TotpChallengeService {
   /**
    * @param jdbc accès JDBC pour le compteur d'échecs
    * @param userController accès au secret TOTP déchiffré ({@code UtilisateurRepository} est
-   *   package-privé, hors du package {@code securite})
+   *     package-privé, hors du package {@code securite})
    * @param totpService vérification du code TOTP (RFC 6238)
    * @param logAdminService journalisation des succès/échecs dans {@code logs_admin}
    */
@@ -50,16 +50,26 @@ public class TotpChallengeService {
   }
 
   /**
-   * Vérifie le code TOTP soumis pour un utilisateur et met à jour le compteur d'échecs.
+   * Challenge TOTP à vérifier.
    *
    * @param userId identifiant de l'utilisateur
    * @param identifiant identifiant lisible (pour les logs)
    * @param code code à 6 chiffres saisi
    * @param ip adresse IP de la requête (pour les logs)
+   */
+  public record ChallengeTotp(String userId, String identifiant, String code, String ip) {}
+
+  /**
+   * Vérifie le code TOTP soumis pour un utilisateur et met à jour le compteur d'échecs.
+   *
+   * @param challenge le challenge à vérifier (voir {@link ChallengeTotp})
    * @return le résultat du challenge
    */
-  public ResultatTotp verifier(
-      final String userId, final String identifiant, final String code, final String ip) {
+  public ResultatTotp verifier(final ChallengeTotp challenge) {
+    final String userId = challenge.userId();
+    final String identifiant = challenge.identifiant();
+    final String code = challenge.code();
+    final String ip = challenge.ip();
     final int echecsCourants = userController.lireEchecsTotp(userId);
     if (echecsCourants >= MAX_ECHECS_TOTP) {
       return ResultatTotp.dejaVerrouille();

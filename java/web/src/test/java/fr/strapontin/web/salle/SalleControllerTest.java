@@ -6,7 +6,6 @@ package fr.strapontin.web.salle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -72,7 +71,8 @@ class SalleControllerTest {
 
     assertEquals(HttpStatus.CREATED, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("succes"));
-    verify(salleService).ajouter("user-1", "Olympia", "tm-123", null, null);
+    verify(salleService)
+        .ajouter(new SalleService.DonneesAjoutSalle("user-1", "Olympia", "tm-123", null, null));
   }
 
   @Test
@@ -81,7 +81,7 @@ class SalleControllerTest {
         controller.ajouterSalle(new RequeteAjouter("   ", null), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
-    verify(salleService, never()).ajouter(anyString(), anyString(), any(), any(), any());
+    verify(salleService, never()).ajouter(any());
   }
 
   @Test
@@ -96,14 +96,16 @@ class SalleControllerTest {
   void ajouterSalle_identifiantsExternesBlancs_convertisEnNull() {
     controller.ajouterSalle(new RequeteAjouter("Olympia", "  ", "", "  "), auth);
 
-    verify(salleService).ajouter("user-1", "Olympia", null, null, null);
+    verify(salleService)
+        .ajouter(new SalleService.DonneesAjoutSalle("user-1", "Olympia", null, null, null));
   }
 
   @Test
   void ajouterSalle_identifiantsExternesPresents_sontStrippes() {
     controller.ajouterSalle(new RequeteAjouter("Olympia", " tm-123 ", " osm-1 ", "Q42"), auth);
 
-    verify(salleService).ajouter("user-1", "Olympia", "tm-123", "osm-1", "Q42");
+    verify(salleService)
+        .ajouter(new SalleService.DonneesAjoutSalle("user-1", "Olympia", "tm-123", "osm-1", "Q42"));
   }
 
   @Test

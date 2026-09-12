@@ -95,7 +95,8 @@ public class SalleController {
     final String osmId = videVersNull(requete.osmId());
     final String wikidataId = videVersNull(requete.wikidataId());
 
-    salleService.ajouter(userId, nom, tmVenueId, osmId, wikidataId);
+    salleService.ajouter(
+        new SalleService.DonneesAjoutSalle(userId, nom, tmVenueId, osmId, wikidataId));
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
@@ -150,7 +151,8 @@ public class SalleController {
     }
 
     emailService.envoyerSignalementSalleManquante(
-        nom, ville, urlSite, commentaire, utilisateur.email());
+        new EmailService.SignalementSalleManquante(
+            nom, ville, urlSite, commentaire, utilisateur.email()));
     return ResponseEntity.noContent().build();
   }
 

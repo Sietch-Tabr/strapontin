@@ -179,7 +179,8 @@ class EmailTemplatesTest {
 
   @Test
   void alerteIntegrite_afficheLeDetailEtTitreRouge() {
-    final String html = EmailTemplatesAlertes.alerteIntegrite("web.jar : md5 modifié", "https://app.fr");
+    final String html =
+        EmailTemplatesAlertes.alerteIntegrite("web.jar : md5 modifié", "https://app.fr");
     assertThat(html).contains("web.jar : md5 modifié");
     assertThat(html).contains("color: #c00");
   }
@@ -320,15 +321,20 @@ class EmailTemplatesTest {
         .contains(baseUrl + "/parametres");
     assertThat(EmailTemplatesAlertes.alerteBackup("ts", "raison", baseUrl))
         .contains(baseUrl + "/parametres");
-    assertThat(EmailTemplatesAlertes.alerteIntegrite("detail", baseUrl)).contains(baseUrl + "/parametres");
+    assertThat(EmailTemplatesAlertes.alerteIntegrite("detail", baseUrl))
+        .contains(baseUrl + "/parametres");
   }
 
   @Test
   void emailsAlerte_ontTitreRouge() {
-    assertThat(EmailTemplatesAlertes.alerteBackup("ts", "", "https://app.fr")).contains("color: #c00");
-    assertThat(EmailTemplatesAlertes.alerteIntegrite("detail", "https://app.fr")).contains("color: #c00");
-    assertThat(EmailTemplatesAlertes.alerteBounce("x@y.fr", "https://app.fr")).contains("color: #c00");
-    assertThat(EmailTemplatesAlertes.alerteWorker("detail", "https://app.fr")).contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteBackup("ts", "", "https://app.fr"))
+        .contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteIntegrite("detail", "https://app.fr"))
+        .contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteBounce("x@y.fr", "https://app.fr"))
+        .contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteWorker("detail", "https://app.fr"))
+        .contains("color: #c00");
   }
 
   @Test
