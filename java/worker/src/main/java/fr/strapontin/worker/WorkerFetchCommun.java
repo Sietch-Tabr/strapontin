@@ -252,6 +252,10 @@ class WorkerFetchCommun {
     }
   }
 
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
+  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
+  // s'applique pas ici.
+  @SuppressWarnings("PMD.DoNotUseThreads")
   void attendreRateLimit() {
     try {
       Thread.sleep(DELAI_ENTRE_ARTISTES_MS);

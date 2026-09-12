@@ -13,14 +13,14 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Implémentation de {@link CadenceurAppels} adossée à Postgres — coordonne les appels vers un même
- * service externe entre plusieurs processus indépendants. Un verrou en mémoire ne coordonnerait
- * que les appels de ce seul processus web ; Ticketmaster est aussi appelé par le worker (fetch
+ * service externe entre plusieurs processus indépendants. Un verrou en mémoire ne coordonnerait que
+ * les appels de ce seul processus web ; Ticketmaster est aussi appelé par le worker (fetch
  * programmé), un processus indépendant.
  *
- * Réservation atomique par {@code UPDATE ... RETURNING} sur la ligne partagée identifiée par
+ * <p>Réservation atomique par {@code UPDATE ... RETURNING} sur la ligne partagée identifiée par
  * {@code cle} : chaque appelant avance le prochain instant autorisé d'au moins {@code delaiMinMs}
- * en respectant l'instant déjà réservé par un appelant concurrent ({@code GREATEST}) — le verrou
- * de ligne Postgres sérialise nativement les écritures concurrentes, sans transaction {@code
+ * en respectant l'instant déjà réservé par un appelant concurrent ({@code GREATEST}) — le verrou de
+ * ligne Postgres sérialise nativement les écritures concurrentes, sans transaction {@code
  * SERIALIZABLE}.
  *
  * @since 2.8.1
@@ -44,17 +44,21 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
     this.delaiMinMs = delaiMinMs;
   }
 
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
+  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
+  // s'applique pas ici.
+  @SuppressWarnings("PMD.DoNotUseThreads")
   @Override
   public void attendre() {
     final Timestamp prochainAppelAutorise =
         jdbc.queryForObject(
             """
-                UPDATE cadences_appels_externes
-                SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, now())
-                    + (:delaiMs || ' milliseconds')::interval
-                WHERE cle = :cle
-                RETURNING prochain_appel_autorise
-                """,
+            UPDATE cadences_appels_externes
+            SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, now())
+                + (:delaiMs || ' milliseconds')::interval
+            WHERE cle = :cle
+            RETURNING prochain_appel_autorise
+            """,
             Map.of("cle", cle, "delaiMs", delaiMinMs),
             Timestamp.class);
     final long attenteMs =

@@ -228,6 +228,10 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
   }
 
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
+  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
+  // s'applique pas ici.
+  @SuppressWarnings("PMD.DoNotUseThreads")
   private boolean attendreEntrePagesEventim() {
     try {
       Thread.sleep(200);

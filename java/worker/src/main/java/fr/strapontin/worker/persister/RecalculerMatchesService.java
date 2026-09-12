@@ -100,7 +100,12 @@ public class RecalculerMatchesService {
 
     final String aujourdhui = LocalDate.now().toString();
 
-    try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    // Executors.newVirtualThreadPerTaskExecutor est la primitive Java 21+ recommandée pour un
+    // parallélisme borné par utilisateur — pas un contexte de requête J2EE, la justification de la
+    // règle ne s'applique pas ici.
+    @SuppressWarnings("PMD.DoNotUseThreads")
+    final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    try (executor) {
       final List<CompletableFuture<Void>> futures =
           usersARecalculer.stream()
               .map(

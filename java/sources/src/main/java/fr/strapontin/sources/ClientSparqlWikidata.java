@@ -170,6 +170,10 @@ final class ClientSparqlWikidata {
     }
   }
 
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
+  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
+  // s'applique pas ici.
+  @SuppressWarnings("PMD.DoNotUseThreads")
   private static void dormir(final long ms) {
     try {
       Thread.sleep(ms);
