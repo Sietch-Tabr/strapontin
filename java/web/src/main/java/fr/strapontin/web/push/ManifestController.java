@@ -17,14 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Contrôleur servant le manifeste PWA dynamiquement.
  *
- * <p>{@code start_url} est dérivé de la requête HTTP entrante — fonctionne
- * sans configuration {@code PUBLIC_BASE_URL}, en dev comme en prod.
+ * <p>{@code start_url} est dérivé de la requête HTTP entrante — fonctionne sans configuration
+ * {@code PUBLIC_BASE_URL}, en dev comme en prod.
  *
- * <p>{@code id} est en revanche dérivé de {@code PUBLIC_BASE_URL} quand cette clé est
- * configurée, pour rester stable quel que soit l'hôte utilisé pour accéder à l'instance
- * (IP LAN, domaine public…) — un {@code id} variable ferait traiter chaque hôte comme une
- * installation PWA distincte plutôt qu'une mise à jour de la même application. Repli
- * sur le comportement dynamique historique si {@code PUBLIC_BASE_URL} n'est pas configurée.
+ * <p>{@code id} est en revanche dérivé de {@code PUBLIC_BASE_URL} quand cette clé est configurée,
+ * pour rester stable quel que soit l'hôte utilisé pour accéder à l'instance (IP LAN, domaine
+ * public…) — un {@code id} variable ferait traiter chaque hôte comme une installation PWA distincte
+ * plutôt qu'une mise à jour de la même application. Repli sur le comportement dynamique historique
+ * si {@code PUBLIC_BASE_URL} n'est pas configurée.
  *
  * <p>Le manifeste est servi sans cache navigateur.
  *
@@ -67,41 +67,45 @@ public class ManifestController {
     manifest.put("lang", "fr");
     manifest.put("categories", List.of("entertainment", "lifestyle"));
     manifest.put("launch_handler", Map.of("client_mode", "navigate-existing"));
-    manifest.put(
-        "icons",
-        List.of(
-            Map.of(
-                "src", "/images/icon-192.png",
-                "sizes", "192x192",
-                "type", "image/png",
-                "purpose", "any"),
-            Map.of(
-                "src", "/images/icon-512.png",
-                "sizes", "512x512",
-                "type", "image/png",
-                "purpose", "any"),
-            Map.of(
-                "src", "/images/icon-512.png",
-                "sizes", "512x512",
-                "type", "image/png",
-                "purpose", "maskable")));
-    manifest.put(
-        "shortcuts",
-        List.of(
-            Map.of(
-                "name", "Mes spectacles",
-                "url", "/spectacles",
-                "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
-            Map.of(
-                "name", "Découverte",
-                "url", "/decouverte",
-                "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
-            Map.of(
-                "name", "Nouveaux concerts",
-                "url", "/?nouveau=true",
-                "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192")))));
+    manifest.put("icons", construireIcones());
+    manifest.put("shortcuts", construireRaccourcis());
 
     return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
+  }
+
+  private static List<Map<String, String>> construireIcones() {
+    return List.of(
+        Map.of(
+            "src", "/images/icon-192.png",
+            "sizes", "192x192",
+            "type", "image/png",
+            "purpose", "any"),
+        Map.of(
+            "src", "/images/icon-512.png",
+            "sizes", "512x512",
+            "type", "image/png",
+            "purpose", "any"),
+        Map.of(
+            "src", "/images/icon-512.png",
+            "sizes", "512x512",
+            "type", "image/png",
+            "purpose", "maskable"));
+  }
+
+  private static List<Map<String, Object>> construireRaccourcis() {
+    return List.of(
+        Map.of(
+            "name", "Mes spectacles",
+            "url", "/spectacles",
+            "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
+        Map.of(
+            "name", "Découverte",
+            "url", "/decouverte",
+            "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
+        Map.of(
+            "name", "Nouveaux concerts",
+            "url", "/?nouveau=true",
+            "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))));
   }
 
   private static String baseUrlDepuisRequete(final HttpServletRequest request) {

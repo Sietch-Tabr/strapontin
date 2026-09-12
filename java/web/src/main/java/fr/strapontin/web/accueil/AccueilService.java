@@ -30,7 +30,7 @@ public class AccueilService {
   private final UserConfigService userConfigService;
 
   /**
-   * @param jdbc              accès JDBC
+   * @param jdbc accès JDBC
    * @param userConfigService lecture du filtre de disponibilité
    */
   public AccueilService(
@@ -43,9 +43,9 @@ public class AccueilService {
    * Marque comme vus les matches artiste non encore vus pour l'utilisateur.
    *
    * <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation. Restreint aux
-   * matchs artiste — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}),
-   * donc marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur
-   * {@code /spectacles} avant même que l'utilisateur n'ait visité cette page.
+   * matchs artiste — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}), donc
+   * marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur {@code
+   * /spectacles} avant même que l'utilisateur n'ait visité cette page.
    *
    * @param userId identifiant de l'utilisateur
    */
@@ -69,11 +69,11 @@ public class AccueilService {
   /**
    * Retourne les prochains concerts des artistes suivis, groupés par artiste.
    *
-   * @param userId            identifiant de l'utilisateur
-   * @param masques           {@code true} pour afficher les concerts masqués
-   * @param indisponibles     {@code "1"} pour inclure les concerts non disponibles
-   * @param nouveau           {@code true} pour afficher uniquement les concerts ajoutés
-   *                          en base depuis moins de 7 jours
+   * @param userId identifiant de l'utilisateur
+   * @param masques {@code true} pour afficher les concerts masqués
+   * @param indisponibles {@code "1"} pour inclure les concerts non disponibles
+   * @param nouveau {@code true} pour afficher uniquement les concerts ajoutés en base depuis moins
+   *     de 7 jours
    * @return groupes artiste/concerts avec compteurs
    */
   public ReponseAccueil accueil(
@@ -86,13 +86,28 @@ public class AccueilService {
     final boolean inclureIndisponibles =
         indisponibles != null ? "1".equals(indisponibles) : !filtreDisponibles;
 
+    final StringBuilder where = construireWhereAccueil(masques, nouveau, inclureIndisponibles);
+
+    final Map<String, Object> params = new HashMap<>();
+    params.put(CLE_USER_ID, userId);
+    params.put("aujourd8", aujourd8);
+
+    final List<ConcertAccueil> lignes = chargerConcertsAccueil(where, params);
+    final List<GroupeArtiste> artistesGroupes = grouperParArtiste(lignes);
+
+    return new ReponseAccueil(
+        artistesGroupes, compterUserArtistes(userId), compterUserSalles(userId));
+  }
+
+  private StringBuilder construireWhereAccueil(
+      final boolean masques, final boolean nouveau, final boolean inclureIndisponibles) {
     final StringBuilder where =
         new StringBuilder(
             """
-                um.user_id = :userId
-                AND c.date >= :aujourd8
-                AND um.masque_le IS %s
-                """
+            um.user_id = :userId
+            AND c.date >= :aujourd8
+            AND um.masque_le IS %s
+            """
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
@@ -111,82 +126,82 @@ public class AccueilService {
              AND c.artiste_id = ua.artiste_id
          )
         """);
+    return where;
+  }
 
-    final Map<String, Object> params = new HashMap<>();
-    params.put(CLE_USER_ID, userId);
-    params.put("aujourd8", aujourd8);
+  // est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL — cohérent avec
+  // SpectacleDto.estNew et avec l'intention "jamais vu", plutôt que first_seen (fraîcheur en
+  // base, indépendante de l'utilisateur) utilisé auparavant ici. Sans lien avec le paramètre
+  // `nouveau` de cette méthode (filtre chip "Nouveau", basé sur first_seen — fonctionnalité
+  // distincte : concerts récemment détectés, pas concerts jamais vus).
+  private List<ConcertAccueil> chargerConcertsAccueil(
+      final StringBuilder where, final Map<String, Object> params) {
+    return jdbc.query(
+        """
+        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
+               c.artiste_id::text AS artiste_id, c.date::text,
+               c.heure::text, c.salle, c.ville, c.url, c.statut,
+               um.vu_le IS NULL AS est_nouveau
+        FROM user_matches um
+        INNER JOIN concerts c ON um.concert_id = c.id
+        LEFT JOIN artistes a ON a.id = c.artiste_id
+        WHERE %s
+        ORDER BY c.date ASC, c.artiste ASC
+        """
+            .formatted(where),
+        params,
+        (rs, _) ->
+            new ConcertAccueil(
+                rs.getString("id"),
+                rs.getString("artiste"),
+                rs.getString("artiste_norm"),
+                rs.getString("artiste_id"),
+                rs.getString("date"),
+                rs.getString("heure"),
+                rs.getString("salle"),
+                rs.getString("ville"),
+                rs.getString("url"),
+                rs.getString("statut"),
+                rs.getBoolean("est_nouveau")));
+  }
 
-    // est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL — cohérent avec
-    // SpectacleDto.estNew et avec l'intention "jamais vu", plutôt que first_seen (fraîcheur en
-    // base, indépendante de l'utilisateur) utilisé auparavant ici. Sans lien avec le paramètre
-    // `nouveau` de cette méthode (filtre chip "Nouveau", basé sur first_seen — fonctionnalité
-    // distincte : concerts récemment détectés, pas concerts jamais vus).
-    final List<ConcertAccueil> lignes =
-        jdbc.query(
-            """
-                SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
-                       c.artiste_id::text AS artiste_id, c.date::text,
-                       c.heure::text, c.salle, c.ville, c.url, c.statut,
-                       um.vu_le IS NULL AS est_nouveau
-                FROM user_matches um
-                INNER JOIN concerts c ON um.concert_id = c.id
-                LEFT JOIN artistes a ON a.id = c.artiste_id
-                WHERE %s
-                ORDER BY c.date ASC, c.artiste ASC
-                """
-                .formatted(where),
-            params,
-            (rs, _) ->
-                new ConcertAccueil(
-                    rs.getString("id"),
-                    rs.getString("artiste"),
-                    rs.getString("artiste_norm"),
-                    rs.getString("artiste_id"),
-                    rs.getString("date"),
-                    rs.getString("heure"),
-                    rs.getString("salle"),
-                    rs.getString("ville"),
-                    rs.getString("url"),
-                    rs.getString("statut"),
-                    rs.getBoolean("est_nouveau")));
-
+  private List<GroupeArtiste> grouperParArtiste(final List<ConcertAccueil> lignes) {
     final Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
     for (final ConcertAccueil c : lignes) {
       groupes.computeIfAbsent(c.artiste(), _ -> new ArrayList<>()).add(c);
     }
 
-    final List<GroupeArtiste> artistesGroupes =
-        groupes.entrySet().stream()
-            .map(
-                e -> {
-                  final List<ConcertAccueil> dates = e.getValue();
-                  final boolean estNew = dates.stream().anyMatch(ConcertAccueil::estNew);
-                  return new GroupeArtiste(
-                      e.getKey(),
-                      dates.get(0).artisteNorm(),
-                      dates.get(0).artisteId(),
-                      dates.size() >= 2,
-                      estNew,
-                      dates);
-                })
-            .toList();
+    return groupes.entrySet().stream()
+        .map(
+            e -> {
+              final List<ConcertAccueil> dates = e.getValue();
+              final boolean estNew = dates.stream().anyMatch(ConcertAccueil::estNew);
+              return new GroupeArtiste(
+                  e.getKey(),
+                  dates.get(0).artisteNorm(),
+                  dates.get(0).artisteId(),
+                  dates.size() >= 2,
+                  estNew,
+                  dates);
+            })
+        .toList();
+  }
 
-    final int nbArtistes =
-        Objects.requireNonNullElse(
-            jdbc.queryForObject(
-                "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-                Map.of(CLE_USER_ID, userId),
-                Integer.class),
-            0);
+  private int compterUserArtistes(final String userId) {
+    return Objects.requireNonNullElse(
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            Integer.class),
+        0);
+  }
 
-    final int nbSalles =
-        Objects.requireNonNullElse(
-            jdbc.queryForObject(
-                "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-                Map.of(CLE_USER_ID, userId),
-                Integer.class),
-            0);
-
-    return new ReponseAccueil(artistesGroupes, nbArtistes, nbSalles);
+  private int compterUserSalles(final String userId) {
+    return Objects.requireNonNullElse(
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            Integer.class),
+        0);
   }
 }

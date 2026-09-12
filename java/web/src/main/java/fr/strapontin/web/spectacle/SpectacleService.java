@@ -189,29 +189,37 @@ public class SpectacleService {
     final boolean sourceSalles = sources == null || sources.isEmpty() || sources.contains("salles");
 
     if (sourceArtistes && !sourceSalles) {
-      final List<UUID> ids =
-          jdbc.queryForList(
-              "SELECT artiste_id FROM user_artistes WHERE user_id = :u",
-              Map.of("u", userId),
-              UUID.class);
-      if (ids.isEmpty()) {
-        where.append(" AND false");
-      } else {
-        where.append(" AND c.artiste_id IN (:artisteIds)");
-        params.put("artisteIds", ids);
-      }
+      appliquerFiltreEntite(
+          where,
+          params,
+          "SELECT artiste_id FROM user_artistes WHERE user_id = :u",
+          userId,
+          "c.artiste_id IN (:artisteIds)",
+          "artisteIds");
     } else if (sourceSalles && !sourceArtistes) {
-      final List<UUID> ids =
-          jdbc.queryForList(
-              "SELECT salle_id FROM user_salles WHERE user_id = :u",
-              Map.of("u", userId),
-              UUID.class);
-      if (ids.isEmpty()) {
-        where.append(" AND false");
-      } else {
-        where.append(" AND c.salle_id IN (:salleIds)");
-        params.put("salleIds", ids);
-      }
+      appliquerFiltreEntite(
+          where,
+          params,
+          "SELECT salle_id FROM user_salles WHERE user_id = :u",
+          userId,
+          "c.salle_id IN (:salleIds)",
+          "salleIds");
+    }
+  }
+
+  private void appliquerFiltreEntite(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final String sqlIds,
+      final String userId,
+      final String clauseIn,
+      final String cleParam) {
+    final List<UUID> ids = jdbc.queryForList(sqlIds, Map.of("u", userId), UUID.class);
+    if (ids.isEmpty()) {
+      where.append(" AND false");
+    } else {
+      where.append(" AND ").append(clauseIn);
+      params.put(cleParam, ids);
     }
   }
 

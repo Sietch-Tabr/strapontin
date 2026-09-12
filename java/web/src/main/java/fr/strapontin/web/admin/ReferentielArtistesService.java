@@ -68,6 +68,28 @@ public class ReferentielArtistesService {
   public ReponseReferentielArtistes lister(
       final int page, final String nom, final String statut, final boolean wikidataManquant) {
     final int pageNum = Math.max(0, page);
+    final FiltresArtistes filtres = construireFiltresArtistes(nom, statut, wikidataManquant);
+
+    final Map<String, Object> paramsPage = new HashMap<>(filtres.params());
+    paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
+    paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
+    final PageArtistes resultatPage = chargerPageArtistes(filtres.where(), paramsPage);
+
+    long total = resultatPage.total();
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
+    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    if (resultatPage.artistes().isEmpty() && pageNum > 0) {
+      total = compterArtistesFiltres(filtres.where(), filtres.params());
+    }
+
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
+    return new ReponseReferentielArtistes(resultatPage.artistes(), pageNum, totalPages, total);
+  }
+
+  private record FiltresArtistes(StringBuilder where, Map<String, Object> params) {}
+
+  private FiltresArtistes construireFiltresArtistes(
+      final String nom, final String statut, final boolean wikidataManquant) {
     final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
@@ -81,10 +103,13 @@ public class ReferentielArtistesService {
     if (wikidataManquant) {
       where.append(" AND wikidata_id IS NULL ");
     }
+    return new FiltresArtistes(where, params);
+  }
 
-    final Map<String, Object> paramsPage = new HashMap<>(params);
-    paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
-    paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
+  private record PageArtistes(List<ArtisteReferentiel> artistes, long total) {}
+
+  private PageArtistes chargerPageArtistes(
+      final StringBuilder where, final Map<String, Object> paramsPage) {
     final long[] total = {0};
     final List<ArtisteReferentiel> artistes =
         jdbc.query(
@@ -108,20 +133,14 @@ public class ReferentielArtistesService {
                   rs.getString("deezer_id"),
                   rs.getString("tm_identifiant_externe"));
             });
+    return new PageArtistes(artistes, total[0]);
+  }
 
-    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
-    // second aller-retour reste alors nécessaire pour connaître le total réel.
-    if (artistes.isEmpty() && pageNum > 0) {
-      final Long totalVide =
-          jdbc.queryForObject(
-              CTE_ARTISTES_AGREGES + "SELECT COUNT(*) FROM artistes_agr" + where,
-              params,
-              Long.class);
-      total[0] = totalVide != null ? totalVide : 0;
-    }
-
-    final int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
-    return new ReponseReferentielArtistes(artistes, pageNum, totalPages, total[0]);
+  private long compterArtistesFiltres(final StringBuilder where, final Map<String, Object> params) {
+    final Long totalVide =
+        jdbc.queryForObject(
+            CTE_ARTISTES_AGREGES + "SELECT COUNT(*) FROM artistes_agr" + where, params, Long.class);
+    return totalVide != null ? totalVide : 0;
   }
 
   private static List<String> lireSources(final String sourcesConcat) {
@@ -286,10 +305,23 @@ public class ReferentielArtistesService {
     final Map<String, Object> ids =
         Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
-    // 1. Événements en conflit (même salle/date/heure déjà présent côté cible) : leurs
-    // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
-    // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
-    // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
+    fusionnerEvenementsArtiste(ids);
+    fusionnerAbonnementsEtSourcesArtiste(ids, cibleId, sourceId);
+    fusionnerMetadonneesArtiste(ids);
+
+    jdbc.update("DELETE FROM artistes WHERE id = CAST(:source AS uuid)", ids);
+
+    logAdminService.logAdmin(
+        "info", "admin", "fusion artiste cible=" + cibleId + " source=" + sourceId);
+    return true;
+  }
+
+  // 1. Événements en conflit (même salle/date/heure déjà présent côté cible) : leurs
+  // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
+  // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
+  // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
+  // 2. Réassigner les événements restants (ceux sans doublon côté cible).
+  private void fusionnerEvenementsArtiste(final Map<String, Object> ids) {
     jdbc.update(
         """
         DELETE FROM observations o1
@@ -318,13 +350,14 @@ public class ReferentielArtistesService {
           AND NOT EXISTS (SELECT 1 FROM observations WHERE observations.evenement_id = evenements.id)
         """,
         ids);
-
-    // 2. Réassigner les événements restants (ceux sans doublon côté cible)
     jdbc.update(
         "UPDATE evenements SET artiste_id = CAST(:cible AS uuid) WHERE artiste_id = CAST(:source"
             + " AS uuid)",
         ids);
+  }
 
+  private void fusionnerAbonnementsEtSourcesArtiste(
+      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
         """
         DELETE FROM user_artistes
@@ -355,7 +388,9 @@ public class ReferentielArtistesService {
         "UPDATE artiste_sources SET necessite_intervention_le = NULL WHERE artiste_id ="
             + " CAST(:cible AS uuid)",
         ids);
+  }
 
+  private void fusionnerMetadonneesArtiste(final Map<String, Object> ids) {
     jdbc.update(
         """
         UPDATE artistes SET
@@ -365,12 +400,6 @@ public class ReferentielArtistesService {
         WHERE id = CAST(:cible AS uuid)
         """,
         ids);
-
-    jdbc.update("DELETE FROM artistes WHERE id = CAST(:source AS uuid)", ids);
-
-    logAdminService.logAdmin(
-        "info", "admin", "fusion artiste cible=" + cibleId + " source=" + sourceId);
-    return true;
   }
 
   /**

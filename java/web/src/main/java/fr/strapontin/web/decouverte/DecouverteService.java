@@ -84,8 +84,45 @@ public class DecouverteService {
             filtre.classification(),
             aujourd8,
             params);
-
     final String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
+
+    final RequetesParalleles futures =
+        lancerRequetesParalleles(where, params, deptsActifs, aujourd8);
+    final List<ConcertDecouverte> concerts = chargerConcerts(where, orderBy, params);
+
+    final int total = futures.total().join();
+    final FiltresDisponibles filtresDisponibles = futures.filtres().join();
+    final Timestamp syncTs = futures.syncTs().join();
+    final List<SyncDept> syncParDept = futures.syncParDept().join();
+
+    return new ReponseDecouverte(
+        concerts,
+        pageNum,
+        Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE)),
+        total,
+        filtresDisponibles.genres(),
+        filtresDisponibles.classifications(),
+        filtresDisponibles.mois(),
+        deptsUtilisateur,
+        syncTs != null ? syncTs.toInstant() : null,
+        syncParDept);
+  }
+
+  private record RequetesParalleles(
+      CompletableFuture<Integer> total,
+      CompletableFuture<FiltresDisponibles> filtres,
+      CompletableFuture<Timestamp> syncTs,
+      CompletableFuture<List<SyncDept>> syncParDept) {}
+
+  // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
+  private RequetesParalleles lancerRequetesParalleles(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final List<String> deptsActifs,
+      final LocalDate aujourd8) {
+    final Map<String, Object> countParams = new HashMap<>(params);
+    countParams.remove("limit");
+    countParams.remove("offset");
 
     final Map<String, Object> baseParams = new HashMap<>();
     baseParams.put("aujourd8", aujourd8);
@@ -96,66 +133,43 @@ public class DecouverteService {
       baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
     }
 
-    final Map<String, Object> countParams = new HashMap<>(params);
-    countParams.remove("limit");
-    countParams.remove("offset");
+    return new RequetesParalleles(
+        CompletableFuture.supplyAsync(() -> compterTotal(where, countParams)),
+        CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams)),
+        CompletableFuture.supplyAsync(this::lireDerniereSync),
+        CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs)));
+  }
 
-    // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
-    final CompletableFuture<Integer> futureTotal =
-        CompletableFuture.supplyAsync(() -> compterTotal(where, countParams));
-    final CompletableFuture<FiltresDisponibles> futureFiltres =
-        CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams));
-    final CompletableFuture<Timestamp> futureSyncTs =
-        CompletableFuture.supplyAsync(this::lireDerniereSync);
-    final CompletableFuture<List<SyncDept>> futureSyncParDept =
-        CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
-
-    final List<ConcertDecouverte> concerts =
-        jdbc.query(
-            """
-            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
-                   c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
-            FROM concerts c
-            LEFT JOIN artistes a ON a.id = c.artiste_id
-            WHERE %s
-            ORDER BY %s
-            LIMIT :limit OFFSET :offset
-            """
-                .formatted(where, orderBy),
-            params,
-            (rs, _) ->
-                new ConcertDecouverte(
-                    rs.getString("id"),
-                    rs.getString("artiste"),
-                    rs.getString("date"),
-                    rs.getString("heure"),
-                    rs.getString("salle"),
-                    rs.getString("ville"),
-                    rs.getString("dept"),
-                    rs.getString("url"),
-                    rs.getString("classification"),
-                    rs.getString("genre"),
-                    rs.getString("statut"),
-                    rs.getTimestamp("first_seen") != null
-                        ? rs.getTimestamp("first_seen").toInstant()
-                        : null));
-
-    final int total = futureTotal.join();
-    final FiltresDisponibles filtres = futureFiltres.join();
-    final Timestamp syncTs = futureSyncTs.join();
-    final List<SyncDept> syncParDept = futureSyncParDept.join();
-
-    return new ReponseDecouverte(
-        concerts,
-        pageNum,
-        Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE)),
-        total,
-        filtres.genres(),
-        filtres.classifications(),
-        filtres.mois(),
-        deptsUtilisateur,
-        syncTs != null ? syncTs.toInstant() : null,
-        syncParDept);
+  private List<ConcertDecouverte> chargerConcerts(
+      final StringBuilder where, final String orderBy, final Map<String, Object> params) {
+    return jdbc.query(
+        """
+        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+               c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
+        FROM concerts c
+        LEFT JOIN artistes a ON a.id = c.artiste_id
+        WHERE %s
+        ORDER BY %s
+        LIMIT :limit OFFSET :offset
+        """
+            .formatted(where, orderBy),
+        params,
+        (rs, _) ->
+            new ConcertDecouverte(
+                rs.getString("id"),
+                rs.getString("artiste"),
+                rs.getString("date"),
+                rs.getString("heure"),
+                rs.getString("salle"),
+                rs.getString("ville"),
+                rs.getString("dept"),
+                rs.getString("url"),
+                rs.getString("classification"),
+                rs.getString("genre"),
+                rs.getString("statut"),
+                rs.getTimestamp("first_seen") != null
+                    ? rs.getTimestamp("first_seen").toInstant()
+                    : null));
   }
 
   /**

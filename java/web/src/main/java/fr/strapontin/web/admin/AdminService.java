@@ -102,31 +102,44 @@ public class AdminService {
    */
   public ReponseUtilisateursAdmin listerUtilisateurs(final int page) {
     final int pageNum = Math.max(0, page);
-    final Map<String, Object> paramsPage =
-        Map.of("taille", TAILLE_PAGE_UTILISATEURS, "offset", pageNum * TAILLE_PAGE_UTILISATEURS);
-    final List<Map<String, Object>> pageUsers =
-        jdbc.queryForList(
-            """
-                SELECT u.id, u.email, u.role::text, u.username, u.display_username,
-                       u.must_change_credentials, u.created_at, u.revocation_admin_le,
-                       COUNT(DISTINCT us.salle_id) AS nb_salles,
-                       COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
-                       COUNT(*) OVER() AS total_filtre
-                FROM users u
-                LEFT JOIN user_salles us ON us.user_id = u.id
-                LEFT JOIN user_artistes ua ON ua.user_id = u.id
-                GROUP BY u.id, u.email, u.role, u.username, u.display_username,
-                         u.must_change_credentials, u.created_at, u.revocation_admin_le
-                ORDER BY u.created_at
-                LIMIT :taille OFFSET :offset
-                """,
-            paramsPage);
+    final List<Map<String, Object>> pageUsers = chargerPageUtilisateurs(pageNum);
 
     final long total =
         pageUsers.isEmpty()
             ? compterUtilisateurs(pageNum)
             : ((Number) pageUsers.get(0).get("total_filtre")).longValue();
 
+    final Map<String, Long> activiteParUsername = chargerActiviteParUsername();
+
+    final List<UtilisateurAdmin> utilisateurs =
+        pageUsers.stream().map(u -> assemblerUtilisateurAdmin(u, activiteParUsername)).toList();
+
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_UTILISATEURS));
+    return new ReponseUtilisateursAdmin(utilisateurs, pageNum, totalPages, total);
+  }
+
+  private List<Map<String, Object>> chargerPageUtilisateurs(final int pageNum) {
+    final Map<String, Object> paramsPage =
+        Map.of("taille", TAILLE_PAGE_UTILISATEURS, "offset", pageNum * TAILLE_PAGE_UTILISATEURS);
+    return jdbc.queryForList(
+        """
+        SELECT u.id, u.email, u.role::text, u.username, u.display_username,
+               u.must_change_credentials, u.created_at, u.revocation_admin_le,
+               COUNT(DISTINCT us.salle_id) AS nb_salles,
+               COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
+               COUNT(*) OVER() AS total_filtre
+        FROM users u
+        LEFT JOIN user_salles us ON us.user_id = u.id
+        LEFT JOIN user_artistes ua ON ua.user_id = u.id
+        GROUP BY u.id, u.email, u.role, u.username, u.display_username,
+                 u.must_change_credentials, u.created_at, u.revocation_admin_le
+        ORDER BY u.created_at
+        LIMIT :taille OFFSET :offset
+        """,
+        paramsPage);
+  }
+
+  private Map<String, Long> chargerActiviteParUsername() {
     final Map<String, Long> activiteParUsername = new HashMap<>();
     jdbc.query(
         """
@@ -138,33 +151,28 @@ public class AdminService {
         Map.of(),
         (RowCallbackHandler)
             rs -> activiteParUsername.put(rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
+    return activiteParUsername;
+  }
 
-    final List<UtilisateurAdmin> utilisateurs =
-        pageUsers.stream()
-            .map(
-                u -> {
-                  final String username = (String) u.get("username");
-                  final Long derniereMs = activiteParUsername.get(username);
-                  final Timestamp revocationTs = (Timestamp) u.get("revocation_admin_le");
-                  final Number nbSallesNum = (Number) u.get("nb_salles");
-                  final Number nbArtistesNum = (Number) u.get("nb_artistes");
-                  return new UtilisateurAdmin(
-                      (String) u.get("id"),
-                      (String) u.get("email"),
-                      (String) u.get("role"),
-                      username,
-                      (String) u.get("display_username"),
-                      (Boolean) u.get("must_change_credentials"),
-                      ((Timestamp) u.get("created_at")).toInstant(),
-                      derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
-                      revocationTs != null ? revocationTs.toInstant() : null,
-                      nbSallesNum != null ? nbSallesNum.intValue() : 0,
-                      nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
-                })
-            .toList();
-
-    final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_UTILISATEURS));
-    return new ReponseUtilisateursAdmin(utilisateurs, pageNum, totalPages, total);
+  private static UtilisateurAdmin assemblerUtilisateurAdmin(
+      final Map<String, Object> u, final Map<String, Long> activiteParUsername) {
+    final String username = (String) u.get("username");
+    final Long derniereMs = activiteParUsername.get(username);
+    final Timestamp revocationTs = (Timestamp) u.get("revocation_admin_le");
+    final Number nbSallesNum = (Number) u.get("nb_salles");
+    final Number nbArtistesNum = (Number) u.get("nb_artistes");
+    return new UtilisateurAdmin(
+        (String) u.get("id"),
+        (String) u.get("email"),
+        (String) u.get("role"),
+        username,
+        (String) u.get("display_username"),
+        (Boolean) u.get("must_change_credentials"),
+        ((Timestamp) u.get("created_at")).toInstant(),
+        derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
+        revocationTs != null ? revocationTs.toInstant() : null,
+        nbSallesNum != null ? nbSallesNum.intValue() : 0,
+        nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
   }
 
   // page vide (offset au-delà du total, ex. dernier utilisateur supprimé depuis) : total_filtre
@@ -246,15 +254,15 @@ public class AdminService {
    *
    * <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
    * rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est déléguée à
-   * {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et la même
-   * garde « dernier admin » que le bouton dédié — sans quoi ce chemin {@code PATCH} permettait de
+   * {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et la même garde
+   * « dernier admin » que le bouton dédié — sans quoi ce chemin {@code PATCH} permettait de
    * contourner intégralement les deux protections.
    *
    * @param userId identifiant de l'utilisateur cible
    * @param requete champs à modifier (nom, email, role — tous optionnels)
    * @param adminId identifiant de l'admin demandeur
    * @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
-   *   (rétrogradation d'un admin) si c'est le seul admin restant (409)
+   *     (rétrogradation d'un admin) si c'est le seul admin restant (409)
    */
   @Transactional
   public void modifierUtilisateur(
@@ -286,19 +294,32 @@ public class AdminService {
     final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     final String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
 
-    if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
-      throw new ErreurMetier("Au moins un champ à modifier est requis.");
-    }
-    if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
-      throw new ErreurMetier("Format d'email invalide.");
-    }
-    if (!role.isEmpty() && !ROLES_VALIDES.contains(role)) {
-      throw new ErreurMetier("Rôle invalide. Valeurs acceptées : user, admin.");
-    }
+    validerChampsPresents(nom, email, role);
+    validerFormatEmail(email);
+    validerRole(role);
     if (!email.isEmpty() && emailDejaPris(email, userId)) {
       throw new ErreurMetier("Cette adresse email est déjà utilisée.");
     }
     return new ChampsModification(nom, email, role);
+  }
+
+  private static void validerChampsPresents(
+      final String nom, final String email, final String role) {
+    if (nom.isEmpty() && email.isEmpty() && role.isEmpty()) {
+      throw new ErreurMetier("Au moins un champ à modifier est requis.");
+    }
+  }
+
+  private static void validerFormatEmail(final String email) {
+    if (!email.isEmpty() && !FORMAT_EMAIL.matcher(email).matches()) {
+      throw new ErreurMetier("Format d'email invalide.");
+    }
+  }
+
+  private static void validerRole(final String role) {
+    if (!role.isEmpty() && !ROLES_VALIDES.contains(role)) {
+      throw new ErreurMetier("Rôle invalide. Valeurs acceptées : user, admin.");
+    }
   }
 
   private boolean emailDejaPris(final String email, final String userId) {
@@ -396,8 +417,8 @@ public class AdminService {
    *
    * @param userId identifiant de l'administrateur à révoquer
    * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
-   *   n'est pas admin (400)
+   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur n'est
+   *     pas admin (400)
    */
   public void initierRevocationAdmin(final String userId, final String adminId) {
     RetrySerialisable.executer(
@@ -417,8 +438,8 @@ public class AdminService {
    *
    * @param userId identifiant de l'administrateur à révoquer
    * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur
-   *   n'est pas admin (400)
+   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur n'est
+   *     pas admin (400)
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
   void initierRevocationAdminTransactionnel(final String userId, final String adminId) {
@@ -501,8 +522,8 @@ public class AdminService {
    * Envoie un email de réinitialisation de mot de passe à un utilisateur.
    *
    * <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
-   * comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à l'admin selon
-   * la disponibilité de Resend, pour garder un filet de secours si l'email n'atteint jamais
+   * comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à l'admin selon la
+   * disponibilité de Resend, pour garder un filet de secours si l'email n'atteint jamais
    * l'utilisateur.
    *
    * @param userId identifiant de l'utilisateur cible

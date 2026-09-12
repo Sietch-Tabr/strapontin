@@ -55,10 +55,7 @@ public class ClientController {
       @RequestBody final Map<String, Object> corps, final HttpServletRequest request) {
     final String message =
         tronquer(String.valueOf(corps.getOrDefault("message", "")), LONGUEUR_MAX_MESSAGE);
-    String type = String.valueOf(corps.getOrDefault("type", "js-error"));
-    if (!TYPES_VALIDES.contains(type)) {
-      type = "js-error";
-    }
+    final String type = normaliserType(corps.getOrDefault("type", "js-error"));
     final String url = tronquer(String.valueOf(corps.getOrDefault("url", "")), LONGUEUR_MAX_URL);
     final String userAgent = tronquer(request.getHeader("User-Agent"), LONGUEUR_MAX_URL);
 
@@ -69,23 +66,32 @@ public class ClientController {
     final Map<String, Object> meta = new HashMap<>();
     meta.put("url", url != null ? url : "");
     meta.put("userAgent", userAgent != null ? userAgent : "");
-    for (final Map.Entry<String, Object> entree : corps.entrySet()) {
-      if (meta.size() >= MAX_CLES_META) {
-        break;
-      }
-      final String cle = entree.getKey();
-      if (!"message".equals(cle)
-          && !"type".equals(cle)
-          && !"url".equals(cle)
-          && !"userAgent".equals(cle)) {
-        final Object valeur = entree.getValue();
-        meta.put(cle, valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
-      }
-    }
+    ajouterMetaSupplementaire(meta, corps);
 
     logAdminService.logAdmin("error", "client-js", "[" + type + "] " + message, meta);
 
     return ResponseEntity.status(201).body(Map.of("succes", true));
+  }
+
+  private static String normaliserType(final Object typeBrut) {
+    final String type = String.valueOf(typeBrut);
+    return TYPES_VALIDES.contains(type) ? type : "js-error";
+  }
+
+  private void ajouterMetaSupplementaire(
+      final Map<String, Object> meta, final Map<String, Object> corps) {
+    final Set<String> clesConnues = Set.of("message", "type", "url", "userAgent");
+    for (final Map.Entry<String, Object> entree : corps.entrySet()) {
+      if (meta.size() >= MAX_CLES_META) {
+        break;
+      }
+      if (!clesConnues.contains(entree.getKey())) {
+        final Object valeur = entree.getValue();
+        meta.put(
+            entree.getKey(),
+            valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
+      }
+    }
   }
 
   private String tronquer(final String valeur, final int max) {

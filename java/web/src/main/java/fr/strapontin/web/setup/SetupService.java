@@ -124,7 +124,19 @@ public class SetupService {
         requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
     final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
     final String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
+    validerRequeteSetup(identifiant, email, motDePasse);
 
+    final String userId = UUID.randomUUID().toString();
+    creerCompteAdmin(userId, email, identifiant);
+    creerCredentials(userId, bcrypt.encode(motDePasse));
+    configurerContactEtBaseUrl(requete, email);
+
+    genererVapid();
+    LOG.info("Premier administrateur créé : {}", identifiant);
+  }
+
+  private static void validerRequeteSetup(
+      final String identifiant, final String email, final String motDePasse) {
     if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9._-]+")) {
       throw new ErreurMetier(
           "L'identifiant doit contenir au moins 3 caractères"
@@ -136,10 +148,9 @@ public class SetupService {
     if (motDePasse.length() < 12) {
       throw new ErreurMetier("Le mot de passe doit contenir au moins 12 caractères.");
     }
+  }
 
-    final String userId = UUID.randomUUID().toString();
-    final String hashMdp = bcrypt.encode(motDePasse);
-
+  private void creerCompteAdmin(final String userId, final String email, final String identifiant) {
     final Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
     paramsUser.put("email", email);
@@ -157,7 +168,9 @@ public class SetupService {
     } catch (DataIntegrityViolationException e) {
       throw new RessourceDejaExistante("L'application est déjà configurée.");
     }
+  }
 
+  private void creerCredentials(final String userId, final String hashMdp) {
     final String accountId = UUID.randomUUID().toString();
     jdbc.update(
         """
@@ -165,7 +178,9 @@ public class SetupService {
         VALUES (:id, :accountId, 'credential', :userId, :password, now(), now())
         """,
         Map.of("id", accountId, "accountId", userId, "userId", userId, "password", hashMdp));
+  }
 
+  private void configurerContactEtBaseUrl(final RequeteSetup requete, final String email) {
     final String baseUrl = requete.baseUrl() == null ? "" : requete.baseUrl().strip();
     String contactEmail = requete.contactEmail() == null ? "" : requete.contactEmail().strip();
     if (contactEmail.isEmpty()) {
@@ -175,9 +190,6 @@ public class SetupService {
       configService.sauvegarderConfig("PUBLIC_BASE_URL", baseUrl);
     }
     configService.sauvegarderConfig("CONTACT_EMAIL", contactEmail);
-
-    genererVapid();
-    LOG.info("Premier administrateur créé : {}", identifiant);
   }
 
   private void genererVapid() {

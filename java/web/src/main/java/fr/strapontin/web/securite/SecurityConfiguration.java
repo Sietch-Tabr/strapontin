@@ -5,6 +5,9 @@
 package fr.strapontin.web.securite;
 
 import fr.strapontin.web.admin.LogAdminService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +25,10 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.config.annotation.web.configurers.ExceptionHandlingConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -96,153 +103,167 @@ public class SecurityConfiguration {
       final SessionRegistry sessionRegistry,
       final LogAdminService logAdminService)
       throws Exception {
-    http.headers(
-            headers ->
-                headers
-                    .httpStrictTransportSecurity(
-                        hsts -> hsts.maxAgeInSeconds(63072000).includeSubDomains(true))
-                    .referrerPolicy(
-                        referrer ->
-                            referrer.policy(
-                                ReferrerPolicyHeaderWriter.ReferrerPolicy
-                                    .STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                    .contentSecurityPolicy(
-                        csp ->
-                            csp.policyDirectives(
-                                "default-src 'none';"
-                                    + " script-src 'self';"
-                                    + " style-src 'self';"
-                                    + " img-src 'self' data:;"
-                                    + " font-src 'self';"
-                                    + " connect-src 'self';"
-                                    + " manifest-src 'self';"
-                                    + " worker-src 'self';"
-                                    + " frame-ancestors 'none';"
-                                    + " object-src 'none';"
-                                    + " base-uri 'self';"
-                                    + " form-action 'self'"))
-                    .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow"))
-                    .addHeaderWriter(
-                        new StaticHeadersWriter(
-                            "Permissions-Policy",
-                            "camera=(), microphone=(), geolocation=(), payment=()")))
+    http.headers(this::configurerHeaders)
         .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
-        .authorizeHttpRequests(
-            auth ->
-                auth.requestMatchers(
-                        "/assets/**",
-                        "/images/**",
-                        "/icons/**",
-                        "/favicon.ico",
-                        "/robots.txt",
-                        "/manifest.json",
-                        "/sw.js",
-                        "/offline.html",
-                        "/offline-fallback.js",
-                        "/index.html")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/push")
-                    .permitAll()
-                    .requestMatchers("/actuator/health")
-                    .permitAll()
-                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
-                    .permitAll()
-                    .requestMatchers(
-                        "/api/auth/login",
-                        "/api/auth/forgot-password",
-                        "/api/auth/reset-password",
-                        "/api/auth/type-token")
-                    .permitAll()
-                    .requestMatchers("/login", "/forgot-password", "/reset-password", "/setup")
-                    .permitAll()
-                    .requestMatchers("/api/setup")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/webhooks/resend")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/interne/backup-statut")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/interne/integrite-statut")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/auth/totp")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/client/erreur")
-                    .authenticated()
-                    .requestMatchers("/api/admin/**")
-                    .hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.POST, "/api/decouverte/fetcher")
-                    .hasRole("ADMIN")
-                    .requestMatchers("/api/**")
-                    .authenticated()
-                    .anyRequest()
-                    .authenticated())
+        .authorizeHttpRequests(this::configurerAutorisations)
         // CSRF désactivé : sessions SameSite=Lax + HttpOnly (identique v1)
         .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(
-            session ->
-                session
-                    .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                    .maximumSessions(10)
-                    .sessionRegistry(sessionRegistry))
-        .exceptionHandling(
-            ex ->
-                ex.authenticationEntryPoint(
-                        (request, response, _) -> {
-                          if (request.getServletPath().startsWith("/api/")) {
-                            try {
-                              final Map<String, Object> meta = new HashMap<>();
-                              meta.put("chemin", request.getServletPath());
-                              meta.put("ip", request.getRemoteAddr());
-                              final String ua = request.getHeader("User-Agent");
-                              meta.put(
-                                  "userAgent",
-                                  ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
-                              logAdminService.logAdmin(
-                                  "warn",
-                                  "web",
-                                  "Accès API non authentifié : " + request.getServletPath(),
-                                  meta);
-                            } catch (Exception e) {
-                              LOG.warn("échec de la journalisation d'un accès non authentifié", e);
-                            }
-                            response.setStatus(401);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
-                          } else {
-                            response.sendRedirect("/login");
-                          }
-                        })
-                    .accessDeniedHandler(
-                        (request, response, _) -> {
-                          if (request.getServletPath().startsWith("/api/")) {
-                            try {
-                              final Map<String, Object> meta = new HashMap<>();
-                              meta.put("chemin", request.getServletPath());
-                              meta.put("ip", request.getRemoteAddr());
-                              final Authentication auth =
-                                  SecurityContextHolder.getContext().getAuthentication();
-                              if (auth != null) {
-                                meta.put("userId", auth.getName());
-                              }
-                              logAdminService.logAdmin(
-                                  "warn",
-                                  "web",
-                                  "Accès API refusé : " + request.getServletPath(),
-                                  meta);
-                            } catch (Exception e) {
-                              LOG.warn("échec de la journalisation d'un accès refusé", e);
-                            }
-                            response.setStatus(403);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
-                          } else {
-                            response.sendRedirect("/login");
-                          }
-                        }));
+        .sessionManagement(session -> configurerSessions(session, sessionRegistry))
+        .exceptionHandling(ex -> configurerExceptions(ex, logAdminService));
 
     return http.build();
+  }
+
+  private void configurerHeaders(final HeadersConfigurer<HttpSecurity> headers) {
+    headers
+        .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(63072000).includeSubDomains(true))
+        .referrerPolicy(
+            referrer ->
+                referrer.policy(
+                    ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+        .contentSecurityPolicy(
+            csp ->
+                csp.policyDirectives(
+                    "default-src 'none';"
+                        + " script-src 'self';"
+                        + " style-src 'self';"
+                        + " img-src 'self' data:;"
+                        + " font-src 'self';"
+                        + " connect-src 'self';"
+                        + " manifest-src 'self';"
+                        + " worker-src 'self';"
+                        + " frame-ancestors 'none';"
+                        + " object-src 'none';"
+                        + " base-uri 'self';"
+                        + " form-action 'self'"))
+        .addHeaderWriter(new StaticHeadersWriter("X-Robots-Tag", "noindex, nofollow"))
+        .addHeaderWriter(
+            new StaticHeadersWriter(
+                "Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()"));
+  }
+
+  private void configurerAutorisations(
+      final AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry
+          auth) {
+    auth.requestMatchers(
+            "/assets/**",
+            "/images/**",
+            "/icons/**",
+            "/favicon.ico",
+            "/robots.txt",
+            "/manifest.json",
+            "/sw.js",
+            "/offline.html",
+            "/offline-fallback.js",
+            "/index.html")
+        .permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/push")
+        .permitAll()
+        .requestMatchers("/actuator/health")
+        .permitAll()
+        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+        .permitAll()
+        .requestMatchers(
+            "/api/auth/login",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password",
+            "/api/auth/type-token")
+        .permitAll()
+        .requestMatchers("/login", "/forgot-password", "/reset-password", "/setup")
+        .permitAll()
+        .requestMatchers("/api/setup")
+        .permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/webhooks/resend")
+        .permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/interne/backup-statut")
+        .permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/interne/integrite-statut")
+        .permitAll()
+        .requestMatchers(HttpMethod.POST, "/api/auth/totp")
+        .authenticated()
+        .requestMatchers(HttpMethod.POST, "/api/client/erreur")
+        .authenticated()
+        .requestMatchers("/api/admin/**")
+        .hasRole("ADMIN")
+        .requestMatchers(HttpMethod.POST, "/api/decouverte/fetcher")
+        .hasRole("ADMIN")
+        .requestMatchers("/api/**")
+        .authenticated()
+        .anyRequest()
+        .authenticated();
+  }
+
+  private void configurerSessions(
+      final SessionManagementConfigurer<HttpSecurity> session,
+      final SessionRegistry sessionRegistry) {
+    session
+        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+        .maximumSessions(10)
+        .sessionRegistry(sessionRegistry);
+  }
+
+  private void configurerExceptions(
+      final ExceptionHandlingConfigurer<HttpSecurity> ex, final LogAdminService logAdminService) {
+    ex.authenticationEntryPoint(
+            (request, response, authEx) ->
+                gererEchecAuthentification(request, response, logAdminService))
+        .accessDeniedHandler(
+            (request, response, accessEx) -> gererAccesRefuse(request, response, logAdminService));
+  }
+
+  private void gererEchecAuthentification(
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final LogAdminService logAdminService)
+      throws IOException {
+    if (request.getServletPath().startsWith("/api/")) {
+      try {
+        final Map<String, Object> meta = new HashMap<>();
+        meta.put("chemin", request.getServletPath());
+        meta.put("ip", request.getRemoteAddr());
+        final String ua = request.getHeader("User-Agent");
+        meta.put("userAgent", ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
+        logAdminService.logAdmin(
+            "warn", "web", "Accès API non authentifié : " + request.getServletPath(), meta);
+      } catch (Exception e) {
+        LOG.warn("échec de la journalisation d'un accès non authentifié", e);
+      }
+      response.setStatus(401);
+      response.setContentType("application/json;charset=UTF-8");
+      response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
+    } else {
+      response.sendRedirect("/login");
+    }
+  }
+
+  private void gererAccesRefuse(
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final LogAdminService logAdminService)
+      throws IOException {
+    if (request.getServletPath().startsWith("/api/")) {
+      try {
+        final Map<String, Object> meta = new HashMap<>();
+        meta.put("chemin", request.getServletPath());
+        meta.put("ip", request.getRemoteAddr());
+        final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+          meta.put("userId", auth.getName());
+        }
+        logAdminService.logAdmin(
+            "warn", "web", "Accès API refusé : " + request.getServletPath(), meta);
+      } catch (Exception e) {
+        LOG.warn("échec de la journalisation d'un accès refusé", e);
+      }
+      response.setStatus(403);
+      response.setContentType("application/json;charset=UTF-8");
+      response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
+    } else {
+      response.sendRedirect("/login");
+    }
   }
 
   /**

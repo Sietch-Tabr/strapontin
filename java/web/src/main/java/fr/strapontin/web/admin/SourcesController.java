@@ -25,8 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Contrôleur REST pour l'onglet admin « Sources ».
  *
- * <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}. Accessible uniquement
- * aux utilisateurs avec le rôle {@code ADMIN}.
+ * <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}. Accessible uniquement aux
+ * utilisateurs avec le rôle {@code ADMIN}.
  *
  * @since 2.3.0
  * @author Kwaite
@@ -62,7 +62,7 @@ public class SourcesController {
    * Liste paginée des salles pour l'onglet admin « Sources ».
    *
    * @param digitick {@code true} pour les salles avec un slug Digitick configuré, {@code false}
-   *   (défaut) pour celles sans identifiant Ticketmaster ni Eventim
+   *     (défaut) pour celles sans identifiant Ticketmaster ni Eventim
    * @param page numéro de page (0-indexé, défaut 0)
    * @param nom filtre nom partiel
    * @return 200 avec la page de résultats
@@ -136,7 +136,7 @@ public class SourcesController {
    * Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
    *
    * @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code dept}
-   *   (opt.)
+   *     (opt.)
    * @return 201 avec {@code {salleId}} si créée, 400 si invalide
    */
   @PostMapping("/digitick-salles")
@@ -150,12 +150,14 @@ public class SourcesController {
     if (slug.isEmpty() || slug.length() > 100) {
       return erreur(400, "Slug Digitick invalide.");
     }
-    final String ville =
-        requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    final String dept =
-        requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
+    final String ville = videOuNull(requete.ville());
+    final String dept = videOuNull(requete.dept());
     final UUID salleId = sourcesService.creerSalleDigitick(nom, slug, ville, dept);
     return ResponseEntity.status(201).body(Map.of("salleId", salleId.toString()));
+  }
+
+  private static String videOuNull(final String valeur) {
+    return valeur == null || valeur.isBlank() ? null : valeur.strip();
   }
 
   /**
@@ -172,12 +174,9 @@ public class SourcesController {
     if (uuid == null) {
       return erreur(400, "UUID de salle invalide.");
     }
-    final String nom =
-        requete.nom() == null || requete.nom().isBlank() ? null : requete.nom().strip();
-    final String ville =
-        requete.ville() == null || requete.ville().isBlank() ? null : requete.ville().strip();
-    final String dept =
-        requete.dept() == null || requete.dept().isBlank() ? null : requete.dept().strip();
+    final String nom = videOuNull(requete.nom());
+    final String ville = videOuNull(requete.ville());
+    final String dept = videOuNull(requete.dept());
     sourcesService.modifierSalleDigitick(uuid, nom, ville, dept);
     return ResponseEntity.ok(Map.of("succes", true));
   }
@@ -186,8 +185,7 @@ public class SourcesController {
    * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
    *
    * @param salleId UUID de la salle
-   * @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID
-   *   invalide
+   * @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID invalide
    */
   @DeleteMapping("/digitick-salles/{salleId}")
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable final String salleId) {

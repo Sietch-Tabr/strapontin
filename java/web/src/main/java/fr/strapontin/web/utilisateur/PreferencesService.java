@@ -103,32 +103,16 @@ public class PreferencesService {
       final ExportComplet export,
       final boolean ecraser,
       final boolean importerConfig) {
-    int nbSupprimesArtistes = 0;
-    int nbSupprimesSalles = 0;
-    if (ecraser) {
-      nbSupprimesArtistes =
-          jdbc.update(
-              "DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
-      nbSupprimesSalles =
-          jdbc.update(
-              "DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
-      LOG.warn(
-          "import préférences mode écraser : {} artiste(s) et {} salle(s) supprimés userId={}",
-          nbSupprimesArtistes,
-          nbSupprimesSalles,
-          userId);
-    }
+    final SuppressionEcraser suppression = supprimerExistantSiEcraser(userId, ecraser);
 
     int[] artistes = {0, 0};
     int[] salles = {0, 0};
 
     if (export.artistes() != null) {
-      final int[] res = importerArtistes(userId, export.artistes());
-      artistes = res;
+      artistes = importerArtistes(userId, export.artistes());
     }
     if (export.salles() != null) {
-      final int[] res = importerSalles(userId, export.salles());
-      salles = res;
+      salles = importerSalles(userId, export.salles());
     }
 
     if (importerConfig && export.config() != null) {
@@ -140,6 +124,35 @@ public class PreferencesService {
     declencherWorkerApresImport(export.salles());
     final ResultatImportComplet resultat =
         new ResultatImportComplet(artistes[0], salles[0], artistes[1] + salles[1]);
+    journaliserImport(userId, resultat, ecraser, suppression);
+    return resultat;
+  }
+
+  private record SuppressionEcraser(int nbArtistes, int nbSalles) {}
+
+  private SuppressionEcraser supprimerExistantSiEcraser(
+      final String userId, final boolean ecraser) {
+    if (!ecraser) {
+      return new SuppressionEcraser(0, 0);
+    }
+    final int nbSupprimesArtistes =
+        jdbc.update(
+            "DELETE FROM user_artistes WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+    final int nbSupprimesSalles =
+        jdbc.update("DELETE FROM user_salles WHERE user_id = :userId", Map.of(CLE_USER_ID, userId));
+    LOG.warn(
+        "import préférences mode écraser : {} artiste(s) et {} salle(s) supprimés userId={}",
+        nbSupprimesArtistes,
+        nbSupprimesSalles,
+        userId);
+    return new SuppressionEcraser(nbSupprimesArtistes, nbSupprimesSalles);
+  }
+
+  private void journaliserImport(
+      final String userId,
+      final ResultatImportComplet resultat,
+      final boolean ecraser,
+      final SuppressionEcraser suppression) {
     LOG.info(
         "import préférences userId={} artistes={} salles={} rejetes={} mode={}",
         userId,
@@ -155,11 +168,10 @@ public class PreferencesService {
     metaImport.put("rejetes", resultat.rejetes());
     metaImport.put("mode", ecraser ? "ecraser" : "fusionner");
     if (ecraser) {
-      metaImport.put("supprimesArtistes", nbSupprimesArtistes);
-      metaImport.put("supprimesSalles", nbSupprimesSalles);
+      metaImport.put("supprimesArtistes", suppression.nbArtistes());
+      metaImport.put("supprimesSalles", suppression.nbSalles());
     }
     logAdminService.logAdmin(niveauLog, "web", "import préférences", metaImport);
-    return resultat;
   }
 
   /**
@@ -169,52 +181,9 @@ public class PreferencesService {
    * @return l'export complet
    */
   public ExportComplet exporter(final String userId) {
-    final List<ArtisteExport> artistes =
-        jdbc.query(
-            """
-                SELECT artiste_affiche FROM user_artistes
-                WHERE user_id = :userId ORDER BY artiste_affiche
-                """,
-            Map.of(CLE_USER_ID, userId),
-            (rs, _) -> {
-              final String affiche = rs.getString("artiste_affiche");
-              return new ArtisteExport(affiche, Normalisation.normaliserTexte(affiche));
-            });
-
-    final List<SalleExport> salles =
-        jdbc.query(
-            """
-                SELECT s.salle_cle AS salle_id, s.nom
-                FROM user_salles us
-                JOIN salles s ON s.id = us.salle_id
-                WHERE us.user_id = :userId ORDER BY s.salle_cle
-                """,
-            Map.of(CLE_USER_ID, userId),
-            (rs, _) -> new SalleExport(rs.getString("salle_id"), null, rs.getString("nom")));
-
-    final List<ConfigExport> configRows =
-        jdbc.query(
-            """
-                SELECT departements, filtre_disponibles, frequence_notifications,
-                       notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
-                FROM user_config WHERE user_id = :userId
-                """,
-            Map.of(CLE_USER_ID, userId),
-            (rs, _) -> {
-              final String[] depts =
-                  rs.getArray("departements") != null
-                      ? (String[]) rs.getArray("departements").getArray()
-                      : new String[0];
-              return new ConfigExport(
-                  Arrays.asList(depts),
-                  rs.getBoolean("filtre_disponibles"),
-                  rs.getString("frequence_notifications"),
-                  rs.getBoolean("notif_artistes"),
-                  rs.getBoolean("notif_salles"),
-                  rs.getBoolean("notif_artistes_push"),
-                  rs.getBoolean("notif_salles_push"),
-                  rs.getString("theme"));
-            });
+    final List<ArtisteExport> artistes = exporterArtistes(userId);
+    final List<SalleExport> salles = exporterSalles(userId);
+    final List<ConfigExport> configRows = exporterConfig(userId);
 
     return new ExportComplet(
         1,
@@ -222,6 +191,56 @@ public class PreferencesService {
         artistes,
         salles,
         configRows.isEmpty() ? null : configRows.get(0));
+  }
+
+  private List<ArtisteExport> exporterArtistes(final String userId) {
+    return jdbc.query(
+        """
+        SELECT artiste_affiche FROM user_artistes
+        WHERE user_id = :userId ORDER BY artiste_affiche
+        """,
+        Map.of(CLE_USER_ID, userId),
+        (rs, _) -> {
+          final String affiche = rs.getString("artiste_affiche");
+          return new ArtisteExport(affiche, Normalisation.normaliserTexte(affiche));
+        });
+  }
+
+  private List<SalleExport> exporterSalles(final String userId) {
+    return jdbc.query(
+        """
+        SELECT s.salle_cle AS salle_id, s.nom
+        FROM user_salles us
+        JOIN salles s ON s.id = us.salle_id
+        WHERE us.user_id = :userId ORDER BY s.salle_cle
+        """,
+        Map.of(CLE_USER_ID, userId),
+        (rs, _) -> new SalleExport(rs.getString("salle_id"), null, rs.getString("nom")));
+  }
+
+  private List<ConfigExport> exporterConfig(final String userId) {
+    return jdbc.query(
+        """
+        SELECT departements, filtre_disponibles, frequence_notifications,
+               notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
+        FROM user_config WHERE user_id = :userId
+        """,
+        Map.of(CLE_USER_ID, userId),
+        (rs, _) -> {
+          final String[] depts =
+              rs.getArray("departements") != null
+                  ? (String[]) rs.getArray("departements").getArray()
+                  : new String[0];
+          return new ConfigExport(
+              Arrays.asList(depts),
+              rs.getBoolean("filtre_disponibles"),
+              rs.getString("frequence_notifications"),
+              rs.getBoolean("notif_artistes"),
+              rs.getBoolean("notif_salles"),
+              rs.getBoolean("notif_artistes_push"),
+              rs.getBoolean("notif_salles_push"),
+              rs.getString("theme"));
+        });
   }
 
   // résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même dédup floue
@@ -372,9 +391,9 @@ public class PreferencesService {
    * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import
    * (même pattern que {@code ArtisteService.executerApresCommit}).
    *
-   * <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne
-   * soient visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout
-   * juste effectué au cycle de fetch qu'il vient lui-même de déclencher.
+   * <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne soient
+   * visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout juste
+   * effectué au cycle de fetch qu'il vient lui-même de déclencher.
    *
    * @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
    */
@@ -410,9 +429,7 @@ public class PreferencesService {
         restClient, LOG, url, "Déclenchement worker impossible : " + url);
   }
 
-  /**
-   * Résultat d'un import de préférences.
-   */
+  /** Résultat d'un import de préférences. */
   public record ResultatImportComplet(int artistes, int salles, int rejetes) {}
 
   /**

@@ -588,39 +588,45 @@ public class SalleService {
     try {
       final List<Map<String, Object>> items = objectMapper.readValue(json, List.class);
       for (final Map<String, Object> item : items) {
-        final String type = (String) item.get("type");
-        final Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
-        final String amenitySecondaire =
-            extratags != null ? (String) extratags.get("amenity") : null;
-        final boolean pertinent =
-            TYPES_SALLE_NOMINATIM.contains(type)
-                || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
-        if (!pertinent) {
-          continue;
+        final ResultatSalle resultat = parseNominatimItem(item);
+        if (resultat != null) {
+          resultats.add(resultat);
         }
-
-        final String displayName = (String) item.get("display_name");
-        if (displayName == null || displayName.isBlank()) {
-          continue;
-        }
-        final String nom = displayName.split(",")[0].strip();
-
-        final String osmType = (String) item.get("osm_type");
-        final Object osmIdBrut = item.get("osm_id");
-        final String osmId =
-            osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
-
-        final Map<String, Object> address = (Map<String, Object>) item.get("address");
-        final String ville = extraireVille(address);
-
-        final String wikidataId = extratags != null ? (String) extratags.get("wikidata") : null;
-
-        resultats.add(new ResultatSalle(nom, ville, null, null, "osm", osmId, wikidataId));
       }
     } catch (Exception e) {
       LOG.warn("Nominatim parsing JSON échoué", e);
     }
     return resultats;
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatSalle parseNominatimItem(final Map<String, Object> item) {
+    final String type = (String) item.get("type");
+    final Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
+    final String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
+    final boolean pertinent =
+        TYPES_SALLE_NOMINATIM.contains(type)
+            || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
+    if (!pertinent) {
+      return null;
+    }
+
+    final String displayName = (String) item.get("display_name");
+    if (displayName == null || displayName.isBlank()) {
+      return null;
+    }
+    final String nom = displayName.split(",")[0].strip();
+
+    final String osmType = (String) item.get("osm_type");
+    final Object osmIdBrut = item.get("osm_id");
+    final String osmId = osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
+
+    final Map<String, Object> address = (Map<String, Object>) item.get("address");
+    final String ville = extraireVille(address);
+
+    final String wikidataId = extratags != null ? (String) extratags.get("wikidata") : null;
+
+    return new ResultatSalle(nom, ville, null, null, "osm", osmId, wikidataId);
   }
 
   private static String extraireVille(final Map<String, Object> address) {
@@ -642,7 +648,6 @@ public class SalleService {
    *     <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même
    *     motif que {@link #rechercherSallesNominatim}.
    */
-  @SuppressWarnings("unchecked")
   List<ResultatSalle> rechercherSallesTM(final String terme) {
     final Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
     if (tmKey.isEmpty()) {
@@ -650,53 +655,18 @@ public class SalleService {
     }
 
     try {
-      final String url =
-          TM_VENUES_URL
-              + "?keyword="
-              + URLEncoder.encode(terme, StandardCharsets.UTF_8)
-              + "&countryCode=FR&size=6&apikey="
-              + URLEncoder.encode(tmKey.get(), StandardCharsets.UTF_8);
-
-      cadenceurTicketmaster.attendre();
-      final WorkerTriggerUtils.ReponseHttp reponse =
-          restClient
-              .get()
-              .uri(url)
-              .exchange(
-                  (_, resp) ->
-                      new WorkerTriggerUtils.ReponseHttp(
-                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
+      final WorkerTriggerUtils.ReponseHttp reponse = appelerTicketmasterVenues(terme, tmKey.get());
       if (reponse.statut() != 200) {
         return List.of();
       }
 
-      final Map<String, Object> root = objectMapper.readValue(reponse.corps(), Map.class);
-      final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
-      if (embedded == null) {
-        return List.of();
-      }
-
-      final List<Map<String, Object>> venues = (List<Map<String, Object>>) embedded.get("venues");
+      final List<Map<String, Object>> venues = extraireVenuesTM(reponse.corps());
       if (venues == null) {
         return List.of();
       }
 
       return venues.stream()
-          .map(
-              v -> {
-                final String nomBrut = (String) v.get("name");
-                if (nomBrut == null) {
-                  return new ResultatSalle(null, null, null, null, "ticketmaster");
-                }
-                final String nom = Normalisation.normaliserCasse(nomBrut);
-                if (nomBrut.contains("??")) {
-                  LOG.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
-                }
-                final String id = (String) v.get("id");
-                final Map<String, Object> city = (Map<String, Object>) v.get("city");
-                final String ville = city != null ? (String) city.get("name") : null;
-                return new ResultatSalle(nom, ville, id, null, "ticketmaster");
-              })
+          .map(this::mapperVenueTM)
           .filter(r -> r.salle() != null)
           .collect(Collectors.toList());
 
@@ -704,6 +674,48 @@ public class SalleService {
       LOG.warn("TM recherche salle échouée pour '{}'", terme, e);
       return List.of();
     }
+  }
+
+  private WorkerTriggerUtils.ReponseHttp appelerTicketmasterVenues(
+      final String terme, final String tmKey) {
+    final String url =
+        TM_VENUES_URL
+            + "?keyword="
+            + URLEncoder.encode(terme, StandardCharsets.UTF_8)
+            + "&countryCode=FR&size=6&apikey="
+            + URLEncoder.encode(tmKey, StandardCharsets.UTF_8);
+
+    cadenceurTicketmaster.attendre();
+    return restClient
+        .get()
+        .uri(url)
+        .exchange(
+            (_, resp) ->
+                new WorkerTriggerUtils.ReponseHttp(
+                    resp.getStatusCode().value(), resp.bodyTo(String.class)));
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Map<String, Object>> extraireVenuesTM(final String corps) throws Exception {
+    final Map<String, Object> root = objectMapper.readValue(corps, Map.class);
+    final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
+    return embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private ResultatSalle mapperVenueTM(final Map<String, Object> v) {
+    final String nomBrut = (String) v.get("name");
+    if (nomBrut == null) {
+      return new ResultatSalle(null, null, null, null, "ticketmaster");
+    }
+    final String nom = Normalisation.normaliserCasse(nomBrut);
+    if (nomBrut.contains("??")) {
+      LOG.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
+    }
+    final String id = (String) v.get("id");
+    final Map<String, Object> city = (Map<String, Object>) v.get("city");
+    final String ville = city != null ? (String) city.get("name") : null;
+    return new ResultatSalle(nom, ville, id, null, "ticketmaster");
   }
 
   private void declencherWorkerSalle(final String identifiants) {

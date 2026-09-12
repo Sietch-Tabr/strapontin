@@ -23,8 +23,8 @@ import org.springframework.web.client.RestClient;
  * Configuration applicative de l'onglet admin : statuts, sauvegarde, validation de format, test de
  * la clé Ticketmaster.
  *
- * <p>Extrait d'{@code AdminService} — {@code AdminService} reste dédié à la seule gestion des comptes
- * utilisateurs.
+ * <p>Extrait d'{@code AdminService} — {@code AdminService} reste dédié à la seule gestion des
+ * comptes utilisateurs.
  *
  * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
@@ -57,6 +57,33 @@ public class ConfigAdminService {
   private static final Pattern FORMAT_VAPID_PUBLIC_KEY = Pattern.compile("^[A-Za-z0-9_-]{87}$");
   private static final Pattern FORMAT_VAPID_PRIVATE_KEY = Pattern.compile("^[A-Za-z0-9_-]{43}$");
 
+  private record FormatAttendu(Pattern pattern, String messageErreur) {}
+
+  private static final Map<String, FormatAttendu> FORMATS_CONFIG =
+      Map.of(
+          "TICKETMASTER_API_KEY",
+              new FormatAttendu(
+                  FORMAT_TM_KEY,
+                  "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques)."),
+          "RESEND_API_KEY",
+              new FormatAttendu(
+                  FORMAT_RESEND_KEY,
+                  "La clé Resend doit commencer par re_ suivi de caractères alphanumériques."),
+          "RESEND_WEBHOOK_SECRET",
+              new FormatAttendu(
+                  FORMAT_WEBHOOK_SECRET,
+                  "La clé webhook Resend doit commencer par whsec_ suivi de caractères base64."),
+          "VAPID_PUBLIC_KEY",
+              new FormatAttendu(
+                  FORMAT_VAPID_PUBLIC_KEY,
+                  "La clé publique VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
+                      + " (87 caractères)."),
+          "VAPID_PRIVATE_KEY",
+              new FormatAttendu(
+                  FORMAT_VAPID_PRIVATE_KEY,
+                  "La clé privée VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
+                      + " (43 caractères)."));
+
   private static final String TM_URL_TEST =
       "https://app.ticketmaster.com/discovery/v2/events.json"
           + "?apikey={cle}&size=1&countryCode=FR&classificationName=music";
@@ -71,7 +98,7 @@ public class ConfigAdminService {
    * @param logAdminService journalisation des modifications de configuration
    * @param restClient client HTTP pour les tests d'API externes
    * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
-   *   fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
+   *     fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
    */
   public ConfigAdminService(
       final ConfigService configService,
@@ -149,38 +176,29 @@ public class ConfigAdminService {
   }
 
   private String validerFormatConfig(final String cle, final String valeur) {
-    if ("TICKETMASTER_API_KEY".equals(cle) && !FORMAT_TM_KEY.matcher(valeur).matches()) {
-      return "Format de clé Ticketmaster invalide (16 à 64 caractères alphanumériques).";
+    final FormatAttendu format = FORMATS_CONFIG.get(cle);
+    if (format != null && !format.pattern().matcher(valeur).matches()) {
+      return format.messageErreur();
     }
-    if ("RESEND_API_KEY".equals(cle) && !FORMAT_RESEND_KEY.matcher(valeur).matches()) {
-      return "La clé Resend doit commencer par re_ suivi de caractères alphanumériques.";
-    }
-    if ("RESEND_WEBHOOK_SECRET".equals(cle) && !FORMAT_WEBHOOK_SECRET.matcher(valeur).matches()) {
-      return "La clé webhook Resend doit commencer par whsec_ suivi de caractères base64.";
-    }
-    if ("VAPID_PUBLIC_KEY".equals(cle) && !FORMAT_VAPID_PUBLIC_KEY.matcher(valeur).matches()) {
-      return "La clé publique VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
-          + " (87 caractères).";
-    }
-    if ("VAPID_PRIVATE_KEY".equals(cle) && !FORMAT_VAPID_PRIVATE_KEY.matcher(valeur).matches()) {
-      return "La clé privée VAPID doit être une clé EC P-256 encodée en Base64 URL-safe"
-          + " (43 caractères).";
-    }
-    if ("PUBLIC_BASE_URL".equals(cle)) {
-      try {
-        final URI uri = URI.create(valeur);
-        final String host = uri.getHost();
-        final boolean estIp =
-            "localhost".equals(host)
-                || (host != null && host.matches("(\\d{1,3}\\.){3}\\d{1,3}"))
-                || (host != null && host.contains(":") && host.matches("[0-9a-fA-F:]+"));
-        if (!estIp && !"https".equals(uri.getScheme())) {
-          return "L'URL doit commencer par https:// pour un domaine public.";
-        }
-      } catch (Exception _) {
-        return "Format d'URL invalide.";
+    return "PUBLIC_BASE_URL".equals(cle) ? validerFormatUrlPublique(valeur) : null;
+  }
+
+  private static String validerFormatUrlPublique(final String valeur) {
+    try {
+      final URI uri = URI.create(valeur);
+      final boolean estIp = estAdresseIpOuLocalhost(uri.getHost());
+      if (!estIp && !"https".equals(uri.getScheme())) {
+        return "L'URL doit commencer par https:// pour un domaine public.";
       }
+    } catch (Exception _) {
+      return "Format d'URL invalide.";
     }
     return null;
+  }
+
+  private static boolean estAdresseIpOuLocalhost(final String host) {
+    return "localhost".equals(host)
+        || (host != null && host.matches("(\\d{1,3}\\.){3}\\d{1,3}"))
+        || (host != null && host.contains(":") && host.matches("[0-9a-fA-F:]+"));
   }
 }
