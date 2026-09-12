@@ -34,7 +34,9 @@ public class TotpGuardFilter extends OncePerRequestFilter {
   private static final Set<String> API_TOTP_AUTORISES =
       Set.of("/api/auth/totp", "/api/auth/logout");
 
-  public TotpGuardFilter() {}
+  public TotpGuardFilter() {
+    super();
+  }
 
   @Override
   protected void doFilterInternal(

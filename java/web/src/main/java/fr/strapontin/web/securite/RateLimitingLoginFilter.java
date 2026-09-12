@@ -68,6 +68,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
    * @param logAdminService journalisation des tentatives bloquées
    */
   public RateLimitingLoginFilter(final LogAdminService logAdminService) {
+    super();
     this.logAdminService = logAdminService;
   }
 

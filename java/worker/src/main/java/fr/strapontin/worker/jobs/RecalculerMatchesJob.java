@@ -21,7 +21,9 @@ public class RecalculerMatchesJob extends QuartzJobBean {
 
   private WorkerService workerService;
 
-  public RecalculerMatchesJob() {}
+  public RecalculerMatchesJob() {
+    super();
+  }
 
   /**
    * @param workerService service d'orchestration injecté par Spring

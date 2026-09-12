@@ -25,7 +25,9 @@ public class ReconciliationNocturneJob extends QuartzJobBean {
 
   private WorkerService workerService;
 
-  public ReconciliationNocturneJob() {}
+  public ReconciliationNocturneJob() {
+    super();
+  }
 
   /**
    * @param workerService service d'orchestration injecté par Spring

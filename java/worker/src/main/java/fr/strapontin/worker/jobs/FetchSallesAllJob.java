@@ -33,7 +33,9 @@ public class FetchSallesAllJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
-  public FetchSallesAllJob() {}
+  public FetchSallesAllJob() {
+    super();
+  }
 
   /**
    * @param workerFetchService service de fetch injecté par Spring

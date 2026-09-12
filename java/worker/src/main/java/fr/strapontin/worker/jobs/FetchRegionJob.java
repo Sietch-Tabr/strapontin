@@ -29,7 +29,9 @@ public class FetchRegionJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
-  public FetchRegionJob() {}
+  public FetchRegionJob() {
+    super();
+  }
 
   /**
    * @param workerFetchService service de fetch injecté par Spring

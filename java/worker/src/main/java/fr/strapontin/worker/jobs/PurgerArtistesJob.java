@@ -23,7 +23,9 @@ public class PurgerArtistesJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;
 
-  public PurgerArtistesJob() {}
+  public PurgerArtistesJob() {
+    super();
+  }
 
   /**
    * @param workerPurgeService service de purge injecté par Spring

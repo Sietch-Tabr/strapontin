@@ -47,6 +47,7 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
    * @param env environnement Spring, pour détecter le profil {@code dev}
    */
   public BloquerAccesDirectIpFilter(final Environment env) {
+    super();
     this.actif = Arrays.stream(env.getActiveProfiles()).noneMatch("dev"::equals);
   }
 
