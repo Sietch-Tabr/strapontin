@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class AdminControllerRelancerJobTest {
             mock(BanniereService.class),
             workerProxyService,
             mock(EmailService.class),
+            mock(EmailServiceAdmin.class),
             mock(VapidService.class),
             mock(ConfigService.class));
   }

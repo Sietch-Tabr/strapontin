@@ -149,7 +149,7 @@ class EmailTemplatesTest {
 
   @Test
   void alerteBackup_avecHorodatage_afficheLaDate() {
-    final String html = EmailTemplates.alerteBackup("20260605_020000", "", "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteBackup("20260605_020000", "", "https://app.fr");
     assertThat(html).contains("Démarré le : 20260605_020000");
     assertThat(html).doesNotContain("Horodatage indisponible");
     assertThat(html).contains("color: #c00");
@@ -157,21 +157,21 @@ class EmailTemplatesTest {
 
   @Test
   void alerteBackup_sansHorodatage_afficheFallback() {
-    final String html = EmailTemplates.alerteBackup("", null, "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteBackup("", null, "https://app.fr");
     assertThat(html).contains("Horodatage indisponible");
   }
 
   @Test
   void alerteBackup_avecRaison_afficheBlocMonospace() {
     final String html =
-        EmailTemplates.alerteBackup("20260605_020000", "pg_dump: fatal", "https://app.fr");
+        EmailTemplatesAlertes.alerteBackup("20260605_020000", "pg_dump: fatal", "https://app.fr");
     assertThat(html).contains("pg_dump: fatal");
     assertThat(html).contains("border-left: 3px solid #c00");
   }
 
   @Test
   void alerteBackup_sansRaison_omitBlocMonospace() {
-    final String html = EmailTemplates.alerteBackup("20260605_020000", "", "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteBackup("20260605_020000", "", "https://app.fr");
     assertThat(html).doesNotContain("border-left: 3px solid #c00");
   }
 
@@ -179,7 +179,7 @@ class EmailTemplatesTest {
 
   @Test
   void alerteIntegrite_afficheLeDetailEtTitreRouge() {
-    final String html = EmailTemplates.alerteIntegrite("web.jar : md5 modifié", "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteIntegrite("web.jar : md5 modifié", "https://app.fr");
     assertThat(html).contains("web.jar : md5 modifié");
     assertThat(html).contains("color: #c00");
   }
@@ -187,7 +187,7 @@ class EmailTemplatesTest {
   @Test
   void alerteIntegrite_detailAvecCaracteresSpeciaux_estEchappe() {
     final String html =
-        EmailTemplates.alerteIntegrite("<script>alert(1)</script>", "https://app.fr");
+        EmailTemplatesAlertes.alerteIntegrite("<script>alert(1)</script>", "https://app.fr");
     assertThat(html).doesNotContain("<script>alert(1)</script>");
   }
 
@@ -195,7 +195,7 @@ class EmailTemplatesTest {
 
   @Test
   void alerteBounce_contientEmailEtCta() {
-    final String html = EmailTemplates.alerteBounce("user@exemple.fr", "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteBounce("user@exemple.fr", "https://app.fr");
     assertThat(html).contains("user@exemple.fr");
     assertThat(html).contains("l&#39;administration");
     assertThat(html).contains("color: #c00");
@@ -203,7 +203,7 @@ class EmailTemplatesTest {
 
   @Test
   void alerteBounce_emailAvecCaracteresSpeciaux_estEchappe() {
-    final String html = EmailTemplates.alerteBounce("<test>@exemple.fr", "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteBounce("<test>@exemple.fr", "https://app.fr");
     assertThat(html).contains("&lt;test&gt;@exemple.fr");
   }
 
@@ -212,7 +212,7 @@ class EmailTemplatesTest {
   @Test
   void alerteWorker_contientDetailEtCta() {
     final String html =
-        EmailTemplates.alerteWorker(
+        EmailTemplatesAlertes.alerteWorker(
             "Dernier job complété : 2026-06-05T00:00:00Z.", "https://app.fr");
     assertThat(html).contains("Dernier job complété");
     assertThat(html).contains("l&#39;administration");
@@ -230,7 +230,7 @@ class EmailTemplatesTest {
             new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
                 1751500100000L, "error", "reconciliation-nocturne", "conflit wikidataId", null));
 
-    final String html = EmailTemplates.alerteLogsAdmin(erreurs, "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteLogsAdmin(erreurs, "https://app.fr");
 
     assertThat(html).contains("2 nouvelle(s) entrée(s)");
     assertThat(html).contains("échec purger:logs-admin");
@@ -247,7 +247,7 @@ class EmailTemplatesTest {
             new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
                 1751500000000L, "error", "worker", "<script>alert(1)</script>", null));
 
-    final String html = EmailTemplates.alerteLogsAdmin(erreurs, "https://app.fr");
+    final String html = EmailTemplatesAlertes.alerteLogsAdmin(erreurs, "https://app.fr");
 
     assertThat(html).doesNotContain("<script>");
   }
@@ -318,17 +318,17 @@ class EmailTemplatesTest {
         .contains(baseUrl + "/parametres");
     assertThat(EmailTemplates.resetMotDePasse("https://reset", baseUrl))
         .contains(baseUrl + "/parametres");
-    assertThat(EmailTemplates.alerteBackup("ts", "raison", baseUrl))
+    assertThat(EmailTemplatesAlertes.alerteBackup("ts", "raison", baseUrl))
         .contains(baseUrl + "/parametres");
-    assertThat(EmailTemplates.alerteIntegrite("detail", baseUrl)).contains(baseUrl + "/parametres");
+    assertThat(EmailTemplatesAlertes.alerteIntegrite("detail", baseUrl)).contains(baseUrl + "/parametres");
   }
 
   @Test
   void emailsAlerte_ontTitreRouge() {
-    assertThat(EmailTemplates.alerteBackup("ts", "", "https://app.fr")).contains("color: #c00");
-    assertThat(EmailTemplates.alerteIntegrite("detail", "https://app.fr")).contains("color: #c00");
-    assertThat(EmailTemplates.alerteBounce("x@y.fr", "https://app.fr")).contains("color: #c00");
-    assertThat(EmailTemplates.alerteWorker("detail", "https://app.fr")).contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteBackup("ts", "", "https://app.fr")).contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteIntegrite("detail", "https://app.fr")).contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteBounce("x@y.fr", "https://app.fr")).contains("color: #c00");
+    assertThat(EmailTemplatesAlertes.alerteWorker("detail", "https://app.fr")).contains("color: #c00");
   }
 
   @Test

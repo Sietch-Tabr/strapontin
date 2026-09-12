@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
 import java.util.Map;
@@ -27,15 +28,15 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 /**
  * Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers).
  *
- * <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du
- * pool HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie
- * avec une vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation
- * avant toute écriture, et que la rétrogradation seule s'applique normalement.
+ * <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du pool
+ * HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie avec une
+ * vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation avant toute
+ * écriture, et que la rétrogradation seule s'applique normalement.
  *
- * <p>Pas de {@code @SpringBootTest} : {@link AdminService} est construit manuellement (comme
- * le permet son injection {@code self} par setter, prévue pour les tests hors contexte Spring),
- * DataSource/Flyway montés à la main pour éviter la complexité d'un contexte web complet
- * (sécurité, sessions JDBC, etc.) non nécessaire pour ce test ciblé.
+ * <p>Pas de {@code @SpringBootTest} : {@link AdminService} est construit manuellement (comme le
+ * permet son injection {@code self} par setter, prévue pour les tests hors contexte Spring),
+ * DataSource/Flyway montés à la main pour éviter la complexité d'un contexte web complet (sécurité,
+ * sessions JDBC, etc.) non nécessaire pour ce test ciblé.
  *
  * @since 2.7.0
  * @author Kwaite
@@ -65,6 +66,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
         new AdminService(
             jdbc,
             mock(EmailService.class),
+            mock(EmailServiceAdmin.class),
             mock(LogAdminService.class),
             mock(VerificationRepository.class));
     s.setSelf(s);

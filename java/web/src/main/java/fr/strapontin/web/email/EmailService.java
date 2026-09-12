@@ -70,13 +70,13 @@ public class EmailService {
 
     final String texte =
         """
-            Bienvenue sur Strapontin
+        Bienvenue sur Strapontin
 
-            Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
-            votre identifiant et votre mot de passe (lien valable 7 jours) :
+        Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
+        votre identifiant et votre mot de passe (lien valable 7 jours) :
 
-            %s
-            """
+        %s
+        """
             .formatted(lienReset);
 
     try {
@@ -105,14 +105,14 @@ public class EmailService {
 
     final String texte =
         """
-            Réinitialisation du mot de passe
+        Réinitialisation du mot de passe
 
-            Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
+        Cliquez sur ce lien pour réinitialiser votre mot de passe (valable 1 heure) :
 
-            %s
+        %s
 
-            Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-            """
+        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+        """
             .formatted(lienReset);
 
     try {
@@ -145,15 +145,15 @@ public class EmailService {
 
     final String texte =
         """
-            Votre double authentification a été réinitialisée
+        Votre double authentification a été réinitialisée
 
-            Un administrateur a réinitialisé la double authentification (2FA) de votre compte.
-            Vous pouvez vous reconnecter sans code, puis la reconfigurer depuis vos paramètres :
+        Un administrateur a réinitialisé la double authentification (2FA) de votre compte.
+        Vous pouvez vous reconnecter sans code, puis la reconfigurer depuis vos paramètres :
 
-            %s/parametres/totp
+        %s/parametres/totp
 
-            Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.
-            """
+        Si vous n'êtes pas à l'origine de cette action, contactez l'administrateur.
+        """
             .formatted(ctx.get().baseUrl());
 
     try {
@@ -187,14 +187,14 @@ public class EmailService {
 
     final String texte =
         """
-            Confirmation de votre nouvelle adresse email
+        Confirmation de votre nouvelle adresse email
 
-            Cliquez sur ce lien pour valider votre nouvelle adresse (valable 24 heures) :
+        Cliquez sur ce lien pour valider votre nouvelle adresse (valable 24 heures) :
 
-            %s
+        %s
 
-            Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-            """
+        Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+        """
             .formatted(lien);
 
     try {
@@ -379,143 +379,6 @@ public class EmailService {
    *
    * @param email l'adresse de l'utilisateur supprimé
    */
-  public void envoyerSuppressionCompte(final String email) {
-    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
-    if (ctx.isEmpty()) {
-      LOG.warn("RESEND_API_KEY absent — email suppression compte non envoyé");
-      return;
-    }
-
-    final String corps = EmailTemplates.suppressionCompte(ctx.get().baseUrl());
-
-    final String texte =
-        """
-            Votre compte Strapontin a été supprimé
-
-            Votre compte Strapontin a été supprimé par un administrateur.
-            Vos données ont été effacées.
-
-            Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
-            """;
-
-    try {
-      emailSender.envoyer(
-          ctx.get(),
-          email,
-          ctx.get().expediteur(),
-          "Votre compte Strapontin a été supprimé",
-          corps,
-          texte);
-      LOG.info("Email suppression compte envoyé : emailHash={}", email.hashCode());
-    } catch (Exception e) {
-      LOG.error("Échec envoi suppression compte : emailHash={}", email.hashCode(), e);
-    }
-  }
-
-  /**
-   * Envoie un email de test pour vérifier la configuration Resend.
-   *
-   * @param emailAdmin l'adresse email de l'administrateur destinataire
-   * @return {@code true} si l'email a été envoyé avec succès
-   */
-  public boolean envoyerEmailTest(final String emailAdmin) {
-    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
-    if (ctx.isEmpty()) {
-      LOG.warn("RESEND_API_KEY absent — email de test non envoyé");
-      return false;
-    }
-    try {
-      emailSender.envoyer(
-          ctx.get(),
-          emailAdmin,
-          ctx.get().expediteur(),
-          "Strapontin — test de configuration email",
-          EmailTemplates.emailTest(ctx.get().baseUrl()),
-          "Test de configuration email Strapontin. Si vous recevez cet email, la configuration"
-              + " Resend est correcte.");
-      LOG.info("Email de test envoyé : emailHash={}", emailAdmin.hashCode());
-      return true;
-    } catch (Exception e) {
-      LOG.error("Échec envoi email de test : emailHash={}", emailAdmin.hashCode(), e);
-      return false;
-    }
-  }
-
-  /**
-   * Notifie un utilisateur qu'il a été promu au rôle administrateur.
-   *
-   * @param email l'adresse de l'utilisateur promu
-   */
-  public void envoyerPromotionAdmin(final String email) {
-    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
-    if (ctx.isEmpty()) {
-      LOG.warn("RESEND_API_KEY absent — email promotion admin non envoyé");
-      return;
-    }
-
-    final String corps = EmailTemplates.promotionAdmin(ctx.get().baseUrl());
-
-    final String texte =
-        """
-            Vous êtes maintenant administrateur Strapontin
-
-            Votre compte a été promu au rôle administrateur.
-            Accédez au panneau d'administration : %s/admin
-            """
-            .formatted(ctx.get().baseUrl());
-
-    try {
-      emailSender.envoyer(
-          ctx.get(),
-          email,
-          ctx.get().expediteur(),
-          "Vous êtes maintenant administrateur Strapontin",
-          corps,
-          texte);
-      LOG.info("Email promotion admin envoyé : emailHash={}", email.hashCode());
-    } catch (Exception e) {
-      LOG.error("Échec envoi email promotion admin : emailHash={}", email.hashCode(), e);
-    }
-  }
-
-  /**
-   * Envoie un préavis de révocation du rôle administrateur (délai de 7 jours).
-   *
-   * @param email l'adresse de l'administrateur concerné
-   * @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
-   */
-  public void envoyerPreavisRevocationAdmin(final String email, final String dateEffective) {
-    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
-    if (ctx.isEmpty()) {
-      LOG.warn("RESEND_API_KEY absent — email préavis révocation admin non envoyé");
-      return;
-    }
-
-    final String corps = EmailTemplates.preavisRevocationAdmin(dateEffective, ctx.get().baseUrl());
-
-    final String texte =
-        """
-            Préavis de révocation admin
-
-            Votre accès administrateur Strapontin sera supprimé le %s.
-            Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
-            """
-            .formatted(dateEffective);
-
-    try {
-      emailSender.envoyer(
-          ctx.get(),
-          email,
-          ctx.get().expediteur(),
-          "Strapontin — préavis de révocation admin",
-          corps,
-          texte);
-      LOG.info("Email préavis révocation admin envoyé : emailHash={}", email.hashCode());
-    } catch (Exception e) {
-      LOG.error("Échec envoi préavis révocation admin : emailHash={}", email.hashCode(), e);
-    }
-  }
-
   private static String formaterDate(final String dateIso) {
     final LocalDate date = LocalDate.parse(dateIso);
     return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)

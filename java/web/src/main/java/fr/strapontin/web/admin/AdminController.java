@@ -8,6 +8,7 @@ import static fr.strapontin.web.ControllerUtils.erreur;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.HashMap;
@@ -50,6 +51,7 @@ public class AdminController {
   private final BanniereService banniereService;
   private final WorkerProxyService workerProxyService;
   private final EmailService emailService;
+  private final EmailServiceAdmin emailServiceAdmin;
   private final VapidService vapidService;
   private final ConfigService configService;
 
@@ -60,6 +62,7 @@ public class AdminController {
    * @param banniereService service de gestion de la bannière système
    * @param workerProxyService proxy HTTP vers le worker (relance des fetches)
    * @param emailService service d'envoi d'emails
+   * @param emailServiceAdmin emails déclenchés par une action d'administration
    * @param vapidService service de gestion des clés VAPID
    * @param configService service de configuration pour lire PUBLIC_BASE_URL
    */
@@ -70,6 +73,7 @@ public class AdminController {
       final BanniereService banniereService,
       final WorkerProxyService workerProxyService,
       final EmailService emailService,
+      final EmailServiceAdmin emailServiceAdmin,
       final VapidService vapidService,
       final ConfigService configService) {
     this.adminService = adminService;
@@ -78,6 +82,7 @@ public class AdminController {
     this.banniereService = banniereService;
     this.workerProxyService = workerProxyService;
     this.emailService = emailService;
+    this.emailServiceAdmin = emailServiceAdmin;
     this.vapidService = vapidService;
     this.configService = configService;
   }
@@ -99,13 +104,13 @@ public class AdminController {
    *
    * <p>Le lien d'invitation n'est <strong>pas</strong> renvoyé dans la réponse quand l'email est
    * configuré (le token ne doit pas transiter côté client). En revanche, si aucun service email
-   * n'est disponible ({@code RESEND_API_KEY} absent), le lien est exposé dans la réponse comme
-   * seul canal de livraison possible : l'admin doit alors le transmettre manuellement.
+   * n'est disponible ({@code RESEND_API_KEY} absent), le lien est exposé dans la réponse comme seul
+   * canal de livraison possible : l'admin doit alors le transmettre manuellement.
    *
    * @param requete corps JSON avec l'email
    * @param auth contexte d'authentification admin
    * @return 201 avec l'identifiant temporaire (et le lien si email indisponible), 400 si l'email
-   *   est déjà pris, 503 si {@code PUBLIC_BASE_URL} n'est pas configurée
+   *     est déjà pris, 503 si {@code PUBLIC_BASE_URL} n'est pas configurée
    */
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
@@ -188,7 +193,7 @@ public class AdminController {
    * @param userId identifiant de l'utilisateur
    * @param auth contexte d'authentification admin
    * @return 200 si envoyé, 400/404 en cas d'erreur, 503 si {@code PUBLIC_BASE_URL} n'est pas
-   *   configurée
+   *     configurée
    */
   @PostMapping("/utilisateurs/{userId}/reset-mdp")
   public ResponseEntity<Map<String, Object>> reinitialiserMdp(
@@ -368,7 +373,7 @@ public class AdminController {
   @PostMapping("/config/tester-email")
   public ResponseEntity<Map<String, Object>> testerEmail(final Authentication auth) {
     final String emailAdmin = utilisateur(auth).email();
-    final boolean succes = emailService.envoyerEmailTest(emailAdmin);
+    final boolean succes = emailServiceAdmin.envoyerEmailTest(emailAdmin);
     return succes
         ? ResponseEntity.ok(Map.of("succes", true))
         : erreur(400, "Envoi impossible — vérifiez RESEND_API_KEY et CONTACT_EMAIL.");

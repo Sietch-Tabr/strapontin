@@ -7,6 +7,7 @@ package fr.strapontin.web.admin;
 import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
@@ -58,6 +59,7 @@ public class AdminService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailService emailService;
+  private final EmailServiceAdmin emailServiceAdmin;
   private final LogAdminService logAdminService;
   private final VerificationRepository verificationRepository;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
@@ -66,16 +68,19 @@ public class AdminService {
   /**
    * @param jdbc accès JDBC
    * @param emailService service d'envoi d'emails
+   * @param emailServiceAdmin emails déclenchés par une action d'administration
    * @param logAdminService service de logs admin
    * @param verificationRepository accès aux tokens de vérification
    */
   public AdminService(
       final NamedParameterJdbcTemplate jdbc,
       final EmailService emailService,
+      final EmailServiceAdmin emailServiceAdmin,
       final LogAdminService logAdminService,
       final VerificationRepository verificationRepository) {
     this.jdbc = jdbc;
     this.emailService = emailService;
+    this.emailServiceAdmin = emailServiceAdmin;
     this.logAdminService = logAdminService;
     this.verificationRepository = verificationRepository;
   }
@@ -402,7 +407,7 @@ public class AdminService {
       final List<Map<String, Object>> cible =
           jdbc.queryForList("SELECT email FROM users WHERE id = :id", Map.of("id", userId));
       if (!cible.isEmpty()) {
-        emailService.envoyerPromotionAdmin((String) cible.get(0).get("email"));
+        emailServiceAdmin.envoyerPromotionAdmin((String) cible.get(0).get("email"));
       }
     }
   }
@@ -472,7 +477,7 @@ public class AdminService {
             .withLocale(Locale.FRANCE)
             .format(LocalDate.ofInstant(dateEffective, ZoneId.of("Europe/Paris")));
 
-    emailService.envoyerPreavisRevocationAdmin((String) cible.get(0).get("email"), dateFormatee);
+    emailServiceAdmin.envoyerPreavisRevocationAdmin((String) cible.get(0).get("email"), dateFormatee);
     logAdminService.logAdmin(
         "warn",
         "admin",
@@ -514,7 +519,7 @@ public class AdminService {
     logAdminService.logAdmin(
         "warn", "admin", "compte supprimé", Map.of("userId", userId, "parAdmin", adminId));
     if (!cible.isEmpty()) {
-      emailService.envoyerSuppressionCompte((String) cible.get(0).get("email"));
+      emailServiceAdmin.envoyerSuppressionCompte((String) cible.get(0).get("email"));
     }
   }
 

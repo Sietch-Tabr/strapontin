@@ -96,7 +96,7 @@ public class EmailAlerteService {
       return;
     }
 
-    final String corps = EmailTemplates.alerteBounce(emailBouncee, ctx.get().baseUrl());
+    final String corps = EmailTemplatesAlertes.alerteBounce(emailBouncee, ctx.get().baseUrl());
 
     try {
       emailSender.envoyer(
@@ -144,7 +144,7 @@ public class EmailAlerteService {
       return;
     }
 
-    final String corps = EmailTemplates.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
+    final String corps = EmailTemplatesAlertes.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
 
     try {
       emailSender.envoyer(
@@ -185,7 +185,7 @@ public class EmailAlerteService {
       return;
     }
 
-    final String corps = EmailTemplates.alerteBackup(horodatage, raison, ctx.get().baseUrl());
+    final String corps = EmailTemplatesAlertes.alerteBackup(horodatage, raison, ctx.get().baseUrl());
 
     final String sujet = "Strapontin — échec backup nocturne";
     final String texte =
@@ -223,7 +223,7 @@ public class EmailAlerteService {
       return;
     }
 
-    final String corps = EmailTemplates.alerteIntegrite(detail, ctx.get().baseUrl());
+    final String corps = EmailTemplatesAlertes.alerteIntegrite(detail, ctx.get().baseUrl());
     final String sujet = "Strapontin — alerte contrôle d'intégrité";
     try {
       emailSender.envoyer(
@@ -261,7 +261,7 @@ public class EmailAlerteService {
             ? "Dernier job complété : %s.".formatted(derniereActiviteIso)
             : "Aucun job complété enregistré.";
 
-    final String corps = EmailTemplates.alerteWorker(detail, ctx.get().baseUrl());
+    final String corps = EmailTemplatesAlertes.alerteWorker(detail, ctx.get().baseUrl());
 
     final String sujet = "Strapontin — worker inactif";
     try {
@@ -301,7 +301,7 @@ public class EmailAlerteService {
     }
 
     final String corps =
-        EmailTemplates.alerteQuotaResend(
+        EmailTemplatesAlertes.alerteQuotaResend(
             compteur.envoyesJour(),
             GestionQuotaResend.LIMITE_JOUR,
             compteur.envoyesMois(),
@@ -347,7 +347,7 @@ public class EmailAlerteService {
       return false;
     }
 
-    final String corps = EmailTemplates.alerteLogsAdmin(erreurs, ctx.get().baseUrl());
+    final String corps = EmailTemplatesAlertes.alerteLogsAdmin(erreurs, ctx.get().baseUrl());
     final String sujet = "Strapontin — " + erreurs.size() + " nouvelle(s) erreur(s) admin";
     try {
       emailSender.envoyer(

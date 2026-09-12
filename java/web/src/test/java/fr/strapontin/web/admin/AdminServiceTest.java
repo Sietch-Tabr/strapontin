@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -46,6 +47,7 @@ class AdminServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
   private EmailService emailService;
+  private EmailServiceAdmin emailServiceAdmin;
   private LogAdminService logAdminService;
   private VerificationRepository verificationRepository;
   private AdminService adminService;
@@ -54,9 +56,12 @@ class AdminServiceTest {
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     emailService = mock(EmailService.class);
+    emailServiceAdmin = mock(EmailServiceAdmin.class);
     logAdminService = mock(LogAdminService.class);
     verificationRepository = mock(VerificationRepository.class);
-    adminService = new AdminService(jdbc, emailService, logAdminService, verificationRepository);
+    adminService =
+        new AdminService(
+            jdbc, emailService, emailServiceAdmin, logAdminService, verificationRepository);
     adminService.setSelf(adminService);
   }
 
@@ -127,7 +132,7 @@ class AdminServiceTest {
 
     verify(jdbc).update(anyString(), anyMap());
     verify(logAdminService).logAdmin(eq("info"), eq("admin"), eq("nom modifié"), anyMap());
-    verify(emailService, never()).envoyerPromotionAdmin(anyString());
+    verify(emailServiceAdmin, never()).envoyerPromotionAdmin(anyString());
   }
 
   @Test
@@ -141,7 +146,7 @@ class AdminServiceTest {
     final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "admin");
     adminService.modifierUtilisateur("user-1", requete, "admin-1");
 
-    verify(emailService).envoyerPromotionAdmin("promo@exemple.fr");
+    verify(emailServiceAdmin).envoyerPromotionAdmin("promo@exemple.fr");
     verify(logAdminService).logAdmin(eq("warn"), eq("admin"), eq("rôle modifié"), anyMap());
   }
 
@@ -154,8 +159,8 @@ class AdminServiceTest {
     final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
     adminService.modifierUtilisateur("user-1", requete, "admin-1");
 
-    verify(emailService, never()).envoyerPromotionAdmin(anyString());
-    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+    verify(emailServiceAdmin, never()).envoyerPromotionAdmin(anyString());
+    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
   // PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue
@@ -174,12 +179,13 @@ class AdminServiceTest {
     final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
     adminService.modifierUtilisateur("admin-cible", requete, "admin-1");
 
-    verify(emailService).envoyerPreavisRevocationAdmin(eq("admin-cible@exemple.fr"), anyString());
+    verify(emailServiceAdmin)
+        .envoyerPreavisRevocationAdmin(eq("admin-cible@exemple.fr"), anyString());
     verify(logAdminService)
         .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
     verify(logAdminService, never())
         .logAdmin(eq("warn"), eq("admin"), eq("rôle modifié"), anyMap());
-    verify(emailService, never()).envoyerPromotionAdmin(anyString());
+    verify(emailServiceAdmin, never()).envoyerPromotionAdmin(anyString());
   }
 
   // le seul admin restant ne peut pas être rétrogradé via PATCH.
@@ -227,7 +233,7 @@ class AdminServiceTest {
 
     assertThrows(
         ErreurMetier.class, () -> adminService.initierRevocationAdmin("inconnu", "admin-1"));
-    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
   @Test
@@ -239,7 +245,7 @@ class AdminServiceTest {
 
     assertThrows(
         ErreurMetier.class, () -> adminService.initierRevocationAdmin("user-1", "admin-1"));
-    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
   @Test
@@ -254,7 +260,7 @@ class AdminServiceTest {
         assertThrows(
             ErreurMetier.class, () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
     assertEquals(409, ex.getStatus());
-    verify(emailService, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
+    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
   @Test
@@ -269,7 +275,7 @@ class AdminServiceTest {
     adminService.initierRevocationAdmin("admin-1", "admin-2");
 
     verify(jdbc).update(anyString(), anyMap());
-    verify(emailService).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
+    verify(emailServiceAdmin).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
     verify(logAdminService)
         .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
   }
@@ -290,7 +296,7 @@ class AdminServiceTest {
     adminService.initierRevocationAdmin("admin-1", "admin-2");
 
     verify(jdbc, times(2)).update(anyString(), anyMap());
-    verify(emailService).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
+    verify(emailServiceAdmin).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
   }
 
   @Test

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,7 @@ class AdminControllerRevoquerSessionsTest {
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
             mock(EmailService.class),
+            mock(EmailServiceAdmin.class),
             mock(VapidService.class),
             mock(ConfigService.class));
   }

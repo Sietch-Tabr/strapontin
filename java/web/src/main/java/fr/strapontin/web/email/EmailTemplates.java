@@ -5,27 +5,23 @@
 package fr.strapontin.web.email;
 
 import fr.strapontin.core.UtilitairesChaine;
-import fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
 
 /**
  * Génération des corps HTML de tous les emails transactionnels Strapontin.
  *
  * <p>Chaque méthode publique retourne un document HTML complet, prêt à être transmis à l'API
- * Resend. Le contenu variable est systématiquement passé par {@link #e(Object)} pour prévenir
- * toute injection HTML.
+ * Resend. Le contenu variable est systématiquement passé par {@link #e(Object)} pour prévenir toute
+ * injection HTML.
  *
- * <p>Structure commune factorisée : <ul>
+ * <p>Structure commune factorisée :
+ *
+ * <ul>
  *   <li>{@link #envelopper} — cadre centré blanc + footer "Gérer mes préférences"
  *   <li>{@link #enveloppErreur} — idem avec titre en rouge
  *   <li>{@link #bouton} — CTA noir réutilisé dans la majorité des emails
- *   <li>{@link #e} — échappement HTML des valeurs variables </ul>
+ *   <li>{@link #e} — échappement HTML des valeurs variables
+ * </ul>
  *
  * @since 2.2.0
  * @author Kwaite
@@ -35,9 +31,9 @@ final class EmailTemplates {
   private EmailTemplates() {}
 
   private static final String C_NOIR = "#111";
-  private static final String C_TEXTE = "#555";
+  static final String C_TEXTE = "#555";
   private static final String C_MUTE = "#aaa";
-  private static final String C_ERREUR = "#c00";
+  static final String C_ERREUR = "#c00";
   private static final String C_BORDURE = "#e5e5e5";
 
   // ---- Emails transactionnels ----
@@ -52,15 +48,15 @@ final class EmailTemplates {
   static String invitation(final String lienReset, final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
-              votre identifiant et votre mot de passe :
-            </p>
-            %s
-            <p style="color: %s; font-size: 13px; margin: 16px 0 0">
-              Ce lien est valable 7 jours.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
+          votre identifiant et votre mot de passe :
+        </p>
+        %s
+        <p style="color: %s; font-size: 13px; margin: 16px 0 0">
+          Ce lien est valable 7 jours.
+        </p>
+        """
             .formatted(C_TEXTE, bouton(lienReset, "Créer mon compte →"), C_MUTE);
     return envelopper("Bienvenue sur Strapontin", corps, baseUrl);
   }
@@ -75,15 +71,15 @@ final class EmailTemplates {
   static String resetMotDePasse(final String lienReset, final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur
-              le bouton ci-dessous. Ce lien est valable 1 heure.
-            </p>
-            %s
-            <p style="color: %s; font-size: 13px; margin-top: 24px">
-              Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur
+          le bouton ci-dessous. Ce lien est valable 1 heure.
+        </p>
+        %s
+        <p style="color: %s; font-size: 13px; margin-top: 24px">
+          Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+        </p>
+        """
             .formatted(C_TEXTE, bouton(lienReset, "Réinitialiser mon mot de passe →"), C_MUTE);
     return envelopper("Réinitialisation du mot de passe", corps, baseUrl);
   }
@@ -97,17 +93,17 @@ final class EmailTemplates {
   static String reinitialisation2fa(final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              La double authentification (2FA) de votre compte a été réinitialisée par un
-              administrateur. Vous pouvez vous reconnecter sans code, puis la reconfigurer
-              depuis vos paramètres.
-            </p>
-            %s
-            <p style="color: %s; font-size: 13px; margin-top: 24px">
-              Si vous n'êtes pas à l'origine de cette action, contactez immédiatement
-              l'administrateur : votre compte pourrait être compromis.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          La double authentification (2FA) de votre compte a été réinitialisée par un
+          administrateur. Vous pouvez vous reconnecter sans code, puis la reconfigurer
+          depuis vos paramètres.
+        </p>
+        %s
+        <p style="color: %s; font-size: 13px; margin-top: 24px">
+          Si vous n'êtes pas à l'origine de cette action, contactez immédiatement
+          l'administrateur : votre compte pourrait être compromis.
+        </p>
+        """
             .formatted(
                 C_TEXTE, bouton(baseUrl + "/parametres/totp", "Reconfigurer la 2FA →"), C_MUTE);
     return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
@@ -123,16 +119,16 @@ final class EmailTemplates {
   static String confirmationEmail(final String lien, final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse.
-              Ce lien est valable 24 heures.
-            </p>
-            %s
-            <p style="color: %s; font-size: 13px; margin-top: 24px">
-              Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-              Votre adresse actuelle reste inchangée.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse.
+          Ce lien est valable 24 heures.
+        </p>
+        %s
+        <p style="color: %s; font-size: 13px; margin-top: 24px">
+          Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+          Votre adresse actuelle reste inchangée.
+        </p>
+        """
             .formatted(C_TEXTE, bouton(lien, "Confirmer ma nouvelle adresse →"), C_MUTE);
     return envelopper("Confirmez votre nouvelle adresse email", corps, baseUrl);
   }
@@ -153,14 +149,14 @@ final class EmailTemplates {
       final String baseUrl) {
     final String corps =
         """
-            <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
-              <tr>
-                <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Email</td>
-                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-              </tr>
-            </table>
-            <p style="color: %s; font-size: 14px; white-space: pre-wrap; border-left: 3px solid %s; padding-left: 12px; margin: 0">%s</p>
-            """
+        <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 130px">Email</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+        </table>
+        <p style="color: %s; font-size: 14px; white-space: pre-wrap; border-left: 3px solid %s; padding-left: 12px; margin: 0">%s</p>
+        """
             .formatted(C_NOIR, e(expediteurEmail), C_TEXTE, C_BORDURE, e(message));
     return envelopper("Signalement — " + typeLabel, corps, baseUrl);
   }
@@ -205,241 +201,12 @@ final class EmailTemplates {
     }
     final String corps =
         """
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
-            <table style="border-collapse: collapse; width: 100%%">%s</table>
-            <p style="margin-top: 24px">%s</p>
-            """
+        <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
+        <table style="border-collapse: collapse; width: 100%%">%s</table>
+        <p style="margin-top: 24px">%s</p>
+        """
             .formatted(C_TEXTE, lignesHtml, bouton(baseUrl + "/", "Voir mes spectacles →"));
     return envelopper(sujet, corps, baseUrl);
-  }
-
-  /**
-   * Alerte d'échec du backup nocturne.
-   *
-   * @param horodatage l'horodatage YYYYMMDD_HHMMSS, ou chaîne vide si inconnu
-   * @param raison la commande ayant échoué, ou chaîne vide
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte backup
-   */
-  static String alerteBackup(final String horodatage, final String raison, final String baseUrl) {
-    final String horodatageHtml =
-        (horodatage != null && !horodatage.isBlank())
-            ? "Démarré le : " + e(horodatage)
-            : "Horodatage indisponible.";
-    final String raisonHtml =
-        (raison != null && !raison.isBlank())
-            ? ("""
-            <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
-            border-left: 3px solid %s; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
-            """
-                .formatted(C_ERREUR, e(raison)))
-            : "";
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 8px">%s</p>
-            %s
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Le backup local nocturne (dump PostgreSQL + .env + logs) n'a pas pu être
-              complété. Vérifiez l'espace disque et les logs systemd sur le serveur.
-            </p>
-            <p style="margin-top: 24px">%s</p>
-            """
-            .formatted(
-                C_TEXTE,
-                horodatageHtml,
-                raisonHtml,
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Échec du backup nocturne", corps, baseUrl);
-  }
-
-  /**
-   * Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur un
-   * LXC prod/dev.
-   *
-   * @param detail sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte
-   */
-  static String alerteIntegrite(final String detail, final String baseUrl) {
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 16px; font-family: monospace;\
-            white-space: pre-wrap; background: #f5f5f5; border-left: 3px solid %s; padding: 8px 12px">\
-            %s</p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Une modification de fichier a été détectée hors d'un déploiement légitime
-              (JARs, .env, scripts/, units systemd). Vérifiez l'origine sur le serveur.
-            </p>
-            """
-            .formatted(C_ERREUR, C_ERREUR, e(detail), C_TEXTE);
-    return enveloppErreur("Alerte contrôle d'intégrité", corps, baseUrl);
-  }
-
-  /**
-   * Alerte de bounce email (rejet définitif par le serveur destinataire).
-   *
-   * @param emailBouncee l'adresse email ayant produit le bounce
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte bounce
-   */
-  static String alerteBounce(final String emailBouncee, final String baseUrl) {
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 16px">
-              Un email envoyé par Strapontin a été rejeté définitivement par le serveur destinataire.
-            </p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Adresse concernée : <strong>%s</strong>
-            </p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Vérifiez l'adresse email de cet utilisateur depuis la page d'administration.
-            </p>
-            <p style="margin-top: 24px">%s</p>
-            """
-            .formatted(
-                C_TEXTE,
-                C_TEXTE,
-                e(emailBouncee),
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Bounce email", corps, baseUrl);
-  }
-
-  /**
-   * Alerte de plainte spam (destinataire ayant signalé un email Strapontin comme indésirable).
-   *
-   * @param emailPlaignant l'adresse email à l'origine de la plainte
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte plainte spam
-   */
-  static String alertePlainteSpam(final String emailPlaignant, final String baseUrl) {
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 16px">
-              Un destinataire a signalé un email envoyé par Strapontin comme indésirable (spam).
-            </p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Adresse concernée : <strong>%s</strong>
-            </p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Une plainte spam menace la réputation d'envoi du domaine. Vérifiez l'adresse email de
-              cet utilisateur depuis la page d'administration.
-            </p>
-            <p style="margin-top: 24px">%s</p>
-            """
-            .formatted(
-                C_TEXTE,
-                C_TEXTE,
-                e(emailPlaignant),
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Plainte spam email", corps, baseUrl);
-  }
-
-  /**
-   * Alerte de worker inactif (aucun job depuis plus de 3 heures).
-   *
-   * @param detail description de la dernière activité (jamais null)
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte worker
-   */
-  static String alerteWorker(final String detail, final String baseUrl) {
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 16px">%s</p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.
-            </p>
-            <p style="margin-top: 24px">%s</p>
-            """
-            .formatted(
-                C_TEXTE,
-                e(detail),
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Worker inactif", corps, baseUrl);
-  }
-
-  /**
-   * Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (suite de l'incident).
-   *
-   * @param envoyesJour nombre d'envois comptabilisés pour le jour courant
-   * @param limiteJour limite journalière Resend (tier gratuit : 100)
-   * @param envoyesMois nombre d'envois comptabilisés pour le mois courant
-   * @param limiteMois limite mensuelle Resend (tier gratuit : 3000)
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte quota Resend
-   */
-  static String alerteQuotaResend(
-      final int envoyesJour,
-      final int limiteJour,
-      final int envoyesMois,
-      final int limiteMois,
-      final String baseUrl) {
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 8px">
-              Le quota d'envoi Resend approche de sa limite.
-            </p>
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-              Jour : %d / %d envois. Mois : %d / %d envois. Au-delà, les emails
-              transactionnels et notifications sont bloqués avant tout appel réseau.
-            </p>
-            <p style="margin-top: 24px">%s</p>
-            """
-            .formatted(
-                C_TEXTE,
-                C_TEXTE,
-                envoyesJour,
-                limiteJour,
-                envoyesMois,
-                limiteMois,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Quota Resend proche de la limite", corps, baseUrl);
-  }
-
-  /**
-   * Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur.
-   *
-   * @param erreurs liste des entrées d'erreur à afficher (non vide)
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML du digest d'erreurs
-   */
-  static String alerteLogsAdmin(final List<EntreeLogAdmin> erreurs, final String baseUrl) {
-    final String lignesHtml =
-        erreurs.stream()
-            .map(
-                entree -> {
-                  final String dateFormatee =
-                      DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
-                          .withLocale(Locale.FRANCE)
-                          .withZone(ZoneId.of("Europe/Paris"))
-                          .format(Instant.ofEpochMilli(entree.ts()));
-                  return """
-                      <tr>
-                        <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
-                          <div style="font-weight: 600; color: %s; font-size: 14px">%s — %s</div>
-                          <div style="color: #666; font-size: 13px; margin-top: 2px">%s</div>
-                        </td>
-                      </tr>
-                      """
-                      .formatted(
-                          C_ERREUR, e(dateFormatee), e(entree.source()), e(entree.message()));
-                })
-            .collect(Collectors.joining());
-    final String corps =
-        """
-            <p style="color: %s; font-size: 14px; margin: 0 0 24px">%d nouvelle(s) entrée(s) d'erreur dans les logs admin :</p>
-            <table style="border-collapse: collapse; width: 100%%">%s</table>
-            <p style="margin-top: 24px">%s</p>
-            """
-            .formatted(
-                C_TEXTE,
-                erreurs.size(),
-                lignesHtml,
-                bouton(baseUrl + "/admin", "Voir les logs admin →"));
-    return enveloppErreur("Nouvelles erreurs — logs admin", corps, baseUrl);
   }
 
   /**
@@ -451,14 +218,14 @@ final class EmailTemplates {
   static String suppressionCompte(final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              Votre compte Strapontin a été supprimé par un administrateur.
-              Vos données ont été effacées.
-            </p>
-            <p style="color: %s; font-size: 13px; margin: 0">
-              Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          Votre compte Strapontin a été supprimé par un administrateur.
+          Vos données ont été effacées.
+        </p>
+        <p style="color: %s; font-size: 13px; margin: 0">
+          Si vous pensez qu'il s'agit d'une erreur, contactez l'administrateur.
+        </p>
+        """
             .formatted(C_TEXTE, C_MUTE);
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
   }
@@ -491,26 +258,26 @@ final class EmailTemplates {
             : "";
     final String corps =
         """
-            <table style="border-collapse: collapse; width: 100%%; margin-bottom: 8px">
-              <tr>
-                <td style="padding: 8px 0; color: #888; font-size: 14px; width: 140px">Utilisateur</td>
-                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #888; font-size: 14px">Nom de la salle</td>
-                <td style="padding: 8px 0; font-size: 14px; color: %s"><strong>%s</strong></td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #888; font-size: 14px">Ville / CP</td>
-                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-              </tr>
-              <tr>
-                <td style="padding: 8px 0; color: #888; font-size: 14px">Site / billetterie</td>
-                <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
-              </tr>
-            </table>
-            %s
-            """
+        <table style="border-collapse: collapse; width: 100%%; margin-bottom: 8px">
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px; width: 140px">Utilisateur</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px">Nom de la salle</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s"><strong>%s</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px">Ville / CP</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #888; font-size: 14px">Site / billetterie</td>
+            <td style="padding: 8px 0; font-size: 14px; color: %s">%s</td>
+          </tr>
+        </table>
+        %s
+        """
             .formatted(
                 C_NOIR,
                 e(emailUtilisateur),
@@ -534,13 +301,13 @@ final class EmailTemplates {
   static String confirmationSignalementSalle(final String nom, final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 16px">
-              Votre signalement pour <strong>%s</strong> a été transmis à l'administrateur.
-            </p>
-            <p style="color: %s; font-size: 13px; margin: 0">
-              L'administrateur pourra vous répondre directement par email si besoin.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 16px">
+          Votre signalement pour <strong>%s</strong> a été transmis à l'administrateur.
+        </p>
+        <p style="color: %s; font-size: 13px; margin: 0">
+          L'administrateur pourra vous répondre directement par email si besoin.
+        </p>
+        """
             .formatted(C_TEXTE, e(nom), C_MUTE);
     return envelopper("Votre signalement a été transmis", corps, baseUrl);
   }
@@ -554,12 +321,12 @@ final class EmailTemplates {
   static String promotionAdmin(final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              Votre compte Strapontin a été promu au rôle administrateur.
-              Vous avez désormais accès au panneau d'administration.
-            </p>
-            %s
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          Votre compte Strapontin a été promu au rôle administrateur.
+          Vous avez désormais accès au panneau d'administration.
+        </p>
+        %s
+        """
             .formatted(C_TEXTE, bouton(baseUrl + "/admin", "Accéder à l'administration →"));
     return envelopper("Vous êtes maintenant administrateur Strapontin", corps, baseUrl);
   }
@@ -574,14 +341,14 @@ final class EmailTemplates {
   static String preavisRevocationAdmin(final String dateEffective, final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 24px">
-              Votre accès administrateur Strapontin sera supprimé le <strong>%s</strong>.
-              Après cette date, vous ne pourrez plus accéder au panneau d'administration.
-            </p>
-            <p style="color: %s; font-size: 13px; margin: 0">
-              Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 24px">
+          Votre accès administrateur Strapontin sera supprimé le <strong>%s</strong>.
+          Après cette date, vous ne pourrez plus accéder au panneau d'administration.
+        </p>
+        <p style="color: %s; font-size: 13px; margin: 0">
+          Si vous pensez qu'il s'agit d'une erreur, contactez un autre administrateur.
+        </p>
+        """
             .formatted(C_TEXTE, e(dateEffective), C_MUTE);
     return enveloppErreur("Préavis de révocation admin", corps, baseUrl);
   }
@@ -595,13 +362,13 @@ final class EmailTemplates {
   static String emailTest(final String baseUrl) {
     final String corps =
         """
-            <p style="color: %s; margin: 0 0 16px">
-              Si vous recevez cet email, la configuration Resend est correcte.
-            </p>
-            <p style="color: %s; font-size: 13px; margin: 0">
-              Envoyé depuis l'administration Strapontin.
-            </p>
-            """
+        <p style="color: %s; margin: 0 0 16px">
+          Si vous recevez cet email, la configuration Resend est correcte.
+        </p>
+        <p style="color: %s; font-size: 13px; margin: 0">
+          Envoyé depuis l'administration Strapontin.
+        </p>
+        """
             .formatted(C_TEXTE, C_MUTE);
     return envelopper("Test de configuration email", corps, baseUrl);
   }
@@ -612,8 +379,7 @@ final class EmailTemplates {
     return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 
-  private static String enveloppErreur(
-      final String titre, final String corps, final String baseUrl) {
+  static String enveloppErreur(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_ERREUR, titre, corps, baseUrl);
   }
 
@@ -640,7 +406,7 @@ final class EmailTemplates {
         .formatted(C_BORDURE, couleur, e(titre), corps, C_MUTE, e(baseUrl), C_MUTE);
   }
 
-  private static String bouton(final String href, final String texte) {
+  static String bouton(final String href, final String texte) {
     return """
     <a href="%s" style="display: inline-block; background: %s; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
     """

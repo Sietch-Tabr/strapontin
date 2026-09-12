@@ -10,14 +10,15 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Tests unitaires pour {@link AdminController#genererVapid} (le résultat de
- * {@link VapidService#genererVapid()} doit être exposé dans la réponse, pas seulement loggé).
+ * Tests unitaires pour {@link AdminController#genererVapid} (le résultat de {@link
+ * VapidService#genererVapid()} doit être exposé dans la réponse, pas seulement loggé).
  *
  * @since 2.6.5
  * @author Kwaite
@@ -38,6 +39,7 @@ class AdminControllerGenererVapidTest {
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
             mock(EmailService.class),
+            mock(EmailServiceAdmin.class),
             vapidService,
             mock(ConfigService.class));
   }

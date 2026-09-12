@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +53,7 @@ class AdminControllerReinitialiserMdpTest {
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
             emailService,
+            mock(EmailServiceAdmin.class),
             mock(VapidService.class),
             configService);
   }
