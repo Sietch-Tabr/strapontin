@@ -25,6 +25,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class EnrichissementConfiguration {
 
+  public EnrichissementConfiguration() {}
+
   /**
    * Client Overpass (OSM) pour la découverte initiale des salles par nom.
    *

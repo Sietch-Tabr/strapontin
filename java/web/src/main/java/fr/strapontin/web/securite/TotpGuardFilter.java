@@ -18,10 +18,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Filtre de garde TOTP : bloque les appels API tant que le challenge 2FA n'est pas validé.
  *
  * <p>Si la session contient {@code TOTP_EN_ATTENTE=true} :
+ *
  * <ul>
- *   <li>Routes {@code /api/**} (sauf {@code /api/auth/totp} et {@code /api/auth/logout}) →
- *       401 JSON {@code {"erreur":"TOTP requis"}}</li>
- *   <li>Routes non-API → laissées passer ; le SPA Vue gère la redirection côté client</li>
+ *   <li>Routes {@code /api/**} (sauf {@code /api/auth/totp} et {@code /api/auth/logout}) → 401 JSON
+ *       {@code {"erreur":"TOTP requis"}}
+ *   <li>Routes non-API → laissées passer ; le SPA Vue gère la redirection côté client
  * </ul>
  *
  * @since 2.0.0
@@ -32,6 +33,8 @@ public class TotpGuardFilter extends OncePerRequestFilter {
 
   private static final Set<String> API_TOTP_AUTORISES =
       Set.of("/api/auth/totp", "/api/auth/logout");
+
+  public TotpGuardFilter() {}
 
   @Override
   protected void doFilterInternal(

@@ -22,6 +22,8 @@ public class PurgerSallesJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;
 
+  public PurgerSallesJob() {}
+
   /**
    * @param workerPurgeService service de purge injecté par Spring
    */

@@ -18,9 +18,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Filtre posant un identifiant de corrélation dans le {@link MDC} Logback.
  *
- * <p>Si la requête entrante contient un header {@code X-Correlation-ID}, il est réutilisé.
- * Sinon, un UUID aléatoire est généré. L'identifiant est retourné dans la réponse
- * via le même header, et retiré du MDC après traitement.
+ * <p>Si la requête entrante contient un header {@code X-Correlation-ID}, il est réutilisé. Sinon,
+ * un UUID aléatoire est généré. L'identifiant est retourné dans la réponse via le même header, et
+ * retiré du MDC après traitement.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -31,6 +31,8 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
   private static final String CLE_MDC = "correlationId";
   private static final String HEADER = "X-Correlation-ID";
   private static final Pattern CORRELATION_ID_PATTERN = Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
+
+  public CorrelationIdFilter() {}
 
   @Override
   protected void doFilterInternal(

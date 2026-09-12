@@ -25,6 +25,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @Configuration
 public class WorkerConfiguration {
 
+  public WorkerConfiguration() {}
+
   /**
    * Sérialiseur JSON (quota TM dans {@code app_config}).
    *

@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 class SpaFallbackController {
 
+  SpaFallbackController() {}
+
   /**
    * Capture les routes à un ou plusieurs segments sans extension et renvoie {@code index.html}.
    *

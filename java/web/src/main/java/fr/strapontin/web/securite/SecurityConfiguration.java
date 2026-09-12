@@ -68,6 +68,8 @@ public class SecurityConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
 
+  public SecurityConfiguration() {}
+
   /**
    * Registre de sessions persisté en JDBC — survit aux redémarrages.
    *

@@ -19,6 +19,8 @@ public class NotifierDigestJob extends QuartzJobBean {
 
   private NotificationDigestService notificationDigestService;
 
+  public NotifierDigestJob() {}
+
   /**
    * @param notificationDigestService service d'envoi du digest injecté par Spring
    */

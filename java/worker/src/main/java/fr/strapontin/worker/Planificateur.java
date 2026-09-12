@@ -80,6 +80,8 @@ public class Planificateur {
   @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronRecalculerMatches;
 
+  public Planificateur() {}
+
   private static JobDetail creerJobDetail(
       final Class<? extends Job> jobClass, final String identite) {
     return JobBuilder.newJob(jobClass).withIdentity(identite).storeDurably().build();

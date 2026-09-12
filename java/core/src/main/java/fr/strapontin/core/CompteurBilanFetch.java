@@ -7,9 +7,8 @@ package fr.strapontin.core;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Compteur mutable thread-safe d'appels/erreurs, prélevé périodiquement en [BilanFetch].
- * Composable dans toute source de concerts ou tout canal de notification sans imposer d'héritage
- * commun.
+ * Compteur mutable thread-safe d'appels/erreurs, prélevé périodiquement en [BilanFetch]. Composable
+ * dans toute source de concerts ou tout canal de notification sans imposer d'héritage commun.
  *
  * @since 2.7.0
  * @author Kwaite
@@ -19,16 +18,14 @@ public final class CompteurBilanFetch {
   private final AtomicInteger appelsCumules = new AtomicInteger();
   private final AtomicInteger erreursCumulees = new AtomicInteger();
 
-  /**
-   * Enregistre une tentative d'appel (HTTP ou envoi).
-   */
+  public CompteurBilanFetch() {}
+
+  /** Enregistre une tentative d'appel (HTTP ou envoi). */
   public void enregistrerAppel() {
     appelsCumules.incrementAndGet();
   }
 
-  /**
-   * Enregistre un appel en échec.
-   */
+  /** Enregistre un appel en échec. */
   public void enregistrerErreur() {
     erreursCumulees.incrementAndGet();
   }

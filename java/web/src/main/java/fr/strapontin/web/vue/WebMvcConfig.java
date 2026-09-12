@@ -19,6 +19,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
+  public WebMvcConfig() {}
+
   @Override
   public void addResourceHandlers(final ResourceHandlerRegistry registry) {
     // sw.js et index.html : no-cache (le navigateur doit toujours vérifier les mises à jour).
