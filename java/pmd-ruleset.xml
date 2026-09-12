@@ -48,9 +48,18 @@
        Servlet, context.getMergedJobDataMap()/getJobDetail().getKey() Quartz,
        response.getStatusLine() client HTTP, pubKey.getW() API clé EC Java) — aucun n'est un
        chaînage à travers les objets métier du projet, le cas que la règle vise réellement. Ces
-       API ne peuvent pas être appelées autrement. -->
+       API ne peuvent pas être appelées autrement.
+
+       AvoidCatchingGenericException exclue après mesure : 112 sites sur 58 fichiers, tous en
+       frontière d'appel externe (HTTP, parsing JSON/XML de réponse externe, envoi email) —
+       schéma de résilience délibéré et déjà documenté (BilanFetch/SourceAvecBilanFetch) : capter
+       large pour journaliser et retomber sur une valeur de repli plutôt que de laisser une
+       exception imprévue interrompre tout un cycle de fetch/job. Un typage précis introduirait un
+       risque réel (un type d'exception non anticipé romprait la résilience que ce pattern garantit
+       justement). -->
   <rule ref="category/java/design.xml">
     <exclude name="LawOfDemeter"/>
+    <exclude name="AvoidCatchingGenericException"/>
   </rule>
   <rule ref="category/java/design.xml/CyclomaticComplexity">
     <properties>
