@@ -43,8 +43,6 @@ public class RetryLotsService {
 
   private static final long DELAI_RETRY_MINUTES = 15;
 
-  private record ConfigRetry(JobKey jobKey, String cleJobData) {}
-
   private static final Map<String, ConfigRetry> CONFIGS_PAR_TYPE_JOB =
       Map.of(
           "fetch:artistes:batch",
@@ -58,6 +56,8 @@ public class RetryLotsService {
   private final Scheduler scheduler;
   private final SuiviChroniciteService suiviChronicite;
   private final LogsAdminWorker logsAdminWorker;
+
+  private record ConfigRetry(JobKey jobKey, String cleJobData) {}
 
   /**
    * @param scheduler planificateur Quartz portant le job cron normal à re-déclencher

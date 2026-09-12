@@ -44,6 +44,20 @@ public class RecalculerMatchesService {
   private static final Logger LOG = LoggerFactory.getLogger(RecalculerMatchesService.class);
   private static final String CLE_USER_ID = "userId";
 
+  /**
+   * Exclut une fiche package Ticketmaster (voir {@code PersisteurConcertsDb.SQL_EST_PACKAGE`) tant
+   * qu'aucune fiche normale du même événement réel (même artiste/salle/date) n'existe — elle
+   * redevient visible dès qu'une fiche normale apparaît et que {@code supprimerDoublonsParSalleId}
+   * les fusionne.
+   */
+  private static final String SQL_PAS_PACKAGE_ISOLE =
+      " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
+          + "   SELECT 1 FROM concerts c2"
+          + "   WHERE c2.artiste_id = c.artiste_id AND c2.salle_id = c.salle_id"
+          + "     AND c2.date = c.date AND c2.id != c.id"
+          + "     AND (c2.url IS NULL OR c2.url !~* '/pack/')"
+          + " ))";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final TransactionTemplate txParUser;
 
@@ -164,20 +178,6 @@ public class RecalculerMatchesService {
       return List.of();
     }
   }
-
-  /**
-   * Exclut une fiche package Ticketmaster (voir {@code PersisteurConcertsDb.SQL_EST_PACKAGE`) tant
-   * qu'aucune fiche normale du même événement réel (même artiste/salle/date) n'existe — elle
-   * redevient visible dès qu'une fiche normale apparaît et que {@code supprimerDoublonsParSalleId}
-   * les fusionne.
-   */
-  private static final String SQL_PAS_PACKAGE_ISOLE =
-      " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
-          + "   SELECT 1 FROM concerts c2"
-          + "   WHERE c2.artiste_id = c.artiste_id AND c2.salle_id = c.salle_id"
-          + "     AND c2.date = c.date AND c2.id != c.id"
-          + "     AND (c2.url IS NULL OR c2.url !~* '/pack/')"
-          + " ))";
 
   private List<UUID> rechercherConcertsParArtistes(
       final List<UUID> artisteIds, final List<String> departements, final String aujourdhui) {

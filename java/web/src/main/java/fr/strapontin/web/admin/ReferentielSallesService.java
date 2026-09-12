@@ -32,6 +32,25 @@ public class ReferentielSallesService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
 
+  private static final String CTE_SALLES_AGREGEES =
+      """
+      WITH salles_agr AS (
+        SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom AS nom_parent,
+               COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
+               COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
+               CASE
+                 WHEN MIN(ss.suspect_depuis) IS NULL THEN 'a_jour'
+                 WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
+                 ELSE 'a_verifier'
+               END AS statut
+        FROM salles s
+        LEFT JOIN salles p ON p.id = s.salle_parent_id
+        LEFT JOIN concerts c ON c.salle_id = s.id
+        LEFT JOIN salle_sources ss ON ss.salle_id = s.id
+        GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom
+      )
+      """;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
@@ -161,25 +180,6 @@ public class ReferentielSallesService {
     }
     return Arrays.stream(sourcesConcat.split(",")).toList();
   }
-
-  private static final String CTE_SALLES_AGREGEES =
-      """
-      WITH salles_agr AS (
-        SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom AS nom_parent,
-               COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
-               COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
-               CASE
-                 WHEN MIN(ss.suspect_depuis) IS NULL THEN 'a_jour'
-                 WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
-                 ELSE 'a_verifier'
-               END AS statut
-        FROM salles s
-        LEFT JOIN salles p ON p.id = s.salle_parent_id
-        LEFT JOIN concerts c ON c.salle_id = s.id
-        LEFT JOIN salle_sources ss ON ss.salle_id = s.id
-        GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom
-      )
-      """;
 
   /**
    * Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},

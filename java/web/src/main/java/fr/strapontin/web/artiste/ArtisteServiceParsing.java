@@ -25,8 +25,6 @@ import org.slf4j.LoggerFactory;
  */
 final class ArtisteServiceParsing {
 
-  private ArtisteServiceParsing() {}
-
   private static final Logger LOG = LoggerFactory.getLogger(ArtisteServiceParsing.class);
 
   // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou un humoriste
@@ -37,6 +35,8 @@ final class ArtisteServiceParsing {
               + "|groupe|humoriste|dj\\b"
               + "|singer|rapper|musician|band|composer|songwriter|comedian|humorist",
           Pattern.CASE_INSENSITIVE);
+
+  private ArtisteServiceParsing() {}
 
   @SuppressWarnings("unchecked")
   static List<SuggestionArtiste> parseWikidataResultats(

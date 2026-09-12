@@ -18,8 +18,6 @@ import java.util.List;
  */
 final class EmailDigestTemplate {
 
-  private EmailDigestTemplate() {}
-
   private static final String GABARIT_CORPS_EMAIL =
       """
       <!DOCTYPE html>
@@ -45,6 +43,8 @@ final class EmailDigestTemplate {
       </body>
       </html>
       """;
+
+  private EmailDigestTemplate() {}
 
   static String construireCorpsEmail(
       final String sujet,

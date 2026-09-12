@@ -35,6 +35,12 @@ final class MapeurEvenementTM {
           "arts et théâtre",
           "theatre");
 
+  // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
+  // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
+  // constant sur tous les cas observés en production. Un package n'est pas accessible à un achat
+  // de billetterie standard : son statut de vente ne doit jamais être notifié comme une prévente.
+  private static final Pattern URL_PACKAGE_TM = Pattern.compile("(?i)/pack/");
+
   private MapeurEvenementTM() {}
 
   /**
@@ -196,12 +202,6 @@ final class MapeurEvenementTM {
   }
 
   private record InfosVenteTM(String statut, String presaleDebut, String presaleNom) {}
-
-  // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
-  // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
-  // constant sur tous les cas observés en production. Un package n'est pas accessible à un achat
-  // de billetterie standard : son statut de vente ne doit jamais être notifié comme une prévente.
-  private static final Pattern URL_PACKAGE_TM = Pattern.compile("(?i)/pack/");
 
   private static boolean estEvenementPackage(final String url) {
     return url != null && URL_PACKAGE_TM.matcher(url).find();

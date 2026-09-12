@@ -47,8 +47,17 @@ public class FusionSallesClePorteeService {
 
   private static final Logger LOG = LoggerFactory.getLogger(FusionSallesClePorteeService.class);
 
+  // Distance au-delà de laquelle deux salles ne peuvent structurellement pas être le même
+  // bâtiment, même en cas de coïncidence artiste+date+heure+dept et de nom similaire — un
+  // complexe multi-salles (La Seine Musicale, #1180) peut partager un nom quasi identique entre
+  // deux halls physiquement distincts de plusieurs centaines de mètres.
+  private static final double DISTANCE_MAX_FUSION_METRES = 500;
+  private static final double RAYON_TERRE_METRES = 6_371_000;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
+
+  private record PaireSalles(UUID a, UUID b) {}
 
   /**
    * @param jdbc accès JDBC
@@ -59,8 +68,6 @@ public class FusionSallesClePorteeService {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
   }
-
-  private record PaireSalles(UUID a, UUID b) {}
 
   /**
    * Détecte puis fusionne les paires de salles distinctes partageant un concert à venir identique
@@ -135,12 +142,6 @@ public class FusionSallesClePorteeService {
     return paires;
   }
 
-  // Distance au-delà de laquelle deux salles ne peuvent structurellement pas être le même
-  // bâtiment, même en cas de coïncidence artiste+date+heure+dept et de nom similaire — un
-  // complexe multi-salles (La Seine Musicale, #1180) peut partager un nom quasi identique entre
-  // deux halls physiquement distincts de plusieurs centaines de mètres.
-  private static final double DISTANCE_MAX_FUSION_METRES = 500;
-
   /**
    * @return {@code true} si les deux salles ont toutes deux des coordonnées connues et que leur
    *     distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
@@ -174,8 +175,6 @@ public class FusionSallesClePorteeService {
     }
     return distanceHaversineMetres(latA, lonA, latB, lonB) <= DISTANCE_MAX_FUSION_METRES;
   }
-
-  private static final double RAYON_TERRE_METRES = 6_371_000;
 
   private static double distanceHaversineMetres(
       final double lat1, final double lon1, final double lat2, final double lon2) {

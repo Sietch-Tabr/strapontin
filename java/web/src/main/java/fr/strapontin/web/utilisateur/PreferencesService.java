@@ -42,6 +42,7 @@ public class PreferencesService {
   private static final Logger LOG = LoggerFactory.getLogger(PreferencesService.class);
   private static final String CLE_USER_ID = "userId";
   private static final String WORKER_URL = "http://localhost:8081/trigger";
+  private static final Pattern VENUE_ID_PATTERN = Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -384,8 +385,6 @@ public class PreferencesService {
         """,
         Map.of(CLE_USER_ID, userId, "depts", nouveauxDepts));
   }
-
-  private static final Pattern VENUE_ID_PATTERN = Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
   /**
    * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import

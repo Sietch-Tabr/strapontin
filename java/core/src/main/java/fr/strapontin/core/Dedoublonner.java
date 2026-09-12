@@ -23,13 +23,15 @@ public final class Dedoublonner {
   // Poids du score de richesse diacritique dans l'arbitrage du nom de salle retenu par fusionner
   // — favorise une forme accentuée correcte ("Théâtre") sur une casse mixte sans accent.
   private static final int POIDS_DIACRITIQUES = 2;
+  private static final String SANS_HEURE = "SANS_HEURE";
+  // Tolérance sous laquelle deux heures distinctes restent compatibles pour la fusion, très en
+  // dessous de tout écart matinée/soirée réel (toujours de l'ordre de l'heure).
+  private static final int TOLERANCE_HEURE_MINUTES = 3;
 
   private Dedoublonner() {}
 
   private record ConcertEnrichi(
       ConcertBrut concert, String artisteNorm, String villeNorm, String salleNorm) {}
-
-  private static final String SANS_HEURE = "SANS_HEURE";
 
   private static ConcertEnrichi enrichir(final ConcertBrut c) {
     final String salleNorm = Normalisation.normaliserTexte(c.salle());
@@ -140,18 +142,13 @@ public final class Dedoublonner {
     return fusionnes;
   }
 
-  // Tolérance sous laquelle deux heures distinctes restent compatibles pour la fusion, très en
-  // dessous de tout écart matinée/soirée réel (toujours de l'ordre de l'heure).
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
-
   /**
    * Indique si deux concerts peuvent fusionner du point de vue de l'heure.
    *
    * <p>Empêche la passe 2 (fuzzy, groupée par date+ville sans heure) de refusionner deux concerts
    * que la passe 1 vient de distinguer par heure (matinée + soirée) : deux heures renseignées et
-   * distantes de plus de {@value #TOLERANCE_HEURE_MINUTES} minutes signent deux concerts
-   * distincts, une heure absente d'un côté (ou des deux) ne permet ni de confirmer ni d'exclure la
-   * fusion.
+   * distantes de plus de {@value #TOLERANCE_HEURE_MINUTES} minutes signent deux concerts distincts,
+   * une heure absente d'un côté (ou des deux) ne permet ni de confirmer ni d'exclure la fusion.
    *
    * @param a premier concert enrichi
    * @param b second concert enrichi

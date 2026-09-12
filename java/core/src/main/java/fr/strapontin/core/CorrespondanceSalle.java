@@ -11,9 +11,9 @@ import java.util.Set;
 /**
  * Détermine si deux noms de salle normalisés désignent la même salle.
  *
- * Extrait de {@code worker/persister/ReconciliateurSalles} (v2.5.7) vers {@code core} pour être réutilisable
- * par le module {@code sources} (découverte Wikidata par nom, v2.6.0) sans dépendance circulaire
- * {@code sources} → {@code worker}.
+ * <p>Extrait de {@code worker/persister/ReconciliateurSalles} (v2.5.7) vers {@code core} pour être
+ * réutilisable par le module {@code sources} (découverte Wikidata par nom, v2.6.0) sans dépendance
+ * circulaire {@code sources} → {@code worker}.
  *
  * @since 2.6.0
  * @author Kwaite
@@ -66,6 +66,12 @@ public final class CorrespondanceSalle {
           // du seuil entre deux salles réellement distinctes.
           "eglise",
           "saint");
+
+  // Longueur minimale d'un token spécifique pour servir de base au containment partiel
+  // asymétrique — évite un containment trivial sur un token déjà très court.
+  private static final int LONGUEUR_MIN_CONTAINMENT_TOKEN = 4;
+
+  private static final String SEPARATEUR_QUALIFICATIF = " - ";
 
   private CorrespondanceSalle() {}
 
@@ -143,10 +149,6 @@ public final class CorrespondanceSalle {
     return (double) intersection.size() / union.size();
   }
 
-  // Longueur minimale d'un token spécifique pour servir de base au containment partiel
-  // asymétrique — évite un containment trivial sur un token déjà très court.
-  private static final int LONGUEUR_MIN_CONTAINMENT_TOKEN = 4;
-
   /**
    * Vérifie si chaque token spécifique du nom le plus court est contenu (au sens sous-chaîne) dans
    * au moins un token spécifique du nom le plus long.
@@ -202,8 +204,9 @@ public final class CorrespondanceSalle {
    *       ("LOlympia") ne produit aucune espace à substituer ("lolympia") : sans ce critère, les
    *       deux formes ne partagent aucun token commun
    *   <li>Containment de tokens spécifiques partiel asymétrique — couvre un mot inséré au milieu
-   *       d'un token plutôt qu'ajouté en tant que mot séparé (« Accor Arena » / « Accorhotels
-   *       Arena ») </ol>
+   *       d'un token plutôt qu'ajouté en tant que mot séparé (« Accor Arena » / « Accorhotels Arena
+   *       »)
+   * </ol>
    *
    * @param a premier nom normalisé
    * @param b deuxième nom normalisé
@@ -215,18 +218,18 @@ public final class CorrespondanceSalle {
 
   /**
    * Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver, en plus du
-   * critère pivot, le containment de caractères du premier critère (les deux plus faibles des
-   * cinq) — un adjectif générique français très courant (ex. "nouvelle") peut satisfaire le pivot
-   * sans pouvoir discriminant réel, et un nom court peut se retrouver préfixe strict d'un nom plus
-   * long sans rapport (ex. "la prade" / "la pradella") ; les deux cas constatés en production sur
-   * un rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
+   * critère pivot, le containment de caractères du premier critère (les deux plus faibles des cinq)
+   * — un adjectif générique français très courant (ex. "nouvelle") peut satisfaire le pivot sans
+   * pouvoir discriminant réel, et un nom court peut se retrouver préfixe strict d'un nom plus long
+   * sans rapport (ex. "la prade" / "la pradella") ; les deux cas constatés en production sur un
+   * rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
    * indépendant. Les trois autres critères restent inchangés dans les deux cas.
    *
    * @param a premier nom normalisé
    * @param b deuxième nom normalisé
    * @param pivotAutorise {@code false} pour exclure le pivot et le containment de caractères de
-   *   l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
-   *   confirmer un candidat validé sur l'un de ces deux seuls critères
+   *     l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
+   *     confirmer un candidat validé sur l'un de ces deux seuls critères
    * @return {@code true} si les salles sont considérées identiques
    */
   public static boolean estDoublonSalle(
@@ -308,8 +311,6 @@ public final class CorrespondanceSalle {
     final Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
     return estContainmentTokensPartiel(specCourt, specLong);
   }
-
-  private static final String SEPARATEUR_QUALIFICATIF = " - ";
 
   // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une espace) — l'extraction
   // opère donc sur le nom brut, jamais sur nom_norm.

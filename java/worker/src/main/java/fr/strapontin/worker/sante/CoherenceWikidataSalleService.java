@@ -57,6 +57,35 @@ public class CoherenceWikidataSalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoherenceWikidataSalleService.class);
 
+  // une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
+  // systématique sur toute salle parisienne/lyonnaise/marseillaise (arrondissement ≠ ville mère),
+  // en zone urbaine dense (quartiers/districts informels sans commune propre, ex. Bercy, La
+  // Défense) ou sur une commune fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom
+  // d'une des communes d'origine, ou référence l'intercommunalité). Cette normalisation est
+  // volontairement locale à ce contrôle *a posteriori* : {@link
+  // WikidataSalleSource#villeIncompatible}
+  // reste inchangé, il bloque le matching *au moment de l'enrichissement* où une
+  // comparaison plus permissive réduirait la couverture.
+  private static final Pattern ARRONDISSEMENT =
+      Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
+
+  // Quartiers/districts informels ne correspondant à aucune commune administrative, rattachés à
+  // une ou plusieurs communes possibles (ex. La Défense chevauche Nanterre/Puteaux/Courbevoie).
+  private static final Map<String, Set<String>> QUARTIERS_EQUIVALENTS =
+      Map.of(
+          "bercy", Set.of("paris"),
+          "la defense", Set.of("nanterre", "puteaux", "courbevoie", "paris"),
+          "st germain l auxerrois", Set.of("paris"),
+          "notre dame", Set.of("paris"),
+          "chaussee d antin", Set.of("paris"),
+          // Quartier administratif du 12e arrondissement de Paris où se trouve l'Opéra Bastille.
+          "quinze vingts", Set.of("paris"));
+
+  // Longueur minimale pour le repli par containment (commune fusionnée/intercommunalité, ex.
+  // « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite », « Orange » ⊂ « communauté de communes du Pays
+  // d'Orange en Provence ») — évite un containment trivial sur un token court.
+  private static final int LONGUEUR_MIN_CONTAINMENT = 5;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
   private final LogsAdminWorker logsAdminWorker;
@@ -276,35 +305,6 @@ public class CoherenceWikidataSalleService {
         ? Coherence.COHERENTE
         : Coherence.INCOHERENTE_TOTALE;
   }
-
-  // une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
-  // systématique sur toute salle parisienne/lyonnaise/marseillaise (arrondissement ≠ ville mère),
-  // en zone urbaine dense (quartiers/districts informels sans commune propre, ex. Bercy, La
-  // Défense) ou sur une commune fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom
-  // d'une des communes d'origine, ou référence l'intercommunalité). Cette normalisation est
-  // volontairement locale à ce contrôle *a posteriori* : {@link
-  // WikidataSalleSource#villeIncompatible}
-  // reste inchangé, il bloque le matching *au moment de l'enrichissement* où une
-  // comparaison plus permissive réduirait la couverture.
-  private static final Pattern ARRONDISSEMENT =
-      Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
-
-  // Quartiers/districts informels ne correspondant à aucune commune administrative, rattachés à
-  // une ou plusieurs communes possibles (ex. La Défense chevauche Nanterre/Puteaux/Courbevoie).
-  private static final Map<String, Set<String>> QUARTIERS_EQUIVALENTS =
-      Map.of(
-          "bercy", Set.of("paris"),
-          "la defense", Set.of("nanterre", "puteaux", "courbevoie", "paris"),
-          "st germain l auxerrois", Set.of("paris"),
-          "notre dame", Set.of("paris"),
-          "chaussee d antin", Set.of("paris"),
-          // Quartier administratif du 12e arrondissement de Paris où se trouve l'Opéra Bastille.
-          "quinze vingts", Set.of("paris"));
-
-  // Longueur minimale pour le repli par containment (commune fusionnée/intercommunalité, ex.
-  // « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite », « Orange » ⊂ « communauté de communes du Pays
-  // d'Orange en Provence ») — évite un containment trivial sur un token court.
-  private static final int LONGUEUR_MIN_CONTAINMENT = 5;
 
   private static boolean villesCoherentes(final String villeSalle, final String communeWikidata) {
     final String villeSalleNorm = Normalisation.normaliserVille(villeSalle);

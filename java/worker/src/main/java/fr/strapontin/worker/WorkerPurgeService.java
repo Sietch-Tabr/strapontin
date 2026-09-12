@@ -32,6 +32,20 @@ public class WorkerPurgeService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerPurgeService.class);
 
+  // Seuil de purge définitive d'un concert futur jamais reconfirmé — très supérieur au seuil de
+  // simple signalement "à vérifier" (WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, une demi-
+  // journée de silence) : un état "à vérifier" posé par ce garde-fou anti-faux-positif ne doit pas
+  // rester affiché indéfiniment sans jamais évoluer. ×10 correspond à environ 5 jours de silence
+  // continu (cron ~11 cycles/jour), largement au-delà de toute panne transitoire de source déjà
+  // observée.
+  static final int SEUIL_PURGE_ABSENCES = WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES * 10;
+
+  // Un concert sans salle_id ni artiste_id n'est jamais retouché par aucun job de fetch (tous
+  // scopés par artiste suivi, salle suivie ou département suivi) — absences_consecutives reste
+  // figé à 0 et ne peut donc jamais atteindre SEUIL_PURGE_ABSENCES. 30 jours sans mise à jour
+  // signe une staleness réelle, indépendante de ce compteur inopérant pour ce cas.
+  private static final int SEUIL_JOURS_HORS_PORTEE = 30;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
 
@@ -62,14 +76,6 @@ public class WorkerPurgeService {
         });
   }
 
-  // Seuil de purge définitive d'un concert futur jamais reconfirmé — très supérieur au seuil de
-  // simple signalement "à vérifier" (WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, une demi-
-  // journée de silence) : un état "à vérifier" posé par ce garde-fou anti-faux-positif ne doit pas
-  // rester affiché indéfiniment sans jamais évoluer. ×10 correspond à environ 5 jours de silence
-  // continu (cron ~11 cycles/jour), largement au-delà de toute panne transitoire de source déjà
-  // observée.
-  static final int SEUIL_PURGE_ABSENCES = WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES * 10;
-
   /**
    * Signale pour suppression les concerts futurs dont le compteur d'absences consécutives dépasse
    * {@value #SEUIL_PURGE_ABSENCES} — un concert signalé "à vérifier" (voir {@code
@@ -99,12 +105,6 @@ public class WorkerPurgeService {
           return new ResultatPersistance(0, signales);
         });
   }
-
-  // Un concert sans salle_id ni artiste_id n'est jamais retouché par aucun job de fetch (tous
-  // scopés par artiste suivi, salle suivie ou département suivi) — absences_consecutives reste
-  // figé à 0 et ne peut donc jamais atteindre SEUIL_PURGE_ABSENCES. 30 jours sans mise à jour
-  // signe une staleness réelle, indépendante de ce compteur inopérant pour ce cas.
-  private static final int SEUIL_JOURS_HORS_PORTEE = 30;
 
   /**
    * Signale pour suppression les concerts futurs sans {@code salle_id} ni {@code artiste_id},

@@ -57,8 +57,6 @@ public class ConfigAdminService {
   private static final Pattern FORMAT_VAPID_PUBLIC_KEY = Pattern.compile("^[A-Za-z0-9_-]{87}$");
   private static final Pattern FORMAT_VAPID_PRIVATE_KEY = Pattern.compile("^[A-Za-z0-9_-]{43}$");
 
-  private record FormatAttendu(Pattern pattern, String messageErreur) {}
-
   private static final Map<String, FormatAttendu> FORMATS_CONFIG =
       Map.of(
           "TICKETMASTER_API_KEY",
@@ -92,6 +90,8 @@ public class ConfigAdminService {
   private final LogAdminService logAdminService;
   private final RestClient restClient;
   private final CadenceurAppels cadenceurTicketmaster;
+
+  private record FormatAttendu(Pattern pattern, String messageErreur) {}
 
   /**
    * @param configService lecture/écriture de la configuration applicative

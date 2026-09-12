@@ -50,6 +50,11 @@ final class ClientSparqlWikidata {
   // publiée par Wikidata pour l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte
   // de temps réel (cycle nocturne unique).
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 2000;
+  private static final Pattern MOTIF_Q_ID = Pattern.compile("^Q[0-9]+$");
+  // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis latitude, jamais
+  // l'inverse — convention géographique standard).
+  private static final Pattern COORDONNEES_WKT =
+      Pattern.compile("Point\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
 
   private final RestClient restClient;
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
@@ -216,8 +221,6 @@ final class ClientSparqlWikidata {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 
-  private static final Pattern MOTIF_Q_ID = Pattern.compile("^Q[0-9]+$");
-
   /**
    * Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la
    * concaténer nue (sans guillemets) dans une clause {@code VALUES ?item { wd:... }} —
@@ -229,11 +232,6 @@ final class ClientSparqlWikidata {
   static boolean estQIdValide(final String qId) {
     return qId != null && MOTIF_Q_ID.matcher(qId).matches();
   }
-
-  // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis latitude, jamais
-  // l'inverse — convention géographique standard).
-  private static final Pattern COORDONNEES_WKT =
-      Pattern.compile("Point\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
 
   /**
    * Parse une valeur WKT Wikidata en {@code [longitude, latitude]} — partagé entre {@link

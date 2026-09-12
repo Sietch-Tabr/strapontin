@@ -82,6 +82,12 @@ import org.springframework.web.client.RestClient;
  */
 public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
 
+  private static final int TAILLE_LOT_MAX = 50;
+
+  private final ClientSparqlWikidata client;
+  private final Cache<String, EnrichissementSalle> cache;
+  private final WikidataSalleDecouverte decouverte;
+
   /**
    * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
    *
@@ -91,12 +97,6 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   public fr.strapontin.core.BilanFetch preleverBilan() {
     return client.preleverBilan();
   }
-
-  private static final int TAILLE_LOT_MAX = 50;
-
-  private final ClientSparqlWikidata client;
-  private final Cache<String, EnrichissementSalle> cache;
-  private final WikidataSalleDecouverte decouverte;
 
   /** Crée une instance avec un client SPARQL par défaut et un cache 24h. */
   public WikidataSalleSource() {

@@ -48,6 +48,11 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // de les comparer entre eux plutôt que de prendre le premier venu.
   private static final int LIMITE_CANDIDATS_DEEZER = 5;
 
+  private final RestClient restClient;
+  private final Cache<String, ResultatResolution> cache;
+  // Bilan de panne agrégé, remonté dans logs_admin par le worker.
+  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
+
   /** Source de résolution utilisée pour un nom canonique. */
   public enum SourceResolution {
     DEEZER,
@@ -61,11 +66,6 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
    * @param source source ayant fourni le nom
    */
   public record ResultatResolution(String nom, SourceResolution source) {}
-
-  private final RestClient restClient;
-  private final Cache<String, ResultatResolution> cache;
-  // Bilan de panne agrégé, remonté dans logs_admin par le worker.
-  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
   /**
    * Crée une instance avec les URLs distantes, un RestClient borné (timeout connexion 10s, lecture

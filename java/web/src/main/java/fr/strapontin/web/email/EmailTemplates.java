@@ -28,13 +28,13 @@ import java.util.List;
  */
 final class EmailTemplates {
 
-  private EmailTemplates() {}
-
   private static final String C_NOIR = "#111";
   static final String C_TEXTE = "#555";
   private static final String C_MUTE = "#aaa";
   static final String C_ERREUR = "#c00";
   private static final String C_BORDURE = "#e5e5e5";
+
+  private EmailTemplates() {}
 
   // ---- Emails transactionnels ----
 

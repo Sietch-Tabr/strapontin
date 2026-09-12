@@ -42,8 +42,23 @@ public class PersisteurConcertsDb {
 
   private static final Logger LOG = LoggerFactory.getLogger(PersisteurConcertsDb.class);
 
+  /**
+   * Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
+   * annulation) plutôt qu'une représentation supplémentaire.
+   */
+  private static final Set<String> STATUTS_REPORT_TM =
+      Set.of("rescheduled", "cancelled", "postponed");
+
+  // Tolérance sur l'écart d'heure entre deux observations d'un même événement réel (fiches TM de
+  // types différents pour le même évènement) — très en dessous de tout écart matinée/soirée réel.
+  private static final int TOLERANCE_HEURE_MINUTES = 3;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurArtisteParUrl resolveurArtisteParUrl;
+
+  private record CleUrlDate(String url, LocalDate date) {}
+
+  private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
   /**
    * @param jdbc template JDBC injecté par Spring
@@ -112,13 +127,6 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
-   * annulation) plutôt qu'une représentation supplémentaire.
-   */
-  private static final Set<String> STATUTS_REPORT_TM =
-      Set.of("rescheduled", "cancelled", "postponed");
-
-  /**
    * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
    * ses observations partage la même {@code url}, même {@code date}, heure différente, nouveau
    * statut {@link #STATUTS_REPORT_TM}).
@@ -135,8 +143,6 @@ public class PersisteurConcertsDb {
    *
    * @param concerts concerts après réconciliation, avant upsert
    */
-  private record CleUrlDate(String url, LocalDate date) {}
-
   void alignerHeureReportTM(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> reports =
         concerts.stream()
@@ -218,10 +224,6 @@ public class PersisteurConcertsDb {
     return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
   }
 
-  // Tolérance sur l'écart d'heure entre deux observations d'un même événement réel (fiches TM de
-  // types différents pour le même évènement) — très en dessous de tout écart matinée/soirée réel.
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
-
   private static boolean heuresCompatibles(
       final LocalTime existante,
       final LocalTime entrante,
@@ -236,8 +238,6 @@ public class PersisteurConcertsDb {
     final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
     return diffMinutes <= TOLERANCE_HEURE_MINUTES;
   }
-
-  private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
   /**
    * Résout l'événement canonique correspondant à un concert entrant, ou en crée un nouveau — point

@@ -37,6 +37,12 @@ public class CoherenceMultiSalleService {
 
   private static final String PREFIXE_INTERNAL = "internal:";
 
+  // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur une seule lettre.
+  private static final int LONGUEUR_MIN_SIGLE = 2;
+
+  // Longueur minimale pour éviter un containment trivial sur un nom déjà très court.
+  private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
 
@@ -164,9 +170,6 @@ public class CoherenceMultiSalleService {
         params);
   }
 
-  // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur une seule lettre.
-  private static final int LONGUEUR_MIN_SIGLE = 2;
-
   /**
    * Un identifiant source synthétique n'est pas une contamination réelle quand il n'est que le nom
    * de la salle complété d'une ville ({@link #nomContenuDansLAutre}, ex. "6mic" / "6mic aix en
@@ -273,9 +276,6 @@ public class CoherenceMultiSalleService {
     LOG.info("coherence:multi-salle:doublon salles={} signalees={}", salles.size(), signalees);
     return signalees;
   }
-
-  // Longueur minimale pour éviter un containment trivial sur un nom déjà très court.
-  private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
 
   // Containment par token complet plutôt que sous-chaîne brute (#1203) : un containment de
   // caractères validait à tort un article court ("les") trivialement présent dans un token du nom

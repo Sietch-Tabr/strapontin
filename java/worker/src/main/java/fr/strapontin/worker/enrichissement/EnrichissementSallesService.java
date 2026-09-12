@@ -53,6 +53,16 @@ public class EnrichissementSallesService {
   // OverpassSalleSource et WikidataSalleSource) — laisse Overpass et Wikidata respirer entre deux
   // lots plutôt que d'enchaîner immédiatement, sur des instances publiques déjà sous tension.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
+  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de réussite déclenche une
+  // alerte — évite un faux positif sur un tout petit lot où un faible nombre de succès est
+  // plausible même en fonctionnement normal (aucune des quelques salles du jour n'existe sur
+  // Wikidata/OSM).
+  private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
+  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une dégradation
+  // chronique mais non totale (constaté en production : 90-100% d'échec chaque nuit durant 11
+  // nuits, jamais 100% pile) reste alors indéfiniment sous le seuil. Un taux de réussite est
+  // requis, pas seulement une absence totale de résultat.
+  private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
@@ -114,17 +124,6 @@ public class EnrichissementSallesService {
     remonterBilans();
     return nbEnrichis;
   }
-
-  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de réussite déclenche une
-  // alerte — évite un faux positif sur un tout petit lot où un faible nombre de succès est
-  // plausible même en fonctionnement normal (aucune des quelques salles du jour n'existe sur
-  // Wikidata/OSM).
-  private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
-  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une dégradation
-  // chronique mais non totale (constaté en production : 90-100% d'échec chaque nuit durant 11
-  // nuits, jamais 100% pile) reste alors indéfiniment sous le seuil. Un taux de réussite est
-  // requis, pas seulement une absence totale de résultat.
-  private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
 
   /**
    * Alerte si un cycle avec un nombre significatif de candidats a un taux de réussite chronique

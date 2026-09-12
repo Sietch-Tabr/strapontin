@@ -40,6 +40,25 @@ public class ReferentielArtistesService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
 
+  private static final String CTE_ARTISTES_AGREGES =
+      """
+      WITH artistes_agr AS (
+        SELECT a.id, a.nom, a.nom_affiche, a.wikidata_id, a.deezer_id,
+               COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
+               COALESCE(string_agg(DISTINCT asrc.source, ','), '') AS sources,
+               CASE
+                 WHEN MIN(asrc.necessite_intervention_le) IS NULL THEN 'a_jour'
+                 ELSE 'invalide'
+               END AS statut,
+               MAX(CASE WHEN asrc.source = 'ticketmaster' THEN asrc.identifiant_externe END)
+                 AS tm_identifiant_externe
+        FROM artistes a
+        LEFT JOIN concerts c ON c.artiste_id = a.id
+        LEFT JOIN artiste_sources asrc ON asrc.artiste_id = a.id
+        GROUP BY a.id, a.nom, a.nom_affiche, a.wikidata_id, a.deezer_id
+      )
+      """;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
@@ -149,25 +168,6 @@ public class ReferentielArtistesService {
     }
     return Arrays.stream(sourcesConcat.split(",")).toList();
   }
-
-  private static final String CTE_ARTISTES_AGREGES =
-      """
-      WITH artistes_agr AS (
-        SELECT a.id, a.nom, a.nom_affiche, a.wikidata_id, a.deezer_id,
-               COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
-               COALESCE(string_agg(DISTINCT asrc.source, ','), '') AS sources,
-               CASE
-                 WHEN MIN(asrc.necessite_intervention_le) IS NULL THEN 'a_jour'
-                 ELSE 'invalide'
-               END AS statut,
-               MAX(CASE WHEN asrc.source = 'ticketmaster' THEN asrc.identifiant_externe END)
-                 AS tm_identifiant_externe
-        FROM artistes a
-        LEFT JOIN concerts c ON c.artiste_id = a.id
-        LEFT JOIN artiste_sources asrc ON asrc.artiste_id = a.id
-        GROUP BY a.id, a.nom, a.nom_affiche, a.wikidata_id, a.deezer_id
-      )
-      """;
 
   /**
    * Efface l'enrichissement automatique d'un artiste ({@code wikidata_id}, {@code deezer_id},

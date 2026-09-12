@@ -39,9 +39,9 @@ public class ReconciliateurArtistes {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurArtistes.class);
 
-  private record ArtisteExistant(String artisteNorm, UUID artisteId) {}
-
   private final NamedParameterJdbcTemplate jdbc;
+
+  private record ArtisteExistant(String artisteNorm, UUID artisteId) {}
 
   /**
    * @param jdbc template JDBC injecté par Spring
@@ -131,11 +131,11 @@ public class ReconciliateurArtistes {
    *
    * <p>{@link #reconcilierUnArtiste} ne guérit une ligne existante que si {@link
    * CorrespondanceArtiste#estDoublonArtiste} relie encore l'ancien nom corrompu au nouveau — un
-   * mauvais rapprochement Deezer peut produire un nom sans aucune parenté textuelle avec
-   * l'original (ex. "nino arial" → "nino arbol"), rendant cette guérison structurellement
-   * impossible. Deux fiches de la même URL désignent nécessairement le même événement réel : cette
-   * voie corrige donc la ligne existante indépendamment de toute similarité de nom, dès que
-   * l'entrant est inéligible à la résolution Deezer (nom brut fiable par construction).
+   * mauvais rapprochement Deezer peut produire un nom sans aucune parenté textuelle avec l'original
+   * (ex. "nino arial" → "nino arbol"), rendant cette guérison structurellement impossible. Deux
+   * fiches de la même URL désignent nécessairement le même événement réel : cette voie corrige donc
+   * la ligne existante indépendamment de toute similarité de nom, dès que l'entrant est inéligible
+   * à la résolution Deezer (nom brut fiable par construction).
    *
    * @param lot concerts après résolution des identités sources
    */
@@ -256,9 +256,9 @@ public class ReconciliateurArtistes {
    * Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
    *
    * <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur une
-   * correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête
-   * source (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un candidat
-   * exact dans le result set, faisant rattacher à tort le concert au mauvais artiste alors qu'une
+   * correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête source
+   * (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un candidat exact dans
+   * le result set, faisant rattacher à tort le concert au mauvais artiste alors qu'une
    * correspondance exacte existait plus loin dans la même liste.
    *
    * @param concert concert à réconcilier
@@ -315,8 +315,8 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée,
-   * désormais démentie par un fetch fiable (concert inéligible à la résolution Deezer).
+   * Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée, désormais
+   * démentie par un fetch fiable (concert inéligible à la résolution Deezer).
    *
    * @param existant ancienne identité (erronée) à corriger
    * @param concert concert entrant portant l'identité corrigée

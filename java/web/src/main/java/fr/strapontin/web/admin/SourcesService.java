@@ -36,6 +36,7 @@ public class SourcesService {
   private static final Logger LOG = LoggerFactory.getLogger(SourcesService.class);
   private static final String URL_DIGITICK =
       "https://web.digitick.com/ext/billetterie5/index.php?site={slug}&action=ajax&op=1";
+  private static final Pattern PATTERN_EVENEMENT = Pattern.compile("evenement\\d");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -217,8 +218,6 @@ public class SourcesService {
       return -1;
     }
   }
-
-  private static final Pattern PATTERN_EVENEMENT = Pattern.compile("evenement\\d");
 
   private List<StatutSource> construireSources() {
     final Instant dernierFetch = lireDernierFetch();
