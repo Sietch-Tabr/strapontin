@@ -48,7 +48,7 @@ public final class CorrespondanceArtiste {
     if (a.equals(b)) {
       return true;
     }
-    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) {
+    if (DistanceTexte.jaro(a, b) >= SEUIL_JARO_ARTISTE) {
       return true;
     }
     if (UtilitairesChaine.estContainmentRatio(

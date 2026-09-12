@@ -131,7 +131,7 @@ public final class Dedoublonner {
           continue;
         }
         final double sim =
-            Normalisation.similarite(groupe.get(i).artisteNorm(), groupe.get(j).artisteNorm());
+            DistanceTexte.similarite(groupe.get(i).artisteNorm(), groupe.get(j).artisteNorm());
         if (sim >= SEUIL_SIMILARITE && heuresCompatibles(groupe.get(i), groupe.get(j))) {
           sousGroupe.add(groupe.get(j));
           traites[j] = true;

@@ -85,7 +85,7 @@ public final class CorrespondanceSalle {
     if (a.equals(b)) {
       return true;
     }
-    if (Normalisation.similarite(a, b) >= seuilSimilarite) {
+    if (DistanceTexte.similarite(a, b) >= seuilSimilarite) {
       return true;
     }
     // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)

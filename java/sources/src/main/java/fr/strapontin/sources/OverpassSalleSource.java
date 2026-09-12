@@ -154,13 +154,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
 
   @Override
   public Map<UUID, EnrichissementSalle> enrichirLot(final List<SalleAEnrichir> salles) {
-    final List<SalleAEnrichir> aTraiter =
-        salles.stream().filter(s -> s.wikidataId() == null && s.dept() != null).toList();
-    final int sansDept =
-        (int) salles.stream().filter(s -> s.wikidataId() == null).count() - aTraiter.size();
-    if (sansDept > 0) {
-      LOG.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
-    }
+    final List<SalleAEnrichir> aTraiter = filtrerSallesEligibles(salles);
     if (aTraiter.isEmpty()) {
       return Map.of();
     }
@@ -173,32 +167,58 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
     final Map<String, List<SalleAEnrichir>> parDept =
         aTraiter.stream().collect(Collectors.groupingBy(SalleAEnrichir::dept));
     for (final Map.Entry<String, List<SalleAEnrichir>> entree : parDept.entrySet()) {
-      final CentreDept centre = CentresDepartement.PAR_DEPT.get(entree.getKey());
-      if (centre == null) {
-        continue;
-      }
-      final List<SalleAEnrichir> sallesDept = entree.getValue();
-      for (int i = 0; i < sallesDept.size(); i += TAILLE_LOT) {
-        final List<SalleAEnrichir> lot =
-            sallesDept.subList(i, Math.min(i + TAILLE_LOT, sallesDept.size()));
-        cadenceur.attendre();
-        final ResultatLot resultat = enrichirUnLot(lot, centre);
-        resultats.putAll(resultat.resultats());
-        if (!resultat.succes()) {
-          final int echecs = echecsConsecutifsCycle.incrementAndGet();
-          if (echecs >= SEUIL_ECHECS_CONSECUTIFS) {
-            LOG.warn(
-                "Overpass — {} échecs consécutifs, instance probablement indisponible, cycle"
-                    + " interrompu (candidats restants retentés au prochain cycle)",
-                echecs);
-            return resultats;
-          }
-        } else {
-          echecsConsecutifsCycle.set(0);
-        }
+      if (enrichirDept(entree.getKey(), entree.getValue(), resultats)) {
+        break;
       }
     }
     return resultats;
+  }
+
+  private List<SalleAEnrichir> filtrerSallesEligibles(final List<SalleAEnrichir> salles) {
+    final List<SalleAEnrichir> aTraiter =
+        salles.stream().filter(s -> s.wikidataId() == null && s.dept() != null).toList();
+    final int sansDept =
+        (int) salles.stream().filter(s -> s.wikidataId() == null).count() - aTraiter.size();
+    if (sansDept > 0) {
+      LOG.debug("Overpass — {} salle(s) ignorée(s), département inconnu", sansDept);
+    }
+    return aTraiter;
+  }
+
+  /**
+   * Enrichit un département par lots de {@value #TAILLE_LOT}.
+   *
+   * @return {@code true} si le disjoncteur s'est déclenché pendant ce département (cycle
+   *     interrompu, candidats restants retentés au prochain cycle).
+   */
+  private boolean enrichirDept(
+      final String dept,
+      final List<SalleAEnrichir> sallesDept,
+      final Map<UUID, EnrichissementSalle> resultats) {
+    final CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
+    if (centre == null) {
+      return false;
+    }
+    for (int i = 0; i < sallesDept.size(); i += TAILLE_LOT) {
+      final List<SalleAEnrichir> lot =
+          sallesDept.subList(i, Math.min(i + TAILLE_LOT, sallesDept.size()));
+      cadenceur.attendre();
+      final ResultatLot resultat = enrichirUnLot(lot, centre);
+      resultats.putAll(resultat.resultats());
+      if (!resultat.succes()) {
+        final int echecs = echecsConsecutifsCycle.incrementAndGet();
+        if (echecs >= SEUIL_ECHECS_CONSECUTIFS) {
+          LOG.warn(
+              "Overpass — {} échecs consécutifs, instance probablement indisponible, cycle"
+                  + " interrompu (candidats restants retentés au prochain cycle)",
+              echecs);
+          return true;
+        }
+      } else {
+        echecsConsecutifsCycle.set(0);
+      }
+    }
+    return false;
   }
 
   /**

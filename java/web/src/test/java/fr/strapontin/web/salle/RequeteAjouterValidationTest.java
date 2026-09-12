@@ -66,7 +66,7 @@ class RequeteAjouterValidationTest {
     assertFalse(violations.isEmpty());
   }
 
-  // un nom de plusieurs Mo atteint Normalisation.levenshtein() (tableau int[m][n]) via
+  // un nom de plusieurs Mo atteint DistanceTexte.levenshtein() (tableau int[m][n]) via
   // CorrespondanceSalle.estDoublonSalle — risque de OutOfMemoryError sans cette borne.
   @Test
   void nom_troplong_estRejete() {

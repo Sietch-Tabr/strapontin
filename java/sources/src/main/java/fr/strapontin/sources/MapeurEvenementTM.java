@@ -6,12 +6,9 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
-import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,12 +33,6 @@ final class MapeurEvenementTM {
           "musical",
           "arts et théâtre",
           "theatre");
-
-  // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
-  // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
-  // constant sur tous les cas observés en production. Un package n'est pas accessible à un achat
-  // de billetterie standard : son statut de vente ne doit jamais être notifié comme une prévente.
-  private static final Pattern URL_PACKAGE_TM = Pattern.compile("(?i)/pack/");
 
   private MapeurEvenementTM() {}
 
@@ -88,20 +79,6 @@ final class MapeurEvenementTM {
     }
   }
 
-  /**
-   * Indique si un horodatage ISO 8601 (avec offset ou {@code Z}) est dans le futur.
-   *
-   * @param iso horodatage à analyser
-   * @return {@code true} si postérieur à maintenant, {@code false} si passé ou illisible
-   */
-  private static boolean estDansLeFutur(final String iso) {
-    try {
-      return OffsetDateTime.parse(iso).toInstant().isAfter(Instant.now());
-    } catch (Exception e) {
-      return false;
-    }
-  }
-
   @SuppressWarnings(UNCHECKED)
   private static String extraireArtisteTM(
       final Map<String, Object> evt,
@@ -114,15 +91,27 @@ final class MapeurEvenementTM {
             ? (String) attractions.get(0).get(CLE_NAME)
             : null;
     if (nomAttraction != null) {
-      // Si la recherche était par nom d'artiste, rejeter les attractions dont le nom normalisé
-      // ne correspond pas exactement (évite les homonymes partiels, ex: "Anuv Jain" pour "Jain").
-      if (artisteFallback != null
-          && !Normalisation.normaliserTexte(nomAttraction)
-              .equals(Normalisation.normaliserTexte(artisteFallback))) {
-        return null;
-      }
-      return Normalisation.normaliserCasse(nomAttraction);
+      return artisteDepuisAttraction(nomAttraction, artisteFallback);
     }
+    return artisteDepuisFallback(evt, artisteFallback);
+  }
+
+  /**
+   * Si la recherche était par nom d'artiste, rejette les attractions dont le nom normalisé ne
+   * correspond pas exactement (évite les homonymes partiels, ex: "Anuv Jain" pour "Jain").
+   */
+  private static String artisteDepuisAttraction(
+      final String nomAttraction, final String artisteFallback) {
+    if (artisteFallback != null
+        && !Normalisation.normaliserTexte(nomAttraction)
+            .equals(Normalisation.normaliserTexte(artisteFallback))) {
+      return null;
+    }
+    return Normalisation.normaliserCasse(nomAttraction);
+  }
+
+  private static String artisteDepuisFallback(
+      final Map<String, Object> evt, final String artisteFallback) {
     if (artisteFallback == null) {
       return null;
     }
@@ -154,110 +143,13 @@ final class MapeurEvenementTM {
     final Map<String, String> segment =
         (Map<String, String>) classificationsData.get(0).get("segment");
     final String segmentNom =
-        segment != null && segment.get(CLE_NAME) != null ? segment.get(CLE_NAME).toLowerCase() : null;
+        segment != null && segment.get(CLE_NAME) != null
+            ? segment.get(CLE_NAME).toLowerCase()
+            : null;
     final Map<String, String> genreMap =
         (Map<String, String>) classificationsData.get(0).get("genre");
     final String genre = genreMap != null ? genreMap.get(CLE_NAME) : null;
     return new String[] {segmentNom, genre};
-  }
-
-  private record InfosVenueTM(String salle, String ville, String dept, String salleSourceId) {}
-
-  private static InfosVenueTM extraireInfosVenueTM(final Map<String, Object> venue) {
-    return new InfosVenueTM(
-        extraireNomSalleTM(venue),
-        extraireVilleTM(venue),
-        extraireDeptTM(venue),
-        extraireSalleSourceIdTM(venue));
-  }
-
-  private static String extraireNomSalleTM(final Map<String, Object> venue) {
-    return Normalisation.normaliserCasse(
-        venue != null && venue.get(CLE_NAME) != null ? (String) venue.get(CLE_NAME) : "Salle inconnue");
-  }
-
-  @SuppressWarnings(UNCHECKED)
-  private static String extraireVilleTM(final Map<String, Object> venue) {
-    final Map<String, String> cityMap =
-        venue != null ? (Map<String, String>) venue.get("city") : null;
-    return cityMap != null ? cityMap.get(CLE_NAME) : null;
-  }
-
-  @SuppressWarnings(UNCHECKED)
-  private static String extraireDeptTM(final Map<String, Object> venue) {
-    // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
-    // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
-    // plausible mais faux — countryCode absent traité comme française par défaut (comportement
-    // historique, aucun cas contraire connu).
-    final Map<String, String> countryMap =
-        venue != null ? (Map<String, String>) venue.get("country") : null;
-    final String countryCode = countryMap != null ? countryMap.get("countryCode") : null;
-    return countryCode == null || "FR".equals(countryCode)
-        ? Normalisation.extraireDeptFrancais(
-            venue != null ? (String) venue.get("postalCode") : null)
-        : null;
-  }
-
-  private static String extraireSalleSourceIdTM(final Map<String, Object> venue) {
-    final Object venueIdObj = venue != null ? venue.get("id") : null;
-    return venueIdObj != null ? "ticketmaster:" + venueIdObj : null;
-  }
-
-  private record InfosVenteTM(String statut, String presaleDebut, String presaleNom) {}
-
-  private static boolean estEvenementPackage(final String url) {
-    return url != null && URL_PACKAGE_TM.matcher(url).find();
-  }
-
-  // "offsale" recouvre deux situations distinctes chez TM : un concert réellement complet, ou
-  // une vente qui n'a simplement pas encore ouvert (prévente à venir, ou vente publique future) —
-  // seule la seconde doit être requalifiée en "presale" plutôt que rester "offsale" à tort.
-  @SuppressWarnings(UNCHECKED)
-  private static InfosVenteTM extraireInfosVenteTM(
-      final Map<String, Object> dates, final Map<String, Object> evt) {
-    final Map<String, String> statusMap = (Map<String, String>) dates.get("status");
-    String statut = statusMap != null ? statusMap.get("code") : null;
-
-    final Map<String, Object> sales = (Map<String, Object>) evt.get("sales");
-    final List<Map<String, Object>> presales =
-        sales != null ? (List<Map<String, Object>>) sales.get("presales") : null;
-    final Map<String, Object> presale =
-        presales != null && !presales.isEmpty() ? presales.get(0) : null;
-    String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
-    final String presaleNom = presale != null ? (String) presale.get(CLE_NAME) : null;
-
-    if ("offsale".equals(statut)) {
-      final String presaleRequalifiee = requalifierOffsaleEnPresale(sales, presaleDebut);
-      if (presaleRequalifiee != null) {
-        statut = "presale";
-        presaleDebut = presaleRequalifiee;
-      }
-    }
-    return new InfosVenteTM(statut, presaleDebut, presaleNom);
-  }
-
-  /**
-   * Détermine si un statut "offsale" doit en réalité être requalifié "presale" — prévente connue
-   * encore à venir, ou à défaut vente publique connue encore à venir.
-   *
-   * @param sales bloc "sales" brut de l'event TM
-   * @param presaleDebut date de début de la prévente déjà extraite, ou {@code null}
-   * @return la date de début à utiliser pour la prévente si une requalification s'applique, {@code
-   *     null} sinon (le statut "offsale" reste inchangé)
-   */
-  @SuppressWarnings(UNCHECKED)
-  private static String requalifierOffsaleEnPresale(
-      final Map<String, Object> sales, final String presaleDebut) {
-    if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
-      return presaleDebut;
-    }
-    final Map<String, Object> ventePublique =
-        sales != null ? (Map<String, Object>) sales.get("public") : null;
-    final String ouverturePublique =
-        ventePublique != null ? (String) ventePublique.get("startDateTime") : null;
-    return ouverturePublique != null && estDansLeFutur(ouverturePublique)
-        ? ouverturePublique
-        : null;
   }
 
   @SuppressWarnings(UNCHECKED)
@@ -282,14 +174,14 @@ final class MapeurEvenementTM {
     final List<Map<String, Object>> venues =
         embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
     final Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
-    final InfosVenueTM infosVenue = extraireInfosVenueTM(venue);
+    final ExtracteurVenueTM.InfosVenueTM infosVenue = ExtracteurVenueTM.extraireInfosVenueTM(venue);
     final String artisteSourceId = extraireAttractionIdTM(embedded);
 
     final String url = (String) evt.get("url");
-    final InfosVenteTM infosVente =
-        estEvenementPackage(url)
-            ? new InfosVenteTM(null, null, null)
-            : extraireInfosVenteTM(dates, evt);
+    final ExtracteurVenteTM.InfosVenteTM infosVente =
+        ExtracteurVenteTM.estEvenementPackage(url)
+            ? new ExtracteurVenteTM.InfosVenteTM(null, null, null)
+            : ExtracteurVenteTM.extraireInfosVenteTM(dates, evt);
 
     final List<Map<String, Object>> classificationsData =
         (List<Map<String, Object>>) evt.get("classifications");

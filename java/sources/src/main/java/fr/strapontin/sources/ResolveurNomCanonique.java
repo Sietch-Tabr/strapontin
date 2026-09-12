@@ -8,6 +8,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
+import fr.strapontin.core.DistanceTexte;
 import fr.strapontin.core.Normalisation;
 import java.net.URLEncoder;
 import java.time.Duration;
@@ -136,37 +137,55 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
    * @return le candidat retenu, ou {@code null} si aucun ne dépasse {@value
    *     #SEUIL_CONFIANCE_DEEZER}
    */
+  /** Accumulateur mutable du meilleur candidat approximatif et du meilleur candidat exact. */
+  private static final class MeilleursCandidatsDeezer {
+    private Map<String, Object> meilleur;
+    private Map<String, Object> meilleurExact;
+    private double meilleurePopularite = -1;
+    private double meilleurePopulariteExacte = -1;
+
+    Map<String, Object> resultat() {
+      return meilleurExact != null ? meilleurExact : meilleur;
+    }
+  }
+
   private Map<String, Object> trouverMeilleurCandidatDeezer(
       final List<Map<String, Object>> dataList, final String nom) {
     final String nomNormalise = Normalisation.normaliserTexte(nom);
-    Map<String, Object> meilleurCandidat = null;
-    Map<String, Object> meilleurCandidatExact = null;
-    double meilleurePopularite = -1;
-    double meilleurePopulariteExacte = -1;
+    final MeilleursCandidatsDeezer acc = new MeilleursCandidatsDeezer();
     for (final Map<String, Object> candidat : dataList) {
-      final String nomCandidat = (String) candidat.get("name");
-      if (nomCandidat == null) {
-        continue;
-      }
-      final String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
-      final double similarite = Normalisation.similarite(nomNormalise, nomCandidatNormalise);
-      if (similarite < SEUIL_CONFIANCE_DEEZER) {
-        continue;
-      }
-      final double popularite = popularite(candidat);
-      if (meilleurCandidat == null || popularite > meilleurePopularite) {
-        meilleurCandidat = candidat;
-        meilleurePopularite = popularite;
-      }
-      // Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus
-      // populaire ; la popularité ne départage qu'entre candidats eux-mêmes exacts.
-      if (nomCandidatNormalise.equals(nomNormalise)
-          && (meilleurCandidatExact == null || popularite > meilleurePopulariteExacte)) {
-        meilleurCandidatExact = candidat;
-        meilleurePopulariteExacte = popularite;
-      }
+      evaluerCandidatDeezer(acc, candidat, nomNormalise);
     }
-    return meilleurCandidatExact != null ? meilleurCandidatExact : meilleurCandidat;
+    return acc.resultat();
+  }
+
+  /**
+   * Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus populaire ; la
+   * popularité ne départage qu'entre candidats eux-mêmes exacts.
+   */
+  private static void evaluerCandidatDeezer(
+      final MeilleursCandidatsDeezer acc,
+      final Map<String, Object> candidat,
+      final String nomNormalise) {
+    final String nomCandidat = (String) candidat.get("name");
+    if (nomCandidat == null) {
+      return;
+    }
+    final String nomCandidatNormalise = Normalisation.normaliserTexte(nomCandidat);
+    final double similarite = DistanceTexte.similarite(nomNormalise, nomCandidatNormalise);
+    if (similarite < SEUIL_CONFIANCE_DEEZER) {
+      return;
+    }
+    final double popularite = popularite(candidat);
+    if (acc.meilleur == null || popularite > acc.meilleurePopularite) {
+      acc.meilleur = candidat;
+      acc.meilleurePopularite = popularite;
+    }
+    if (nomCandidatNormalise.equals(nomNormalise)
+        && (acc.meilleurExact == null || popularite > acc.meilleurePopulariteExacte)) {
+      acc.meilleurExact = candidat;
+      acc.meilleurePopulariteExacte = popularite;
+    }
   }
 
   private static double popularite(final Map<String, Object> candidat) {
