@@ -5,7 +5,9 @@
 package fr.strapontin.sources;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.Normalisation;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -55,6 +57,16 @@ final class TicketmasterAttractionResolver {
     this.baseUrl = baseUrl;
     this.cadenceur = cadenceur;
     this.avertissementsAttractionIntrouvable = avertissementsAttractionIntrouvable;
+  }
+
+  /**
+   * Crée le cache de throttle par défaut des avertissements d'attraction introuvable (expiration 1
+   * jour, taille max 1000).
+   *
+   * @return un nouveau cache de throttle
+   */
+  static Cache<String, Boolean> creerCacheAvertissementsParDefaut() {
+    return Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build();
   }
 
   /**

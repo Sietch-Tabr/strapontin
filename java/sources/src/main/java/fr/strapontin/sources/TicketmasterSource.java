@@ -5,18 +5,13 @@
 package fr.strapontin.sources;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
-import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -37,7 +32,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterSource.class);
 
-  private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
+  // Package-private (pas private) : réutilisé par TicketmasterRegionFetcher.
+  static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 
   /**
    * Classifications Ticketmaster filtrées lors des fetchs (musique, opéra, comédie musicale).
@@ -54,7 +50,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   public static final String PREFIXE_IDENTIFIANT = "tm";
 
-  private static final int TAILLE_PAGE_REGION = 200;
+  static final int TAILLE_PAGE_REGION = 200;
   // TM applique un Spike Arrest strict de 200ms minimum entre requêtes, sans tolérance de rafale
   // (maxBurstMessageCount=1.0) : le cadenceur n'espace que les instants de départ côté client, la
   // latence réseau peut donc faire percevoir deux appels espacés de 250ms comme trop rapprochés
@@ -63,19 +59,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   // Public : réutilisé par les cadenceurs partagés inter-processus (web, worker) pour rester
   // aligné sur ce même délai plutôt que de dupliquer la valeur.
   public static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
-  private static final String CHEMIN_EVENTS = "/events.json";
-  private static final String TRI_DATE_ASC = "date,asc";
-  private static final String PARAM_SIZE = "size";
-  private static final String PARAM_SORT = "sort";
-  private static final String PARAM_START_DATE_TIME = "startDateTime";
+  static final String CHEMIN_EVENTS = "/events.json";
+  static final String TRI_DATE_ASC = "date,asc";
+  static final String PARAM_SIZE = "size";
+  static final String PARAM_SORT = "sort";
+  static final String PARAM_START_DATE_TIME = "startDateTime";
 
   private final String apiKey;
   private final RestClient restClient;
-  private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
-  // concertsManques reste spécifique à TM (pagination plafonnée), séparé du tronc commun
-  // appels/erreurs porté par compteurBilan.
-  private final AtomicInteger concertsManquesCumules = new AtomicInteger();
-  private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
+  private final EtatFetchTM etatFetch = new EtatFetchTM();
   private final CadenceurAppels cadenceur;
   private final TicketmasterHealthCheck healthCheck;
   private final TicketmasterPageFetcher pageFetcher;
@@ -135,7 +127,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     this(
         apiKey,
         restClient,
-        Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build(),
+        TicketmasterAttractionResolver.creerCacheAvertissementsParDefaut(),
         cadenceur);
   }
 
@@ -180,13 +172,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur);
     this.pageFetcher =
         new TicketmasterPageFetcher(
-            this.restClient,
-            this.apiKey,
-            this.cadenceur,
-            compteurBilan,
-            dernierQuota,
-            concertsManquesCumules,
-            TAILLE_PAGE_REGION);
+            this.restClient, this.apiKey, this.cadenceur, etatFetch, TAILLE_PAGE_REGION);
     this.attractionResolver =
         new TicketmasterAttractionResolver(
             this.restClient,
@@ -203,7 +189,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return quota courant ou null
    */
   public QuotaTM obtenirQuota() {
-    return dernierQuota.get();
+    return etatFetch.quota();
   }
 
   /**
@@ -215,7 +201,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   @Override
   public BilanFetch preleverBilan() {
-    return compteurBilan.preleverBilan();
+    return etatFetch.preleverBilan();
   }
 
   /**
@@ -226,7 +212,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return le nombre de concerts manqués depuis le dernier prélèvement
    */
   public int preleverConcertsManques() {
-    return concertsManquesCumules.getAndSet(0);
+    return etatFetch.preleverConcertsManques();
   }
 
   /**
@@ -294,7 +280,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     final TicketmasterPageFetcher.ResultatPage resultat = pageFetcher.fetchPage(uriBase, 0, nom);
     if (resultat.quota() != null) {
-      dernierQuota.set(resultat.quota());
+      etatFetch.mettreAJourQuota(resultat.quota());
     }
     if (resultat.succes()) {
       LOG.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
@@ -379,7 +365,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     if (!resultat.succes()) {
       LOG.warn(
           "TM fetchArtistesLot ids={} échoué (voir erreur HTTP ci-dessus)", attractionIds.size());
-    } else if (dernierQuota.get() != null) {
+    } else if (etatFetch.quota() != null) {
       LOG.info(
           "TM fetchArtistesLot ids={} total={}", attractionIds.size(), resultat.concerts().size());
     }
@@ -460,34 +446,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @return liste des concerts trouvés pour tous les départements
    */
   @Override
-  public List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
-    if (classifs == null) {
-      classifs = CLASSIFICATIONS;
-    }
-    final List<ConcertBrut> tous = new ArrayList<>();
-
-    for (int i = 0; i < depts.size(); i++) {
-      final String dept = depts.get(i);
-      final CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
-      if (centre == null) {
-        LOG.warn("département sans coordonnées connues, ignoré dept={}", dept);
-      } else {
-        final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
-        final UriComponentsBuilder uriBase =
-            UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
-                .queryParam("latlong", centre.lat() + "," + centre.lng())
-                .queryParam("radius", centre.rayon())
-                .queryParam("unit", "km")
-                .queryParam("classificationName", classifs.toArray())
-                .queryParam(PARAM_SIZE, TAILLE_PAGE_REGION)
-                .queryParam(PARAM_SORT, TRI_DATE_ASC)
-                .queryParam(PARAM_START_DATE_TIME, fenetre.debut())
-                .queryParam("endDateTime", fenetre.fin());
-
-        tous.addAll(pageFetcher.fetchToutesPages(uriBase, null, "dept=" + dept).concerts());
-      }
-    }
-
-    return tous;
+  public List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
+    return TicketmasterRegionFetcher.fetchRegion(pageFetcher, depts, classifs);
   }
 }

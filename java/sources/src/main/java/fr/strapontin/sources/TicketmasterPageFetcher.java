@@ -4,7 +4,6 @@
  */
 package fr.strapontin.sources;
 
-import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
@@ -12,8 +11,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -41,19 +38,14 @@ final class TicketmasterPageFetcher {
   private final RestClient restClient;
   private final String apiKey;
   private final CadenceurAppels cadenceur;
-  private final CompteurBilanFetch compteurBilan;
-  private final AtomicReference<QuotaTM> dernierQuota;
-  private final AtomicInteger concertsManquesCumules;
+  private final EtatFetchTM etatFetch;
   private final int taillePage;
 
   /**
    * @param restClient client HTTP Ticketmaster partagé
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
-   * @param compteurBilan compteur d'appels/erreurs partagé avec {@link TicketmasterSource}
-   * @param dernierQuota référence partagée vers le dernier quota TM extrait, mise à jour ici
-   * @param concertsManquesCumules compteur partagé de concerts manqués par plafonnement de
-   *     pagination, mis à jour ici
+   * @param etatFetch état partagé (quota, concerts manqués, bilan) avec {@link TicketmasterSource}
    * @param taillePage taille de page utilisée par l'appelant (pour le calcul du nombre de pages
    *     total dans le log de plafonnement)
    */
@@ -61,16 +53,12 @@ final class TicketmasterPageFetcher {
       final RestClient restClient,
       final String apiKey,
       final CadenceurAppels cadenceur,
-      final CompteurBilanFetch compteurBilan,
-      final AtomicReference<QuotaTM> dernierQuota,
-      final AtomicInteger concertsManquesCumules,
+      final EtatFetchTM etatFetch,
       final int taillePage) {
     this.restClient = restClient;
     this.apiKey = apiKey;
     this.cadenceur = cadenceur;
-    this.compteurBilan = compteurBilan;
-    this.dernierQuota = dernierQuota;
-    this.concertsManquesCumules = concertsManquesCumules;
+    this.etatFetch = etatFetch;
     this.taillePage = taillePage;
   }
 
@@ -92,7 +80,7 @@ final class TicketmasterPageFetcher {
     cadenceur.attendre();
     final String uri = construireUriFetchPage(uriBase, numPage);
 
-    compteurBilan.enregistrerAppel();
+    etatFetch.enregistrerAppel();
     final Instant avantAppelHttp = Instant.now();
     try {
       final ResponseEntity<Map> response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
@@ -114,7 +102,7 @@ final class TicketmasterPageFetcher {
             uriSafe,
             TicketmasterSource.redigerApiKey(e.getMessage()));
       }
-      compteurBilan.enregistrerErreur();
+      etatFetch.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
     }
   }
@@ -197,7 +185,7 @@ final class TicketmasterPageFetcher {
         succes = false;
       }
       if (resultat.quota() != null) {
-        dernierQuota.set(resultat.quota());
+        etatFetch.mettreAJourQuota(resultat.quota());
       }
       if (numPage == 0) {
         totalElements = resultat.total();
@@ -213,7 +201,7 @@ final class TicketmasterPageFetcher {
 
     final int nbPagesTotal = (int) Math.ceil((double) totalElements / taillePage);
     if (nbPagesTotal > NB_PAGES_MAX) {
-      concertsManquesCumules.addAndGet(Math.max(0, totalElements - tousLesEvents.size()));
+      etatFetch.ajouterConcertsManques(Math.max(0, totalElements - tousLesEvents.size()));
       LOG.warn(
           "NB_PAGES_MAX atteint contexte={} — concerts manqués total={} recuperes={}"
               + " pagesFetched={} pagesTotal={}",
