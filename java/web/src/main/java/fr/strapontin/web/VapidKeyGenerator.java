@@ -5,6 +5,7 @@
 package fr.strapontin.web;
 
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.ECPrivateKey;
@@ -38,9 +39,9 @@ public final class VapidKeyGenerator {
    * Génère une nouvelle paire de clés VAPID EC P-256.
    *
    * @return la paire de clés encodées
-   * @throws Exception si la génération de clés échoue
+   * @throws GeneralSecurityException si la génération de clés échoue
    */
-  public static PaireVapid genererPaire() throws Exception {
+  public static PaireVapid genererPaire() throws GeneralSecurityException {
     final KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
     kpg.initialize(new ECGenParameterSpec("secp256r1"));
     final KeyPair paire = kpg.generateKeyPair();

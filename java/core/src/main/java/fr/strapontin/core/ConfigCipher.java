@@ -36,7 +36,7 @@ public final class ConfigCipher {
 
   private static final SecureRandom RNG = new SecureRandom();
 
-  private static final int N = 16384;
+  private static final int N = 16_384;
   private static final int R = 8;
   private static final int P = 1;
   private static final int DK_LEN = 32;

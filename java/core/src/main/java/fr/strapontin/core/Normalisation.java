@@ -5,6 +5,7 @@
 package fr.strapontin.core;
 
 import java.text.Normalizer;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -61,7 +62,7 @@ public final class Normalisation {
    * @return le texte normalisé, éventuellement vide
    */
   public static String normaliserTexte(final String texte) {
-    String s = texte.toLowerCase();
+    String s = texte.toLowerCase(Locale.ROOT);
     for (final Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
       s = s.replace(String.valueOf(e.getKey()), e.getValue());
     }
@@ -82,7 +83,7 @@ public final class Normalisation {
    * @return clé alphanumérique (peut être vide si le nom ne contient aucun caractère valide)
    */
   public static String normaliserSalleCle(final String nom) {
-    final String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
+    final String nfd = Normalizer.normalize(nom.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
     return NON_ALPHANUM_STRICT.matcher(ACCENTS.matcher(nfd).replaceAll("")).replaceAll("");
   }
 
@@ -127,8 +128,10 @@ public final class Normalisation {
    * @param nom nom à normaliser
    * @return nom en title case ou nom inchangé
    */
+  // equalsIgnoreCase ne convient pas ici : le test porte sur nom lui-même (déjà entièrement
+  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
   public static String normaliserCasse(final String nom) {
-    if (!nom.equals(nom.toUpperCase())) {
+    if (!nom.equals(nom.toUpperCase(Locale.ROOT))) {
       return nom;
     }
     final Matcher m = SEP_NORMALISER_CASSE.matcher(nom);
@@ -138,7 +141,7 @@ public final class Normalisation {
     while (m.find()) {
       final String mot = nom.substring(dernier, m.start());
       if (!mot.isEmpty()) {
-        final String bas = mot.toLowerCase();
+        final String bas = mot.toLowerCase(Locale.ROOT);
         if (!debutPhrase && ARTICLES_FR.contains(bas)) {
           sb.append(bas);
         } else {
@@ -147,12 +150,12 @@ public final class Normalisation {
       }
       final String sep = m.group();
       sb.append(sep);
-      debutPhrase = sep.equals("-");
+      debutPhrase = "-".equals(sep);
       dernier = m.end();
     }
     final String fin = nom.substring(dernier);
     if (!fin.isEmpty()) {
-      final String bas = fin.toLowerCase();
+      final String bas = fin.toLowerCase(Locale.ROOT);
       if (!debutPhrase && ARTICLES_FR.contains(bas)) {
         sb.append(bas);
       } else {

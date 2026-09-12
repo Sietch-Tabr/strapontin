@@ -7,7 +7,7 @@ package fr.strapontin.sources;
 /**
  * Garantit un écart minimal entre deux appels HTTP vers un même service externe.
  *
- * {@code sources} reste volontairement sans dépendance JDBC/DB — {@link CadenceurAppelsMemoire}
+ * <p>{@code sources} reste volontairement sans dépendance JDBC/DB — {@link CadenceurAppelsMemoire}
  * (implémentation par défaut, verrou en mémoire) ne coordonne que les appels d'un même processus.
  * Un service externe appelé depuis plusieurs processus indépendants (ex. Ticketmaster, appelé à la
  * fois par le worker et par la recherche interactive du module web) nécessite une implémentation
@@ -17,10 +17,9 @@ package fr.strapontin.sources;
  * @since 2.8.1
  * @author Kwaite
  */
+@FunctionalInterface
 public interface CadenceurAppels {
 
-  /**
-   * Bloque l'appelant si nécessaire pour respecter l'écart minimal depuis le dernier appel.
-   */
+  /** Bloque l'appelant si nécessaire pour respecter l'écart minimal depuis le dernier appel. */
   void attendre();
 }

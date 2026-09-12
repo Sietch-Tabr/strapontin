@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -99,8 +100,10 @@ class AdminModificationUtilisateurService {
   private ChampsModification validerEtNormaliser(
       final RequeteModifierUtilisateur requete, final String userId) {
     final String nom = requete.nom() == null ? "" : requete.nom().strip();
-    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
-    final String role = requete.role() == null ? "" : requete.role().strip().toLowerCase();
+    final String email =
+        requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
+    final String role =
+        requete.role() == null ? "" : requete.role().strip().toLowerCase(Locale.ROOT);
 
     validerChampsPresents(nom, email, role);
     validerFormatEmail(email);
@@ -165,7 +168,7 @@ class AdminModificationUtilisateurService {
       miseAJour.put("role", champs.role());
     }
 
-    final StringBuilder setClauses = new StringBuilder("updated_at = :updatedAt");
+    final StringBuilder setClauses = new StringBuilder(150).append("updated_at = :updatedAt");
     if (!champs.nom().isEmpty()) {
       setClauses.append(", display_username = :nom");
     }

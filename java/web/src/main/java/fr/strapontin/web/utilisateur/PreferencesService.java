@@ -311,7 +311,7 @@ public class PreferencesService {
             c.theme() != null ? c.theme() : "auto"));
   }
 
-  private void fusionnerDepartements(final String userId, final String[] nouveauxDepts) {
+  private void fusionnerDepartements(final String userId, final String... nouveauxDepts) {
     jdbc.update(
         """
         UPDATE user_config

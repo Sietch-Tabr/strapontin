@@ -16,6 +16,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -467,7 +468,7 @@ public class SalleService {
    * @return identifiant normalisé (ex. {@code "olympia"})
    */
   public static String normaliserSalleCle(final String nom) {
-    final String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
+    final String nfd = Normalizer.normalize(nom.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
     return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
   }
 

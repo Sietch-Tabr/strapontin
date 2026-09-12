@@ -127,16 +127,6 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
-  /**
-   * Sélectionne le meilleur candidat Deezer parmi les résultats de recherche : une correspondance
-   * exacte (nom normalisé identique) l'emporte toujours sur un homonyme approximatif mieux
-   * référencé, la popularité ne départageant qu'entre candidats eux-mêmes exacts.
-   *
-   * @param dataList résultats bruts de la recherche Deezer
-   * @param nom nom recherché (non normalisé)
-   * @return le candidat retenu, ou {@code null} si aucun ne dépasse {@value
-   *     #SEUIL_CONFIANCE_DEEZER}
-   */
   /** Accumulateur mutable du meilleur candidat approximatif et du meilleur candidat exact. */
   private static final class MeilleursCandidatsDeezer {
     private Map<String, Object> meilleur;
@@ -149,6 +139,16 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
+  /**
+   * Sélectionne le meilleur candidat Deezer parmi les résultats de recherche : une correspondance
+   * exacte (nom normalisé identique) l'emporte toujours sur un homonyme approximatif mieux
+   * référencé, la popularité ne départageant qu'entre candidats eux-mêmes exacts.
+   *
+   * @param dataList résultats bruts de la recherche Deezer
+   * @param nom nom recherché (non normalisé)
+   * @return le candidat retenu, ou {@code null} si aucun ne dépasse {@value
+   *     #SEUIL_CONFIANCE_DEEZER}
+   */
   private Map<String, Object> trouverMeilleurCandidatDeezer(
       final List<Map<String, Object>> dataList, final String nom) {
     final String nomNormalise = Normalisation.normaliserTexte(nom);
@@ -225,7 +225,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       return cached;
     }
 
-    ResultatResolution resultat;
+    final ResultatResolution resultat;
     if ("artiste".equals(type)) {
       final String nomDeezer = rechercherDeezerArtiste(nom);
       resultat =

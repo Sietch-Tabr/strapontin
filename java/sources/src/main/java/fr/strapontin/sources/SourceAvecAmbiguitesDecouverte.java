@@ -16,6 +16,7 @@ import java.util.UUID;
  * @since 2.9.0
  * @author Kwaite
  */
+@FunctionalInterface
 public interface SourceAvecAmbiguitesDecouverte {
 
   /**

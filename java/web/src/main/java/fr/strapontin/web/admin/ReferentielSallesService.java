@@ -115,7 +115,7 @@ public class ReferentielSallesService {
       final String dept,
       final String statut,
       final boolean wikidataManquant) {
-    final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+    final StringBuilder where = new StringBuilder(60).append(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
     ajouterFiltreLike(where, params, "nom", nom);
     ajouterFiltreLike(where, params, "ville", ville);

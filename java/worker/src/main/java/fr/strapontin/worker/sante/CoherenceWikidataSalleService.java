@@ -313,10 +313,8 @@ public class CoherenceWikidataSalleService {
     if (villeSalleNorm.equals(communeNorm)) {
       return true;
     }
-    if (!Collections.disjoint(canonicaliser(villeSalleNorm), canonicaliser(communeNorm))) {
-      return true;
-    }
-    return containmentCoherent(villeSalleNorm, communeNorm);
+    return !Collections.disjoint(canonicaliser(villeSalleNorm), canonicaliser(communeNorm))
+        || containmentCoherent(villeSalleNorm, communeNorm);
   }
 
   private static Set<String> canonicaliser(final String villeNorm) {

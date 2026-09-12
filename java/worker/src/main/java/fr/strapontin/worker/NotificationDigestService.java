@@ -234,14 +234,14 @@ public class NotificationDigestService {
       LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
     }
     final int matchesNotifies;
-    if (!concertIdsNotifies.isEmpty()) {
-      matchesNotifies = marquerMatchesNotifies(userId, concertIdsNotifies, maintenant);
-    } else {
+    if (concertIdsNotifies.isEmpty()) {
       LOG.warn(
           "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
               + " à jour",
           userId);
       matchesNotifies = 0;
+    } else {
+      matchesNotifies = marquerMatchesNotifies(userId, concertIdsNotifies, maintenant);
     }
     return new BilanDigestUtilisateur(emailOk, pushOk, erreur, matchesNotifies);
   }

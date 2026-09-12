@@ -54,7 +54,7 @@ class SourcesSallesListingService {
 
   private ReponseSallesSources listerSallesAvecDigitick(final int page, final String nom) {
     final int pageNum = Math.max(0, page);
-    final StringBuilder where = new StringBuilder();
+    final StringBuilder where = new StringBuilder(50);
     final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND s.nom ILIKE :nom ");
@@ -99,7 +99,7 @@ class SourcesSallesListingService {
 
   private ReponseSallesSources listerSallesSansTmNiEventim(final int page, final String nom) {
     final int pageNum = Math.max(0, page);
-    final StringBuilder where = new StringBuilder();
+    final StringBuilder where = new StringBuilder(50);
     final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND s.nom ILIKE :nom ");

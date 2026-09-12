@@ -130,8 +130,8 @@ public class GestionQuotaResendWorker {
         jourChange ? 0 : c.envoyesJour(),
         mois,
         moisChange ? 0 : c.envoyesMois(),
-        jourChange ? false : c.alerteJourEnvoyee(),
-        moisChange ? false : c.alerteMoisEnvoyee());
+        !jourChange && c.alerteJourEnvoyee(),
+        !moisChange && c.alerteMoisEnvoyee());
   }
 
   private CompteurEnvoisResend lireCompteurCourant() {

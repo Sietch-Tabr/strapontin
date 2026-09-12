@@ -22,7 +22,9 @@ import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHtt
 @SpringBootApplication
 @EnableJdbcHttpSession
 @EnableScheduling
-public class WebApplication {
+public final class WebApplication {
+
+  private WebApplication() {}
 
   /**
    * @param args arguments de la ligne de commande

@@ -11,10 +11,10 @@ import java.util.Map;
 /**
  * Fragments SQL communs aux requêtes de listing de concerts.
  *
- * <p>Mutualise la construction des clauses {@code WHERE}/{@code ORDER BY} partagées entre
- * {@code DecouverteService} (catalogue global) et {@code SpectacleService} (matches utilisateur) :
- * filtres mois/genre/classification, tri et bornes de pagination. Les filtres propres à chaque
- * source (départements, masquage, sources suivies) restent dans leur service respectif.
+ * <p>Mutualise la construction des clauses {@code WHERE}/{@code ORDER BY} partagées entre {@code
+ * DecouverteService} (catalogue global) et {@code SpectacleService} (matches utilisateur) : filtres
+ * mois/genre/classification, tri et bornes de pagination. Les filtres propres à chaque source
+ * (départements, masquage, sources suivies) restent dans leur service respectif.
  *
  * <p>Chaque méthode {@code appliquer*} ajoute sa condition au {@link StringBuilder} et ses
  * paramètres nommés à la {@link Map} fournie, sans rien faire si le filtre est absent.
@@ -24,9 +24,7 @@ import java.util.Map;
  */
 public final class FiltreConcertsBuilder {
 
-  /**
-   * Nombre de concerts par page pour les listings paginés.
-   */
+  /** Nombre de concerts par page pour les listings paginés. */
   public static final int CONCERTS_PAR_PAGE = 100;
 
   private FiltreConcertsBuilder() {
@@ -46,8 +44,8 @@ public final class FiltreConcertsBuilder {
   /**
    * Tronque une saisie utilisateur après suppression des espaces de bordure.
    *
-   * @param valeur       la saisie brute
-   * @param maxLongueur  longueur maximale conservée
+   * @param valeur la saisie brute
+   * @param maxLongueur longueur maximale conservée
    * @return la saisie nettoyée et tronquée
    */
   public static String tronquer(final String valeur, final int maxLongueur) {
@@ -58,21 +56,21 @@ public final class FiltreConcertsBuilder {
   /**
    * Ajoute le filtre mois ({@code YYYY-MM}) ; sans effet si le format est invalide.
    *
-   * <p>La regex ne valide que la forme (4 chiffres, tiret, 2 chiffres), pas la validité
-   * calendaire — un mois comme {@code 2026-13} la passe puis faisait échouer
-   * {@link LocalDate#parse} avec une exception non interceptée (500 générique au lieu du
-   * contrat documenté "sans effet si invalide").
+   * <p>La regex ne valide que la forme (4 chiffres, tiret, 2 chiffres), pas la validité calendaire
+   * — un mois comme {@code 2026-13} la passe puis faisait échouer {@link LocalDate#parse} avec une
+   * exception non interceptée (500 générique au lieu du contrat documenté "sans effet si
+   * invalide").
    *
-   * @param where  clause WHERE en construction
+   * @param where clause WHERE en construction
    * @param params paramètres nommés
-   * @param mois   mois au format {@code YYYY-MM}
+   * @param mois mois au format {@code YYYY-MM}
    */
   public static void appliquerMois(
       final StringBuilder where, final Map<String, Object> params, final String mois) {
     if (mois.isBlank() || !mois.matches("\\d{4}-\\d{2}")) {
       return;
     }
-    LocalDate debutMois;
+    final LocalDate debutMois;
     try {
       debutMois = LocalDate.parse(mois + "-01");
     } catch (DateTimeParseException e) {
@@ -86,8 +84,8 @@ public final class FiltreConcertsBuilder {
   /**
    * Ajoute le filtre genre ({@code ILIKE}) ; sans effet si le genre est vide.
    *
-   * @param where    clause WHERE en construction
-   * @param params   paramètres nommés
+   * @param where clause WHERE en construction
+   * @param params paramètres nommés
    * @param genreStr genre déjà tronqué via {@link #tronquer(String, int)}
    */
   public static void appliquerGenre(
@@ -101,8 +99,8 @@ public final class FiltreConcertsBuilder {
   /**
    * Ajoute le filtre classification (égalité) ; sans effet si la classification est vide.
    *
-   * @param where          clause WHERE en construction
-   * @param params         paramètres nommés
+   * @param where clause WHERE en construction
+   * @param params paramètres nommés
    * @param classification classification exacte
    */
   public static void appliquerClassification(

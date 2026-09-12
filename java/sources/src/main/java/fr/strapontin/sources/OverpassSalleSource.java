@@ -79,7 +79,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
   // isolé, souvent résolu en quelques secondes) — backoff court, inchangé depuis 2.7.8.
   private static final int NB_ESSAIS_MAX = 2;
   private static final long DELAI_APRES_ERREUR_MS = 5000;
-  private static final long DELAI_APRES_429_MS = 20000;
+  private static final long DELAI_APRES_429_MS = 20_000;
   // Constaté en production : une fenêtre d'indisponibilité de l'instance publique (connexion
   // refusée pendant 1-2 minutes, probablement un redémarrage du dispatcher) fait échouer chaque
   // lot départemental consécutif sans jamais s'arrêter, brûlant tout le reste du cycle en retries
@@ -205,7 +205,9 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
       cadenceur.attendre();
       final ResultatLot resultat = enrichirUnLot(lot, centre);
       resultats.putAll(resultat.resultats());
-      if (!resultat.succes()) {
+      if (resultat.succes()) {
+        echecsConsecutifsCycle.set(0);
+      } else {
         final int echecs = echecsConsecutifsCycle.incrementAndGet();
         if (echecs >= SEUIL_ECHECS_CONSECUTIFS) {
           LOG.warn(
@@ -214,8 +216,6 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
               echecs);
           return true;
         }
-      } else {
-        echecsConsecutifsCycle.set(0);
       }
     }
     return false;

@@ -45,11 +45,11 @@ final class EmailTemplatesAlertes {
             : "Horodatage indisponible.";
     final String raisonHtml =
         (raison != null && !raison.isBlank())
-            ? ("""
+            ? """
             <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
             border-left: 3px solid %s; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
             """
-                .formatted(EmailTemplates.C_ERREUR, EmailTemplates.e(raison)))
+                .formatted(EmailTemplates.C_ERREUR, EmailTemplates.e(raison))
             : "";
     final String corps =
         """

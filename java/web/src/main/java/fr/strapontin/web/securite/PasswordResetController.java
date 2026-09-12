@@ -8,6 +8,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -77,7 +78,7 @@ public class PasswordResetController {
     if (req.email() != null && !req.email().isBlank()) {
       resoudreBaseUrl()
           .ifPresentOrElse(
-              baseUrl -> authService.motDePasseOublie(req.email().strip().toLowerCase(), baseUrl),
+              baseUrl -> authService.motDePasseOublie(req.email().strip().toLowerCase(Locale.ROOT), baseUrl),
               () ->
                   logAdminService.logAdmin(
                       "error",
@@ -117,7 +118,7 @@ public class PasswordResetController {
   public ResponseEntity<?> reinitialiserMotDePasse(
       @Valid @RequestBody final ResetPasswordRequest req, final HttpServletRequest httpRequest) {
     if (req.identifiant() != null && !req.identifiant().isBlank()) {
-      final String ident = req.identifiant().strip().toLowerCase();
+      final String ident = req.identifiant().strip().toLowerCase(Locale.ROOT);
       if (ident.length() < 3 || ident.length() > 30) {
         return ResponseEntity.badRequest()
             .body(Map.of(CLE_ERREUR, "L'identifiant doit contenir entre 3 et 30 caractères."));

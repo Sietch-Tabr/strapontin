@@ -11,6 +11,7 @@ import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
@@ -92,7 +93,7 @@ public class AdminController {
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
       @Valid @RequestBody final RequeteCreerUtilisateur requete, final Authentication auth) {
     final String adminId = utilisateur(auth).id();
-    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
+    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
 
     if (email.isEmpty()) {
       return erreur(400, "Format d'email invalide.");

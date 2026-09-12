@@ -13,6 +13,7 @@ import fr.strapontin.core.BilanFetch;
  * @since 2.7.0
  * @author Kwaite
  */
+@FunctionalInterface
 public interface SourceAvecBilanFetch {
 
   /**

@@ -19,7 +19,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author Kwaite
  */
 @SpringBootApplication
-public class WorkerApplication {
+public final class WorkerApplication {
+
+  private WorkerApplication() {}
 
   /**
    * @param args arguments de la ligne de commande

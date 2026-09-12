@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -117,7 +118,7 @@ final class MapeurEvenementTM {
     }
     final String nomEvenement = (String) evt.get(CLE_NAME);
     if (nomEvenement != null
-        && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
+        && nomEvenement.toLowerCase(Locale.ROOT).contains(artisteFallback.toLowerCase(Locale.ROOT))) {
       return artisteFallback;
     }
     return null;
@@ -144,7 +145,7 @@ final class MapeurEvenementTM {
         (Map<String, String>) classificationsData.get(0).get("segment");
     final String segmentNom =
         segment != null && segment.get(CLE_NAME) != null
-            ? segment.get(CLE_NAME).toLowerCase()
+            ? segment.get(CLE_NAME).toLowerCase(Locale.ROOT)
             : null;
     final Map<String, String> genreMap =
         (Map<String, String>) classificationsData.get(0).get("genre");

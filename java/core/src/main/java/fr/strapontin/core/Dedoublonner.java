@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -193,6 +194,8 @@ public final class Dedoublonner {
     return meilleur;
   }
 
+  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom lui-même (déjà entièrement
+  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
   private static ConcertEnrichi fusionner(final List<ConcertEnrichi> concerts) {
     final ConcertEnrichi gagnant =
         concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
@@ -201,10 +204,10 @@ public final class Dedoublonner {
     for (final ConcertEnrichi c : concerts) {
       final int scoreM =
           scoreNomRiche(meilleureSalle) * POIDS_DIACRITIQUES
-              + (meilleureSalle.equals(meilleureSalle.toUpperCase()) ? 0 : 1);
+              + (meilleureSalle.equals(meilleureSalle.toUpperCase(Locale.ROOT)) ? 0 : 1);
       final int scoreC =
           scoreNomRiche(c.concert().salle()) * POIDS_DIACRITIQUES
-              + (c.concert().salle().equals(c.concert().salle().toUpperCase()) ? 0 : 1);
+              + (c.concert().salle().equals(c.concert().salle().toUpperCase(Locale.ROOT)) ? 0 : 1);
       if (scoreC > scoreM) {
         meilleureSalle = c.concert().salle();
       }

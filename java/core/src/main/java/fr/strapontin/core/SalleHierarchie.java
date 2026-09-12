@@ -9,7 +9,8 @@ import java.util.function.Function;
 
 /**
  * Détection de cycle sur la hiérarchie {@code salles.salle_parent_id} — fonction pure partagée
- * entre {@code web} et {@code worker} sans dépendance JDBC, sur le modèle de {@link CorrespondanceSalle}.
+ * entre {@code web} et {@code worker} sans dépendance JDBC, sur le modèle de {@link
+ * CorrespondanceSalle}.
  *
  * @since 2.9.0
  * @author Kwaite
@@ -30,7 +31,7 @@ public final class SalleHierarchie {
    * @param candidatParentId parent envisagé, ou {@code null} (jamais de cycle)
    * @param salleId salle à laquelle ce parent serait assigné
    * @param lecteurParent fonction retournant le {@code salle_parent_id} connu d'une salle, ou
-   *   {@code null} si elle n'en a pas
+   *     {@code null} si elle n'en a pas
    * @return {@code true} si cette assignation créerait un cycle
    */
   public static boolean creeraitCycle(
@@ -44,7 +45,8 @@ public final class SalleHierarchie {
       if (courant.equals(salleId)) {
         return true;
       }
-      if (++profondeur > PROFONDEUR_MAX) {
+      profondeur++;
+      if (profondeur > PROFONDEUR_MAX) {
         return true;
       }
       courant = lecteurParent.apply(courant);

@@ -166,10 +166,8 @@ public class SuiviSanteSourcesService {
       return true;
     }
     final String nomAttraction = tm.recupererNomAttraction(identifiant);
-    if (nomAttraction == null) {
-      return false;
-    }
-    return Normalisation.normaliserTexte((String) lignes.get(0).get("nom"))
-        .equals(Normalisation.normaliserTexte(nomAttraction));
+    return nomAttraction != null
+        && Normalisation.normaliserTexte((String) lignes.get(0).get("nom"))
+            .equals(Normalisation.normaliserTexte(nomAttraction));
   }
 }

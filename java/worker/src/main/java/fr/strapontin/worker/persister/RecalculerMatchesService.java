@@ -190,7 +190,7 @@ public class RecalculerMatchesService {
     params.put("artisteIds", artisteIds);
     params.put("aujourdhui", LocalDate.parse(aujourdhui));
 
-    String sql;
+    final String sql;
     if (departements.isEmpty()) {
       sql =
           "SELECT DISTINCT c.id FROM concerts c"

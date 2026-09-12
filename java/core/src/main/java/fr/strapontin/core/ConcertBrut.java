@@ -50,7 +50,7 @@ public record ConcertBrut(
     String salleSourceId,
     String artisteSourceId) {
 
-  /** Valide la présence des champs obligatoires. */
+  // Valide la présence des champs obligatoires.
   public ConcertBrut {
     Objects.requireNonNull(artiste, "artiste");
     Objects.requireNonNull(date, "date");

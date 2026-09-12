@@ -176,8 +176,8 @@ final class EmailTemplates {
     for (final LigneConcert c : lignes) {
       final String urlBillets =
           c.url() != null
-              ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
-                  .formatted(e(c.url()), C_NOIR))
+              ? " — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
+                  .formatted(e(c.url()), C_NOIR)
               : "";
       // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
       // digest couvrant plusieurs artistes se lit comme une liste continue.
@@ -419,6 +419,9 @@ final class EmailTemplates {
    * @param valeur la valeur à échapper (null retourne une chaîne vide)
    * @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
    */
+  // Nom volontairement court : appelé des dizaines de fois dans des lignes de formatage HTML déjà
+  // denses (voir les gabarits ci-dessus) — un nom plus long nuirait à leur lisibilité.
+  @SuppressWarnings("PMD.ShortMethodName")
   static String e(final Object valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }

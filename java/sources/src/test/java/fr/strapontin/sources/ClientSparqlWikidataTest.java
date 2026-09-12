@@ -6,7 +6,7 @@ package fr.strapontin.sources;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -111,7 +111,7 @@ class ClientSparqlWikidataTest {
   }
 
   @Test
-  void executer_502Persistant_abandonneApresRetriesEtRetourneNull() {
+  void executer_502Persistant_abandonneApresRetriesEtRetourneMapVide() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -125,7 +125,7 @@ class ClientSparqlWikidataTest {
     final ClientSparqlWikidata client = new ClientSparqlWikidata(restClient);
     final var resultat = client.executer("SELECT * WHERE {}");
 
-    assertNull(resultat);
+    assertTrue(resultat.isEmpty());
     serveur.verify();
   }
 }

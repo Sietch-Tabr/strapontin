@@ -14,6 +14,7 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -135,10 +136,7 @@ public class TotpService {
           final String cleCache = secret + ":" + pas;
           final Set<String> utilises =
               codesConsommes.get(cleCache, _ -> ConcurrentHashMap.newKeySet());
-          if (!utilises.add(codeNorm)) {
-            return false;
-          }
-          return true;
+          return utilises.add(codeNorm);
         }
       }
       return false;
@@ -183,7 +181,7 @@ public class TotpService {
   }
 
   static byte[] base32Decoder(final String encoded) {
-    final String norm = encoded.toUpperCase().replaceAll("[^A-Z2-7]", "");
+    final String norm = encoded.toUpperCase(Locale.ROOT).replaceAll("[^A-Z2-7]", "");
     final byte[] resultat = new byte[norm.length() * 5 / 8];
     int tampon = 0;
     int bitsRestants = 0;
@@ -197,7 +195,8 @@ public class TotpService {
       bitsRestants += 5;
       if (bitsRestants >= 8) {
         bitsRestants -= 8;
-        resultat[idx++] = (byte) (tampon >> bitsRestants);
+        resultat[idx] = (byte) (tampon >> bitsRestants);
+        idx++;
       }
     }
     return resultat;

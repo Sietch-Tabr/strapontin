@@ -167,7 +167,9 @@ class NotificationPushDigestService {
             jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
             LOG.info("Abonnement push révoqué : {} — {}", userId, ab.get(CLE_ENDPOINT));
           }
-          case SUCCES -> nbEnvoyes++;
+          case SUCCES -> {
+            nbEnvoyes++;
+          }
           case ECHEC -> {
             // tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
             // succès implicite — sans cette branche, un push jamais délivré était compté
@@ -203,7 +205,7 @@ class NotificationPushDigestService {
                 + NotificationDigestService.formaterDate(premier.date())
                 + (premier.ville() != null ? " · " + premier.ville() : "")
             : construireLignesPreventePush(concerts);
-    String url;
+    final String url;
     if (concerts.size() == 1) {
       if ("SALLE".equals(premier.source())) {
         url = "/spectacles?source=salles";

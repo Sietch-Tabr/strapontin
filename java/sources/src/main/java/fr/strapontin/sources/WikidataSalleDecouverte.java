@@ -333,10 +333,7 @@ final class WikidataSalleDecouverte {
       return false;
     }
     final String deptCandidat = Normalisation.extraireDeptFrancais(codePostal);
-    if (deptCandidat == null) {
-      return false;
-    }
-    return !deptSalle.equals(deptCandidat);
+    return deptCandidat != null && !deptSalle.equals(deptCandidat);
   }
 
   /**

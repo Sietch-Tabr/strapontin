@@ -80,7 +80,9 @@ public class SecurityConfiguration {
    * @return la SecurityFilterChain configurée
    * @throws Exception en cas d'erreur de configuration
    */
+  // throws Exception imposé par HttpSecurity.build() (SecurityBuilder<O>), pas modifiable.
   @Bean
+  @SuppressWarnings("PMD.SignatureDeclareThrowsException")
   SecurityFilterChain securityFilterChain(
       final HttpSecurity http,
       final CorrelationIdFilter correlationIdFilter,
@@ -106,7 +108,8 @@ public class SecurityConfiguration {
 
   private void configurerHeaders(final HeadersConfigurer<HttpSecurity> headers) {
     headers
-        .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(63072000).includeSubDomains(true))
+        .httpStrictTransportSecurity(
+            hsts -> hsts.maxAgeInSeconds(63_072_000).includeSubDomains(true))
         .referrerPolicy(
             referrer ->
                 referrer.policy(

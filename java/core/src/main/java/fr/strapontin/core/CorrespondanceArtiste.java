@@ -9,8 +9,9 @@ import java.util.Objects;
 /**
  * Détermine si deux noms d'artiste normalisés désignent le même artiste.
  *
- * Extrait de {@code worker/persister/ReconciliateurArtistes} (v2.5.7) vers {@code core} pour être réutilisable
- * par le module {@code web} (ajout d'artiste, v2.6.0) sans dépendance {@code web} → {@code worker}.
+ * <p>Extrait de {@code worker/persister/ReconciliateurArtistes} (v2.5.7) vers {@code core} pour
+ * être réutilisable par le module {@code web} (ajout d'artiste, v2.6.0) sans dépendance {@code web}
+ * → {@code worker}.
  *
  * @since 2.6.0
  * @author Kwaite
@@ -30,7 +31,7 @@ public final class CorrespondanceArtiste {
   /**
    * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
    *
-   * Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
+   * <p>Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
    * containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
    * "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1"), par une égalité
    * sans espaces ({@link UtilitairesChaine#estEgaliteSansEspaces}) pour une contraction de nom
@@ -55,10 +56,7 @@ public final class CorrespondanceArtiste {
         a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
       return true;
     }
-    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) {
-      return true;
-    }
-    return estPrefixeDeMotComplet(a, b);
+    return UtilitairesChaine.estEgaliteSansEspaces(a, b) || estPrefixeDeMotComplet(a, b);
   }
 
   // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul, préfixe trivial

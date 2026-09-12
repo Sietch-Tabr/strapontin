@@ -362,12 +362,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     final TicketmasterPageFetcher.ResultatMultiPage resultat =
         pageFetcher.fetchToutesPages(uriBase, null, "lot");
-    if (!resultat.succes()) {
+    if (resultat.succes()) {
+      if (etatFetch.quota() != null) {
+        LOG.info(
+            "TM fetchArtistesLot ids={} total={}",
+            attractionIds.size(),
+            resultat.concerts().size());
+      }
+    } else {
       LOG.warn(
           "TM fetchArtistesLot ids={} échoué (voir erreur HTTP ci-dessus)", attractionIds.size());
-    } else if (etatFetch.quota() != null) {
-      LOG.info(
-          "TM fetchArtistesLot ids={} total={}", attractionIds.size(), resultat.concerts().size());
     }
     return resultat.concerts();
   }

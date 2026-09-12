@@ -161,14 +161,14 @@ class SalleRepository {
     }
 
     final List<String> tokensList = new ArrayList<>(tokens);
-    final StringBuilder whereTokens = new StringBuilder("(");
+    final StringBuilder whereTokens = new StringBuilder(50).append('(');
     for (int i = 0; i < tokensList.size(); i++) {
       if (i > 0) {
         whereTokens.append(" OR ");
       }
       whereTokens.append("salle_cle LIKE :t").append(i);
     }
-    whereTokens.append(")");
+    whereTokens.append(')');
 
     final MapSqlParameterSource params = new MapSqlParameterSource();
     for (int i = 0; i < tokensList.size(); i++) {

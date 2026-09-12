@@ -10,6 +10,7 @@ import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
@@ -72,7 +73,7 @@ public class ParametresRestController {
   public ResponseEntity<Map<String, Object>> emailChange(
       @Valid @RequestBody final RequeteEmailChange corps, final Authentication auth) {
     final UtilisateurDetails details = utilisateur(auth);
-    final String emailNorm = corps.email().strip().toLowerCase();
+    final String emailNorm = corps.email().strip().toLowerCase(Locale.ROOT);
     if (emailNorm.equalsIgnoreCase(details.email())) {
       return erreur(400, "Cette adresse est déjà votre adresse email actuelle.");
     }

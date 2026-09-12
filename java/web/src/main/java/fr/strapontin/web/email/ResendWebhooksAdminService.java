@@ -88,19 +88,17 @@ public class ResendWebhooksAdminService {
 
     try {
       final ListWebhookEventsResponseSuccess reponse = client.webhooks().listEvents(webhookId);
-      final List<EvenementWebhook> evenements =
-          reponse.getData() != null
-              ? reponse.getData().stream()
-                  .map(
-                      e ->
-                          new EvenementWebhook(
-                              e.getId(),
-                              e.getType(),
-                              e.getStatus() != null ? e.getStatus().getValue() : null,
-                              e.getCreatedAt()))
-                  .toList()
-              : List.of();
-      return evenements;
+      return reponse.getData() != null
+          ? reponse.getData().stream()
+              .map(
+                  e ->
+                      new EvenementWebhook(
+                          e.getId(),
+                          e.getType(),
+                          e.getStatus() != null ? e.getStatus().getValue() : null,
+                          e.getCreatedAt()))
+              .toList()
+          : List.of();
     } catch (ResendException e) {
       LOG.warn("Erreur listing événements webhook Resend : {}", e.getMessage());
       return List.of();

@@ -9,6 +9,7 @@ import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.config.ConfigService;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -121,8 +122,8 @@ public class SetupService {
     }
 
     final String identifiant =
-        requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase();
-    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase();
+        requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase(Locale.ROOT);
+    final String email = requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
     final String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
     validerRequeteSetup(identifiant, email, motDePasse);
 

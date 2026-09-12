@@ -65,11 +65,11 @@ public class PreferencesController {
     }
 
     final String contentType = fichier.getContentType();
-    if (contentType == null || !contentType.equals(MediaType.APPLICATION_JSON_VALUE)) {
+    if (contentType == null || !MediaType.APPLICATION_JSON_VALUE.equals(contentType)) {
       return erreur(400, "Le fichier doit être au format JSON.");
     }
 
-    ExportComplet export;
+    final ExportComplet export;
     try {
       export = preferencesService.deserialiserExport(fichier.getBytes());
     } catch (Exception e) {

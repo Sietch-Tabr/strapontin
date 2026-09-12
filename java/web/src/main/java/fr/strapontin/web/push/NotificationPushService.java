@@ -140,7 +140,7 @@ public class NotificationPushService {
         """
             .formatted(baseUrl);
 
-    PushService pushService;
+    final PushService pushService;
     try {
       pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {

@@ -10,8 +10,8 @@ package fr.strapontin.worker.sante;
  *
  * <p>Remplace un couple de paramètres {@code String table, String colonneId} passés en clair aux
  * méthodes qui construisent une requête SQL par concaténation — un enum exclut structurellement
- * tout appel avec une valeur non constante, contrairement à un {@code String} dont rien ne
- * garantit qu'il reste toujours l'un des deux littéraux attendus.
+ * tout appel avec une valeur non constante, contrairement à un {@code String} dont rien ne garantit
+ * qu'il reste toujours l'un des deux littéraux attendus.
  *
  * @since 2.8.7
  * @author Kwaite
@@ -20,25 +20,25 @@ enum TypeEntiteSource {
   SALLE("salle_sources", "salle_id"),
   ARTISTE("artiste_sources", "artiste_id");
 
-  private final String table;
-  private final String colonneId;
+  private final String nomTable;
+  private final String nomColonneId;
 
-  TypeEntiteSource(final String table, final String colonneId) {
-    this.table = table;
-    this.colonneId = colonneId;
+  TypeEntiteSource(final String nomTable, final String nomColonneId) {
+    this.nomTable = nomTable;
+    this.nomColonneId = nomColonneId;
   }
 
   /**
    * @return nom de la table ({@code salle_sources} ou {@code artiste_sources})
    */
   String table() {
-    return table;
+    return nomTable;
   }
 
   /**
    * @return nom de la colonne de rattachement ({@code salle_id} ou {@code artiste_id})
    */
   String colonneId() {
-    return colonneId;
+    return nomColonneId;
   }
 }

@@ -46,7 +46,7 @@ public record FiltreConcerts(
     String indisponibles,
     @BindParam("dept") List<String> depts) {
 
-  /** Restitue les valeurs par défaut qu'un paramètre de requête absent ne porte pas. */
+  // Restitue les valeurs par défaut qu'un paramètre de requête absent ne porte pas.
   public FiltreConcerts {
     q = q != null ? q : "";
     mois = mois != null ? mois : "";

@@ -131,6 +131,9 @@ final class EventimAttractionResolver {
    * @param identiteConfirmee désactive le repli par containment si vrai
    * @return l'attraction retenue, ou {@code null} si aucune correspondance acceptable
    */
+  // La map représente une attraction unique (un enregistrement), pas une collection à agréger —
+  // l'appelant teste explicitement null pour distinguer "aucune correspondance" d'une map vide.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private Map<String, Object> selectionnerAttraction(
       final List<Map<String, Object>> attractions,
       final String terme,

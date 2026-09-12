@@ -10,6 +10,7 @@ import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -95,7 +96,7 @@ public class UserController {
   public ResponseEntity<Map<String, Object>> majIdentifiant(
       @Valid @RequestBody final RequeteIdentifiant requete, final Authentication auth) {
     final String userId = utilisateur(auth).id();
-    final String identifiant = requete.identifiant().strip().toLowerCase();
+    final String identifiant = requete.identifiant().strip().toLowerCase(Locale.ROOT);
 
     if (utilisateurRepository.identifiantDejaUtilise(identifiant, userId)) {
       return erreur(400, "Cet identifiant est déjà utilisé.");

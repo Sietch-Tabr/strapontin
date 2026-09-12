@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.config.ConfigService;
+import java.security.GeneralSecurityException;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -44,9 +45,9 @@ public class VapidService {
    * Génère une paire de clés VAPID EC P-256, les persiste et supprime les abonnements push.
    *
    * @return paire de clés encodées en Base64 URL-safe et nombre d'abonnements supprimés
-   * @throws Exception si la génération de clés échoue
+   * @throws GeneralSecurityException si la génération de clés échoue
    */
-  public ResultatVapid genererVapid() throws Exception {
+  public ResultatVapid genererVapid() throws GeneralSecurityException {
     final VapidKeyGenerator.PaireVapid paire = VapidKeyGenerator.genererPaire();
 
     configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());

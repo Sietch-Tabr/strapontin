@@ -222,7 +222,7 @@ class ResolveurSalleParConcert {
   private List<Map<String, Object>> requeterCandidatsParTokens(
       final Set<String> tokens, final String nomNormSquash, final String dept) {
     final List<String> tokensList = new ArrayList<>(tokens);
-    final StringBuilder sbWhere = new StringBuilder("(");
+    final StringBuilder sbWhere = new StringBuilder(100).append('(');
     for (int i = 0; i < tokensList.size(); i++) {
       if (i > 0) {
         sbWhere.append(" OR ");

@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -51,9 +52,11 @@ class ReconciliationNomsSalles {
    * @param salle nom brut de la salle
    * @return score (diacritiques favorisés, casse mixte favorisée)
    */
+  // equalsIgnoreCase ne convient pas ici : le test porte sur le nom lui-même (déjà entièrement
+  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
   private static int scoreSalle(final String salle) {
     final int diacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
-    final int casseMixte = salle.equals(salle.toUpperCase()) ? 0 : 1;
+    final int casseMixte = salle.equals(salle.toUpperCase(Locale.ROOT)) ? 0 : 1;
     return diacr + casseMixte;
   }
 
@@ -125,7 +128,7 @@ class ReconciliationNomsSalles {
    * @param artisteNorm nom d'artiste normalisé
    * @param date date du concert
    * @param heure heure du concert au format {@code HH:mm} (voir {@link #formaterHeure}), peut être
-   *   {@code null}
+   *     {@code null}
    * @param dept département du concert, peut être {@code null}
    * @return clé de regroupement
    */

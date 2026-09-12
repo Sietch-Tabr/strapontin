@@ -374,11 +374,11 @@ public class PersisteurConcertsDb {
     for (final ValeurConcert v : valeurs) {
       final ResolutionEvenement resolution = resoudreOuCreerEvenement(v);
       upsertObservation(resolution.id(), v);
-      if (!resolution.nouveau()) {
+      if (resolution.nouveau()) {
+        inserts++;
+      } else {
         mettreAJourChampsEvenement(resolution.id(), v);
         updates++;
-      } else {
-        inserts++;
       }
     }
     return new PersisterConcerts.ResultatPersistance(inserts, updates);

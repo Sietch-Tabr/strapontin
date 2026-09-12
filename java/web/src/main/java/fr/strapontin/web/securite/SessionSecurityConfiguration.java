@@ -120,7 +120,7 @@ public class SessionSecurityConfiguration {
     serialiseur.setUseSecureCookie(cookieSecure);
     serialiseur.setSameSite("Lax");
     serialiseur.setUseHttpOnlyCookie(true);
-    serialiseur.setCookieMaxAge(2592000);
+    serialiseur.setCookieMaxAge(2_592_000);
     return serialiseur;
   }
 }

@@ -182,7 +182,7 @@ public class WorkerStatsService {
    * @param travail travail à exécuter, retournant le bilan de persistance en cas de succès
    */
   public void executerAvecStats(
-      final org.slf4j.Logger callerLog,
+      final Logger callerLog,
       final String typeJob,
       final Supplier<ResultatPersistance> travail) {
     final long debut = System.currentTimeMillis();
@@ -228,7 +228,7 @@ public class WorkerStatsService {
    * @param travail travail à exécuter, retournant le bilan et un message d'erreur optionnel
    */
   public void executerAvecStatsToleretErreur(
-      final org.slf4j.Logger callerLog, final String typeJob, final Supplier<ResultatJob> travail) {
+      final Logger callerLog, final String typeJob, final Supplier<ResultatJob> travail) {
     final long debut = System.currentTimeMillis();
     try {
       final ResultatJob rj = travail.get();

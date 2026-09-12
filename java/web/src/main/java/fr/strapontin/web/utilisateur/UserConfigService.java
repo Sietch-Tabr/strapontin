@@ -10,6 +10,7 @@ import fr.strapontin.web.config.ConfigService;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -313,7 +314,7 @@ public class UserConfigService {
   }
 
   private String normaliserDept(final String d) {
-    final String valeur = d.toUpperCase();
+    final String valeur = d.toUpperCase(Locale.ROOT);
     if (valeur.matches("2[AB]")) {
       return "20";
     }

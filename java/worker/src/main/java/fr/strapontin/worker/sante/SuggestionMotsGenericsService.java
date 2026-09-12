@@ -121,7 +121,7 @@ public class SuggestionMotsGenericsService {
       if (json == null) {
         return new HashSet<>();
       }
-      return objectMapper.readValue(json, new TypeReference<HashSet<String>>() {});
+      return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashSet<>();
     } catch (JsonProcessingException e) {

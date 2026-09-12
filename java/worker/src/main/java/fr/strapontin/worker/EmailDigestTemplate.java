@@ -95,6 +95,9 @@ final class EmailDigestTemplate {
             lieu);
   }
 
+  // Nom volontairement court : appelé à de nombreuses reprises dans des lignes de formatage HTML
+  // déjà denses (voir le gabarit ci-dessus) — un nom plus long nuirait à leur lisibilité.
+  @SuppressWarnings("PMD.ShortMethodName")
   private static String e(final String valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }

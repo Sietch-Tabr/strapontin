@@ -18,7 +18,6 @@ import java.util.Objects;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -149,7 +148,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   static List<ConcertBrut> parserConcerts(final String html, final String slug) {
     final Document doc = Jsoup.parse(html);
-    final Elements evenements = doc.select(SEL_EVENEMENTS);
+    final List<Element> evenements = doc.select(SEL_EVENEMENTS);
     final List<ConcertBrut> concerts = new ArrayList<>();
 
     for (final Element ev : evenements) {
@@ -206,7 +205,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     final String salle = salleNomEl != null ? salleNomEl.text().trim() : "Salle inconnue";
 
     // Ville : le premier span.evenementSalleVille commence par "- Ville", le second est la ville
-    final Elements villeEls = ev.select(SEL_VILLE);
+    final List<Element> villeEls = ev.select(SEL_VILLE);
     final String ville = villeEls.size() >= 2 ? villeEls.get(1).text().trim() : null;
 
     // Département depuis code postal (déjà validé non vide par estConcertValide)
@@ -271,6 +270,10 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
    * @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
    */
+  // Le tableau représente une paire date/heure, pas une collection à agréger — l'appelant teste
+  // explicitement null pour distinguer "format invalide" d'un tableau vide, sémantiques
+  // différentes.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   static String[] parserDatetime(final String datetime) {
     if (datetime == null || datetime.length() < 10) {
       return null;

@@ -97,11 +97,11 @@ final class ClientSparqlWikidata {
 
   /**
    * Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503 (×3).
-   * Retourne {@code null} si toutes les tentatives échouent — l'appelant traite cela comme une
+   * Retourne une map vide si toutes les tentatives échouent — l'appelant traite cela comme une
    * absence de résultat, sans lever d'exception.
    *
    * @param sparql corps de la requête SPARQL
-   * @return corps JSON désérialisé, ou null en cas d'échec définitif
+   * @return corps JSON désérialisé, ou une map vide en cas d'échec définitif
    */
   Map<String, Object> executer(final String sparql) {
     // un appel logique = un executer, quel que soit le nombre de retries internes —
@@ -113,7 +113,8 @@ final class ClientSparqlWikidata {
     while (tentative < RETRY_TOTAL_MAX) {
       tentative++;
       try {
-        return effectuerRequete(sparql);
+        final Map<String, Object> resultat = effectuerRequete(sparql);
+        return resultat != null ? resultat : Map.of();
       } catch (HttpClientErrorException.TooManyRequests e) {
         final long attenteMs =
             extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
@@ -129,18 +130,18 @@ final class ClientSparqlWikidata {
               RETRY_TRANSITOIRE_MAX,
               e.getMessage());
           compteurBilan.enregistrerErreur();
-          return null;
+          return Map.of();
         }
         dormir(1000L * tentativesTransitoires);
       } catch (Exception e) {
         compteurBilan.enregistrerErreur();
         LOG.warn("Wikidata SPARQL erreur : {}", e.getMessage());
-        return null;
+        return Map.of();
       }
     }
     compteurBilan.enregistrerErreur();
     LOG.warn("Wikidata SPARQL abandon après {} tentatives", RETRY_TOTAL_MAX);
-    return null;
+    return Map.of();
   }
 
   /**
@@ -244,6 +245,9 @@ final class ClientSparqlWikidata {
    * @param wkt valeur brute du binding {@code ?coord}, ou {@code null}
    * @return {@code [longitude, latitude]}, ou {@code null} si absent/mal formé
    */
+  // Le tableau représente une paire de coordonnées, pas une collection à agréger — les appelants
+  // testent explicitement null pour distinguer "absent" d'un tableau vide, sémantiques différentes.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   static double[] parserCoordonnees(final String wkt) {
     if (wkt == null) {
       return null;

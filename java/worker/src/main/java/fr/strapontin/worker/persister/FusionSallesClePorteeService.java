@@ -202,6 +202,9 @@ public class FusionSallesClePorteeService {
    *
    * @return {@code [cible, source]}, ou {@code null} si l'une des deux salles n'existe plus
    */
+  // Le tableau représente une paire cible/source, pas une collection à agréger — l'appelant teste
+  // explicitement null pour distinguer "salle disparue" d'un tableau vide, sémantiques différentes.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private UUID[] choisirCibleEtSource(final UUID a, final UUID b) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(

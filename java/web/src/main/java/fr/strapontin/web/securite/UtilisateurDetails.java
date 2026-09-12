@@ -7,6 +7,7 @@ package fr.strapontin.web.securite;
 import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,7 +43,7 @@ public record UtilisateurDetails(
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
-    return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+    return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase(Locale.ROOT)));
   }
 
   @Override

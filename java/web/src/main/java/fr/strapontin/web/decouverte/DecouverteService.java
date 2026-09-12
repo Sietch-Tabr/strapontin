@@ -127,7 +127,7 @@ public class DecouverteService {
     final Map<String, Object> baseParams = new HashMap<>();
     baseParams.put("aujourd8", aujourd8);
     final StringBuilder whereBase =
-        new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+        new StringBuilder(100).append("c.date >= :aujourd8 AND c.disponible = true");
     if (!deptsActifs.isEmpty()) {
       whereBase.append(" AND c.dept = ANY(:depts)");
       baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
@@ -268,7 +268,8 @@ public class DecouverteService {
       final String classification,
       final LocalDate aujourd8,
       final Map<String, Object> params) {
-    final StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+    final StringBuilder where =
+        new StringBuilder(150).append("c.date >= :aujourd8 AND c.disponible = true");
     params.put("aujourd8", aujourd8);
     if (!deptsActifs.isEmpty()) {
       where.append(" AND c.dept = ANY(:depts)");

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.salle;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.CadenceurAppels;
@@ -110,7 +111,8 @@ class SalleRechercheTicketmasterService {
   }
 
   @SuppressWarnings("unchecked")
-  private List<Map<String, Object>> extraireVenuesTM(final String corps) throws Exception {
+  private List<Map<String, Object>> extraireVenuesTM(final String corps)
+      throws JsonProcessingException {
     final Map<String, Object> root = objectMapper.readValue(corps, Map.class);
     final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
     return embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;

@@ -50,7 +50,9 @@ public final class DistanceTexte {
   }
 
   // Marque dans matchA/matchB les caractères de a et b qui se correspondent dans la fenêtre
-  // Jaro, et retourne leur nombre.
+  // Jaro, et retourne leur nombre. matchA/matchB sont des tampons de sortie mutés en place, pas
+  // une liste variadique de valeurs — varargs induirait en erreur sur leur rôle réel.
+  @SuppressWarnings("PMD.UseVarargs")
   private static int rechercherCorrespondances(
       final String a,
       final String b,
@@ -76,7 +78,9 @@ public final class DistanceTexte {
   }
 
   // Compte, parmi les caractères déjà marqués correspondants, ceux dont l'ordre relatif diffère
-  // entre a et b.
+  // entre a et b. matchA/matchB sont des tampons remplis par rechercherCorrespondances, pas une
+  // liste variadique de valeurs.
+  @SuppressWarnings("PMD.UseVarargs")
   private static int compterTranspositions(
       final String a, final String b, final boolean[] matchA, final boolean[] matchB) {
     int transpositions = 0;

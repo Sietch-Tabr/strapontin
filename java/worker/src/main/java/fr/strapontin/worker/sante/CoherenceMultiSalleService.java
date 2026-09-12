@@ -182,10 +182,7 @@ public class CoherenceMultiSalleService {
     if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) {
       return false;
     }
-    if (nomContenuDansLAutre(nomExtrait, nomNormSalle)) {
-      return false;
-    }
-    return !estSigleDe(nomExtrait, nomNormSalle);
+    return !nomContenuDansLAutre(nomExtrait, nomNormSalle) && !estSigleDe(nomExtrait, nomNormSalle);
   }
 
   /**
@@ -195,12 +192,12 @@ public class CoherenceMultiSalleService {
    */
   private static boolean estSigleDe(final String a, final String b) {
     final String court = a.length() <= b.length() ? a : b;
-    final String plusLong = a.length() <= b.length() ? b : a;
     final String sigleObserve = court.replace(" ", "");
     if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) {
       return false;
     }
 
+    final String plusLong = a.length() <= b.length() ? b : a;
     final String[] mots = plusLong.split("\\s+");
     if (mots.length != sigleObserve.length()) {
       return false;
@@ -290,10 +287,10 @@ public class CoherenceMultiSalleService {
   // CorrespondanceSalle#estContainmentTokensPartiel.
   private static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
     final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
-    final String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
     if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) {
       return false;
     }
+    final String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
     final Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
     final Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
     return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);

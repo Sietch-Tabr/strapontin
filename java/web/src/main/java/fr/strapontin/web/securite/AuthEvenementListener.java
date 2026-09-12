@@ -6,6 +6,7 @@ package fr.strapontin.web.securite;
 
 import fr.strapontin.web.admin.LogAdminService;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
@@ -63,7 +64,7 @@ public class AuthEvenementListener {
     final String identifiant = event.getAuthentication().getName();
     final String ip = obtenirIp(event.getAuthentication());
     final String raison =
-        event.getException().getClass().getSimpleName().replace("Exception", "").toLowerCase();
+        event.getException().getClass().getSimpleName().replace("Exception", "").toLowerCase(Locale.ROOT);
     final Map<String, Object> meta = new HashMap<>();
     meta.put("identifiant", identifiant);
     meta.put("ip", ip != null ? ip : "?");

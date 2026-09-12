@@ -85,15 +85,14 @@ public final class CorrespondanceSalle {
     if (a.equals(b)) {
       return true;
     }
-    if (DistanceTexte.similarite(a, b) >= seuilSimilarite) {
-      return true;
-    }
     // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)
     // n'a aucun pouvoir discriminant propre — "la prade" est un préfixe strict de "la pradella",
     // deux lieux réels sans rapport — désactivé au même titre que le pivot quand aucun signal de
     // localisation indépendant ne peut confirmer le candidat.
-    return containmentAutorise
-        && UtilitairesChaine.estContainmentRatio(a, b, longueurMinContainment, ratioMinContainment);
+    return DistanceTexte.similarite(a, b) >= seuilSimilarite
+        || (containmentAutorise
+            && UtilitairesChaine.estContainmentRatio(
+                a, b, longueurMinContainment, ratioMinContainment));
   }
 
   /**
@@ -257,10 +256,8 @@ public final class CorrespondanceSalle {
     if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) {
       return true;
     }
-    if (pivotAutorise && estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec)) {
-      return true;
-    }
-    return estContainmentPartielSuffisant(specA, specB);
+    return (pivotAutorise && estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec))
+        || estContainmentPartielSuffisant(specA, specB);
   }
 
   private static Set<String> intersection(final Set<String> a, final Set<String> b) {

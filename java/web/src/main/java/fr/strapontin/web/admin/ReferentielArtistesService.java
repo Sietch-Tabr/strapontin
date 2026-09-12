@@ -113,7 +113,7 @@ public class ReferentielArtistesService {
 
   private FiltresArtistes construireFiltresArtistes(
       final String nom, final String statut, final boolean wikidataManquant) {
-    final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+    final StringBuilder where = new StringBuilder(100).append(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND nom ILIKE :nom ");

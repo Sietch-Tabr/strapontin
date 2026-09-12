@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -135,13 +136,15 @@ public class PersisterConcerts {
     return ReconciliateurSalles.jaccardTokens(a, b);
   }
 
+  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom lui-même (déjà entièrement
+  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
   private static int scoreArtisteSalle(final String artiste, final String salle) {
     final int artisteDiacr =
         Normalizer.normalize(artiste, Normalizer.Form.NFD).length() - artiste.length();
     final int salleDiacr =
         Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
-    final int artisteCasseMixte = artiste.equals(artiste.toUpperCase()) ? 0 : 5;
-    final int salleCasseMixte = salle.equals(salle.toUpperCase()) ? 0 : 1;
+    final int artisteCasseMixte = artiste.equals(artiste.toUpperCase(Locale.ROOT)) ? 0 : 5;
+    final int salleCasseMixte = salle.equals(salle.toUpperCase(Locale.ROOT)) ? 0 : 1;
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
   }
 

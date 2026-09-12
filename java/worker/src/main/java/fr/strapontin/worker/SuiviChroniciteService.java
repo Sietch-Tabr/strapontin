@@ -105,7 +105,7 @@ public class SuiviChroniciteService {
       if (json == null) {
         return new HashMap<>();
       }
-      return objectMapper.readValue(json, new TypeReference<HashMap<String, Integer>>() {});
+      return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashMap<>();
     } catch (JsonProcessingException e) {

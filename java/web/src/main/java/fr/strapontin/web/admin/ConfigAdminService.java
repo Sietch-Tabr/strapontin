@@ -164,10 +164,12 @@ public class ConfigAdminService {
       throw new ErreurMetier("Clé de configuration invalide.");
     }
     final boolean valeurVide = valeur == null || valeur.isEmpty();
-    if (!valeurVide) {
+    if (valeurVide) {
+      if (CLES_OBLIGATOIRES.contains(cle)) {
+        throw new ErreurMetier("La valeur ne peut pas être vide pour " + cle + ".");
+      }
+    } else {
       validerFormatOuLever(cle, valeur);
-    } else if (CLES_OBLIGATOIRES.contains(cle)) {
-      throw new ErreurMetier("La valeur ne peut pas être vide pour " + cle + ".");
     }
     configService.sauvegarderConfig(cle, valeurVide ? null : valeur);
     logAdminService.logAdmin("info", "admin", "Config sauvegardée : " + cle, Map.of("cle", cle));
