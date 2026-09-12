@@ -9,13 +9,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -63,8 +55,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   public static final String PREFIXE_IDENTIFIANT = "tm";
 
   private static final int TAILLE_PAGE_REGION = 200;
-  // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7 → 1200 (HTTP 400)
-  private static final int NB_PAGES_MAX = 6;
   // TM applique un Spike Arrest strict de 200ms minimum entre requêtes, sans tolérance de rafale
   // (maxBurstMessageCount=1.0) : le cadenceur n'espace que les instants de départ côté client, la
   // latence réseau peut donc faire percevoir deux appels espacés de 250ms comme trop rapprochés
@@ -75,7 +65,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   public static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";
-  private static final String CLE_EMBEDDED = "_embedded";
 
   private final String apiKey;
   private final RestClient restClient;
@@ -86,11 +75,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final CadenceurAppels cadenceur;
   private final TicketmasterHealthCheck healthCheck;
-  // Une absence de correspondance TM pour un nom donné est un résultat stable la plupart du temps
-  // (rappelé à chaque cycle fetch:artistes:batch, aucun état négatif persisté pour permettre une
-  // redécouverte si TM ajoute l'attraction plus tard) — sans throttle, le WARN se répète à chaque
-  // cycle pour le même nom déjà classé introuvable.
-  private final Cache<String, Boolean> avertissementsAttractionIntrouvable;
+  private final TicketmasterPageFetcher pageFetcher;
+  private final TicketmasterAttractionResolver attractionResolver;
 
   /**
    * Crée une instance avec la clé API fournie, un RestClient par défaut (timeout connexion 10s,
@@ -185,11 +171,26 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       final CadenceurAppels cadenceur) {
     this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
     this.restClient = Objects.requireNonNull(restClient, "restClient");
-    this.avertissementsAttractionIntrouvable =
-        Objects.requireNonNull(
-            avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
+    Objects.requireNonNull(
+        avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
     this.cadenceur = Objects.requireNonNull(cadenceur, "cadenceur");
     this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur);
+    this.pageFetcher =
+        new TicketmasterPageFetcher(
+            this.restClient,
+            this.apiKey,
+            this.cadenceur,
+            compteurBilan,
+            dernierQuota,
+            concertsManquesCumules,
+            TAILLE_PAGE_REGION);
+    this.attractionResolver =
+        new TicketmasterAttractionResolver(
+            this.restClient,
+            this.apiKey,
+            BASE_URL,
+            this.cadenceur,
+            avertissementsAttractionIntrouvable);
   }
 
   /**
@@ -249,101 +250,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * @param succes {@code false} si l'appel HTTP a échoué (voir {@link #fetchPage}) — distingue une
-   *     page réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi
-   *     les deux se traduisent identiquement par {@code concerts} vide et {@code total=0}.
-   */
-  private record ResultatPage(
-      List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota, boolean succes) {}
-
-  /**
-   * @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPage#succes}).
-   */
-  private record ResultatMultiPage(List<ConcertBrut> concerts, boolean succes) {}
-
-  private ResultatPage fetchPage(
-      UriComponentsBuilder uriBase, int numPage, String artisteFallback) {
-    cadenceur.attendre();
-    final String uri = construireUriFetchPage(uriBase, numPage);
-
-    compteurBilan.enregistrerAppel();
-    final Instant avantAppelHttp = Instant.now();
-    try {
-      final ResponseEntity<Map> response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
-      final QuotaTM quota = extraireQuotaTm(response.getHeaders());
-      return construireResultatPage(response.getBody(), quota, artisteFallback);
-    } catch (Exception e) {
-      final String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
-      final long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
-      // Diagnostic dédié au 429 (Spike Arrest) : la durée réelle de l'appel HTTP objective si le
-      // rejet survient après une latence réseau anormale (jitter) plutôt qu'immédiatement (autre
-      // cause) — le cadenceur n'espace que l'instant de départ côté client, jamais l'instant
-      // d'arrivée effective côté serveur TM.
-      if (e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode().value() == 429) {
-        LOG.warn(
-            "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}", uriSafe, dureeAppelMs);
-      } else {
-        LOG.warn("erreur HTTP Ticketmaster url={} : {}", uriSafe, redigerApiKey(e.getMessage()));
-      }
-      compteurBilan.enregistrerErreur();
-      return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
-    }
-  }
-
-  private String construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
-    return uriBase
-        .cloneBuilder()
-        .queryParam("apikey", apiKey)
-        .queryParam("locale", "fr,en,*")
-        .queryParam("countryCode", "FR")
-        .queryParam("includeTBA", "no")
-        .queryParam("includeTBD", "no")
-        .queryParam("page", numPage)
-        .build()
-        .toUriString();
-  }
-
-  private static QuotaTM extraireQuotaTm(final HttpHeaders headers) {
-    if (headers.get("Rate-Limit-Available") == null) {
-      return null;
-    }
-    return new QuotaTM(
-        Integer.parseInt(headers.getFirst("Rate-Limit-Available")),
-        Integer.parseInt(headers.getOrEmpty("Rate-Limit").stream().findFirst().orElse("0")),
-        Long.parseLong(headers.getOrEmpty("Rate-Limit-Reset").stream().findFirst().orElse("0")),
-        Instant.now().toString());
-  }
-
-  @SuppressWarnings("unchecked")
-  private ResultatPage construireResultatPage(
-      final Map data, final QuotaTM quota, final String artisteFallback) {
-    if (data == null) {
-      return new ResultatPage(List.of(), 0, NB_PAGES_MAX, quota, true);
-    }
-
-    final Map<String, Object> page = (Map<String, Object>) data.get("page");
-    final int total = page != null ? ((Number) page.get("totalElements")).intValue() : 0;
-    final int totalPages =
-        page != null ? ((Number) page.get("totalPages")).intValue() : NB_PAGES_MAX;
-
-    final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-    final List<Map<String, Object>> evts =
-        embedded != null ? (List<Map<String, Object>>) embedded.get("events") : null;
-    if (evts == null) {
-      return new ResultatPage(List.of(), total, totalPages, quota, true);
-    }
-
-    final List<ConcertBrut> concerts = new ArrayList<>();
-    for (final Map<String, Object> evt : evts) {
-      final ConcertBrut c = mapEvenement(evt, artisteFallback);
-      if (c != null) {
-        concerts.add(c);
-      }
-    }
-    return new ResultatPage(concerts, total, totalPages, quota, true);
-  }
-
-  /**
    * Retire toute clé API Ticketmaster (paramètre {@code apikey=...}) d'un message avant
    * journalisation. Sur une panne réseau bas niveau, l'exception Spring ({@code
    * ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son propre
@@ -354,71 +260,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   static String redigerApiKey(final String message) {
     return message == null ? null : message.replaceAll("apikey=[^&\\s\"]+", "apikey=***");
-  }
-
-  private record FenetreTemps(String debut, String fin) {}
-
-  private static FenetreTemps obtenirFenetreTemps() {
-    final Instant maintenant = Instant.now();
-    final Instant dans6Mois = maintenant.plus(6L * 30, ChronoUnit.DAYS);
-    final DateTimeFormatter fmt =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
-    return new FenetreTemps(fmt.format(maintenant), fmt.format(dans6Mois));
-  }
-
-  /**
-   * Récupère toutes les pages disponibles (bornées à {@link #NB_PAGES_MAX}) pour une requête TM.
-   *
-   * @param uriBase URI de base de la requête, sans pagination
-   * @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
-   * @param contexte identifiant du centre de recherche (ex. {@code "dept=75"}) inclus dans le log
-   *     de plafonnement de pagination, pour distinguer les départements/salles chroniquement
-   *     affectés
-   * @return les concerts récupérés sur toutes les pages parcourues, et si toutes les pages ont été
-   *     récupérées avec succès (voir {@link ResultatPage#succes})
-   */
-  private ResultatMultiPage fetchToutesPages(
-      final UriComponentsBuilder uriBase, final String artisteFallback, final String contexte) {
-    final List<ConcertBrut> tousLesEvents = new ArrayList<>();
-    int borneMax = NB_PAGES_MAX;
-    int totalElements = 0;
-    boolean continuer = true;
-    boolean succes = true;
-
-    for (int numPage = 0; numPage < borneMax && continuer; numPage++) {
-      final ResultatPage resultat = fetchPage(uriBase, numPage, artisteFallback);
-      if (!resultat.succes()) {
-        succes = false;
-      }
-      if (resultat.quota() != null) {
-        dernierQuota.set(resultat.quota());
-      }
-      if (numPage == 0) {
-        totalElements = resultat.total();
-        borneMax = Math.min(resultat.totalPages(), NB_PAGES_MAX);
-      }
-      tousLesEvents.addAll(resultat.concerts());
-
-      final boolean fini =
-          resultat.concerts().isEmpty()
-              || (totalElements > 0 && tousLesEvents.size() >= totalElements);
-      continuer = !fini;
-    }
-
-    final int nbPagesTotal = (int) Math.ceil((double) totalElements / TAILLE_PAGE_REGION);
-    if (nbPagesTotal > NB_PAGES_MAX) {
-      concertsManquesCumules.addAndGet(Math.max(0, totalElements - tousLesEvents.size()));
-      LOG.warn(
-          "NB_PAGES_MAX atteint contexte={} — concerts manqués total={} recuperes={}"
-              + " pagesFetched={} pagesTotal={}",
-          contexte,
-          totalElements,
-          tousLesEvents.size(),
-          NB_PAGES_MAX,
-          nbPagesTotal);
-    }
-
-    return new ResultatMultiPage(tousLesEvents, succes);
   }
 
   @Override
@@ -439,7 +280,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   @Override
   public List<ConcertBrut> fetchArtiste(final String nom) {
-    final FenetreTemps fenetre = obtenirFenetreTemps();
+    final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
     final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("keyword", nom)
@@ -448,7 +289,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("sort", TRI_DATE_ASC)
             .queryParam("startDateTime", fenetre.debut());
 
-    final ResultatPage resultat = fetchPage(uriBase, 0, nom);
+    final TicketmasterPageFetcher.ResultatPage resultat = pageFetcher.fetchPage(uriBase, 0, nom);
     if (resultat.quota() != null) {
       dernierQuota.set(resultat.quota());
     }
@@ -475,7 +316,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         identifiant.startsWith(PREFIXE_IDENTIFIANT + ":")
             ? identifiant.substring(PREFIXE_IDENTIFIANT.length() + 1)
             : identifiant;
-    final FenetreTemps fenetre = obtenirFenetreTemps();
+    final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
     final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("venueId", venueId)
@@ -484,7 +325,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("startDateTime", fenetre.debut())
             .queryParam("endDateTime", fenetre.fin());
 
-    final ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "salle=" + venueId);
+    final TicketmasterPageFetcher.ResultatMultiPage resultat =
+        pageFetcher.fetchToutesPages(uriBase, null, "salle=" + venueId);
     if (resultat.succes()) {
       LOG.info("TM fetchSalle venueId={} total={}", venueId, resultat.concerts().size());
     } else {
@@ -503,48 +345,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param nom nom de l'artiste
    * @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
    */
-  @SuppressWarnings("unchecked")
   public String rechercherAttractionId(final String nom) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/attractions.json")
-            .queryParam("keyword", nom)
-            .queryParam("locale", "*")
-            .queryParam("size", 10)
-            .queryParam("apikey", apiKey)
-            .build()
-            .toUriString();
-    cadenceur.attendre();
-    try {
-      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) {
-        return null;
-      }
-      final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      final List<Map<String, Object>> attractions =
-          embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-      if (attractions == null || attractions.isEmpty()) {
-        return null;
-      }
-      final String nomNorm = Normalisation.normaliserTexte(nom);
-      for (final Map<String, Object> attraction : attractions) {
-        final String nomAttraction = (String) attraction.getOrDefault("name", "");
-        if (Normalisation.normaliserTexte(nomAttraction).equals(nomNorm)) {
-          return (String) attraction.get("id");
-        }
-      }
-      if (avertissementsAttractionIntrouvable.getIfPresent(nomNorm) == null) {
-        avertissementsAttractionIntrouvable.put(nomNorm, Boolean.TRUE);
-        LOG.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
-      } else {
-        LOG.debug(
-            "rechercherAttractionId TM — pas de correspondance exacte nom={} (déjà signalé)", nom);
-      }
-      return null;
-    } catch (Exception e) {
-      LOG.warn(
-          "rechercherAttractionId TM échoué nom='{}' : {}", nom, redigerApiKey(e.getMessage()));
-      return null;
-    }
+    return attractionResolver.rechercherAttractionId(nom);
   }
 
   /**
@@ -561,7 +363,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler après coup un
     // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
     LOG.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
-    final FenetreTemps fenetre = obtenirFenetreTemps();
+    final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
     final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("attractionId", String.join(",", attractionIds))
@@ -569,7 +371,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
             .queryParam("sort", TRI_DATE_ASC)
             .queryParam("startDateTime", fenetre.debut());
 
-    final ResultatMultiPage resultat = fetchToutesPages(uriBase, null, "lot");
+    final TicketmasterPageFetcher.ResultatMultiPage resultat =
+        pageFetcher.fetchToutesPages(uriBase, null, "lot");
     if (!resultat.succes()) {
       LOG.warn(
           "TM fetchArtistesLot ids={} échoué (voir erreur HTTP ci-dessus)", attractionIds.size());
@@ -666,7 +469,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
       if (centre == null) {
         LOG.warn("département sans coordonnées connues, ignoré dept={}", dept);
       } else {
-        final FenetreTemps fenetre = obtenirFenetreTemps();
+        final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
         final UriComponentsBuilder uriBase =
             UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
                 .queryParam("latlong", centre.lat() + "," + centre.lng())
@@ -678,7 +481,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
                 .queryParam("startDateTime", fenetre.debut())
                 .queryParam("endDateTime", fenetre.fin());
 
-        tous.addAll(fetchToutesPages(uriBase, null, "dept=" + dept).concerts());
+        tous.addAll(pageFetcher.fetchToutesPages(uriBase, null, "dept=" + dept).concerts());
       }
     }
 

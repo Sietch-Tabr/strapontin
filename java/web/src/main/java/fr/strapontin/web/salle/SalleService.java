@@ -4,15 +4,12 @@
  */
 package fr.strapontin.web.salle;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
-import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
@@ -20,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -50,55 +46,34 @@ import org.springframework.web.client.RestClient;
 public class SalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SalleService.class);
-  private static final String TM_VENUES_URL =
-      "https://app.ticketmaster.com/discovery/v2/venues.json";
-  private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-  // Types Nominatim pertinents pour une salle de spectacle — testés sur le type de
-  // premier niveau ET sur extratags.amenity (une salle taguée leisure/tourism, ex. un stade, peut
-  // porter amenity en tag secondaire). community_centre couvre les salles des fêtes/polyvalentes
-  // (petites communes, souvent seule couverture Digitick disponible).
-  private static final Set<String> TYPES_SALLE_NOMINATIM =
-      Set.of(
-          "music_venue",
-          "arts_centre",
-          "theatre",
-          "nightclub",
-          "events_venue",
-          "concert_hall",
-          "community_centre");
   private static final int CAP_SALLES = 200;
 
   private final SalleRepository salleRepository;
-  private final ConfigService configService;
-  private final ObjectMapper objectMapper;
   private final RestClient restClient;
-  private final CadenceurAppels cadenceurTicketmaster;
   private final LogAdminService logAdminService;
+  private final SalleRechercheNominatimService salleRechercheNominatimService;
+  private final SalleRechercheTicketmasterService salleRechercheTicketmasterService;
   private SalleService self;
 
   /**
    * @param salleRepository accès aux données salles
-   * @param configService lecture de la clé API Ticketmaster
-   * @param objectMapper désérialiseur JSON (pour l'API Ticketmaster)
    * @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
    *     fr.strapontin.web.WebConfiguration})
-   * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
-   *     fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
    * @param logAdminService journalisation des suppressions dans {@code logs_admin}
+   * @param salleRechercheNominatimService recherche de salles via Nominatim (OSM)
+   * @param salleRechercheTicketmasterService recherche de salles via l'API Ticketmaster
    */
   public SalleService(
       final SalleRepository salleRepository,
-      final ConfigService configService,
-      final ObjectMapper objectMapper,
       final RestClient restClient,
-      final CadenceurAppels cadenceurTicketmaster,
-      final LogAdminService logAdminService) {
+      final LogAdminService logAdminService,
+      final SalleRechercheNominatimService salleRechercheNominatimService,
+      final SalleRechercheTicketmasterService salleRechercheTicketmasterService) {
     this.salleRepository = salleRepository;
-    this.configService = configService;
-    this.objectMapper = objectMapper;
     this.restClient = restClient;
-    this.cadenceurTicketmaster = cadenceurTicketmaster;
     this.logAdminService = logAdminService;
+    this.salleRechercheNominatimService = salleRechercheNominatimService;
+    this.salleRechercheTicketmasterService = salleRechercheTicketmasterService;
   }
 
   /**
@@ -162,65 +137,28 @@ public class SalleService {
       // deux appels, pas leur somme.
       if (listeResultats.size() < 3) {
         final CompletableFuture<List<ResultatSalle>> futureNominatim =
-            CompletableFuture.supplyAsync(() -> rechercherSallesNominatim(recherche));
+            CompletableFuture.supplyAsync(
+                () -> salleRechercheNominatimService.rechercher(recherche));
         final CompletableFuture<List<ResultatSalle>> futureTm =
-            CompletableFuture.supplyAsync(() -> rechercherSallesTM(recherche));
+            CompletableFuture.supplyAsync(
+                () -> salleRechercheTicketmasterService.rechercher(recherche));
         final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
         resultatsExternes.addAll(futureTm.join());
         for (final ResultatSalle r : resultatsExternes) {
           if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) {
             continue;
           }
-          fusionnerOuAjouter(listeResultats, r);
+          SalleSuggestions.fusionnerOuAjouter(listeResultats, r);
         }
       }
 
       resultats = listeResultats;
       final String rechercheNorm = normaliserSalleCle(recherche);
-      dejaLaSuivie = contientCorrespondancePartielle(rechercheNorm, sallesDejaAjoutees);
+      dejaLaSuivie =
+          SalleSuggestions.contientCorrespondancePartielle(rechercheNorm, sallesDejaAjoutees);
     }
 
     return new ReponseSalles(salles, resultats, dejaLaSuivie);
-  }
-
-  /**
-   * Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle ({@link
-   * CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
-   *
-   * <p>Utilise le même algorithme que {@link #resoudreSalleId} — avant correctif, {@code
-   * fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale ({@code
-   * estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors qu'un clic
-   * sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleId} — un seul
-   * algorithme de dédoublonnage salle dans tout le projet.
-   *
-   * <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
-   * tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées.
-   *
-   * <p>Package-private (plutôt que {@code private}) pour être testable directement.
-   *
-   * @param liste suggestions déjà collectées (modifiée en place)
-   * @param candidat nouveau résultat externe à intégrer
-   */
-  static void fusionnerOuAjouter(final List<ResultatSalle> liste, final ResultatSalle candidat) {
-    for (int i = 0; i < liste.size(); i++) {
-      final ResultatSalle existant = liste.get(i);
-      if (CorrespondanceSalle.estDoublonSalle(
-          Normalisation.normaliserTexte(existant.salle()),
-          Normalisation.normaliserTexte(candidat.salle()))) {
-        liste.set(
-            i,
-            new ResultatSalle(
-                existant.salle(),
-                existant.ville() != null ? existant.ville() : candidat.ville(),
-                existant.tmVenueId() != null ? existant.tmVenueId() : candidat.tmVenueId(),
-                existant.digitickSlug() != null ? existant.digitickSlug() : candidat.digitickSlug(),
-                existant.source(),
-                existant.osmId() != null ? existant.osmId() : candidat.osmId(),
-                existant.wikidataId() != null ? existant.wikidataId() : candidat.wikidataId()));
-        return;
-      }
-    }
-    liste.add(candidat);
   }
 
   /**
@@ -504,218 +442,6 @@ public class SalleService {
   public static String normaliserSalleCle(final String nom) {
     final String nfd = Normalizer.normalize(nom.toLowerCase(), Normalizer.Form.NFD);
     return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}", "").replaceAll("[^a-z0-9]", "");
-  }
-
-  /**
-   * Indique si une recherche correspond, même partiellement, à une salle déjà suivie.
-   *
-   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un terme
-   * partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été trouvée puis
-   * exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun signal expliquant
-   * l'absence de résultat.
-   *
-   * <p>Package-private (plutôt que {@code private}) pour être testable directement.
-   *
-   * @param rechercheNorm clé normalisée de la recherche ({@link #normaliserSalleCle})
-   * @param clesNorm clés normalisées des salles déjà suivies
-   * @return {@code true} si une salle déjà suivie contient la recherche
-   */
-  static boolean contientCorrespondancePartielle(
-      final String rechercheNorm, final Set<String> clesNorm) {
-    return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));
-  }
-
-  /**
-   * Recherche des salles par nom via Nominatim (OSM).
-   *
-   * <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire selon
-   * la politique d'usage Nominatim.
-   *
-   * @param terme terme de recherche saisi par l'utilisateur
-   * @return suggestions filtrées par type de lieu pertinent, vide si aucune ou en cas d'échec
-   *     réseau
-   *     <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
-   *     ({@code Mockito.spy}) évitant un appel réseau réel — même motif que {@code
-   *     ArtisteService#rechercherWikidata}.
-   */
-  List<ResultatSalle> rechercherSallesNominatim(final String terme) {
-    try {
-      final String contact =
-          configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
-      final String url =
-          NOMINATIM_URL
-              + "?q="
-              + URLEncoder.encode(terme, StandardCharsets.UTF_8)
-              + "&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
-      final WorkerTriggerUtils.ReponseHttp reponse =
-          restClient
-              .get()
-              .uri(url)
-              .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
-              .exchange(
-                  (_, resp) ->
-                      new WorkerTriggerUtils.ReponseHttp(
-                          resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) {
-        LOG.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
-        return List.of();
-      }
-      return parseNominatimResultats(reponse.corps());
-    } catch (Exception e) {
-      LOG.warn("Nominatim recherche salle échouée pour '{}'", terme, e);
-      return List.of();
-    }
-  }
-
-  /**
-   * Filtre et convertit les résultats bruts Nominatim en suggestions de salle.
-   *
-   * <p>Un résultat est pertinent si son {@code type} de premier niveau ou son {@code
-   * extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} — {@code
-   * class=amenity} seul n'est plus suffisant (trop large : laissait passer des bornes de recharge
-   * électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un stade avec {@code
-   * extratags.amenity=music_venue}) n'est plus rejetée à tort.
-   *
-   * <p>Package-private (plutôt que {@code private}) pour être testable directement, sans appel
-   * réseau réel.
-   *
-   * @param json corps de la réponse Nominatim (tableau JSON)
-   * @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
-   */
-  @SuppressWarnings("unchecked")
-  List<ResultatSalle> parseNominatimResultats(final String json) {
-    final List<ResultatSalle> resultats = new ArrayList<>();
-    try {
-      final List<Map<String, Object>> items = objectMapper.readValue(json, List.class);
-      for (final Map<String, Object> item : items) {
-        final ResultatSalle resultat = parseNominatimItem(item);
-        if (resultat != null) {
-          resultats.add(resultat);
-        }
-      }
-    } catch (Exception e) {
-      LOG.warn("Nominatim parsing JSON échoué", e);
-    }
-    return resultats;
-  }
-
-  @SuppressWarnings("unchecked")
-  private ResultatSalle parseNominatimItem(final Map<String, Object> item) {
-    final String type = (String) item.get("type");
-    final Map<String, Object> extratags = (Map<String, Object>) item.get("extratags");
-    final String amenitySecondaire = extratags != null ? (String) extratags.get("amenity") : null;
-    final boolean pertinent =
-        TYPES_SALLE_NOMINATIM.contains(type)
-            || (amenitySecondaire != null && TYPES_SALLE_NOMINATIM.contains(amenitySecondaire));
-    if (!pertinent) {
-      return null;
-    }
-
-    final String displayName = (String) item.get("display_name");
-    if (displayName == null || displayName.isBlank()) {
-      return null;
-    }
-    final String nom = displayName.split(",")[0].strip();
-
-    final String osmType = (String) item.get("osm_type");
-    final Object osmIdBrut = item.get("osm_id");
-    final String osmId = osmType != null && osmIdBrut != null ? osmType + "/" + osmIdBrut : null;
-
-    final Map<String, Object> address = (Map<String, Object>) item.get("address");
-    final String ville = extraireVille(address);
-
-    final String wikidataId = extratags != null ? (String) extratags.get("wikidata") : null;
-
-    return new ResultatSalle(nom, ville, null, null, "osm", osmId, wikidataId);
-  }
-
-  private static String extraireVille(final Map<String, Object> address) {
-    if (address == null) {
-      return null;
-    }
-    for (final String cle : List.of("city", "town", "village", "municipality")) {
-      final Object valeur = address.get(cle);
-      if (valeur instanceof String s && !s.isBlank()) {
-        return s;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * @param terme terme de recherche saisi par l'utilisateur
-   * @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en cas d'échec réseau
-   *     <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même
-   *     motif que {@link #rechercherSallesNominatim}.
-   */
-  List<ResultatSalle> rechercherSallesTM(final String terme) {
-    final Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
-    if (tmKey.isEmpty()) {
-      return List.of();
-    }
-
-    try {
-      final WorkerTriggerUtils.ReponseHttp reponse = appelerTicketmasterVenues(terme, tmKey.get());
-      if (reponse.statut() != 200) {
-        return List.of();
-      }
-
-      final List<Map<String, Object>> venues = extraireVenuesTM(reponse.corps());
-      if (venues == null) {
-        return List.of();
-      }
-
-      return venues.stream()
-          .map(this::mapperVenueTM)
-          .filter(r -> r.salle() != null)
-          .collect(Collectors.toList());
-
-    } catch (Exception e) {
-      LOG.warn("TM recherche salle échouée pour '{}'", terme, e);
-      return List.of();
-    }
-  }
-
-  private WorkerTriggerUtils.ReponseHttp appelerTicketmasterVenues(
-      final String terme, final String tmKey) {
-    final String url =
-        TM_VENUES_URL
-            + "?keyword="
-            + URLEncoder.encode(terme, StandardCharsets.UTF_8)
-            + "&countryCode=FR&size=6&apikey="
-            + URLEncoder.encode(tmKey, StandardCharsets.UTF_8);
-
-    cadenceurTicketmaster.attendre();
-    return restClient
-        .get()
-        .uri(url)
-        .exchange(
-            (_, resp) ->
-                new WorkerTriggerUtils.ReponseHttp(
-                    resp.getStatusCode().value(), resp.bodyTo(String.class)));
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<Map<String, Object>> extraireVenuesTM(final String corps) throws Exception {
-    final Map<String, Object> root = objectMapper.readValue(corps, Map.class);
-    final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
-    return embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
-  }
-
-  @SuppressWarnings("unchecked")
-  private ResultatSalle mapperVenueTM(final Map<String, Object> v) {
-    final String nomBrut = (String) v.get("name");
-    if (nomBrut == null) {
-      return new ResultatSalle(null, null, null, null, "ticketmaster");
-    }
-    final String nom = Normalisation.normaliserCasse(nomBrut);
-    if (nomBrut.contains("??")) {
-      LOG.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
-    }
-    final String id = (String) v.get("id");
-    final Map<String, Object> city = (Map<String, Object>) v.get("city");
-    final String ville = city != null ? (String) city.get("name") : null;
-    return new ResultatSalle(nom, ville, id, null, "ticketmaster");
   }
 
   private void declencherWorkerSalle(final String identifiants) {

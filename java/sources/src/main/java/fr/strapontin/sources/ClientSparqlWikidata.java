@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +23,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.UnknownContentTypeException;
 
 /**
- * Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link
- * WikidataArtisteSource} : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff
- * exponentiel) et erreurs transitoires 502/503/content-type inattendu (×3).
+ * Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link WikidataArtisteSource}
+ * : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff exponentiel) et erreurs
+ * transitoires 502/503/content-type inattendu (×3).
  *
  * @since 2.6.0
  * @author Kwaite
@@ -55,9 +56,7 @@ final class ClientSparqlWikidata {
       new fr.strapontin.core.CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
-  /**
-   * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s).
-   */
+  /** Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s). */
   ClientSparqlWikidata() {
     this(construireRestClientParDefaut());
   }
@@ -93,8 +92,8 @@ final class ClientSparqlWikidata {
 
   /**
    * Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503 (×3).
-   * Retourne {@code null} si toutes les tentatives échouent — l'appelant traite cela comme une absence
-   * de résultat, sans lever d'exception.
+   * Retourne {@code null} si toutes les tentatives échouent — l'appelant traite cela comme une
+   * absence de résultat, sans lever d'exception.
    *
    * @param sparql corps de la requête SPARQL
    * @return corps JSON désérialisé, ou null en cas d'échec définitif
@@ -229,5 +228,34 @@ final class ClientSparqlWikidata {
    */
   static boolean estQIdValide(final String qId) {
     return qId != null && MOTIF_Q_ID.matcher(qId).matches();
+  }
+
+  // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis latitude, jamais
+  // l'inverse — convention géographique standard).
+  private static final Pattern COORDONNEES_WKT =
+      Pattern.compile("Point\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
+
+  /**
+   * Parse une valeur WKT Wikidata en {@code [longitude, latitude]} — partagé entre {@link
+   * WikidataSalleSource} et {@link WikidataSalleDecouverte}.
+   *
+   * @param wkt valeur brute du binding {@code ?coord}, ou {@code null}
+   * @return {@code [longitude, latitude]}, ou {@code null} si absent/mal formé
+   */
+  static double[] parserCoordonnees(final String wkt) {
+    if (wkt == null) {
+      return null;
+    }
+    final Matcher matcher = COORDONNEES_WKT.matcher(wkt);
+    if (!matcher.find()) {
+      return null;
+    }
+    try {
+      return new double[] {
+        Double.parseDouble(matcher.group(1)), Double.parseDouble(matcher.group(2))
+      };
+    } catch (NumberFormatException e) {
+      return null;
+    }
   }
 }

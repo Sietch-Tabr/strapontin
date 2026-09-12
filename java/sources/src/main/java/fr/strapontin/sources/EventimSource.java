@@ -7,14 +7,11 @@ package fr.strapontin.sources;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.ConcertBrut;
-import fr.strapontin.core.Normalisation;
-import fr.strapontin.core.UtilitairesChaine;
 import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,11 +57,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par le worker,
   // via un composant partagé).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
-  // correspondances par containment acceptées depuis le dernier prélèvement — un
-  // containment n'est pas nécessairement une erreur (ex. "-M-" → "-M- Matthieu Chedid" est
-  // correct) mais reste un signal à vérifier manuellement, jusque-là invisible (log SLF4J niveau
-  // INFO uniquement, jamais dans logs_admin).
-  private final List<String> containmentsAcceptes = Collections.synchronizedList(new ArrayList<>());
+  private final EventimAttractionResolver attractionResolver;
 
   /**
    * Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
@@ -118,6 +111,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   public EventimSource(final RestClient restClient) {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
+    this.attractionResolver =
+        new EventimAttractionResolver(this.restClient, compteurBilan, BASE_URL, WEB_ID);
   }
 
   @Override
@@ -139,18 +134,14 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   /**
    * Retourne les correspondances par containment acceptées depuis le dernier prélèvement et vide la
    * liste — contrairement à {@link #preleverBilan}, ce n'est pas un bilan de panne : Eventim ne
-   * persiste aucun identifiant ({@link #rechercherAttractionId} est rappelé à chaque cycle), donc
-   * un containment mal résolu peut réapparaître à chaque fetch tant qu'il n'est pas corrigé
-   * manuellement.
+   * persiste aucun identifiant ({@link EventimAttractionResolver#rechercherAttractionId} est
+   * rappelé à chaque cycle), donc un containment mal résolu peut réapparaître à chaque fetch tant
+   * qu'il n'est pas corrigé manuellement.
    *
    * @return messages décrivant chaque containment accepté depuis le dernier prélèvement
    */
   public List<String> preleverContainmentsAcceptes() {
-    synchronized (containmentsAcceptes) {
-      final List<String> copie = List.copyOf(containmentsAcceptes);
-      containmentsAcceptes.clear();
-      return copie;
-    }
+    return attractionResolver.preleverContainmentsAcceptes();
   }
 
   /**
@@ -291,134 +282,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Recherche l'attractionId Eventim correspondant à un terme de recherche.
-   *
-   * @param terme nom de l'artiste cherché
-   * @param identiteConfirmee {@code true} si l'artiste a déjà une identité confirmée par une source
-   *     indépendante — désactive le repli par containment, n'accepte plus qu'une correspondance
-   *     exacte
-   * @return attractionId trouvé, ou {@code null} si aucune correspondance acceptable
-   */
-  @SuppressWarnings("unchecked")
-  private String rechercherAttractionId(final String terme, final boolean identiteConfirmee) {
-    final String uri = construireUriRechercheAttractions(terme);
-
-    compteurBilan.enregistrerAppel();
-    try {
-      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) {
-        return null;
-      }
-      final List<Map<String, Object>> attractions =
-          (List<Map<String, Object>>) data.get("attractions");
-      if (attractions == null || attractions.isEmpty()) {
-        return null;
-      }
-
-      final Map<String, Object> exact =
-          selectionnerAttraction(attractions, terme, identiteConfirmee);
-      return exact != null ? extraireAttractionId(exact) : null;
-    } catch (Exception e) {
-      compteurBilan.enregistrerErreur();
-      LOG.warn("Eventim attractions erreur terme={}", terme, e);
-      return null;
-    }
-  }
-
-  private String construireUriRechercheAttractions(final String terme) {
-    return UriComponentsBuilder.fromUriString(BASE_URL + "/v1/attractions")
-        .queryParam(PARAM_WEB_ID, WEB_ID)
-        .queryParam(PARAM_LANGUE, "fr")
-        .queryParam("search_term", terme)
-        .queryParam("top", 5)
-        .build()
-        .toUriString();
-  }
-
-  /**
-   * Sélectionne la meilleure correspondance parmi les attractions retournées : égalité exacte
-   * (normalisée ou sans espaces) en priorité, repli sur un containment du terme dans le nom si
-   * l'identité n'est pas déjà confirmée par ailleurs.
-   *
-   * @param attractions résultats bruts de l'API attractions Eventim
-   * @param terme terme recherché
-   * @param identiteConfirmee désactive le repli par containment si vrai
-   * @return l'attraction retenue, ou {@code null} si aucune correspondance acceptable
-   */
-  private Map<String, Object> selectionnerAttraction(
-      final List<Map<String, Object>> attractions,
-      final String terme,
-      final boolean identiteConfirmee) {
-    final String termeNorm = Normalisation.normaliserTexte(terme);
-    Map<String, Object> parContainment = null;
-    for (final Map<String, Object> a : attractions) {
-      final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
-      if (estCorrespondanceExacte(nomNorm, termeNorm)) {
-        return a;
-      }
-      if (parContainment == null
-          && estContainmentEligible(terme, termeNorm, nomNorm, identiteConfirmee)) {
-        parContainment = a;
-      }
-    }
-    if (parContainment != null) {
-      journaliserContainmentAccepte(terme, parContainment);
-      return parContainment;
-    }
-    journaliserAucuneCorrespondance(terme, attractions);
-    return null;
-  }
-
-  // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
-  // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
-  private static boolean estCorrespondanceExacte(final String nomNorm, final String termeNorm) {
-    return nomNorm.equals(termeNorm) || UtilitairesChaine.estEgaliteSansEspaces(nomNorm, termeNorm);
-  }
-
-  // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid") —
-  // seulement si l'identité n'est pas déjà confirmée par ailleurs : sinon ce repli approximatif a
-  // fini par accepter à répétition un mauvais rapprochement (ex. "Furies" dans "Love & Furies",
-  // deux entités distinctes). Seuil sur la longueur brute pour éviter les faux positifs sur un
-  // seul caractère.
-  private static boolean estContainmentEligible(
-      final String terme,
-      final String termeNorm,
-      final String nomNorm,
-      final boolean identiteConfirmee) {
-    return !identiteConfirmee
-        && terme.length() >= 2
-        && !termeNorm.isEmpty()
-        && nomNorm.contains(termeNorm);
-  }
-
-  private void journaliserContainmentAccepte(
-      final String terme, final Map<String, Object> attraction) {
-    final String nomRetourne = (String) attraction.getOrDefault("name", "");
-    LOG.info(
-        "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
-        terme,
-        nomRetourne);
-    containmentsAcceptes.add("terme=" + terme + " → resultat=" + nomRetourne);
-  }
-
-  private void journaliserAucuneCorrespondance(
-      final String terme, final List<Map<String, Object>> attractions) {
-    final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
-    LOG.warn(
-        "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
-        terme,
-        nomRetourne);
-  }
-
-  private static String extraireAttractionId(final Map<String, Object> attraction) {
-    Object id = attraction.get("attractionId");
-    if (id == null) {
-      id = attraction.get("id");
-    }
-    return id != null ? String.valueOf(id) : null;
-  }
-
-  /**
    * @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPageEventim}).
    */
   private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
@@ -517,13 +380,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * Récupère les concerts d'un artiste via l'API Eventim, en tenant compte de son identité déjà
    * confirmée par une source indépendante si connue.
    *
-   * <p>Motif : le repli par containment de {@link #rechercherAttractionId} (ex. "Furies" trouvé
-   * dans "Love & Furies") s'est révélé actif et récurrent — chaque cycle de fetch réacceptait le
-   * même mauvais rapprochement, défaisant silencieusement tout nettoyage de données fait à la main.
-   * Dès que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId} connu (identité confirmée
-   * indépendamment), seule une correspondance exacte est acceptée — le repli par containment reste
-   * réservé aux artistes dont l'identité n'est pas encore confirmée, cas pour lequel il a été
-   * introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
+   * <p>Motif : le repli par containment de {@link EventimAttractionResolver#rechercherAttractionId}
+   * (ex. "Furies" trouvé dans "Love & Furies") s'est révélé actif et récurrent — chaque cycle de
+   * fetch réacceptait le même mauvais rapprochement, défaisant silencieusement tout nettoyage de
+   * données fait à la main. Dès que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId}
+   * connu (identité confirmée indépendamment), seule une correspondance exacte est acceptée — le
+   * repli par containment reste réservé aux artistes dont l'identité n'est pas encore confirmée,
+   * cas pour lequel il a été introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
    *
    * @param nom nom de l'artiste
    * @param deezerId identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas
@@ -536,7 +399,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   public List<ConcertBrut> fetchArtiste(
       final String nom, final String deezerId, final String wikidataId) {
     final boolean identiteConfirmee = deezerId != null || wikidataId != null;
-    final String attractionId = rechercherAttractionId(nom, identiteConfirmee);
+    final String attractionId = attractionResolver.rechercherAttractionId(nom, identiteConfirmee);
     if (attractionId == null) {
       LOG.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
