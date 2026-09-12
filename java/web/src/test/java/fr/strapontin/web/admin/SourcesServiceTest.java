@@ -5,7 +5,6 @@
 package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,7 +27,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
@@ -41,14 +39,20 @@ import org.springframework.web.client.RestClient;
 class SourcesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
+  private SourcesSallesListingService sourcesSallesListingService;
   private SourcesService sourcesService;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
+    sourcesSallesListingService = mock(SourcesSallesListingService.class);
     sourcesService =
         new SourcesService(
-            jdbc, new ObjectMapper(), mock(RestClient.class), mock(SalleService.class));
+            jdbc,
+            new ObjectMapper(),
+            mock(RestClient.class),
+            mock(SalleService.class),
+            sourcesSallesListingService);
   }
 
   @Test
@@ -187,27 +191,16 @@ class SourcesServiceTest {
         .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
   }
 
+  // le détail de la construction SQL (HAVING, colonne id) est testé directement dans
+  // SourcesSallesListingServiceTest — ici, seule la délégation compte.
   @Test
-  void listerSalles_vueSansDigitick_excluTMEtEventim() {
-    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    when(jdbc.query(
-            sqlCaptor.capture(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
+  void listerSalles_nominal_delegueAuServiceDeListage() {
+    final ReponseSallesSources attendue = new ReponseSallesSources(List.of(), 0, 1, 0L);
+    when(sourcesSallesListingService.lister(false, 0, "olympia")).thenReturn(attendue);
 
-    sourcesService.listerSalles(false, 0, null);
+    final ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, "olympia");
 
-    final String sqlSalles =
-        sqlCaptor.getAllValues().stream()
-            .filter(sql -> sql.contains("HAVING"))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("Aucune requête avec HAVING trouvée"));
-    assertTrue(
-        sqlSalles.contains("'ticketmaster'"),
-        "La requête doit filtrer les salles sans source ticketmaster");
-    assertTrue(
-        sqlSalles.contains("'eventim'"), "La requête doit filtrer les salles sans source eventim");
+    assertEquals(attendue, reponse);
   }
 
   @Test
@@ -217,32 +210,16 @@ class SourcesServiceTest {
   }
 
   @Test
-  void listerSalles_lesDeuxVues_utilisentColonneId_pasSalleUuid() {
-    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    when(jdbc.query(
-            sqlCaptor.capture(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
-
-    sourcesService.listerSalles(false, 0, null);
-    sourcesService.listerSalles(true, 0, null);
-
-    sqlCaptor
-        .getAllValues()
-        .forEach(
-            sql ->
-                assertFalse(
-                    sql.contains("salle_uuid"),
-                    "Requête SQL référence encore salle_uuid (colonne supprimée en V24) : " + sql));
-  }
-
-  @Test
   void testerDigitickSlug_erreurReseau_retourneNegatif() {
     final RestClient restClientEchoue = mock(RestClient.class);
     when(restClientEchoue.get()).thenThrow(new RuntimeException("timeout"));
     final SourcesService service =
-        new SourcesService(jdbc, new ObjectMapper(), restClientEchoue, mock(SalleService.class));
+        new SourcesService(
+            jdbc,
+            new ObjectMapper(),
+            restClientEchoue,
+            mock(SalleService.class),
+            sourcesSallesListingService);
 
     assertTrue(service.testerDigitickSlug("lempreinte") < 0);
   }
@@ -259,19 +236,5 @@ class SourcesServiceTest {
     final List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
     final StatutSource digitick = sources.get(3);
     assertEquals(2, digitick.nbSallesConfigurees());
-  }
-
-  @Test
-  void listerSalles_nominal_retourneLesSalles() {
-    final UUID uuid = UUID.randomUUID();
-    when(jdbc.query(
-            anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null, null, null)));
-
-    final ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, null);
-
-    assertEquals(1, reponse.salles().size());
-    assertEquals("L'Olympia", reponse.salles().get(0).nom());
-    assertNull(reponse.salles().get(0).digitickSlug());
   }
 }

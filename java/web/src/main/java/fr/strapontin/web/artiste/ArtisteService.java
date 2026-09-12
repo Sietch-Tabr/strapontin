@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,14 +48,6 @@ public class ArtisteService {
   private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
   private static final String WIKIDATA_USER_AGENT =
       "Strapontin/2.6.3 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
-  // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou un humoriste
-  // des homonymes non pertinents pour l'autocomplete.
-  private static final Pattern MOTS_CLES_ARTISTE =
-      Pattern.compile(
-          "chanteur|chanteuse|musicien|musicienne|rappeur|rappeuse|compositeur|compositrice"
-              + "|groupe|humoriste|dj\\b"
-              + "|singer|rapper|musician|band|composer|songwriter|comedian|humorist",
-          Pattern.CASE_INSENSITIVE);
   private static final int CAP_ARTISTES = 500;
 
   private final ArtisteRepository artisteRepository;
@@ -392,35 +383,8 @@ public class ArtisteService {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private List<SuggestionArtiste> parseWikidataResultats(final String json) {
-    final List<SuggestionArtiste> resultats = new ArrayList<>();
-    try {
-      final Map<String, Object> root = objectMapper.readValue(json, Map.class);
-      final List<Map<String, Object>> search = (List<Map<String, Object>>) root.get("search");
-      if (search == null) {
-        return resultats;
-      }
-
-      for (final Map<String, Object> item : search) {
-        final String label = (String) item.get("label");
-        final String id = (String) item.get("id");
-        if (label == null || label.isBlank() || id == null) {
-          continue;
-        }
-        final String description = (String) item.get("description");
-        // Description absente : on ne peut ni confirmer ni exclure — on garde plutôt que de
-        // priver l'utilisateur d'un résultat potentiellement pertinent (simple suggestion,
-        // l'utilisateur reste seul décideur au clic).
-        if (description != null && !MOTS_CLES_ARTISTE.matcher(description).find()) {
-          continue;
-        }
-        resultats.add(new SuggestionArtiste(label, "wikidata", description, id));
-      }
-    } catch (Exception _) {
-      LOG.warn("Wikidata Search parsing JSON échoué");
-    }
-    return resultats;
+    return ArtisteServiceParsing.parseWikidataResultats(objectMapper, json);
   }
 
   /**
@@ -508,30 +472,8 @@ public class ArtisteService {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private List<SuggestionArtiste> parseDeezerResultats(final String json) {
-    final List<SuggestionArtiste> resultats = new ArrayList<>();
-    try {
-      final Map<String, Object> root = objectMapper.readValue(json, Map.class);
-      final List<Map<String, Object>> data = (List<Map<String, Object>>) root.get("data");
-      if (data == null) {
-        return resultats;
-      }
-
-      data.stream()
-          .sorted(
-              (a, b) ->
-                  Integer.compare(
-                      ((Number) b.getOrDefault("nb_fan", 0)).intValue(),
-                      ((Number) a.getOrDefault("nb_fan", 0)).intValue()))
-          .map(a -> (String) a.get("name"))
-          .filter(name -> name != null && !name.isBlank())
-          .distinct()
-          .forEach(name -> resultats.add(new SuggestionArtiste(name, "deezer")));
-    } catch (Exception _) {
-      LOG.warn("Deezer parsing JSON échoué");
-    }
-    return resultats;
+    return ArtisteServiceParsing.parseDeezerResultats(objectMapper, json);
   }
 
   private void declencherWorkerArtiste() {

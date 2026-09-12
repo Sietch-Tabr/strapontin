@@ -21,23 +21,24 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 /**
- * Tests unitaires ciblés pour {@link AdminController#annulerRevocationAdmin} — seul
- * endpoint de gestion utilisateur à ne pas vérifier {@code userId.equals(adminId)} avant.
+ * Tests unitaires ciblés pour {@link AdminController#annulerRevocationAdmin} — seul endpoint de
+ * gestion utilisateur à ne pas vérifier {@code userId.equals(adminId)} avant.
  *
  * @since 2.6.3
  * @author Kwaite
  */
 class AdminControllerAnnulerRevocationTest {
 
-  private AdminService adminService;
+  private AdminRevocationService adminRevocationService;
   private AdminController controller;
 
   @BeforeEach
   void setUp() {
-    adminService = mock(AdminService.class);
+    adminRevocationService = mock(AdminRevocationService.class);
     controller =
         new AdminController(
-            adminService,
+            mock(AdminService.class),
+            adminRevocationService,
             mock(ConfigAdminService.class),
             mock(JobsAdminService.class),
             mock(BanniereService.class),
@@ -62,7 +63,7 @@ class AdminControllerAnnulerRevocationTest {
         controller.annulerRevocationAdmin("admin-1", authPour("admin-1"));
 
     assertEquals(400, reponse.getStatusCode().value());
-    verify(adminService, never()).annulerRevocationAdmin("admin-1", "admin-1");
+    verify(adminRevocationService, never()).annulerRevocationAdmin("admin-1", "admin-1");
   }
 
   @Test
@@ -71,6 +72,6 @@ class AdminControllerAnnulerRevocationTest {
         controller.annulerRevocationAdmin("admin-2", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(adminService).annulerRevocationAdmin("admin-2", "admin-1");
+    verify(adminRevocationService).annulerRevocationAdmin("admin-2", "admin-1");
   }
 }

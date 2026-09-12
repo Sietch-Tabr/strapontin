@@ -46,6 +46,7 @@ public class AdminController {
   private static final Logger LOG = LoggerFactory.getLogger(AdminController.class);
 
   private final AdminService adminService;
+  private final AdminRevocationService adminRevocationService;
   private final ConfigAdminService configAdminService;
   private final JobsAdminService jobsAdminService;
   private final BanniereService banniereService;
@@ -57,6 +58,7 @@ public class AdminController {
 
   /**
    * @param adminService service d'administration (gestion utilisateurs)
+   * @param adminRevocationService révocation différée du rôle admin
    * @param configAdminService service de configuration applicative
    * @param jobsAdminService service de statistiques des jobs Quartz
    * @param banniereService service de gestion de la bannière système
@@ -68,6 +70,7 @@ public class AdminController {
    */
   public AdminController(
       final AdminService adminService,
+      final AdminRevocationService adminRevocationService,
       final ConfigAdminService configAdminService,
       final JobsAdminService jobsAdminService,
       final BanniereService banniereService,
@@ -77,6 +80,7 @@ public class AdminController {
       final VapidService vapidService,
       final ConfigService configService) {
     this.adminService = adminService;
+    this.adminRevocationService = adminRevocationService;
     this.configAdminService = configAdminService;
     this.jobsAdminService = jobsAdminService;
     this.banniereService = banniereService;
@@ -237,7 +241,7 @@ public class AdminController {
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible de révoquer votre propre compte.");
     }
-    adminService.initierRevocationAdmin(userId, adminId);
+    adminRevocationService.initierRevocationAdmin(userId, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "initierRevocationAdmin"));
   }
 
@@ -255,7 +259,7 @@ public class AdminController {
     if (userId.equals(adminId)) {
       return erreur(400, "Impossible d'annuler votre propre révocation.");
     }
-    adminService.annulerRevocationAdmin(userId, adminId);
+    adminRevocationService.annulerRevocationAdmin(userId, adminId);
     return ResponseEntity.ok(Map.of("succes", true, "action", "annulerRevocationAdmin"));
   }
 

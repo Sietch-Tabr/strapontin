@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
@@ -12,29 +11,17 @@ import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -51,24 +38,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AdminService.class);
   private static final Pattern FORMAT_EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
   private static final Set<String> ROLES_VALIDES = Set.of("user", "admin");
-  private static final int MAX_TENTATIVES_REVOCATION = 3;
-  private static final int TAILLE_PAGE_UTILISATEURS = 50;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailService emailService;
   private final EmailServiceAdmin emailServiceAdmin;
+  private final AdminRevocationService adminRevocationService;
+  private final AdminUtilisateursListingService adminUtilisateursListingService;
   private final LogAdminService logAdminService;
   private final VerificationRepository verificationRepository;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-  private AdminService self;
 
   /**
    * @param jdbc accès JDBC
    * @param emailService service d'envoi d'emails
    * @param emailServiceAdmin emails déclenchés par une action d'administration
+   * @param adminRevocationService révocation différée du rôle admin
+   * @param adminUtilisateursListingService pagination des utilisateurs
    * @param logAdminService service de logs admin
    * @param verificationRepository accès aux tokens de vérification
    */
@@ -76,27 +63,17 @@ public class AdminService {
       final NamedParameterJdbcTemplate jdbc,
       final EmailService emailService,
       final EmailServiceAdmin emailServiceAdmin,
+      final AdminRevocationService adminRevocationService,
+      final AdminUtilisateursListingService adminUtilisateursListingService,
       final LogAdminService logAdminService,
       final VerificationRepository verificationRepository) {
     this.jdbc = jdbc;
     this.emailService = emailService;
     this.emailServiceAdmin = emailServiceAdmin;
+    this.adminRevocationService = adminRevocationService;
+    this.adminUtilisateursListingService = adminUtilisateursListingService;
     this.logAdminService = logAdminService;
     this.verificationRepository = verificationRepository;
-  }
-
-  /**
-   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-   * éviter le problème d'auto-référence à la construction — l'appel à {@link
-   * #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de
-   * l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code
-   * self} peut être positionné manuellement sur l'instance elle-même.
-   *
-   * @param self référence proxifiée de ce bean ({@code @Lazy})
-   */
-  @Autowired
-  public void setSelf(@Lazy final AdminService self) {
-    this.self = self;
   }
 
   /**
@@ -106,88 +83,7 @@ public class AdminService {
    * @return page d'utilisateurs triés par date de création
    */
   public ReponseUtilisateursAdmin listerUtilisateurs(final int page) {
-    final int pageNum = Math.max(0, page);
-    final List<Map<String, Object>> pageUsers = chargerPageUtilisateurs(pageNum);
-
-    final long total =
-        pageUsers.isEmpty()
-            ? compterUtilisateurs(pageNum)
-            : ((Number) pageUsers.get(0).get("total_filtre")).longValue();
-
-    final Map<String, Long> activiteParUsername = chargerActiviteParUsername();
-
-    final List<UtilisateurAdmin> utilisateurs =
-        pageUsers.stream().map(u -> assemblerUtilisateurAdmin(u, activiteParUsername)).toList();
-
-    final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_UTILISATEURS));
-    return new ReponseUtilisateursAdmin(utilisateurs, pageNum, totalPages, total);
-  }
-
-  private List<Map<String, Object>> chargerPageUtilisateurs(final int pageNum) {
-    final Map<String, Object> paramsPage =
-        Map.of("taille", TAILLE_PAGE_UTILISATEURS, "offset", pageNum * TAILLE_PAGE_UTILISATEURS);
-    return jdbc.queryForList(
-        """
-        SELECT u.id, u.email, u.role::text, u.username, u.display_username,
-               u.must_change_credentials, u.created_at, u.revocation_admin_le,
-               COUNT(DISTINCT us.salle_id) AS nb_salles,
-               COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
-               COUNT(*) OVER() AS total_filtre
-        FROM users u
-        LEFT JOIN user_salles us ON us.user_id = u.id
-        LEFT JOIN user_artistes ua ON ua.user_id = u.id
-        GROUP BY u.id, u.email, u.role, u.username, u.display_username,
-                 u.must_change_credentials, u.created_at, u.revocation_admin_le
-        ORDER BY u.created_at
-        LIMIT :taille OFFSET :offset
-        """,
-        paramsPage);
-  }
-
-  private Map<String, Long> chargerActiviteParUsername() {
-    final Map<String, Long> activiteParUsername = new HashMap<>();
-    jdbc.query(
-        """
-        SELECT PRINCIPAL_NAME, MAX(LAST_ACCESS_TIME) as derniere
-        FROM SPRING_SESSION
-        WHERE PRINCIPAL_NAME IS NOT NULL
-        GROUP BY PRINCIPAL_NAME
-        """,
-        Map.of(),
-        (RowCallbackHandler)
-            rs -> activiteParUsername.put(rs.getString("PRINCIPAL_NAME"), rs.getLong("derniere")));
-    return activiteParUsername;
-  }
-
-  private static UtilisateurAdmin assemblerUtilisateurAdmin(
-      final Map<String, Object> u, final Map<String, Long> activiteParUsername) {
-    final String username = (String) u.get("username");
-    final Long derniereMs = activiteParUsername.get(username);
-    final Timestamp revocationTs = (Timestamp) u.get("revocation_admin_le");
-    final Number nbSallesNum = (Number) u.get("nb_salles");
-    final Number nbArtistesNum = (Number) u.get("nb_artistes");
-    return new UtilisateurAdmin(
-        (String) u.get("id"),
-        (String) u.get("email"),
-        (String) u.get("role"),
-        username,
-        (String) u.get("display_username"),
-        (Boolean) u.get("must_change_credentials"),
-        ((Timestamp) u.get("created_at")).toInstant(),
-        derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
-        revocationTs != null ? revocationTs.toInstant() : null,
-        nbSallesNum != null ? nbSallesNum.intValue() : 0,
-        nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
-  }
-
-  // page vide (offset au-delà du total, ex. dernier utilisateur supprimé depuis) : total_filtre
-  // n'est renvoyé par aucune ligne, un second aller-retour reste alors nécessaire.
-  private long compterUtilisateurs(final int pageNum) {
-    if (pageNum == 0) {
-      return 0;
-    }
-    final Long total = jdbc.queryForObject("SELECT COUNT(*) FROM users", Map.of(), Long.class);
-    return total != null ? total : 0;
+    return adminUtilisateursListingService.lister(page);
   }
 
   /**
@@ -259,9 +155,9 @@ public class AdminService {
    *
    * <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
    * rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est déléguée à
-   * {@link #initierRevocationAdmin}, qui applique le même délai différé de 7 jours et la même garde
-   * « dernier admin » que le bouton dédié — sans quoi ce chemin {@code PATCH} permettait de
-   * contourner intégralement les deux protections.
+   * {@link AdminRevocationService#initierRevocationAdmin}, qui applique le même délai différé de 7
+   * jours et la même garde « dernier admin » que le bouton dédié — sans quoi ce chemin {@code
+   * PATCH} permettait de contourner intégralement les deux protections.
    *
    * @param userId identifiant de l'utilisateur cible
    * @param requete champs à modifier (nom, email, role — tous optionnels)
@@ -395,7 +291,7 @@ public class AdminService {
       return;
     }
     if (retrogradationAdmin) {
-      initierRevocationAdmin(userId, adminId);
+      adminRevocationService.initierRevocationAdmin(userId, adminId);
       return;
     }
     logAdminService.logAdmin(
@@ -410,99 +306,6 @@ public class AdminService {
         emailServiceAdmin.envoyerPromotionAdmin((String) cible.get(0).get("email"));
       }
     }
-  }
-
-  /**
-   * Initie une révocation différée du rôle admin (effective dans 7 jours).
-   *
-   * <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
-   * (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se révoquant
-   * mutuellement au même instant pourraient tous deux passer la garde « dernier admin » avant
-   * qu'aucun des deux {@code UPDATE} ne soit committé.
-   *
-   * @param userId identifiant de l'administrateur à révoquer
-   * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur n'est
-   *     pas admin (400)
-   */
-  public void initierRevocationAdmin(final String userId, final String adminId) {
-    RetrySerialisable.executer(
-        MAX_TENTATIVES_REVOCATION,
-        LOG,
-        "la révocation admin",
-        () -> self.initierRevocationAdminTransactionnel(userId, adminId));
-  }
-
-  /**
-   * Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
-   *
-   * <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action. {@code
-   * REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction déjà
-   * ouverte (ex. {@link #modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE serait ignorée
-   * en cas d'imbrication dans une transaction moins stricte.
-   *
-   * @param userId identifiant de l'administrateur à révoquer
-   * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur n'est
-   *     pas admin (400)
-   */
-  @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  void initierRevocationAdminTransactionnel(final String userId, final String adminId) {
-    final List<Map<String, Object>> cible =
-        jdbc.queryForList(
-            "SELECT email, role::text AS role FROM users WHERE id = :id", Map.of("id", userId));
-    if (cible.isEmpty()) {
-      throw new ErreurMetier("Utilisateur introuvable.", 404);
-    }
-    if (!"admin".equals(cible.get(0).get("role"))) {
-      throw new ErreurMetier("Cet utilisateur n'est pas administrateur.");
-    }
-
-    final int nbAdmins =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM users WHERE role = 'admin' AND revocation_admin_le IS NULL",
-            Map.of(),
-            Integer.class);
-    if (nbAdmins <= 1) {
-      throw new ErreurMetier("Impossible de révoquer le seul administrateur restant.", 409);
-    }
-
-    final Instant dateEffective = Instant.now().plus(7, ChronoUnit.DAYS);
-    jdbc.update(
-        "UPDATE users SET revocation_admin_le = :date WHERE id = :id",
-        Map.of("date", Timestamp.from(dateEffective), "id", userId));
-
-    final String dateFormatee =
-        DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
-            .withLocale(Locale.FRANCE)
-            .format(LocalDate.ofInstant(dateEffective, ZoneId.of("Europe/Paris")));
-
-    emailServiceAdmin.envoyerPreavisRevocationAdmin((String) cible.get(0).get("email"), dateFormatee);
-    logAdminService.logAdmin(
-        "warn",
-        "admin",
-        "révocation admin initiée",
-        Map.of("userId", userId, "dateEffective", dateFormatee, "parAdmin", adminId));
-  }
-
-  /**
-   * Annule une révocation admin en cours (remet revocation_admin_le à NULL).
-   *
-   * @param userId identifiant de l'administrateur concerné
-   * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
-   */
-  public void annulerRevocationAdmin(final String userId, final String adminId) {
-    final int miseAJour =
-        jdbc.update(
-            "UPDATE users SET revocation_admin_le = NULL WHERE id = :id"
-                + " AND revocation_admin_le IS NOT NULL",
-            Map.of("id", userId));
-    if (miseAJour == 0) {
-      throw new ErreurMetier("Aucune révocation en cours pour cet utilisateur.");
-    }
-    logAdminService.logAdmin(
-        "info", "admin", "révocation admin annulée", Map.of("userId", userId, "parAdmin", adminId));
   }
 
   /**
@@ -596,7 +399,8 @@ public class AdminService {
   /**
    * Révoque immédiatement toutes les sessions actives d'un utilisateur (ex. compte compromis,
    * départ, demande explicite de l'utilisateur) — indépendant de la révocation admin ({@link
-   * #initierRevocationAdmin}), qui ne concerne que la rétrogradation d'un rôle.
+   * AdminRevocationService#initierRevocationAdmin}), qui ne concerne que la rétrogradation d'un
+   * rôle.
    *
    * @param userId identifiant de l'utilisateur cible
    * @param adminId identifiant de l'admin à l'origine de l'action

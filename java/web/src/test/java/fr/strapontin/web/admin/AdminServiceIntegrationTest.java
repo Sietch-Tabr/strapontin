@@ -33,10 +33,11 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
  * vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation avant toute
  * écriture, et que la rétrogradation seule s'applique normalement.
  *
- * <p>Pas de {@code @SpringBootTest} : {@link AdminService} est construit manuellement (comme le
- * permet son injection {@code self} par setter, prévue pour les tests hors contexte Spring),
- * DataSource/Flyway montés à la main pour éviter la complexité d'un contexte web complet (sécurité,
- * sessions JDBC, etc.) non nécessaire pour ce test ciblé.
+ * <p>Pas de {@code @SpringBootTest} : {@link AdminService} et {@link AdminRevocationService} sont
+ * construits manuellement (cette dernière avec une vraie connexion, comme le permet son injection
+ * {@code self} par setter, prévue pour les tests hors contexte Spring, pour que la révocation
+ * différée écrive réellement en base), DataSource/Flyway montés à la main pour éviter la complexité
+ * d'un contexte web complet (sécurité, sessions JDBC, etc.) non nécessaire pour ce test ciblé.
  *
  * @since 2.7.0
  * @author Kwaite
@@ -62,15 +63,19 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   @BeforeEach
   void setUp() {
     jdbc.update("DELETE FROM users", Map.of());
-    final AdminService s =
+    final AdminRevocationService revocationService =
+        new AdminRevocationService(
+            jdbc, mock(EmailServiceAdmin.class), mock(LogAdminService.class));
+    revocationService.setSelf(revocationService);
+    service =
         new AdminService(
             jdbc,
             mock(EmailService.class),
             mock(EmailServiceAdmin.class),
+            revocationService,
+            mock(AdminUtilisateursListingService.class),
             mock(LogAdminService.class),
             mock(VerificationRepository.class));
-    s.setSelf(s);
-    service = s;
   }
 
   private void insererAdmin(final String id) {

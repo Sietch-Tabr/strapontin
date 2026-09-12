@@ -34,6 +34,7 @@ class AdminControllerRelancerJobTest {
     controller =
         new AdminController(
             mock(AdminService.class),
+            mock(AdminRevocationService.class),
             mock(ConfigAdminService.class),
             mock(JobsAdminService.class),
             mock(BanniereService.class),

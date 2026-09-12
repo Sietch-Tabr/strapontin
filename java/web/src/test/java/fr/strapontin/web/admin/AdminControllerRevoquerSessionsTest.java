@@ -36,6 +36,7 @@ class AdminControllerRevoquerSessionsTest {
     controller =
         new AdminController(
             adminService,
+            mock(AdminRevocationService.class),
             mock(ConfigAdminService.class),
             mock(JobsAdminService.class),
             mock(BanniereService.class),

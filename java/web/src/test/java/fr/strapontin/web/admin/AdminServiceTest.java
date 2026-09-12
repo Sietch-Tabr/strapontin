@@ -14,7 +14,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,15 +21,12 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.VerificationRepository;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -48,6 +44,8 @@ class AdminServiceTest {
   private NamedParameterJdbcTemplate jdbc;
   private EmailService emailService;
   private EmailServiceAdmin emailServiceAdmin;
+  private AdminRevocationService adminRevocationService;
+  private AdminUtilisateursListingService adminUtilisateursListingService;
   private LogAdminService logAdminService;
   private VerificationRepository verificationRepository;
   private AdminService adminService;
@@ -57,12 +55,19 @@ class AdminServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     emailService = mock(EmailService.class);
     emailServiceAdmin = mock(EmailServiceAdmin.class);
+    adminRevocationService = mock(AdminRevocationService.class);
+    adminUtilisateursListingService = mock(AdminUtilisateursListingService.class);
     logAdminService = mock(LogAdminService.class);
     verificationRepository = mock(VerificationRepository.class);
     adminService =
         new AdminService(
-            jdbc, emailService, emailServiceAdmin, logAdminService, verificationRepository);
-    adminService.setSelf(adminService);
+            jdbc,
+            emailService,
+            emailServiceAdmin,
+            adminRevocationService,
+            adminUtilisateursListingService,
+            logAdminService,
+            verificationRepository);
   }
 
   @Test
@@ -163,9 +168,10 @@ class AdminServiceTest {
     verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
-  // PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue
-  // à initierRevocationAdmin (même délai différé 7 jours, même garde dernier admin) plutôt que
-  // d'exécuter un UPDATE role='user' direct.
+  // PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue à
+  // AdminRevocationService.initierRevocationAdmin (même délai différé 7 jours, même garde dernier
+  // admin, testés directement dans AdminRevocationServiceTest) plutôt que d'exécuter un UPDATE
+  // role='user' direct.
   @Test
   void modifierUtilisateur_retrogradeAdminActuel_delegueAInitierRevocationAdmin() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
@@ -173,38 +179,15 @@ class AdminServiceTest {
     ligneAdminCible.put("role", "admin");
     ligneAdminCible.put("email", "admin-cible@exemple.fr");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
     adminService.modifierUtilisateur("admin-cible", requete, "admin-1");
 
-    verify(emailServiceAdmin)
-        .envoyerPreavisRevocationAdmin(eq("admin-cible@exemple.fr"), anyString());
-    verify(logAdminService)
-        .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
+    verify(adminRevocationService).initierRevocationAdmin("admin-cible", "admin-1");
     verify(logAdminService, never())
         .logAdmin(eq("warn"), eq("admin"), eq("rôle modifié"), anyMap());
     verify(emailServiceAdmin, never()).envoyerPromotionAdmin(anyString());
-  }
-
-  // le seul admin restant ne peut pas être rétrogradé via PATCH.
-  @Test
-  void modifierUtilisateur_retrogradeSeulAdmin_leveErreurMetier409() {
-    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
-    final Map<String, Object> ligneAdminCible = new HashMap<>();
-    ligneAdminCible.put("role", "admin");
-    ligneAdminCible.put("email", "admin-cible@exemple.fr");
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
-
-    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
-    final ErreurMetier ex =
-        assertThrows(
-            ErreurMetier.class,
-            () -> adminService.modifierUtilisateur("admin-cible", requete, "admin-1"));
-
-    assertEquals(409, ex.getStatus());
   }
 
   // combiner une rétrogradation admin avec nom/email en un seul PATCH imbriquerait un
@@ -225,112 +208,6 @@ class AdminServiceTest {
 
     assertEquals(400, ex.getStatus());
     verify(jdbc, never()).update(anyString(), anyMap());
-  }
-
-  @Test
-  void initierRevocationAdmin_utilisateurInexistant_leveErreurMetier() {
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
-
-    assertThrows(
-        ErreurMetier.class, () -> adminService.initierRevocationAdmin("inconnu", "admin-1"));
-    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
-  }
-
-  @Test
-  void initierRevocationAdmin_pasAdmin_leveErreurMetier() {
-    final Map<String, Object> ligne = new HashMap<>();
-    ligne.put("email", "user@exemple.fr");
-    ligne.put("role", "user");
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
-
-    assertThrows(
-        ErreurMetier.class, () -> adminService.initierRevocationAdmin("user-1", "admin-1"));
-    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
-  }
-
-  @Test
-  void initierRevocationAdmin_seulAdmin_leveErreurMetier409() {
-    final Map<String, Object> ligne = new HashMap<>();
-    ligne.put("email", "admin@exemple.fr");
-    ligne.put("role", "admin");
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
-
-    final ErreurMetier ex =
-        assertThrows(
-            ErreurMetier.class, () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
-    assertEquals(409, ex.getStatus());
-    verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
-  }
-
-  @Test
-  void initierRevocationAdmin_adminCible_initieRevocationEtEnvoieEmail() {
-    final Map<String, Object> ligne = new HashMap<>();
-    ligne.put("email", "admin@exemple.fr");
-    ligne.put("role", "admin");
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
-
-    adminService.initierRevocationAdmin("admin-1", "admin-2");
-
-    verify(jdbc).update(anyString(), anyMap());
-    verify(emailServiceAdmin).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
-    verify(logAdminService)
-        .logAdmin(eq("warn"), eq("admin"), eq("révocation admin initiée"), anyMap());
-  }
-
-  // deux révocations concurrentes peuvent lever un conflit de sérialisation PostgreSQL
-  // (isolation SERIALIZABLE) — la première tentative échoue, la seconde réussit.
-  @Test
-  void initierRevocationAdmin_conflitSerialisationPuisSucces_reessaieEtReussit() {
-    final Map<String, Object> ligne = new HashMap<>();
-    ligne.put("email", "admin@exemple.fr");
-    ligne.put("role", "admin");
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
-    when(jdbc.update(anyString(), anyMap()))
-        .thenThrow(new PessimisticLockingFailureException("conflit"))
-        .thenReturn(1);
-
-    adminService.initierRevocationAdmin("admin-1", "admin-2");
-
-    verify(jdbc, times(2)).update(anyString(), anyMap());
-    verify(emailServiceAdmin).envoyerPreavisRevocationAdmin(eq("admin@exemple.fr"), anyString());
-  }
-
-  @Test
-  void initierRevocationAdmin_conflitSerialisationPersistant_leveApresMaxTentatives() {
-    final Map<String, Object> ligne = new HashMap<>();
-    ligne.put("email", "admin@exemple.fr");
-    ligne.put("role", "admin");
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
-    when(jdbc.update(anyString(), anyMap()))
-        .thenThrow(new PessimisticLockingFailureException("conflit"));
-
-    assertThrows(
-        PessimisticLockingFailureException.class,
-        () -> adminService.initierRevocationAdmin("admin-1", "admin-2"));
-    verify(jdbc, times(3)).update(anyString(), anyMap());
-  }
-
-  @Test
-  void annulerRevocationAdmin_revocationExistante_annule() {
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
-
-    adminService.annulerRevocationAdmin("admin-1", "admin-2");
-
-    verify(logAdminService)
-        .logAdmin(eq("info"), eq("admin"), eq("révocation admin annulée"), anyMap());
-  }
-
-  @Test
-  void annulerRevocationAdmin_aucuneRevocation_leveErreurMetier() {
-    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
-
-    assertThrows(
-        ErreurMetier.class, () -> adminService.annulerRevocationAdmin("admin-1", "admin-2"));
   }
 
   @Test
@@ -411,41 +288,15 @@ class AdminServiceTest {
     verify(jdbc, never()).update(org.mockito.ArgumentMatchers.contains("SPRING_SESSION"), anyMap());
   }
 
-  // garde-fou contre une croissance non bornée de la table users : le total vient de la même
-  // exécution que la page (COUNT(*) OVER()), pas d'une requête COUNT séparée.
+  // la pagination elle-même (COUNT(*) OVER(), repli sur un second COUNT) est testée dans
+  // AdminUtilisateursListingServiceTest — ici, seule la délégation compte.
   @Test
-  void listerUtilisateurs_nominal_retournePageAvecTotal() {
-    final Map<String, Object> ligne = new HashMap<>();
-    ligne.put("id", "u1");
-    ligne.put("email", "a@b.fr");
-    ligne.put("role", "user");
-    ligne.put("username", "user1");
-    ligne.put("display_username", "Utilisateur Un");
-    ligne.put("must_change_credentials", false);
-    ligne.put("created_at", Timestamp.from(Instant.now()));
-    ligne.put("revocation_admin_le", null);
-    ligne.put("nb_salles", 2);
-    ligne.put("nb_artistes", 0);
-    ligne.put("total_filtre", 3L);
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+  void listerUtilisateurs_nominal_delegueAuServiceDeListage() {
+    final ReponseUtilisateursAdmin attendue = new ReponseUtilisateursAdmin(List.of(), 0, 1, 0L);
+    when(adminUtilisateursListingService.lister(0)).thenReturn(attendue);
 
     final ReponseUtilisateursAdmin reponse = adminService.listerUtilisateurs(0);
 
-    assertEquals(1, reponse.utilisateurs().size());
-    assertEquals(3L, reponse.total());
-    assertEquals(0, reponse.page());
-  }
-
-  // page au-delà du total (offset trop grand) : aucune ligne ne porte total_filtre, un second
-  // aller-retour COUNT reste nécessaire pour ne pas afficher un total à zéro trompeur.
-  @Test
-  void listerUtilisateurs_pageAuDelaDuTotal_retombeSurUnCountSepare() {
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(5L);
-
-    final ReponseUtilisateursAdmin reponse = adminService.listerUtilisateurs(3);
-
-    assertEquals(5L, reponse.total());
-    assertTrue(reponse.utilisateurs().isEmpty());
+    assertEquals(attendue, reponse);
   }
 }
