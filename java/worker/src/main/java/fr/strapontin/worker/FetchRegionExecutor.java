@@ -67,7 +67,7 @@ class FetchRegionExecutor {
 
   private WorkerStatsService.ResultatJob executerCycle(
       final boolean retry, final List<String> deptsCibles) {
-    if (!commun.gestionQuotaTM().cronAutorise()) {
+    if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
       LOG.warn("fetch:region suspendu — quota TM insuffisant");
       return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
     }
@@ -89,7 +89,7 @@ class FetchRegionExecutor {
   private List<String> deptsConfigures() {
     final List<String[]> allDepts =
         commun
-            .jdbc()
+            .obtenirJdbc()
             .query(
                 "SELECT departements FROM user_config",
                 Map.of(),
@@ -176,7 +176,7 @@ class FetchRegionExecutor {
    */
   private List<String> sallesConnuesDesDepartements(final List<String> depts) {
     return commun
-        .jdbc()
+        .obtenirJdbc()
         .queryForList(
             "SELECT DISTINCT salle_id::text FROM concerts"
                 + " WHERE dept IN (:depts) AND salle_id IS NOT NULL AND date >= CURRENT_DATE",

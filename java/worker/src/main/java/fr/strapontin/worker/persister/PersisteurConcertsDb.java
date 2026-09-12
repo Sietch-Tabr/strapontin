@@ -206,6 +206,9 @@ public class PersisteurConcertsDb {
     return exact.isEmpty() ? null : exact.get(0);
   }
 
+  // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
+  // compatible plutôt que de poursuivre l'itération sans effet utile.
+  @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
   private UUID chercherEvenementParSalleEtDate(final ValeurConcert v) {
     final List<Map<String, Object>> candidats =
         jdbc.queryForList(

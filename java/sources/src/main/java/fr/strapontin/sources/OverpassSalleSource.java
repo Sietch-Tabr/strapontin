@@ -322,7 +322,10 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
         .formatted(TIMEOUT_SERVEUR_SECONDES, nomsRegex, around);
   }
 
-  @SuppressWarnings("unchecked")
+  // break en dernière position de boucle nécessaire : arrête la recherche au premier tag
+  // correspondant plutôt que de poursuivre l'itération et risquer d'écraser resultats avec une
+  // correspondance ultérieure moins pertinente.
+  @SuppressWarnings({"unchecked", "PMD.AvoidBranchingStatementAsLastInLoop"})
   private static Map<UUID, EnrichissementSalle> mapperReponse(
       final Map<String, Object> data, final List<SalleAEnrichir> lot) {
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();

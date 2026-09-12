@@ -243,6 +243,9 @@ public class ReconciliateurArtistes {
    * @return le concert réconcilié avec le premier candidat flou trouvé ({@link
    *     CorrespondanceArtiste#estDoublonArtiste}), ou {@code null} si aucun candidat flou n'existe.
    */
+  // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
+  // flou trouvé plutôt que de poursuivre l'itération sans effet utile.
+  @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
   private ValeurConcert reconcilierParCorrespondanceFloue(
       final ValeurConcert concert, final List<ArtisteExistant> artistesExistants) {
     for (final ArtisteExistant existant : artistesExistants) {

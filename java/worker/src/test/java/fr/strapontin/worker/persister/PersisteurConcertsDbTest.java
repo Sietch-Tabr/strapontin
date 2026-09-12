@@ -57,7 +57,8 @@ class PersisteurConcertsDbTest {
   @Test
   void alignerHeureReportTM_concertPackageStatutNull_neLevePasDException() {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc, mock(ResolveurArtisteParUrl.class));
+    final PersisteurConcertsDb db =
+        new PersisteurConcertsDb(jdbc, mock(ResolveurArtisteParUrl.class));
 
     final List<ValeurConcert> concerts =
         List.of(concert("http://tm/pack/123", LocalTime.of(20, 0), null));
@@ -70,7 +71,8 @@ class PersisteurConcertsDbTest {
   @Test
   void alignerHeureReportTM_statutNonReport_ignoreLeConcert() {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc, mock(ResolveurArtisteParUrl.class));
+    final PersisteurConcertsDb db =
+        new PersisteurConcertsDb(jdbc, mock(ResolveurArtisteParUrl.class));
 
     final List<ValeurConcert> concerts =
         List.of(concert("http://tm/123", LocalTime.of(20, 0), "onsale"));
@@ -83,7 +85,8 @@ class PersisteurConcertsDbTest {
   @Test
   void alignerHeureReportTM_reportAvecUneSeuleHeureExistante_aligneLaLigneExistante() {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    final PersisteurConcertsDb db = new PersisteurConcertsDb(jdbc, mock(ResolveurArtisteParUrl.class));
+    final PersisteurConcertsDb db =
+        new PersisteurConcertsDb(jdbc, mock(ResolveurArtisteParUrl.class));
     final UUID idExistant = UUID.randomUUID();
 
     final Map<String, Object> ligneExistante =

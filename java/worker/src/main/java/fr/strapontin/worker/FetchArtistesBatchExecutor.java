@@ -58,13 +58,15 @@ class FetchArtistesBatchExecutor {
   void executer(final List<String> artisteIdsCibles) {
     final boolean retry = artisteIdsCibles != null;
     LOG.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
-    rapportage.workerStatsService().executerAvecStatsToleretErreur(
-        LOG, "fetch:artistes:batch", () -> executerCycle(retry, artisteIdsCibles));
+    rapportage
+        .workerStatsService()
+        .executerAvecStatsToleretErreur(
+            LOG, "fetch:artistes:batch", () -> executerCycle(retry, artisteIdsCibles));
   }
 
   private WorkerStatsService.ResultatJob executerCycle(
       final boolean retry, final List<String> artisteIdsCibles) {
-    if (!commun.gestionQuotaTM().cronAutorise()) {
+    if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
       LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
       return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
     }
@@ -88,20 +90,22 @@ class FetchArtistesBatchExecutor {
 
   private List<Map<String, Object>> chargerArtistesSuivisBatch(
       final boolean retry, final List<String> artisteIdsCibles) {
-    return commun.jdbc().queryForList(
-        "SELECT ua.artiste_id::text AS artiste_id_str,"
-            + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-            + " MAX(asm.identifiant_externe) AS attraction_id,"
-            + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
-            + " MAX(a.deezer_id) AS deezer_id,"
-            + " MAX(a.wikidata_id) AS wikidata_id"
-            + " FROM user_artistes ua"
-            + " JOIN artistes a ON a.id = ua.artiste_id"
-            + " LEFT JOIN artiste_sources asm"
-            + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
-            + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
-            + " GROUP BY ua.artiste_id",
-        retry ? Map.of("ids", artisteIdsCibles) : Map.of());
+    return commun
+        .obtenirJdbc()
+        .queryForList(
+            "SELECT ua.artiste_id::text AS artiste_id_str,"
+                + " MAX(ua.artiste_affiche) AS artiste_affiche,"
+                + " MAX(asm.identifiant_externe) AS attraction_id,"
+                + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
+                + " MAX(a.deezer_id) AS deezer_id,"
+                + " MAX(a.wikidata_id) AS wikidata_id"
+                + " FROM user_artistes ua"
+                + " JOIN artistes a ON a.id = ua.artiste_id"
+                + " LEFT JOIN artiste_sources asm"
+                + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
+                + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
+                + " GROUP BY ua.artiste_id",
+            retry ? Map.of("ids", artisteIdsCibles) : Map.of());
   }
 
   private ResultatPersistance traiterLots(
@@ -245,27 +249,27 @@ class FetchArtistesBatchExecutor {
         nom,
         artisteIdStr);
     commun
-        .jdbc()
+        .obtenirJdbc()
         .update(
-        "UPDATE artiste_sources SET necessite_intervention_le ="
-            + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
-            + " AS uuid) AND source = 'ticketmaster'",
-        Map.of("artisteId", artisteIdStr));
+            "UPDATE artiste_sources SET necessite_intervention_le ="
+                + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
+                + " AS uuid) AND source = 'ticketmaster'",
+            Map.of("artisteId", artisteIdStr));
     return true;
   }
 
   private String rechercherEtEnregistrerAttractionId(final String nom, final String artisteIdStr) {
     String attractionId = null;
     try {
-      attractionId = commun.tm().rechercherAttractionId(nom);
+      attractionId = commun.obtenirTm().rechercherAttractionId(nom);
       if (attractionId != null) {
         commun
-            .jdbc()
+            .obtenirJdbc()
             .update(
-            "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
-                + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
-                + " ON CONFLICT DO NOTHING",
-            Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
+                "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
+                    + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
+                    + " ON CONFLICT DO NOTHING",
+                Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
       }
     } catch (Exception e) {
       LOG.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
@@ -282,7 +286,7 @@ class FetchArtistesBatchExecutor {
       final List<String> lot =
           attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
       try {
-        final List<ConcertBrut> concertsLot = commun.tm().fetchArtistesLot(lot);
+        final List<ConcertBrut> concertsLot = commun.obtenirTm().fetchArtistesLot(lot);
         resultats.addAll(concertsLot);
         rapportage.suiviSanteSourcesService().enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
@@ -296,7 +300,7 @@ class FetchArtistesBatchExecutor {
     final List<ConcertBrut> resultats = new ArrayList<>();
     for (final String nom : nomsSansTmId) {
       try {
-        resultats.addAll(commun.tm().fetchArtiste(nom));
+        resultats.addAll(commun.obtenirTm().fetchArtiste(nom));
       } catch (Exception e) {
         LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
       }

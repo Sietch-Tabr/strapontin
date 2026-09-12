@@ -99,7 +99,9 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     return resultats;
   }
 
-  @SuppressWarnings("unchecked")
+  // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
+  // valide plutôt que de poursuivre l'itération sans effet utile.
+  @SuppressWarnings({"unchecked", "PMD.AvoidBranchingStatementAsLastInLoop"})
   private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {

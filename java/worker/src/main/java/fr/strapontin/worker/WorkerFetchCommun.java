@@ -99,21 +99,21 @@ public class WorkerFetchCommun {
   /**
    * @return accès JDBC partagé
    */
-  NamedParameterJdbcTemplate jdbc() {
+  NamedParameterJdbcTemplate obtenirJdbc() {
     return jdbc;
   }
 
   /**
    * @return source Ticketmaster partagée
    */
-  TicketmasterSource tm() {
+  TicketmasterSource obtenirTm() {
     return tm;
   }
 
   /**
    * @return gestion du quota Ticketmaster partagée
    */
-  GestionQuotaTM gestionQuotaTM() {
+  GestionQuotaTM obtenirGestionQuotaTM() {
     return gestionQuotaTM;
   }
 

@@ -182,9 +182,7 @@ public class WorkerStatsService {
    * @param travail travail à exécuter, retournant le bilan de persistance en cas de succès
    */
   public void executerAvecStats(
-      final Logger callerLog,
-      final String typeJob,
-      final Supplier<ResultatPersistance> travail) {
+      final Logger callerLog, final String typeJob, final Supplier<ResultatPersistance> travail) {
     final long debut = System.currentTimeMillis();
     try {
       final ResultatPersistance resultat = travail.get();

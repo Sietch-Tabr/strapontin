@@ -64,7 +64,9 @@ class FetchSallesExecutor {
         try {
           final List<ConcertBrut> resultat = source.fetchSalle(identifiant);
           destination.addAll(resultat);
-          rapportage.suiviSanteSourcesService().enregistrerResultatSalle(identifiant, resultat.size());
+          rapportage
+              .suiviSanteSourcesService()
+              .enregistrerResultatSalle(identifiant, resultat.size());
         } catch (Exception e) {
           LOG.error(
               "{} fetchSalle échoué identifiant={} : {}",
@@ -86,7 +88,7 @@ class FetchSallesExecutor {
    */
   void executerUneSalle(final String identifiantsStr) {
     LOG.info("fetch:salle démarré identifiants={}", identifiantsStr);
-    if (!commun.gestionQuotaTM().verifier("fetch:salle")) {
+    if (!commun.obtenirGestionQuotaTM().verifier("fetch:salle")) {
       return;
     }
 
@@ -126,30 +128,32 @@ class FetchSallesExecutor {
   void executerToutes(final List<String> salleIdsCibles) {
     final boolean retry = salleIdsCibles != null;
     LOG.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");
-    rapportage.workerStatsService().executerAvecStatsToleretErreur(
-        LOG,
-        "fetch:salles:all",
-        () -> {
-          if (!commun.gestionQuotaTM().cronAutorise()) {
-            LOG.warn("fetch:salles:all suspendu — quota TM insuffisant");
-            return new WorkerStatsService.ResultatJob(
-                new ResultatPersistance(0, 0), "quota insuffisant");
-          }
+    rapportage
+        .workerStatsService()
+        .executerAvecStatsToleretErreur(
+            LOG,
+            "fetch:salles:all",
+            () -> {
+              if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
+                LOG.warn("fetch:salles:all suspendu — quota TM insuffisant");
+                return new WorkerStatsService.ResultatJob(
+                    new ResultatPersistance(0, 0), "quota insuffisant");
+              }
 
-          final List<SalleAFetcher> sallesAFetcher =
-              recupererIdentifiantsSallesSuivies(salleIdsCibles);
-          if (sallesAFetcher.isEmpty()) {
-            LOG.info("fetch:salles:all — aucune salle suivie avec source configurée");
-            return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
-          }
+              final List<SalleAFetcher> sallesAFetcher =
+                  recupererIdentifiantsSallesSuivies(salleIdsCibles);
+              if (sallesAFetcher.isEmpty()) {
+                LOG.info("fetch:salles:all — aucune salle suivie avec source configurée");
+                return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
+              }
 
-          final ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
-          commun.sauvegarderQuota();
-          recalculerMatchesService.recalculerMatches(null);
-          rapportage.notificationDigestService().executerDigest("temps_reel");
-          LOG.info("fetch:salles:all terminé");
-          return WorkerStatsService.ResultatJob.succes(resultat);
-        });
+              final ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
+              commun.sauvegarderQuota();
+              recalculerMatchesService.recalculerMatches(null);
+              rapportage.notificationDigestService().executerDigest("temps_reel");
+              LOG.info("fetch:salles:all terminé");
+              return WorkerStatsService.ResultatJob.succes(resultat);
+            });
   }
 
   /**
@@ -169,7 +173,7 @@ class FetchSallesExecutor {
       final List<String> salleIdsCibles) {
     final boolean filtre = salleIdsCibles != null;
     return commun
-        .jdbc()
+        .obtenirJdbc()
         .queryForList(
             "SELECT ss.salle_id::text AS salle_id,"
                 + " string_agg(ss.source || ':' || ss.identifiant_externe, ',') AS identifiants"

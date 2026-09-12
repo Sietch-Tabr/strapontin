@@ -118,7 +118,9 @@ final class MapeurEvenementTM {
     }
     final String nomEvenement = (String) evt.get(CLE_NAME);
     if (nomEvenement != null
-        && nomEvenement.toLowerCase(Locale.ROOT).contains(artisteFallback.toLowerCase(Locale.ROOT))) {
+        && nomEvenement
+            .toLowerCase(Locale.ROOT)
+            .contains(artisteFallback.toLowerCase(Locale.ROOT))) {
       return artisteFallback;
     }
     return null;
