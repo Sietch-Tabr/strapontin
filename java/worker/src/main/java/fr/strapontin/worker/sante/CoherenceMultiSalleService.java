@@ -61,20 +61,48 @@ public class CoherenceMultiSalleService {
    * @return nombre de salles nouvellement signalées
    */
   public int detecterContamination() {
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            """
-            SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
-                   s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
-            FROM salle_sources ss
-            JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.identifiant_externe LIKE :prefixe
-            """,
-            Map.of("prefixe", PREFIXE_INTERNAL + "%"));
+    final List<Map<String, Object>> lignes = chargerSourcesInternes();
     if (lignes.isEmpty()) {
       return 0;
     }
 
+    final DonneesSourcesInternes donnees = regrouperParSalle(lignes);
+    int signalees = 0;
+    for (final Map.Entry<UUID, List<String>> entree : donnees.nomsExtraitsParSalle().entrySet()) {
+      final UUID salleId = entree.getKey();
+      if (evaluerContaminationSalle(
+          salleId,
+          entree.getValue(),
+          donnees.nomNormParSalle().get(salleId),
+          donnees.signaleeParSalle().get(salleId))) {
+        signalees++;
+      }
+    }
+    LOG.info(
+        "coherence:multi-salle:contamination candidats={} signalees={}",
+        donnees.nomsExtraitsParSalle().size(),
+        signalees);
+    return signalees;
+  }
+
+  private List<Map<String, Object>> chargerSourcesInternes() {
+    return jdbc.queryForList(
+        """
+        SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
+               s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
+        FROM salle_sources ss
+        JOIN salles s ON s.id = ss.salle_id
+        WHERE ss.identifiant_externe LIKE :prefixe
+        """,
+        Map.of("prefixe", PREFIXE_INTERNAL + "%"));
+  }
+
+  private record DonneesSourcesInternes(
+      Map<UUID, List<String>> nomsExtraitsParSalle,
+      Map<UUID, String> nomNormParSalle,
+      Map<UUID, String> signaleeParSalle) {}
+
+  private DonneesSourcesInternes regrouperParSalle(final List<Map<String, Object>> lignes) {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
     final Map<UUID, String> nomNormParSalle = new HashMap<>();
     final Map<UUID, String> signaleeParSalle = new HashMap<>();
@@ -87,41 +115,44 @@ public class CoherenceMultiSalleService {
       nomNormParSalle.put(salleId, (String) ligne.get("nom_norm"));
       signaleeParSalle.put(salleId, (String) ligne.get("signalee"));
     }
+    return new DonneesSourcesInternes(nomsExtraitsParSalle, nomNormParSalle, signaleeParSalle);
+  }
 
-    int signalees = 0;
-    for (final Map.Entry<UUID, List<String>> entree : nomsExtraitsParSalle.entrySet()) {
-      final UUID salleId = entree.getKey();
-      final String nomNormSalle = nomNormParSalle.get(salleId);
-      final List<String> mesententes =
-          entree.getValue().stream()
-              .filter(nomExtrait -> estContaminationReelle(nomExtrait, nomNormSalle))
-              .distinct()
-              .sorted()
-              .toList();
-      final String signatureActuelle = mesententes.isEmpty() ? null : String.join("|", mesententes);
-      if (Objects.equals(signatureActuelle, signaleeParSalle.get(salleId))) {
-        continue;
-      }
-
-      memoriserContaminationSignalee(salleId, signatureActuelle);
-      if (signatureActuelle == null) {
-        continue;
-      }
-      signalees++;
-      logsAdminWorker.inserer(
-          "warn",
-          "coherence-salle",
-          "salle potentiellement multi-lieux — source(s) interne(s) divergente(s) du nom salleId="
-              + salleId
-              + " mesententes="
-              + signatureActuelle,
-          Map.of("salleId", salleId.toString(), "mesententes", signatureActuelle));
+  /**
+   * Évalue les mésententes nom/source d'une salle et met à jour la signature de contamination déjà
+   * signalée si elle a changé.
+   *
+   * @return {@code true} si une nouvelle contamination a été signalée
+   */
+  private boolean evaluerContaminationSalle(
+      final UUID salleId,
+      final List<String> nomsExtraits,
+      final String nomNormSalle,
+      final String signaleePrecedente) {
+    final List<String> mesententes =
+        nomsExtraits.stream()
+            .filter(nomExtrait -> estContaminationReelle(nomExtrait, nomNormSalle))
+            .distinct()
+            .sorted()
+            .toList();
+    final String signatureActuelle = mesententes.isEmpty() ? null : String.join("|", mesententes);
+    if (Objects.equals(signatureActuelle, signaleePrecedente)) {
+      return false;
     }
-    LOG.info(
-        "coherence:multi-salle:contamination candidats={} signalees={}",
-        nomsExtraitsParSalle.size(),
-        signalees);
-    return signalees;
+
+    memoriserContaminationSignalee(salleId, signatureActuelle);
+    if (signatureActuelle == null) {
+      return false;
+    }
+    logsAdminWorker.inserer(
+        "warn",
+        "coherence-salle",
+        "salle potentiellement multi-lieux — source(s) interne(s) divergente(s) du nom salleId="
+            + salleId
+            + " mesententes="
+            + signatureActuelle,
+        Map.of("salleId", salleId.toString(), "mesententes", signatureActuelle));
+    return true;
   }
 
   private void memoriserContaminationSignalee(final UUID salleId, final String signature) {

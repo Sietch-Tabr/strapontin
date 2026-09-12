@@ -169,64 +169,71 @@ public class WorkerFetchService {
     workerStatsService.executerAvecStatsToleretErreur(
         LOG,
         "fetch:artistes:batch",
-        () -> {
-          if (!gestionQuotaTM.cronAutorise()) {
-            LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
-            return new WorkerStatsService.ResultatJob(
-                new ResultatPersistance(0, 0), "quota insuffisant");
-          }
+        () -> executerCycleFetchArtistesBatch(retry, artisteIdsCibles));
+  }
 
-          final List<Map<String, Object>> rows =
-              jdbc.queryForList(
-                  "SELECT ua.artiste_id::text AS artiste_id_str,"
-                      + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-                      + " MAX(asm.identifiant_externe) AS attraction_id,"
-                      + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
-                      + " MAX(a.deezer_id) AS deezer_id,"
-                      + " MAX(a.wikidata_id) AS wikidata_id"
-                      + " FROM user_artistes ua"
-                      + " JOIN artistes a ON a.id = ua.artiste_id"
-                      + " LEFT JOIN artiste_sources asm"
-                      + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
-                      + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
-                      + " GROUP BY ua.artiste_id",
-                  retry ? Map.of("ids", artisteIdsCibles) : Map.of());
+  private WorkerStatsService.ResultatJob executerCycleFetchArtistesBatch(
+      final boolean retry, final List<String> artisteIdsCibles) {
+    if (!gestionQuotaTM.cronAutorise()) {
+      LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
+      return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
+    }
 
-          if (rows.isEmpty()) {
-            LOG.info("fetch:artistes:batch — aucun artiste suivi");
-            return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
-          }
+    final List<Map<String, Object>> rows = chargerArtistesSuivisBatch(retry, artisteIdsCibles);
+    if (rows.isEmpty()) {
+      LOG.info("fetch:artistes:batch — aucun artiste suivi");
+      return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
+    }
 
-          final List<SourceConcerts> sourcesSimples =
-              sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
+    final List<SourceConcerts> sourcesSimples =
+        sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
+    final ResultatPersistance resultat = traiterLotsArtistesBatch(rows, sourcesSimples);
 
-          ResultatPersistance resultat = new ResultatPersistance(0, 0);
-          final List<String> echecsLots = new ArrayList<>();
-          final List<String> idsEnEchec = new ArrayList<>();
-          final int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
-          for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
-            final List<Map<String, Object>> lot =
-                rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
-            try {
-              resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
-            } catch (Exception e) {
-              LOG.error(
-                  "fetch:artistes:batch lot {}-{} échoué : {}",
-                  i,
-                  i + lot.size(),
-                  e.getMessage(),
-                  e);
-              echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
-              lot.forEach(row -> idsEnEchec.add((String) row.get("artiste_id_str")));
-            }
-          }
-          remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots, idsEnEchec);
-          sauvegarderQuota();
-          recalculerMatchesService.recalculerMatches(null);
-          notificationDigestService.executerDigest("temps_reel");
-          LOG.info("fetch:artistes:batch terminé");
-          return WorkerStatsService.ResultatJob.succes(resultat);
-        });
+    sauvegarderQuota();
+    recalculerMatchesService.recalculerMatches(null);
+    notificationDigestService.executerDigest("temps_reel");
+    LOG.info("fetch:artistes:batch terminé");
+    return WorkerStatsService.ResultatJob.succes(resultat);
+  }
+
+  private List<Map<String, Object>> chargerArtistesSuivisBatch(
+      final boolean retry, final List<String> artisteIdsCibles) {
+    return jdbc.queryForList(
+        "SELECT ua.artiste_id::text AS artiste_id_str,"
+            + " MAX(ua.artiste_affiche) AS artiste_affiche,"
+            + " MAX(asm.identifiant_externe) AS attraction_id,"
+            + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
+            + " MAX(a.deezer_id) AS deezer_id,"
+            + " MAX(a.wikidata_id) AS wikidata_id"
+            + " FROM user_artistes ua"
+            + " JOIN artistes a ON a.id = ua.artiste_id"
+            + " LEFT JOIN artiste_sources asm"
+            + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
+            + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
+            + " GROUP BY ua.artiste_id",
+        retry ? Map.of("ids", artisteIdsCibles) : Map.of());
+  }
+
+  private ResultatPersistance traiterLotsArtistesBatch(
+      final List<Map<String, Object>> rows, final List<SourceConcerts> sourcesSimples) {
+    ResultatPersistance resultat = new ResultatPersistance(0, 0);
+    final List<String> echecsLots = new ArrayList<>();
+    final List<String> idsEnEchec = new ArrayList<>();
+    final int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
+    for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
+      final List<Map<String, Object>> lot =
+          rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
+      try {
+        resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
+      } catch (Exception e) {
+        LOG.error(
+            "fetch:artistes:batch lot {}-{} échoué : {}", i, i + lot.size(), e.getMessage(), e);
+        echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
+        lot.forEach(row -> idsEnEchec.add((String) row.get("artiste_id_str")));
+      }
+    }
+    remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots, idsEnEchec);
+    return resultat;
   }
 
   /**

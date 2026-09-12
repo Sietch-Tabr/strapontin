@@ -248,10 +248,35 @@ public class FusionSallesClePorteeService {
     final Map<String, Object> ids =
         Map.of("cible", cibleId.toString(), "source", sourceId.toString());
 
-    // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
-    // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
-    // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
-    // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
+    fusionnerEvenements(ids);
+    fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
+    fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
+
+    // 7. Suppression de la salle source
+    jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
+
+    LOG.info(
+        "reconciliation:nocturne — salles fusionnées par clé forte cible={} source={}",
+        cibleId,
+        sourceId);
+    // Fusion automatique et destructive (suppression d'une salle établie) : jamais silencieuse,
+    // contrairement au reste du cycle nocturne qui ne fait que journaliser un constat.
+    logsAdminWorker.inserer(
+        "info",
+        "reconciliation-nocturne",
+        "salles fusionnées automatiquement par clé forte (artiste+date+heure+dept) cible="
+            + cibleId
+            + " source="
+            + sourceId,
+        Map.of("salleCible", cibleId.toString(), "salleSource", sourceId.toString()));
+  }
+
+  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
+  // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
+  // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
+  // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
+  // 2. Réassigner les événements restants (ceux sans doublon côté cible).
+  private void fusionnerEvenements(final Map<String, Object> ids) {
     jdbc.update(
         """
         DELETE FROM observations o1
@@ -280,14 +305,16 @@ public class FusionSallesClePorteeService {
           AND NOT EXISTS (SELECT 1 FROM observations WHERE observations.evenement_id = evenements.id)
         """,
         ids);
-
-    // 2. Réassigner les événements restants (ceux sans doublon côté cible)
     jdbc.update(
         "UPDATE evenements SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
         ids);
+  }
 
-    // 3. Abonnements en double supprimés, le reste réassigné
+  // 3. Abonnements en double supprimés, le reste réassigné.
+  // 4. Sources externes réassignées, dédoublonnage préalable des conflits par type de source.
+  private void fusionnerAbonnementsEtSources(
+      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
         """
         DELETE FROM user_salles
@@ -303,14 +330,21 @@ public class FusionSallesClePorteeService {
             + " AS uuid)",
         ids);
 
-    // 4. Sources externes réassignées, dédoublonnage préalable des conflits par type de source
     dedupliquerSallesSourcesAvantFusion(cibleId, sourceId);
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source"
             + " AS uuid)",
         ids);
+  }
 
-    // 5. Métadonnées récupérées si la cible ne les a pas déjà
+  // 5. Métadonnées récupérées si la cible ne les a pas déjà.
+  // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
+  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
+  // une sous-salle de la source (cas limite : un enfant l'emporte sur son propre complexe par
+  // nombre de concerts), elle hérite du parent de la source plutôt que de rester rattachée à une
+  // salle sur le point d'être supprimée.
+  private void fusionnerMetadonneesEtSousSalles(
+      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
         """
         UPDATE salles SET
@@ -320,35 +354,12 @@ public class FusionSallesClePorteeService {
         """,
         ids);
 
-    // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
-    // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
-    // une sous-salle de la source (cas limite : un enfant l'emporte sur son propre complexe par
-    // nombre de concerts), elle hérite du parent de la source plutôt que de rester rattachée à une
-    // salle sur le point d'être supprimée.
     jdbc.update(
         "UPDATE salles SET salle_parent_id ="
             + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
             + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
         ids);
     reassignerSousSallesSansCycle(cibleId, sourceId);
-
-    // 7. Suppression de la salle source
-    jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
-
-    LOG.info(
-        "reconciliation:nocturne — salles fusionnées par clé forte cible={} source={}",
-        cibleId,
-        sourceId);
-    // Fusion automatique et destructive (suppression d'une salle établie) : jamais silencieuse,
-    // contrairement au reste du cycle nocturne qui ne fait que journaliser un constat.
-    logsAdminWorker.inserer(
-        "info",
-        "reconciliation-nocturne",
-        "salles fusionnées automatiquement par clé forte (artiste+date+heure+dept) cible="
-            + cibleId
-            + " source="
-            + sourceId,
-        Map.of("salleCible", cibleId.toString(), "salleSource", sourceId.toString()));
   }
 
   /**

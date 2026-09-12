@@ -114,6 +114,8 @@ public class PersisteurConcertsDb {
    * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour Eventim
    *     uniquement
    */
+  private record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
+
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> avecUrl =
         concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();
@@ -122,22 +124,28 @@ public class PersisteurConcertsDb {
     }
 
     final List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
-    final List<Map<String, Object>> lignesExistantes =
-        jdbc.queryForList(
-            """
-            SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
-                   e.heure AS heure, o.source AS source, o.url AS url
-            FROM observations o JOIN evenements e ON e.id = o.evenement_id
-            WHERE o.url IN (:urls) AND o.source = 'eventim'
-            """,
-            Map.of("urls", urls));
-
+    final List<Map<String, Object>> lignesExistantes = chargerObservationsParUrl(urls);
     if (lignesExistantes.isEmpty()) {
       return concerts;
     }
 
-    record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
+    final Map<CleUrl, Map<String, Object>> index = construireIndexUrlsExistantes(lignesExistantes);
+    return concerts.stream().map(c -> reconcilierArtisteParUrl(c, index)).toList();
+  }
 
+  private List<Map<String, Object>> chargerObservationsParUrl(final List<String> urls) {
+    return jdbc.queryForList(
+        """
+        SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
+               e.heure AS heure, o.source AS source, o.url AS url
+        FROM observations o JOIN evenements e ON e.id = o.evenement_id
+        WHERE o.url IN (:urls) AND o.source = 'eventim'
+        """,
+        Map.of("urls", urls));
+  }
+
+  private Map<CleUrl, Map<String, Object>> construireIndexUrlsExistantes(
+      final List<Map<String, Object>> lignesExistantes) {
     final Map<CleUrl, Map<String, Object>> index = new HashMap<>();
     for (final Map<String, Object> l : lignesExistantes) {
       final Date sqlDate = (Date) l.get("date");
@@ -150,32 +158,31 @@ public class PersisteurConcertsDb {
               sqlHeure != null ? sqlHeure.toLocalTime() : null);
       index.putIfAbsent(cle, l);
     }
+    return index;
+  }
 
-    return concerts.stream()
-        .map(
-            c -> {
-              if (c.url() == null) {
-                return c;
-              }
-              final CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
-              final Map<String, Object> existant = index.get(cle);
-              if (existant == null) {
-                return c;
-              }
-              final String artisteNormExistant = (String) existant.get("artiste_norm");
-              final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
-              if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
-                return c;
-              }
-              LOG.debug(
-                  "url doublon résolu entrant={} existant={} url={}",
-                  c.artisteNorm(),
-                  artisteNormExistant,
-                  c.url());
-              final UUID artisteIdFinal = c.artisteId() != null ? c.artisteId() : artisteIdExistant;
-              return c.avecArtisteNormEtId(artisteNormExistant, artisteIdFinal);
-            })
-        .toList();
+  private ValeurConcert reconcilierArtisteParUrl(
+      final ValeurConcert c, final Map<CleUrl, Map<String, Object>> index) {
+    if (c.url() == null) {
+      return c;
+    }
+    final CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
+    final Map<String, Object> existant = index.get(cle);
+    if (existant == null) {
+      return c;
+    }
+    final String artisteNormExistant = (String) existant.get("artiste_norm");
+    final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
+    if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
+      return c;
+    }
+    LOG.debug(
+        "url doublon résolu entrant={} existant={} url={}",
+        c.artisteNorm(),
+        artisteNormExistant,
+        c.url());
+    final UUID artisteIdFinal = c.artisteId() != null ? c.artisteId() : artisteIdExistant;
+    return c.avecArtisteNormEtId(artisteNormExistant, artisteIdFinal);
   }
 
   /**
@@ -202,6 +209,8 @@ public class PersisteurConcertsDb {
    *
    * @param concerts concerts après réconciliation, avant upsert
    */
+  private record CleUrlDate(String url, LocalDate date) {}
+
   void alignerHeureReportTM(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> reports =
         concerts.stream()
@@ -218,6 +227,15 @@ public class PersisteurConcertsDb {
     }
 
     final List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
+    final Map<CleUrlDate, List<Map<String, Object>>> parCle = chargerEvenementsTmParUrlDate(urls);
+
+    for (final ValeurConcert c : reports) {
+      alignerHeureSiReport(c, parCle);
+    }
+  }
+
+  private Map<CleUrlDate, List<Map<String, Object>>> chargerEvenementsTmParUrlDate(
+      final List<String> urls) {
     final List<Map<String, Object>> existants =
         jdbc.queryForList(
             """
@@ -227,41 +245,42 @@ public class PersisteurConcertsDb {
             """,
             Map.of("urls", urls));
 
-    record CleUrlDate(String url, LocalDate date) {}
     final Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
     for (final Map<String, Object> ligne : existants) {
       final CleUrlDate cle =
           new CleUrlDate((String) ligne.get("url"), ((Date) ligne.get("date")).toLocalDate());
       parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
     }
+    return parCle;
+  }
 
-    for (final ValeurConcert c : reports) {
-      final List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
-      if (candidats == null) {
-        continue;
-      }
-      final Set<LocalTime> heuresDistinctes =
-          candidats.stream()
-              .map(l -> ((Time) l.get("heure")).toLocalTime())
-              .collect(Collectors.toSet());
-      if (heuresDistinctes.size() != 1) {
-        continue;
-      }
-      final LocalTime heureExistante = heuresDistinctes.iterator().next();
-      if (heureExistante.equals(c.heure())) {
-        continue;
-      }
-      final UUID idExistant = (UUID) candidats.get(0).get("id");
-      jdbc.update(
-          "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
-          Map.of("heure", c.heure(), "id", idExistant.toString()));
-      LOG.info(
-          "report Ticketmaster aligné url={} date={} heure {}->{}",
-          c.url(),
-          c.date(),
-          heureExistante,
-          c.heure());
+  private void alignerHeureSiReport(
+      final ValeurConcert c, final Map<CleUrlDate, List<Map<String, Object>>> parCle) {
+    final List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
+    if (candidats == null) {
+      return;
     }
+    final Set<LocalTime> heuresDistinctes =
+        candidats.stream()
+            .map(l -> ((Time) l.get("heure")).toLocalTime())
+            .collect(Collectors.toSet());
+    if (heuresDistinctes.size() != 1) {
+      return;
+    }
+    final LocalTime heureExistante = heuresDistinctes.iterator().next();
+    if (heureExistante.equals(c.heure())) {
+      return;
+    }
+    final UUID idExistant = (UUID) candidats.get(0).get("id");
+    jdbc.update(
+        "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
+        Map.of("heure", c.heure(), "id", idExistant.toString()));
+    LOG.info(
+        "report Ticketmaster aligné url={} date={} heure {}->{}",
+        c.url(),
+        c.date(),
+        heureExistante,
+        c.heure());
   }
 
   /**
@@ -308,6 +327,22 @@ public class PersisteurConcertsDb {
    * plutôt qu'en nettoyage après coup ; sinon, création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert v) {
+    final UUID exactId = chercherEvenementExact(v);
+    if (exactId != null) {
+      return new ResolutionEvenement(exactId, false);
+    }
+
+    if (v.salleId() != null) {
+      final UUID candidatId = chercherEvenementParSalleEtDate(v);
+      if (candidatId != null) {
+        return new ResolutionEvenement(candidatId, false);
+      }
+    }
+
+    return new ResolutionEvenement(creerNouvelEvenement(v), true);
+  }
+
+  private UUID chercherEvenementExact(final ValeurConcert v) {
     final MapSqlParameterSource paramsExact =
         new MapSqlParameterSource()
             .addValue("artisteNorm", v.artisteNorm())
@@ -322,57 +357,56 @@ public class PersisteurConcertsDb {
                 + " AND salle_id IS NOT DISTINCT FROM CAST(:salleId AS uuid)",
             paramsExact,
             (rs, _) -> rs.getObject("id", UUID.class));
-    if (!exact.isEmpty()) {
-      return new ResolutionEvenement(exact.get(0), false);
-    }
+    return exact.isEmpty() ? null : exact.get(0);
+  }
 
-    if (v.salleId() != null) {
-      final List<Map<String, Object>> candidats =
-          jdbc.queryForList(
-              """
-              SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
-                     e.heure AS heure,
-                     EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
-                            AND o.url ~* '/pack/') AS a_observation_package
-              FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
-              """,
-              Map.of("salleId", v.salleId().toString(), "date", v.date()));
-      final boolean entrantPackage = estPackage(v.url());
-      for (final Map<String, Object> c : candidats) {
-        final UUID candArtisteId = (UUID) c.get("artiste_id");
-        final String candArtisteNorm = (String) c.get("artiste_norm");
-        final boolean artisteCorrespond =
-            v.artisteId() != null
-                ? v.artisteId().equals(candArtisteId)
-                : candArtisteId == null
-                    && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
-        if (!artisteCorrespond) {
-          continue;
-        }
-        final Time heureSql = (Time) c.get("heure");
-        final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
-        final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
-        if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
-          continue;
-        }
-        return new ResolutionEvenement((UUID) c.get("id"), false);
-      }
-    }
-
-    final UUID nouveauId =
-        jdbc.queryForObject(
+  private UUID chercherEvenementParSalleEtDate(final ValeurConcert v) {
+    final List<Map<String, Object>> candidats =
+        jdbc.queryForList(
             """
-            INSERT INTO evenements
-                (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
-                 genre, statut, presale_debut, presale_nom, artiste_id)
-            VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
-                    :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
-                    :presaleNom, CAST(:artisteId AS uuid))
-            RETURNING id
+            SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
+                   e.heure AS heure,
+                   EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
+                          AND o.url ~* '/pack/') AS a_observation_package
+            FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
             """,
-            paramsCreation(v),
-            UUID.class);
-    return new ResolutionEvenement(nouveauId, true);
+            Map.of("salleId", v.salleId().toString(), "date", v.date()));
+    final boolean entrantPackage = estPackage(v.url());
+    for (final Map<String, Object> c : candidats) {
+      final UUID candArtisteId = (UUID) c.get("artiste_id");
+      final String candArtisteNorm = (String) c.get("artiste_norm");
+      final boolean artisteCorrespond =
+          v.artisteId() != null
+              ? v.artisteId().equals(candArtisteId)
+              : candArtisteId == null
+                  && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
+      if (!artisteCorrespond) {
+        continue;
+      }
+      final Time heureSql = (Time) c.get("heure");
+      final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
+      final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
+      if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
+        continue;
+      }
+      return (UUID) c.get("id");
+    }
+    return null;
+  }
+
+  private UUID creerNouvelEvenement(final ValeurConcert v) {
+    return jdbc.queryForObject(
+        """
+        INSERT INTO evenements
+            (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
+             genre, statut, presale_debut, presale_nom, artiste_id)
+        VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
+                :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
+                :presaleNom, CAST(:artisteId AS uuid))
+        RETURNING id
+        """,
+        paramsCreation(v),
+        UUID.class);
   }
 
   private static MapSqlParameterSource paramsCreation(final ValeurConcert v) {

@@ -91,11 +91,27 @@ public class WorkerStatsService {
       final ResultatPersistance resultat,
       final String erreur) {
     final Timestamp maintenant = Timestamp.from(Instant.now());
+    enregistrerMetriqueDuree(typeJob, dureeMs);
+    enregistrerLignesFetchJobs(typeJob, maintenant, dureeMs, resultat, erreur);
+    if (typeJob.startsWith("fetch:")) {
+      remonterBilansFetch(typeJob, resultat, erreur, maintenant);
+    }
+  }
+
+  private void enregistrerMetriqueDuree(final String typeJob, final long dureeMs) {
     Timer.builder("strapontin.worker.job.duration")
         .description("Durée d'exécution d'un job worker (fetch/purge/révocation/réconciliation)")
         .tag("type_job", typeJob)
         .register(meterRegistry)
         .record(dureeMs, TimeUnit.MILLISECONDS);
+  }
+
+  private void enregistrerLignesFetchJobs(
+      final String typeJob,
+      final Timestamp maintenant,
+      final long dureeMs,
+      final ResultatPersistance resultat,
+      final String erreur) {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
       params.put("typeJob", typeJob);
@@ -126,28 +142,30 @@ public class WorkerStatsService {
     } catch (Exception e) {
       LOG.warn("Impossible d'enregistrer stat job {} : {}", typeJob, e.getMessage());
     }
-    if (typeJob.startsWith("fetch:")) {
-      boolean bilanLoggue = false;
-      for (final SourceConcerts source : sources) {
-        if (source instanceof SourceAvecBilanFetch avecBilan) {
-          bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
-        }
-        if (source instanceof EventimSource eventimSource) {
-          bilanLoggue |= remonterContainmentsEventim(typeJob, eventimSource);
-        }
+  }
+
+  private void remonterBilansFetch(
+      final String typeJob,
+      final ResultatPersistance resultat,
+      final String erreur,
+      final Timestamp maintenant) {
+    boolean bilanLoggue = false;
+    for (final SourceConcerts source : sources) {
+      if (source instanceof SourceAvecBilanFetch avecBilan) {
+        bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
       }
-      bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
-      bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
-      if (!bilanLoggue
-          && erreur == null
-          && resultat.nbInseres() == 0
-          && resultat.nbMisAJour() == 0) {
-        remonterResultatVide(typeJob, maintenant);
+      if (source instanceof EventimSource eventimSource) {
+        bilanLoggue |= remonterContainmentsEventim(typeJob, eventimSource);
       }
-      if (erreur == null) {
-        deriveVolumeFetchService.verifier(
-            typeJob, resultat.nbInseres() + resultat.nbMisAJour(), maintenant);
-      }
+    }
+    bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
+    bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
+    if (!bilanLoggue && erreur == null && resultat.nbInseres() == 0 && resultat.nbMisAJour() == 0) {
+      remonterResultatVide(typeJob, maintenant);
+    }
+    if (erreur == null) {
+      deriveVolumeFetchService.verifier(
+          typeJob, resultat.nbInseres() + resultat.nbMisAJour(), maintenant);
     }
   }
 

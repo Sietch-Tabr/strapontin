@@ -41,13 +41,13 @@ import org.springframework.stereotype.Service;
 /**
  * Service de notification digest (email + push VAPID) pour le worker.
  *
- * Lit les {@code user_matches} non notifiés, groupe par utilisateur, envoie email via Resend et push
- * VAPID, puis met à jour {@code notifie_le}.
+ * <p>Lit les {@code user_matches} non notifiés, groupe par utilisateur, envoie email via Resend et
+ * push VAPID, puis met à jour {@code notifie_le}.
  *
- * Si {@code RESEND_API_KEY} ou les clés VAPID sont absentes de {@code app_config}, la notification
- * correspondante est ignorée sans erreur. Depuis, le canal email est de même ignoré sans erreur si
- * le quota d'envoi Resend jour/mois est atteint ({@link GestionQuotaResendWorker}, compteur
- * partagé avec le module web).
+ * <p>Si {@code RESEND_API_KEY} ou les clés VAPID sont absentes de {@code app_config}, la
+ * notification correspondante est ignorée sans erreur. Depuis, le canal email est de même ignoré
+ * sans erreur si le quota d'envoi Resend jour/mois est atteint ({@link GestionQuotaResendWorker},
+ * compteur partagé avec le module web).
  *
  * @since 2.0.0
  * @author Kwaite
@@ -76,9 +76,7 @@ public class NotificationDigestService {
     Resend creer(String cle);
   }
 
-  /**
-   * Fabrique du client push VAPID — même motif que {@link FabriqueResend}.
-   */
+  /** Fabrique du client push VAPID — même motif que {@link FabriqueResend}. */
   @FunctionalInterface
   interface FabriquePushService {
     PushService creer(String clePublique, String clePrivee, String sujet)
@@ -196,58 +194,12 @@ public class NotificationDigestService {
       final Timestamp maintenant = Timestamp.from(Instant.now());
       for (final Map.Entry<String, List<ConcertNotif>> entree :
           groupes.parUtilisateur().entrySet()) {
-        final String userId = entree.getKey();
-        final List<ConcertNotif> concerts = entree.getValue();
-        final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
-        try {
-          final ResultatDigest res =
-              envoyerDigest(
-                  userId,
-                  groupes.emailsUtilisateurs().get(userId),
-                  concerts,
-                  groupes.configsUtilisateurs().get(userId));
-          if (res.emailOk()) {
-            nbEmailsOk++;
-          }
-          if (res.pushOk()) {
-            nbPushOk++;
-          }
-          // Seuls les concerts du canal effectivement en succès sont marqués notifiés :
-          // un digest mixte email+push où un seul canal échoue ne doit pas marquer à tort les
-          // concerts du canal en échec comme notifiés.
-          if (res.emailOk()) {
-            res.concertsEmail()
-                .forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
-          }
-          if (res.pushOk()) {
-            res.concertsPush().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
-          }
-        } catch (Exception e) {
-          nbErreurs++;
-          LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
-        }
-        if (!concertIdsNotifies.isEmpty()) {
-          final int updated =
-              jdbc.update(
-                  """
-                      UPDATE user_matches um
-                      SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
-                      FROM concerts c
-                      WHERE c.id = um.concert_id
-                        AND um.user_id = :userId
-                        AND um.concert_id IN (:concertIds)
-                      """,
-                  new MapSqlParameterSource()
-                      .addValue("userId", userId)
-                      .addValue("maintenant", maintenant)
-                      .addValue("concertIds", concertIdsNotifies));
-          nbMatchesNotifies += updated;
-        } else {
-          LOG.warn(
-              "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
-                  + " à jour",
-              userId);
-        }
+        final BilanDigestUtilisateur bilan =
+            traiterDigestUtilisateur(entree.getKey(), entree.getValue(), groupes, maintenant);
+        nbEmailsOk += bilan.emailOk() ? 1 : 0;
+        nbPushOk += bilan.pushOk() ? 1 : 0;
+        nbErreurs += bilan.erreur() ? 1 : 0;
+        nbMatchesNotifies += bilan.matchesNotifies();
         nbUtilisateurs++;
       }
     } catch (Exception e) {
@@ -259,6 +211,75 @@ public class NotificationDigestService {
       remonterBilanPush();
       LOG.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
     }
+  }
+
+  /**
+   * Bilan de l'envoi du digest à un utilisateur (extrait de {@link #executerDigest}).
+   *
+   * @param matchesNotifies nombre de matches marqués notifiés pour cet utilisateur
+   */
+  private record BilanDigestUtilisateur(
+      boolean emailOk, boolean pushOk, boolean erreur, int matchesNotifies) {}
+
+  private BilanDigestUtilisateur traiterDigestUtilisateur(
+      final String userId,
+      final List<ConcertNotif> concerts,
+      final MatchesGroupes groupes,
+      final Timestamp maintenant) {
+    final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
+    boolean emailOk = false;
+    boolean pushOk = false;
+    boolean erreur = false;
+    try {
+      final ResultatDigest res =
+          envoyerDigest(
+              userId,
+              groupes.emailsUtilisateurs().get(userId),
+              concerts,
+              groupes.configsUtilisateurs().get(userId));
+      emailOk = res.emailOk();
+      pushOk = res.pushOk();
+      // Seuls les concerts du canal effectivement en succès sont marqués notifiés :
+      // un digest mixte email+push où un seul canal échoue ne doit pas marquer à tort les
+      // concerts du canal en échec comme notifiés.
+      if (res.emailOk()) {
+        res.concertsEmail().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
+      }
+      if (res.pushOk()) {
+        res.concertsPush().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
+      }
+    } catch (Exception e) {
+      erreur = true;
+      LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
+    }
+    final int matchesNotifies;
+    if (!concertIdsNotifies.isEmpty()) {
+      matchesNotifies = marquerMatchesNotifies(userId, concertIdsNotifies, maintenant);
+    } else {
+      LOG.warn(
+          "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
+              + " à jour",
+          userId);
+      matchesNotifies = 0;
+    }
+    return new BilanDigestUtilisateur(emailOk, pushOk, erreur, matchesNotifies);
+  }
+
+  private int marquerMatchesNotifies(
+      final String userId, final Set<UUID> concertIdsNotifies, final Timestamp maintenant) {
+    return jdbc.update(
+        """
+        UPDATE user_matches um
+        SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
+        FROM concerts c
+        WHERE c.id = um.concert_id
+          AND um.user_id = :userId
+          AND um.concert_id IN (:concertIds)
+        """,
+        new MapSqlParameterSource()
+            .addValue("userId", userId)
+            .addValue("maintenant", maintenant)
+            .addValue("concertIds", concertIdsNotifies));
   }
 
   /**
@@ -280,68 +301,72 @@ public class NotificationDigestService {
    * @param frequence {@code "temps_reel"} ou {@code "quotidien"}
    * @return les matches non notifiés, groupés par utilisateur
    */
+  private static final String SQL_MATCHES_NON_NOTIFIES =
+      """
+      SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
+             COALESCE(a.nom, c.artiste) AS artiste,
+             CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
+             c.statut,
+             uc.notif_artistes, uc.notif_salles,
+             uc.notif_artistes_push, uc.notif_salles_push,
+             uc.frequence_notifications::text AS frequence_notifications,
+             CASE
+               WHEN EXISTS (
+                 SELECT 1 FROM user_artistes ua
+                 WHERE ua.user_id = um.user_id
+                   AND c.artiste_id = ua.artiste_id
+               ) THEN 'ARTISTE'
+               ELSE 'SALLE'
+             END AS source
+      FROM user_matches um
+      JOIN concerts    c  ON c.id      = um.concert_id
+      LEFT JOIN artistes a ON a.id = c.artiste_id
+      JOIN users       u  ON u.id      = um.user_id
+      JOIN user_config uc ON uc.user_id = um.user_id
+      WHERE um.notification_envoyee_le IS NULL
+        AND um.masque_le  IS NULL
+        AND (
+          (uc.frequence_notifications = CAST(:frequence AS frequence_notif)
+           AND (
+             ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
+               SELECT 1 FROM user_artistes ua
+               WHERE ua.user_id = um.user_id
+                 AND c.artiste_id = ua.artiste_id
+             ))
+             OR
+             ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
+               SELECT 1 FROM user_salles us
+               WHERE us.user_id = um.user_id
+                 AND c.salle_id = us.salle_id
+             ))
+           ))
+          OR
+          (CAST(:frequence AS frequence_notif) = 'temps_reel'
+           AND uc.frequence_notifications = 'jamais'
+           AND (
+             (uc.notif_artistes_push = true AND EXISTS (
+               SELECT 1 FROM user_artistes ua
+               WHERE ua.user_id = um.user_id
+                 AND c.artiste_id = ua.artiste_id
+             ))
+             OR
+             (uc.notif_salles_push = true AND EXISTS (
+               SELECT 1 FROM user_salles us
+               WHERE us.user_id = um.user_id
+                 AND c.salle_id = us.salle_id
+             ))
+           ))
+        )
+      ORDER BY um.user_id, c.date
+      """;
+
   private MatchesGroupes chargerMatchesNonNotifies(final String frequence) {
     final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            """
-                SELECT um.user_id, u.email, CAST(c.id AS text) AS concert_id,
-                       COALESCE(a.nom, c.artiste) AS artiste,
-                       CAST(c.date AS text) AS date, c.salle, c.ville, c.url, c.artiste_norm,
-                       c.statut,
-                       uc.notif_artistes, uc.notif_salles,
-                       uc.notif_artistes_push, uc.notif_salles_push,
-                       uc.frequence_notifications::text AS frequence_notifications,
-                       CASE
-                         WHEN EXISTS (
-                           SELECT 1 FROM user_artistes ua
-                           WHERE ua.user_id = um.user_id
-                             AND c.artiste_id = ua.artiste_id
-                         ) THEN 'ARTISTE'
-                         ELSE 'SALLE'
-                       END AS source
-                FROM user_matches um
-                JOIN concerts    c  ON c.id      = um.concert_id
-                LEFT JOIN artistes a ON a.id = c.artiste_id
-                JOIN users       u  ON u.id      = um.user_id
-                JOIN user_config uc ON uc.user_id = um.user_id
-                WHERE um.notification_envoyee_le IS NULL
-                  AND um.masque_le  IS NULL
-                  AND (
-                    (uc.frequence_notifications = CAST(:frequence AS frequence_notif)
-                     AND (
-                       ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
-                         SELECT 1 FROM user_artistes ua
-                         WHERE ua.user_id = um.user_id
-                           AND c.artiste_id = ua.artiste_id
-                       ))
-                       OR
-                       ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
-                         SELECT 1 FROM user_salles us
-                         WHERE us.user_id = um.user_id
-                           AND c.salle_id = us.salle_id
-                       ))
-                     ))
-                    OR
-                    (CAST(:frequence AS frequence_notif) = 'temps_reel'
-                     AND uc.frequence_notifications = 'jamais'
-                     AND (
-                       (uc.notif_artistes_push = true AND EXISTS (
-                         SELECT 1 FROM user_artistes ua
-                         WHERE ua.user_id = um.user_id
-                           AND c.artiste_id = ua.artiste_id
-                       ))
-                       OR
-                       (uc.notif_salles_push = true AND EXISTS (
-                         SELECT 1 FROM user_salles us
-                         WHERE us.user_id = um.user_id
-                           AND c.salle_id = us.salle_id
-                       ))
-                     ))
-                  )
-                ORDER BY um.user_id, c.date
-                """,
-            Map.of("frequence", frequence));
+        jdbc.queryForList(SQL_MATCHES_NON_NOTIFIES, Map.of("frequence", frequence));
+    return regrouperLignesParUtilisateur(lignes);
+  }
 
+  private MatchesGroupes regrouperLignesParUtilisateur(final List<Map<String, Object>> lignes) {
     final Map<String, String> emailsUtilisateurs = new LinkedHashMap<>();
     final Map<String, ConfigNotifUser> configsUtilisateurs = new LinkedHashMap<>();
     final Map<String, List<ConcertNotif>> parUtilisateur = new LinkedHashMap<>();
@@ -374,9 +399,9 @@ public class NotificationDigestService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} le bilan agrégé des envois push pour le cycle de digest qui vient de
-   * se terminer, même mécanisme générique que le bilan de panne des sources de concerts (voir
-   * {@code WorkerStatsService#remonterBilan}).
+   * Remonte dans {@code logs_admin} le bilan agrégé des envois push pour le cycle de digest qui
+   * vient de se terminer, même mécanisme générique que le bilan de panne des sources de concerts
+   * (voir {@code WorkerStatsService#remonterBilan}).
    */
   private void remonterBilanPush() {
     final BilanFetch bilan = compteurPush.preleverBilan();
@@ -471,8 +496,8 @@ public class NotificationDigestService {
    * Interprète le statut HTTP d'un envoi push.
    *
    * <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout le
-   * reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du succès, comptant
-   * à tort tout autre code d'erreur comme un envoi réussi.
+   * reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du succès, comptant à
+   * tort tout autre code d'erreur comme un envoi réussi.
    *
    * @param status statut HTTP retourné par le push service
    * @return issue de l'envoi
@@ -497,26 +522,48 @@ public class NotificationDigestService {
       LOG.debug("VAPID non configuré — push digest ignoré pour {}", userId);
       return false;
     }
-    final List<Map<String, Object>> abonnements =
-        jdbc.queryForList(
-            "SELECT id, endpoint, p256dh, auth FROM push_abonnements WHERE user_id = :userId",
-            Map.of("userId", userId));
+    final List<Map<String, Object>> abonnements = chargerAbonnementsPush(userId);
     if (abonnements.isEmpty()) {
       return false;
     }
 
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    PushService pushService;
-    try {
-      pushService =
-          fabriquePushService.creer(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
-    } catch (Exception e) {
-      LOG.error("Impossible d'initialiser le service VAPID", e);
+    final PushService pushService =
+        creerPushServiceVapid(clePublique.get(), clePrivee.get(), contactEmail);
+    if (pushService == null) {
       return false;
     }
 
     final String payload = construirePayloadPush(concerts, baseUrl);
+    final int nbEnvoyes = envoyerPushAAbonnements(pushService, abonnements, payload, userId);
+    if (nbEnvoyes > 0) {
+      LOG.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
+    }
+    return nbEnvoyes > 0;
+  }
+
+  private List<Map<String, Object>> chargerAbonnementsPush(final String userId) {
+    return jdbc.queryForList(
+        "SELECT id, endpoint, p256dh, auth FROM push_abonnements WHERE user_id = :userId",
+        Map.of("userId", userId));
+  }
+
+  private PushService creerPushServiceVapid(
+      final String clePublique, final String clePrivee, final String contactEmail) {
+    try {
+      return fabriquePushService.creer(clePublique, clePrivee, "mailto:" + contactEmail);
+    } catch (Exception e) {
+      LOG.error("Impossible d'initialiser le service VAPID", e);
+      return null;
+    }
+  }
+
+  private int envoyerPushAAbonnements(
+      final PushService pushService,
+      final List<Map<String, Object>> abonnements,
+      final String payload,
+      final String userId) {
     int nbEnvoyes = 0;
     for (final Map<String, Object> ab : abonnements) {
       compteurPush.enregistrerAppel();
@@ -549,10 +596,7 @@ public class NotificationDigestService {
         LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
       }
     }
-    if (nbEnvoyes > 0) {
-      LOG.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
-    }
-    return nbEnvoyes > 0;
+    return nbEnvoyes;
   }
 
   // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service worker
@@ -594,14 +638,14 @@ public class NotificationDigestService {
   }
 
   /**
-   * Construit le corps texte du push pour un digest à plusieurs concerts, une ligne par concert,
-   * en insérant une ligne vide à chaque changement d'artiste — sans cette séparation, un digest
+   * Construit le corps texte du push pour un digest à plusieurs concerts, une ligne par concert, en
+   * insérant une ligne vide à chaque changement d'artiste — sans cette séparation, un digest
    * couvrant plusieurs artistes se lit comme une liste continue sans indication de regroupement.
    *
    * @param concerts concerts du digest (triés par date), au moins deux éléments
    * @param baseUrl l'URL publique de base de l'application
    * @return le corps texte du push, une ligne (éventuellement précédée d'une ligne vide) par
-   *   concert
+   *     concert
    */
   private static String construireLignesPreventePush(final List<ConcertNotif> concerts) {
     final StringBuilder corps = new StringBuilder();
@@ -627,65 +671,71 @@ public class NotificationDigestService {
     return UtilitairesChaine.echapperHtml(valeur);
   }
 
+  private static final String GABARIT_CORPS_EMAIL =
+      """
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head><meta charset="utf-8"><title>%s</title></head>
+      <body style="font-family:system-ui,sans-serif;background:#f9f9f9;margin:0;padding:32px 16px">
+      <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">
+      <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">%s</h2>
+      <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
+      <table style="border-collapse:collapse;width:100%%">
+      %s
+      </table>
+      <p style="margin-top:24px">
+        <a href="%s/spectacles"
+           style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
+          Voir mes spectacles →
+        </a>
+      </p>
+      </div>
+      <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
+        Strapontin — <a href="%s/parametres" style="color:#aaa">Gérer mes préférences</a>
+      </p>
+      </body>
+      </html>
+      """;
+
   private static String construireCorpsEmail(
       final String sujet, final List<ConcertNotif> concerts, final String baseUrl) {
     final StringBuilder lignes = new StringBuilder();
     String artistePrecedent = null;
     for (final ConcertNotif c : concerts) {
-      final String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
-      final String lien =
-          c.url() != null
-              ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                  .formatted(e(c.url()))
-              : "";
-      final String prevente =
-          "presale".equals(c.statut())
-              ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
-              : "";
-      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
-      // digest couvrant plusieurs artistes se lit comme une liste continue.
-      final String stylecel =
-          artistePrecedent != null && !artistePrecedent.equals(c.artiste())
-              ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
-              : "padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top";
-      lignes.append(
-          """
-          <tr>
-            <td style="%s">
-              <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-              <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
-              <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
-            </td>
-          </tr>
-          """
-              .formatted(stylecel, e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu));
+      lignes.append(construireLigneConcertEmail(c, artistePrecedent));
       artistePrecedent = c.artiste();
     }
+    return GABARIT_CORPS_EMAIL.formatted(sujet, sujet, lignes, baseUrl, baseUrl);
+  }
+
+  // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
+  // digest couvrant plusieurs artistes se lit comme une liste continue.
+  private static String construireLigneConcertEmail(
+      final ConcertNotif c, final String artistePrecedent) {
+    final String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
+    final String lien =
+        c.url() != null
+            ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
+                .formatted(e(c.url()))
+            : "";
+    final String prevente =
+        "presale".equals(c.statut())
+            ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
+            : "";
+    final String stylecel =
+        artistePrecedent != null && !artistePrecedent.equals(c.artiste())
+            ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
+            : "padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top";
     return """
-    <!DOCTYPE html>
-    <html lang="fr">
-    <head><meta charset="utf-8"><title>%s</title></head>
-    <body style="font-family:system-ui,sans-serif;background:#f9f9f9;margin:0;padding:32px 16px">
-    <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #e5e5e5">
-    <h2 style="font-size:20px;font-weight:600;color:#111;margin:0 0 8px">%s</h2>
-    <p style="color:#555;font-size:14px;margin:0 0 24px">Voici les nouveaux concerts ajoutés :</p>
-    <table style="border-collapse:collapse;width:100%%">
-    %s
-    </table>
-    <p style="margin-top:24px">
-      <a href="%s/spectacles"
-         style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:500">
-        Voir mes spectacles →
-      </a>
-    </p>
-    </div>
-    <p style="text-align:center;color:#aaa;font-size:12px;margin-top:24px">
-      Strapontin — <a href="%s/parametres" style="color:#aaa">Gérer mes préférences</a>
-    </p>
-    </body>
-    </html>
+    <tr>
+      <td style="%s">
+        <div style="font-weight:600;color:#111;font-size:14px">%s</div>
+        <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
+        <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
+      </td>
+    </tr>
     """
-        .formatted(sujet, sujet, lignes, baseUrl, baseUrl);
+        .formatted(stylecel, e(c.artiste()), formaterDate(c.date()), prevente, lien, lieu);
   }
 
   private void logAdminDigest(int nbEmails, int nbPush, int nbErreurs) {

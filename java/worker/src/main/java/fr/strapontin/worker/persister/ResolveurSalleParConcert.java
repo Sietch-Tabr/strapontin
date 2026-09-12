@@ -54,7 +54,7 @@ class ResolveurSalleParConcert {
    *
    * @param c concert portant le {@code salleSourceId} à résoudre
    * @return UUID de la salle résolue ou créée, ou {@code null} si le {@code salleSourceId} est mal
-   *   formé
+   *     formé
    */
   UUID upsertSalleSource(final ValeurConcert c) {
     final int sep = c.salleSourceId().indexOf(':');
@@ -64,59 +64,7 @@ class ResolveurSalleParConcert {
     final String source = c.salleSourceId().substring(0, sep);
     final String identifiant = c.salleSourceId().substring(sep + 1);
 
-    final List<UUID> existants =
-        jdbc.query(
-            "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
-            Map.of("nom", c.salle()),
-            (rs, _) -> rs.getObject("id", UUID.class));
-    UUID salleId = existants.isEmpty() ? null : existants.get(0);
-
-    if (salleId == null) {
-      salleId = chercherSalleParTokens(c.salle(), c.dept());
-    }
-
-    if (salleId == null) {
-      salleId = resoudreSousSalle(c.salle(), c.dept());
-    }
-
-    if (salleId == null) {
-      salleId = chercherSalleParCleForte(c);
-    }
-
-    Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
-    if (salleId == null) {
-      coordsGeocodees = clientNominatim.geocoder(c.salle());
-      if (coordsGeocodees.isPresent()) {
-        salleId = chercherSalleParProximiteGps(coordsGeocodees.get(), c.dept());
-      }
-    }
-
-    if (salleId == null) {
-      final String salleCle = Normalisation.normaliserTexte(c.salle());
-      final MapSqlParameterSource params =
-          new MapSqlParameterSource()
-              .addValue("salleCle", salleCle)
-              .addValue("nom", c.salle())
-              .addValue("nomNorm", salleCle)
-              .addValue("dept", c.dept())
-              .addValue(
-                  "latitude",
-                  coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
-              .addValue(
-                  "longitude",
-                  coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
-      jdbc.update(
-          "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude)"
-              + " VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude, :longitude)"
-              + " ON CONFLICT (salle_cle) DO NOTHING",
-          params);
-      salleId =
-          jdbc.queryForObject(
-              "SELECT id FROM salles WHERE salle_cle = :salleCle",
-              Map.of("salleCle", salleCle),
-              UUID.class);
-    }
-
+    final UUID salleId = resoudreOuCreerSalleId(c);
     if (salleId == null) {
       return null;
     }
@@ -146,18 +94,74 @@ class ResolveurSalleParConcert {
     return salleId;
   }
 
+  private UUID resoudreOuCreerSalleId(final ValeurConcert c) {
+    final List<UUID> existants =
+        jdbc.query(
+            "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
+            Map.of("nom", c.salle()),
+            (rs, _) -> rs.getObject("id", UUID.class));
+    UUID salleId = existants.isEmpty() ? null : existants.get(0);
+
+    if (salleId == null) {
+      salleId = chercherSalleParTokens(c.salle(), c.dept());
+    }
+
+    if (salleId == null) {
+      salleId = resoudreSousSalle(c.salle(), c.dept());
+    }
+
+    if (salleId == null) {
+      salleId = chercherSalleParCleForte(c);
+    }
+
+    Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
+    if (salleId == null) {
+      coordsGeocodees = clientNominatim.geocoder(c.salle());
+      if (coordsGeocodees.isPresent()) {
+        salleId = chercherSalleParProximiteGps(coordsGeocodees.get(), c.dept());
+      }
+    }
+
+    return salleId != null ? salleId : creerNouvelleSalle(c, coordsGeocodees);
+  }
+
+  private UUID creerNouvelleSalle(
+      final ValeurConcert c, final Optional<ClientNominatim.Coordonnees> coordsGeocodees) {
+    final String salleCle = Normalisation.normaliserTexte(c.salle());
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("salleCle", salleCle)
+            .addValue("nom", c.salle())
+            .addValue("nomNorm", salleCle)
+            .addValue("dept", c.dept())
+            .addValue(
+                "latitude", coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
+            .addValue(
+                "longitude",
+                coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude)"
+            + " VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude, :longitude)"
+            + " ON CONFLICT (salle_cle) DO NOTHING",
+        params);
+    return jdbc.queryForObject(
+        "SELECT id FROM salles WHERE salle_cle = :salleCle",
+        Map.of("salleCle", salleCle),
+        UUID.class);
+  }
+
   /**
    * Dernier recours avant de conclure à une salle réellement nouvelle (aucune correspondance par
    * nom ni par clé forte) : cherche, parmi les salles déjà connues dont les coordonnées sont
    * connues, une salle proche des coordonnées géocodées du nom entrant — même seuil que {@link
-   * FusionSallesClePorteeService#coordonneesConnuesEtProches}, réutilisé tel quel. Couvre le cas
-   * où deux sources désignent le même lieu physique sous des noms sans aucun rapport textuel, sans
+   * FusionSallesClePorteeService#coordonneesConnuesEtProches}, réutilisé tel quel. Couvre le cas où
+   * deux sources désignent le même lieu physique sous des noms sans aucun rapport textuel, sans
    * même partager d'artiste/date/heure/dept déjà en base.
    *
    * @param coords coordonnées géocodées du nom entrant
    * @param dept département connu du concert (filtre les candidats, désactivé si absent)
    * @return UUID de la salle existante la plus proche dans le rayon autorisé, ou {@code null} si
-   *   aucune
+   *     aucune
    */
   private UUID chercherSalleParProximiteGps(
       final ClientNominatim.Coordonnees coords, final String dept) {
@@ -183,15 +187,15 @@ class ResolveurSalleParConcert {
   /**
    * Cherche une salle existante dont le {@code nom_norm} est un doublon du nom fourni.
    *
-   * <p>Émet une seule requête SQL pour tous les tokens significatifs du nom (corrige le pattern
-   * N+1 antérieur où une requête était émise par token), complétée par une clause sur le {@code
+   * <p>Émet une seule requête SQL pour tous les tokens significatifs du nom (corrige le pattern N+1
+   * antérieur où une requête était émise par token), complétée par une clause sur le {@code
    * nom_norm} sans espaces : sans elle, une variante d'apostrophe/article entre deux sources ("l
    * olympia" vs "lolympia") ne partage aucun token substantiel et le candidat n'est jamais
-   * récupéré, quand bien même {@link CorrespondanceSalle#estDoublonSalle} le détecterait. Le
-   * filtre {@code dept} élimine les salles homonymes de départements distincts, réduisant le
-   * risque de faux positif du critère pivot. Repli sur le département d'un concert déjà rattaché à
-   * la salle candidate quand {@code salles.dept} est vide — cette colonne n'est écrite qu'à la
-   * création et jamais mise à jour ensuite, contrairement à {@code concerts.dept}.
+   * récupéré, quand bien même {@link CorrespondanceSalle#estDoublonSalle} le détecterait. Le filtre
+   * {@code dept} élimine les salles homonymes de départements distincts, réduisant le risque de
+   * faux positif du critère pivot. Repli sur le département d'un concert déjà rattaché à la salle
+   * candidate quand {@code salles.dept} est vide — cette colonne n'est écrite qu'à la création et
+   * jamais mise à jour ensuite, contrairement à {@code concerts.dept}.
    *
    * @param nom nom brut de la salle à créer
    * @param dept département connu du concert (nullable — désactive le filtre si absent)
@@ -256,16 +260,15 @@ class ResolveurSalleParConcert {
   /**
    * Retient, parmi les candidats validés par {@link CorrespondanceSalle#estDoublonSalle}, celui au
    * Jaccard de tokens le plus élevé, pas le premier de la liste (l'ordre SQL n'est pas garanti) :
-   * un nom générique de complexe multi-salles (ex. "La Seine Musicale - Boulogne Billancourt")
-   * peut valider plusieurs salles physiquement distinctes du même complexe via le seul critère
-   * pivot — sans ce score, le choix entre elles n'était pas déterministe et pouvait rattacher au
-   * mauvais auditorium alors qu'une salle plus proche textuellement existait dans le même lot de
-   * candidats.
+   * un nom générique de complexe multi-salles (ex. "La Seine Musicale - Boulogne Billancourt") peut
+   * valider plusieurs salles physiquement distinctes du même complexe via le seul critère pivot —
+   * sans ce score, le choix entre elles n'était pas déterministe et pouvait rattacher au mauvais
+   * auditorium alors qu'une salle plus proche textuellement existait dans le même lot de candidats.
    *
    * <p>{@link CorrespondanceSalle#qualificatifsDivergents} écarte en amont tout candidat dont le
    * qualificatif de sous-salle brut (ex. "- Grande Seine" / "- Auditorium P.devedjian") diverge du
-   * nôtre — le nom du complexe seul ne doit jamais suffire à conclure à un doublon entre deux
-   * halls physiquement distincts.
+   * nôtre — le nom du complexe seul ne doit jamais suffire à conclure à un doublon entre deux halls
+   * physiquement distincts.
    */
   private UUID meilleurCandidatValide(
       final String nom, final String nomNorm, final List<Map<String, Object>> lignes) {
@@ -301,19 +304,19 @@ class ResolveurSalleParConcert {
   }
 
   /**
-   * Résout ou crée une sous-salle rattachée à un complexe déjà connu, quand le nom entrant porte
-   * un qualificatif de sous-salle (ex. "La Seine Musicale - Grande Seine") et qu'aucune sous-salle
+   * Résout ou crée une sous-salle rattachée à un complexe déjà connu, quand le nom entrant porte un
+   * qualificatif de sous-salle (ex. "La Seine Musicale - Grande Seine") et qu'aucune sous-salle
    * exacte n'a encore été trouvée par {@link #chercherSalleParTokens}.
    *
    * <p>Rattache toujours le concert à une sous-salle nouvellement créée plutôt qu'au complexe lui
    * même — un nom sans qualificatif continue de résoudre vers le complexe (site, salle non
-   * précisée), mais un nom qualifié ne doit jamais mélanger son événement avec ceux d'un autre
-   * hall du même complexe.
+   * précisée), mais un nom qualifié ne doit jamais mélanger son événement avec ceux d'un autre hall
+   * du même complexe.
    *
    * @param nom nom brut entrant, potentiellement qualifié
    * @param dept département connu du concert
    * @return UUID de la sous-salle résolue ou créée, ou {@code null} si {@code nom} ne porte aucun
-   *   qualificatif ou si le complexe de base n'est pas encore connu
+   *     qualificatif ou si le complexe de base n'est pas encore connu
    */
   private UUID resoudreSousSalle(final String nom, final String dept) {
     final String base = CorrespondanceSalle.extraireBase(nom);
@@ -362,8 +365,7 @@ class ResolveurSalleParConcert {
    *
    * <p>Deux sources indépendantes rapportant le même artiste à la minute et au département près ne
    * peuvent structurellement pas désigner deux évènements réels distincts — restreint aux cas où
-   * l'heure et le département sont tous deux connus pour ne pas affaiblir la spécificité de la
-   * clé.
+   * l'heure et le département sont tous deux connus pour ne pas affaiblir la spécificité de la clé.
    *
    * @param c concert dont la salle reste à résoudre
    * @return UUID de la salle du concert existant correspondant, ou {@code null} si aucun
@@ -436,13 +438,12 @@ class ResolveurSalleParConcert {
 
   /**
    * Rattache à leur salle les concerts sans {@code salleId}, ou réaligne ceux dont le {@code
-   * salleId} déjà résolu pointe vers une salle dont le {@code nom_norm} diverge désormais du
-   * {@code salleNorm} du concert — via correspondance exacte sur {@code salle_norm} / {@code
-   * nom_norm}.
+   * salleId} déjà résolu pointe vers une salle dont le {@code nom_norm} diverge désormais du {@code
+   * salleNorm} du concert — via correspondance exacte sur {@code salle_norm} / {@code nom_norm}.
    *
    * <p>(rattrapage) : une simple égalité de {@code nom_norm} ignorait le département, défaisant
-   * silencieusement le filtre dept de {@link #chercherSalleParTokens} pour deux salles homonymes
-   * au texte strictement identique (ex. "Casino - Barriere" Toulouse/Lille, {@code
+   * silencieusement le filtre dept de {@link #chercherSalleParTokens} pour deux salles homonymes au
+   * texte strictement identique (ex. "Casino - Barriere" Toulouse/Lille, {@code
    * chercherSalleParTokens} rejette correctement le candidat en amont, mais ce repli par égalité
    * exacte le retrouvait quand même en aval, sans filtre). Même repli sur le département d'un
    * concert déjà rattaché que {@link #chercherSalleParTokens} quand {@code salles.dept} est vide.
@@ -453,8 +454,8 @@ class ResolveurSalleParConcert {
    * établie — sans ce réalignement, le {@code salleId} restait celui du complexe, créant un
    * événement cross-source distinct pour la même date/artiste. Une correspondance exacte de {@code
    * nom_norm} n'existant que pour une salle réellement homonyme, ce réalignement laisse inchangés
-   * les concerts résolus par clé forte sur un nom sans rapport ({@link #chercherSalleParCleForte}
-   * — leur {@code salleNorm} ne partage par construction aucune correspondance exacte en base).
+   * les concerts résolus par clé forte sur un nom sans rapport ({@link #chercherSalleParCleForte} —
+   * leur {@code salleNorm} ne partage par construction aucune correspondance exacte en base).
    *
    * @param concerts concerts après déduplication
    * @return liste enrichie avec les {@code salleId} résolus ou réalignés par nom_norm
@@ -515,9 +516,9 @@ class ResolveurSalleParConcert {
 
   /**
    * @return {@code true} si le concert n'a pas encore de {@code salleId}, ou si celui déjà résolu
-   *   pointe vers une salle dont le {@code nom_norm} connu diverge du {@code salleNorm} actuel du
-   *   concert (silencieux si le {@code nom_norm} de la salle résolue n'est pas connu — pas de
-   *   réalignement sans confirmation positive de la divergence)
+   *     pointe vers une salle dont le {@code nom_norm} connu diverge du {@code salleNorm} actuel du
+   *     concert (silencieux si le {@code nom_norm} de la salle résolue n'est pas connu — pas de
+   *     réalignement sans confirmation positive de la divergence)
    */
   private static boolean salleIdDivergent(
       final ValeurConcert c, final Map<UUID, String> nomNormParSalleId) {
@@ -556,7 +557,7 @@ class ResolveurSalleParConcert {
    *
    * @param salleIds identifiants des salles à vérifier
    * @return département connu par salle, absente si aucun département connu (ni {@code
-   *   salles.dept}, ni aucun concert déjà rattaché)
+   *     salles.dept}, ni aucun concert déjà rattaché)
    */
   Map<UUID, String> deptsConnus(final Set<UUID> salleIds) {
     if (salleIds.isEmpty()) {

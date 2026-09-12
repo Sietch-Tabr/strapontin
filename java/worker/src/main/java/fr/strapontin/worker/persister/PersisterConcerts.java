@@ -29,12 +29,17 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Orchestrateur de persistance des concerts dédoublonnés.
  *
- * <p>Délègue les responsabilités spécialisées à trois services : <ul>
+ * <p>Délègue les responsabilités spécialisées à trois services :
+ *
+ * <ul>
  *   <li>{@link ReconciliateurSalles} — réconciliation des noms de salle
  *   <li>{@link ReconciliateurArtistes} — réconciliation des noms d'artiste
- *   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID) </ul>
+ *   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID)
+ * </ul>
  *
- * <p>Traitement par lots de 500. Pour chaque lot : <ol>
+ * <p>Traitement par lots de 500. Pour chaque lot :
+ *
+ * <ol>
  *   <li>Résolution des UUIDs par identifiants sources ({@code salle_sources}, {@code
  *       artiste_sources})
  *   <li>Première réconciliation des noms de salle (intra-lot puis contre la base)
@@ -43,7 +48,8 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Déduplication sur la clé de conflit finale
  *   <li>Rattachement des salles par {@code nom_norm} exact
  *   <li>Résolution de l'événement canonique (existant ou nouveau) puis upsert de l'observation de
- *       la source (#1192, plus de suppression a posteriori) </ol>
+ *       la source (#1192, plus de suppression a posteriori)
+ * </ol>
  *
  * @since 2.0.0
  * @author Kwaite
@@ -82,9 +88,9 @@ public class PersisterConcerts {
    * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
    * éviter le problème d'auto-référence à la construction — l'appel à {@link
    * #persisterLotTransactionnel} passe ainsi par le proxy AOP Spring et commit sa propre
-   * transaction par sous-lot, plutôt qu'une transaction unique englobant toute la boucle. En
-   * dehors d'un contexte Spring (tests unitaires n'exerçant pas ce chemin), {@code self} reste
-   * {@code null} sans effet — seul {@link #persisterConcerts} avec une liste non vide l'exerce.
+   * transaction par sous-lot, plutôt qu'une transaction unique englobant toute la boucle. En dehors
+   * d'un contexte Spring (tests unitaires n'exerçant pas ce chemin), {@code self} reste {@code
+   * null} sans effet — seul {@link #persisterConcerts} avec une liste non vide l'exerce.
    *
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
@@ -174,13 +180,13 @@ public class PersisterConcerts {
   /**
    * Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleId)}.
    *
-   * <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id}
-   * (NULLS NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même
-   * salle différemment ont le même {@code salle_id} après résolution — ils conflicteraient au sein
-   * d'un même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
+   * <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id} (NULLS
+   * NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même salle
+   * différemment ont le même {@code salle_id} après résolution — ils conflicteraient au sein d'un
+   * même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
    *
-   * <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que
-   * tous les {@code salle_id} soient résolus.
+   * <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que tous
+   * les {@code salle_id} soient résolus.
    *
    * @param lot valeurs de concerts après réconciliation complète des salles
    * @return lot sans doublons
@@ -234,7 +240,21 @@ public class PersisterConcerts {
     final Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
     final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
     reconciliateurSalles.absorberRenommagesSalles(concerts, cachesSalles);
+    upsertSallesSourcesManquantes(concerts, cachesSalles);
 
+    final Map<UUID, String> deptsConnus = resoudreDeptsConnusSallesMappees(concerts, cachesSalles);
+    final Map<String, UUID> cachesSallesParNom =
+        resoudreSallesParNomFallback(concerts, cachesSalles, deptsConnus);
+
+    final List<ValeurConcert> resolus =
+        appliquerResolutionUuids(
+            concerts, cachesSalles, cachesArtistes, cachesSallesParNom, deptsConnus);
+
+    return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
+  }
+
+  private void upsertSallesSourcesManquantes(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     for (final ValeurConcert c : concerts) {
       if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
         final UUID uuid = reconciliateurSalles.upsertSalleSource(c);
@@ -243,34 +263,31 @@ public class PersisterConcerts {
         }
       }
     }
+  }
 
-    // Un mapping salle_sources réutilisé contourne les garde-fous géographiques appliqués à la
-    // création d'un nouveau mapping — à valider avant de lui faire confiance.
+  private Map<UUID, String> resoudreDeptsConnusSallesMappees(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     final Set<UUID> sallesMappees =
         concerts.stream()
             .filter(c -> c.salleSourceId() != null)
             .map(c -> cachesSalles.get(c.salleSourceId()))
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-    final Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
+    return reconciliateurSalles.deptsConnus(sallesMappees);
+  }
 
+  // Un mapping salle_sources réutilisé contourne les garde-fous géographiques appliqués à la
+  // création d'un nouveau mapping — à valider avant de lui faire confiance.
+  private Map<String, UUID> resoudreSallesParNomFallback(
+      final List<ValeurConcert> concerts,
+      final Map<String, UUID> cachesSalles,
+      final Map<UUID, String> deptsConnus) {
     final Map<String, UUID> cachesSallesParNom = new HashMap<>();
     for (final ValeurConcert c : concerts) {
       final UUID salleMappee =
           c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
       if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
-        logsAdminWorker.inserer(
-            "warn",
-            "persistance",
-            "mapping salle_sources ignoré — incohérence géographique salleId="
-                + salleMappee
-                + " deptConnu="
-                + deptsConnus.get(salleMappee)
-                + " deptEntrant="
-                + c.dept()
-                + " artiste="
-                + c.artisteNorm(),
-            Map.of("salleId", salleMappee.toString(), "artiste", c.artisteNorm()));
+        journaliserMappingIncoherent(salleMappee, c, deptsConnus);
       }
       final boolean besoinFallback =
           c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
@@ -282,40 +299,61 @@ public class PersisterConcerts {
         cachesSallesParNom.put(c.salleNorm(), salleId);
       }
     }
+    return cachesSallesParNom;
+  }
 
-    final List<ValeurConcert> resolus =
-        concerts.stream()
-            .map(
-                c -> {
-                  final UUID salleMappee =
-                      c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-                  final UUID salleId =
-                      c.salleSourceId() != null
-                              && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
-                          ? salleMappee
-                          : cachesSallesParNom.get(c.salleNorm());
-                  final UUID artisteId =
-                      c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
-                  if (salleId == null && artisteId == null) {
-                    return c;
-                  }
-                  return c.avecUuids(
-                      salleId != null ? salleId : c.salleId(),
-                      artisteId != null ? artisteId : c.artisteId());
-                })
-            .toList();
+  private void journaliserMappingIncoherent(
+      final UUID salleMappee, final ValeurConcert c, final Map<UUID, String> deptsConnus) {
+    logsAdminWorker.inserer(
+        "warn",
+        "persistance",
+        "mapping salle_sources ignoré — incohérence géographique salleId="
+            + salleMappee
+            + " deptConnu="
+            + deptsConnus.get(salleMappee)
+            + " deptEntrant="
+            + c.dept()
+            + " artiste="
+            + c.artisteNorm(),
+        Map.of("salleId", salleMappee.toString(), "artiste", c.artisteNorm()));
+  }
 
-    return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
+  private List<ValeurConcert> appliquerResolutionUuids(
+      final List<ValeurConcert> concerts,
+      final Map<String, UUID> cachesSalles,
+      final Map<String, UUID> cachesArtistes,
+      final Map<String, UUID> cachesSallesParNom,
+      final Map<UUID, String> deptsConnus) {
+    return concerts.stream()
+        .map(
+            c -> {
+              final UUID salleMappee =
+                  c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+              final UUID salleId =
+                  c.salleSourceId() != null
+                          && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
+                      ? salleMappee
+                      : cachesSallesParNom.get(c.salleNorm());
+              final UUID artisteId =
+                  c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
+              if (salleId == null && artisteId == null) {
+                return c;
+              }
+              return c.avecUuids(
+                  salleId != null ? salleId : c.salleId(),
+                  artisteId != null ? artisteId : c.artisteId());
+            })
+        .toList();
   }
 
   /**
-   * Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de
-   * la salle qu'il désigne.
+   * Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de la
+   * salle qu'il désigne.
    *
    * @param salleMappee salle résolue via le mapping source, ou {@code null} si non résolue
    * @param deptEntrant département du concert entrant, ou {@code null} si inconnu
    * @param deptsConnus départements connus par salle (voir {@link
-   *   ReconciliateurSalles#deptsConnus})
+   *     ReconciliateurSalles#deptsConnus})
    * @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
    */
   private static boolean mappingSalleIncoherent(
