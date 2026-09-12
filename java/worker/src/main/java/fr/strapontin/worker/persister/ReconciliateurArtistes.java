@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,6 +39,8 @@ public class ReconciliateurArtistes {
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurArtistes.class);
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final CorrecteurArtisteParUrl correcteurArtisteParUrl;
+  private final ResolveurArtisteParNomNorm resolveurArtisteParNomNorm;
 
   private record ArtisteExistant(String artisteNorm, UUID artisteId) {}
 
@@ -48,6 +49,8 @@ public class ReconciliateurArtistes {
    */
   public ReconciliateurArtistes(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
+    this.correcteurArtisteParUrl = new CorrecteurArtisteParUrl(jdbc);
+    this.resolveurArtisteParNomNorm = new ResolveurArtisteParNomNorm(jdbc);
   }
 
   /**
@@ -140,69 +143,7 @@ public class ReconciliateurArtistes {
    * @param lot concerts après résolution des identités sources
    */
   void corrigerParUrl(final List<ValeurConcert> lot) {
-    final List<ValeurConcert> candidats =
-        lot.stream()
-            .filter(
-                c ->
-                    c.url() != null
-                        && !EligibiliteResolutionDeezer.estEligible(c.classification(), c.source()))
-            .toList();
-    if (candidats.isEmpty()) {
-      return;
-    }
-
-    final List<String> urls = candidats.stream().map(ValeurConcert::url).distinct().toList();
-    final List<Map<String, Object>> existants =
-        jdbc.queryForList(
-            "SELECT DISTINCT o.url AS url, e.artiste_norm AS artiste_norm"
-                + " FROM observations o JOIN evenements e ON e.id = o.evenement_id"
-                + " WHERE o.url IN (:urls)",
-            Map.of("urls", urls));
-
-    final Map<String, String> artisteNormParUrl = new HashMap<>();
-    for (final Map<String, Object> ligne : existants) {
-      artisteNormParUrl.put((String) ligne.get("url"), (String) ligne.get("artiste_norm"));
-    }
-
-    for (final ValeurConcert c : candidats) {
-      final String artisteNormExistant = artisteNormParUrl.get(c.url());
-      if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
-        continue;
-      }
-      corrigerArtisteParUrl(c);
-    }
-  }
-
-  // Filtre par url plutôt que par (artiste_norm, date, salle_norm) comme
-  // corrigerArtisteExistantEnBase — deux fiches partageant la même url désignent nécessairement le
-  // même événement réel, quels que soient l'ancien nom corrompu et sa date/salle éventuellement
-  // elles-mêmes faussées par le même mauvais rapprochement.
-  private void corrigerArtisteParUrl(final ValeurConcert concert) {
-    final MapSqlParameterSource params =
-        new MapSqlParameterSource()
-            .addValue("nouvelArtiste", concert.artiste())
-            .addValue("nouvelArtisteNorm", concert.artisteNorm())
-            .addValue("url", concert.url());
-    // Identité (evenements.artiste_norm) et affichage de l'observation concernée
-    // (observations.artiste_brut) vivent désormais sur deux tables distinctes (#1192) — les deux
-    // doivent être corrigés, la seconde ne portant que sur l'observation partageant cette url.
-    final int nbCorrigees =
-        jdbc.update(
-            "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"
-                + " WHERE id = (SELECT evenement_id FROM observations WHERE url = :url LIMIT 1)"
-                + " AND artiste_norm != :nouvelArtisteNorm",
-            params);
-    jdbc.update(
-        "UPDATE observations SET artiste_brut = :nouvelArtiste, updated_at = now()"
-            + " WHERE url = :url",
-        params);
-    if (nbCorrigees > 0) {
-      LOG.info(
-          "artiste corrigé par url url={} nouveau={} count={}",
-          concert.url(),
-          concert.artisteNorm(),
-          nbCorrigees);
-    }
+    correcteurArtisteParUrl.corrigerParUrl(lot);
   }
 
   private Map<String, String> construireRemplacementsArtisteIntraLot(
@@ -273,6 +214,20 @@ public class ReconciliateurArtistes {
       return concert;
     }
 
+    final ValeurConcert exact = reconcilierParCorrespondanceExacte(concert, artistesExistants);
+    if (exact != null) {
+      return exact;
+    }
+    final ValeurConcert flou = reconcilierParCorrespondanceFloue(concert, artistesExistants);
+    return flou != null ? flou : concert;
+  }
+
+  /**
+   * @return le concert propageant l'{@code artisteId} existant si un {@code artisteNorm}
+   *     strictement identique est trouvé, ou {@code null} si aucun candidat exact n'existe.
+   */
+  private static ValeurConcert reconcilierParCorrespondanceExacte(
+      final ValeurConcert concert, final List<ArtisteExistant> artistesExistants) {
     for (final ArtisteExistant existant : artistesExistants) {
       if (existant.artisteNorm().equals(concert.artisteNorm())) {
         if (concert.artisteId() == null && existant.artisteId() != null) {
@@ -281,6 +236,15 @@ public class ReconciliateurArtistes {
         return concert;
       }
     }
+    return null;
+  }
+
+  /**
+   * @return le concert réconcilié avec le premier candidat flou trouvé ({@link
+   *     CorrespondanceArtiste#estDoublonArtiste}), ou {@code null} si aucun candidat flou n'existe.
+   */
+  private ValeurConcert reconcilierParCorrespondanceFloue(
+      final ValeurConcert concert, final List<ArtisteExistant> artistesExistants) {
     for (final ArtisteExistant existant : artistesExistants) {
       if (!estDoublonArtiste(concert.artisteNorm(), existant.artisteNorm())) {
         continue;
@@ -311,7 +275,7 @@ public class ReconciliateurArtistes {
           artisteIdPropague);
       return concert.avecArtisteNormEtId(existant.artisteNorm(), artisteIdPropague);
     }
-    return concert;
+    return null;
   }
 
   /**
@@ -365,84 +329,6 @@ public class ReconciliateurArtistes {
    * @return liste enrichie avec les {@code artiste_id} résolus par nom
    */
   List<ValeurConcert> resoudreArtisteParNomNorm(final List<ValeurConcert> concerts) {
-    final List<String> nomsNormSansId =
-        concerts.stream()
-            .filter(c -> c.artisteId() == null)
-            .map(ValeurConcert::artisteNorm)
-            .distinct()
-            .toList();
-    if (nomsNormSansId.isEmpty()) {
-      return concerts;
-    }
-
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            "SELECT id, nom_norm FROM artistes WHERE nom_norm IN (:nomsNorm)",
-            Map.of("nomsNorm", nomsNormSansId));
-
-    final Map<String, UUID> parNomNorm = new HashMap<>();
-    for (final Map<String, Object> ligne : lignes) {
-      parNomNorm.put((String) ligne.get("nom_norm"), (UUID) ligne.get("id"));
-    }
-    if (parNomNorm.isEmpty()) {
-      return concerts;
-    }
-
-    final List<ValeurConcert> enrichis =
-        concerts.stream()
-            .map(
-                c -> {
-                  if (c.artisteId() != null) {
-                    return c;
-                  }
-                  final UUID artisteId = parNomNorm.get(c.artisteNorm());
-                  return artisteId != null ? c.avecArtisteId(artisteId) : c;
-                })
-            .toList();
-
-    persistersArtistesSources(enrichis, parNomNorm.keySet());
-    return enrichis;
-  }
-
-  /**
-   * Persiste dans {@code artiste_sources} les mappings nouvellement résolus par nom.
-   *
-   * <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent dans
-   * {@code nomNormsResolus}) et dont la source externe est connue ({@code artisteSourceId != null}
-   * — Digitick n'en a pas).
-   *
-   * @param concerts concerts après résolution par nom
-   * @param nomNormsResolus noms normalisés effectivement résolus par le lookup
-   */
-  private void persistersArtistesSources(
-      final List<ValeurConcert> concerts, final Set<String> nomNormsResolus) {
-    final List<SqlParameterSource> params = new ArrayList<>();
-    for (final ValeurConcert c : concerts) {
-      if (c.artisteId() == null
-          || c.artisteSourceId() == null
-          || !nomNormsResolus.contains(c.artisteNorm())) {
-        continue;
-      }
-      final int sep = c.artisteSourceId().indexOf(':');
-      if (sep <= 0) {
-        continue;
-      }
-      final String source = c.artisteSourceId().substring(0, sep);
-      final String identifiant = c.artisteSourceId().substring(sep + 1);
-      params.add(
-          new MapSqlParameterSource()
-              .addValue("artisteId", c.artisteId().toString())
-              .addValue("source", source)
-              .addValue("identifiant", identifiant));
-    }
-    if (params.isEmpty()) {
-      return;
-    }
-    jdbc.batchUpdate(
-        "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
-            + " VALUES (CAST(:artisteId AS uuid), :source, :identifiant)"
-            + " ON CONFLICT DO NOTHING",
-        params.toArray(new SqlParameterSource[0]));
-    LOG.info("artiste_sources persistés en lot count={}", params.size());
+    return resolveurArtisteParNomNorm.resoudre(concerts);
   }
 }

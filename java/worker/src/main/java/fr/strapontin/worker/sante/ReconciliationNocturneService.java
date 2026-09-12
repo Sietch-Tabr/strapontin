@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.core.CorrespondanceArtiste;
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
@@ -14,8 +12,6 @@ import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
-import java.sql.Array;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -47,7 +43,6 @@ import org.springframework.stereotype.Service;
 public class ReconciliationNocturneService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliationNocturneService.class);
-  private static final String CLE_ARTISTE_ID = "artisteId";
   private static final String NIVEAU_WARN = "warn";
   private static final String SOURCE_RECONCILIATION_NOCTURNE = "reconciliation-nocturne";
 
@@ -62,6 +57,7 @@ public class ReconciliationNocturneService {
   private final CoherenceMultiSalleService coherenceMultiSalle;
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
   private final ControleIntegriteService controleIntegrite;
+  private final HealthCheckArtistesTM healthCheckArtistesTM;
 
   /**
    * @param jdbc accès JDBC
@@ -99,6 +95,7 @@ public class ReconciliationNocturneService {
     this.coherenceMultiSalle = coherenceMultiSalle;
     this.suggestionMotsGenerics = suggestionMotsGenerics;
     this.controleIntegrite = controleIntegrite;
+    this.healthCheckArtistesTM = new HealthCheckArtistesTM(jdbc, tm, logsAdminWorker);
   }
 
   /**
@@ -114,8 +111,8 @@ public class ReconciliationNocturneService {
    */
   public ResultatReconciliation executer() {
     final int[] bilanSalles = healthCheckSallesTM();
-    healthCheckArtistesTM();
-    final int nomsIncoherentsTM = healthCheckNomsArtistesTM();
+    healthCheckArtistesTM.verifierVivacite();
+    final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     alerterDigitickSuspect();
 
     final int enrichisArtistes = enrichissementArtistes.enrichir();
@@ -147,152 +144,6 @@ public class ReconciliationNocturneService {
   }
 
   /**
-   * Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à l'artiste
-   * suivi — contrôle distinct du health-check de vivacité ({@link #healthCheckArtistesTM}), qui ne
-   * détecte qu'un identifiant mort (HTTP 404), jamais un identifiant vivant mais rattaché à la
-   * mauvaise entité (tribute, homonyme). S'applique à <strong>tous</strong> les artistes liés TM,
-   * pas seulement les {@code suspect_depuis} : un tribute/homonyme a des événements à venir, il ne
-   * déclenche donc jamais le compteur passif {@code nb_zero_consecutifs}.
-   *
-   * <p>La comparaison passe par {@link CorrespondanceArtiste#estDoublonArtiste} (même algorithme
-   * flou que la réconciliation) plutôt qu'une égalité stricte post-normalisation — un écart
-   * purement cosmétique (espace, article) n'est jamais signalé. Un écart réel (nom de scène) n'est
-   * resignalé que si le nom TM diffère de {@code nom_tm_ignore}, la dernière valeur explicitement
-   * acceptée par un admin.
-   *
-   * @return nombre d'incohérences détectées
-   */
-  private int healthCheckNomsArtistesTM() {
-    final List<Map<String, Object>> lies =
-        jdbc.queryForList(
-            """
-            SELECT asrc.artiste_id, asrc.identifiant_externe, asrc.necessite_intervention_le,
-                   asrc.nom_tm_ignore, a.nom
-            FROM artistes a JOIN artiste_sources asrc ON asrc.artiste_id = a.id
-            WHERE asrc.source = 'ticketmaster'
-            """,
-            Map.of());
-
-    int incoherences = 0;
-    for (final Map<String, Object> ligne : lies) {
-      final UUID artisteId = (UUID) ligne.get("artiste_id");
-      final String attractionId = (String) ligne.get("identifiant_externe");
-      final String nom = (String) ligne.get("nom");
-      final String nomTmIgnore = (String) ligne.get("nom_tm_ignore");
-      final boolean dejaSignale = ligne.get("necessite_intervention_le") != null;
-      final String nomAttraction = tm.recupererNomAttraction(attractionId);
-      if (nomAttraction == null) {
-        continue;
-      }
-      if (CorrespondanceArtiste.estDoublonArtiste(
-          Normalisation.normaliserTexte(nom), Normalisation.normaliserTexte(nomAttraction))) {
-        continue;
-      }
-      if (nomAttraction.equals(nomTmIgnore)) {
-        continue;
-      }
-      if (preAccepterSiAliasWikidataConnu(artisteId, nomAttraction)) {
-        continue;
-      }
-      incoherences++;
-      signalerNomIncoherent(artisteId, attractionId, nom, nomAttraction, dejaSignale);
-    }
-    return incoherences;
-  }
-
-  /**
-   * Pré-accepte automatiquement un nom TM incohérent qui correspond en réalité à un alias Wikidata
-   * déjà connu de l'artiste (nom de scène alternatif, ex. « -M- » pour Matthieu Chédid) — même
-   * effet que {@code ReferentielArtistesService.ignorerIntervention}, sans attendre une première
-   * validation manuelle admin puisque Wikidata fait déjà autorité sur cet alias.
-   *
-   * @return {@code true} si le nom a été pré-accepté (aucun signalement à faire)
-   */
-  private boolean preAccepterSiAliasWikidataConnu(
-      final UUID artisteId, final String nomAttraction) {
-    final List<String> alias = lireAliasWikidata(artisteId);
-    if (alias.isEmpty()) {
-      return false;
-    }
-    final String nomAttractionNorm = Normalisation.normaliserTexte(nomAttraction);
-    final boolean correspond =
-        alias.stream()
-            .anyMatch(
-                a ->
-                    CorrespondanceArtiste.estDoublonArtiste(
-                        Normalisation.normaliserTexte(a), nomAttractionNorm));
-    if (!correspond) {
-      return false;
-    }
-    jdbc.update(
-        """
-        UPDATE artiste_sources
-        SET necessite_intervention_le = NULL, nom_tm_ignore = :nomAttraction,
-            nom_tm_incoherent = :nomAttraction
-        WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
-        """,
-        Map.of(CLE_ARTISTE_ID, artisteId.toString(), "nomAttraction", nomAttraction));
-    return true;
-  }
-
-  private List<String> lireAliasWikidata(final UUID artisteId) {
-    final List<String[]> resultats =
-        jdbc.query(
-            "SELECT alias_wikidata FROM artistes WHERE id = CAST(:id AS uuid)",
-            Map.of("id", artisteId.toString()),
-            (rs, _) -> {
-              final Array tableau = rs.getArray("alias_wikidata");
-              return tableau != null ? (String[]) tableau.getArray() : new String[0];
-            });
-    return resultats.isEmpty() ? List.of() : Arrays.asList(resultats.get(0));
-  }
-
-  /**
-   * Marque l'artiste comme nécessitant une intervention et journalise l'incohérence.
-   *
-   * <p>Le WARN n'est journalisé qu'à la première détection ({@code dejaSignale} faux) — un état
-   * déjà connu et stable (le flag reste posé tant qu'aucun fetch positif cohérent ou résolution
-   * manuelle ne l'efface) ne doit pas générer indéfiniment le même WARN à chaque cycle nocturne.
-   * {@code nom_tm_incoherent} est en revanche toujours rafraîchi, y compris quand le flag était
-   * déjà posé — {@code ignorerIntervention} (module web) doit pouvoir mémoriser le nom TM *courant*
-   * comme accepté, pas une valeur obsolète d'une nuit précédente.
-   */
-  private void signalerNomIncoherent(
-      final UUID artisteId,
-      final String attractionId,
-      final String nom,
-      final String nomAttraction,
-      final boolean dejaSignale) {
-    jdbc.update(
-        """
-        UPDATE artiste_sources
-        SET necessite_intervention_le = COALESCE(necessite_intervention_le, now()),
-            nom_tm_incoherent = :nomAttraction
-        WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
-        """,
-        Map.of(CLE_ARTISTE_ID, artisteId.toString(), "nomAttraction", nomAttraction));
-    if (dejaSignale) {
-      return;
-    }
-    logsAdminWorker.inserer(
-        NIVEAU_WARN,
-        SOURCE_RECONCILIATION_NOCTURNE,
-        "nom TM incohérent avec l'artiste suivi artiste="
-            + nom
-            + " nomTM="
-            + nomAttraction
-            + " attractionId="
-            + attractionId,
-        Map.of(
-            CLE_ARTISTE_ID,
-            artisteId.toString(),
-            "attractionId",
-            attractionId,
-            "nomTM",
-            nomAttraction));
-  }
-
-  /**
    * @return tableau {@code [verifiees, redecouvertes, ambigues]}
    */
   private int[] healthCheckSallesTM() {
@@ -314,7 +165,7 @@ public class ReconciliationNocturneService {
       final String nom = (String) ligne.get("nom");
       verifiees++;
       if (tm.verifierVenue(ancienVenueId) != StatutIdTM.MORT) {
-        reinitialiserSuspect(TypeEntiteSource.SALLE, salleId);
+        reinitialiserSuspect(salleId);
         continue;
       }
 
@@ -337,7 +188,7 @@ public class ReconciliationNocturneService {
         candidats.stream()
             .filter(c -> !c.id().equals(ancienVenueId))
             .filter(c -> tm.compterEventsVenue(c.id()) > 0)
-            .filter(c -> !dejaUtiliseParAutreEntite(TypeEntiteSource.SALLE, salleId, c.id()))
+            .filter(c -> !dejaUtiliseParAutreEntite(salleId, c.id()))
             .toList();
 
     if (valides.size() == 1) {
@@ -376,89 +227,25 @@ public class ReconciliationNocturneService {
     return -1;
   }
 
-  private void healthCheckArtistesTM() {
-    final List<Map<String, Object>> suspects =
-        jdbc.queryForList(
-            """
-            SELECT asrc.artiste_id, asrc.identifiant_externe, a.nom
-            FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
-            WHERE asrc.source = 'ticketmaster' AND asrc.suspect_depuis IS NOT NULL
-            """,
-            Map.of());
-
-    for (final Map<String, Object> ligne : suspects) {
-      final UUID artisteId = (UUID) ligne.get("artiste_id");
-      final String ancienAttractionId = (String) ligne.get("identifiant_externe");
-      final String nom = (String) ligne.get("nom");
-      if (tm.verifierAttraction(ancienAttractionId) != StatutIdTM.MORT) {
-        reinitialiserSuspect(TypeEntiteSource.ARTISTE, artisteId);
-        continue;
-      }
-      redecouvrirArtiste(artisteId, ancienAttractionId, nom);
-    }
-  }
-
   /**
-   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort un identifiant suspect
-   * alors qu'il s'agit simplement d'une salle/artiste sans événement à venir pour l'instant — la
-   * vérification active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle
-   * confirme que l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect"
-   * perdurer jusqu'à expiration (24h, cf. {@link #executer()}).
+   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort une salle suspecte alors
+   * qu'il s'agit simplement d'une salle sans événement à venir pour l'instant — la vérification
+   * active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle confirme que
+   * l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect" perdurer
+   * jusqu'à expiration (24h, cf. {@link #executer()}).
    */
-  private void reinitialiserSuspect(final TypeEntiteSource type, final UUID id) {
+  private void reinitialiserSuspect(final UUID salleId) {
     jdbc.update(
-        "UPDATE "
-            + type.table()
-            + " SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
-            + " WHERE "
-            + type.colonneId()
-            + " = CAST(:id AS uuid) AND source = 'ticketmaster'",
-        Map.of("id", id.toString()));
+        "UPDATE salle_sources SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
+            + " WHERE salle_id = CAST(:id AS uuid) AND source = 'ticketmaster'",
+        Map.of("id", salleId.toString()));
   }
 
-  private void redecouvrirArtiste(
-      final UUID artisteId, final String ancienAttractionId, final String nom) {
-    final String nouveauId = tm.rechercherAttractionId(nom);
-    if (nouveauId != null
-        && !nouveauId.equals(ancienAttractionId)
-        && !dejaUtiliseParAutreEntite(TypeEntiteSource.ARTISTE, artisteId, nouveauId)) {
-      jdbc.update(
-          """
-          UPDATE artiste_sources
-          SET identifiant_externe = :nouveauId, nb_zero_consecutifs = 0, suspect_depuis = NULL
-          WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
-          """,
-          Map.of("nouveauId", nouveauId, CLE_ARTISTE_ID, artisteId.toString()));
-      LOG.info(
-          "reconciliation:nocturne — artiste redécouvert nom={} ancien={} nouveau={}",
-          nom,
-          ancienAttractionId,
-          nouveauId);
-      return;
-    }
-    jdbc.update(
-        """
-        UPDATE artiste_sources SET necessite_intervention_le = now()
-        WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
-        """,
-        Map.of(CLE_ARTISTE_ID, artisteId.toString()));
-    logsAdminWorker.inserer(
-        NIVEAU_WARN,
-        SOURCE_RECONCILIATION_NOCTURNE,
-        "redécouverte artiste échouée nom=" + nom + " ancienAttractionId=" + ancienAttractionId,
-        Map.of(CLE_ARTISTE_ID, artisteId.toString(), "ancienAttractionId", ancienAttractionId));
-  }
-
-  private boolean dejaUtiliseParAutreEntite(
-      final TypeEntiteSource type, final UUID idActuel, final String candidatId) {
+  private boolean dejaUtiliseParAutreEntite(final UUID idActuel, final String candidatId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT 1 FROM "
-                + type.table()
-                + " WHERE source = 'ticketmaster' AND identifiant_externe ="
-                + " :candidatId AND "
-                + type.colonneId()
-                + " != CAST(:idActuel AS uuid)",
+            "SELECT 1 FROM salle_sources WHERE source = 'ticketmaster' AND identifiant_externe ="
+                + " :candidatId AND salle_id != CAST(:idActuel AS uuid)",
             Map.of("candidatId", candidatId, "idActuel", idActuel.toString()));
     return !lignes.isEmpty();
   }

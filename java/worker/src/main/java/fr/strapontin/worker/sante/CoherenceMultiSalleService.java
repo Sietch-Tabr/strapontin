@@ -236,45 +236,52 @@ public class CoherenceMultiSalleService {
     int signalees = 0;
     for (int i = 0; i < salles.size(); i++) {
       for (int j = i + 1; j < salles.size(); j++) {
-        final Map<String, Object> a = salles.get(i);
-        final Map<String, Object> b = salles.get(j);
-        final UUID idA = (UUID) a.get("id");
-        final UUID idB = (UUID) b.get("id");
-        final UUID parentA = (UUID) a.get("salle_parent_id");
-        final UUID parentB = (UUID) b.get("salle_parent_id");
-        // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons — leur nom qualifié
-        // ("X - Y") satisferait sinon le containment de tokens ci-dessous par construction.
-        if (idA.equals(parentB) || idB.equals(parentA)) {
-          continue;
+        if (evaluerPaireDoublon(salles.get(i), salles.get(j))) {
+          signalees++;
         }
-        final String deptA = (String) a.get("dept");
-        final String deptB = (String) b.get("dept");
-        if (deptA != null && deptB != null && !deptA.equals(deptB)) {
-          continue;
-        }
-        if (!nomContenuDansLAutre((String) a.get("nom_norm"), (String) b.get("nom_norm"))) {
-          continue;
-        }
-
-        final String dejaSignale = (String) a.get("doublon_signale");
-        if (idB.toString().equals(dejaSignale)) {
-          continue;
-        }
-
-        memoriserDoublonSignale(idA, idB);
-        signalees++;
-        logsAdminWorker.inserer(
-            "warn",
-            "coherence-salle",
-            "doublon de salle potentiel sans wikidata_id ni concert partagé salleA="
-                + idA
-                + " salleB="
-                + idB,
-            Map.of("salleA", idA.toString(), "salleB", idB.toString()));
       }
     }
     LOG.info("coherence:multi-salle:doublon salles={} signalees={}", salles.size(), signalees);
     return signalees;
+  }
+
+  /**
+   * @return {@code true} si la paire est un doublon potentiel nouvellement signalé (ni déjà connu,
+   *     ni un complexe/sous-salle apparenté, ni de départements incompatibles).
+   */
+  private boolean evaluerPaireDoublon(final Map<String, Object> a, final Map<String, Object> b) {
+    final UUID idA = (UUID) a.get("id");
+    final UUID idB = (UUID) b.get("id");
+    final UUID parentA = (UUID) a.get("salle_parent_id");
+    final UUID parentB = (UUID) b.get("salle_parent_id");
+    // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons — leur nom qualifié
+    // ("X - Y") satisferait sinon le containment de tokens ci-dessous par construction.
+    if (idA.equals(parentB) || idB.equals(parentA)) {
+      return false;
+    }
+    final String deptA = (String) a.get("dept");
+    final String deptB = (String) b.get("dept");
+    if (deptA != null && deptB != null && !deptA.equals(deptB)) {
+      return false;
+    }
+    if (!nomContenuDansLAutre((String) a.get("nom_norm"), (String) b.get("nom_norm"))) {
+      return false;
+    }
+    final String dejaSignale = (String) a.get("doublon_signale");
+    if (idB.toString().equals(dejaSignale)) {
+      return false;
+    }
+
+    memoriserDoublonSignale(idA, idB);
+    logsAdminWorker.inserer(
+        "warn",
+        "coherence-salle",
+        "doublon de salle potentiel sans wikidata_id ni concert partagé salleA="
+            + idA
+            + " salleB="
+            + idB,
+        Map.of("salleA", idA.toString(), "salleB", idB.toString()));
+    return true;
   }
 
   // Containment par token complet plutôt que sous-chaîne brute (#1203) : un containment de

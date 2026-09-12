@@ -6,19 +6,12 @@ package fr.strapontin.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
-import com.resend.services.emails.model.CreateEmailOptions;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import nl.martijndwars.webpush.PushService;
@@ -49,12 +42,10 @@ public class NotificationDigestService {
   private static final Logger LOG = LoggerFactory.getLogger(NotificationDigestService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final ObjectMapper jackson;
-  private final GestionQuotaResendWorker gestionQuotaResendWorker;
-  private final ConfigServiceWorker configService;
-  private final FabriqueResend fabriqueResend;
   private final NotificationPushDigestService pushDigestService;
+  private final NotificationEmailDigestService emailDigestService;
   private final MatchesNonNotifiesLoader matchesLoader;
+  private final NotificationDigestStats stats;
 
   /**
    * Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail} testable
@@ -106,15 +97,14 @@ public class NotificationDigestService {
       final GestionQuotaResendWorker gestionQuotaResendWorker,
       final FabriqueResend fabriqueResend,
       final FabriquePushService fabriquePushService) {
-    this.configService = configService;
     this.jdbc = jdbc;
-    this.jackson = jackson;
-    this.gestionQuotaResendWorker = gestionQuotaResendWorker;
-    this.fabriqueResend = fabriqueResend;
     this.pushDigestService =
         new NotificationPushDigestService(
             configService, jdbc, logsAdminWorker, fabriquePushService);
+    this.emailDigestService =
+        new NotificationEmailDigestService(configService, gestionQuotaResendWorker, fabriqueResend);
     this.matchesLoader = new MatchesNonNotifiesLoader(jdbc);
+    this.stats = new NotificationDigestStats(jdbc, jackson);
   }
 
   /**
@@ -301,100 +291,18 @@ public class NotificationDigestService {
   }
 
   private boolean envoyerEmail(final String email, final List<ConcertNotif> concerts) {
-    if (concerts.isEmpty()) {
-      return false;
-    }
-    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
-    if (cle.isEmpty()) {
-      LOG.debug("RESEND_API_KEY absent — digest email ignoré");
-      return false;
-    }
-    if (!gestionQuotaResendWorker.reserverEnvoi()) {
-      // notification_envoyee_le n'est pas marquée pour ce canal (comportement déjà
-      // existant, cf. clé "RESEND_API_KEY absent" ci-dessus) — retenté au prochain cycle de
-      // digest plutôt que perdu.
-      return false;
-    }
-    final String expediteur = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
-
-    final int nb = concerts.size();
-    final String sujet =
-        nb == 1
-            ? "1 nouveau concert correspond à vos préférences"
-            : "%d nouveaux concerts correspondent à vos préférences".formatted(nb);
-    try {
-      final Resend resend = fabriqueResend.creer(cle.get());
-      final CreateEmailOptions options =
-          CreateEmailOptions.builder()
-              .from(expediteur)
-              .replyTo(expediteur)
-              .to(List.of(email))
-              .subject(sujet)
-              .html(EmailDigestTemplate.construireCorpsEmail(sujet, concerts, baseUrl))
-              .text(sujet)
-              .build();
-      resend.emails().send(options);
-      LOG.info("Digest email envoyé : {} ({} concert(s))", email, nb);
-      return true;
-    } catch (Exception e) {
-      LOG.error("Échec envoi digest email : {}", email, e);
-      return false;
-    }
+    return emailDigestService.envoyerEmail(email, concerts);
   }
 
-  private void logAdminDigest(int nbEmails, int nbPush, int nbErreurs) {
-    try {
-      final String metaJson =
-          jackson.writeValueAsString(
-              Map.of("nb_emails", nbEmails, "nb_push", nbPush, "nb_erreurs", nbErreurs));
-      final String message = "digest — " + nbEmails + " email(s), " + nbPush + " push envoyés";
-      final String niveau = nbErreurs > 0 ? "warn" : "info";
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          new MapSqlParameterSource()
-              .addValue("ts", Instant.now().toEpochMilli())
-              .addValue("niveau", niveau)
-              .addValue("source", "worker")
-              .addValue("message", message)
-              .addValue("meta", metaJson));
-    } catch (Exception e) {
-      LOG.warn("Impossible d'écrire log admin digest : {}", e.getMessage());
-    }
+  private void logAdminDigest(final int nbEmails, final int nbPush, final int nbErreurs) {
+    stats.logAdminDigest(nbEmails, nbPush, nbErreurs);
   }
 
-  private void enregistrerStat(long dureeMs, int nbNotifies, String erreur) {
-    try {
-      final Map<String, Object> params = new LinkedHashMap<>();
-      params.put("typeJob", "notifier:digest");
-      params.put("now", Timestamp.from(Instant.now()));
-      params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
-      params.put("nbNotifies", nbNotifies);
-      params.put("erreur", erreur);
-      jdbc.update(
-          """
-          INSERT INTO fetch_jobs (type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur)
-          VALUES (:typeJob, :now, :dureeMs, 0, :nbNotifies, :erreur)
-          ON CONFLICT (type_job) DO UPDATE SET
-            derniere_exec  = EXCLUDED.derniere_exec,
-            duree_ms       = EXCLUDED.duree_ms,
-            nb_inseres     = EXCLUDED.nb_inseres,
-            nb_mis_a_jour  = EXCLUDED.nb_mis_a_jour,
-            erreur         = EXCLUDED.erreur
-          """,
-          params);
-    } catch (Exception e) {
-      LOG.warn("Impossible d'enregistrer stat notifier:digest : {}", e.getMessage());
-    }
+  private void enregistrerStat(final long dureeMs, final int nbNotifies, final String erreur) {
+    stats.enregistrerStat(dureeMs, nbNotifies, erreur);
   }
 
   static String formaterDate(final String dateIso) {
-    final LocalDate date = LocalDate.parse(dateIso);
-    return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
-        .withLocale(Locale.FRANCE)
-        .format(date);
+    return NotificationDigestStats.formaterDate(dateIso);
   }
 }
