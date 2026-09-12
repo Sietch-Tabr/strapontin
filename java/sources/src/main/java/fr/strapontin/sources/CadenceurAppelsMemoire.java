@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Implémentation en mémoire de {@link CadenceurAppels} : verrou sur l'instance, coordonne les
@@ -18,6 +19,7 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
 
   private final long delaiMinMs;
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
+  private final ReentrantLock verrou = new ReentrantLock();
 
   /**
    * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
@@ -31,16 +33,21 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   // s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   @Override
-  public synchronized void attendre() {
-    final long maintenant = System.currentTimeMillis();
-    final long prochainAppel = dernierAppelMs.get() + delaiMinMs;
-    if (maintenant < prochainAppel) {
-      try {
-        Thread.sleep(prochainAppel - maintenant);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
+  public void attendre() {
+    verrou.lock();
+    try {
+      final long maintenant = System.currentTimeMillis();
+      final long prochainAppel = dernierAppelMs.get() + delaiMinMs;
+      if (maintenant < prochainAppel) {
+        try {
+          Thread.sleep(prochainAppel - maintenant);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
       }
+      dernierAppelMs.set(System.currentTimeMillis());
+    } finally {
+      verrou.unlock();
     }
-    dernierAppelMs.set(System.currentTimeMillis());
   }
 }

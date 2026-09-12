@@ -358,7 +358,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
       try {
         capacite = Integer.parseInt(capaciteStr.replaceAll("[^0-9]", ""));
       } catch (NumberFormatException e) {
-        capacite = null;
+        LOG.trace("capacité OSM non exploitable : {}", capaciteStr, e);
       }
     }
     return new EnrichissementSalle(

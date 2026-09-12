@@ -43,7 +43,9 @@ public class UtilisateurDetailsService implements UserDetailsService {
    * @return les détails Spring Security de l'utilisateur
    * @throws UsernameNotFoundException si aucun compte n'est trouvé
    */
+  // throws imposé par le contrat de l'interface UserDetailsService, pas modifiable.
   @Override
+  @SuppressWarnings("PMD.AvoidUncheckedExceptionsInSignatures")
   public UserDetails loadUserByUsername(final String identifiant) throws UsernameNotFoundException {
     final String sql =
         """

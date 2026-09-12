@@ -129,28 +129,7 @@ public class SalleService {
                   })
               .collect(Collectors.toCollection(ArrayList::new));
 
-      // Nominatim et Ticketmaster sont interrogés en parallèle (chacun jusqu'à 10 s de timeout
-      // côté RestClient partagé) plutôt que séquentiellement : un enchaînement séquentiel peut
-      // approcher les 20 s dans le pire cas, constaté en E2E (mobile-safari, timeout
-      // d'assertion 25 s dépassé — même famille que le correctif équivalent côté
-      // ArtisteService.lister). En parallèle, l'attente totale est bornée par le plus lent des
-      // deux appels, pas leur somme.
-      if (listeResultats.size() < 3) {
-        final CompletableFuture<List<ResultatSalle>> futureNominatim =
-            CompletableFuture.supplyAsync(
-                () -> salleRechercheNominatimService.rechercher(recherche));
-        final CompletableFuture<List<ResultatSalle>> futureTm =
-            CompletableFuture.supplyAsync(
-                () -> salleRechercheTicketmasterService.rechercher(recherche));
-        final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
-        resultatsExternes.addAll(futureTm.join());
-        for (final ResultatSalle r : resultatsExternes) {
-          if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) {
-            continue;
-          }
-          SalleSuggestions.fusionnerOuAjouter(listeResultats, r);
-        }
-      }
+      completerAvecSourcesExternes(listeResultats, sallesDejaAjoutees, recherche);
 
       resultats = listeResultats;
       final String rechercheNorm = normaliserSalleCle(recherche);
@@ -159,6 +138,42 @@ public class SalleService {
     }
 
     return new ReponseSalles(salles, resultats, dejaLaSuivie);
+  }
+
+  /**
+   * Complète {@code listeResultats} avec Nominatim/Ticketmaster si la base n'a pas retourné assez
+   * de résultats.
+   *
+   * <p>Nominatim et Ticketmaster sont interrogés en parallèle (chacun jusqu'à 10 s de timeout côté
+   * RestClient partagé) plutôt que séquentiellement : un enchaînement séquentiel peut approcher les
+   * 20 s dans le pire cas, constaté en E2E (mobile-safari, timeout d'assertion 25 s dépassé — même
+   * famille que le correctif équivalent côté ArtisteService.lister). En parallèle, l'attente totale
+   * est bornée par le plus lent des deux appels, pas leur somme.
+   *
+   * @param listeResultats résultats déjà trouvés en base, complétés en place
+   * @param sallesDejaAjoutees clés normalisées des salles déjà suivies (exclues des suggestions)
+   * @param recherche terme de recherche
+   */
+  private void completerAvecSourcesExternes(
+      final List<ResultatSalle> listeResultats,
+      final Set<String> sallesDejaAjoutees,
+      final String recherche) {
+    if (listeResultats.size() >= 3) {
+      return;
+    }
+    final CompletableFuture<List<ResultatSalle>> futureNominatim =
+        CompletableFuture.supplyAsync(() -> salleRechercheNominatimService.rechercher(recherche));
+    final CompletableFuture<List<ResultatSalle>> futureTm =
+        CompletableFuture.supplyAsync(
+            () -> salleRechercheTicketmasterService.rechercher(recherche));
+    final List<ResultatSalle> resultatsExternes = new ArrayList<>(futureNominatim.join());
+    resultatsExternes.addAll(futureTm.join());
+    for (final ResultatSalle r : resultatsExternes) {
+      if (sallesDejaAjoutees.contains(normaliserSalleCle(r.salle()))) {
+        continue;
+      }
+      SalleSuggestions.fusionnerOuAjouter(listeResultats, r);
+    }
   }
 
   /**

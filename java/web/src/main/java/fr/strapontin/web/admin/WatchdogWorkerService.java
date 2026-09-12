@@ -37,7 +37,9 @@ public class WatchdogWorkerService {
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailAlerteService emailAlerteService;
 
-  private volatile Instant derniereAlerte;
+  // Lu/écrit uniquement depuis verifier(), toujours invoquée séquentiellement par le
+  // TaskScheduler Spring par défaut (pas de concurrence, volatile inutile).
+  private Instant derniereAlerte;
 
   /**
    * @param jdbc accès JDBC

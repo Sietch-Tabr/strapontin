@@ -8,9 +8,9 @@ import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.UtilitairesChaine;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -38,7 +38,8 @@ final class EventimAttractionResolver {
   // containment n'est pas nécessairement une erreur (ex. "-M-" → "-M- Matthieu Chedid" est
   // correct) mais reste un signal à vérifier manuellement, jusque-là invisible (log SLF4J niveau
   // INFO uniquement, jamais dans logs_admin).
-  private final List<String> containmentsAcceptes = Collections.synchronizedList(new ArrayList<>());
+  private final List<String> containmentsAcceptes = new ArrayList<>();
+  private final ReentrantLock verrouContainments = new ReentrantLock();
 
   /**
    * @param restClient client HTTP Eventim partagé
@@ -65,10 +66,13 @@ final class EventimAttractionResolver {
    * @return messages décrivant chaque containment accepté depuis le dernier prélèvement
    */
   List<String> preleverContainmentsAcceptes() {
-    synchronized (containmentsAcceptes) {
+    verrouContainments.lock();
+    try {
       final List<String> copie = List.copyOf(containmentsAcceptes);
       containmentsAcceptes.clear();
       return copie;
+    } finally {
+      verrouContainments.unlock();
     }
   }
 
@@ -180,7 +184,12 @@ final class EventimAttractionResolver {
         "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
         terme,
         nomRetourne);
-    containmentsAcceptes.add("terme=" + terme + " → resultat=" + nomRetourne);
+    verrouContainments.lock();
+    try {
+      containmentsAcceptes.add("terme=" + terme + " → resultat=" + nomRetourne);
+    } finally {
+      verrouContainments.unlock();
+    }
   }
 
   private void journaliserAucuneCorrespondance(

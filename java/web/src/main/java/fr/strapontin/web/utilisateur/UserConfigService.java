@@ -298,10 +298,10 @@ public class UserConfigService {
   }
 
   private static String versCast(final String champJava, final String placeholder) {
-    return switch (champJava) {
-      case "frequenceNotifications" -> "CAST(" + placeholder + " AS frequence_notif)";
-      default -> placeholder;
-    };
+    if ("frequenceNotifications".equals(champJava)) {
+      return "CAST(" + placeholder + " AS frequence_notif)";
+    }
+    return placeholder;
   }
 
   private String versColonne(final String champJava) {

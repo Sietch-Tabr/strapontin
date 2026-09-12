@@ -171,8 +171,8 @@ public class NotificationPushService {
           return code;
         }
       }
-    } catch (NumberFormatException _) {
-      // pas de code HTTP dans le message
+    } catch (NumberFormatException nfe) {
+      LOG.trace("extraireCodeHttp : pas de code HTTP dans le message", nfe);
     }
     return -1;
   }

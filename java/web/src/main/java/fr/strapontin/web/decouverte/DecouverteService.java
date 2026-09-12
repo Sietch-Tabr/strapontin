@@ -232,6 +232,7 @@ public class DecouverteService {
             case "genre" -> genres.add(rs.getString("valeur"));
             case "mois" -> mois.add(rs.getString("valeur"));
             case "classification" -> classifications.add(rs.getString("valeur"));
+            default -> LOG.warn("type de filtre inconnu ignoré : {}", rs.getString("type"));
           }
         });
     return new FiltresDisponibles(genres, mois, classifications);

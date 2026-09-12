@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class SpectacleService {
+
+  private static final Logger LOG = LoggerFactory.getLogger(SpectacleService.class);
 
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_AUJOURDHUI = "aujourd8";
@@ -303,6 +307,7 @@ public class SpectacleService {
             case "genre" -> genres.add(rs.getString("valeur"));
             case "mois" -> mois.add(rs.getString("valeur"));
             case "classification" -> classifications.add(rs.getString("valeur"));
+            default -> LOG.warn("type de filtre inconnu ignoré : {}", rs.getString("type"));
           }
         });
     return new FiltresDisponibles(genres, mois, classifications);

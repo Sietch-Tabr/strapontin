@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AuthService.class);
-  private static final SecureRandom rng = new SecureRandom();
+  private static final SecureRandom RNG = new SecureRandom();
 
   private final VerificationRepository verificationRepository;
   private final EmailService emailService;
@@ -134,7 +134,9 @@ public class AuthService {
     } catch (DataIntegrityViolationException e) {
       // Race entre le contrôle ci-dessus et cet UPDATE : deux invitations concurrentes ont
       // pu choisir le même identifiant entre-temps.
-      throw new ErreurMetier("Cet identifiant est déjà utilisé.");
+      final ErreurMetier erreur = new ErreurMetier("Cet identifiant est déjà utilisé.");
+      erreur.initCause(e);
+      throw erreur;
     }
     verificationRepository.supprimerParTokenHash(tokenHash);
 
@@ -185,7 +187,7 @@ public class AuthService {
 
   private static String genererToken(final int nbOctets) {
     final byte[] octets = new byte[nbOctets];
-    rng.nextBytes(octets);
+    RNG.nextBytes(octets);
     final StringBuilder sb = new StringBuilder();
     for (final byte b : octets) {
       sb.append(String.format("%02x", b));

@@ -48,6 +48,11 @@ public final class ConfigCipher {
    *
    * @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
    */
+  // Le sel SCrypt est volontairement fixe (pas une clé de chiffrement secrète) : la clé réelle
+  // dérive de "secret" (APP_CONFIG_SECRET), jamais codé en dur — changer ce sel rendrait
+  // illisibles toutes les valeurs app_config déjà chiffrées, au même titre qu'un changement
+  // d'APP_CONFIG_SECRET.
+  @SuppressWarnings("PMD.HardCodedCryptoKey")
   public ConfigCipher(final String secret) {
     Objects.requireNonNull(secret, "secret");
     this.cleChiffrement =

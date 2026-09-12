@@ -166,7 +166,10 @@ public class SetupService {
           """,
           paramsUser);
     } catch (DataIntegrityViolationException e) {
-      throw new RessourceDejaExistante("L'application est déjà configurée.");
+      final RessourceDejaExistante erreur =
+          new RessourceDejaExistante("L'application est déjà configurée.");
+      erreur.initCause(e);
+      throw erreur;
     }
   }
 
