@@ -63,6 +63,7 @@ public class EnrichissementSallesService {
   // nuits, jamais 100% pile) reste alors indéfiniment sous le seuil. Un taux de réussite est
   // requis, pas seulement une absence totale de résultat.
   private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
+  private static final String CLE_WIKIDATA_ID = "wikidataId";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
@@ -279,7 +280,7 @@ public class EnrichissementSallesService {
   private boolean mettreAJourSalle(
       final UUID salleId, final String nom, final EnrichissementSalle e) {
     final Map<String, Object> params = new HashMap<>();
-    params.put("wikidataId", e.wikidataId());
+    params.put(CLE_WIKIDATA_ID, e.wikidataId());
     params.put("nomAffiche", e.nomAffiche());
     params.put("ville", e.ville());
     params.put("latitude", e.latitude());
@@ -331,14 +332,14 @@ public class EnrichissementSallesService {
             + nom
             + " wikidataId="
             + e.wikidataId(),
-        Map.of("salleId", salleId.toString(), "wikidataId", e.wikidataId()));
+        Map.of("salleId", salleId.toString(), CLE_WIKIDATA_ID, e.wikidataId()));
     if (porteuse != null) {
       signalementMatchingService.signaler(
           "collision_wikidata_salle",
           "salle",
           salleId,
           "basse",
-          Map.of("wikidataId", e.wikidataId(), "salleExistante", porteuse.get("id").toString()));
+          Map.of(CLE_WIKIDATA_ID, e.wikidataId(), "salleExistante", porteuse.get("id").toString()));
     }
     return false;
   }
@@ -347,7 +348,7 @@ public class EnrichissementSallesService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT id, latitude, longitude FROM salles WHERE wikidata_id = :wikidataId",
-            Map.of("wikidataId", wikidataId));
+            Map.of(CLE_WIKIDATA_ID, wikidataId));
     return lignes.isEmpty() ? null : lignes.get(0);
   }
 

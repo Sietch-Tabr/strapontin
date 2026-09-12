@@ -34,6 +34,9 @@ public class UserConfigService {
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
   private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
+  private static final String CLE_USER_ID = "userId";
+  private static final String CLE_DEPARTEMENTS = "departements";
+  private static final String CLE_THEME = "theme";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
@@ -63,7 +66,7 @@ public class UserConfigService {
     final List<Boolean> lignes =
         jdbc.queryForList(
             "SELECT filtre_disponibles FROM user_config WHERE user_id = :userId",
-            Map.of("userId", userId),
+            Map.of(CLE_USER_ID, userId),
             Boolean.class);
     return lignes.isEmpty() || lignes.get(0);
   }
@@ -78,14 +81,14 @@ public class UserConfigService {
     final List<ConfigUtilisateur> lignes =
         jdbc.query(
             """
-                SELECT departements, filtre_disponibles, frequence_notifications,
-                       notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
-                FROM user_config
-                WHERE user_id = :userId
-                """,
-            Map.of("userId", userId),
+            SELECT departements, filtre_disponibles, frequence_notifications,
+                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
+            FROM user_config
+            WHERE user_id = :userId
+            """,
+            Map.of(CLE_USER_ID, userId),
             (rs, _) -> {
-              final String[] depts = (String[]) rs.getArray("departements").getArray();
+              final String[] depts = (String[]) rs.getArray(CLE_DEPARTEMENTS).getArray();
               return new ConfigUtilisateur(
                   Arrays.asList(depts),
                   rs.getBoolean("filtre_disponibles"),
@@ -94,7 +97,7 @@ public class UserConfigService {
                   rs.getBoolean("notif_salles"),
                   rs.getBoolean("notif_artistes_push"),
                   rs.getBoolean("notif_salles_push"),
-                  rs.getString("theme"),
+                  rs.getString(CLE_THEME),
                   false);
             });
 
@@ -136,7 +139,7 @@ public class UserConfigService {
 
     final List<String> ignores = bruts.stream().filter(s -> normaliserDept(s) == null).toList();
 
-    upsertConfig(userId, Map.of("departements", depts.toArray(String[]::new)));
+    upsertConfig(userId, Map.of(CLE_DEPARTEMENTS, depts.toArray(String[]::new)));
     return new ResultatMajDepartements(ignores);
   }
 
@@ -183,12 +186,18 @@ public class UserConfigService {
         "web",
         "notifications modifiées",
         Map.of(
-            "userId", userId,
-            "frequence", requete.frequenceNotifications(),
-            "notifArtistes", requete.notifArtistes(),
-            "notifSalles", requete.notifSalles(),
-            "notifArtistesPush", requete.notifArtistesPush(),
-            "notifSallesPush", requete.notifSallesPush()));
+            CLE_USER_ID,
+            userId,
+            "frequence",
+            requete.frequenceNotifications(),
+            "notifArtistes",
+            requete.notifArtistes(),
+            "notifSalles",
+            requete.notifSalles(),
+            "notifArtistesPush",
+            requete.notifArtistesPush(),
+            "notifSallesPush",
+            requete.notifSallesPush()));
   }
 
   /**
@@ -201,7 +210,7 @@ public class UserConfigService {
     final List<Boolean> lignes =
         jdbc.queryForList(
             "SELECT onboarding_vu FROM user_config WHERE user_id = :userId",
-            Map.of("userId", userId),
+            Map.of(CLE_USER_ID, userId),
             Boolean.class);
     return lignes.isEmpty() || !lignes.get(0);
   }
@@ -242,13 +251,13 @@ public class UserConfigService {
         VALUES (:userId, CAST(:theme AS theme_interface))
         ON CONFLICT (user_id) DO UPDATE SET theme = CAST(:theme AS theme_interface), updated_at = now()
         """,
-        Map.of("userId", userId, "theme", valeur));
+        Map.of(CLE_USER_ID, userId, CLE_THEME, valeur));
   }
 
   private void upsertConfig(final String userId, final Map<String, Object> champs) {
     final StringBuilder setClauses = new StringBuilder();
     final Map<String, Object> params = new HashMap<>(champs);
-    params.put("userId", userId);
+    params.put(CLE_USER_ID, userId);
 
     for (final String cle : champs.keySet()) {
       if (setClauses.length() > 0) {
@@ -268,10 +277,10 @@ public class UserConfigService {
 
     final String sql =
         """
-            INSERT INTO user_config (%s)
-            VALUES (%s)
-            ON CONFLICT (user_id) DO UPDATE SET %s, updated_at = now()
-            """
+        INSERT INTO user_config (%s)
+        VALUES (%s)
+        ON CONFLICT (user_id) DO UPDATE SET %s, updated_at = now()
+        """
             .formatted(String.join(", ", colonnes), String.join(", ", placeholders), setClauses);
 
     jdbc.update(sql, params);
@@ -286,14 +295,14 @@ public class UserConfigService {
 
   private String versColonne(final String champJava) {
     return switch (champJava) {
-      case "departements" -> "departements";
+      case CLE_DEPARTEMENTS -> CLE_DEPARTEMENTS;
       case "filtreDisponibles" -> "filtre_disponibles";
       case "frequenceNotifications" -> "frequence_notifications";
       case "notifArtistes" -> "notif_artistes";
       case "notifSalles" -> "notif_salles";
       case "notifArtistesPush" -> "notif_artistes_push";
       case "notifSallesPush" -> "notif_salles_push";
-      case "theme" -> "theme";
+      case CLE_THEME -> CLE_THEME;
       case "onboardingVu" -> "onboarding_vu";
       default -> throw new IllegalArgumentException("Champ inconnu : " + champJava);
     };
@@ -310,8 +319,6 @@ public class UserConfigService {
     return null;
   }
 
-  /**
-   * Résultat de la mise à jour des départements.
-   */
+  /** Résultat de la mise à jour des départements. */
   public record ResultatMajDepartements(List<String> ignores) {}
 }

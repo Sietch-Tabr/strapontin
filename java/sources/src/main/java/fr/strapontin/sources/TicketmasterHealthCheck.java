@@ -24,6 +24,7 @@ final class TicketmasterHealthCheck {
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterHealthCheck.class);
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
   private static final String CLE_EMBEDDED = "_embedded";
+  private static final String PARAM_APIKEY = "apikey";
 
   private final String apiKey;
   private final RestClient restClient;
@@ -47,7 +48,7 @@ final class TicketmasterHealthCheck {
   private StatutIdTM verifierRessource(final String chemin) {
     final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + chemin)
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
@@ -69,7 +70,7 @@ final class TicketmasterHealthCheck {
   String recupererNomAttraction(final String attractionId) {
     final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
@@ -91,7 +92,7 @@ final class TicketmasterHealthCheck {
         UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
             .queryParam("keyword", nom)
             .queryParam("countryCode", "FR")
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
@@ -129,7 +130,7 @@ final class TicketmasterHealthCheck {
         UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
             .queryParam("venueId", venueId)
             .queryParam("size", 1)
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();

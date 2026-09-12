@@ -34,6 +34,9 @@ import org.springframework.stereotype.Service;
 class ResolveurSalleParConcert {
 
   private static final Logger LOG = LoggerFactory.getLogger(ResolveurSalleParConcert.class);
+  private static final String CLE_DEPT = "dept";
+  private static final String CLE_NOM = "nom";
+  private static final String CLE_SALLE_CLE = "salleCle";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ClientNominatim clientNominatim;
@@ -78,7 +81,7 @@ class ResolveurSalleParConcert {
     if (c.dept() != null) {
       jdbc.update(
           "UPDATE salles SET dept = COALESCE(dept, :dept) WHERE id = CAST(:uuid AS uuid)",
-          Map.of("dept", c.dept(), "uuid", salleId.toString()));
+          Map.of(CLE_DEPT, c.dept(), "uuid", salleId.toString()));
     }
 
     jdbc.update(
@@ -100,7 +103,7 @@ class ResolveurSalleParConcert {
     final List<UUID> existants =
         jdbc.query(
             "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
-            Map.of("nom", c.salle()),
+            Map.of(CLE_NOM, c.salle()),
             (rs, _) -> rs.getObject("id", UUID.class));
     UUID salleId = existants.isEmpty() ? null : existants.get(0);
 
@@ -132,10 +135,10 @@ class ResolveurSalleParConcert {
     final String salleCle = Normalisation.normaliserTexte(c.salle());
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
-            .addValue("salleCle", salleCle)
-            .addValue("nom", c.salle())
+            .addValue(CLE_SALLE_CLE, salleCle)
+            .addValue(CLE_NOM, c.salle())
             .addValue("nomNorm", salleCle)
-            .addValue("dept", c.dept())
+            .addValue(CLE_DEPT, c.dept())
             .addValue(
                 "latitude", coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
             .addValue(
@@ -148,7 +151,7 @@ class ResolveurSalleParConcert {
         params);
     return jdbc.queryForObject(
         "SELECT id FROM salles WHERE salle_cle = :salleCle",
-        Map.of("salleCle", salleCle),
+        Map.of(CLE_SALLE_CLE, salleCle),
         UUID.class);
   }
 
@@ -172,7 +175,7 @@ class ResolveurSalleParConcert {
             "SELECT id, latitude, longitude FROM salles"
                 + " WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
                 + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)",
-            new MapSqlParameterSource().addValue("dept", dept, Types.VARCHAR));
+            new MapSqlParameterSource().addValue(CLE_DEPT, dept, Types.VARCHAR));
     for (final Map<String, Object> ligne : lignes) {
       final Double latitude = (Double) ligne.get("latitude");
       final Double longitude = (Double) ligne.get("longitude");
@@ -237,7 +240,7 @@ class ResolveurSalleParConcert {
       params.addValue("t" + i, "%" + tokensList.get(i) + "%");
     }
     params.addValue("nomNormSquash", nomNormSquash);
-    params.addValue("dept", dept, Types.VARCHAR);
+    params.addValue(CLE_DEPT, dept, Types.VARCHAR);
 
     // salles.dept n'est écrit qu'à la création et n'est jamais mis à jour ensuite,
     // contrairement à concerts.dept (fiablement renseigné à chaque ingestion) — un simple
@@ -279,7 +282,7 @@ class ResolveurSalleParConcert {
     double meilleurScore = -1;
     for (final Map<String, Object> ligne : lignes) {
       final UUID uuid = (UUID) ligne.get("id");
-      final String nomCandidat = (String) ligne.get("nom");
+      final String nomCandidat = (String) ligne.get(CLE_NOM);
       final String nomNormCandidat = (String) ligne.get("nom_norm");
       if (!CorrespondanceSalle.estDoublonSalle(nomNorm, nomNormCandidat)) {
         continue;
@@ -339,15 +342,15 @@ class ResolveurSalleParConcert {
             + " VALUES (:salleCle, :nom, :nomNorm, :dept, CAST(:parentId AS uuid))"
             + " ON CONFLICT (salle_cle) DO NOTHING",
         new MapSqlParameterSource()
-            .addValue("salleCle", salleCle)
-            .addValue("nom", nom)
+            .addValue(CLE_SALLE_CLE, salleCle)
+            .addValue(CLE_NOM, nom)
             .addValue("nomNorm", salleCle)
-            .addValue("dept", dept)
+            .addValue(CLE_DEPT, dept)
             .addValue("parentId", complexeId.toString()));
     final UUID sousSalleId =
         jdbc.queryForObject(
             "SELECT id FROM salles WHERE salle_cle = :salleCle",
-            Map.of("salleCle", salleCle),
+            Map.of(CLE_SALLE_CLE, salleCle),
             UUID.class);
     LOG.info(
         "sous-salle créée pour complexe nom={} base={} complexeId={} sousSalleId={}",
@@ -384,10 +387,14 @@ class ResolveurSalleParConcert {
                 + " ORDER BY salle_id"
                 + " LIMIT 20",
             Map.of(
-                "artisteNorm", c.artisteNorm(),
-                "date", c.date(),
-                "heure", c.heure(),
-                "dept", c.dept()),
+                "artisteNorm",
+                c.artisteNorm(),
+                "date",
+                c.date(),
+                "heure",
+                c.heure(),
+                CLE_DEPT,
+                c.dept()),
             (rs, _) -> rs.getObject("salle_id", UUID.class));
     if (candidats.isEmpty()) {
       return null;
@@ -469,7 +476,7 @@ class ResolveurSalleParConcert {
             Map.of("ids", salleIds));
     final Map<UUID, String> resultat = new HashMap<>();
     for (final Map<String, Object> ligne : lignes) {
-      final String dept = (String) ligne.get("dept");
+      final String dept = (String) ligne.get(CLE_DEPT);
       if (dept != null) {
         resultat.put((UUID) ligne.get("id"), dept);
       }

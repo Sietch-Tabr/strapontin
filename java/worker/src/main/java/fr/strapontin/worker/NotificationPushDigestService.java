@@ -32,6 +32,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class NotificationPushDigestService {
 
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushDigestService.class);
+  private static final String CLE_ENDPOINT = "endpoint";
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -155,7 +156,7 @@ class NotificationPushDigestService {
         final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
         final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
         final Subscription subscription =
-            new Subscription((String) ab.get("endpoint"), new Subscription.Keys(p256dh, auth));
+            new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
         final Notification notification = new Notification(subscription, payload);
         final HttpResponse response = pushService.send(notification);
         final int status = response.getStatusLine().getStatusCode();
@@ -164,7 +165,7 @@ class NotificationPushDigestService {
             // Abonnement mort (410/404) : nettoyage attendu, pas une panne du canal push —
             // n'entre pas dans le bilan de panne.
             jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-            LOG.info("Abonnement push révoqué : {} — {}", userId, ab.get("endpoint"));
+            LOG.info("Abonnement push révoqué : {} — {}", userId, ab.get(CLE_ENDPOINT));
           }
           case SUCCES -> nbEnvoyes++;
           case ECHEC -> {
@@ -172,12 +173,13 @@ class NotificationPushDigestService {
             // succès implicite — sans cette branche, un push jamais délivré était compté
             // comme réussi.
             compteurPush.enregistrerErreur();
-            LOG.warn("Push: statut inattendu {} pour {} — {}", status, userId, ab.get("endpoint"));
+            LOG.warn(
+                "Push: statut inattendu {} pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
           }
         }
       } catch (Exception e) {
         compteurPush.enregistrerErreur();
-        LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get("endpoint"), e);
+        LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
       }
     }
     return nbEnvoyes;

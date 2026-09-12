@@ -36,6 +36,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class SpectacleService {
 
+  private static final String CLE_USER_ID = "userId";
+  private static final String CLE_AUJOURDHUI = "aujourd8";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final UserConfigService userConfigService;
 
@@ -68,8 +71,8 @@ public class SpectacleService {
     final String conditionMasque = filtre.masques() ? "NOT NULL" : "NULL";
 
     final Map<String, Object> params = new HashMap<>();
-    params.put("userId", userId);
-    params.put("aujourd8", aujourd8);
+    params.put(CLE_USER_ID, userId);
+    params.put(CLE_AUJOURDHUI, aujourd8);
     final StringBuilder whereClause =
         construireWhere(userId, filtre, conditionMasque, inclureIndisponibles, aujourd8, params);
 
@@ -91,7 +94,7 @@ public class SpectacleService {
     paramsPage.put("limit", CONCERTS_PAR_PAGE);
     paramsPage.put("offset", pageNum * CONCERTS_PAR_PAGE);
 
-    final Map<String, Object> baseParams = Map.of("userId", userId, "aujourd8", aujourd8);
+    final Map<String, Object> baseParams = Map.of(CLE_USER_ID, userId, CLE_AUJOURDHUI, aujourd8);
 
     // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête principale
     final CompletableFuture<Integer> futureTotal =
@@ -350,7 +353,7 @@ public class SpectacleService {
                 + " = CAST(:concertId AS uuid)"
             : "UPDATE user_matches SET masque_le = NULL WHERE user_id = :userId AND concert_id"
                 + " = CAST(:concertId AS uuid)";
-    jdbc.update(sql, Map.of("userId", userId, "concertId", concertId));
+    jdbc.update(sql, Map.of(CLE_USER_ID, userId, "concertId", concertId));
   }
 
   /**
@@ -376,7 +379,13 @@ public class SpectacleService {
             WHERE artiste_id = CAST(:artisteId AS uuid) AND date >= :aujourd8
           )
         """,
-        Map.of("userId", userId, "artisteId", artisteId.toString(), "aujourd8", LocalDate.now()));
+        Map.of(
+            CLE_USER_ID,
+            userId,
+            "artisteId",
+            artisteId.toString(),
+            CLE_AUJOURDHUI,
+            LocalDate.now()));
   }
 
   /**
@@ -398,7 +407,13 @@ public class SpectacleService {
             WHERE artiste_id = CAST(:artisteId AS uuid) AND date >= :aujourd8
           )
         """,
-        Map.of("userId", userId, "artisteId", artisteId.toString(), "aujourd8", LocalDate.now()));
+        Map.of(
+            CLE_USER_ID,
+            userId,
+            "artisteId",
+            artisteId.toString(),
+            CLE_AUJOURDHUI,
+            LocalDate.now()));
   }
 
   /**

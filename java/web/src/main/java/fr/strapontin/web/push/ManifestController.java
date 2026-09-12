@@ -34,6 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ManifestController {
 
+  private static final String CLE_NAME = "name";
+  private static final String CLE_ICONS = "icons";
+  private static final String CLE_SRC = "src";
+  private static final String CLE_SIZES = "sizes";
+  private static final String ICON_192 = "/images/icon-192.png";
+  private static final String TAILLE_192 = "192x192";
+
   private final ConfigService configService;
 
   /**
@@ -55,7 +62,7 @@ public class ManifestController {
     final String idBaseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse(baseUrl);
 
     final Map<String, Object> manifest = new LinkedHashMap<>();
-    manifest.put("name", "Strapontin");
+    manifest.put(CLE_NAME, "Strapontin");
     manifest.put("short_name", "Strapontin");
     manifest.put("description", "Concert finder — suivez vos artistes et salles préférés");
     manifest.put("id", idBaseUrl + "/");
@@ -67,7 +74,7 @@ public class ManifestController {
     manifest.put("lang", "fr");
     manifest.put("categories", List.of("entertainment", "lifestyle"));
     manifest.put("launch_handler", Map.of("client_mode", "navigate-existing"));
-    manifest.put("icons", construireIcones());
+    manifest.put(CLE_ICONS, construireIcones());
     manifest.put("shortcuts", construireRaccourcis());
 
     return ResponseEntity.ok().cacheControl(CacheControl.noCache()).body(manifest);
@@ -75,37 +82,50 @@ public class ManifestController {
 
   private static List<Map<String, String>> construireIcones() {
     return List.of(
+        Map.of(CLE_SRC, ICON_192, CLE_SIZES, TAILLE_192, "type", "image/png", "purpose", "any"),
         Map.of(
-            "src", "/images/icon-192.png",
-            "sizes", "192x192",
-            "type", "image/png",
-            "purpose", "any"),
+            CLE_SRC,
+            "/images/icon-512.png",
+            CLE_SIZES,
+            "512x512",
+            "type",
+            "image/png",
+            "purpose",
+            "any"),
         Map.of(
-            "src", "/images/icon-512.png",
-            "sizes", "512x512",
-            "type", "image/png",
-            "purpose", "any"),
-        Map.of(
-            "src", "/images/icon-512.png",
-            "sizes", "512x512",
-            "type", "image/png",
-            "purpose", "maskable"));
+            CLE_SRC,
+            "/images/icon-512.png",
+            CLE_SIZES,
+            "512x512",
+            "type",
+            "image/png",
+            "purpose",
+            "maskable"));
   }
 
   private static List<Map<String, Object>> construireRaccourcis() {
     return List.of(
         Map.of(
-            "name", "Mes spectacles",
-            "url", "/spectacles",
-            "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
+            CLE_NAME,
+            "Mes spectacles",
+            "url",
+            "/spectacles",
+            CLE_ICONS,
+            List.of(Map.of(CLE_SRC, ICON_192, CLE_SIZES, TAILLE_192))),
         Map.of(
-            "name", "Découverte",
-            "url", "/decouverte",
-            "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))),
+            CLE_NAME,
+            "Découverte",
+            "url",
+            "/decouverte",
+            CLE_ICONS,
+            List.of(Map.of(CLE_SRC, ICON_192, CLE_SIZES, TAILLE_192))),
         Map.of(
-            "name", "Nouveaux concerts",
-            "url", "/?nouveau=true",
-            "icons", List.of(Map.of("src", "/images/icon-192.png", "sizes", "192x192"))));
+            CLE_NAME,
+            "Nouveaux concerts",
+            "url",
+            "/?nouveau=true",
+            CLE_ICONS,
+            List.of(Map.of(CLE_SRC, ICON_192, CLE_SIZES, TAILLE_192))));
   }
 
   private static String baseUrlDepuisRequete(final HttpServletRequest request) {

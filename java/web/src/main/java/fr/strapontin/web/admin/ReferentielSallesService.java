@@ -31,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReferentielSallesService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
+  private static final String CLE_CIBLE = "cible";
+  private static final String CLE_SOURCE = "source";
 
   private static final String CTE_SALLES_AGREGEES =
       """
@@ -242,14 +244,14 @@ public class ReferentielSallesService {
     final Long nbExistantes =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salles WHERE id IN (CAST(:cible AS uuid), CAST(:source AS uuid))",
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()),
+            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()),
             Long.class);
     if (nbExistantes == null || nbExistantes < 2) {
       return false;
     }
 
     final Map<String, Object> ids =
-        Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
     fusionnerEvenements(ids);
     fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
@@ -368,7 +370,7 @@ public class ReferentielSallesService {
         jdbc.query(
             "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
                 + " CAST(:cible AS uuid)",
-            Map.of("source", sourceId.toString(), "cible", cibleId.toString()),
+            Map.of(CLE_SOURCE, sourceId.toString(), CLE_CIBLE, cibleId.toString()),
             (rs, _) -> rs.getObject("id", UUID.class));
 
     for (final UUID enfant : enfants) {
@@ -387,7 +389,7 @@ public class ReferentielSallesService {
         jdbc.update(
             "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid) WHERE id = CAST(:id AS"
                 + " uuid)",
-            Map.of("cible", cibleId.toString(), "id", enfant.toString()));
+            Map.of(CLE_CIBLE, cibleId.toString(), "id", enfant.toString()));
       }
     }
   }
@@ -430,12 +432,12 @@ public class ReferentielSallesService {
             JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
             WHERE src.salle_id = CAST(:source AS uuid)
             """,
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
+            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()));
 
     for (final Map<String, Object> conflit : conflits) {
       final boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
       final Map<String, Object> paramsSuppression = new HashMap<>();
-      paramsSuppression.put("source", conflit.get("source"));
+      paramsSuppression.put(CLE_SOURCE, conflit.get(CLE_SOURCE));
       paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
       paramsSuppression.put(
           "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));

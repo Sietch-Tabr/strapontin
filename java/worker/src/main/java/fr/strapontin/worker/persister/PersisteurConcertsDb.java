@@ -52,6 +52,9 @@ public class PersisteurConcertsDb {
   // Tolérance sur l'écart d'heure entre deux observations d'un même événement réel (fiches TM de
   // types différents pour le même évènement) — très en dessous de tout écart matinée/soirée réel.
   private static final int TOLERANCE_HEURE_MINUTES = 3;
+  private static final String CLE_SALLE = "salle";
+  private static final String CLE_DATE = "date";
+  private static final String CLE_HEURE = "heure";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurArtisteParUrl resolveurArtisteParUrl;
@@ -83,7 +86,7 @@ public class PersisteurConcertsDb {
   Map<String, UUID> resoudreUuidsParSource(final List<ValeurConcert> concerts, final String type) {
     final Map<String, List<String>> parSource = new HashMap<>();
     for (final ValeurConcert c : concerts) {
-      final String sourceId = "salle".equals(type) ? c.salleSourceId() : c.artisteSourceId();
+      final String sourceId = CLE_SALLE.equals(type) ? c.salleSourceId() : c.artisteSourceId();
       if (sourceId != null) {
         final int sep = sourceId.indexOf(':');
         if (sep > 0) {
@@ -94,7 +97,7 @@ public class PersisteurConcertsDb {
       }
     }
 
-    final boolean estSalle = "salle".equals(type);
+    final boolean estSalle = CLE_SALLE.equals(type);
     final String sql =
         estSalle
             ? "SELECT salle_id, identifiant_externe FROM salle_sources"
@@ -180,7 +183,7 @@ public class PersisteurConcertsDb {
     final Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
     for (final Map<String, Object> ligne : existants) {
       final CleUrlDate cle =
-          new CleUrlDate((String) ligne.get("url"), ((Date) ligne.get("date")).toLocalDate());
+          new CleUrlDate((String) ligne.get("url"), ((Date) ligne.get(CLE_DATE)).toLocalDate());
       parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
     }
     return parCle;
@@ -194,7 +197,7 @@ public class PersisteurConcertsDb {
     }
     final Set<LocalTime> heuresDistinctes =
         candidats.stream()
-            .map(l -> ((Time) l.get("heure")).toLocalTime())
+            .map(l -> ((Time) l.get(CLE_HEURE)).toLocalTime())
             .collect(Collectors.toSet());
     if (heuresDistinctes.size() != 1) {
       return;
@@ -206,7 +209,7 @@ public class PersisteurConcertsDb {
     final UUID idExistant = (UUID) candidats.get(0).get("id");
     jdbc.update(
         "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
-        Map.of("heure", c.heure(), "id", idExistant.toString()));
+        Map.of(CLE_HEURE, c.heure(), "id", idExistant.toString()));
     LOG.info(
         "report Ticketmaster aligné url={} date={} heure {}->{}",
         c.url(),
@@ -272,8 +275,8 @@ public class PersisteurConcertsDb {
     final MapSqlParameterSource paramsExact =
         new MapSqlParameterSource()
             .addValue("artisteNorm", v.artisteNorm())
-            .addValue("date", v.date(), Types.DATE)
-            .addValue("heure", v.heure(), Types.TIME)
+            .addValue(CLE_DATE, v.date(), Types.DATE)
+            .addValue(CLE_HEURE, v.heure(), Types.TIME)
             .addValue(
                 "salleId", v.salleId() != null ? v.salleId().toString() : null, Types.VARCHAR);
     final List<UUID> exact =
@@ -296,7 +299,7 @@ public class PersisteurConcertsDb {
                           AND o.url ~* '/pack/') AS a_observation_package
             FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
             """,
-            Map.of("salleId", v.salleId().toString(), "date", v.date()));
+            Map.of("salleId", v.salleId().toString(), CLE_DATE, v.date()));
     final boolean entrantPackage = estPackage(v.url());
     for (final Map<String, Object> c : candidats) {
       final UUID candArtisteId = (UUID) c.get("artiste_id");
@@ -309,7 +312,7 @@ public class PersisteurConcertsDb {
       if (!artisteCorrespond) {
         continue;
       }
-      final Time heureSql = (Time) c.get("heure");
+      final Time heureSql = (Time) c.get(CLE_HEURE);
       final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
       final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
       if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
@@ -338,10 +341,10 @@ public class PersisteurConcertsDb {
   private static MapSqlParameterSource paramsCreation(final ValeurConcert v) {
     return new MapSqlParameterSource()
         .addValue("artisteNorm", v.artisteNorm())
-        .addValue("date", v.date(), Types.DATE)
-        .addValue("heure", v.heure(), Types.TIME)
+        .addValue(CLE_DATE, v.date(), Types.DATE)
+        .addValue(CLE_HEURE, v.heure(), Types.TIME)
         .addValue("salleId", v.salleId() != null ? v.salleId().toString() : null)
-        .addValue("salle", v.salle())
+        .addValue(CLE_SALLE, v.salle())
         .addValue("salleNorm", v.salleNorm())
         .addValue("ville", v.ville())
         .addValue("dept", v.dept())
@@ -409,7 +412,7 @@ public class PersisteurConcertsDb {
             .addValue("source", v.source())
             .addValue("url", v.url())
             .addValue("artiste", v.artiste())
-            .addValue("salle", v.salle()));
+            .addValue(CLE_SALLE, v.salle()));
   }
 
   /**

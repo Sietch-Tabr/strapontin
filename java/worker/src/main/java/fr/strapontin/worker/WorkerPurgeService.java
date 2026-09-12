@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 public class WorkerPurgeService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerPurgeService.class);
+  private static final String CLE_SEUIL = "seuil";
 
   // Seuil de purge définitive d'un concert futur jamais reconfirmé — très supérieur au seuil de
   // simple signalement "à vérifier" (WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, une demi-
@@ -100,7 +101,7 @@ public class WorkerPurgeService {
                   "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
                       + " AND suppression_suggeree_le IS NULL",
-                  Map.of("seuil", SEUIL_PURGE_ABSENCES));
+                  Map.of(CLE_SEUIL, SEUIL_PURGE_ABSENCES));
           LOG.info("purger:concerts-non-confirmes terminé signales={}", signales);
           return new ResultatPersistance(0, signales);
         });
@@ -243,15 +244,15 @@ public class WorkerPurgeService {
         "purger:logs-admin",
         () -> {
           final int supprimesLogs =
-              jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of("seuil", seuilLogs));
+              jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of(CLE_SEUIL, seuilLogs));
           final int supprimesHistorique =
               jdbc.update(
                   "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
-                  Map.of("seuil", Timestamp.from(seuilHistorique)));
+                  Map.of(CLE_SEUIL, Timestamp.from(seuilHistorique)));
           final int supprimesVerifications =
               jdbc.update(
                   "DELETE FROM verifications WHERE expires_at < :seuil",
-                  Map.of("seuil", Timestamp.from(seuilVerifications)));
+                  Map.of(CLE_SEUIL, Timestamp.from(seuilVerifications)));
           LOG.info(
               "purger:logs-admin terminé supprimesLogs={} supprimesHistorique={}"
                   + " supprimesVerifications={}",

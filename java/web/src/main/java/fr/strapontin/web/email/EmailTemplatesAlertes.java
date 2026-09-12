@@ -25,6 +25,9 @@ import java.util.stream.Collectors;
  */
 final class EmailTemplatesAlertes {
 
+  private static final String CHEMIN_ADMIN = "/admin";
+  private static final String LIBELLE_ALLER_ADMINISTRATION = "Aller à l'administration →";
+
   private EmailTemplatesAlertes() {}
 
   /**
@@ -63,7 +66,7 @@ final class EmailTemplatesAlertes {
                 horodatageHtml,
                 raisonHtml,
                 EmailTemplates.C_TEXTE,
-                EmailTemplates.bouton(baseUrl + "/admin", "Aller à l'administration →"));
+                EmailTemplates.bouton(baseUrl + CHEMIN_ADMIN, LIBELLE_ALLER_ADMINISTRATION));
     return EmailTemplates.enveloppErreur("Échec du backup nocturne", corps, baseUrl);
   }
 
@@ -120,7 +123,7 @@ final class EmailTemplatesAlertes {
                 EmailTemplates.C_TEXTE,
                 EmailTemplates.e(emailBouncee),
                 EmailTemplates.C_TEXTE,
-                EmailTemplates.bouton(baseUrl + "/admin", "Aller à l'administration →"));
+                EmailTemplates.bouton(baseUrl + CHEMIN_ADMIN, LIBELLE_ALLER_ADMINISTRATION));
     return EmailTemplates.enveloppErreur("Bounce email", corps, baseUrl);
   }
 
@@ -151,7 +154,7 @@ final class EmailTemplatesAlertes {
                 EmailTemplates.C_TEXTE,
                 EmailTemplates.e(emailPlaignant),
                 EmailTemplates.C_TEXTE,
-                EmailTemplates.bouton(baseUrl + "/admin", "Aller à l'administration →"));
+                EmailTemplates.bouton(baseUrl + CHEMIN_ADMIN, LIBELLE_ALLER_ADMINISTRATION));
     return EmailTemplates.enveloppErreur("Plainte spam email", corps, baseUrl);
   }
 
@@ -175,7 +178,7 @@ final class EmailTemplatesAlertes {
                 EmailTemplates.C_TEXTE,
                 EmailTemplates.e(detail),
                 EmailTemplates.C_TEXTE,
-                EmailTemplates.bouton(baseUrl + "/admin", "Aller à l'administration →"));
+                EmailTemplates.bouton(baseUrl + CHEMIN_ADMIN, LIBELLE_ALLER_ADMINISTRATION));
     return EmailTemplates.enveloppErreur("Worker inactif", corps, baseUrl);
   }
 
@@ -213,7 +216,7 @@ final class EmailTemplatesAlertes {
                 limiteJour,
                 envoyesMois,
                 limiteMois,
-                EmailTemplates.bouton(baseUrl + "/admin", "Aller à l'administration →"));
+                EmailTemplates.bouton(baseUrl + CHEMIN_ADMIN, LIBELLE_ALLER_ADMINISTRATION));
     return EmailTemplates.enveloppErreur("Quota Resend proche de la limite", corps, baseUrl);
   }
 
@@ -259,7 +262,7 @@ final class EmailTemplatesAlertes {
                 EmailTemplates.C_TEXTE,
                 erreurs.size(),
                 lignesHtml,
-                EmailTemplates.bouton(baseUrl + "/admin", "Voir les logs admin →"));
+                EmailTemplates.bouton(baseUrl + CHEMIN_ADMIN, "Voir les logs admin →"));
     return EmailTemplates.enveloppErreur("Nouvelles erreurs — logs admin", corps, baseUrl);
   }
 }

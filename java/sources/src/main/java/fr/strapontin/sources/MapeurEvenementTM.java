@@ -23,6 +23,8 @@ final class MapeurEvenementTM {
 
   private static final Logger LOG = LoggerFactory.getLogger(MapeurEvenementTM.class);
   private static final String CLE_EMBEDDED = "_embedded";
+  private static final String CLE_NAME = "name";
+  private static final String UNCHECKED = "unchecked";
 
   private static final Map<String, String> CLASSIFICATION_MAP =
       Map.of(
@@ -100,7 +102,7 @@ final class MapeurEvenementTM {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static String extraireArtisteTM(
       final Map<String, Object> evt,
       final Map<String, Object> embedded,
@@ -109,7 +111,7 @@ final class MapeurEvenementTM {
         embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
     final String nomAttraction =
         attractions != null && !attractions.isEmpty()
-            ? (String) attractions.get(0).get("name")
+            ? (String) attractions.get(0).get(CLE_NAME)
             : null;
     if (nomAttraction != null) {
       // Si la recherche était par nom d'artiste, rejeter les attractions dont le nom normalisé
@@ -124,7 +126,7 @@ final class MapeurEvenementTM {
     if (artisteFallback == null) {
       return null;
     }
-    final String nomEvenement = (String) evt.get("name");
+    final String nomEvenement = (String) evt.get(CLE_NAME);
     if (nomEvenement != null
         && nomEvenement.toLowerCase().contains(artisteFallback.toLowerCase())) {
       return artisteFallback;
@@ -132,7 +134,7 @@ final class MapeurEvenementTM {
     return null;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static String extraireAttractionIdTM(final Map<String, Object> embedded) {
     final List<Map<String, Object>> attractions =
         embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
@@ -143,7 +145,7 @@ final class MapeurEvenementTM {
     return id != null ? "ticketmaster:" + id : null;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static String[] extraireClassificationTM(
       final List<Map<String, Object>> classificationsData) {
     if (classificationsData == null || classificationsData.isEmpty()) {
@@ -152,10 +154,10 @@ final class MapeurEvenementTM {
     final Map<String, String> segment =
         (Map<String, String>) classificationsData.get(0).get("segment");
     final String segmentNom =
-        segment != null && segment.get("name") != null ? segment.get("name").toLowerCase() : null;
+        segment != null && segment.get(CLE_NAME) != null ? segment.get(CLE_NAME).toLowerCase() : null;
     final Map<String, String> genreMap =
         (Map<String, String>) classificationsData.get(0).get("genre");
-    final String genre = genreMap != null ? genreMap.get("name") : null;
+    final String genre = genreMap != null ? genreMap.get(CLE_NAME) : null;
     return new String[] {segmentNom, genre};
   }
 
@@ -171,17 +173,17 @@ final class MapeurEvenementTM {
 
   private static String extraireNomSalleTM(final Map<String, Object> venue) {
     return Normalisation.normaliserCasse(
-        venue != null && venue.get("name") != null ? (String) venue.get("name") : "Salle inconnue");
+        venue != null && venue.get(CLE_NAME) != null ? (String) venue.get(CLE_NAME) : "Salle inconnue");
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static String extraireVilleTM(final Map<String, Object> venue) {
     final Map<String, String> cityMap =
         venue != null ? (Map<String, String>) venue.get("city") : null;
-    return cityMap != null ? cityMap.get("name") : null;
+    return cityMap != null ? cityMap.get(CLE_NAME) : null;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static String extraireDeptTM(final Map<String, Object> venue) {
     // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
     // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
@@ -210,7 +212,7 @@ final class MapeurEvenementTM {
   // "offsale" recouvre deux situations distinctes chez TM : un concert réellement complet, ou
   // une vente qui n'a simplement pas encore ouvert (prévente à venir, ou vente publique future) —
   // seule la seconde doit être requalifiée en "presale" plutôt que rester "offsale" à tort.
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static InfosVenteTM extraireInfosVenteTM(
       final Map<String, Object> dates, final Map<String, Object> evt) {
     final Map<String, String> statusMap = (Map<String, String>) dates.get("status");
@@ -222,7 +224,7 @@ final class MapeurEvenementTM {
     final Map<String, Object> presale =
         presales != null && !presales.isEmpty() ? presales.get(0) : null;
     String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
-    final String presaleNom = presale != null ? (String) presale.get("name") : null;
+    final String presaleNom = presale != null ? (String) presale.get(CLE_NAME) : null;
 
     if ("offsale".equals(statut)) {
       final String presaleRequalifiee = requalifierOffsaleEnPresale(sales, presaleDebut);
@@ -243,7 +245,7 @@ final class MapeurEvenementTM {
    * @return la date de début à utiliser pour la prévente si une requalification s'applique, {@code
    *     null} sinon (le statut "offsale" reste inchangé)
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static String requalifierOffsaleEnPresale(
       final Map<String, Object> sales, final String presaleDebut) {
     if (presaleDebut != null && estDansLeFutur(presaleDebut)) {
@@ -258,7 +260,7 @@ final class MapeurEvenementTM {
         : null;
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings(UNCHECKED)
   private static ConcertBrut parseEvenementTM(
       final Map<String, Object> evt, final String artisteFallback) {
     final Map<String, Object> dates = (Map<String, Object>) evt.get("dates");

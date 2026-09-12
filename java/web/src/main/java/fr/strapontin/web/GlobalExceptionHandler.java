@@ -38,6 +38,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+  private static final String CLE_ERREUR = "erreur";
 
   private final LogAdminService logAdminService;
 
@@ -56,7 +57,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(ErreurMetier.class)
   public ResponseEntity<Map<String, Object>> gererErreurMetier(final ErreurMetier ex) {
-    return ResponseEntity.status(ex.getStatus()).body(Map.of("erreur", ex.getMessage()));
+    return ResponseEntity.status(ex.getStatus()).body(Map.of(CLE_ERREUR, ex.getMessage()));
   }
 
   /**
@@ -68,7 +69,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(RessourceDejaExistante.class)
   @ResponseStatus(HttpStatus.CONFLICT)
   public Map<String, Object> gererRessourceDejaExistante(final RessourceDejaExistante ex) {
-    return Map.of("erreur", ex.getMessage());
+    return Map.of(CLE_ERREUR, ex.getMessage());
   }
 
   /**
@@ -85,7 +86,7 @@ public class GlobalExceptionHandler {
             .map(FieldError::getDefaultMessage)
             .findFirst()
             .orElse("Données invalides.");
-    return Map.of("erreur", message);
+    return Map.of(CLE_ERREUR, message);
   }
 
   /**
@@ -98,7 +99,7 @@ public class GlobalExceptionHandler {
   @ResponseStatus(HttpStatus.CONFLICT)
   public Map<String, Object> gererDoublon(final DuplicateKeyException ex) {
     LOG.debug("Contrainte d'unicité violée : {}", ex.getMessage());
-    return Map.of("erreur", "Cette ressource existe déjà.");
+    return Map.of(CLE_ERREUR, "Cette ressource existe déjà.");
   }
 
   /**
@@ -110,7 +111,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(NoResourceFoundException.class)
   @ResponseStatus(HttpStatus.NOT_FOUND)
   public Map<String, Object> gererRessourceIntrouvable(final NoResourceFoundException ex) {
-    return Map.of("erreur", "Ressource introuvable.");
+    return Map.of(CLE_ERREUR, "Ressource introuvable.");
   }
 
   /**
@@ -123,7 +124,7 @@ public class GlobalExceptionHandler {
   @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
   public Map<String, Object> gererMethodeNonSupportee(
       final HttpRequestMethodNotSupportedException ex) {
-    return Map.of("erreur", "Méthode non supportée.");
+    return Map.of(CLE_ERREUR, "Méthode non supportée.");
   }
 
   /**
@@ -135,7 +136,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(AuthenticationException.class)
   @ResponseStatus(HttpStatus.UNAUTHORIZED)
   public Map<String, Object> gererErreurAuthentification(final AuthenticationException ex) {
-    return Map.of("erreur", "Authentification requise.");
+    return Map.of(CLE_ERREUR, "Authentification requise.");
   }
 
   /**
@@ -151,7 +152,7 @@ public class GlobalExceptionHandler {
       final DataAccessException ex, final HttpServletRequest request) {
     LOG.error("Erreur d'accès aux données", ex);
     logErreurServeur(request, ex);
-    return Map.of("erreur", "Erreur de base de données.");
+    return Map.of(CLE_ERREUR, "Erreur de base de données.");
   }
 
   /**
@@ -167,7 +168,7 @@ public class GlobalExceptionHandler {
       final Exception ex, final HttpServletRequest request) {
     LOG.error("Erreur inattendue", ex);
     logErreurServeur(request, ex);
-    return Map.of("erreur", "Une erreur inattendue s'est produite.");
+    return Map.of(CLE_ERREUR, "Une erreur inattendue s'est produite.");
   }
 
   private void logErreurServeur(final HttpServletRequest request, final Exception ex) {

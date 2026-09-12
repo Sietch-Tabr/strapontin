@@ -18,8 +18,8 @@ import org.springframework.stereotype.Repository;
 /**
  * Accès aux données pour les artistes suivis ({@code user_artistes}).
  *
- * <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité) appartiennent à
- * {@link ArtisteService}.
+ * <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité) appartiennent à {@link
+ * ArtisteService}.
  *
  * @since 2.1.0
  * @author Kwaite
@@ -28,6 +28,7 @@ import org.springframework.stereotype.Repository;
 class ArtisteRepository {
 
   private static final String CLE_USER_ID = "userId";
+  private static final String CLE_ARTISTE_ID = "artisteId";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -78,7 +79,7 @@ class ArtisteRepository {
   /**
    * Vérifie si un artiste est déjà suivi par l'utilisateur.
    *
-   * @param userId    identifiant de l'utilisateur
+   * @param userId identifiant de l'utilisateur
    * @param artisteId UUID stable de l'artiste
    * @return {@code true} si déjà présent
    */
@@ -88,7 +89,7 @@ class ArtisteRepository {
             SELECT 1 FROM user_artistes
             WHERE user_id = :userId AND artiste_id = CAST(:artisteId AS uuid)
             """,
-            Map.of(CLE_USER_ID, userId, "artisteId", artisteId.toString()),
+            Map.of(CLE_USER_ID, userId, CLE_ARTISTE_ID, artisteId.toString()),
             Integer.class)
         .isEmpty();
   }
@@ -109,9 +110,9 @@ class ArtisteRepository {
   }
 
   /**
-   * Recherche les artistes du référentiel dont le {@code nom_norm} partage au moins un des
-   * tokens fournis — pré-filtre SQL avant application de la correspondance floue
-   * ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
+   * Recherche les artistes du référentiel dont le {@code nom_norm} partage au moins un des tokens
+   * fournis — pré-filtre SQL avant application de la correspondance floue ({@code
+   * CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
    *
    * @param tokens tokens significatifs (≥3 caractères) du nom recherché
    * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
@@ -143,8 +144,8 @@ class ArtisteRepository {
   /**
    * Insère ou récupère un artiste dans le référentiel global et retourne son UUID stable.
    *
-   * @param nom      nom affiché
-   * @param nomNorm  nom normalisé (clé unique)
+   * @param nom nom affiché
+   * @param nomNorm nom normalisé (clé unique)
    * @return UUID stable de l'artiste (existant ou nouvellement créé)
    */
   UUID upsertArtiste(final String nom, final String nomNorm) {
@@ -162,8 +163,8 @@ class ArtisteRepository {
   /**
    * Insère un artiste dans la liste de suivi.
    *
-   * @param userId    identifiant de l'utilisateur
-   * @param nom       nom affiché
+   * @param userId identifiant de l'utilisateur
+   * @param nom nom affiché
    * @param artisteId UUID stable de l'artiste dans le référentiel global
    */
   void ajouter(final String userId, final String nom, final UUID artisteId) {
@@ -172,14 +173,14 @@ class ArtisteRepository {
         INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
         VALUES (:userId, :nom, CAST(:artisteId AS uuid))
         """,
-        Map.of(CLE_USER_ID, userId, "nom", nom, "artisteId", artisteId.toString()));
+        Map.of(CLE_USER_ID, userId, "nom", nom, CLE_ARTISTE_ID, artisteId.toString()));
   }
 
   /**
    * Enregistre une correspondance source externe → artiste interne.
    *
-   * @param artisteId          UUID stable de l'artiste
-   * @param source             nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
+   * @param artisteId UUID stable de l'artiste
+   * @param source nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
    * @param identifiantExterne identifiant dans la source externe
    */
   void enregistrerArtisteSource(
@@ -191,21 +192,23 @@ class ArtisteRepository {
         ON CONFLICT DO NOTHING
         """,
         Map.of(
-            "artisteId", artisteId.toString(),
-            "source", source,
-            "identifiantExterne", identifiantExterne));
+            CLE_ARTISTE_ID,
+            artisteId.toString(),
+            "source",
+            source,
+            "identifiantExterne",
+            identifiantExterne));
   }
 
   /**
-   * Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents — ne
-   * touche jamais une valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever
-   * {@link org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) —
-   * à la charge de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon
-   * 2.6.0).
+   * Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents — ne touche jamais une
+   * valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever {@link
+   * org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) — à la charge
+   * de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon 2.6.0).
    *
    * @param artisteId UUID stable de l'artiste
    * @param wikidataId Q-ID Wikidata (peut être {@code null})
-   * @param deezerId   identifiant Deezer (peut être {@code null})
+   * @param deezerId identifiant Deezer (peut être {@code null})
    */
   void mettreAJourIdsWikidata(
       final UUID artisteId, final String wikidataId, final String deezerId) {
@@ -226,7 +229,7 @@ class ArtisteRepository {
   /**
    * Supprime un artiste de la liste de suivi.
    *
-   * @param userId    identifiant de l'utilisateur
+   * @param userId identifiant de l'utilisateur
    * @param artisteId UUID stable de l'artiste à supprimer
    * @return le nombre de lignes réellement supprimées (0 si l'artiste n'était pas suivi)
    */
@@ -236,6 +239,6 @@ class ArtisteRepository {
         DELETE FROM user_artistes
         WHERE user_id = :userId AND artiste_id = CAST(:artisteId AS uuid)
         """,
-        Map.of(CLE_USER_ID, userId, "artisteId", artisteId.toString()));
+        Map.of(CLE_USER_ID, userId, CLE_ARTISTE_ID, artisteId.toString()));
   }
 }

@@ -27,6 +27,7 @@ class SourcesSallesListingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SourcesSallesListingService.class);
   private static final int TAILLE_PAGE_SALLES = 50;
+  private static final String CLE_NOM = "nom";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -57,7 +58,7 @@ class SourcesSallesListingService {
     final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND s.nom ILIKE :nom ");
-      params.put("nom", "%" + nom.strip() + "%");
+      params.put(CLE_NOM, "%" + nom.strip() + "%");
     }
     params.put("taille", TAILLE_PAGE_SALLES);
     params.put("offset", pageNum * TAILLE_PAGE_SALLES);
@@ -76,7 +77,7 @@ class SourcesSallesListingService {
               total[0] = rs.getLong("total_filtre");
               return new SalleSourceAdmin(
                   rs.getObject("id", UUID.class),
-                  rs.getString("nom"),
+                  rs.getString(CLE_NOM),
                   rs.getString("digitick_slug"),
                   rs.getString("ville"),
                   rs.getString("dept"));
@@ -102,7 +103,7 @@ class SourcesSallesListingService {
     final Map<String, Object> params = new HashMap<>();
     if (nom != null && !nom.isBlank()) {
       where.append(" AND s.nom ILIKE :nom ");
-      params.put("nom", "%" + nom.strip() + "%");
+      params.put(CLE_NOM, "%" + nom.strip() + "%");
     }
     params.put("taille", TAILLE_PAGE_SALLES);
     params.put("offset", pageNum * TAILLE_PAGE_SALLES);
@@ -144,7 +145,7 @@ class SourcesSallesListingService {
               total[0] = rs.getLong("total_filtre");
               return new SalleSourceAdmin(
                   rs.getObject("id", UUID.class),
-                  rs.getString("nom"),
+                  rs.getString(CLE_NOM),
                   rs.getString("digitick_slug"),
                   rs.getString("ville"),
                   rs.getString("dept"));

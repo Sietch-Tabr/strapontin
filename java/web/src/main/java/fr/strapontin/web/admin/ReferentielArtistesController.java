@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class ReferentielArtistesController {
 
+  private static final String MESSAGE_UUID_ARTISTE_INVALIDE = "UUID d'artiste invalide.";
+  private static final String CLE_SUCCES = "succes";
+
   private final ReferentielArtistesService service;
 
   /**
@@ -73,13 +76,13 @@ public class ReferentielArtistesController {
       @PathVariable final String uuid, @Valid @RequestBody final RequeteNomAffiche corps) {
     final UUID id = parseUuid(uuid);
     if (id == null) {
-      return erreur(400, "UUID d'artiste invalide.");
+      return erreur(400, MESSAGE_UUID_ARTISTE_INVALIDE);
     }
     final boolean maj = service.modifierNomAffiche(id, corps.nomAffiche());
     if (!maj) {
       return erreur(404, "Artiste inconnu.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -95,13 +98,13 @@ public class ReferentielArtistesController {
       @PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
     if (id == null) {
-      return erreur(400, "UUID d'artiste invalide.");
+      return erreur(400, MESSAGE_UUID_ARTISTE_INVALIDE);
     }
     final boolean maj = service.reinitialiserEnrichissement(id);
     if (!maj) {
       return erreur(404, "Artiste inconnu.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -115,13 +118,13 @@ public class ReferentielArtistesController {
   public ResponseEntity<Map<String, Object>> ignorerIntervention(@PathVariable final String uuid) {
     final UUID id = parseUuid(uuid);
     if (id == null) {
-      return erreur(400, "UUID d'artiste invalide.");
+      return erreur(400, MESSAGE_UUID_ARTISTE_INVALIDE);
     }
     final boolean maj = service.ignorerIntervention(id);
     if (!maj) {
       return erreur(404, "Artiste inconnu.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -138,13 +141,13 @@ public class ReferentielArtistesController {
       @PathVariable final String uuid, @Valid @RequestBody final RequeteIdentifiantTm corps) {
     final UUID id = parseUuid(uuid);
     if (id == null) {
-      return erreur(400, "UUID d'artiste invalide.");
+      return erreur(400, MESSAGE_UUID_ARTISTE_INVALIDE);
     }
     final boolean maj = service.corrigerIdentifiantTm(id, corps.identifiantExterne());
     if (!maj) {
       return erreur(404, "Artiste inconnu ou sans source Ticketmaster.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -169,6 +172,6 @@ public class ReferentielArtistesController {
     if (!fusionne) {
       return erreur(404, "Artiste source ou cible inconnu.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 }

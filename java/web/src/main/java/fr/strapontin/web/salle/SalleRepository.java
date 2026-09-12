@@ -31,6 +31,9 @@ import org.springframework.stereotype.Repository;
 class SalleRepository {
 
   private static final String CLE_USER_ID = "userId";
+  private static final String CLE_NOM = "nom";
+  private static final String CLE_SALLE_ID = "salleId";
+  private static final String CLE_UUID = "uuid";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -64,20 +67,23 @@ class SalleRepository {
         (rs, _) ->
             new SalleUtilisateur(
                 rs.getObject("id", UUID.class),
-                rs.getString("nom"),
+                rs.getString(CLE_NOM),
                 rs.getTimestamp("created_at").toInstant(),
                 rs.getBoolean("a_digitick")));
   }
 
   /**
-   * Recherche des salles dans les concerts existants, le référentiel Digitick et les salles
-   * connues avec concerts.
+   * Recherche des salles dans les concerts existants, le référentiel Digitick et les salles connues
+   * avec concerts.
    *
-   * <p>Union de trois sources : <ol>
+   * <p>Union de trois sources :
+   *
+   * <ol>
    *   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern
    *   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern
    *   <li>Salles connues avec concerts ({@code salle_id IS NOT NULL}) — évite un appel TM inutile
-   *       et permet à {@code estMemeSalle} de filtrer les doublons de venueId </ol>
+   *       et permet à {@code estMemeSalle} de filtrer les doublons de venueId
+   * </ol>
    *
    * @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
    * @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
@@ -120,7 +126,7 @@ class SalleRepository {
             SELECT 1 FROM user_salles
             WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)
             """,
-            Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()),
+            Map.of(CLE_USER_ID, userId, CLE_SALLE_ID, salleId.toString()),
             Integer.class)
         .isEmpty();
   }
@@ -146,7 +152,7 @@ class SalleRepository {
    * CorrespondanceSalle.estDoublonSalle} sur {@code nom}, non exprimable en SQL).
    *
    * @param tokens clés normalisées ({@code SalleService.normaliserSalleCle}) des mots du nom
-   *   recherché, filtrées aux tokens d'au moins 3 caractères
+   *     recherché, filtrées aux tokens d'au moins 3 caractères
    * @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
    */
   List<Map<String, Object>> chercherCandidatsParCle(final Set<String> tokens) {
@@ -183,7 +189,7 @@ class SalleRepository {
   UUID upsertSalle(final String salleCle, final String nom) {
     final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
-    params.put("nom", nom);
+    params.put(CLE_NOM, nom);
     params.put("nomNorm", Normalisation.normaliserTexte(nom));
     return jdbc.queryForObject(
         """
@@ -211,7 +217,7 @@ class SalleRepository {
       final String salleCle, final String nom, final String ville, final String dept) {
     final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
-    params.put("nom", nom);
+    params.put(CLE_NOM, nom);
     params.put("nomNorm", Normalisation.normaliserTexte(nom));
     params.put("ville", ville);
     params.put("dept", dept);
@@ -232,9 +238,9 @@ class SalleRepository {
   /**
    * Met à jour le nom, la ville et le CP d'une salle existante.
    *
-   * <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via cette
-   * méthode laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching
-   * Wikidata/Overpass pour cette salle.
+   * <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via cette méthode
+   * laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching Wikidata/Overpass
+   * pour cette salle.
    *
    * @param salleId UUID de la salle
    * @param nom nouveau nom (null = inchangé)
@@ -244,8 +250,8 @@ class SalleRepository {
   void mettreAJourSalle(
       final UUID salleId, final String nom, final String ville, final String dept) {
     final MapSqlParameterSource params = new MapSqlParameterSource();
-    params.addValue("uuid", salleId.toString());
-    params.addValue("nom", nom);
+    params.addValue(CLE_UUID, salleId.toString());
+    params.addValue(CLE_NOM, nom);
     params.addValue("nomNorm", nom != null ? Normalisation.normaliserTexte(nom) : null);
     params.addValue("ville", ville);
     params.addValue("dept", dept);
@@ -266,9 +272,9 @@ class SalleRepository {
    *
    * <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
    * préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur canonique
-   * de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle}
-   * n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait
-   * jamais rien (mismatch silencieux, aucune exception).
+   * de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle} n'accepte
+   * que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait jamais rien
+   * (mismatch silencieux, aucune exception).
    *
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucune source connue
@@ -277,12 +283,12 @@ class SalleRepository {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT source, identifiant_externe
-                FROM salle_sources
-                WHERE salle_id = CAST(:uuid AS uuid)
-                ORDER BY source
-                """,
-            Map.of("uuid", salleId.toString()));
+            SELECT source, identifiant_externe
+            FROM salle_sources
+            WHERE salle_id = CAST(:uuid AS uuid)
+            ORDER BY source
+            """,
+            Map.of(CLE_UUID, salleId.toString()));
     if (lignes.isEmpty()) {
       return null;
     }
@@ -306,20 +312,20 @@ class SalleRepository {
     final int nb =
         jdbc.update(
             """
-                DELETE FROM salles
-                WHERE id = CAST(:uuid AS uuid)
-                  AND NOT EXISTS (
-                      SELECT 1 FROM user_salles WHERE salle_id = CAST(:uuid AS uuid))
-                  AND NOT EXISTS (
-                      SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
-                """,
-            Map.of("uuid", salleId.toString()));
+            DELETE FROM salles
+            WHERE id = CAST(:uuid AS uuid)
+              AND NOT EXISTS (
+                  SELECT 1 FROM user_salles WHERE salle_id = CAST(:uuid AS uuid))
+              AND NOT EXISTS (
+                  SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
+            """,
+            Map.of(CLE_UUID, salleId.toString()));
     return nb > 0;
   }
 
   /**
-   * Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur déjà
-   * résolue par le job nocturne ({@code COALESCE}). Peut lever {@link
+   * Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur déjà résolue
+   * par le job nocturne ({@code COALESCE}). Peut lever {@link
    * org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à la charge
    * de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
    *
@@ -332,7 +338,7 @@ class SalleRepository {
         UPDATE salles SET wikidata_id = COALESCE(wikidata_id, :wikidataId)
         WHERE id = CAST(:uuid AS uuid)
         """,
-        Map.of("uuid", salleId.toString(), "wikidataId", wikidataId));
+        Map.of(CLE_UUID, salleId.toString(), "wikidataId", wikidataId));
   }
 
   /**
@@ -348,14 +354,14 @@ class SalleRepository {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-                SELECT COALESCE(s.nom_affiche, s.nom) AS nom
-                FROM salle_sources ss
-                JOIN salles s ON s.id = ss.salle_id
-                WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
-                  AND ss.salle_id != CAST(:uuid AS uuid)
-                """,
-            Map.of("slug", slug, "uuid", exclureSalleId.toString()));
-    return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get("nom"));
+            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
+            FROM salle_sources ss
+            JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
+              AND ss.salle_id != CAST(:uuid AS uuid)
+            """,
+            Map.of("slug", slug, CLE_UUID, exclureSalleId.toString()));
+    return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get(CLE_NOM));
   }
 
   /**
@@ -374,9 +380,12 @@ class SalleRepository {
         ON CONFLICT DO NOTHING
         """,
         Map.of(
-            "salleId", salleId.toString(),
-            "source", source,
-            "identifiantExterne", identifiantExterne));
+            CLE_SALLE_ID,
+            salleId.toString(),
+            "source",
+            source,
+            "identifiantExterne",
+            identifiantExterne));
   }
 
   /**
@@ -391,7 +400,7 @@ class SalleRepository {
         INSERT INTO user_salles (user_id, salle_id)
         VALUES (:userId, CAST(:salleId AS uuid))
         """,
-        Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
+        Map.of(CLE_USER_ID, userId, CLE_SALLE_ID, salleId.toString()));
   }
 
   /**
@@ -407,6 +416,6 @@ class SalleRepository {
         DELETE FROM user_salles
         WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)
         """,
-        Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
+        Map.of(CLE_USER_ID, userId, CLE_SALLE_ID, salleId.toString()));
   }
 }

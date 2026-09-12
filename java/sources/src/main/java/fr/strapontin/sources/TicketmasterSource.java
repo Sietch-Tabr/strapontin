@@ -65,6 +65,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   public static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
   private static final String CHEMIN_EVENTS = "/events.json";
   private static final String TRI_DATE_ASC = "date,asc";
+  private static final String PARAM_SIZE = "size";
+  private static final String PARAM_SORT = "sort";
+  private static final String PARAM_START_DATE_TIME = "startDateTime";
 
   private final String apiKey;
   private final RestClient restClient;
@@ -285,9 +288,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("keyword", nom)
             .queryParam("classificationName", CLASSIFICATIONS.toArray())
-            .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", TRI_DATE_ASC)
-            .queryParam("startDateTime", fenetre.debut());
+            .queryParam(PARAM_SIZE, TAILLE_PAGE_REGION)
+            .queryParam(PARAM_SORT, TRI_DATE_ASC)
+            .queryParam(PARAM_START_DATE_TIME, fenetre.debut());
 
     final TicketmasterPageFetcher.ResultatPage resultat = pageFetcher.fetchPage(uriBase, 0, nom);
     if (resultat.quota() != null) {
@@ -320,9 +323,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("venueId", venueId)
-            .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", TRI_DATE_ASC)
-            .queryParam("startDateTime", fenetre.debut())
+            .queryParam(PARAM_SIZE, TAILLE_PAGE_REGION)
+            .queryParam(PARAM_SORT, TRI_DATE_ASC)
+            .queryParam(PARAM_START_DATE_TIME, fenetre.debut())
             .queryParam("endDateTime", fenetre.fin());
 
     final TicketmasterPageFetcher.ResultatMultiPage resultat =
@@ -367,9 +370,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     final UriComponentsBuilder uriBase =
         UriComponentsBuilder.fromUriString(BASE_URL + CHEMIN_EVENTS)
             .queryParam("attractionId", String.join(",", attractionIds))
-            .queryParam("size", TAILLE_PAGE_REGION)
-            .queryParam("sort", TRI_DATE_ASC)
-            .queryParam("startDateTime", fenetre.debut());
+            .queryParam(PARAM_SIZE, TAILLE_PAGE_REGION)
+            .queryParam(PARAM_SORT, TRI_DATE_ASC)
+            .queryParam(PARAM_START_DATE_TIME, fenetre.debut());
 
     final TicketmasterPageFetcher.ResultatMultiPage resultat =
         pageFetcher.fetchToutesPages(uriBase, null, "lot");
@@ -476,9 +479,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
                 .queryParam("radius", centre.rayon())
                 .queryParam("unit", "km")
                 .queryParam("classificationName", classifs.toArray())
-                .queryParam("size", TAILLE_PAGE_REGION)
-                .queryParam("sort", TRI_DATE_ASC)
-                .queryParam("startDateTime", fenetre.debut())
+                .queryParam(PARAM_SIZE, TAILLE_PAGE_REGION)
+                .queryParam(PARAM_SORT, TRI_DATE_ASC)
+                .queryParam(PARAM_START_DATE_TIME, fenetre.debut())
                 .queryParam("endDateTime", fenetre.fin());
 
         tous.addAll(pageFetcher.fetchToutesPages(uriBase, null, "dept=" + dept).concerts());

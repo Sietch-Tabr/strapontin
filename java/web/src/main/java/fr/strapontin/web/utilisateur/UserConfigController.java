@@ -32,6 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/user/config")
 public class UserConfigController {
 
+  private static final String CLE_SUCCES = "succes";
+
   private final UserConfigService userConfigService;
 
   /**
@@ -73,7 +75,7 @@ public class UserConfigController {
         userConfigService.majDepartements(userId, bruts);
 
     final Map<String, Object> rep = new HashMap<>();
-    rep.put("succes", "departements");
+    rep.put(CLE_SUCCES, "departements");
     if (!resultat.ignores().isEmpty()) {
       rep.put("ignores", resultat.ignores());
     }
@@ -92,7 +94,7 @@ public class UserConfigController {
       @Valid @RequestBody final RequeteNotifications requete, final Authentication auth) {
     final String userId = utilisateur(auth).id();
     userConfigService.majNotifications(userId, requete);
-    return ResponseEntity.ok(Map.of("succes", "notifications"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, "notifications"));
   }
 
   /**
@@ -107,7 +109,7 @@ public class UserConfigController {
       @Valid @RequestBody final RequeteFiltres requete, final Authentication auth) {
     final String userId = utilisateur(auth).id();
     userConfigService.majFiltres(userId, requete.filtreDisponibles());
-    return ResponseEntity.ok(Map.of("succes", "filtres"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, "filtres"));
   }
 
   /**
@@ -122,7 +124,7 @@ public class UserConfigController {
       @Valid @RequestBody final RequeteTheme requete, final Authentication auth) {
     final String userId = utilisateur(auth).id();
     userConfigService.majTheme(userId, requete.valeur());
-    return ResponseEntity.ok(Map.of("succes", "theme", "theme", requete.valeur()));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, "theme", "theme", requete.valeur()));
   }
 
   /**

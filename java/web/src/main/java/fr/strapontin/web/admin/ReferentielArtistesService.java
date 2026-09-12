@@ -39,6 +39,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReferentielArtistesService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
+  private static final String NIVEAU_INFO = "info";
+  private static final String SOURCE_ADMIN = "admin";
+  private static final String CLE_ARTISTE_ID = "artisteId";
+  private static final String CLE_SOURCE = "source";
 
   private static final String CTE_ARTISTES_AGREGES =
       """
@@ -188,10 +192,10 @@ public class ReferentielArtistesService {
             Map.of("id", artisteId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
-          "info",
-          "admin",
+          NIVEAU_INFO,
+          SOURCE_ADMIN,
           "enrichissement artiste réinitialisé",
-          Map.of("artisteId", artisteId.toString()));
+          Map.of(CLE_ARTISTE_ID, artisteId.toString()));
     }
     return nb > 0;
   }
@@ -220,10 +224,10 @@ public class ReferentielArtistesService {
             Map.of("id", artisteId.toString()));
     if (nb > 0) {
       logAdminService.logAdmin(
-          "info",
-          "admin",
+          NIVEAU_INFO,
+          SOURCE_ADMIN,
           "intervention ignorée artiste=" + artisteId,
-          Map.of("artisteId", artisteId.toString()));
+          Map.of(CLE_ARTISTE_ID, artisteId.toString()));
     }
     return nb > 0;
   }
@@ -253,10 +257,10 @@ public class ReferentielArtistesService {
             Map.of("id", artisteId.toString(), "identifiant", identifiantExterne.strip()));
     if (nb > 0) {
       logAdminService.logAdmin(
-          "info",
-          "admin",
+          NIVEAU_INFO,
+          SOURCE_ADMIN,
           "identifiant TM corrigé artiste=" + artisteId,
-          Map.of("artisteId", artisteId.toString(), "identifiantExterne", identifiantExterne));
+          Map.of(CLE_ARTISTE_ID, artisteId.toString(), "identifiantExterne", identifiantExterne));
     }
     return nb > 0;
   }
@@ -296,14 +300,14 @@ public class ReferentielArtistesService {
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM artistes WHERE id IN (CAST(:cible AS uuid), CAST(:source AS"
                 + " uuid))",
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()),
+            Map.of("cible", cibleId.toString(), CLE_SOURCE, sourceId.toString()),
             Long.class);
     if (nbExistants == null || nbExistants < 2) {
       return false;
     }
 
     final Map<String, Object> ids =
-        Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+        Map.of("cible", cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
     fusionnerEvenementsArtiste(ids);
     fusionnerAbonnementsEtSourcesArtiste(ids, cibleId, sourceId);
@@ -312,7 +316,7 @@ public class ReferentielArtistesService {
     jdbc.update("DELETE FROM artistes WHERE id = CAST(:source AS uuid)", ids);
 
     logAdminService.logAdmin(
-        "info", "admin", "fusion artiste cible=" + cibleId + " source=" + sourceId);
+        NIVEAU_INFO, SOURCE_ADMIN, "fusion artiste cible=" + cibleId + " source=" + sourceId);
     return true;
   }
 
@@ -428,13 +432,14 @@ public class ReferentielArtistesService {
             JOIN artiste_sources dst ON dst.source = src.source AND dst.artiste_id = CAST(:cible AS uuid)
             WHERE src.artiste_id = CAST(:source AS uuid)
             """,
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
+            Map.of("cible", cibleId.toString(), CLE_SOURCE, sourceId.toString()));
 
     for (final Map<String, Object> conflit : conflits) {
       final boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
       final Map<String, Object> paramsSuppression = new HashMap<>();
-      paramsSuppression.put("source", conflit.get("source"));
-      paramsSuppression.put("artisteId", garderSource ? cibleId.toString() : sourceId.toString());
+      paramsSuppression.put(CLE_SOURCE, conflit.get(CLE_SOURCE));
+      paramsSuppression.put(
+          CLE_ARTISTE_ID, garderSource ? cibleId.toString() : sourceId.toString());
       paramsSuppression.put(
           "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));
       jdbc.update(

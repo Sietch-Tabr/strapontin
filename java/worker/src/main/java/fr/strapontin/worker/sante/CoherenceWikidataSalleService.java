@@ -71,15 +71,16 @@ public class CoherenceWikidataSalleService {
 
   // Quartiers/districts informels ne correspondant à aucune commune administrative, rattachés à
   // une ou plusieurs communes possibles (ex. La Défense chevauche Nanterre/Puteaux/Courbevoie).
+  private static final String VILLE_PARIS = "paris";
   private static final Map<String, Set<String>> QUARTIERS_EQUIVALENTS =
       Map.of(
-          "bercy", Set.of("paris"),
-          "la defense", Set.of("nanterre", "puteaux", "courbevoie", "paris"),
-          "st germain l auxerrois", Set.of("paris"),
-          "notre dame", Set.of("paris"),
-          "chaussee d antin", Set.of("paris"),
+          "bercy", Set.of(VILLE_PARIS),
+          "la defense", Set.of("nanterre", "puteaux", "courbevoie", VILLE_PARIS),
+          "st germain l auxerrois", Set.of(VILLE_PARIS),
+          "notre dame", Set.of(VILLE_PARIS),
+          "chaussee d antin", Set.of(VILLE_PARIS),
           // Quartier administratif du 12e arrondissement de Paris où se trouve l'Opéra Bastille.
-          "quinze vingts", Set.of("paris"));
+          "quinze vingts", Set.of(VILLE_PARIS));
 
   // Longueur minimale pour le repli par containment (commune fusionnée/intercommunalité, ex.
   // « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite », « Orange » ⊂ « communauté de communes du Pays

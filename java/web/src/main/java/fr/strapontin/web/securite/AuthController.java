@@ -46,6 +46,7 @@ public class AuthController {
 
   private static final Logger LOG = LoggerFactory.getLogger(AuthController.class);
   private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
+  private static final String CLE_ERREUR = "erreur";
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
@@ -145,7 +146,7 @@ public class AuthController {
    * @param httpRequest la requête HTTP (pour lire et modifier la session)
    * @param auth le contexte d'authentification Spring Security
    * @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
-   *   trop d'échecs ou compte verrouillé
+   *     trop d'échecs ou compte verrouillé
    */
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
@@ -155,14 +156,14 @@ public class AuthController {
     final HttpSession session = httpRequest.getSession(false);
     if (session == null
         || !Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
-      return ResponseEntity.status(409).body(Map.of("erreur", "Aucun challenge TOTP en attente"));
+      return ResponseEntity.status(409).body(Map.of(CLE_ERREUR, "Aucun challenge TOTP en attente"));
     }
 
     if (!(auth != null
         && auth.isAuthenticated()
         && auth.getPrincipal() instanceof UtilisateurDetails principal)) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(Map.of("erreur", "Authentification requise"));
+          .body(Map.of(CLE_ERREUR, "Authentification requise"));
     }
 
     final ResultatTotp resultat =
@@ -174,7 +175,7 @@ public class AuthController {
         session.invalidate();
         LOG.debug("Compte TOTP verrouillé, session invalidée : {}", principal.identifiant());
         yield ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("erreur", "Compte verrouillé. Contactez un administrateur."));
+            .body(Map.of(CLE_ERREUR, "Compte verrouillé. Contactez un administrateur."));
       }
       case SUCCES -> {
         session.removeAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE);
@@ -185,13 +186,13 @@ public class AuthController {
         session.invalidate();
         LOG.debug("Trop de tentatives TOTP, session invalidée : {}", principal.identifiant());
         yield ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(Map.of("erreur", "Trop de tentatives. Compte verrouillé."));
+            .body(Map.of(CLE_ERREUR, "Trop de tentatives. Compte verrouillé."));
       }
       case ECHEC ->
           ResponseEntity.status(422)
               .body(
                   Map.of(
-                      "erreur",
+                      CLE_ERREUR,
                       "Code incorrect. " + resultat.essaisRestants() + " essai(s) restant(s)."));
     };
   }
@@ -199,8 +200,8 @@ public class AuthController {
   /**
    * Retourne l'utilisateur actuellement authentifié.
    *
-   * <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente
-   * pour la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
+   * <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente pour
+   * la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
    *
    * @param auth l'authentification Spring Security (injectée automatiquement)
    * @param httpRequest la requête HTTP (pour lire l'état TOTP de la session)
@@ -287,13 +288,13 @@ public class AuthController {
       final String ident = req.identifiant().strip().toLowerCase();
       if (ident.length() < 3 || ident.length() > 30) {
         return ResponseEntity.badRequest()
-            .body(Map.of("erreur", "L'identifiant doit contenir entre 3 et 30 caractères."));
+            .body(Map.of(CLE_ERREUR, "L'identifiant doit contenir entre 3 et 30 caractères."));
       }
       if (!FORMAT_IDENTIFIANT.matcher(ident).matches()) {
         return ResponseEntity.badRequest()
             .body(
                 Map.of(
-                    "erreur",
+                    CLE_ERREUR,
                     "L'identifiant ne peut contenir que des lettres, chiffres, points,"
                         + " tirets et underscores."));
       }
@@ -319,8 +320,7 @@ public class AuthController {
   }
 
   /**
-   * Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de
-   * passe).
+   * Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de passe).
    *
    * <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
    * : un attaquant contrôlant ce header pourrait rediriger le lien de réinitialisation vers un

@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 public class ConfigService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ConfigService.class);
+  private static final String CLE_CLE = "cle";
 
   private final ConfigCipher cipher;
   private final NamedParameterJdbcTemplate jdbc;
@@ -79,7 +80,7 @@ public class ConfigService {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
     cache.invalidate(cle);
     if (valeur == null || valeur.isBlank()) {
-      jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of("cle", cle));
+      jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of(CLE_CLE, cle));
       LOG.info("config supprimée cle={}", cle);
       return;
     }
@@ -92,7 +93,7 @@ public class ConfigService {
           SET valeur_chiffree = EXCLUDED.valeur_chiffree,
               mis_a_jour_le   = now()
         """;
-    jdbc.update(sql, Map.of("cle", cle, "valeur", valeurChiffree));
+    jdbc.update(sql, Map.of(CLE_CLE, cle, "valeur", valeurChiffree));
   }
 
   /**
@@ -102,7 +103,7 @@ public class ConfigService {
    */
   public Set<String> lireConfigsPresentes() {
     final List<String> cles =
-        jdbc.query("SELECT cle FROM app_config", Map.of(), (rs, _) -> rs.getString("cle"));
+        jdbc.query("SELECT cle FROM app_config", Map.of(), (rs, _) -> rs.getString(CLE_CLE));
     return new HashSet<>(cles);
   }
 
@@ -110,7 +111,7 @@ public class ConfigService {
     final List<String> lignes =
         jdbc.query(
             "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-            Map.of("cle", cle),
+            Map.of(CLE_CLE, cle),
             (rs, _) -> rs.getString("valeur_chiffree"));
     if (lignes.isEmpty()) {
       return Optional.empty();

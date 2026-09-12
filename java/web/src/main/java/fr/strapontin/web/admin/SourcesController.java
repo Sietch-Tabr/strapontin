@@ -35,6 +35,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class SourcesController {
 
+  private static final String MESSAGE_UUID_SALLE_INVALIDE = "UUID de salle invalide.";
+
   private final SourcesService sourcesService;
   private final WorkerProxyService workerProxyService;
 
@@ -87,7 +89,7 @@ public class SourcesController {
       @PathVariable final String salleId, @Valid @RequestBody final RequeteSlug corps) {
     final UUID uuid = parseUuid(salleId);
     if (uuid == null) {
-      return erreur(400, "UUID de salle invalide.");
+      return erreur(400, MESSAGE_UUID_SALLE_INVALIDE);
     }
     sourcesService.mettreAJourDigitickSlug(uuid, corps.slug() == null ? "" : corps.slug());
     return ResponseEntity.ok(Map.of("succes", true));
@@ -120,7 +122,7 @@ public class SourcesController {
   public ResponseEntity<Map<String, Object>> fetchSalle(@PathVariable final String salleId) {
     final UUID uuid = parseUuid(salleId);
     if (uuid == null) {
-      return erreur(400, "UUID de salle invalide.");
+      return erreur(400, MESSAGE_UUID_SALLE_INVALIDE);
     }
     final String identifiants = sourcesService.obtenirIdentifiantsSalle(uuid);
     if (identifiants == null) {
@@ -172,7 +174,7 @@ public class SourcesController {
       @PathVariable final String salleId, @Valid @RequestBody final RequeteDigitickSalle requete) {
     final UUID uuid = parseUuid(salleId);
     if (uuid == null) {
-      return erreur(400, "UUID de salle invalide.");
+      return erreur(400, MESSAGE_UUID_SALLE_INVALIDE);
     }
     final String nom = videOuNull(requete.nom());
     final String ville = videOuNull(requete.ville());
@@ -191,7 +193,7 @@ public class SourcesController {
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable final String salleId) {
     final UUID uuid = parseUuid(salleId);
     if (uuid == null) {
-      return erreur(400, "UUID de salle invalide.");
+      return erreur(400, MESSAGE_UUID_SALLE_INVALIDE);
     }
     final boolean supprimee = sourcesService.supprimerSalleDigitick(uuid);
     if (!supprimee) {

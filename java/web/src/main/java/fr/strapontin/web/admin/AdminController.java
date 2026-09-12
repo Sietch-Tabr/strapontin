@@ -44,6 +44,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
   private static final Logger LOG = LoggerFactory.getLogger(AdminController.class);
+  private static final String CLE_SUCCES = "succes";
+  private static final String CLE_ACTION = "action";
 
   private final AdminService adminService;
   private final AdminRevocationService adminRevocationService;
@@ -137,7 +139,7 @@ public class AdminController {
         .map(
             r -> {
               final Map<String, Object> corps = new HashMap<>();
-              corps.put("succes", true);
+              corps.put(CLE_SUCCES, true);
               corps.put("email", r.email());
               corps.put("identifiant", r.identifiant());
               if (!emailDisponible) {
@@ -166,7 +168,7 @@ public class AdminController {
       return erreur(400, "Utilisez /parametres pour modifier votre propre compte.");
     }
     adminService.modifierUtilisateur(userId, requete, adminId);
-    return ResponseEntity.ok(Map.of("succes", true, "action", "modifierCompte"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "modifierCompte"));
   }
 
   /**
@@ -184,7 +186,7 @@ public class AdminController {
       return erreur(400, "Impossible de supprimer ce compte.");
     }
     adminService.supprimerUtilisateur(userId, adminId);
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -216,8 +218,8 @@ public class AdminController {
         .map(
             r -> {
               final Map<String, Object> corps = new HashMap<>();
-              corps.put("succes", true);
-              corps.put("action", "reinitialiserMdp");
+              corps.put(CLE_SUCCES, true);
+              corps.put(CLE_ACTION, "reinitialiserMdp");
               corps.put("email", r.email());
               if (!emailDisponible) {
                 corps.put("lienReset", r.lienReset());
@@ -242,7 +244,7 @@ public class AdminController {
       return erreur(400, "Impossible de révoquer votre propre compte.");
     }
     adminRevocationService.initierRevocationAdmin(userId, adminId);
-    return ResponseEntity.ok(Map.of("succes", true, "action", "initierRevocationAdmin"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "initierRevocationAdmin"));
   }
 
   /**
@@ -260,7 +262,7 @@ public class AdminController {
       return erreur(400, "Impossible d'annuler votre propre révocation.");
     }
     adminRevocationService.annulerRevocationAdmin(userId, adminId);
-    return ResponseEntity.ok(Map.of("succes", true, "action", "annulerRevocationAdmin"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "annulerRevocationAdmin"));
   }
 
   /**
@@ -279,7 +281,7 @@ public class AdminController {
     }
     if (adminService.reinitialiserTotp(userId, adminId)) {
       return ResponseEntity.ok(
-          Map.<String, Object>of("succes", true, "action", "reinitialiserTotp"));
+          Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "reinitialiserTotp"));
     }
     return erreur(404, "Utilisateur introuvable.");
   }
@@ -297,7 +299,7 @@ public class AdminController {
     final String adminId = utilisateur(auth).id();
     if (adminService.revoquerToutesSessions(userId, adminId)) {
       return ResponseEntity.ok(
-          Map.<String, Object>of("succes", true, "action", "revoquerSessions"));
+          Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "revoquerSessions"));
     }
     return erreur(404, "Utilisateur introuvable.");
   }
@@ -327,7 +329,7 @@ public class AdminController {
     final String valeur = requete.valeur() == null ? "" : requete.valeur().strip();
 
     configAdminService.sauvegarderConfig(cle, valeur, adminId);
-    return ResponseEntity.ok(Map.of("succes", true, "action", "sauvegarderConfig", "cle", cle));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "sauvegarderConfig", "cle", cle));
   }
 
   /**
@@ -341,9 +343,9 @@ public class AdminController {
       final VapidService.ResultatVapid resultat = vapidService.genererVapid();
       return ResponseEntity.ok(
           Map.of(
-              "succes",
+              CLE_SUCCES,
               true,
-              "action",
+              CLE_ACTION,
               "genererVapid",
               "clePublique",
               resultat.clePublique(),
@@ -379,7 +381,7 @@ public class AdminController {
     final String emailAdmin = utilisateur(auth).email();
     final boolean succes = emailServiceAdmin.envoyerEmailTest(emailAdmin);
     return succes
-        ? ResponseEntity.ok(Map.of("succes", true))
+        ? ResponseEntity.ok(Map.of(CLE_SUCCES, true))
         : erreur(400, "Envoi impossible — vérifiez RESEND_API_KEY et CONTACT_EMAIL.");
   }
 
@@ -395,7 +397,7 @@ public class AdminController {
     final String type =
         Set.of("info", "warning", "error").contains(requete.type()) ? requete.type() : "info";
     banniereService.publierBanniere(requete.message().strip(), type);
-    return ResponseEntity.ok(Map.of("succes", true, "action", "publierBanniere"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "publierBanniere"));
   }
 
   /**
@@ -406,7 +408,7 @@ public class AdminController {
   @DeleteMapping("/banniere")
   public ResponseEntity<Map<String, Object>> effacerBanniere() {
     banniereService.effacerBanniere();
-    return ResponseEntity.ok(Map.of("succes", true, "action", "effacerBanniere"));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true, CLE_ACTION, "effacerBanniere"));
   }
 
   /**

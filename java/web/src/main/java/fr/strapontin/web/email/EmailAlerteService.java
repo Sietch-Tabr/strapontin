@@ -16,8 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Alertes email système (bounce, plainte spam, backup, worker inactif, digest logs_admin) —
- * extrait d'{@code EmailService}, qui reste dédié aux emails transactionnels utilisateur.
+ * Alertes email système (bounce, plainte spam, backup, worker inactif, digest logs_admin) — extrait
+ * d'{@code EmailService}, qui reste dédié aux emails transactionnels utilisateur.
  *
  * <p>Si {@code RESEND_API_KEY} est absent de la configuration, toutes les méthodes retournent
  * silencieusement sans erreur. Les corps HTML sont générés par {@link EmailTemplates}.
@@ -37,6 +37,7 @@ public class EmailAlerteService {
   private static final String CLE_DERNIERE_ALERTE_BOUNCE = "DERNIERE_ALERTE_BOUNCE_ENVOYEE";
   private static final String CLE_DERNIERE_ALERTE_SPAM = "DERNIERE_ALERTE_SPAM_ENVOYEE";
   private static final Duration INTERVALLE_MIN_ALERTE = Duration.ofMinutes(60);
+  private static final String CHEMIN_ADMIN = "/admin";
 
   private final ConfigService configService;
   private final EmailSender emailSender;
@@ -48,8 +49,8 @@ public class EmailAlerteService {
 
   /**
    * Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
-   * digest logs_admin) — distincte de l'expéditeur. Voir
-   * {@link EmailSender#obtenirDestinataireAlerte()} pour la justification complète.
+   * digest logs_admin) — distincte de l'expéditeur. Voir {@link
+   * EmailSender#obtenirDestinataireAlerte()} pour la justification complète.
    *
    * @return l'adresse à notifier, vide si ni {@code ADMIN_ALERT_EMAIL} ni aucun admin n'existe
    */
@@ -58,8 +59,8 @@ public class EmailAlerteService {
   }
 
   /**
-   * Indique si une alerte du type donné a déjà été envoyée il y a moins de
-   * {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle.
+   * Indique si une alerte du type donné a déjà été envoyée il y a moins de {@link
+   * #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle.
    */
   private boolean alerteRecente(final String cleConfig) {
     return configService
@@ -74,9 +75,9 @@ public class EmailAlerteService {
   /**
    * Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
    *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur (c'est
-   * cette confusion qui a provoqué la boucle de bounces du 15/07/2026). Throttlée à une
-   * notification par heure maximum.
+   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur (c'est cette
+   * confusion qui a provoqué la boucle de bounces du 15/07/2026). Throttlée à une notification par
+   * heure maximum.
    *
    * @param emailBouncee l'adresse email qui a produit le bounce
    */
@@ -109,7 +110,7 @@ public class EmailAlerteService {
               + emailBouncee
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
-              + "/admin");
+              + CHEMIN_ADMIN);
       configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_BOUNCE, Instant.now().toString());
       LOG.info("Notification bounce envoyée : emailHash={}", emailBouncee.hashCode());
     } catch (Exception e) {
@@ -118,12 +119,12 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une notification à l'admin quand un destinataire signale un email Strapontin comme
-   * spam — même traitement que le bounce, une plainte spam menaçant la réputation
-   * d'envoi du domaine au moins autant qu'un rejet définitif.
+   * Envoie une notification à l'admin quand un destinataire signale un email Strapontin comme spam
+   * — même traitement que le bounce, une plainte spam menaçant la réputation d'envoi du domaine au
+   * moins autant qu'un rejet définitif.
    *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
-   * Throttlée à une notification par heure maximum.
+   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur. Throttlée à une
+   * notification par heure maximum.
    *
    * @param emailPlaignant l'adresse email à l'origine de la plainte
    */
@@ -144,7 +145,8 @@ public class EmailAlerteService {
       return;
     }
 
-    final String corps = EmailTemplatesAlertes.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
+    final String corps =
+        EmailTemplatesAlertes.alertePlainteSpam(emailPlaignant, ctx.get().baseUrl());
 
     try {
       emailSender.envoyer(
@@ -157,7 +159,7 @@ public class EmailAlerteService {
               + emailPlaignant
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
-              + "/admin");
+              + CHEMIN_ADMIN);
       configService.sauvegarderConfig(CLE_DERNIERE_ALERTE_SPAM, Instant.now().toString());
       LOG.info("Notification plainte spam envoyée : emailHash={}", emailPlaignant.hashCode());
     } catch (Exception e) {
@@ -171,7 +173,7 @@ public class EmailAlerteService {
    * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
    *
    * @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
-   * @param raison     la commande bash ayant déclenché l'échec, ou chaîne vide
+   * @param raison la commande bash ayant déclenché l'échec, ou chaîne vide
    */
   public void envoyerAlerteBackup(final String horodatage, final String raison) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
@@ -185,7 +187,8 @@ public class EmailAlerteService {
       return;
     }
 
-    final String corps = EmailTemplatesAlertes.alerteBackup(horodatage, raison, ctx.get().baseUrl());
+    final String corps =
+        EmailTemplatesAlertes.alerteBackup(horodatage, raison, ctx.get().baseUrl());
 
     final String sujet = "Strapontin — échec backup nocturne";
     final String texte =
@@ -236,7 +239,7 @@ public class EmailAlerteService {
               + detail
               + ". Consultez l'administration : "
               + ctx.get().baseUrl()
-              + "/admin");
+              + CHEMIN_ADMIN);
       LOG.info("Alerte intégrité envoyée");
     } catch (Exception e) {
       LOG.error("Échec envoi alerte intégrité", e);
@@ -246,7 +249,7 @@ public class EmailAlerteService {
   /**
    * Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
    *
-   * @param email               l'adresse email de l'administrateur
+   * @param email l'adresse email de l'administrateur
    * @param derniereActiviteIso la date ISO du dernier job complété, ou null
    */
   public void envoyerAlerteWorkerInactif(final String email, final String derniereActiviteIso) {
@@ -280,18 +283,18 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une alerte à l'admin quand le quota d'envoi Resend jour ou mois approche de sa
-   * limite (80%, suite de l'incident).
+   * Envoie une alerte à l'admin quand le quota d'envoi Resend jour ou mois approche de sa limite
+   * (80%, suite de l'incident).
    *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur. Ne
-   * consomme volontairement pas le garde-fou {@code GestionQuotaResend.reserverEnvoi()} avant
-   * son propre envoi — au seuil de 80%, il reste toujours de la marge sous la limite dure.
+   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur. Ne consomme
+   * volontairement pas le garde-fou {@code GestionQuotaResend.reserverEnvoi()} avant son propre
+   * envoi — au seuil de 80%, il reste toujours de la marge sous la limite dure.
    *
-   * @param email    l'adresse email de l'administrateur
+   * @param email l'adresse email de l'administrateur
    * @param compteur le compteur courant ayant déclenché le seuil
-   * @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon
-   *     (RESEND_API_KEY absent ou échec d'envoi) — dans ce cas l'appelant ne doit pas marquer
-   *     l'alerte comme signalée, pour ne pas la perdre en cas de panne temporaire de Resend
+   * @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon (RESEND_API_KEY
+   *     absent ou échec d'envoi) — dans ce cas l'appelant ne doit pas marquer l'alerte comme
+   *     signalée, pour ne pas la perdre en cas de panne temporaire de Resend
    */
   public boolean envoyerAlerteQuotaResend(final String email, final CompteurEnvoisResend compteur) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
@@ -333,11 +336,11 @@ public class EmailAlerteService {
   /**
    * Envoie un digest des nouvelles entrées {@code logs_admin} de niveau erreur.
    *
-   * @param email   l'adresse email de l'administrateur
+   * @param email l'adresse email de l'administrateur
    * @param erreurs les entrées d'erreur à inclure dans le digest (non vide)
-   * @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon
-   *     (RESEND_API_KEY absent ou échec d'envoi) — dans ce cas le curseur ne doit pas avancer
-   *     côté appelant, pour ne perdre aucune erreur en cas de panne temporaire de Resend
+   * @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon (RESEND_API_KEY
+   *     absent ou échec d'envoi) — dans ce cas le curseur ne doit pas avancer côté appelant, pour
+   *     ne perdre aucune erreur en cas de panne temporaire de Resend
    */
   public boolean envoyerAlerteLogsAdmin(
       final String email, final List<LogAdminService.EntreeLogAdmin> erreurs) {
@@ -359,7 +362,7 @@ public class EmailAlerteService {
           erreurs.size()
               + " nouvelle(s) erreur(s) dans logs_admin. Consultez l'administration : "
               + ctx.get().baseUrl()
-              + "/admin");
+              + CHEMIN_ADMIN);
       LOG.info("Alerte logs admin envoyée : emailHash={} nb={}", email.hashCode(), erreurs.size());
       return true;
     } catch (Exception e) {

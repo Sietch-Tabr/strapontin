@@ -53,6 +53,8 @@ public class FusionSallesClePorteeService {
   // deux halls physiquement distincts de plusieurs centaines de mètres.
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
   private static final double RAYON_TERRE_METRES = 6_371_000;
+  private static final String CLE_CIBLE = "cible";
+  private static final String CLE_SOURCE = "source";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -245,7 +247,7 @@ public class FusionSallesClePorteeService {
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
     final Map<String, Object> ids =
-        Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
     fusionnerEvenements(ids);
     fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
@@ -374,7 +376,7 @@ public class FusionSallesClePorteeService {
         jdbc.query(
             "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
                 + " CAST(:cible AS uuid)",
-            Map.of("source", sourceId.toString(), "cible", cibleId.toString()),
+            Map.of(CLE_SOURCE, sourceId.toString(), CLE_CIBLE, cibleId.toString()),
             (rs, _) -> rs.getObject("id", UUID.class));
 
     for (final UUID enfant : enfants) {
@@ -389,12 +391,12 @@ public class FusionSallesClePorteeService {
                 + enfant
                 + " cible="
                 + cibleId,
-            Map.of("enfant", enfant.toString(), "cible", cibleId.toString()));
+            Map.of("enfant", enfant.toString(), CLE_CIBLE, cibleId.toString()));
       } else {
         jdbc.update(
             "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid) WHERE id = CAST(:id AS"
                 + " uuid)",
-            Map.of("cible", cibleId.toString(), "id", enfant.toString()));
+            Map.of(CLE_CIBLE, cibleId.toString(), "id", enfant.toString()));
       }
     }
   }
@@ -426,12 +428,12 @@ public class FusionSallesClePorteeService {
             JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
             WHERE src.salle_id = CAST(:source AS uuid)
             """,
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
+            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()));
 
     for (final Map<String, Object> conflit : conflits) {
       final boolean garderSource = laSourceEstPlusSaine(conflit);
       final Map<String, Object> paramsSuppression = new HashMap<>();
-      paramsSuppression.put("source", conflit.get("source"));
+      paramsSuppression.put(CLE_SOURCE, conflit.get(CLE_SOURCE));
       paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
       paramsSuppression.put(
           "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));

@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 public class WorkerStatsService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerStatsService.class);
+  private static final String SOURCE_WORKER = "worker";
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
@@ -272,7 +273,7 @@ public class WorkerStatsService {
         .map(
             entree -> {
               final String message = suiviChronicite.enrichirSiChronique(entree.message(), streak);
-              logsAdminWorker.inserer(entree.niveau(), "worker", message, entree.meta());
+              logsAdminWorker.inserer(entree.niveau(), SOURCE_WORKER, message, entree.meta());
               return true;
             })
         .orElse(false);
@@ -297,7 +298,7 @@ public class WorkerStatsService {
     }
     logsAdminWorker.inserer(
         "warn",
-        "worker",
+        SOURCE_WORKER,
         typeJob + " — " + concertsManques + " concert(s) TM non récupéré(s) (pagination plafonnée)",
         Map.of("manques", concertsManques));
     return true;
@@ -321,7 +322,7 @@ public class WorkerStatsService {
     }
     logsAdminWorker.inserer(
         "warn",
-        "worker",
+        SOURCE_WORKER,
         typeJob
             + " — "
             + containments.size()
@@ -343,7 +344,7 @@ public class WorkerStatsService {
       final Map<String, Object> params = new LinkedHashMap<>();
       params.put("ts", execLe.getTime());
       params.put("niveau", "warn");
-      params.put("source", "worker");
+      params.put("source", SOURCE_WORKER);
       params.put("message", typeJob + " — 0 concert inséré ou mis à jour (résultat vide)");
       params.put("meta", "{}");
       jdbc.update(

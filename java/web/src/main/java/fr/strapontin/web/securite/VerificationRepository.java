@@ -15,14 +15,16 @@ import org.springframework.stereotype.Repository;
 /**
  * Accès aux données de la table {@code verifications} (tokens reset MDP et invitation).
  *
- * <p>SQL pur — aucune logique métier. Utilisé par {@link AuthService} et
- * {@link fr.strapontin.web.admin.AdminService}.
+ * <p>SQL pur — aucune logique métier. Utilisé par {@link AuthService} et {@link
+ * fr.strapontin.web.admin.AdminService}.
  *
  * @since 2.1.0
  * @author Kwaite
  */
 @Repository
 public class VerificationRepository {
+
+  private static final String CLE_EMAIL = "email";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -41,7 +43,7 @@ public class VerificationRepository {
    */
   public boolean utilisateurExistePourEmail(final String email) {
     return !jdbc.queryForList(
-            "SELECT id FROM users WHERE email = :email", Map.of("email", email), String.class)
+            "SELECT id FROM users WHERE email = :email", Map.of(CLE_EMAIL, email), String.class)
         .isEmpty();
   }
 
@@ -49,7 +51,7 @@ public class VerificationRepository {
    * Supprime les entrées de vérification pour un identifiant donné.
    *
    * @param identifiant préfixe/identifiant de la vérification (ex. {@code
-   * "reset:user@example.com"})
+   *     "reset:user@example.com"})
    */
   public void supprimerParIdentifiant(final String identifiant) {
     jdbc.update(
@@ -59,10 +61,10 @@ public class VerificationRepository {
   /**
    * Insère une entrée de vérification.
    *
-   * @param id         identifiant UUID
+   * @param id identifiant UUID
    * @param identifiant contexte (ex. {@code "reset:email"}, {@code "invite:email"})
-   * @param tokenHash  hash SHA-256 du token
-   * @param expiresAt  date d'expiration
+   * @param tokenHash hash SHA-256 du token
+   * @param expiresAt date d'expiration
    */
   public void inserer(
       final String id, final String identifiant, final String tokenHash, final Instant expiresAt) {
@@ -83,7 +85,7 @@ public class VerificationRepository {
    *
    * @param tokenHash hash SHA-256 du token
    * @return l'identifiant (ex. {@code "reset:email"}), ou {@link Optional#empty()} si
-   * invalide/expiré
+   *     invalide/expiré
    */
   public Optional<String> lireIdentifiantParTokenHash(final String tokenHash) {
     final List<String> lignes =
@@ -108,7 +110,7 @@ public class VerificationRepository {
    * Met à jour le mot de passe dans {@code accounts} par email utilisateur.
    *
    * @param email email de l'utilisateur
-   * @param hash  nouveau hash bcrypt
+   * @param hash nouveau hash bcrypt
    */
   public void majMotDePasseParEmail(final String email, final String hash) {
     jdbc.update(
@@ -116,7 +118,7 @@ public class VerificationRepository {
         UPDATE accounts SET password = :hash, updated_at = NOW()
         WHERE user_id = (SELECT id FROM users WHERE email = :email)
         """,
-        Map.of("hash", hash, "email", email));
+        Map.of("hash", hash, CLE_EMAIL, email));
   }
 
   /**
@@ -127,17 +129,17 @@ public class VerificationRepository {
   public void majMustChangeFalseParEmail(final String email) {
     jdbc.update(
         "UPDATE users SET must_change_credentials = false, updated_at = NOW() WHERE email = :email",
-        Map.of("email", email));
+        Map.of(CLE_EMAIL, email));
   }
 
   /**
    * Définit l'identifiant et désactive le flag {@code must_change_credentials} par email.
    *
-   * <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais
-   * été personnalisé par un admin, même garde que
-   * {@link fr.strapontin.web.utilisateur.UtilisateurRepository#majIdentifiant}.
+   * <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais été
+   * personnalisé par un admin, même garde que {@link
+   * fr.strapontin.web.utilisateur.UtilisateurRepository#majIdentifiant}.
    *
-   * @param email      email de l'utilisateur
+   * @param email email de l'utilisateur
    * @param identifiant nouvel identifiant (déjà normalisé en minuscules)
    */
   public void majUsernameEtActiverParEmail(final String email, final String identifiant) {
@@ -150,21 +152,21 @@ public class VerificationRepository {
             must_change_credentials = false, updated_at = NOW()
         WHERE lower(email) = lower(:email)
         """,
-        Map.of("ident", identifiant, "email", email));
+        Map.of("ident", identifiant, CLE_EMAIL, email));
   }
 
   /**
    * Retourne le nom de connexion (username) d'un utilisateur à partir de son email.
    *
    * @param email email de l'utilisateur (normalisé)
-   * @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe pas ou n'a
-   * pas de username
+   * @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe pas ou n'a pas de
+   *     username
    */
   public Optional<String> lireUsernameParEmail(final String email) {
     final List<String> lignes =
         jdbc.queryForList(
             "SELECT username FROM users WHERE lower(email) = lower(:email)",
-            Map.of("email", email),
+            Map.of(CLE_EMAIL, email),
             String.class);
     return lignes.isEmpty() || lignes.get(0) == null
         ? Optional.empty()
@@ -175,13 +177,13 @@ public class VerificationRepository {
    * Vérifie si un identifiant est déjà pris par un autre utilisateur (exclusion par email).
    *
    * @param identifiant identifiant à vérifier (en minuscules)
-   * @param email       email de l'utilisateur courant (exclu)
+   * @param email email de l'utilisateur courant (exclu)
    * @return {@code true} si l'identifiant est pris
    */
   public boolean identifiantDejaUtiliseParEmail(final String identifiant, final String email) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE lower(username) = :ident AND lower(email) != lower(:email)",
-            Map.of("ident", identifiant, "email", email),
+            Map.of("ident", identifiant, CLE_EMAIL, email),
             Integer.class)
         .isEmpty();
   }

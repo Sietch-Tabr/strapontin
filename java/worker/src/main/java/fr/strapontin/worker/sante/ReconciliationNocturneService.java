@@ -47,6 +47,9 @@ import org.springframework.stereotype.Service;
 public class ReconciliationNocturneService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliationNocturneService.class);
+  private static final String CLE_ARTISTE_ID = "artisteId";
+  private static final String NIVEAU_WARN = "warn";
+  private static final String SOURCE_RECONCILIATION_NOCTURNE = "reconciliation-nocturne";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
@@ -228,7 +231,7 @@ public class ReconciliationNocturneService {
             nom_tm_incoherent = :nomAttraction
         WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
         """,
-        Map.of("artisteId", artisteId.toString(), "nomAttraction", nomAttraction));
+        Map.of(CLE_ARTISTE_ID, artisteId.toString(), "nomAttraction", nomAttraction));
     return true;
   }
 
@@ -267,13 +270,13 @@ public class ReconciliationNocturneService {
             nom_tm_incoherent = :nomAttraction
         WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
         """,
-        Map.of("artisteId", artisteId.toString(), "nomAttraction", nomAttraction));
+        Map.of(CLE_ARTISTE_ID, artisteId.toString(), "nomAttraction", nomAttraction));
     if (dejaSignale) {
       return;
     }
     logsAdminWorker.inserer(
-        "warn",
-        "reconciliation-nocturne",
+        NIVEAU_WARN,
+        SOURCE_RECONCILIATION_NOCTURNE,
         "nom TM incohérent avec l'artiste suivi artiste="
             + nom
             + " nomTM="
@@ -281,9 +284,12 @@ public class ReconciliationNocturneService {
             + " attractionId="
             + attractionId,
         Map.of(
-            "artisteId", artisteId.toString(),
-            "attractionId", attractionId,
-            "nomTM", nomAttraction));
+            CLE_ARTISTE_ID,
+            artisteId.toString(),
+            "attractionId",
+            attractionId,
+            "nomTM",
+            nomAttraction));
   }
 
   /**
@@ -352,8 +358,8 @@ public class ReconciliationNocturneService {
     }
 
     logsAdminWorker.inserer(
-        "warn",
-        "reconciliation-nocturne",
+        NIVEAU_WARN,
+        SOURCE_RECONCILIATION_NOCTURNE,
         "redécouverte ambiguë salle="
             + nom
             + " ancienVenueId="
@@ -422,7 +428,7 @@ public class ReconciliationNocturneService {
           SET identifiant_externe = :nouveauId, nb_zero_consecutifs = 0, suspect_depuis = NULL
           WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
           """,
-          Map.of("nouveauId", nouveauId, "artisteId", artisteId.toString()));
+          Map.of("nouveauId", nouveauId, CLE_ARTISTE_ID, artisteId.toString()));
       LOG.info(
           "reconciliation:nocturne — artiste redécouvert nom={} ancien={} nouveau={}",
           nom,
@@ -435,12 +441,12 @@ public class ReconciliationNocturneService {
         UPDATE artiste_sources SET necessite_intervention_le = now()
         WHERE artiste_id = CAST(:artisteId AS uuid) AND source = 'ticketmaster'
         """,
-        Map.of("artisteId", artisteId.toString()));
+        Map.of(CLE_ARTISTE_ID, artisteId.toString()));
     logsAdminWorker.inserer(
-        "warn",
-        "reconciliation-nocturne",
+        NIVEAU_WARN,
+        SOURCE_RECONCILIATION_NOCTURNE,
         "redécouverte artiste échouée nom=" + nom + " ancienAttractionId=" + ancienAttractionId,
-        Map.of("artisteId", artisteId.toString(), "ancienAttractionId", ancienAttractionId));
+        Map.of(CLE_ARTISTE_ID, artisteId.toString(), "ancienAttractionId", ancienAttractionId));
   }
 
   private boolean dejaUtiliseParAutreEntite(
@@ -471,8 +477,8 @@ public class ReconciliationNocturneService {
     }
 
     logsAdminWorker.inserer(
-        "warn",
-        "reconciliation-nocturne",
+        NIVEAU_WARN,
+        SOURCE_RECONCILIATION_NOCTURNE,
         suspectes.size()
             + " slug(s) Digitick suspect(s) — correction manuelle via l'onglet admin Salles",
         Map.of("nbSuspectes", suspectes.size()));
