@@ -5,15 +5,9 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
-import fr.strapontin.core.CorrespondanceArtiste;
-import fr.strapontin.core.Dedoublonner;
-import fr.strapontin.core.Normalisation;
-import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.ResolveurNomCanonique;
-import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
@@ -21,11 +15,8 @@ import fr.strapontin.worker.quota.GestionQuotaTM;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -46,14 +37,10 @@ public class WorkerFetchService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerFetchService.class);
 
-  private static final int DELAI_ENTRE_ARTISTES_MS = 250;
-  private static final int TAILLE_LOT_TM = 20;
-  private static final int TAILLE_LOT_DEPTS = 5;
   private static final int TAILLE_LOT_SALLES = 20;
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
-  private final ResolveurNomCanonique resolveur;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
   private final GestionQuotaTM gestionQuotaTM;
@@ -61,8 +48,9 @@ public class WorkerFetchService {
   private final NamedParameterJdbcTemplate jdbc;
   private final SuiviSanteSourcesService suiviSanteSourcesService;
   private final WorkerStatsService workerStatsService;
-  private final LogsAdminWorker logsAdminWorker;
-  private final RetryLotsService retryLotsService;
+  private final WorkerFetchCommun commun;
+  private final FetchArtistesBatchExecutor fetchArtistesBatchExecutor;
+  private final FetchRegionExecutor fetchRegionExecutor;
 
   /**
    * @param sources sources de fetch injectées (une par source active)
@@ -93,7 +81,6 @@ public class WorkerFetchService {
       final RetryLotsService retryLotsService) {
     this.sources = sources;
     this.tm = tm;
-    this.resolveur = resolveur;
     this.persisterConcerts = persisterConcerts;
     this.recalculerMatchesService = recalculerMatchesService;
     this.gestionQuotaTM = gestionQuotaTM;
@@ -101,43 +88,31 @@ public class WorkerFetchService {
     this.jdbc = jdbc;
     this.suiviSanteSourcesService = suiviSanteSourcesService;
     this.workerStatsService = workerStatsService;
-    this.logsAdminWorker = logsAdminWorker;
-    this.retryLotsService = retryLotsService;
-  }
-
-  /**
-   * Remonte dans {@code logs_admin} les échecs de lots d'un job multi-lots, indépendamment du
-   * résultat des autres lots — sans cela, un lot en échec reste invisible tant que le job dans son
-   * ensemble se termine sans exception et que son bilan agrégé reste positif grâce aux autres lots.
-   *
-   * <p>Niveau {@code error} si tous les lots du job ont échoué (panne totale), {@code warn} sinon
-   * (échec partiel, même convention que {@code WorkerStatsService#remonterBilan}). Délègue ensuite
-   * à {@link RetryLotsService} la décision de retenter ou d'abandonner les identifiants en échec, y
-   * compris quand ce cycle est propre (remise à zéro du compteur de tentatives).
-   *
-   * @param typeJob type de job (ex. {@code "fetch:salles:all"})
-   * @param echecs messages d'échec, un par lot en échec
-   * @param totalLots nombre total de lots traités par le job
-   * @param identifiantsEnEchec identifiants des entités des lots en échec, pour un retry ciblé
-   */
-  private void remonterEchecsLots(
-      final String typeJob,
-      final List<String> echecs,
-      final int totalLots,
-      final List<String> identifiantsEnEchec) {
-    if (!echecs.isEmpty()) {
-      final String niveau = echecs.size() == totalLots ? "error" : "warn";
-      final String message =
-          typeJob
-              + " — "
-              + echecs.size()
-              + "/"
-              + totalLots
-              + " lot(s) échoué(s) : "
-              + String.join(" | ", echecs);
-      logsAdminWorker.inserer(niveau, "worker", message, Map.of("echecs", echecs));
-    }
-    retryLotsService.gererResultat(typeJob, identifiantsEnEchec);
+    this.commun =
+        new WorkerFetchCommun(
+            jdbc, resolveur, logsAdminWorker, retryLotsService, tm, gestionQuotaTM);
+    this.fetchArtistesBatchExecutor =
+        new FetchArtistesBatchExecutor(
+            sources,
+            tm,
+            persisterConcerts,
+            recalculerMatchesService,
+            gestionQuotaTM,
+            notificationDigestService,
+            jdbc,
+            workerStatsService,
+            suiviSanteSourcesService,
+            commun);
+    this.fetchRegionExecutor =
+        new FetchRegionExecutor(
+            jdbc,
+            sources,
+            persisterConcerts,
+            recalculerMatchesService,
+            gestionQuotaTM,
+            notificationDigestService,
+            workerStatsService,
+            commun);
   }
 
   /**
@@ -146,10 +121,10 @@ public class WorkerFetchService {
    * <p>Suspendu si le quota TM est inférieur à 500 (SEUIL_QUOTA_CRON). Une exception dans un lot
    * n'interrompt pas les lots suivants : le recalcul de matchs et le digest de notification
    * s'exécutent toujours sur la base des lots effectivement réussis, plutôt que d'être sautés en
-   * cas d'échec partiel.
+   * cas d'échec partiel. Voir {@link FetchArtistesBatchExecutor}.
    */
   public void executerFetchArtistesBatch() {
-    executerFetchArtistesBatchInterne(null);
+    fetchArtistesBatchExecutor.executer(null);
   }
 
   /**
@@ -160,185 +135,25 @@ public class WorkerFetchService {
    * @param artisteIdsCibles identifiants ({@code artistes.id}, texte) à retenter
    */
   public void executerFetchArtistesBatch(final List<String> artisteIdsCibles) {
-    executerFetchArtistesBatchInterne(artisteIdsCibles);
-  }
-
-  private void executerFetchArtistesBatchInterne(final List<String> artisteIdsCibles) {
-    final boolean retry = artisteIdsCibles != null;
-    LOG.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
-    workerStatsService.executerAvecStatsToleretErreur(
-        LOG,
-        "fetch:artistes:batch",
-        () -> executerCycleFetchArtistesBatch(retry, artisteIdsCibles));
-  }
-
-  private WorkerStatsService.ResultatJob executerCycleFetchArtistesBatch(
-      final boolean retry, final List<String> artisteIdsCibles) {
-    if (!gestionQuotaTM.cronAutorise()) {
-      LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
-      return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
-    }
-
-    final List<Map<String, Object>> rows = chargerArtistesSuivisBatch(retry, artisteIdsCibles);
-    if (rows.isEmpty()) {
-      LOG.info("fetch:artistes:batch — aucun artiste suivi");
-      return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
-    }
-
-    final List<SourceConcerts> sourcesSimples =
-        sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
-    final ResultatPersistance resultat = traiterLotsArtistesBatch(rows, sourcesSimples);
-
-    sauvegarderQuota();
-    recalculerMatchesService.recalculerMatches(null);
-    notificationDigestService.executerDigest("temps_reel");
-    LOG.info("fetch:artistes:batch terminé");
-    return WorkerStatsService.ResultatJob.succes(resultat);
-  }
-
-  private List<Map<String, Object>> chargerArtistesSuivisBatch(
-      final boolean retry, final List<String> artisteIdsCibles) {
-    return jdbc.queryForList(
-        "SELECT ua.artiste_id::text AS artiste_id_str,"
-            + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-            + " MAX(asm.identifiant_externe) AS attraction_id,"
-            + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
-            + " MAX(a.deezer_id) AS deezer_id,"
-            + " MAX(a.wikidata_id) AS wikidata_id"
-            + " FROM user_artistes ua"
-            + " JOIN artistes a ON a.id = ua.artiste_id"
-            + " LEFT JOIN artiste_sources asm"
-            + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
-            + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
-            + " GROUP BY ua.artiste_id",
-        retry ? Map.of("ids", artisteIdsCibles) : Map.of());
-  }
-
-  private ResultatPersistance traiterLotsArtistesBatch(
-      final List<Map<String, Object>> rows, final List<SourceConcerts> sourcesSimples) {
-    ResultatPersistance resultat = new ResultatPersistance(0, 0);
-    final List<String> echecsLots = new ArrayList<>();
-    final List<String> idsEnEchec = new ArrayList<>();
-    final int totalLots = (rows.size() + TAILLE_LOT_TM - 1) / TAILLE_LOT_TM;
-    for (int i = 0; i < rows.size(); i += TAILLE_LOT_TM) {
-      final List<Map<String, Object>> lot =
-          rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
-      try {
-        resultat = accumuler(resultat, traiterLotArtistesBatch(lot, sourcesSimples));
-      } catch (Exception e) {
-        LOG.error(
-            "fetch:artistes:batch lot {}-{} échoué : {}", i, i + lot.size(), e.getMessage(), e);
-        echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
-        lot.forEach(row -> idsEnEchec.add((String) row.get("artiste_id_str")));
-      }
-    }
-    remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots, idsEnEchec);
-    return resultat;
+    fetchArtistesBatchExecutor.executer(artisteIdsCibles);
   }
 
   /**
-   * Fetch + dédoublonnage + persistance d'un lot d'artistes (taille {@value TAILLE_LOT_TM}).
-   *
-   * <p>Persistance par lot plutôt qu'en un seul bloc final : sans cela, une interruption
-   * (redéploiement, crash) avant la fin du cycle complet perdrait tout le travail de fetch déjà
-   * effectué sur ce cycle (quota TM consommé pour rien). Le dédoublonnage cross-sources
-   * (TM/Eventim) reste correct à cette granularité : un même concert n'est jamais rapporté par deux
-   * sources pour deux artistes différents, la comparaison par lot suffit.
-   *
-   * @param lot sous-ensemble de lignes artiste (taille {@value TAILLE_LOT_TM})
-   * @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch individuel par artiste)
-   * @return bilan de persistance du lot
+   * Fetch par région pour tous les départements configurés. Suspendu si le quota TM est
+   * insuffisant. Voir {@link FetchRegionExecutor}.
    */
-  private ResultatPersistance traiterLotArtistesBatch(
-      final List<Map<String, Object>> lot, final List<SourceConcerts> sourcesSimples) {
-    final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot);
-
-    final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
-    for (final SourceConcerts source : sourcesSimples) {
-      for (final Map<String, Object> row : lot) {
-        final String nom = (String) row.get("artiste_affiche");
-        final String deezerId = (String) row.get("deezer_id");
-        final String wikidataId = (String) row.get("wikidata_id");
-        try {
-          concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
-        } catch (Exception e) {
-          LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
-        }
-        attendreRateLimit();
-      }
-    }
-
-    final List<ConcertBrut> tous = new ArrayList<>(concertsTM);
-    tous.addAll(concertsAutresSources);
-
-    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    LOG.info(
-        "fetch:artistes:batch lot={} bruts={} dédoublonnés={}",
-        lot.size(),
-        tous.size(),
-        dedoublonnes.size());
-
-    final String debutLot = OffsetDateTime.now().toString();
-    final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    final List<String> artisteIds =
-        lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
-    mettreAJourAbsences("artiste_id", artisteIds, debutLot);
-    return resultat;
+  public void executerFetchRegion() {
+    fetchRegionExecutor.executer(null);
   }
-
-  // Nombre d'absences consécutives (cycles fetch:artistes:batch/fetch:salles:all successifs sans
-  // qu'un concert précédemment vu ne réapparaisse) à partir duquel il est marqué comme non
-  // confirmé récemment — évite un faux positif sur un simple aléa réseau isolé, tout en restant
-  // assez bas pour signaler une disparition réelle dans un délai raisonnable (cron ~11 cycles/jour
-  // — 5 absences correspond à environ une demi-journée de silence continu). Package-private :
-  // référencé par WorkerPurgeService pour dériver le seuil de purge définitive (voir
-  // WorkerPurgeService.SEUIL_PURGE_ABSENCES).
-  static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
 
   /**
-   * Met à jour le compteur d'absences consécutives des concerts futurs liés aux entités
-   * effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu ({@code
-   * updated_at} avancé par l'upsert), incrémenté sinon.
+   * Retente un sous-ensemble ciblé de départements, en échec lors d'un cycle précédent — voir
+   * {@link RetryLotsService}.
    *
-   * @param colonne "artiste_id" ou "salle_id"
-   * @param ids identifiants (texte) des entités traitées dans ce cycle
-   * @param debutCycle horodatage capturé avant la persistance du lot
+   * @param deptsCibles départements à retenter
    */
-  private static final String SQL_ABSENCES_BASE =
-      "UPDATE evenements SET"
-          + " absences_consecutives = CASE WHEN updated_at >= CAST(:debut AS timestamptz)"
-          + "   THEN 0 ELSE absences_consecutives + 1 END,"
-          + " absence_detectee_le = CASE"
-          + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
-          + "   WHEN absences_consecutives + 1 >= :seuil THEN COALESCE(absence_detectee_le, now())"
-          + "   ELSE absence_detectee_le END,"
-          // Un concert flagué pour suppression puis effectivement reconfirmé (ex. après fusion
-          // d'un doublon de salle) n'a plus de raison de rester marqué suppression_suggeree_le.
-          + " suppression_suggeree_le = CASE"
-          + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
-          + "   ELSE suppression_suggeree_le END"
-          + " WHERE %s::text IN (:ids) AND date >= CURRENT_DATE";
-
-  private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
-  private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
-
-  private void mettreAJourAbsences(
-      final String colonne, final List<String> ids, final String debutCycle) {
-    if (ids.isEmpty()) {
-      return;
-    }
-    final String sql =
-        switch (colonne) {
-          case "artiste_id" -> SQL_ABSENCES_ARTISTE;
-          case "salle_id" -> SQL_ABSENCES_SALLE;
-          default -> throw new IllegalArgumentException("colonne inconnue : " + colonne);
-        };
-    jdbc.update(sql, Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
-  }
-
-  private static ResultatPersistance accumuler(
-      final ResultatPersistance a, final ResultatPersistance b) {
-    return new ResultatPersistance(a.nbInseres() + b.nbInseres(), a.nbMisAJour() + b.nbMisAJour());
+  public void executerFetchRegion(final List<String> deptsCibles) {
+    fetchRegionExecutor.executer(deptsCibles);
   }
 
   /**
@@ -367,269 +182,6 @@ public class WorkerFetchService {
   }
 
   /**
-   * Fetch TM pour une liste d'artistes suivis.
-   *
-   * <p>Deux passes :
-   *
-   * <ol>
-   *   <li>Résolution des {@code attractionId} manquants (1 requête /attractions.json par artiste
-   *       non résolu), puis fetch groupé par lots de {@value TAILLE_LOT_TM} via {@code
-   *       fetchArtistesBatch} — réduit la consommation de quota d'un facteur ×20 par rapport à un
-   *       fetch artiste-par-artiste.
-   *   <li>Fallback keyword ({@code fetchArtiste}) pour les artistes sans {@code attractionId} TM.
-   * </ol>
-   *
-   * @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche}, {@code
-   *     artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
-   * @return concerts bruts collectés depuis TM
-   */
-  private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}
-
-  private List<ConcertBrut> fetchTMParArtistes(final List<Map<String, Object>> rows) {
-    final ResolutionAttractionIds resolution = resoudreAttractionIds(rows);
-    final List<ConcertBrut> resultats =
-        new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds()));
-    resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId()));
-    return resultats;
-  }
-
-  // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK = (source,
-  // identifiant_externe)) — une fusion mal dédupliquée peut laisser deux identifiants TM pour le
-  // même artiste, rendant le MAX() de la requête appelante arbitraire. Mieux vaut ne pas fetcher
-  // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts d'un
-  // autre artiste sous cette identité.
-  private ResolutionAttractionIds resoudreAttractionIds(final List<Map<String, Object>> rows) {
-    final List<String> attractionIds = new ArrayList<>();
-    final List<String> nomsSansTmId = new ArrayList<>();
-
-    for (final Map<String, Object> row : rows) {
-      final String nom = (String) row.get("artiste_affiche");
-      final String artisteIdStr = (String) row.get("artiste_id_str");
-      String attractionId = (String) row.get("attraction_id");
-      if (attractionIdAmbigu(row, nom, artisteIdStr)) {
-        continue;
-      }
-      if (attractionId == null) {
-        attractionId = rechercherEtEnregistrerAttractionId(nom, artisteIdStr);
-      }
-      if (attractionId != null) {
-        attractionIds.add(attractionId);
-      } else {
-        nomsSansTmId.add(nom);
-      }
-    }
-    return new ResolutionAttractionIds(attractionIds, nomsSansTmId);
-  }
-
-  private boolean attractionIdAmbigu(
-      final Map<String, Object> row, final String nom, final String artisteIdStr) {
-    final Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
-    final int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
-    if (nbIdsDistincts <= 1) {
-      return false;
-    }
-    LOG.warn(
-        "artiste_sources ambigu — {} identifiant_externe ticketmaster distincts pour"
-            + " artiste={} artisteId={}, fetch TM ignoré ce cycle",
-        nbIdsDistincts,
-        nom,
-        artisteIdStr);
-    jdbc.update(
-        "UPDATE artiste_sources SET necessite_intervention_le ="
-            + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
-            + " AS uuid) AND source = 'ticketmaster'",
-        Map.of("artisteId", artisteIdStr));
-    return true;
-  }
-
-  private String rechercherEtEnregistrerAttractionId(final String nom, final String artisteIdStr) {
-    String attractionId = null;
-    try {
-      attractionId = tm.rechercherAttractionId(nom);
-      if (attractionId != null) {
-        jdbc.update(
-            "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
-                + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
-                + " ON CONFLICT DO NOTHING",
-            Map.of("artisteId", artisteIdStr, "attractionId", attractionId));
-      }
-    } catch (Exception e) {
-      LOG.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
-    }
-    // Throttle nécessaire ici : un lot avec plusieurs artistes jamais résolus peut générer une
-    // rafale d'appels /attractions.json sans délai sinon.
-    attendreRateLimit();
-    return attractionId;
-  }
-
-  private List<ConcertBrut> fetchParLotsAttractionIds(final List<String> attractionIds) {
-    final List<ConcertBrut> resultats = new ArrayList<>();
-    for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
-      final List<String> lot =
-          attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
-      try {
-        final List<ConcertBrut> concertsLot = tm.fetchArtistesLot(lot);
-        resultats.addAll(concertsLot);
-        suiviSanteSourcesService.enregistrerResultatArtistesLot(lot, concertsLot);
-      } catch (Exception e) {
-        LOG.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
-      }
-    }
-    return resultats;
-  }
-
-  private List<ConcertBrut> fetchParNomsSansAttractionId(final List<String> nomsSansTmId) {
-    final List<ConcertBrut> resultats = new ArrayList<>();
-    for (final String nom : nomsSansTmId) {
-      try {
-        resultats.addAll(tm.fetchArtiste(nom));
-      } catch (Exception e) {
-        LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
-      }
-      attendreRateLimit();
-    }
-    return resultats;
-  }
-
-  /**
-   * Fetch par région pour tous les départements configurés.
-   *
-   * <p>Suspendu si le quota TM est insuffisant.
-   */
-  public void executerFetchRegion() {
-    executerFetchRegionInterne(null);
-  }
-
-  /**
-   * Retente un sous-ensemble ciblé de départements, en échec lors d'un cycle précédent — voir
-   * {@link RetryLotsService}.
-   *
-   * @param deptsCibles départements à retenter
-   */
-  public void executerFetchRegion(final List<String> deptsCibles) {
-    executerFetchRegionInterne(deptsCibles);
-  }
-
-  private void executerFetchRegionInterne(final List<String> deptsCibles) {
-    final boolean retry = deptsCibles != null;
-    LOG.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");
-    workerStatsService.executerAvecStatsToleretErreur(
-        LOG,
-        "fetch:region",
-        () -> {
-          if (!gestionQuotaTM.cronAutorise()) {
-            LOG.warn("fetch:region suspendu — quota TM insuffisant");
-            return new WorkerStatsService.ResultatJob(
-                new ResultatPersistance(0, 0), "quota insuffisant");
-          }
-
-          List<String> deptsListe;
-          if (retry) {
-            deptsListe = deptsCibles;
-          } else {
-            final List<String[]> allDepts =
-                jdbc.query(
-                    "SELECT departements FROM user_config",
-                    Map.of(),
-                    (rs, _) -> (String[]) rs.getArray("departements").getArray());
-            deptsListe = new ArrayList<>(collecterTousLesDepts(allDepts));
-          }
-
-          if (deptsListe.isEmpty()) {
-            LOG.info("fetch:region — aucun département configuré");
-            return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
-          }
-
-          ResultatPersistance resultat = new ResultatPersistance(0, 0);
-          final List<String> echecsLots = new ArrayList<>();
-          final List<String> deptsEnEchec = new ArrayList<>();
-          final int totalLots = (deptsListe.size() + TAILLE_LOT_DEPTS - 1) / TAILLE_LOT_DEPTS;
-          for (int i = 0; i < deptsListe.size(); i += TAILLE_LOT_DEPTS) {
-            final List<String> lotDepts =
-                deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
-            try {
-              resultat = accumuler(resultat, traiterLotDepartements(lotDepts));
-            } catch (Exception e) {
-              LOG.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
-              echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
-              deptsEnEchec.addAll(lotDepts);
-            }
-          }
-          remonterEchecsLots("fetch:region", echecsLots, totalLots, deptsEnEchec);
-          sauvegarderQuota();
-          recalculerMatchesService.recalculerMatches(null);
-          notificationDigestService.executerDigest("temps_reel");
-          LOG.info("fetch:region terminé");
-          return WorkerStatsService.ResultatJob.succes(resultat);
-        });
-  }
-
-  private static Set<String> collecterTousLesDepts(final List<String[]> allDepts) {
-    final Set<String> tousLesDepts = new LinkedHashSet<>();
-    for (final String[] depts : allDepts) {
-      if (depts != null) {
-        for (final String d : depts) {
-          if (d != null && !d.isBlank()) {
-            tousLesDepts.add(d.trim());
-          }
-        }
-      }
-    }
-    return tousLesDepts;
-  }
-
-  /**
-   * Fetch + dédoublonnage + persistance d'un lot de départements (taille {@value
-   * TAILLE_LOT_DEPTS}).
-   *
-   * <p>Persistance par lot plutôt qu'en un seul bloc final (même motif que {@link
-   * #traiterLotArtistesBatch}) : le dédoublonnage cross-sources reste correct à cette granularité,
-   * un même concert n'étant jamais rapporté par deux sources dans deux départements différents.
-   *
-   * <p>Met à jour les absences des salles du lot indépendamment de tout suivi utilisateur — {@code
-   * fetch:region} est browse-only, un concert découvert ici peut n'être jamais suivi ni par artiste
-   * ni par salle, auquel cas il n'entrerait autrement dans le périmètre d'aucun suivi de
-   * péremption.
-   *
-   * @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
-   * @return bilan de persistance du lot
-   */
-  private ResultatPersistance traiterLotDepartements(final List<String> lotDepts) {
-    final List<ConcertBrut> tous = new ArrayList<>();
-    for (final SourceConcerts source : sources) {
-      try {
-        tous.addAll(source.fetchRegion(lotDepts, null));
-      } catch (Exception e) {
-        LOG.warn("{} fetchRegion échoué depts={} : {}", source.nom(), lotDepts, e.getMessage());
-      }
-    }
-
-    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
-    LOG.info(
-        "fetch:region depts={} bruts={} dédoublonnés={}",
-        lotDepts.size(),
-        tous.size(),
-        dedoublonnes.size());
-
-    final String debutLot = OffsetDateTime.now().toString();
-    final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    mettreAJourAbsences("salle_id", sallesConnuesDesDepartements(lotDepts), debutLot);
-    return resultat;
-  }
-
-  /**
-   * Salles déjà connues (concerts futurs déjà en base) pour un lot de départements — inclut les
-   * salles non suivies, contrairement à {@link #recupererIdentifiantsSallesSuivies}.
-   */
-  private List<String> sallesConnuesDesDepartements(final List<String> depts) {
-    return jdbc.queryForList(
-        "SELECT DISTINCT salle_id::text FROM concerts"
-            + " WHERE dept IN (:depts) AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
-        Map.of("depts", depts),
-        String.class);
-  }
-
-  /**
    * Fetch les concerts d'une ou plusieurs salles identifiées par leurs identifiants préfixés.
    *
    * <p>Le paramètre est une liste d'identifiants séparés par une virgule, chacun préfixé par la
@@ -648,9 +200,9 @@ public class WorkerFetchService {
     for (final String identifiant : identifiants) {
       fetchEtSuivreSalle(identifiant.trim(), concerts);
     }
-    sauvegarderQuota();
+    commun.sauvegarderQuota();
 
-    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(concerts);
+    final List<ConcertBrut> dedoublonnes = commun.resoudreEtDeduplicer(concerts, LOG);
     LOG.info(
         "fetch:salle identifiants={} bruts={} dédoublonnés={}",
         identifiantsStr,
@@ -710,7 +262,7 @@ public class WorkerFetchService {
           }
 
           final ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
-          sauvegarderQuota();
+          commun.sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
           notificationDigestService.executerDigest("temps_reel");
           LOG.info("fetch:salles:all terminé");
@@ -762,7 +314,7 @@ public class WorkerFetchService {
       final List<SalleAFetcher> lotSalles =
           sallesAFetcher.subList(i, Math.min(i + TAILLE_LOT_SALLES, sallesAFetcher.size()));
       try {
-        resultat = accumuler(resultat, traiterLotSalles(lotSalles));
+        resultat = WorkerFetchCommun.accumuler(resultat, traiterLotSalles(lotSalles));
       } catch (Exception e) {
         LOG.error(
             "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
@@ -770,7 +322,7 @@ public class WorkerFetchService {
         lotSalles.forEach(salle -> salleIdsEnEchec.add(salle.salleId()));
       }
     }
-    remonterEchecsLots("fetch:salles:all", echecsLots, totalLots, salleIdsEnEchec);
+    commun.remonterEchecsLots("fetch:salles:all", echecsLots, totalLots, salleIdsEnEchec);
     return resultat;
   }
 
@@ -793,7 +345,7 @@ public class WorkerFetchService {
       }
     }
 
-    final List<ConcertBrut> dedoublonnes = resoudreEtDeduplicer(tous);
+    final List<ConcertBrut> dedoublonnes = commun.resoudreEtDeduplicer(tous, LOG);
     LOG.info(
         "fetch:salles:all salles={} bruts={} dédoublonnés={}",
         lotSalles.size(),
@@ -803,122 +355,7 @@ public class WorkerFetchService {
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     final List<String> salleIds = lotSalles.stream().map(SalleAFetcher::salleId).toList();
-    mettreAJourAbsences("salle_id", salleIds, debutLot);
+    commun.mettreAJourAbsences("salle_id", salleIds, debutLot);
     return resultat;
-  }
-
-  /**
-   * Détermine si un concert est éligible à la résolution du nom canonique via Deezer.
-   *
-   * <p>Exclut les classifications "theatre", "divers" et "sports" ({@link
-   * #CLASSIFICATIONS_NON_MUSICALES}, jamais un vrai musicien côté Deezer) ainsi que, spécifiquement
-   * pour Eventim, une classification vide/absente — Digitick omet aussi sa classification mais
-   * uniquement pour de vrais concerts (filtré en amont sur le genre "Concert"), alors qu'Eventim
-   * l'omet fréquemment y compris pour des spectacles non musicaux.
-   *
-   * @param c concert à évaluer
-   * @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
-   */
-  private static boolean estEligibleResolutionDeezer(final ConcertBrut c) {
-    return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
-  }
-
-  /**
-   * Rejette un candidat Deezer divergent du {@code nom_affiche} Wikidata déjà connu pour cet
-   * artiste : un mauvais rapprochement Deezer est une cause de corruption déjà rencontrée (ex. «
-   * Nino Arial » → « Niño Árbol »), détectable avant la persistance quand l'identité de l'artiste
-   * est déjà établie ailleurs par une source plus fiable (Wikidata).
-   *
-   * @param nomBrut nom brut entrant, avant résolution Deezer
-   * @param nomDeezer nom canonique proposé par {@link ResolveurNomCanonique}
-   * @return {@code nomDeezer}, ou {@code nomBrut} si un {@code nom_affiche} déjà connu diverge
-   */
-  private String nomCanoniqueValideOuBrut(final String nomBrut, final String nomDeezer) {
-    if (nomDeezer.equals(nomBrut)) {
-      return nomDeezer;
-    }
-    final List<String> nomsAffiches =
-        jdbc.query(
-            "SELECT nom_affiche FROM artistes WHERE nom_norm = :nomNorm AND nom_affiche IS NOT"
-                + " NULL",
-            Map.of("nomNorm", Normalisation.normaliserTexte(nomBrut)),
-            (rs, _) -> rs.getString("nom_affiche"));
-    if (nomsAffiches.isEmpty()) {
-      return nomDeezer;
-    }
-    final String nomAffiche = nomsAffiches.get(0);
-    if (CorrespondanceArtiste.estDoublonArtiste(
-        Normalisation.normaliserTexte(nomAffiche), Normalisation.normaliserTexte(nomDeezer))) {
-      return nomDeezer;
-    }
-    LOG.info(
-        "résolution Deezer rejetée — divergence avec nom_affiche Wikidata connu brut={} deezer={}"
-            + " nomAffiche={}",
-        nomBrut,
-        nomDeezer,
-        nomAffiche);
-    return nomBrut;
-  }
-
-  private List<ConcertBrut> resoudreEtDeduplicer(final List<ConcertBrut> concerts) {
-    final List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
-
-    final Map<String, String> tableauResolution = new LinkedHashMap<>();
-    final List<String> noms =
-        dedoublonnes.stream()
-            .filter(WorkerFetchService::estEligibleResolutionDeezer)
-            .map(ConcertBrut::artiste)
-            .distinct()
-            .toList();
-
-    for (final String nom : noms) {
-      final ResolveurNomCanonique.ResultatResolution resultat =
-          resolveur.resoudreNomCanonique("artiste", nom);
-      tableauResolution.put(nom, nomCanoniqueValideOuBrut(nom, resultat.nom()));
-    }
-
-    return dedoublonnes.stream()
-        .map(
-            c -> {
-              if (!estEligibleResolutionDeezer(c)) {
-                return c;
-              }
-              final String nomResolu = tableauResolution.getOrDefault(c.artiste(), c.artiste());
-              if (nomResolu.equals(c.artiste())) {
-                return c;
-              }
-              return new ConcertBrut(
-                  nomResolu,
-                  c.date(),
-                  c.heure(),
-                  c.salle(),
-                  c.ville(),
-                  c.dept(),
-                  c.url(),
-                  c.source(),
-                  c.classification(),
-                  c.genre(),
-                  c.statut(),
-                  c.presaleDebut(),
-                  c.presaleNom(),
-                  c.salleSourceId(),
-                  c.artisteSourceId());
-            })
-        .toList();
-  }
-
-  private void sauvegarderQuota() {
-    final QuotaTM quota = tm.obtenirQuota();
-    if (quota != null) {
-      gestionQuotaTM.ecrireQuota(quota);
-    }
-  }
-
-  private void attendreRateLimit() {
-    try {
-      Thread.sleep(DELAI_ENTRE_ARTISTES_MS);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
   }
 }

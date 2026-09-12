@@ -392,18 +392,18 @@ class NotificationDigestServiceTest {
   @Test
   void interpreterStatutPush_statut2xx_retourneSucces() {
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.SUCCES,
-        NotificationDigestService.interpreterStatutPush(201));
+        NotificationPushDigestService.ResultatEnvoiPush.SUCCES,
+        NotificationPushDigestService.interpreterStatutPush(201));
   }
 
   @Test
   void interpreterStatutPush_statut404Ou410_retourneAbonnementMort() {
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
-        NotificationDigestService.interpreterStatutPush(404));
+        NotificationPushDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
+        NotificationPushDigestService.interpreterStatutPush(404));
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
-        NotificationDigestService.interpreterStatutPush(410));
+        NotificationPushDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
+        NotificationPushDigestService.interpreterStatutPush(410));
   }
 
   // Avant, tout statut différent de 404/410 était compté comme un succès — un 400 (payload
@@ -411,14 +411,14 @@ class NotificationDigestServiceTest {
   @Test
   void interpreterStatutPush_statutErreurNi404Ni410_retourneEchec() {
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationDigestService.interpreterStatutPush(400));
+        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationPushDigestService.interpreterStatutPush(400));
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationDigestService.interpreterStatutPush(429));
+        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationPushDigestService.interpreterStatutPush(429));
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationDigestService.interpreterStatutPush(500));
+        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationPushDigestService.interpreterStatutPush(500));
   }
 
   // --- : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---
@@ -562,7 +562,7 @@ class NotificationDigestServiceTest {
       final List<NotificationDigestService.ConcertNotif> concerts, final String baseUrl)
       throws Exception {
     final Method m =
-        NotificationDigestService.class.getDeclaredMethod(
+        NotificationPushDigestService.class.getDeclaredMethod(
             "construirePayloadPush", List.class, String.class);
     m.setAccessible(true);
     return (String) m.invoke(null, concerts, baseUrl);
@@ -574,7 +574,7 @@ class NotificationDigestServiceTest {
       final String baseUrl)
       throws Exception {
     final Method m =
-        NotificationDigestService.class.getDeclaredMethod(
+        EmailDigestTemplate.class.getDeclaredMethod(
             "construireCorpsEmail", String.class, List.class, String.class);
     m.setAccessible(true);
     return (String) m.invoke(null, sujet, concerts, baseUrl);

@@ -63,12 +63,12 @@ public class WorkerPurgeService {
   }
 
   // Seuil de purge définitive d'un concert futur jamais reconfirmé — très supérieur au seuil de
-  // simple signalement "à vérifier" (WorkerFetchService.SEUIL_ABSENCES_CONSECUTIVES, une demi-
+  // simple signalement "à vérifier" (WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, une demi-
   // journée de silence) : un état "à vérifier" posé par ce garde-fou anti-faux-positif ne doit pas
   // rester affiché indéfiniment sans jamais évoluer. ×10 correspond à environ 5 jours de silence
   // continu (cron ~11 cycles/jour), largement au-delà de toute panne transitoire de source déjà
   // observée.
-  static final int SEUIL_PURGE_ABSENCES = WorkerFetchService.SEUIL_ABSENCES_CONSECUTIVES * 10;
+  static final int SEUIL_PURGE_ABSENCES = WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES * 10;
 
   /**
    * Signale pour suppression les concerts futurs dont le compteur d'absences consécutives dépasse
