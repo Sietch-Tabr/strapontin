@@ -5,7 +5,6 @@
 package fr.strapontin.web;
 
 import fr.strapontin.sources.CadenceurAppels;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -50,7 +49,7 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
   @SuppressWarnings("PMD.DoNotUseThreads")
   @Override
   public void attendre() {
-    final Timestamp prochainAppelAutorise =
+    final Instant prochainAppelAutorise =
         jdbc.queryForObject(
             """
             UPDATE cadences_appels_externes
@@ -60,9 +59,8 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
             RETURNING prochain_appel_autorise
             """,
             Map.of("cle", cle, "delaiMs", delaiMinMs),
-            Timestamp.class);
-    final long attenteMs =
-        Duration.between(Instant.now(), prochainAppelAutorise.toInstant()).toMillis();
+            Instant.class);
+    final long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise).toMillis();
     if (attenteMs <= 0) {
       return;
     }

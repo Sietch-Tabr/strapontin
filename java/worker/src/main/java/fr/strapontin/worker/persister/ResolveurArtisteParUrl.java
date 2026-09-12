@@ -86,14 +86,14 @@ class ResolveurArtisteParUrl {
       final List<Map<String, Object>> lignesExistantes) {
     final Map<CleUrl, Map<String, Object>> index = new HashMap<>();
     for (final Map<String, Object> l : lignesExistantes) {
-      final Date sqlDate = (Date) l.get("date");
-      final Time sqlHeure = (Time) l.get("heure");
+      final Object dateBrute = l.get("date");
+      final Object heureBrute = l.get("heure");
       final CleUrl cle =
           new CleUrl(
               (String) l.get("source"),
               (String) l.get("url"),
-              sqlDate != null ? sqlDate.toLocalDate() : null,
-              sqlHeure != null ? sqlHeure.toLocalTime() : null);
+              dateBrute != null ? ((Date) dateBrute).toLocalDate() : null,
+              heureBrute != null ? ((Time) heureBrute).toLocalTime() : null);
       index.putIfAbsent(cle, l);
     }
     return index;

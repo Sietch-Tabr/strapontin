@@ -7,7 +7,6 @@ package fr.strapontin.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -172,7 +171,7 @@ public class NotificationDigestService {
         return;
       }
 
-      final Timestamp maintenant = Timestamp.from(Instant.now());
+      final Instant maintenant = Instant.now();
       for (final Map.Entry<String, List<ConcertNotif>> entree :
           groupes.parUtilisateur().entrySet()) {
         final BilanDigestUtilisateur bilan =
@@ -206,7 +205,7 @@ public class NotificationDigestService {
       final String userId,
       final List<ConcertNotif> concerts,
       final MatchesNonNotifiesLoader.MatchesGroupes groupes,
-      final Timestamp maintenant) {
+      final Instant maintenant) {
     final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
     boolean emailOk = false;
     boolean pushOk = false;
@@ -247,7 +246,7 @@ public class NotificationDigestService {
   }
 
   private int marquerMatchesNotifies(
-      final String userId, final Set<UUID> concertIdsNotifies, final Timestamp maintenant) {
+      final String userId, final Set<UUID> concertIdsNotifies, final Instant maintenant) {
     return jdbc.update(
         """
         UPDATE user_matches um
@@ -259,7 +258,9 @@ public class NotificationDigestService {
         """,
         new MapSqlParameterSource()
             .addValue("userId", userId)
-            .addValue("maintenant", maintenant)
+            // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre de bind —
+            // OffsetDateTime est le seul type JSR-310 supporté automatiquement en écriture.
+            .addValue("maintenant", maintenant.atOffset(java.time.ZoneOffset.UTC))
             .addValue("concertIds", concertIdsNotifies));
   }
 

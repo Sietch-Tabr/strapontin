@@ -12,7 +12,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.concert.FiltreConcerts;
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashMap;
@@ -120,7 +120,7 @@ class DecouverteServiceTest {
         .thenReturn(List.of());
     when(jdbc.queryForObject(contains("SELECT COUNT(*)"), anyMap(), eq(Integer.class)))
         .thenReturn(total);
-    when(jdbc.queryForObject(contains("MAX(derniere_exec)"), anyMap(), eq(Timestamp.class)))
+    when(jdbc.queryForObject(contains("MAX(derniere_exec)"), anyMap(), eq(Instant.class)))
         .thenReturn(null);
     when(jdbc.query(contains("GROUP BY dept"), anyMap(), any(RowMapper.class)))
         .thenReturn(List.of());

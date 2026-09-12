@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -80,7 +79,7 @@ public class SignalementsAdminService {
             """,
             paramsPage,
             (rs, _) -> {
-              final Timestamp ts = rs.getTimestamp("detecte_le");
+              final Object detecteLeBrut = rs.getObject("detecte_le");
               return new EntreeSignalement(
                   rs.getString("categorie"),
                   rs.getString("id"),
@@ -88,7 +87,7 @@ public class SignalementsAdminService {
                   rs.getString("entite_type"),
                   rs.getString("entite_id"),
                   rs.getString("confiance"),
-                  ts != null ? ts.toInstant() : null,
+                  detecteLeBrut != null ? ((java.sql.Timestamp) detecteLeBrut).toInstant() : null,
                   rs.getString("details"));
             });
 

@@ -14,7 +14,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.email.EmailAlerteService;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -25,8 +24,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /**
  * Tests unitaires pour {@link WatchdogWorkerService}.
  *
- * <p>Couvre la résolution du destinataire via {@link EmailAlerteService#obtenirDestinataireAlerte()}
- * (plus de lecture directe de CONTACT_EMAIL).
+ * <p>Couvre la résolution du destinataire via {@link
+ * EmailAlerteService#obtenirDestinataireAlerte()} (plus de lecture directe de CONTACT_EMAIL).
  *
  * @since 2.7.0
  * @author Kwaite
@@ -46,7 +45,7 @@ class WatchdogWorkerServiceTest {
 
   @Test
   void verifier_workerInactifEtDestinataireDisponible_envoieAlerte() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Instant.class))).thenReturn(null);
     when(emailAlerteService.obtenirDestinataireAlerte())
         .thenReturn(Optional.of("alerte@exemple.fr"));
 
@@ -57,7 +56,7 @@ class WatchdogWorkerServiceTest {
 
   @Test
   void verifier_aucunDestinataireDisponible_neFaitRien() {
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Instant.class))).thenReturn(null);
     when(emailAlerteService.obtenirDestinataireAlerte()).thenReturn(Optional.empty());
 
     service.verifier();
@@ -67,8 +66,8 @@ class WatchdogWorkerServiceTest {
 
   @Test
   void verifier_workerActifRecemment_neConsultePasLeDestinataire() {
-    final Timestamp recent = Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(recent);
+    final Instant recent = Instant.now().minus(1, ChronoUnit.HOURS);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Instant.class))).thenReturn(recent);
 
     service.verifier();
 

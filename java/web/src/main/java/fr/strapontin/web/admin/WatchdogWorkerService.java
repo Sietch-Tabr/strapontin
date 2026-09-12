@@ -5,7 +5,6 @@
 package fr.strapontin.web.admin;
 
 import fr.strapontin.web.email.EmailAlerteService;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -84,12 +83,10 @@ public class WatchdogWorkerService {
 
   private Instant lireDerniereExecReussie() {
     try {
-      final Timestamp ts =
-          jdbc.queryForObject(
-              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL OR erreur = ''",
-              Map.of(),
-              Timestamp.class);
-      return ts != null ? ts.toInstant() : null;
+      return jdbc.queryForObject(
+          "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL OR erreur = ''",
+          Map.of(),
+          Instant.class);
     } catch (Exception e) {
       LOG.warn("watchdog: impossible de lire fetch_jobs — {}", e.getMessage());
       return null;

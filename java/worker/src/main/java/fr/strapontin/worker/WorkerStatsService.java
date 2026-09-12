@@ -13,8 +13,8 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,7 +91,7 @@ public class WorkerStatsService {
       final long dureeMs,
       final ResultatPersistance resultat,
       final String erreur) {
-    final Timestamp maintenant = Timestamp.from(Instant.now());
+    final Instant maintenant = Instant.now();
     enregistrerMetriqueDuree(typeJob, dureeMs);
     enregistrerLignesFetchJobs(typeJob, maintenant, dureeMs, resultat, erreur);
     if (typeJob.startsWith("fetch:")) {
@@ -109,14 +109,19 @@ public class WorkerStatsService {
 
   private void enregistrerLignesFetchJobs(
       final String typeJob,
-      final Timestamp maintenant,
+      final Instant maintenant,
       final long dureeMs,
       final ResultatPersistance resultat,
       final String erreur) {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
       params.put("typeJob", typeJob);
-      params.put("now", maintenant);
+      // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre de bind
+      // (contrairement
+      // à la lecture via getObject/queryForObject) — OffsetDateTime est le seul type JSR-310
+      // supporté
+      // automatiquement en écriture par le driver.
+      params.put("now", maintenant.atOffset(ZoneOffset.UTC));
       params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
       params.put("nbInseres", resultat.nbInseres());
       params.put("nbMisAJour", resultat.nbMisAJour());
@@ -149,7 +154,7 @@ public class WorkerStatsService {
       final String typeJob,
       final ResultatPersistance resultat,
       final String erreur,
-      final Timestamp maintenant) {
+      final Instant maintenant) {
     boolean bilanLoggue = false;
     for (final SourceConcerts source : sources) {
       if (source instanceof SourceAvecBilanFetch avecBilan) {
@@ -337,10 +342,10 @@ public class WorkerStatsService {
    * @param typeJob le type de job de fetch
    * @param execLe l'horodatage de l'exécution
    */
-  private void remonterResultatVide(final String typeJob, final Timestamp execLe) {
+  private void remonterResultatVide(final String typeJob, final Instant execLe) {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
-      params.put("ts", execLe.getTime());
+      params.put("ts", execLe.toEpochMilli());
       params.put("niveau", "warn");
       params.put("source", SOURCE_WORKER);
       params.put("message", typeJob + " — 0 concert inséré ou mis à jour (résultat vide)");

@@ -4,7 +4,8 @@
  */
 package fr.strapontin.worker;
 
-import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -65,7 +66,7 @@ public class DeriveVolumeFetchService {
    * @param avant horodatage du cycle courant — exclut structurellement sa propre ligne d'historique
    *     de la moyenne, que celle-ci ait déjà été insérée ou non au moment de l'appel
    */
-  public void verifier(final String typeJob, final int volumeCourant, final Timestamp avant) {
+  public void verifier(final String typeJob, final int volumeCourant, final Instant avant) {
     final List<Integer> historique = lireVolumesRecents(typeJob, avant);
     if (historique.size() < NB_EXECUTIONS_MOYENNE) {
       return;
@@ -99,7 +100,7 @@ public class DeriveVolumeFetchService {
         Map.of("typeJob", typeJob, "volume", volumeCourant, "moyenneRecente", moyenne));
   }
 
-  private List<Integer> lireVolumesRecents(final String typeJob, final Timestamp avant) {
+  private List<Integer> lireVolumesRecents(final String typeJob, final Instant avant) {
     return jdbc.query(
         """
         SELECT nb_inseres + nb_mis_a_jour AS volume
@@ -108,7 +109,16 @@ public class DeriveVolumeFetchService {
         ORDER BY exec_le DESC
         LIMIT :limite
         """,
-        Map.of("typeJob", typeJob, "avant", avant, "limite", NB_EXECUTIONS_MOYENNE),
+        // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre de bind —
+        // OffsetDateTime est le seul type JSR-310 supporté automatiquement en écriture par le
+        // driver.
+        Map.of(
+            "typeJob",
+            typeJob,
+            "avant",
+            avant.atOffset(ZoneOffset.UTC),
+            "limite",
+            NB_EXECUTIONS_MOYENNE),
         (rs, _) -> rs.getInt("volume"));
   }
 }

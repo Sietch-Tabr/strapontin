@@ -8,7 +8,7 @@ import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,7 +92,7 @@ public class DecouverteService {
 
     final int total = futures.total().join();
     final FiltresDisponibles filtresDisponibles = futures.filtres().join();
-    final Timestamp syncTs = futures.syncTs().join();
+    final Instant syncTs = futures.syncTs().join();
     final List<SyncDept> syncParDept = futures.syncParDept().join();
 
     return new ReponseDecouverte(
@@ -104,14 +104,14 @@ public class DecouverteService {
         filtresDisponibles.classifications(),
         filtresDisponibles.mois(),
         deptsUtilisateur,
-        syncTs != null ? syncTs.toInstant() : null,
+        syncTs,
         syncParDept);
   }
 
   private record RequetesParalleles(
       CompletableFuture<Integer> total,
       CompletableFuture<FiltresDisponibles> filtres,
-      CompletableFuture<Timestamp> syncTs,
+      CompletableFuture<Instant> syncTs,
       CompletableFuture<List<SyncDept>> syncParDept) {}
 
   // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
@@ -238,12 +238,12 @@ public class DecouverteService {
     return new FiltresDisponibles(genres, mois, classifications);
   }
 
-  private Timestamp lireDerniereSync() {
+  private Instant lireDerniereSync() {
     return jdbc.queryForObject(
         "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE type_job = 'fetch:region'"
             + " AND derniere_exec IS NOT NULL",
         Map.of(),
-        Timestamp.class);
+        Instant.class);
   }
 
   private List<SyncDept> lireSyncParDept(final List<String> deptsActifs) {
@@ -255,8 +255,12 @@ public class DecouverteService {
             + " WHERE dept = ANY(:depts) GROUP BY dept",
         Map.of(CLE_DEPTS, deptsActifs.toArray(String[]::new)),
         (rs, _) -> {
-          final Timestamp ts = rs.getTimestamp("derniere_sync");
-          return new SyncDept(rs.getString("dept"), ts != null ? ts.toInstant() : null);
+          final Object derniereSyncBrute = rs.getObject("derniere_sync");
+          return new SyncDept(
+              rs.getString("dept"),
+              derniereSyncBrute != null
+                  ? ((java.sql.Timestamp) derniereSyncBrute).toInstant()
+                  : null);
         });
   }
 

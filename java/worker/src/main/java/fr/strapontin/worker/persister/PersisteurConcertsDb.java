@@ -232,8 +232,9 @@ public class PersisteurConcertsDb {
       if (!artisteCorrespond) {
         continue;
       }
-      final Time heureSql = (Time) c.get(CLE_HEURE);
-      final LocalTime heureExistante = heureSql != null ? heureSql.toLocalTime() : null;
+      final Object heureBrute = c.get(CLE_HEURE);
+      final LocalTime heureExistante =
+          heureBrute != null ? ((Time) heureBrute).toLocalTime() : null;
       final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
       if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
         continue;

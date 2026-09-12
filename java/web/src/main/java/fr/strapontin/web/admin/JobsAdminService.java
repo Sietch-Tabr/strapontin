@@ -6,7 +6,6 @@ package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -118,12 +117,10 @@ public class JobsAdminService {
 
   private Instant lireDernierSucces() {
     try {
-      final Timestamp ts =
-          jdbc.queryForObject(
-              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
-              Map.of(),
-              Timestamp.class);
-      return ts != null ? ts.toInstant() : null;
+      return jdbc.queryForObject(
+          "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
+          Map.of(),
+          Instant.class);
     } catch (Exception _) {
       LOG.debug("Impossible de lire le dernier job réussi");
       return null;

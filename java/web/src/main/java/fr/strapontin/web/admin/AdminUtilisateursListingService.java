@@ -99,7 +99,7 @@ class AdminUtilisateursListingService {
       final Map<String, Object> u, final Map<String, Long> activiteParUsername) {
     final String username = (String) u.get("username");
     final Long derniereMs = activiteParUsername.get(username);
-    final Timestamp revocationTs = (Timestamp) u.get("revocation_admin_le");
+    final Object revocationBrute = u.get("revocation_admin_le");
     final Number nbSallesNum = (Number) u.get("nb_salles");
     final Number nbArtistesNum = (Number) u.get("nb_artistes");
     return new UtilisateurAdmin(
@@ -111,7 +111,7 @@ class AdminUtilisateursListingService {
         (Boolean) u.get("must_change_credentials"),
         ((Timestamp) u.get("created_at")).toInstant(),
         derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
-        revocationTs != null ? revocationTs.toInstant() : null,
+        revocationBrute != null ? ((Timestamp) revocationBrute).toInstant() : null,
         nbSallesNum != null ? nbSallesNum.intValue() : 0,
         nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
   }
