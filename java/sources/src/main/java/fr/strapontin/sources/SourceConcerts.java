@@ -53,7 +53,8 @@ public interface SourceConcerts {
    *     confirmée par cette source
    * @return concerts trouvés, ou liste vide si la source ne supporte pas cette opération
    */
-  default List<ConcertBrut> fetchArtiste(String nom, String deezerId, String wikidataId) {
+  default List<ConcertBrut> fetchArtiste(
+      final String nom, final String deezerId, final String wikidataId) {
     return fetchArtiste(nom);
   }
 

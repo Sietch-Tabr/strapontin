@@ -139,7 +139,7 @@ public class EnrichissementSallesService {
    * @param nbCandidats nombre de salles traitées dans ce cycle
    * @param nbEnrichis nombre de salles effectivement enrichies
    */
-  private void alerterSiCycleImproductif(int nbCandidats, int nbEnrichis) {
+  private void alerterSiCycleImproductif(final int nbCandidats, final int nbEnrichis) {
     if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) {
       return;
     }

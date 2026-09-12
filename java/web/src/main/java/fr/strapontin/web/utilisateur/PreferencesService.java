@@ -189,7 +189,7 @@ public class PreferencesService {
   // (CorrespondanceArtiste.estDoublonArtiste) que l'ajout interactif, plutôt qu'un ON CONFLICT
   // exact sur nom_norm qui créait un doublon de référentiel pour une variante orthographique
   // mineure (ex. "The Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
-  private int[] importerArtistes(String userId, List<ArtisteExport> artistes) {
+  private int[] importerArtistes(final String userId, final List<ArtisteExport> artistes) {
     final Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
@@ -230,7 +230,7 @@ public class PreferencesService {
   // (CorrespondanceSalle.estDoublonSalle) que l'ajout interactif, plutôt qu'un ON CONFLICT exact
   // sur salle_cle. Le salleId de l'export JSON n'est volontairement pas utilisé pour retrouver
   // une salle existante (comportement inchangé) — le nom est toujours re-normalisé.
-  private int[] importerSalles(String userId, List<SalleExport> salles) {
+  private int[] importerSalles(final String userId, final List<SalleExport> salles) {
     final Integer nbExistants =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
@@ -337,7 +337,7 @@ public class PreferencesService {
    *
    * @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
    */
-  private void declencherWorkerApresImport(List<SalleExport> salles) {
+  private void declencherWorkerApresImport(final List<SalleExport> salles) {
     final Runnable action =
         () -> {
           envoyerPostWorker(WORKER_URL + "/artiste");

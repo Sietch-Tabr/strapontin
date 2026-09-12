@@ -64,7 +64,10 @@ public class NotificationPushService {
   }
 
   private int envoyerAUnAbonnement(
-      Map<String, Object> ab, PushService pushService, String userId, String payload) {
+      final Map<String, Object> ab,
+      final PushService pushService,
+      final String userId,
+      final String payload) {
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
