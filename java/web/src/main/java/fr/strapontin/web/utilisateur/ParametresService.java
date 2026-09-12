@@ -20,8 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Service pour les paramètres utilisateur : statistiques et flux de changement d'email.
  *
- * <p>Regroupe la logique métier extraite de {@code ParametresRestController} :
- * accès JDBC, génération de tokens et envoi d'emails de confirmation.
+ * <p>Regroupe la logique métier extraite de {@code ParametresRestController} : accès JDBC,
+ * génération de tokens et envoi d'emails de confirmation.
  *
  * @since 2.5.4
  * @author Kwaite
@@ -34,8 +34,8 @@ public class ParametresService {
   private final UtilisateurRepository utilisateurRepository;
 
   /**
-   * @param jdbc                  accès JDBC
-   * @param emailService          service d'envoi d'emails
+   * @param jdbc accès JDBC
+   * @param emailService service d'envoi d'emails
    * @param utilisateurRepository accès aux données utilisateur
    */
   public ParametresService(
@@ -106,12 +106,12 @@ public class ParametresService {
   /**
    * Déclenche le flux de confirmation de changement d'email.
    *
-   * <p>Génère un token sécurisé, l'insère dans {@code verifications}, met à jour
-   * {@code pending_email} et envoie le lien de confirmation.
+   * <p>Génère un token sécurisé, l'insère dans {@code verifications}, met à jour {@code
+   * pending_email} et envoie le lien de confirmation.
    *
-   * @param details   utilisateur courant
+   * @param details utilisateur courant
    * @param emailNorm nouvelle adresse email normalisée
-   * @param baseUrl   URL de base de l'application (pour construire le lien de confirmation)
+   * @param baseUrl URL de base de l'application (pour construire le lien de confirmation)
    */
   @Transactional
   public void demanderChangementEmail(
@@ -139,37 +139,23 @@ public class ParametresService {
   /**
    * Résultat de la confirmation d'email.
    *
-   * @param statut  code décrivant l'issue de la confirmation
-   * @param userId  identifiant de l'utilisateur ciblé (peut être nul si le token est invalide)
+   * @param statut code décrivant l'issue de la confirmation
+   * @param userId identifiant de l'utilisateur ciblé (peut être nul si le token est invalide)
    */
   public record ResultatConfirmation(Statut statut, String userId) {
-    /**
-     * Codes de résultat possibles pour la confirmation d'email.
-     */
+    /** Codes de résultat possibles pour la confirmation d'email. */
     public enum Statut {
-      /**
-       * Confirmation réussie.
-       */
+      /** Confirmation réussie. */
       OK,
-      /**
-       * Token absent, vide ou non trouvé en base.
-       */
+      /** Token absent, vide ou non trouvé en base. */
       LIEN_INVALIDE,
-      /**
-       * Token expiré (non trouvé car expires_at dépassé).
-       */
+      /** Token expiré (non trouvé car expires_at dépassé). */
       LIEN_EXPIRE,
-      /**
-       * L'utilisateur du token diffère de l'utilisateur authentifié.
-       */
+      /** L'utilisateur du token diffère de l'utilisateur authentifié. */
       MAUVAIS_UTILISATEUR,
-      /**
-       * Aucun {@code pending_email} pour cet utilisateur.
-       */
+      /** Aucun {@code pending_email} pour cet utilisateur. */
       AUCUN_CHANGEMENT,
-      /**
-       * Le nouvel email est déjà utilisé par un autre compte.
-       */
+      /** Le nouvel email est déjà utilisé par un autre compte. */
       EMAIL_DEJA_UTILISE,
     }
   }
@@ -177,37 +163,49 @@ public class ParametresService {
   /**
    * Valide le token et applique le changement d'email si tout est correct.
    *
-   * @param token              token de confirmation (hexadécimal brut)
-   * @param userIdAuthentifie  identifiant de l'utilisateur authentifié
+   * @param token token de confirmation (hexadécimal brut)
+   * @param userIdAuthentifie identifiant de l'utilisateur authentifié
    * @return résultat indiquant le statut et l'identifiant utilisateur cible
    */
-  @Transactional
-  public ResultatConfirmation confirmerEmail(final String token, final String userIdAuthentifie) {
+  private record TokenResolu(ResultatConfirmation.Statut echec, String userId) {}
+
+  private TokenResolu resoudreUserIdDepuisToken(
+      final String token, final String userIdAuthentifie) {
     if (token == null || token.isBlank()) {
-      return new ResultatConfirmation(ResultatConfirmation.Statut.LIEN_INVALIDE, null);
+      return new TokenResolu(ResultatConfirmation.Statut.LIEN_INVALIDE, null);
     }
 
     final List<Map<String, Object>> verifs =
         jdbc.queryForList(
             """
-                SELECT identifier FROM verifications
-                WHERE value = :hash AND expires_at > NOW()
-                """,
+            SELECT identifier FROM verifications
+            WHERE value = :hash AND expires_at > NOW()
+            """,
             Map.of("hash", GenerateurSecrets.sha256Hex(token)));
 
     if (verifs.isEmpty()) {
-      return new ResultatConfirmation(ResultatConfirmation.Statut.LIEN_EXPIRE, null);
+      return new TokenResolu(ResultatConfirmation.Statut.LIEN_EXPIRE, null);
     }
 
     final String identifier = (String) verifs.get(0).get("identifier");
     final String userId = identifier.contains(":") ? identifier.split(":", 2)[1] : null;
     if (userId == null) {
-      return new ResultatConfirmation(ResultatConfirmation.Statut.LIEN_INVALIDE, null);
+      return new TokenResolu(ResultatConfirmation.Statut.LIEN_INVALIDE, null);
     }
 
     if (!userId.equals(userIdAuthentifie)) {
-      return new ResultatConfirmation(ResultatConfirmation.Statut.MAUVAIS_UTILISATEUR, userId);
+      return new TokenResolu(ResultatConfirmation.Statut.MAUVAIS_UTILISATEUR, userId);
     }
+    return new TokenResolu(null, userId);
+  }
+
+  @Transactional
+  public ResultatConfirmation confirmerEmail(final String token, final String userIdAuthentifie) {
+    final TokenResolu resolu = resoudreUserIdDepuisToken(token, userIdAuthentifie);
+    if (resolu.echec() != null) {
+      return new ResultatConfirmation(resolu.echec(), resolu.userId());
+    }
+    final String userId = resolu.userId();
 
     final List<String> pendingEmails =
         jdbc.queryForList(

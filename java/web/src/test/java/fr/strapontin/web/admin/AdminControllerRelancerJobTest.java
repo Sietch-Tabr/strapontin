@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.web.config.ConfigService;
-import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Tests unitaires ciblés pour {@link AdminController#relancerJob} (v2.6.0) — bouton
- * « Relancer » par job de maintenance dans l'onglet admin Tableau de bord.
+ * Tests unitaires ciblés pour {@link SystemeAdminController#relancerJob} (v2.6.0) — bouton «
+ * Relancer » par job de maintenance dans l'onglet admin Tableau de bord.
  *
  * @since 2.6.0
  * @author Kwaite
@@ -26,23 +24,20 @@ import org.springframework.http.ResponseEntity;
 class AdminControllerRelancerJobTest {
 
   private WorkerProxyService workerProxyService;
-  private AdminController controller;
+  private SystemeAdminController controller;
 
   @BeforeEach
   void setUp() {
     workerProxyService = mock(WorkerProxyService.class);
     controller =
-        new AdminController(
+        new SystemeAdminController(
             mock(AdminService.class),
-            mock(AdminRevocationService.class),
             mock(ConfigAdminService.class),
             mock(JobsAdminService.class),
             mock(BanniereService.class),
             workerProxyService,
-            mock(EmailService.class),
             mock(EmailServiceAdmin.class),
-            mock(VapidService.class),
-            mock(ConfigService.class));
+            mock(VapidService.class));
   }
 
   @Test

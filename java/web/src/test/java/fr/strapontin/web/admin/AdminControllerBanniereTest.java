@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import fr.strapontin.web.config.ConfigService;
-import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Tests unitaires pour {@link AdminController#publierBanniere} et {@link
- * AdminController#effacerBanniere}.
+ * Tests unitaires pour {@link SystemeAdminController#publierBanniere} et {@link
+ * SystemeAdminController#effacerBanniere}.
  *
  * @since 2.6.6
  * @author Kwaite
@@ -26,23 +24,20 @@ import org.springframework.http.ResponseEntity;
 class AdminControllerBanniereTest {
 
   private BanniereService banniereService;
-  private AdminController controller;
+  private SystemeAdminController controller;
 
   @BeforeEach
   void setUp() {
     banniereService = mock(BanniereService.class);
     controller =
-        new AdminController(
+        new SystemeAdminController(
             mock(AdminService.class),
-            mock(AdminRevocationService.class),
             mock(ConfigAdminService.class),
             mock(JobsAdminService.class),
             banniereService,
             mock(WorkerProxyService.class),
-            mock(EmailService.class),
             mock(EmailServiceAdmin.class),
-            mock(VapidService.class),
-            mock(ConfigService.class));
+            mock(VapidService.class));
   }
 
   @Test

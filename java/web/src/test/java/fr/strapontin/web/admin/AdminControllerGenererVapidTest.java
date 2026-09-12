@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.web.config.ConfigService;
-import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Tests unitaires pour {@link AdminController#genererVapid} (le résultat de {@link
+ * Tests unitaires pour {@link SystemeAdminController#genererVapid} (le résultat de {@link
  * VapidService#genererVapid()} doit être exposé dans la réponse, pas seulement loggé).
  *
  * @since 2.6.5
@@ -26,23 +24,20 @@ import org.springframework.http.ResponseEntity;
 class AdminControllerGenererVapidTest {
 
   private VapidService vapidService;
-  private AdminController controller;
+  private SystemeAdminController controller;
 
   @BeforeEach
   void setUp() {
     vapidService = mock(VapidService.class);
     controller =
-        new AdminController(
+        new SystemeAdminController(
             mock(AdminService.class),
-            mock(AdminRevocationService.class),
             mock(ConfigAdminService.class),
             mock(JobsAdminService.class),
             mock(BanniereService.class),
             mock(WorkerProxyService.class),
-            mock(EmailService.class),
             mock(EmailServiceAdmin.class),
-            vapidService,
-            mock(ConfigService.class));
+            vapidService);
   }
 
   @Test

@@ -37,6 +37,17 @@ public class UserConfigService {
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_DEPARTEMENTS = "departements";
   private static final String CLE_THEME = "theme";
+  private static final Map<String, String> CHAMPS_VERS_COLONNES =
+      Map.ofEntries(
+          Map.entry(CLE_DEPARTEMENTS, CLE_DEPARTEMENTS),
+          Map.entry("filtreDisponibles", "filtre_disponibles"),
+          Map.entry("frequenceNotifications", "frequence_notifications"),
+          Map.entry("notifArtistes", "notif_artistes"),
+          Map.entry("notifSalles", "notif_salles"),
+          Map.entry("notifArtistesPush", "notif_artistes_push"),
+          Map.entry("notifSallesPush", "notif_salles_push"),
+          Map.entry(CLE_THEME, CLE_THEME),
+          Map.entry("onboardingVu", "onboarding_vu"));
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigService configService;
@@ -294,18 +305,11 @@ public class UserConfigService {
   }
 
   private String versColonne(final String champJava) {
-    return switch (champJava) {
-      case CLE_DEPARTEMENTS -> CLE_DEPARTEMENTS;
-      case "filtreDisponibles" -> "filtre_disponibles";
-      case "frequenceNotifications" -> "frequence_notifications";
-      case "notifArtistes" -> "notif_artistes";
-      case "notifSalles" -> "notif_salles";
-      case "notifArtistesPush" -> "notif_artistes_push";
-      case "notifSallesPush" -> "notif_salles_push";
-      case CLE_THEME -> CLE_THEME;
-      case "onboardingVu" -> "onboarding_vu";
-      default -> throw new IllegalArgumentException("Champ inconnu : " + champJava);
-    };
+    final String colonne = CHAMPS_VERS_COLONNES.get(champJava);
+    if (colonne == null) {
+      throw new IllegalArgumentException("Champ inconnu : " + champJava);
+    }
+    return colonne;
   }
 
   private String normaliserDept(final String d) {

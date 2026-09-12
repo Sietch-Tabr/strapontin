@@ -67,13 +67,16 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
         new AdminRevocationService(
             jdbc, mock(EmailServiceAdmin.class), mock(LogAdminService.class));
     revocationService.setSelf(revocationService);
+    final AdminModificationUtilisateurService modificationService =
+        new AdminModificationUtilisateurService(
+            jdbc, mock(LogAdminService.class), revocationService, mock(EmailServiceAdmin.class));
     service =
         new AdminService(
             jdbc,
             mock(EmailService.class),
             mock(EmailServiceAdmin.class),
-            revocationService,
             mock(AdminUtilisateursListingService.class),
+            modificationService,
             mock(LogAdminService.class),
             mock(VerificationRepository.class));
   }

@@ -117,26 +117,36 @@ public class ReferentielSallesService {
       final boolean wikidataManquant) {
     final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
-    if (nom != null && !nom.isBlank()) {
-      where.append(" AND nom ILIKE :nom ");
-      params.put("nom", "%" + nom.strip() + "%");
-    }
-    if (ville != null && !ville.isBlank()) {
-      where.append(" AND ville ILIKE :ville ");
-      params.put("ville", "%" + ville.strip() + "%");
-    }
-    if (dept != null && !dept.isBlank()) {
-      where.append(" AND dept = :dept ");
-      params.put("dept", dept.strip());
-    }
-    if (statut != null && !statut.isBlank()) {
-      where.append(" AND statut = :statut ");
-      params.put("statut", statut.strip());
-    }
+    ajouterFiltreLike(where, params, "nom", nom);
+    ajouterFiltreLike(where, params, "ville", ville);
+    ajouterFiltreExact(where, params, "dept", dept);
+    ajouterFiltreExact(where, params, "statut", statut);
     if (wikidataManquant) {
       where.append(" AND wikidata_id IS NULL ");
     }
     return new FiltresSalles(where, params);
+  }
+
+  private static void ajouterFiltreLike(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final String cle,
+      final String valeur) {
+    if (valeur != null && !valeur.isBlank()) {
+      where.append(" AND ").append(cle).append(" ILIKE :").append(cle).append(' ');
+      params.put(cle, "%" + valeur.strip() + "%");
+    }
+  }
+
+  private static void ajouterFiltreExact(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final String cle,
+      final String valeur) {
+    if (valeur != null && !valeur.isBlank()) {
+      where.append(" AND ").append(cle).append(" = :").append(cle).append(' ');
+      params.put(cle, valeur.strip());
+    }
   }
 
   private record PageSalles(List<SalleReferentiel> salles, long total) {}

@@ -8,20 +8,13 @@ import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
-import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -33,21 +26,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
-import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
-import org.springframework.session.config.SessionRepositoryCustomizer;
-import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
-import org.springframework.session.web.http.CookieSerializer;
-import org.springframework.session.web.http.DefaultCookieSerializer;
 
 /**
  * Configuration Spring Security 7 pour le mode SPA Vue 3.
@@ -55,9 +40,9 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
  * <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login via {@link
  * RateLimitingLoginFilter} (intercepte {@code /api/auth/login}). Accès direct par IP bloqué via
  * {@link BloquerAccesDirectIpFilter}. CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code
- * Strict}, compatibilité Safari sur navigation entrante, voir {@link #cookieSerializer} — + {@code
- * form-action 'self'} en CSP). Login via {@code POST /api/auth/login}, logout via {@code POST
- * /api/auth/logout}.
+ * Strict}, compatibilité Safari sur navigation entrante, voir {@link
+ * SessionSecurityConfiguration#cookieSerializer} — + {@code form-action 'self'} en CSP). Login via
+ * {@code POST /api/auth/login}, logout via {@code POST /api/auth/logout}.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -266,92 +251,5 @@ public class SecurityConfiguration {
     } else {
       response.sendRedirect("/login");
     }
-  }
-
-  /**
-   * Encodeur de mots de passe bcrypt.
-   *
-   * @return l'encodeur de mots de passe
-   */
-  @Bean
-  PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-  }
-
-  /**
-   * Gestionnaire d'authentification avec chargement depuis la base de données.
-   *
-   * <p>Attache un {@link AuthenticationEventPublisher} explicitement : un {@link ProviderManager}
-   * construit à la main, hors du chemin d'auto-configuration Spring Boot standard, n'en reçoit
-   * aucun par défaut — sans lui, {@code AuthenticationSuccessEvent}/ {@code
-   * AbstractAuthenticationFailureEvent} ne sont jamais publiés et {@link AuthEvenementListener}
-   * reste du code mort.
-   *
-   * @param userDetailsService le service de chargement des utilisateurs
-   * @param passwordEncoder l'encodeur de mots de passe
-   * @param eventPublisher l'éditeur d'événements applicatif Spring
-   * @return l'AuthenticationManager configuré
-   */
-  @Bean
-  AuthenticationManager authenticationManager(
-      final UserDetailsService userDetailsService,
-      final PasswordEncoder passwordEncoder,
-      final ApplicationEventPublisher eventPublisher) {
-    final DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-    provider.setPasswordEncoder(passwordEncoder);
-    final ProviderManager providerManager = new ProviderManager(provider);
-    providerManager.setAuthenticationEventPublisher(
-        new DefaultAuthenticationEventPublisher(eventPublisher));
-    return providerManager;
-  }
-
-  /**
-   * Force le timeout d'inactivité des sessions JDBC à 30 jours.
-   *
-   * <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 — ce customizer
-   * le remplace de façon programmatique. La session est prolongée à chaque requête ; elle expire
-   * uniquement après 30 jours sans activité.
-   *
-   * @return le customizer de dépôt de sessions
-   */
-  @Bean
-  SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionTimeoutCustomizer() {
-    return repository -> repository.setDefaultMaxInactiveInterval(Duration.ofDays(30));
-  }
-
-  /**
-   * Publie les événements de session HTTP (requis pour le suivi des sessions actives).
-   *
-   * @return le publisher d'événements de session
-   */
-  @Bean
-  HttpSessionEventPublisher httpSessionEventPublisher() {
-    return new HttpSessionEventPublisher();
-  }
-
-  /**
-   * Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax} et {@code
-   * max-age} 30 jours.
-   *
-   * <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session JDBC
-   * ; ce bean prend le relais.
-   *
-   * <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome et
-   * bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
-   * site, retour d'une autre app iOS). Lax autorise le cookie sur les navigations GET entrantes
-   * tout en le bloquant sur les requêtes cross-site non-GET — protection CSRF équivalente.
-   *
-   * @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
-   * @return le sérialiseur de cookies configuré
-   */
-  @Bean
-  CookieSerializer cookieSerializer(
-      @Value("${app.cookie.secure:true}") final boolean cookieSecure) {
-    final DefaultCookieSerializer serialiseur = new DefaultCookieSerializer();
-    serialiseur.setUseSecureCookie(cookieSecure);
-    serialiseur.setSameSite("Lax");
-    serialiseur.setUseHttpOnlyCookie(true);
-    serialiseur.setCookieMaxAge(2592000);
-    return serialiseur;
   }
 }

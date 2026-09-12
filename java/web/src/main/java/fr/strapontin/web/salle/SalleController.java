@@ -81,8 +81,7 @@ public class SalleController {
    *
    * @param requete corps JSON avec le nom et l'ID TM optionnel
    * @param auth contexte d'authentification
-   * @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link
-   *   GlobalExceptionHandler})
+   * @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link GlobalExceptionHandler})
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
@@ -92,19 +91,16 @@ public class SalleController {
     if (nom.isEmpty() || nom.length() > 200) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Identifiant de salle invalide."));
     }
-    final String tmVenueId =
-        requete.tmVenueId() == null || requete.tmVenueId().isBlank()
-            ? null
-            : requete.tmVenueId().strip();
-    final String osmId =
-        requete.osmId() == null || requete.osmId().isBlank() ? null : requete.osmId().strip();
-    final String wikidataId =
-        requete.wikidataId() == null || requete.wikidataId().isBlank()
-            ? null
-            : requete.wikidataId().strip();
+    final String tmVenueId = videVersNull(requete.tmVenueId());
+    final String osmId = videVersNull(requete.osmId());
+    final String wikidataId = videVersNull(requete.wikidataId());
 
     salleService.ajouter(userId, nom, tmVenueId, osmId, wikidataId);
     return ResponseEntity.status(201).body(Map.of("succes", true));
+  }
+
+  private static String videVersNull(final String valeur) {
+    return valeur == null || valeur.isBlank() ? null : valeur.strip();
   }
 
   /**

@@ -44,20 +44,27 @@ final class SalleSuggestions {
       if (CorrespondanceSalle.estDoublonSalle(
           Normalisation.normaliserTexte(existant.salle()),
           Normalisation.normaliserTexte(candidat.salle()))) {
-        liste.set(
-            i,
-            new ResultatSalle(
-                existant.salle(),
-                existant.ville() != null ? existant.ville() : candidat.ville(),
-                existant.tmVenueId() != null ? existant.tmVenueId() : candidat.tmVenueId(),
-                existant.digitickSlug() != null ? existant.digitickSlug() : candidat.digitickSlug(),
-                existant.source(),
-                existant.osmId() != null ? existant.osmId() : candidat.osmId(),
-                existant.wikidataId() != null ? existant.wikidataId() : candidat.wikidataId()));
+        liste.set(i, fusionner(existant, candidat));
         return;
       }
     }
     liste.add(candidat);
+  }
+
+  private static ResultatSalle fusionner(
+      final ResultatSalle existant, final ResultatSalle candidat) {
+    return new ResultatSalle(
+        existant.salle(),
+        preferer(existant.ville(), candidat.ville()),
+        preferer(existant.tmVenueId(), candidat.tmVenueId()),
+        preferer(existant.digitickSlug(), candidat.digitickSlug()),
+        existant.source(),
+        preferer(existant.osmId(), candidat.osmId()),
+        preferer(existant.wikidataId(), candidat.wikidataId()));
+  }
+
+  private static String preferer(final String existant, final String candidat) {
+    return existant != null ? existant : candidat;
   }
 
   /**

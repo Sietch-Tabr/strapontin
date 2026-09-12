@@ -11,9 +11,7 @@ import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.artiste.ArtisteService;
 import fr.strapontin.web.salle.SalleService;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +48,7 @@ public class PreferencesService {
   private final LogAdminService logAdminService;
   private final ArtisteService artisteService;
   private final SalleService salleService;
+  private final PreferencesExportService preferencesExportService;
 
   /**
    * @param jdbc accès JDBC
@@ -72,6 +71,7 @@ public class PreferencesService {
     this.logAdminService = logAdminService;
     this.artisteService = artisteService;
     this.salleService = salleService;
+    this.preferencesExportService = new PreferencesExportService(jdbc);
   }
 
   /**
@@ -182,66 +182,7 @@ public class PreferencesService {
    * @return l'export complet
    */
   public ExportComplet exporter(final String userId) {
-    final List<ArtisteExport> artistes = exporterArtistes(userId);
-    final List<SalleExport> salles = exporterSalles(userId);
-    final List<ConfigExport> configRows = exporterConfig(userId);
-
-    return new ExportComplet(
-        1,
-        Instant.now().toString(),
-        artistes,
-        salles,
-        configRows.isEmpty() ? null : configRows.get(0));
-  }
-
-  private List<ArtisteExport> exporterArtistes(final String userId) {
-    return jdbc.query(
-        """
-        SELECT artiste_affiche FROM user_artistes
-        WHERE user_id = :userId ORDER BY artiste_affiche
-        """,
-        Map.of(CLE_USER_ID, userId),
-        (rs, _) -> {
-          final String affiche = rs.getString("artiste_affiche");
-          return new ArtisteExport(affiche, Normalisation.normaliserTexte(affiche));
-        });
-  }
-
-  private List<SalleExport> exporterSalles(final String userId) {
-    return jdbc.query(
-        """
-        SELECT s.salle_cle AS salle_id, s.nom
-        FROM user_salles us
-        JOIN salles s ON s.id = us.salle_id
-        WHERE us.user_id = :userId ORDER BY s.salle_cle
-        """,
-        Map.of(CLE_USER_ID, userId),
-        (rs, _) -> new SalleExport(rs.getString("salle_id"), null, rs.getString("nom")));
-  }
-
-  private List<ConfigExport> exporterConfig(final String userId) {
-    return jdbc.query(
-        """
-        SELECT departements, filtre_disponibles, frequence_notifications,
-               notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
-        FROM user_config WHERE user_id = :userId
-        """,
-        Map.of(CLE_USER_ID, userId),
-        (rs, _) -> {
-          final String[] depts =
-              rs.getArray("departements") != null
-                  ? (String[]) rs.getArray("departements").getArray()
-                  : new String[0];
-          return new ConfigExport(
-              Arrays.asList(depts),
-              rs.getBoolean("filtre_disponibles"),
-              rs.getString("frequence_notifications"),
-              rs.getBoolean("notif_artistes"),
-              rs.getBoolean("notif_salles"),
-              rs.getBoolean("notif_artistes_push"),
-              rs.getBoolean("notif_salles_push"),
-              rs.getString("theme"));
-        });
+    return preferencesExportService.exporter(userId);
   }
 
   // résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même dédup floue

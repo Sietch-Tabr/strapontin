@@ -1,0 +1,169 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.web.securite;
+
+import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.config.ConfigService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Endpoints de réinitialisation de mot de passe et d'activation de compte invité.
+ *
+ * <p>Extrait d'{@link AuthController} pour rester sous le seuil de couplage entre objets (20). HTTP
+ * pur — délègue au {@link AuthService}.
+ *
+ * @since 2.9.1
+ * @author Kwaite
+ */
+@RestController
+public class PasswordResetController {
+
+  private static final Logger LOG = LoggerFactory.getLogger(PasswordResetController.class);
+  private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
+  private static final String CLE_ERREUR = "erreur";
+
+  private final AuthenticationManager authenticationManager;
+  private final AuthService authService;
+  private final ConfigService configService;
+  private final LogAdminService logAdminService;
+
+  /**
+   * @param authenticationManager gestionnaire d'authentification Spring Security (activation d'une
+   *     invitation avec ouverture de session immédiate)
+   * @param authService service de réinitialisation de mot de passe
+   * @param configService service de configuration pour lire PUBLIC_BASE_URL
+   * @param logAdminService audit des tentatives bloquées faute de PUBLIC_BASE_URL configurée
+   */
+  public PasswordResetController(
+      final AuthenticationManager authenticationManager,
+      final AuthService authService,
+      final ConfigService configService,
+      final LogAdminService logAdminService) {
+    this.authenticationManager = authenticationManager;
+    this.authService = authService;
+    this.configService = configService;
+    this.logAdminService = logAdminService;
+  }
+
+  /**
+   * Déclenche l'envoi d'un email de réinitialisation de mot de passe.
+   *
+   * <p>Retourne toujours 200 pour éviter l'énumération de comptes.
+   *
+   * @param req le corps contenant l'adresse email
+   * @return 200 dans tous les cas
+   */
+  @PostMapping("/api/auth/forgot-password")
+  public ResponseEntity<Map<String, Object>> motDePasseOublie(
+      @RequestBody final ForgotPasswordRequest req) {
+    if (req.email() != null && !req.email().isBlank()) {
+      resoudreBaseUrl()
+          .ifPresentOrElse(
+              baseUrl -> authService.motDePasseOublie(req.email().strip().toLowerCase(), baseUrl),
+              () ->
+                  logAdminService.logAdmin(
+                      "error",
+                      "auth",
+                      "Réinitialisation de mot de passe bloquée — PUBLIC_BASE_URL non configurée"));
+    }
+    // Réponse identique que l'email existe ou non, et que PUBLIC_BASE_URL soit configurée ou
+    // non — évite toute énumération de compte ou fuite de configuration au client.
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  /**
+   * Retourne le type d'un token de vérification sans le consommer.
+   *
+   * <p>Retourne toujours 200 — {@code "reset"} si le token est absent ou invalide (opacité).
+   *
+   * @param token token brut (non hashé)
+   * @return {@code {type: "invite"}} ou {@code {type: "reset"}}
+   */
+  @GetMapping("/api/auth/type-token")
+  public ResponseEntity<Map<String, Object>> typeToken(@RequestParam final String token) {
+    final boolean estInvite = authService.estTokenInvite(token);
+    return ResponseEntity.ok(Map.of("type", estInvite ? "invite" : "reset"));
+  }
+
+  /**
+   * Réinitialise le mot de passe via un token de vérification.
+   *
+   * <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni, active le
+   * compte en une seule opération (identifiant + mot de passe) et ouvre une session.
+   *
+   * @param req le corps contenant le token, le mot de passe et optionnellement l'identifiant
+   * @param httpRequest pour créer la session lors de l'activation d'une invitation
+   * @return 200 si réinitialisé — 400 si invalide
+   */
+  @PostMapping("/api/auth/reset-password")
+  public ResponseEntity<?> reinitialiserMotDePasse(
+      @Valid @RequestBody final ResetPasswordRequest req, final HttpServletRequest httpRequest) {
+    if (req.identifiant() != null && !req.identifiant().isBlank()) {
+      final String ident = req.identifiant().strip().toLowerCase();
+      if (ident.length() < 3 || ident.length() > 30) {
+        return ResponseEntity.badRequest()
+            .body(Map.of(CLE_ERREUR, "L'identifiant doit contenir entre 3 et 30 caractères."));
+      }
+      if (!FORMAT_IDENTIFIANT.matcher(ident).matches()) {
+        return ResponseEntity.badRequest()
+            .body(
+                Map.of(
+                    CLE_ERREUR,
+                    "L'identifiant ne peut contenir que des lettres, chiffres, points,"
+                        + " tirets et underscores."));
+      }
+      final String identFinal =
+          authService.activerCompteInvite(req.token(), ident, req.motDePasse());
+
+      final UsernamePasswordAuthenticationToken tokenNonAuthentifie =
+          UsernamePasswordAuthenticationToken.unauthenticated(identFinal, req.motDePasse());
+      tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
+      final Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
+
+      final UtilisateurDetails details =
+          EtablisseurSession.ouvrir(
+                  auth, httpRequest, "Principal inattendu après activation invitation")
+              .details();
+      LOG.debug("Activation compte invitation, connexion : {}", details.identifiant());
+      return ResponseEntity.ok(
+          new UtilisateurDto(
+              details.id(), details.identifiant(), details.email(), details.role(), false, false));
+    }
+
+    authService.reinitialiserMotDePasse(req.token(), req.motDePasse());
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  /**
+   * Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de passe).
+   *
+   * <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
+   * : un attaquant contrôlant ce header pourrait rediriger le lien de réinitialisation vers un
+   * domaine sous son contrôle et voler le token dès qu'un utilisateur clique dessus (Host Header
+   * Injection). {@link Optional#empty()} plutôt qu'un repli non sûr si {@code PUBLIC_BASE_URL}
+   * n'est pas configurée — l'appelant doit alors refuser d'envoyer le lien.
+   *
+   * @return l'URL de base configurée, ou vide si absente
+   */
+  private Optional<String> resoudreBaseUrl() {
+    return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
+  }
+}

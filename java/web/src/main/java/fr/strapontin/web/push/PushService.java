@@ -86,8 +86,8 @@ public class PushService {
   /**
    * Enregistre un nouvel abonnement push.
    *
-   * <p>Le COUNT+INSERT est rendu atomique via une transaction {@code SERIALIZABLE} avec retry
-   * (même pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux abonnements
+   * <p>Le COUNT+INSERT est rendu atomique via une transaction {@code SERIALIZABLE} avec retry (même
+   * pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux abonnements
    * concurrents lisant tous deux {@code count = 9 < 10} avant qu'aucun des deux {@code INSERT} ne
    * soit committé pouvaient tous deux réussir, dépassant le cap documenté comme une limite dure.
    *
@@ -96,23 +96,31 @@ public class PushService {
    * @throws ErreurMetier 400 si données incomplètes/invalides, 429 si cap atteint
    */
   public void abonner(final String userId, final RequeteAbonnement requete) {
-    if (requete.endpoint() == null
-        || requete.keys() == null
-        || requete.keys().p256dh() == null
-        || requete.keys().auth() == null) {
-      throw new ErreurMetier("Abonnement incomplet.");
-    }
-    if (requete.endpoint().length() > 2048
-        || requete.keys().p256dh().length() > 256
-        || requete.keys().auth().length() > 256) {
-      throw new ErreurMetier("Données d'abonnement invalides.");
-    }
+    validerAbonnementComplet(requete);
+    validerTailleAbonnement(requete);
 
     RetrySerialisable.executer(
         MAX_TENTATIVES_ABONNEMENT,
         LOG,
         "l'abonnement push",
         () -> self.abonnerTransactionnel(userId, requete));
+  }
+
+  private static void validerAbonnementComplet(final RequeteAbonnement requete) {
+    if (requete.endpoint() == null
+        || requete.keys() == null
+        || requete.keys().p256dh() == null
+        || requete.keys().auth() == null) {
+      throw new ErreurMetier("Abonnement incomplet.");
+    }
+  }
+
+  private static void validerTailleAbonnement(final RequeteAbonnement requete) {
+    if (requete.endpoint().length() > 2048
+        || requete.keys().p256dh().length() > 256
+        || requete.keys().auth().length() > 256) {
+      throw new ErreurMetier("Données d'abonnement invalides.");
+    }
   }
 
   /**

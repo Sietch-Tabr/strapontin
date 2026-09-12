@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
-import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Map;
 import java.util.Optional;
@@ -25,8 +24,8 @@ import org.springframework.security.core.Authentication;
 
 /**
  * Tests unitaires ciblés pour {@link AdminController#creerUtilisateur} — le lien d'invitation ne
- * doit plus jamais être construit depuis le header {@code Host} de la requête entrante quand
- * {@code PUBLIC_BASE_URL} n'est pas configurée (Host Header Injection).
+ * doit plus jamais être construit depuis le header {@code Host} de la requête entrante quand {@code
+ * PUBLIC_BASE_URL} n'est pas configurée (Host Header Injection).
  *
  * @since 2.8.2
  * @author Kwaite
@@ -45,16 +44,7 @@ class AdminControllerCreerUtilisateurTest {
     configService = mock(ConfigService.class);
     controller =
         new AdminController(
-            adminService,
-            mock(AdminRevocationService.class),
-            mock(ConfigAdminService.class),
-            mock(JobsAdminService.class),
-            mock(BanniereService.class),
-            mock(WorkerProxyService.class),
-            emailService,
-            mock(EmailServiceAdmin.class),
-            mock(VapidService.class),
-            configService);
+            adminService, mock(AdminRevocationService.class), emailService, configService);
   }
 
   private static Authentication authPour(final String userId) {

@@ -215,13 +215,28 @@ public class SalleService {
     }
 
     final UUID salleId = resoudreSalleId(nom, salleCle);
+    validerAjoutSalle(userId, salleId);
+    enregistrerSourcesSalle(salleId, nom, tmVenueId, osmId, wikidataId);
+    salleRepository.ajouterPourUtilisateur(userId, salleId);
+
+    executerApresCommit(salleId);
+  }
+
+  private void validerAjoutSalle(final String userId, final UUID salleId) {
     if (salleRepository.existePourUtilisateur(userId, salleId)) {
       throw new RessourceDejaExistante("Cette salle est déjà dans votre liste.");
     }
     if (salleRepository.compterPourUtilisateur(userId) >= CAP_SALLES) {
       throw new ErreurMetier("Limite de 200 salles atteinte.");
     }
+  }
 
+  private void enregistrerSourcesSalle(
+      final UUID salleId,
+      final String nom,
+      final String tmVenueId,
+      final String osmId,
+      final String wikidataId) {
     if (tmVenueId != null) {
       salleRepository.enregistrerSalleSource(salleId, "ticketmaster", tmVenueId);
     }
@@ -238,9 +253,6 @@ public class SalleService {
             wikidataId);
       }
     }
-    salleRepository.ajouterPourUtilisateur(userId, salleId);
-
-    executerApresCommit(salleId);
   }
 
   /**

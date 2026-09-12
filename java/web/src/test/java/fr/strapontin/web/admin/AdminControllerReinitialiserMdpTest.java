@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
-import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.Map;
 import java.util.Optional;
@@ -47,16 +46,7 @@ class AdminControllerReinitialiserMdpTest {
         .thenReturn(Optional.of("https://strapontin.fr"));
     controller =
         new AdminController(
-            adminService,
-            mock(AdminRevocationService.class),
-            mock(ConfigAdminService.class),
-            mock(JobsAdminService.class),
-            mock(BanniereService.class),
-            mock(WorkerProxyService.class),
-            emailService,
-            mock(EmailServiceAdmin.class),
-            mock(VapidService.class),
-            configService);
+            adminService, mock(AdminRevocationService.class), emailService, configService);
   }
 
   private static Authentication authPour(final String userId) {
