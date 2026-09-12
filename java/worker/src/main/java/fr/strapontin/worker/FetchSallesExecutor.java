@@ -10,15 +10,12 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
-import fr.strapontin.worker.quota.GestionQuotaTM;
-import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Pipeline complet des jobs {@code fetch:salle} et {@code fetch:salles:all} : fetch par salle
@@ -35,34 +32,22 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
-  private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
-  private final GestionQuotaTM gestionQuotaTM;
-  private final NotificationDigestService notificationDigestService;
-  private final SuiviSanteSourcesService suiviSanteSourcesService;
-  private final WorkerStatsService workerStatsService;
+  private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
 
   FetchSallesExecutor(
-      final NamedParameterJdbcTemplate jdbc,
       final List<SourceConcerts> sources,
       final PersisterConcerts persisterConcerts,
       final RecalculerMatchesService recalculerMatchesService,
-      final GestionQuotaTM gestionQuotaTM,
-      final NotificationDigestService notificationDigestService,
-      final SuiviSanteSourcesService suiviSanteSourcesService,
-      final WorkerStatsService workerStatsService,
+      final FetchRapportage rapportage,
       final WorkerFetchCommun commun) {
-    this.jdbc = jdbc;
     this.sources = sources;
     this.persisterConcerts = persisterConcerts;
     this.recalculerMatchesService = recalculerMatchesService;
-    this.gestionQuotaTM = gestionQuotaTM;
-    this.notificationDigestService = notificationDigestService;
-    this.suiviSanteSourcesService = suiviSanteSourcesService;
-    this.workerStatsService = workerStatsService;
+    this.rapportage = rapportage;
     this.commun = commun;
   }
 
@@ -79,7 +64,7 @@ class FetchSallesExecutor {
         try {
           final List<ConcertBrut> resultat = source.fetchSalle(identifiant);
           destination.addAll(resultat);
-          suiviSanteSourcesService.enregistrerResultatSalle(identifiant, resultat.size());
+          rapportage.suiviSanteSourcesService().enregistrerResultatSalle(identifiant, resultat.size());
         } catch (Exception e) {
           LOG.error(
               "{} fetchSalle échoué identifiant={} : {}",
@@ -101,7 +86,7 @@ class FetchSallesExecutor {
    */
   void executerUneSalle(final String identifiantsStr) {
     LOG.info("fetch:salle démarré identifiants={}", identifiantsStr);
-    if (!gestionQuotaTM.verifier("fetch:salle")) {
+    if (!commun.gestionQuotaTM().verifier("fetch:salle")) {
       return;
     }
 
@@ -141,11 +126,11 @@ class FetchSallesExecutor {
   void executerToutes(final List<String> salleIdsCibles) {
     final boolean retry = salleIdsCibles != null;
     LOG.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");
-    workerStatsService.executerAvecStatsToleretErreur(
+    rapportage.workerStatsService().executerAvecStatsToleretErreur(
         LOG,
         "fetch:salles:all",
         () -> {
-          if (!gestionQuotaTM.cronAutorise()) {
+          if (!commun.gestionQuotaTM().cronAutorise()) {
             LOG.warn("fetch:salles:all suspendu — quota TM insuffisant");
             return new WorkerStatsService.ResultatJob(
                 new ResultatPersistance(0, 0), "quota insuffisant");
@@ -161,7 +146,7 @@ class FetchSallesExecutor {
           final ResultatPersistance resultat = traiterTousLesLotsSalles(sallesAFetcher);
           commun.sauvegarderQuota();
           recalculerMatchesService.recalculerMatches(null);
-          notificationDigestService.executerDigest("temps_reel");
+          rapportage.notificationDigestService().executerDigest("temps_reel");
           LOG.info("fetch:salles:all terminé");
           return WorkerStatsService.ResultatJob.succes(resultat);
         });
@@ -183,7 +168,8 @@ class FetchSallesExecutor {
   private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(
       final List<String> salleIdsCibles) {
     final boolean filtre = salleIdsCibles != null;
-    return jdbc
+    return commun
+        .jdbc()
         .queryForList(
             "SELECT ss.salle_id::text AS salle_id,"
                 + " string_agg(ss.source || ':' || ss.identifiant_externe, ',') AS identifiants"

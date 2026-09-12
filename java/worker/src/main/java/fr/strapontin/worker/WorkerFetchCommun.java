@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * Briques partagées par les différents pipelines de fetch de {@link WorkerFetchService} (batch
@@ -26,11 +27,15 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * remontée des échecs de lot, sauvegarde du quota TM.
  *
  * <p>Extrait de {@link WorkerFetchService} pour rester sous la limite de 500 lignes par fichier.
+ * Bean Spring (pas seulement assemblé manuellement) pour que {@link WorkerFetchService} et les
+ * exécuteurs de fetch (voir {@link FetchArtistesBatchExecutor}) reçoivent jdbc/tm/gestionQuotaTM
+ * via cette seule dépendance plutôt que trois paramètres de constructeur supplémentaires chacun.
  *
  * @since 2.9.1
  * @author Kwaite
  */
-class WorkerFetchCommun {
+@Component
+public class WorkerFetchCommun {
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
 
@@ -68,7 +73,15 @@ class WorkerFetchCommun {
   private final TicketmasterSource tm;
   private final GestionQuotaTM gestionQuotaTM;
 
-  WorkerFetchCommun(
+  /**
+   * @param jdbc accès JDBC
+   * @param resolveur résolution du nom canonique artiste/salle
+   * @param logsAdminWorker journalisation des échecs de lots
+   * @param retryLotsService retry ciblé des lots en échec
+   * @param tm fetch par lot d'attractionIds Ticketmaster
+   * @param gestionQuotaTM lecture du quota Ticketmaster restant
+   */
+  public WorkerFetchCommun(
       final NamedParameterJdbcTemplate jdbc,
       final ResolveurNomCanonique resolveur,
       final LogsAdminWorker logsAdminWorker,
@@ -81,6 +94,27 @@ class WorkerFetchCommun {
     this.retryLotsService = retryLotsService;
     this.tm = tm;
     this.gestionQuotaTM = gestionQuotaTM;
+  }
+
+  /**
+   * @return accès JDBC partagé
+   */
+  NamedParameterJdbcTemplate jdbc() {
+    return jdbc;
+  }
+
+  /**
+   * @return source Ticketmaster partagée
+   */
+  TicketmasterSource tm() {
+    return tm;
+  }
+
+  /**
+   * @return gestion du quota Ticketmaster partagée
+   */
+  GestionQuotaTM gestionQuotaTM() {
+    return gestionQuotaTM;
   }
 
   static ResultatPersistance accumuler(final ResultatPersistance a, final ResultatPersistance b) {

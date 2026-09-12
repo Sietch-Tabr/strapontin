@@ -17,16 +17,23 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Service;
 
 /**
  * Health-check et redécouverte active des identifiants Ticketmaster suspects, et vérification de
  * cohérence nom/artiste — extrait de {@link ReconciliationNocturneService} pour rester sous le
  * seuil de couplage entre objets (20).
  *
+ * <p>Bean Spring (pas seulement assemblé manuellement) pour que {@link
+ * ReconciliationNocturneService} le reçoive comme une seule dépendance plutôt que de reconstruire
+ * jdbc/tm/logsAdminWorker à chaque fois — voir le seuil de nombre de paramètres de constructeur
+ * (8).
+ *
  * @since 2.9.1
  * @author Kwaite
  */
-final class HealthCheckArtistesTM {
+@Service
+public final class HealthCheckArtistesTM {
 
   private static final Logger LOG = LoggerFactory.getLogger(HealthCheckArtistesTM.class);
   private static final String CLE_ARTISTE_ID = "artisteId";
@@ -37,7 +44,12 @@ final class HealthCheckArtistesTM {
   private final TicketmasterSource tm;
   private final LogsAdminWorker logsAdminWorker;
 
-  HealthCheckArtistesTM(
+  /**
+   * @param jdbc accès JDBC
+   * @param tm health-check et redécouverte des identifiants TM
+   * @param logsAdminWorker journalisation des incohérences détectées
+   */
+  public HealthCheckArtistesTM(
       final NamedParameterJdbcTemplate jdbc,
       final TicketmasterSource tm,
       final LogsAdminWorker logsAdminWorker) {

@@ -90,20 +90,15 @@ class WorkerFetchServiceTest {
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
             new SuiviChroniciteService(jdbc, new ObjectMapper()),
             new DeriveVolumeFetchService(jdbc, logsAdminWorker));
+    final WorkerFetchCommun commun =
+        new WorkerFetchCommun(
+            jdbc, resolveur, logsAdminWorker, retryLotsService, tm, gestionQuotaTM);
+    final FetchRapportage rapportage =
+        new FetchRapportage(
+            notificationDigestService, workerStatsService, suiviSanteSourcesService);
     fetchService =
         new WorkerFetchService(
-            sources,
-            tm,
-            resolveur,
-            persisterConcerts,
-            recalculerMatchesService,
-            gestionQuotaTM,
-            notificationDigestService,
-            jdbc,
-            suiviSanteSourcesService,
-            workerStatsService,
-            logsAdminWorker,
-            retryLotsService);
+            sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
   }
 
   @Test

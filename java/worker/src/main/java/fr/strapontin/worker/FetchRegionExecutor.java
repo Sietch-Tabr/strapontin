@@ -9,7 +9,6 @@ import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
-import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -18,7 +17,6 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Pipeline complet du job {@code fetch:region} : fetch par département auprès de toutes les
@@ -35,31 +33,22 @@ class FetchRegionExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchRegionExecutor.class);
   private static final int TAILLE_LOT_DEPTS = 5;
 
-  private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
-  private final GestionQuotaTM gestionQuotaTM;
-  private final NotificationDigestService notificationDigestService;
-  private final WorkerStatsService workerStatsService;
+  private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
 
   FetchRegionExecutor(
-      final NamedParameterJdbcTemplate jdbc,
       final List<SourceConcerts> sources,
       final PersisterConcerts persisterConcerts,
       final RecalculerMatchesService recalculerMatchesService,
-      final GestionQuotaTM gestionQuotaTM,
-      final NotificationDigestService notificationDigestService,
-      final WorkerStatsService workerStatsService,
+      final FetchRapportage rapportage,
       final WorkerFetchCommun commun) {
-    this.jdbc = jdbc;
     this.sources = sources;
     this.persisterConcerts = persisterConcerts;
     this.recalculerMatchesService = recalculerMatchesService;
-    this.gestionQuotaTM = gestionQuotaTM;
-    this.notificationDigestService = notificationDigestService;
-    this.workerStatsService = workerStatsService;
+    this.rapportage = rapportage;
     this.commun = commun;
   }
 
@@ -70,13 +59,15 @@ class FetchRegionExecutor {
   void executer(final List<String> deptsCibles) {
     final boolean retry = deptsCibles != null;
     LOG.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");
-    workerStatsService.executerAvecStatsToleretErreur(
-        LOG, "fetch:region", () -> executerCycle(retry, deptsCibles));
+    rapportage
+        .workerStatsService()
+        .executerAvecStatsToleretErreur(
+            LOG, "fetch:region", () -> executerCycle(retry, deptsCibles));
   }
 
   private WorkerStatsService.ResultatJob executerCycle(
       final boolean retry, final List<String> deptsCibles) {
-    if (!gestionQuotaTM.cronAutorise()) {
+    if (!commun.gestionQuotaTM().cronAutorise()) {
       LOG.warn("fetch:region suspendu — quota TM insuffisant");
       return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
     }
@@ -90,17 +81,19 @@ class FetchRegionExecutor {
     final ResultatPersistance resultat = traiterLots(deptsListe);
     commun.sauvegarderQuota();
     recalculerMatchesService.recalculerMatches(null);
-    notificationDigestService.executerDigest("temps_reel");
+    rapportage.notificationDigestService().executerDigest("temps_reel");
     LOG.info("fetch:region terminé");
     return WorkerStatsService.ResultatJob.succes(resultat);
   }
 
   private List<String> deptsConfigures() {
     final List<String[]> allDepts =
-        jdbc.query(
-            "SELECT departements FROM user_config",
-            Map.of(),
-            (rs, _) -> (String[]) rs.getArray("departements").getArray());
+        commun
+            .jdbc()
+            .query(
+                "SELECT departements FROM user_config",
+                Map.of(),
+                (rs, _) -> (String[]) rs.getArray("departements").getArray());
     return new ArrayList<>(collecterTousLesDepts(allDepts));
   }
 
@@ -182,10 +175,12 @@ class FetchRegionExecutor {
    * salles non suivies.
    */
   private List<String> sallesConnuesDesDepartements(final List<String> depts) {
-    return jdbc.queryForList(
-        "SELECT DISTINCT salle_id::text FROM concerts"
-            + " WHERE dept IN (:depts) AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
-        Map.of("depts", depts),
-        String.class);
+    return commun
+        .jdbc()
+        .queryForList(
+            "SELECT DISTINCT salle_id::text FROM concerts"
+                + " WHERE dept IN (:depts) AND salle_id IS NOT NULL AND date >= CURRENT_DATE",
+            Map.of("depts", depts),
+            String.class);
   }
 }

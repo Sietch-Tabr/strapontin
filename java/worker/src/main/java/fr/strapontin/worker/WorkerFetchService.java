@@ -4,15 +4,10 @@
  */
 package fr.strapontin.worker;
 
-import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
-import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
-import fr.strapontin.worker.quota.GestionQuotaTM;
-import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.util.List;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
@@ -34,67 +29,28 @@ public class WorkerFetchService {
 
   /**
    * @param sources sources de fetch injectées (une par source active)
-   * @param tm fetch par lot d'attractionIds Ticketmaster
-   * @param resolveur résolution du nom canonique artiste/salle
    * @param persisterConcerts persistance des concerts dédoublonnés et résolus
    * @param recalculerMatchesService recalcul des matches utilisateur après persistance
-   * @param gestionQuotaTM lecture du quota Ticketmaster restant
-   * @param notificationDigestService déclenchement des notifications immédiates
-   * @param jdbc accès JDBC
-   * @param suiviSanteSourcesService suivi passif des échecs de fetch par salle/artiste
-   * @param workerStatsService journalisation du bilan de chaque job
-   * @param logsAdminWorker journalisation des échecs de lots
-   * @param retryLotsService retry ciblé des lots en échec
+   * @param rapportage collaborateurs de reporting partagés (notification, bilan de job, suivi
+   *     passif des échecs par source)
+   * @param commun briques partagées entre pipelines de fetch (jdbc, tm, quota, dédoublonnage, suivi
+   *     des absences, retry)
    */
   public WorkerFetchService(
       final List<SourceConcerts> sources,
-      final TicketmasterSource tm,
-      final ResolveurNomCanonique resolveur,
       final PersisterConcerts persisterConcerts,
       final RecalculerMatchesService recalculerMatchesService,
-      final GestionQuotaTM gestionQuotaTM,
-      final NotificationDigestService notificationDigestService,
-      final NamedParameterJdbcTemplate jdbc,
-      final SuiviSanteSourcesService suiviSanteSourcesService,
-      final WorkerStatsService workerStatsService,
-      final LogsAdminWorker logsAdminWorker,
-      final RetryLotsService retryLotsService) {
-    final WorkerFetchCommun commun =
-        new WorkerFetchCommun(
-            jdbc, resolveur, logsAdminWorker, retryLotsService, tm, gestionQuotaTM);
+      final FetchRapportage rapportage,
+      final WorkerFetchCommun commun) {
     this.fetchArtistesBatchExecutor =
         new FetchArtistesBatchExecutor(
-            sources,
-            tm,
-            persisterConcerts,
-            recalculerMatchesService,
-            gestionQuotaTM,
-            notificationDigestService,
-            jdbc,
-            workerStatsService,
-            suiviSanteSourcesService,
-            commun);
+            sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
     this.fetchRegionExecutor =
         new FetchRegionExecutor(
-            jdbc,
-            sources,
-            persisterConcerts,
-            recalculerMatchesService,
-            gestionQuotaTM,
-            notificationDigestService,
-            workerStatsService,
-            commun);
+            sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
     this.fetchSallesExecutor =
         new FetchSallesExecutor(
-            jdbc,
-            sources,
-            persisterConcerts,
-            recalculerMatchesService,
-            gestionQuotaTM,
-            notificationDigestService,
-            suiviSanteSourcesService,
-            workerStatsService,
-            commun);
+            sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
   }
 
   /**

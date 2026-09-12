@@ -79,9 +79,6 @@ class ReconciliationNocturneServiceTest {
     when(controleIntegrite.verifier()).thenReturn(0);
     service =
         new ReconciliationNocturneService(
-            jdbc,
-            tm,
-            logsAdminWorker,
             enrichissementSalles,
             enrichissementArtistes,
             coherenceWikidataSalle,
@@ -89,7 +86,9 @@ class ReconciliationNocturneServiceTest {
             fusionSallesClePortee,
             coherenceMultiSalle,
             suggestionMotsGenerics,
-            controleIntegrite);
+            controleIntegrite,
+            new HealthCheckArtistesTM(jdbc, tm, logsAdminWorker),
+            new HealthCheckSallesTM(jdbc, tm, logsAdminWorker));
   }
 
   private static Map<String, Object> ligneSalleSuspecte(

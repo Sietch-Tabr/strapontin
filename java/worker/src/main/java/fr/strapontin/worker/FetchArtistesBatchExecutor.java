@@ -7,19 +7,15 @@ package fr.strapontin.worker;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
-import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
-import fr.strapontin.worker.quota.GestionQuotaTM;
-import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Pipeline complet du job {@code fetch:artistes:batch} : fetch TM par lot d'attractionIds (+
@@ -37,36 +33,21 @@ class FetchArtistesBatchExecutor {
   private static final int TAILLE_LOT_TM = 20;
 
   private final List<SourceConcerts> sources;
-  private final TicketmasterSource tm;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
-  private final GestionQuotaTM gestionQuotaTM;
-  private final NotificationDigestService notificationDigestService;
-  private final NamedParameterJdbcTemplate jdbc;
-  private final WorkerStatsService workerStatsService;
-  private final SuiviSanteSourcesService suiviSanteSourcesService;
+  private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
 
   FetchArtistesBatchExecutor(
       final List<SourceConcerts> sources,
-      final TicketmasterSource tm,
       final PersisterConcerts persisterConcerts,
       final RecalculerMatchesService recalculerMatchesService,
-      final GestionQuotaTM gestionQuotaTM,
-      final NotificationDigestService notificationDigestService,
-      final NamedParameterJdbcTemplate jdbc,
-      final WorkerStatsService workerStatsService,
-      final SuiviSanteSourcesService suiviSanteSourcesService,
+      final FetchRapportage rapportage,
       final WorkerFetchCommun commun) {
     this.sources = sources;
-    this.tm = tm;
     this.persisterConcerts = persisterConcerts;
     this.recalculerMatchesService = recalculerMatchesService;
-    this.gestionQuotaTM = gestionQuotaTM;
-    this.notificationDigestService = notificationDigestService;
-    this.jdbc = jdbc;
-    this.workerStatsService = workerStatsService;
-    this.suiviSanteSourcesService = suiviSanteSourcesService;
+    this.rapportage = rapportage;
     this.commun = commun;
   }
 
@@ -77,13 +58,13 @@ class FetchArtistesBatchExecutor {
   void executer(final List<String> artisteIdsCibles) {
     final boolean retry = artisteIdsCibles != null;
     LOG.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
-    workerStatsService.executerAvecStatsToleretErreur(
+    rapportage.workerStatsService().executerAvecStatsToleretErreur(
         LOG, "fetch:artistes:batch", () -> executerCycle(retry, artisteIdsCibles));
   }
 
   private WorkerStatsService.ResultatJob executerCycle(
       final boolean retry, final List<String> artisteIdsCibles) {
-    if (!gestionQuotaTM.cronAutorise()) {
+    if (!commun.gestionQuotaTM().cronAutorise()) {
       LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
       return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
     }
@@ -100,14 +81,14 @@ class FetchArtistesBatchExecutor {
 
     commun.sauvegarderQuota();
     recalculerMatchesService.recalculerMatches(null);
-    notificationDigestService.executerDigest("temps_reel");
+    rapportage.notificationDigestService().executerDigest("temps_reel");
     LOG.info("fetch:artistes:batch terminé");
     return WorkerStatsService.ResultatJob.succes(resultat);
   }
 
   private List<Map<String, Object>> chargerArtistesSuivisBatch(
       final boolean retry, final List<String> artisteIdsCibles) {
-    return jdbc.queryForList(
+    return commun.jdbc().queryForList(
         "SELECT ua.artiste_id::text AS artiste_id_str,"
             + " MAX(ua.artiste_affiche) AS artiste_affiche,"
             + " MAX(asm.identifiant_externe) AS attraction_id,"
@@ -263,7 +244,9 @@ class FetchArtistesBatchExecutor {
         nbIdsDistincts,
         nom,
         artisteIdStr);
-    jdbc.update(
+    commun
+        .jdbc()
+        .update(
         "UPDATE artiste_sources SET necessite_intervention_le ="
             + " COALESCE(necessite_intervention_le, now()) WHERE artiste_id = CAST(:artisteId"
             + " AS uuid) AND source = 'ticketmaster'",
@@ -274,9 +257,11 @@ class FetchArtistesBatchExecutor {
   private String rechercherEtEnregistrerAttractionId(final String nom, final String artisteIdStr) {
     String attractionId = null;
     try {
-      attractionId = tm.rechercherAttractionId(nom);
+      attractionId = commun.tm().rechercherAttractionId(nom);
       if (attractionId != null) {
-        jdbc.update(
+        commun
+            .jdbc()
+            .update(
             "INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)"
                 + " VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :attractionId)"
                 + " ON CONFLICT DO NOTHING",
@@ -297,9 +282,9 @@ class FetchArtistesBatchExecutor {
       final List<String> lot =
           attractionIds.subList(i, Math.min(i + TAILLE_LOT_TM, attractionIds.size()));
       try {
-        final List<ConcertBrut> concertsLot = tm.fetchArtistesLot(lot);
+        final List<ConcertBrut> concertsLot = commun.tm().fetchArtistesLot(lot);
         resultats.addAll(concertsLot);
-        suiviSanteSourcesService.enregistrerResultatArtistesLot(lot, concertsLot);
+        rapportage.suiviSanteSourcesService().enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
         LOG.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
       }
@@ -311,7 +296,7 @@ class FetchArtistesBatchExecutor {
     final List<ConcertBrut> resultats = new ArrayList<>();
     for (final String nom : nomsSansTmId) {
       try {
-        resultats.addAll(tm.fetchArtiste(nom));
+        resultats.addAll(commun.tm().fetchArtiste(nom));
       } catch (Exception e) {
         LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
       }

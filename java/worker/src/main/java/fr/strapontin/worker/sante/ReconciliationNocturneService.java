@@ -4,20 +4,10 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
-import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
-import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
@@ -39,16 +29,15 @@ import org.springframework.stereotype.Service;
  * @since 2.6.0
  * @author Kwaite
  */
+// 10 collaborateurs indépendants : chacun est une vérification/un enrichissement autonome du
+// job nocturne, sans regroupement thématique naturel (contrairement à FetchRapportage côté
+// fetch) — un tel regroupement serait un simple contournement du seuil, pas une amélioration de
+// conception. HealthCheckArtistesTM/HealthCheckSallesTM (déjà des beans Spring, voir leur propre
+// Javadoc) ont réduit le compte de 11 à 10.
+@SuppressWarnings("PMD.ExcessiveParameterList")
 @Service
 public class ReconciliationNocturneService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ReconciliationNocturneService.class);
-  private static final String NIVEAU_WARN = "warn";
-  private static final String SOURCE_RECONCILIATION_NOCTURNE = "reconciliation-nocturne";
-
-  private final NamedParameterJdbcTemplate jdbc;
-  private final TicketmasterSource tm;
-  private final LogsAdminWorker logsAdminWorker;
   private final EnrichissementSallesService enrichissementSalles;
   private final EnrichissementArtistesService enrichissementArtistes;
   private final CoherenceWikidataSalleService coherenceWikidataSalle;
@@ -58,11 +47,9 @@ public class ReconciliationNocturneService {
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
   private final ControleIntegriteService controleIntegrite;
   private final HealthCheckArtistesTM healthCheckArtistesTM;
+  private final HealthCheckSallesTM healthCheckSallesTM;
 
   /**
-   * @param jdbc accès JDBC
-   * @param tm health-check et redécouverte des identifiants TM suspects
-   * @param logsAdminWorker journalisation du bilan de cycle
    * @param enrichissementSalles enrichissement Wikidata/OSM des salles (phase 2)
    * @param enrichissementArtistes enrichissement Wikidata/Deezer des artistes (phase 2)
    * @param coherenceWikidataSalle revalidation ville/wikidata_id des salles déjà enrichies
@@ -71,11 +58,10 @@ public class ReconciliationNocturneService {
    * @param coherenceMultiSalle détection de contamination/doublon multi-salles
    * @param suggestionMotsGenerics suggestion de mots-types de salle génériques non couverts
    * @param controleIntegrite contrôles d'intégrité généralistes du référentiel
+   * @param healthCheckArtistesTM health-check et redécouverte des identifiants TM artiste suspects
+   * @param healthCheckSallesTM health-check et redécouverte des identifiants TM salle suspects
    */
   public ReconciliationNocturneService(
-      final NamedParameterJdbcTemplate jdbc,
-      final TicketmasterSource tm,
-      final LogsAdminWorker logsAdminWorker,
       final EnrichissementSallesService enrichissementSalles,
       final EnrichissementArtistesService enrichissementArtistes,
       final CoherenceWikidataSalleService coherenceWikidataSalle,
@@ -83,10 +69,9 @@ public class ReconciliationNocturneService {
       final FusionSallesClePorteeService fusionSallesClePortee,
       final CoherenceMultiSalleService coherenceMultiSalle,
       final SuggestionMotsGenericsService suggestionMotsGenerics,
-      final ControleIntegriteService controleIntegrite) {
-    this.jdbc = jdbc;
-    this.tm = tm;
-    this.logsAdminWorker = logsAdminWorker;
+      final ControleIntegriteService controleIntegrite,
+      final HealthCheckArtistesTM healthCheckArtistesTM,
+      final HealthCheckSallesTM healthCheckSallesTM) {
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
@@ -95,7 +80,8 @@ public class ReconciliationNocturneService {
     this.coherenceMultiSalle = coherenceMultiSalle;
     this.suggestionMotsGenerics = suggestionMotsGenerics;
     this.controleIntegrite = controleIntegrite;
-    this.healthCheckArtistesTM = new HealthCheckArtistesTM(jdbc, tm, logsAdminWorker);
+    this.healthCheckArtistesTM = healthCheckArtistesTM;
+    this.healthCheckSallesTM = healthCheckSallesTM;
   }
 
   /**
@@ -110,10 +96,10 @@ public class ReconciliationNocturneService {
    * @return bilan agrégé de l'exécution
    */
   public ResultatReconciliation executer() {
-    final int[] bilanSalles = healthCheckSallesTM();
+    final int[] bilanSalles = healthCheckSallesTM.verifier();
     healthCheckArtistesTM.verifierVivacite();
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
-    alerterDigitickSuspect();
+    healthCheckSallesTM.alerterDigitickSuspect();
 
     final int enrichisArtistes = enrichissementArtistes.enrichir();
     final int enrichisSalles = enrichissementSalles.enrichir();
@@ -141,133 +127,5 @@ public class ReconciliationNocturneService {
         doublonsSignales,
         motsGenericsSuggeres,
         integriteSignalements);
-  }
-
-  /**
-   * @return tableau {@code [verifiees, redecouvertes, ambigues]}
-   */
-  private int[] healthCheckSallesTM() {
-    final List<Map<String, Object>> suspectes =
-        jdbc.queryForList(
-            """
-            SELECT ss.salle_id, ss.identifiant_externe, s.nom
-            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'ticketmaster' AND ss.suspect_depuis IS NOT NULL
-            """,
-            Map.of());
-
-    int verifiees = 0;
-    int redecouvertes = 0;
-    int ambigues = 0;
-    for (final Map<String, Object> ligne : suspectes) {
-      final UUID salleId = (UUID) ligne.get("salle_id");
-      final String ancienVenueId = (String) ligne.get("identifiant_externe");
-      final String nom = (String) ligne.get("nom");
-      verifiees++;
-      if (tm.verifierVenue(ancienVenueId) != StatutIdTM.MORT) {
-        reinitialiserSuspect(salleId);
-        continue;
-      }
-
-      final int resultatRedecouverte = redecouvrirSalle(salleId, ancienVenueId, nom);
-      if (resultatRedecouverte > 0) {
-        redecouvertes++;
-      } else if (resultatRedecouverte < 0) {
-        ambigues++;
-      }
-    }
-    return new int[] {verifiees, redecouvertes, ambigues};
-  }
-
-  /**
-   * @return 1 si redécouverte automatique effectuée, -1 si ambigu (0 ou ≥2 candidats), 0 sinon
-   */
-  private int redecouvrirSalle(final UUID salleId, final String ancienVenueId, final String nom) {
-    final List<CandidatVenueTM> candidats = tm.rechercherVenuesParNom(nom);
-    final List<CandidatVenueTM> valides =
-        candidats.stream()
-            .filter(c -> !c.id().equals(ancienVenueId))
-            .filter(c -> tm.compterEventsVenue(c.id()) > 0)
-            .filter(c -> !dejaUtiliseParAutreEntite(salleId, c.id()))
-            .toList();
-
-    if (valides.size() == 1) {
-      final String nouveauId = valides.get(0).id();
-      jdbc.update(
-          """
-          UPDATE salle_sources
-          SET identifiant_externe = :nouveauId, nb_zero_consecutifs = 0, suspect_depuis = NULL
-          WHERE salle_id = CAST(:salleId AS uuid) AND source = 'ticketmaster'
-          """,
-          Map.of("nouveauId", nouveauId, "salleId", salleId.toString()));
-      LOG.info(
-          "reconciliation:nocturne — salle redécouverte nom={} ancien={} nouveau={}",
-          nom,
-          ancienVenueId,
-          nouveauId);
-      return 1;
-    }
-
-    logsAdminWorker.inserer(
-        NIVEAU_WARN,
-        SOURCE_RECONCILIATION_NOCTURNE,
-        "redécouverte ambiguë salle="
-            + nom
-            + " ancienVenueId="
-            + ancienVenueId
-            + " candidats="
-            + valides.size(),
-        Map.of(
-            "salleId",
-            salleId.toString(),
-            "ancienVenueId",
-            ancienVenueId,
-            "nbCandidats",
-            valides.size()));
-    return -1;
-  }
-
-  /**
-   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort une salle suspecte alors
-   * qu'il s'agit simplement d'une salle sans événement à venir pour l'instant — la vérification
-   * active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle confirme que
-   * l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect" perdurer
-   * jusqu'à expiration (24h, cf. {@link #executer()}).
-   */
-  private void reinitialiserSuspect(final UUID salleId) {
-    jdbc.update(
-        "UPDATE salle_sources SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
-            + " WHERE salle_id = CAST(:id AS uuid) AND source = 'ticketmaster'",
-        Map.of("id", salleId.toString()));
-  }
-
-  private boolean dejaUtiliseParAutreEntite(final UUID idActuel, final String candidatId) {
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            "SELECT 1 FROM salle_sources WHERE source = 'ticketmaster' AND identifiant_externe ="
-                + " :candidatId AND salle_id != CAST(:idActuel AS uuid)",
-            Map.of("candidatId", candidatId, "idActuel", idActuel.toString()));
-    return !lignes.isEmpty();
-  }
-
-  private void alerterDigitickSuspect() {
-    final List<Map<String, Object>> suspectes =
-        jdbc.queryForList(
-            """
-            SELECT ss.identifiant_externe, s.nom
-            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
-            """,
-            Map.of());
-    if (suspectes.isEmpty()) {
-      return;
-    }
-
-    logsAdminWorker.inserer(
-        NIVEAU_WARN,
-        SOURCE_RECONCILIATION_NOCTURNE,
-        suspectes.size()
-            + " slug(s) Digitick suspect(s) — correction manuelle via l'onglet admin Salles",
-        Map.of("nbSuspectes", suspectes.size()));
   }
 }
