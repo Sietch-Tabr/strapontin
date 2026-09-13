@@ -73,6 +73,8 @@ public class SuggestionMotsGenericsService {
    *
    * @return nombre de mots nouvellement suggérés
    */
+  // Le HashSet copie les tokens du nom courant (mutable pour removeAll) — pas hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   public int suggerer() {
     final List<String> noms =
         jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);

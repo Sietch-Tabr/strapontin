@@ -38,6 +38,7 @@ public class UserConfigService {
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_DEPARTEMENTS = "departements";
   private static final String CLE_THEME = "theme";
+  private static final String CHAMP_FREQUENCE_NOTIFICATIONS = "frequenceNotifications";
   private static final Map<String, String> CHAMPS_VERS_COLONNES =
       Map.ofEntries(
           Map.entry(CLE_DEPARTEMENTS, CLE_DEPARTEMENTS),
@@ -299,7 +300,7 @@ public class UserConfigService {
   }
 
   private static String versCast(final String champJava, final String placeholder) {
-    if ("frequenceNotifications".equals(champJava)) {
+    if (CHAMP_FREQUENCE_NOTIFICATIONS.equals(champJava)) {
       return "CAST(" + placeholder + " AS frequence_notif)";
     }
     return placeholder;

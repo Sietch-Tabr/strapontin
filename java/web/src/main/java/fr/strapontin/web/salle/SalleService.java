@@ -48,6 +48,8 @@ public class SalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SalleService.class);
   private static final int CAP_SALLES = 200;
+  private static final int LONGUEUR_MIN_RECHERCHE_EXTERNE = 2;
+  private static final int NB_MIN_RESULTATS_BASE_AVANT_EXTERNE = 3;
 
   private final SalleRepository salleRepository;
   private final RestClient restClient;
@@ -110,7 +112,7 @@ public class SalleService {
     List<ResultatSalle> resultats = List.of();
     boolean dejaLaSuivie = false;
 
-    if (recherche.length() >= 2) {
+    if (recherche.length() >= LONGUEUR_MIN_RECHERCHE_EXTERNE) {
       final Set<String> sallesDejaAjoutees =
           salles.stream().map(s -> normaliserSalleCle(s.nom())).collect(Collectors.toSet());
 
@@ -159,7 +161,7 @@ public class SalleService {
       final List<ResultatSalle> listeResultats,
       final Set<String> sallesDejaAjoutees,
       final String recherche) {
-    if (listeResultats.size() >= 3) {
+    if (listeResultats.size() >= NB_MIN_RESULTATS_BASE_AVANT_EXTERNE) {
       return;
     }
     final CompletableFuture<List<ResultatSalle>> futureNominatim =

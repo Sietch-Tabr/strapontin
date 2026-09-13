@@ -33,6 +33,8 @@ class NotificationPushDigestService {
 
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushDigestService.class);
   private static final String CLE_ENDPOINT = "endpoint";
+  private static final int NB_CONCERTS_SINGULIER = 1;
+  private static final String SOURCE_SALLE = "SALLE";
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -144,6 +146,9 @@ class NotificationPushDigestService {
     }
   }
 
+  // Subscription/Notification portent les clés/le payload propres à l'abonnement courant — pas
+  // hissables hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private int envoyerPushAAbonnements(
       final PushService pushService,
       final List<Map<String, Object>> abonnements,
@@ -206,8 +211,8 @@ class NotificationPushDigestService {
                 + (premier.ville() != null ? " · " + premier.ville() : "")
             : construireLignesPreventePush(concerts);
     final String url;
-    if (concerts.size() == 1) {
-      if ("SALLE".equals(premier.source())) {
+    if (concerts.size() == NB_CONCERTS_SINGULIER) {
+      if (SOURCE_SALLE.equals(premier.source())) {
         url = "/spectacles?source=salles";
       } else {
         url = "/?ancre=artiste-" + URLEncoder.encode(premier.artisteNorm(), StandardCharsets.UTF_8);

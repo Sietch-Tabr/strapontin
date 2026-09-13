@@ -31,6 +31,7 @@ public final class HealthCheckSallesTM {
   private static final Logger LOG = LoggerFactory.getLogger(HealthCheckSallesTM.class);
   private static final String NIVEAU_WARN = "warn";
   private static final String SOURCE_RECONCILIATION_NOCTURNE = "reconciliation-nocturne";
+  private static final int NB_CANDIDATS_NON_AMBIGU = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
@@ -98,7 +99,7 @@ public final class HealthCheckSallesTM {
             .filter(c -> !dejaUtiliseParAutreEntite(salleId, c.id()))
             .toList();
 
-    if (valides.size() == 1) {
+    if (valides.size() == NB_CANDIDATS_NON_AMBIGU) {
       final String nouveauId = valides.get(0).id();
       jdbc.update(
           """

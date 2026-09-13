@@ -53,6 +53,8 @@ public class WikidataArtisteSource
 
   private static final int TAILLE_LOT_MAX = 50;
   private static final int TAILLE_CANDIDATS_DECOUVERTE = 5;
+  // Au-delà d'un seul type distinct parmi les candidats, l'ambiguïté ne peut plus être tranchée.
+  private static final int NB_TYPES_DISTINCTS_NON_AMBIGU = 1;
 
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementArtiste> cache;
@@ -213,7 +215,7 @@ public class WikidataArtisteSource
             .map(b -> ClientSparqlWikidata.valeurBinding(b, "typeMatch"))
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
-    if (typesDistincts.size() > 1) {
+    if (typesDistincts.size() > NB_TYPES_DISTINCTS_NON_AMBIGU) {
       LOG.warn(
           "Wikidata découverte — candidats ambigus (types {}) nom={} — non rapproché",
           typesDistincts,

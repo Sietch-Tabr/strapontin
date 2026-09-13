@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -71,7 +72,7 @@ class SalleRechercheTicketmasterService {
 
     try {
       final WorkerTriggerUtils.ReponseHttp reponse = appelerTicketmasterVenues(terme, tmKey.get());
-      if (reponse.statut() != 200) {
+      if (reponse.statut() != HttpStatus.OK.value()) {
         return List.of();
       }
 

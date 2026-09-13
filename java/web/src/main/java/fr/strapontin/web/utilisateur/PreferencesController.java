@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class PreferencesController {
 
   private static final Logger LOG = LoggerFactory.getLogger(PreferencesController.class);
+  private static final int VERSION_EXPORT_SUPPORTEE = 1;
 
   private final PreferencesService preferencesService;
 
@@ -80,7 +81,7 @@ public class PreferencesController {
     if (export == null) {
       return erreur(400, "Fichier invalide ou format non reconnu.");
     }
-    if (export.version() != 1) {
+    if (export.version() != VERSION_EXPORT_SUPPORTEE) {
       return erreur(422, "Version de fichier non supportée : " + export.version() + ".");
     }
 

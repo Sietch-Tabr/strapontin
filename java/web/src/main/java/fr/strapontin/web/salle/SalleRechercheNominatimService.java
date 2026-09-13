@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -91,7 +92,7 @@ class SalleRechercheNominatimService {
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) {
+      if (reponse.statut() != HttpStatus.OK.value()) {
         LOG.warn("Nominatim erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }

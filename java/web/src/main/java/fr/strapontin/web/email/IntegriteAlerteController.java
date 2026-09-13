@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class IntegriteAlerteController {
 
+  private static final String STATUT_MODIFIE = "modifie";
+
   private final EmailAlerteService emailAlerteService;
   private final LogAdminService logAdminService;
   private final String integriteSecret;
@@ -71,7 +73,7 @@ public class IntegriteAlerteController {
             authorization.getBytes(StandardCharsets.UTF_8))) {
       return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
     }
-    if ("modifie".equals(statut)) {
+    if (STATUT_MODIFIE.equals(statut)) {
       logAdminService.logAdmin(
           "error", "web", "contrôle d'intégrité — modification détectée", Map.of("detail", detail));
       emailAlerteService.envoyerAlerteIntegrite(detail);

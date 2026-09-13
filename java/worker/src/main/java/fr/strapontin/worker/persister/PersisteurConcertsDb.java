@@ -68,6 +68,8 @@ public class PersisteurConcertsDb {
    * @param type {@code "salle"} ou {@code "artiste"}
    * @return cache des UUIDs résolus par identifiant préfixé
    */
+  // computeIfAbsent n'instancie une ArrayList que pour les sources réellement nouvelles.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   Map<String, UUID> resoudreUuidsParSource(final List<ValeurConcert> concerts, final String type) {
     final Map<String, List<String>> parSource = new HashMap<>();
     for (final ValeurConcert c : concerts) {

@@ -34,8 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>La modification d'email n'est volontairement pas exposée ici : le seul chemin autorisé est le
  * flux à confirmation par token {@code POST /api/parametres/email-change} ({@link
- * ParametresRestController}), qui vérifie la possession de la nouvelle adresse avant de
- * l'appliquer — contrairement à un simple {@code PATCH} qui l'aurait acceptée immédiatement.
+ * ParametresRestController}), qui vérifie la possession de la nouvelle adresse avant de l'appliquer
+ * — contrairement à un simple {@code PATCH} qui l'aurait acceptée immédiatement.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -43,6 +43,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+
+  private static final int LONGUEUR_MIN_MOT_DE_PASSE = 12;
 
   private final UtilisateurRepository utilisateurRepository;
   private final PasswordEncoder passwordEncoder;
@@ -125,8 +127,12 @@ public class UserController {
     if (requete.motDePasseActuel() == null || requete.motDePasseNouveau() == null) {
       return erreur(400, "Tous les champs sont obligatoires.");
     }
-    if (requete.motDePasseNouveau().length() < 12) {
-      return erreur(400, "Le nouveau mot de passe doit contenir au moins 12 caractères.");
+    if (requete.motDePasseNouveau().length() < LONGUEUR_MIN_MOT_DE_PASSE) {
+      return erreur(
+          400,
+          "Le nouveau mot de passe doit contenir au moins "
+              + LONGUEUR_MIN_MOT_DE_PASSE
+              + " caractères.");
     }
     if (!passwordEncoder.matches(requete.motDePasseActuel(), details.motDePasse())) {
       return erreur(400, "Mot de passe actuel incorrect.");

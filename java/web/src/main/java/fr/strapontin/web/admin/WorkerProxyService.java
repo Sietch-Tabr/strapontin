@@ -12,6 +12,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -19,9 +20,9 @@ import org.springframework.web.client.RestClientResponseException;
 /**
  * Proxy HTTP vers le worker (port 8081) pour les opérations admin.
  *
- * <p>Centralise les appels internes vers le worker (jobs en cours, prochaines
- * exécutions, relance des fetches) en réutilisant le {@link RestClient} partagé
- * plutôt que d'instancier un {@code HttpClient} jetable par appel.
+ * <p>Centralise les appels internes vers le worker (jobs en cours, prochaines exécutions, relance
+ * des fetches) en réutilisant le {@link RestClient} partagé plutôt que d'instancier un {@code
+ * HttpClient} jetable par appel.
  *
  * @since 2.2.3
  * @author Kwaite
@@ -39,8 +40,8 @@ public class WorkerProxyService {
   private final LogAdminService logAdminService;
 
   /**
-   * @param restClient      client HTTP partagé
-   * @param objectMapper    désérialiseur JSON des réponses worker
+   * @param restClient client HTTP partagé
+   * @param objectMapper désérialiseur JSON des réponses worker
    * @param logAdminService service de logs admin
    */
   public WorkerProxyService(
@@ -53,9 +54,9 @@ public class WorkerProxyService {
   }
 
   /**
-   * Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante
-   * courante — pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors
-   * contexte de requête HTTP (ex. depuis un thread Quartz).
+   * Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante courante —
+   * pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors contexte de requête HTTP
+   * (ex. depuis un thread Quartz).
    *
    * @param requete requête en cours de construction
    * @return la même requête, avec le header ajouté si un correlationId est disponible
@@ -142,8 +143,7 @@ public class WorkerProxyService {
   /**
    * Déclenche immédiatement tous les fetches via le worker.
    *
-   * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause —
-   * )
+   * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause — )
    */
   public ResultatRelance relancerFetches() {
     try {
@@ -162,14 +162,13 @@ public class WorkerProxyService {
   }
 
   /**
-   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
-   * (ex. {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique
-   * du worker (v2.6.0).
+   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible (ex.
+   * {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique du worker
+   * (v2.6.0).
    *
-   * <p>Distingue trois causes d'échec plutôt que de toutes les renvoyer en 503 : le
-   * worker répond 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre
-   * code d'erreur si Quartz échoue en interne, ou aucune réponse si le worker est réellement
-   * injoignable.
+   * <p>Distingue trois causes d'échec plutôt que de toutes les renvoyer en 503 : le worker répond
+   * 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre code d'erreur si
+   * Quartz échoue en interne, ou aucune réponse si le worker est réellement injoignable.
    *
    * @param typeJob identifiant lisible du job à relancer
    * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
@@ -184,8 +183,9 @@ public class WorkerProxyService {
           "info", "admin", "Job relancé manuellement", Map.of("typeJob", typeJob));
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
-      if (e.getStatusCode().value() == 400) {
-        return new ResultatRelance(false, "Job inconnu : " + typeJob + ".", 400);
+      if (e.getStatusCode().value() == HttpStatus.BAD_REQUEST.value()) {
+        return new ResultatRelance(
+            false, "Job inconnu : " + typeJob + ".", HttpStatus.BAD_REQUEST.value());
       }
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);

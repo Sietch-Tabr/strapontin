@@ -109,6 +109,9 @@ class MatchesNonNotifiesLoader {
     return regrouperLignesParUtilisateur(lignes);
   }
 
+  // ConfigNotifUser/ConcertNotif/ArrayList portent les champs de la ligne courante — pas
+  // hissables hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private MatchesGroupes regrouperLignesParUtilisateur(final List<Map<String, Object>> lignes) {
     final Map<String, String> emailsUtilisateurs = new LinkedHashMap<>();
     final Map<String, NotificationDigestService.ConfigNotifUser> configsUtilisateurs =

@@ -22,6 +22,8 @@ final class ExtracteurVenteTM {
 
   private static final String CLE_NAME = "name";
   private static final String UNCHECKED = "unchecked";
+  private static final String STATUT_OFFSALE = "offsale";
+  private static final String STATUT_PRESALE = "presale";
 
   // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
   // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
@@ -54,10 +56,10 @@ final class ExtracteurVenteTM {
     String presaleDebut = presale != null ? (String) presale.get("startDateTime") : null;
     final String presaleNom = presale != null ? (String) presale.get(CLE_NAME) : null;
 
-    if ("offsale".equals(statut)) {
+    if (STATUT_OFFSALE.equals(statut)) {
       final String presaleRequalifiee = requalifierOffsaleEnPresale(sales, presaleDebut);
       if (presaleRequalifiee != null) {
-        statut = "presale";
+        statut = STATUT_PRESALE;
         presaleDebut = presaleRequalifiee;
       }
     }

@@ -423,6 +423,8 @@ public class ReferentielSallesService {
    * @param cibleId UUID de la salle à conserver
    * @param sourceId UUID de la salle à absorber
    */
+  // paramsSuppression porte des valeurs propres au conflit courant — pas hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(

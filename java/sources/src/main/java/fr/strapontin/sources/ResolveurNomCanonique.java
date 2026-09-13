@@ -48,6 +48,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // (id=1590752, nb_fan=1 547 139), présent en 2e position. Élargir la fenêtre de candidats permet
   // de les comparer entre eux plutôt que de prendre le premier venu.
   private static final int LIMITE_CANDIDATS_DEEZER = 5;
+  private static final String TYPE_ARTISTE = "artiste";
 
   private final RestClient restClient;
   private final Cache<String, ResultatResolution> cache;
@@ -226,7 +227,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
 
     final ResultatResolution resultat;
-    if ("artiste".equals(type)) {
+    if (TYPE_ARTISTE.equals(type)) {
       final String nomDeezer = rechercherDeezerArtiste(nom);
       resultat =
           nomDeezer != null

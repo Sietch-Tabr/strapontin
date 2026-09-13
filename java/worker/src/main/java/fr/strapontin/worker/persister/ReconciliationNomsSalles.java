@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 class ReconciliationNomsSalles {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliationNomsSalles.class);
+  private static final int NB_NOMS_SANS_DOUBLON = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -84,6 +85,8 @@ class ReconciliationNomsSalles {
    * @param lot valeurs de concerts à réconcilier
    * @return lot avec {@code salleNorm} canoniques
    */
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
     final Map<String, String> remplacementsIntraLot = construireRemplacementsIntraLot(lot);
     final List<ValeurConcert> lotApresIntraLot =
@@ -149,6 +152,8 @@ class ReconciliationNomsSalles {
     return heure == null ? null : heure.format(DateTimeFormatter.ofPattern("HH:mm"));
   }
 
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<String, String> construireRemplacementsIntraLot(final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();
     final Map<String, List<String>> parGroupe = new LinkedHashMap<>();
@@ -166,7 +171,7 @@ class ReconciliationNomsSalles {
       }
     }
     for (final List<String> sallesNorm : parGroupe.values()) {
-      if (sallesNorm.size() > 1) {
+      if (sallesNorm.size() > NB_NOMS_SANS_DOUBLON) {
         ajouterDoublonsSalle(sallesNorm, remplacements);
       }
     }

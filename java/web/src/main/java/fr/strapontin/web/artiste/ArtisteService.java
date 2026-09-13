@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -49,6 +50,8 @@ public class ArtisteService {
   private static final String WIKIDATA_USER_AGENT =
       "Strapontin/2.6.3 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
   private static final int CAP_ARTISTES = 500;
+  private static final int LONGUEUR_MIN_RECHERCHE_EXTERNE = 2;
+  private static final int NB_MIN_SUGGESTIONS_BASE_AVANT_EXTERNE = 3;
 
   private final ArtisteRepository artisteRepository;
   private final ObjectMapper objectMapper;
@@ -92,7 +95,7 @@ public class ArtisteService {
     List<SuggestionArtiste> suggestions = List.of();
     boolean dejaLeSuivi = false;
 
-    if (recherche.length() >= 2) {
+    if (recherche.length() >= LONGUEUR_MIN_RECHERCHE_EXTERNE) {
       final String rechercheNorm = Normalisation.normaliserTexte(recherche);
       final Set<String> nomsSuivisNorm =
           artistes.stream()
@@ -118,7 +121,7 @@ public class ArtisteService {
       // approcher les 20 s dans le pire cas (les deux appels au plafond de leur timeout),
       // constaté en E2E (webkit, timeout d'assertion à 25 s dépassé). En parallèle, l'attente
       // totale est bornée par le plus lent des deux, pas leur somme.
-      if (resultatsSuggestions.size() < 3) {
+      if (resultatsSuggestions.size() < NB_MIN_SUGGESTIONS_BASE_AVANT_EXTERNE) {
         final CompletableFuture<List<SuggestionArtiste>> futureWikidata =
             CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
         final CompletableFuture<List<SuggestionArtiste>> futureDeezer =
@@ -372,7 +375,7 @@ public class ArtisteService {
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) {
+      if (reponse.statut() != HttpStatus.OK.value()) {
         LOG.warn("Wikidata Search erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }
@@ -413,7 +416,7 @@ public class ArtisteService {
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) {
+      if (reponse.statut() != HttpStatus.OK.value()) {
         return null;
       }
 
@@ -461,7 +464,7 @@ public class ArtisteService {
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(
                           resp.getStatusCode().value(), resp.bodyTo(String.class)));
-      if (reponse.statut() != 200) {
+      if (reponse.statut() != HttpStatus.OK.value()) {
         LOG.warn("Deezer erreur HTTP {} pour '{}'", reponse.statut(), terme);
         return List.of();
       }

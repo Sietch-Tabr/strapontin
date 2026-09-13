@@ -42,6 +42,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String CLE_TOTAL_RESULTS = "totalResults";
   private static final int TAILLE_PAGE = 50;
   private static final int MAX_PAGES = 10;
+  private static final int PREMIERE_PAGE = 1;
 
   /** Catégories Eventim correspondant aux spectacles musicaux (concerts et musique classique). */
   public static final List<String> CATEGORIES_REGION =
@@ -301,7 +302,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     final String artisteSourceId = "eventim:" + attractionId;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
-      if (page > 1) {
+      if (page > PREMIERE_PAGE) {
         continuer = attendreEntrePagesEventim();
       }
       if (continuer) {
@@ -338,7 +339,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     boolean continuer = true;
 
     for (int page = 1; page <= MAX_PAGES && continuer; page++) {
-      if (page > 1) {
+      if (page > PREMIERE_PAGE) {
         continuer = attendreEntrePagesEventim();
       }
       if (continuer) {

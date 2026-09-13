@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 public class ReconciliateurArtistes {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurArtistes.class);
+  private static final int NB_NOMS_SANS_DOUBLON = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final CorrecteurArtisteParUrl correcteurArtisteParUrl;
@@ -93,6 +94,9 @@ public class ReconciliateurArtistes {
    * @param lot valeurs de concerts après réconciliation des salles
    * @return lot avec {@code artisteNorm} réconcilié
    */
+  // ArtisteExistant porte les champs de la ligne courante ; computeIfAbsent n'instancie une
+  // ArrayList que pour les clés réellement nouvelles — rien de hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   List<ValeurConcert> reconcilierArtistes(final List<ValeurConcert> lot) {
     final Map<String, String> remplacementsIntraLot = construireRemplacementsArtisteIntraLot(lot);
     final List<ValeurConcert> lotApresIntraLot =
@@ -146,6 +150,8 @@ public class ReconciliateurArtistes {
     correcteurArtisteParUrl.corrigerParUrl(lot);
   }
 
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<String, String> construireRemplacementsArtisteIntraLot(
       final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();
@@ -159,7 +165,7 @@ public class ReconciliateurArtistes {
       }
     }
     for (final List<String> artistesNorm : parGroupe.values()) {
-      if (artistesNorm.size() > 1) {
+      if (artistesNorm.size() > NB_NOMS_SANS_DOUBLON) {
         ajouterDoublonsArtiste(artistesNorm, remplacements);
       }
     }

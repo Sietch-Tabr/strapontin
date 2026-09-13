@@ -39,6 +39,7 @@ public class AdminRevocationService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AdminRevocationService.class);
   private static final int MAX_TENTATIVES_REVOCATION = 3;
+  private static final int NB_MIN_ADMINS_APRES_REVOCATION = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailServiceAdmin emailServiceAdmin;
@@ -122,7 +123,7 @@ public class AdminRevocationService {
             "SELECT COUNT(*) FROM users WHERE role = 'admin' AND revocation_admin_le IS NULL",
             Map.of(),
             Integer.class);
-    if (nbAdmins <= 1) {
+    if (nbAdmins <= NB_MIN_ADMINS_APRES_REVOCATION) {
       throw new ErreurMetier("Impossible de révoquer le seul administrateur restant.", 409);
     }
 

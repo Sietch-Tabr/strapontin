@@ -165,6 +165,8 @@ public class AccueilService {
                 rs.getBoolean("est_nouveau")));
   }
 
+  // computeIfAbsent n'instancie une ArrayList que pour les artistes réellement nouveaux.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private List<GroupeArtiste> grouperParArtiste(final List<ConcertAccueil> lignes) {
     final Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();
     for (final ConcertAccueil c : lignes) {

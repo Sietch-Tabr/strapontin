@@ -29,6 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class BackupAlerteController {
 
+  private static final String STATUT_SUCCES = "succes";
+
   private final EmailAlerteService emailAlerteService;
   private final LogAdminService logAdminService;
   private final String backupSecret;
@@ -77,7 +79,7 @@ public class BackupAlerteController {
             authorization.getBytes(StandardCharsets.UTF_8))) {
       return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
     }
-    if ("succes".equals(statut)) {
+    if (STATUT_SUCCES.equals(statut)) {
       logAdminService.logAdmin(
           "info",
           "web",

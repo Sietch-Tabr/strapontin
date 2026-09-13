@@ -54,6 +54,7 @@ public class FusionSallesClePorteeService {
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
   private static final double RAYON_TERRE_METRES = 6_371_000;
   private static final String CLE_CIBLE = "cible";
+  private static final int NB_SALLES_PAIRE = 2;
   private static final String CLE_SOURCE = "source";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -214,7 +215,7 @@ public class FusionSallesClePorteeService {
             FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
             """,
             Map.of("a", a.toString(), "b", b.toString()));
-    if (lignes.size() < 2) {
+    if (lignes.size() < NB_SALLES_PAIRE) {
       return null;
     }
 
@@ -416,6 +417,8 @@ public class FusionSallesClePorteeService {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
+  // paramsSuppression porte des valeurs propres au conflit courant — pas hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(

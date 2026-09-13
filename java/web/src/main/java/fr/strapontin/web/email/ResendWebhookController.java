@@ -38,6 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class ResendWebhookController {
 
   private static final Logger LOG = LoggerFactory.getLogger(ResendWebhookController.class);
+  private static final String EVENEMENT_BOUNCE = "email.bounced";
+  private static final String EVENEMENT_PLAINTE_SPAM = "email.complained";
 
   private final ConfigService configService;
   private final EmailAlerteService emailAlerteService;
@@ -133,10 +135,10 @@ public class ResendWebhookController {
 
       // email.bounced et email.complained (plainte spam) reçoivent le même traitement :
       // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
-      if ("email.bounced".equals(type)) {
+      if (EVENEMENT_BOUNCE.equals(type)) {
         traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire, svixId);
         emailAlerteService.envoyerNotificationBounce(emailDestinataire);
-      } else if ("email.complained".equals(type)) {
+      } else if (EVENEMENT_PLAINTE_SPAM.equals(type)) {
         traiterIncidentEmail("Plainte spam", "plainte spam email reçue", emailDestinataire, svixId);
         emailAlerteService.envoyerNotificationPlainteSpam(emailDestinataire);
       }

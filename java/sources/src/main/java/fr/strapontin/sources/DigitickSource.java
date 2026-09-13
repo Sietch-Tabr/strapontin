@@ -52,6 +52,9 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String SEL_VILLE = "span.evenementSalleVille";
   private static final String SEL_CODE_POSTAL = "span.evenementSalleCodePostal";
   private static final String SEL_URL = "a.evenementReserver";
+  // Longueur d'un datetime ISO complet avec heure ("yyyy-MM-ddTHH:mm") — en dessous, seule la
+  // date est présente.
+  private static final int LONGUEUR_DATETIME_AVEC_HEURE = 16;
 
   private final RestClient restClient;
   // Bilan de panne agrégé, remonté dans logs_admin par le worker.
@@ -279,7 +282,7 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
       return null;
     }
     final String date = datetime.substring(0, 10);
-    if (datetime.length() < 16) {
+    if (datetime.length() < LONGUEUR_DATETIME_AVEC_HEURE) {
       return new String[] {date, null};
     }
     final String heure = datetime.substring(11, 16);

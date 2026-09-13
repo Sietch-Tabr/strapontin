@@ -40,6 +40,7 @@ final class AlignementReportTM {
 
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
+  private static final int NB_HEURES_DISTINCTES_NON_AMBIGU = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -89,6 +90,9 @@ final class AlignementReportTM {
     }
   }
 
+  // CleUrlDate porte les champs de la ligne courante ; computeIfAbsent n'instancie une ArrayList
+  // que pour les clés réellement nouvelles — rien de hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<CleUrlDate, List<Map<String, Object>>> chargerEvenementsTmParUrlDate(
       final List<String> urls) {
     final List<Map<String, Object>> existants =
@@ -119,7 +123,7 @@ final class AlignementReportTM {
         candidats.stream()
             .map(l -> ((Time) l.get(CLE_HEURE)).toLocalTime())
             .collect(Collectors.toSet());
-    if (heuresDistinctes.size() != 1) {
+    if (heuresDistinctes.size() != NB_HEURES_DISTINCTES_NON_AMBIGU) {
       return;
     }
     final LocalTime heureExistante = heuresDistinctes.iterator().next();

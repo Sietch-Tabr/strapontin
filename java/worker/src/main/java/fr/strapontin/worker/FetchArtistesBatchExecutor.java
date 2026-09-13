@@ -31,6 +31,7 @@ class FetchArtistesBatchExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(FetchArtistesBatchExecutor.class);
   private static final int TAILLE_LOT_TM = 20;
+  private static final int NB_IDS_DISTINCTS_NON_AMBIGU = 1;
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
@@ -239,7 +240,7 @@ class FetchArtistesBatchExecutor {
       final Map<String, Object> row, final String nom, final String artisteIdStr) {
     final Number nbIdsDistinctsNum = (Number) row.get("nb_ids_distincts");
     final int nbIdsDistincts = nbIdsDistinctsNum != null ? nbIdsDistinctsNum.intValue() : 0;
-    if (nbIdsDistincts <= 1) {
+    if (nbIdsDistincts <= NB_IDS_DISTINCTS_NON_AMBIGU) {
       return false;
     }
     LOG.warn(

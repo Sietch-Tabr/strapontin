@@ -25,6 +25,9 @@ import java.util.Base64;
  */
 public final class VapidKeyGenerator {
 
+  // Taille en octets d'une coordonnée EC P-256 (256 bits).
+  private static final int TAILLE_COORDONNEE_P256 = 32;
+
   private VapidKeyGenerator() {}
 
   /**
@@ -52,8 +55,8 @@ public final class VapidKeyGenerator {
     uncompressed[0] = 0x04;
     final byte[] x = vers32Octets(w.getAffineX());
     final byte[] y = vers32Octets(w.getAffineY());
-    System.arraycopy(x, 0, uncompressed, 1, 32);
-    System.arraycopy(y, 0, uncompressed, 33, 32);
+    System.arraycopy(x, 0, uncompressed, 1, TAILLE_COORDONNEE_P256);
+    System.arraycopy(y, 0, uncompressed, 1 + TAILLE_COORDONNEE_P256, TAILLE_COORDONNEE_P256);
     final String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
 
     final ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
@@ -65,14 +68,14 @@ public final class VapidKeyGenerator {
 
   private static byte[] vers32Octets(final BigInteger n) {
     final byte[] raw = n.toByteArray();
-    if (raw.length == 32) {
+    if (raw.length == TAILLE_COORDONNEE_P256) {
       return raw;
     }
-    final byte[] result = new byte[32];
-    if (raw.length > 32) {
-      System.arraycopy(raw, raw.length - 32, result, 0, 32);
+    final byte[] result = new byte[TAILLE_COORDONNEE_P256];
+    if (raw.length > TAILLE_COORDONNEE_P256) {
+      System.arraycopy(raw, raw.length - TAILLE_COORDONNEE_P256, result, 0, TAILLE_COORDONNEE_P256);
     } else {
-      System.arraycopy(raw, 0, result, 32 - raw.length, raw.length);
+      System.arraycopy(raw, 0, result, TAILLE_COORDONNEE_P256 - raw.length, raw.length);
     }
     return result;
   }

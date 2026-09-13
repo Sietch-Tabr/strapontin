@@ -198,7 +198,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         .formatted(values);
   }
 
-  @SuppressWarnings("unchecked")
+  // Le record retourné porte les champs du binding courant — pas d'instance hissable hors boucle.
+  @SuppressWarnings({"unchecked", "PMD.AvoidInstantiatingObjectsInLoops"})
   private Map<UUID, EnrichissementSalle> mapperReponse(
       final Map<String, Object> data, final Map<String, UUID> qidVersUuid) {
     final Map<UUID, EnrichissementSalle> resultats = new HashMap<>();

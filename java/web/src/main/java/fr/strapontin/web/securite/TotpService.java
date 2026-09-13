@@ -47,6 +47,7 @@ public class TotpService {
   private static final long PERIODE_SECONDES = 30L;
   private static final int DIGITS = 6;
   private static final int[] PUISSANCES_10 = {1, 10, 100, 1_000, 10_000, 100_000, 1_000_000};
+  private static final int BITS_PAR_OCTET = 8;
 
   private final SecureRandom rng = new SecureRandom();
   private final Cache<String, Set<String>> codesConsommes =
@@ -193,8 +194,8 @@ public class TotpService {
       }
       tampon = (tampon << 5) | val;
       bitsRestants += 5;
-      if (bitsRestants >= 8) {
-        bitsRestants -= 8;
+      if (bitsRestants >= BITS_PAR_OCTET) {
+        bitsRestants -= BITS_PAR_OCTET;
         resultat[idx] = (byte) (tampon >> bitsRestants);
         idx++;
       }
