@@ -17,55 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Découverte d'une entité Wikidata par recherche de nom, quand aucun Q-ID n'est encore connu pour
- * la salle ({@code SERVICE wikibase:mwapi}, une requête par salle, non batchable).
- *
- * <p>Extrait de {@link WikidataSalleSource} pour rester sous la limite de 500 lignes par fichier.
- * Overpass n'est plus un passage obligé pour les salles (son instance publique traverse un incident
- * de surcharge documenté, voir {@link OverpassSalleSource}). <strong>Pas de filtre de type
- * positif</strong> (contrairement à {@link WikidataArtisteSource}) : l'ontologie Wikidata des
- * salles de spectacle est hétérogène (ex. « salle de spectacles polyvalente » Q1763828 est
- * sous-classe P279 de « gymnase » Q14092), un filtre transitif risquerait de faire correspondre des
- * équipements sportifs. Un filtre négatif exclut en revanche les entités de type
- * région/département/commune (P31 région administrative, département français, commune française)
- * ainsi que les infrastructures de transport (gare, arrêt de tram) : une recherche par nom peut
- * sinon retourner une entité administrative ou de transport homonyme plutôt que le lieu physique
- * recherché — constaté en production sur une gare (Villepinte) et un arrêt de tram (Bordeaux)
- * retenus à tort. Le département de la commune du candidat (déduit de son code postal, P281) est
- * également confronté au département connu de la salle Strapontin quand les deux sont disponibles
- * (voir {@link #deptIncompatible}) — {@code salles.ville} peut rester vide au moment de cet
- * enrichissement quand {@code salles.dept} est déjà fiable (renseigné dès la création à partir d'un
- * concert réel). En contrepartie, la requête exige {@code wdt:P625} (coordonnées géographiques) :
- * sans ce garde-fou, une recherche par nom seul peut retourner en premier résultat une œuvre
- * culturelle homonyme (constaté en production : pour « L'Olympia », le premier candidat mwapi est
- * un <em>album</em> d'Émilie Simon sorti en 2007, pas la salle) — un album/single/livre n'a pas de
- * coordonnées, une salle en a toujours une. Exception vérifiée : un candidat typé {@code
- * wd:Q1060829} (bâtiment de salle de concert) est accepté même sans coordonnées — constaté en
- * production sur « salle Paul-Fort » (Nantes), correcte mais structurellement exclue par l'exigence
- * de coordonnées seule, laissant un homonyme sans rapport (« salle Paul Bouin », Basse-Goulaine)
- * devenir l'unique candidat retourné. La désambiguïsation finale réutilise {@link
- * CorrespondanceSalle#estDoublonSalle} (module {@code core}, même algorithme que {@code
- * ReconciliateurSalles} côté worker : Levenshtein ≥ 0.75, Jaccard tokens, critère pivot) plutôt
- * qu'une simple égalité de chaîne — nécessaire pour absorber à la fois l'article défini français («
- * L'Olympia » ↔ « Olympia », via containment) et les suffixes descriptifs fréquents côté Strapontin
- * absents du libellé Wikidata (« Zenith Paris - la Villette » ↔ « Zénith Paris », via Jaccard
- * tokens). La comparaison porte aussi sur les <strong>alias</strong> ({@code skos:altLabel}) : les
- * grandes salles changent régulièrement de nom commercial (sponsoring) et Wikidata conserve souvent
- * l'ancien nom comme libellé principal, le nom actuel n'étant qu'un alias — constaté en production
- * : « Accor Arena » (nom Strapontin, actuel) n'est qu'un alias de l'entité dont le libellé
- * principal Wikidata est resté « Palais Omnisports de Paris-Bercy ». Sans vérifier les alias, ces
- * salles ne seraient jamais enrichies malgré une entrée Wikidata existante. Réutiliser l'algorithme
- * flou du projet plutôt qu'une correspondance exacte reste raisonnablement sûr ici : les candidats
- * mwapi sont déjà restreints aux résultats les plus pertinents pour le nom recherché, et les seuils
- * (Jaccard 0.5, pivot ≥7 chars) ont été calibrés dans le projet précisément pour rejeter les
- * homonymes inter-villes (« zenith bordeaux » vs « zenith caen »). <strong>Ce calibrage ne couvre
- * pas les homonymes internationaux</strong> — un nom propre français perd son identité après
- * suppression des accents et peut coïncider avec un nom anglais sans rapport (constaté en
- * production : « Orléans Arena » → « orleans arena », strictement identique à « Orleans Arena »
- * Q3356467, une salle de Las Vegas, Nevada — correspondance exacte immédiate, aucun seuil flou
- * impliqué). La requête exige donc {@code wdt:P17 wd:Q142} (pays = France) : Strapontin ne suit que
- * des concerts français (TM/Eventim/Digitick France), toute salle hors de ce périmètre est
- * nécessairement une fausse correspondance.
+ * Découverte d'une entité Wikidata par recherche de nom, sans Q-ID connu
+ * ({@code wikibase:mwapi}, extrait de {@link WikidataSalleSource}) — filtre,
+ * coordonnées, alias et périmètre France : détails, wiki Sources-de-données.
  *
  * @since 2.9.1
  * @author Kwaite
@@ -76,7 +30,7 @@ final class WikidataSalleDecouverte {
 
   /**
    * Sépare le premier séparateur significatif de sous-salle/qualificatif
-   * ({@code -}, {@code /} , {@code (} ) d'un nom de salle, le cas échéant.
+   * ({@code -}, {@code /}, {@code (}) d'un nom de salle, le cas échéant.
    */
   private static final Pattern SEPARATEUR_SOUS_SALLE = Pattern.compile("[-/(]");
 
@@ -114,14 +68,11 @@ final class WikidataSalleDecouverte {
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementSalle> cache;
 
+  /* package-private : instancié uniquement par WikidataSalleSource (même package). */
   /**
    * @param client client SPARQL Wikidata partagé
-   * @param cache cache des enrichissements découverts, partagé avec
-   *     {@link WikidataSalleSource}
-   */
-  /*
-   * package-private : instancié uniquement par WikidataSalleSource (même
-   * package).
+   * @param cache cache des enrichissements découverts, partagé avec {@link
+   *     WikidataSalleSource}
    */
   WikidataSalleDecouverte(
       final ClientSparqlWikidata client, final Cache<String, EnrichissementSalle> cache) {
@@ -225,12 +176,11 @@ final class WikidataSalleDecouverte {
   }
 
   /**
-   * Évalue un binding SPARQL candidat pour {@link #decouvrirParNom} : nom correspondant, cohérence
-   * ville/dept, puis construction de l'enrichissement et mise en cache si accepté.
+   * Évalue un binding candidat : correspondance nom, cohérence ville/dept.
    *
    * @param salle salle recherchée
    * @param binding binding SPARQL brut
-   * @param nomRecherche nom utilisé pour la requête (pour les logs de rejet)
+   * @param nomRecherche nom utilisé pour la requête (logs de rejet)
    * @return l'enrichissement si ce candidat est accepté, vide sinon
    */
   private Optional<EnrichissementSalle> evaluerCandidatDecouverte(
@@ -303,20 +253,11 @@ final class WikidataSalleDecouverte {
   }
 
   /**
-   * Vérifie que la commune du candidat Wikidata ne contredit pas la ville connue de la salle
-   * Strapontin.
-   *
-   * <p>Constaté en production : le repli sur nom tronqué peut retenir en rang 0 un candidat au nom
-   * générique partagé par plusieurs communes (ex. "Collegiale Saint" → "collégiale Saint-Agricol
-   * d'Avignon", alors que la salle recherchée est à Chinon) — aucune des désambiguïsations de
-   * {@link #trouverLabelCorrespondant} ne porte sur la localisation. Ce garde-fou n'écarte que les
-   * cas où les deux villes sont connues et diffèrent ; une ville inconnue d'un côté ou de l'autre
-   * ne bloque rien (reste au niveau de risque actuel, pas de régression sur les cas déjà couverts).
-   *
-   * @param villeSalle ville connue de la salle Strapontin ({@link SalleAEnrichir#ville}), peut être
-   *     {@code null}
-   * @param communeLabel commune du candidat Wikidata (P131), peut être {@code null}
-   * @return {@code true} si les deux villes sont connues et ne correspondent pas
+   * Vérifie que la commune du candidat Wikidata ne contredit pas la ville
+   * connue (rejette seulement si les deux sont connues et diffèrent).
+   * @param villeSalle ville connue de la salle Strapontin, ou {@code null}
+   * @param communeLabel commune du candidat Wikidata (P131), ou {@code null}
+   * @return {@code true} si les deux villes sont connues et diffèrent
    */
   private static boolean villeIncompatible(final String villeSalle, final String communeLabel) {
     if (villeSalle == null || villeSalle.isBlank()) {
@@ -330,20 +271,12 @@ final class WikidataSalleDecouverte {
   }
 
   /**
-   * Vérifie que le département du candidat Wikidata (dérivé du code postal de sa commune) ne
-   * contredit pas le département connu de la salle Strapontin.
-   *
-   * <p>Complète {@link #villeIncompatible} : {@code salles.dept} est renseigné dès la création de
-   * la salle à partir d'un concert réel (fiable), alors que {@code salles.ville} peut rester vide
-   * ou fausse au moment de cet enrichissement (angle mort constaté en production sur plusieurs
-   * salles rattachées à tort à une entité Wikidata sans rapport — gare, arrêt de tram, bâtiment
-   * homonyme — faute de ville connue pour bloquer le rapprochement). Même politique que {@link
-   * #villeIncompatible} : ne rejette que si les deux départements sont connus et diffèrent.
-   *
-   * @param deptSalle département connu de la salle Strapontin ({@link SalleAEnrichir#dept}), peut
-   *     être {@code null}
-   * @param codePostal code postal de la commune du candidat Wikidata (P281), peut être {@code null}
-   * @return {@code true} si les deux départements sont connus et ne correspondent pas
+   * Vérifie que le département du candidat Wikidata (code postal de sa
+   * commune) ne contredit pas celui de la salle, complétant {@link
+   * #villeIncompatible}.
+   * @param deptSalle département connu de la salle Strapontin, ou {@code null}
+   * @param codePostal code postal du candidat (P281), ou {@code null}
+   * @return {@code true} si les deux départements sont connus et diffèrent
    */
   private static boolean deptIncompatible(final String deptSalle, final String codePostal) {
     if (deptSalle == null || deptSalle.isBlank()) {
@@ -354,22 +287,12 @@ final class WikidataSalleDecouverte {
   }
 
   /**
-   * Cherche une correspondance floue ({@link CorrespondanceSalle#estDoublonSalle}, complété par un
-   * containment de tokens asymétrique, cf. {@link #estCorrespondanceAsymetrique}) sur le libellé
-   * principal Wikidata ou l'un de ses alias.
-   *
-   * <p>Les alias sont vérifiés en plus du libellé principal, pas à la place : les grandes salles
-   * changent régulièrement de nom commercial (sponsoring) et Wikidata conserve souvent l'ancien nom
-   * comme libellé principal, le nom actuel n'étant qu'un alias.
-   *
-   * @param nomNormCible nom de la salle Strapontin, normalisé ({@link SalleAEnrichir#nomNorm})
-   * @param itemLabel libellé principal du candidat Wikidata (peut être {@code null})
-   * @param aliases alias du candidat séparés par {@code "|"} (peut être {@code null} ou vide)
-   * @param localisationConnue {@code false} si le candidat n'a ni commune ni code postal Wikidata
-   *     connus — désactive alors le critère pivot d'{@link CorrespondanceSalle}, sans aucun signal
-   *     indépendant pour confirmer un candidat validé sur ce seul critère (voir {@link
-   *     CorrespondanceSalle#estDoublonSalle(String, String, boolean)})
-   * @return le libellé (principal ou alias) qui correspond, ou {@code null} si aucun
+   * Cherche une correspondance floue sur le libellé Wikidata ou un alias.
+   * @param nomNormCible nom de la salle Strapontin, normalisé
+   * @param itemLabel libellé principal du candidat, ou {@code null}
+   * @param aliases alias du candidat séparés par {@code "|"}, ou {@code null}
+   * @param localisationConnue transmis à estDoublonSalle (désactive le pivot)
+   * @return le libellé (principal ou alias) qui correspond, ou {@code null}
    */
   private static String trouverLabelCorrespondant(
       final String nomNormCible,
@@ -394,30 +317,12 @@ final class WikidataSalleDecouverte {
   }
 
   /**
-   * Complète {@link CorrespondanceSalle#estDoublonSalle} par un containment de tokens asymétrique :
-   * couvre le cas où Wikidata combine l'ancien et le nouveau nom dans un seul alias (constaté en
-   * production : « Dôme de Paris » — nom Strapontin actuel — n'est rapproché d'aucun candidat mwapi
-   * malgré l'existence de l'entité correcte en rang 0, son libellé principal étant « Palais des
-   * sports » et son alias le plus proche « Dôme de Paris - Palais des Sports »). Cet alias est trop
-   * long relativement à notre nom pour satisfaire le containment de caractères (ratio {@code <
-   * 0.5}) ou le Jaccard symétrique (0.4, sous le seuil 0.5) de {@code estDoublonSalle} — les deux
-   * critères pénalisent le nombre de mots supplémentaires côté Wikidata, alors que ces mots
-   * supplémentaires sont justement l'ancien nom, pas du bruit.
-   *
-   * <p>Asymétrique à dessein : exige que <strong>tous</strong> les tokens significatifs de notre
-   * nom (le plus souvent court, le nom commercial actuel) soient présents dans le candidat Wikidata
-   * (souvent plus long, combinant plusieurs noms), jamais l'inverse — un candidat plus court que
-   * notre nom reste filtré par {@code estDoublonSalle} seul. Le {@value
-   * #TAILLE_MIN_TOKENS_CONTAINMENT} minimum de tokens cible évite qu'un nom d'un seul mot
-   * corresponde à n'importe quel candidat le contenant (même risque de faux positif qu'un Jaccard
-   * non borné, documenté dans {@link CorrespondanceSalle}).
-   *
+   * Complète estDoublonSalle par un containment de tokens asymétrique (alias
+   * combinant ancien/nouveau nom, ex. « Dôme de Paris », voir wiki).
    * @param nomNormCible nom Strapontin normalisé
    * @param candidatNorm libellé ou alias Wikidata normalisé
-   * @param localisationConnue transmis tel quel à {@link
-   *     CorrespondanceSalle#estDoublonSalle(String, String, boolean)}
-   * @return {@code true} si les tokens significatifs de {@code nomNormCible} sont tous inclus dans
-   *     ceux de {@code candidatNorm}
+   * @param localisationConnue transmis tel quel à estDoublonSalle
+   * @return {@code true} si tous les tokens de {@code nomNormCible} sont inclus
    */
   private static boolean estCorrespondanceAsymetrique(
       final String nomNormCible, final String candidatNorm, final boolean localisationConnue) {
