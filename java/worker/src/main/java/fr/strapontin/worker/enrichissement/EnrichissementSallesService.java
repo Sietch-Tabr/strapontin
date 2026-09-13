@@ -24,22 +24,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Orchestrateur d'enrichissement des salles (étapes 1-2).
- *
- * <p>Boucle sur les {@link SourceEnrichissementSalle} injectées (une nouvelle source = un bean
- * Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
- * EnrichissementConfiguration} importe : {@code OverpassSalleSource} doit être déclaré avant {@code
- * WikidataSalleSource} — le Q-ID découvert par Overpass est propagé aux sources suivantes dans la
- * même passe pour que Wikidata puisse enrichir sur cette base. Pour les salles qu'Overpass n'a pas
- * trouvées (nom absent d'OSM, instance publique surchargée), {@code WikidataSalleSource} tente
- * ensuite sa propre recherche par nom — Overpass n'est donc plus un passage obligé.
- *
- * <p>Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : avec
- * Overpass en incident de surcharge, un cycle complet peut prendre plusieurs dizaines de minutes
- * (chaque lot épuise son timeout avant d'abandonner) — persister uniquement à la toute fin perdrait
- * tout le travail déjà résolu en cas d'interruption (redéploiement, crash, arrêt du job) avant la
- * fin du cycle.
- *
+ * Orchestrateur d'enrichissement des salles (étapes 1-2), boucle sur les
+ * {@link SourceEnrichissementSalle} injectées — ordre de déclaration des
+ * beans et persistance par lot : CLAUDE.md, Enrichissement Wikidata/OSM.
  * @since 2.6.0
  * @author Kwaite
  */
@@ -76,7 +63,7 @@ public class EnrichissementSallesService {
 
   /**
    * @param jdbc accès JDBC
-   * @param sources sources d'enrichissement injectées, dans leur ordre de déclaration Spring
+   * @param sources sources d'enrichissement, dans leur ordre de déclaration
    * @param logsAdminWorker journalisation du bilan de cycle
    * @param suiviChronicite comptage des cycles consécutifs en échec par source
    * @param fusionSallesClePortee fusion nocturne des salles détectées comme doublons
@@ -98,12 +85,9 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
-   * courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit, qui laissait une
-   * entité en échec systématique éternellement prioritaire, cf.), priorisées par nombre de concerts
-   * liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code nom_affiche} déjà présent
-   * (override manuel admin).
-   *
+   * Enrichit les salles sans {@code wikidata_id} du {@code jour_batch}
+   * courant (rotation hebdomadaire), priorisées par nombre de concerts
+   * liés — n'écrase jamais un {@code nom_affiche} déjà présent.
    * @return nombre de salles effectivement mises à jour
    */
   public int enrichir() {
@@ -129,15 +113,10 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * Alerte si un cycle avec un nombre significatif de candidats a un taux de réussite chronique
-   * trop bas — un bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas ce
-   * cas : une source répondant {@code 200 OK} avec un contenu systématiquement vide (aucune
-   * correspondance, jamais une erreur HTTP) ne remonte jamais rien via ce mécanisme, alors qu'elle
-   * peut être structurellement inopérante. Un seuil strict à 0 salle enrichie (avant 2.7.9) ne
-   * détectait qu'une panne totale, jamais une dégradation chronique mais non totale (constaté en
-   * production : 90-100% d'échec chaque nuit durant 11 nuits, jamais 100% pile, restant ainsi
-   * indéfiniment sous le radar).
-   *
+   * Alerte sur un taux de réussite chronique trop bas (voir {@link
+   * #SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF}/{@link
+   * #SEUIL_TAUX_REUSSITE_MIN_CYCLE}) — {@link #remonterBilans} ne détecte
+   * pas une source répondant 200 OK avec un contenu vide.
    * @param nbCandidats nombre de salles traitées dans ce cycle
    * @param nbEnrichis nombre de salles effectivement enrichies
    */
@@ -311,13 +290,9 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * Une collision {@code wikidata_id} est un signal plus fort qu'une simple coïncidence de concert
-   * (Wikidata affirme explicitement l'identité) — traité comme {@link
-   * FusionSallesClePorteeService}, avec le même garde-fou GPS, mais fusion automatique uniquement
-   * si les deux salles ont des coordonnées connues et proches (#1189) : à la différence d'une
-   * fusion par clé forte, aucun autre signal positif (nom, dept) ne cross-valide cette collision,
-   * l'absence de preuve géographique doit donc empêcher la fusion plutôt que l'autoriser par
-   * défaut.
+   * Collision {@code wikidata_id} : signal plus fort qu'une coïncidence de
+   * concert — fusion automatique seulement si coordonnées connues et
+   * proches, sinon signalement seul (CLAUDE.md, signalements_matching).
    */
   private boolean gererCollisionWikidataId(
       final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
