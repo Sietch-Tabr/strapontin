@@ -21,10 +21,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Client HTTP pour l'API publique Eventim France.
- *
- * <p>Effectue les appels REST vers l'API exploration Eventim : recherche par artiste (via
- * attractionId) et par région (par département). La pagination est gérée jusqu'à MAX_PAGES.
+ * Client HTTP pour l'API publique Eventim France (recherche par artiste via
+ * attractionId, et par région/département, pagination gérée jusqu'à
+ * MAX_PAGES).
  *
  * @since 2.0.0
  * @author Kwaite
@@ -67,24 +66,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private final EventimAttractionResolver attractionResolver;
 
   /**
-   * Crée une instance avec un RestClient par défaut incluant les headers Eventim et un timeout
-   * explicite (connexion 10s, lecture 30s).
-   *
-   * <p>Le {@code User-Agent} identifie honnêtement un bot plutôt que de mimer un navigateur :
-   * depuis le 09/07/2026, Akamai bloque en 403 tout client dont le {@code User-Agent} prétend être
-   * un navigateur ({@code Mozilla/5.0...}, quel que soit le navigateur imité) sans en avoir la
-   * signature réelle, alors qu'un {@code User-Agent} non-navigateur passe sans restriction —
-   * vérifié par tests répétés depuis des réseaux distincts. Les en-têtes {@code sec-ch-ua*}/{@code
-   * Sec-Fetch-*}/{@code Referer}/ {@code Origin} (contournement anti-bot historique, commit
-   * 231c026, devenu obsolète) sont retirés en conséquence : incohérents avec un {@code User-Agent}
-   * de bot.
-   *
-   * <p>Aucun {@code Accept-Encoding} explicite : envoyer ce header manuellement fait basculer
-   * {@code SimpleClientHttpRequestFactory} (JDK {@code HttpURLConnection}) en mode « décompression
-   * à la charge de l'appelant » — Eventim répond alors en gzip sans jamais être décompressé,
-   * faisant échouer la désérialisation JSON. En l'absence de ce header, le JDK ajoute son propre
-   * {@code Accept-Encoding: gzip} et décompresse la réponse de façon transparente. Bug latent
-   * introduit par le 08/07/2026, masqué du 09/07 au correctif par le blocage Akamai.
+   * Crée une instance avec un RestClient par défaut (headers Eventim,
+   * timeout 10s/30s). User-Agent honnête + sans Accept-Encoding explicite
+   * (contournement Akamai #904, détails wiki Sources-de-données).
    */
   public EventimSource() {
     this(
@@ -96,11 +80,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Construit un {@link RestClient.Builder} avec les headers par défaut (sans requestFactory ni
-   * build), pour permettre à {@link org.springframework.test.web.client.MockRestServiceServer} de
-   * se lier à la configuration réelle en test (régression sur {@code User-Agent}/ {@code
-   * Accept-Encoding}).
-   *
+   * Construit un {@link RestClient.Builder} avec les headers par défaut
+   * (sans requestFactory ni build), pour lier MockRestServiceServer à la
+   * config réelle en test (régression User-Agent/Accept-Encoding).
    * @return le builder configuré, prêt à recevoir une requestFactory
    */
   /* package-private : visibilité élargie pour EventimSourceTest (même
@@ -141,34 +123,23 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Retourne les correspondances par containment acceptées depuis le dernier prélèvement et vide la
-   * liste — contrairement à {@link #preleverBilan}, ce n'est pas un bilan de panne : Eventim ne
-   * persiste aucun identifiant ({@link EventimAttractionResolver#rechercherAttractionId} est
-   * rappelé à chaque cycle), donc un containment mal résolu peut réapparaître à chaque fetch tant
-   * qu'il n'est pas corrigé manuellement.
-   *
-   * @return messages décrivant chaque containment accepté depuis le dernier prélèvement
+   * Retourne les correspondances par containment acceptées et vide la
+   * liste — pas un bilan de panne : Eventim ne persiste aucun identifiant
+   * (rappelé à chaque cycle), un containment mal résolu peut donc
+   * réapparaître tant qu'il n'est pas corrigé manuellement.
+   * @return messages décrivant chaque containment accepté
    */
   public List<String> preleverContainmentsAcceptes() {
     return attractionResolver.preleverContainmentsAcceptes();
   }
 
   /**
-   * Corrige la ville Eventim pour les salles de la région parisienne hors Paris intra-muros.
-   *
-   * <p>Eventim utilise parfois "Paris" comme libellé régional/marketing au lieu de la commune
-   * réelle pour les salles de la petite couronne (ex. La Seine Musicale à Boulogne-Billancourt,
-   * Stade de France à Saint-Denis), alors que {@code dept} (dérivé du code postal) reste fiable. Si
-   * une incohérence est détectée, tente d'extraire la commune depuis le nom de la salle (forme
-   * "Salle - Commune") ; sinon journalise et retourne {@code null} plutôt que la valeur incohérente
-   * — une valeur qu'on vient soi-même de qualifier d'incohérente ne doit jamais écraser une valeur
-   * déjà connue en base.
-   *
+   * Corrige la ville Eventim ("Paris" marketing pour la petite couronne) via
+   * dept ou le nom de salle ("Salle - Commune"), jamais de valeur incohérente.
    * @param ville ville brute renvoyée par Eventim, peut être {@code null}
    * @param dept département dérivé du code postal, peut être {@code null}
-   * @param salle nom de la salle, utilisé comme source alternative de la commune
-   * @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
-   *     incohérence détectée sans correction possible
+   * @param salle nom de la salle, source alternative de la commune
+   * @return ville corrigée, ou {@code null} si incohérence non corrigeable
    */
   public static String corrigerVilleEventim(
       final String ville, final String dept, final String salle) {
@@ -212,11 +183,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   /**
    * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
-   *
    * @param produit produit Eventim sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
-   * @param artisteSourceId identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
-   *     null si inconnu (fetch région ou salle)
+   * @param artisteFallback nom de l'artiste cherché (fetchArtiste), ou null
+   * @param artisteSourceId identifiant préfixé (ex. "eventim:12345"), ou null
    * @return concert extrait, ou null si le produit est invalide
    */
   public static ConcertBrut mapProduit(
@@ -387,13 +356,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Récupère les concerts d'un artiste via l'API Eventim.
-   *
-   * <p>Recherche d'abord l'attractionId Eventim par le nom, puis pagine les produits. Identité non
-   * confirmée par une source indépendante : le repli par containment reste autorisé.
-   *
+   * Récupère les concerts d'un artiste via l'API Eventim (recherche
+   * l'attractionId par nom, puis pagine ; containment autorisé, identité
+   * non confirmée par une source indépendante).
    * @param nom nom de l'artiste
-   * @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
+   * @return liste des concerts trouvés, vide si l'artiste n'est pas référencé
    */
   @Override
   public List<ConcertBrut> fetchArtiste(final String nom) {
@@ -401,23 +368,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Récupère les concerts d'un artiste via l'API Eventim, en tenant compte de son identité déjà
-   * confirmée par une source indépendante si connue.
-   *
-   * <p>Motif : le repli par containment de {@link EventimAttractionResolver#rechercherAttractionId}
-   * (ex. "Furies" trouvé dans "Love & Furies") s'est révélé actif et récurrent — chaque cycle de
-   * fetch réacceptait le même mauvais rapprochement, défaisant silencieusement tout nettoyage de
-   * données fait à la main. Dès que l'artiste a déjà un {@code deezerId} ou un {@code wikidataId}
-   * connu (identité confirmée indépendamment), seule une correspondance exacte est acceptée — le
-   * repli par containment reste réservé aux artistes dont l'identité n'est pas encore confirmée,
-   * cas pour lequel il a été introduit (ex. {@code "-M-"} → {@code "-M- Matthieu Chedid"}).
-   *
+   * Comme {@link #fetchArtiste(String)}, désactive le containment si
+   * deezerId/wikidataId connu (évite la contamination récurrente, wiki).
    * @param nom nom de l'artiste
-   * @param deezerId identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas
-   *     confirmée
-   * @param wikidataId identifiant Wikidata déjà connu, ou {@code null} si l'identité n'est pas
-   *     confirmée
-   * @return liste des concerts trouvés, vide si l'artiste n'est pas référencé sur Eventim
+   * @param deezerId identifiant Deezer déjà connu, ou {@code null}
+   * @param wikidataId identifiant Wikidata déjà connu, ou {@code null}
+   * @return liste des concerts trouvés, vide si non référencé
    */
   @Override
   public List<ConcertBrut> fetchArtiste(
@@ -438,11 +394,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Récupère les concerts par région pour une liste de départements.
-   *
-   * <p>Le paramètre {@code classifs} est ignoré : Eventim utilise ses propres catégories ({@link
-   * #CATEGORIES_REGION}) qui ne correspondent pas aux classifications Ticketmaster.
-   *
+   * Récupère les concerts par région (classifs ignoré — Eventim utilise
+   * ses propres catégories {@link #CATEGORIES_REGION}).
    * @param depts liste de codes département (ex: ["75", "92"])
    * @param classifs ignoré — toujours {@link #CATEGORIES_REGION}
    * @return liste des concerts trouvés pour tous les départements

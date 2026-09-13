@@ -23,9 +23,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Résolution de la salle d'un concert entrant (par identifiant source, par tokens de nom, ou par
- * clé forte artiste+date+heure+dept), ou création si aucune ne correspond — extrait de {@link
- * ReconciliateurSalles} (v2.8.7, dette de taille pure, aucun changement fonctionnel).
+ * Résolution de la salle d'un concert entrant (identifiant, tokens, ou clé
+ * forte artiste+date+heure+dept), ou création — extrait de {@link
+ * ReconciliateurSalles} (v2.8.7, dette de taille pure).
  *
  * @since 2.8.7
  * @author Kwaite
