@@ -22,13 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service d'administration : gestion des comptes utilisateurs.
- *
- * <p>Contient la logique métier et l'accès aux données pour la gestion des utilisateurs. {@link
- * AdminController#creerUtilisateur} est atomique ({@code @Transactional}). La gestion des clés
- * VAPID est déléguée à {@link VapidService}, la configuration applicative à {@link
- * ConfigAdminService} et les statistiques de jobs à {@link JobsAdminService}.
- *
+ * Service d'administration : gestion des comptes utilisateurs — VAPID
+ * délégué à {@link VapidService}, config applicative à {@link
+ * ConfigAdminService}, stats jobs à {@link JobsAdminService}.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -51,13 +47,9 @@ public class AdminService {
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
 
   /**
-   * @param jdbc accès JDBC
-   * @param emailService service d'envoi d'emails
-   * @param emailServiceAdmin emails déclenchés par une action d'administration
-   * @param adminUtilisateursListingService pagination des utilisateurs
-   * @param adminModificationUtilisateurService modification nom/email/rôle d'un utilisateur
-   * @param logAdminService service de logs admin
-   * @param verificationRepository accès aux tokens de vérification
+   * Injection Spring : accès JDBC, services email/vérification/logs admin,
+   * et les deux services délégués pour le listing/la modification
+   * d'utilisateurs (paramètres homonymes des champs).
    */
   public AdminService(
       final NamedParameterJdbcTemplate jdbc,
@@ -93,7 +85,7 @@ public class AdminService {
    * @param email email du nouvel utilisateur
    * @param adminId identifiant de l'admin demandeur
    * @param baseUrl URL de base pour construire le lien d'invitation
-   * @return résultat de la création, ou {@link Optional#empty()} si l'email est déjà pris
+   * @return résultat de la création, vide si l'email est déjà pris
    */
   @Transactional
   public Optional<ResultatCreation> creerUtilisateur(
@@ -150,21 +142,12 @@ public class AdminService {
   }
 
   /**
-   * Valide et met à jour les champs d'un utilisateur.
-   *
-   * <p>Si le nouveau rôle est {@code admin}, envoie un email de promotion à l'utilisateur.
-   *
-   * <p>Si le nouveau rôle est {@code user} et que la cible est actuellement {@code admin}, la
-   * rétrogradation n'est <strong>pas</strong> appliquée immédiatement ici : elle est déléguée à
-   * {@link AdminRevocationService#initierRevocationAdmin}, qui applique le même délai différé de 7
-   * jours et la même garde « dernier admin » que le bouton dédié — sans quoi ce chemin {@code
-   * PATCH} permettait de contourner intégralement les deux protections.
-   *
+   * Valide et met à jour les champs d'un utilisateur — rétrogradation
+   * déléguée à {@link AdminRevocationService#initierRevocationAdmin}.
    * @param userId identifiant de l'utilisateur cible
    * @param requete champs à modifier (nom, email, role — tous optionnels)
    * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
-   *     (rétrogradation d'un admin) si c'est le seul admin restant (409)
+   * @throws ErreurMetier si invalide, email pris, ou dernier admin (409)
    */
   public void modifierUtilisateur(
       final String userId, final RequeteModifierUtilisateur requete, final String adminId) {
@@ -194,17 +177,12 @@ public class AdminService {
   }
 
   /**
-   * Envoie un email de réinitialisation de mot de passe à un utilisateur.
-   *
-   * <p>Le lien de réinitialisation est toujours retourné dans {@link ResultatReset#lienReset()}
-   * comme {@link #creerUtilisateur}, c'est au contrôleur de décider de l'exposer à l'admin selon la
-   * disponibilité de Resend, pour garder un filet de secours si l'email n'atteint jamais
-   * l'utilisateur.
-   *
+   * Envoie un email de réinitialisation — le lien est toujours retourné
+   * ({@link ResultatReset#lienReset()}), au contrôleur de l'exposer.
    * @param userId identifiant de l'utilisateur cible
    * @param adminId identifiant de l'admin demandeur
    * @param baseUrl URL de base pour construire le lien
-   * @return le résultat (email + lien) si l'utilisateur existe, {@link Optional#empty()} sinon
+   * @return le résultat (email + lien) si l'utilisateur existe, vide sinon
    */
   @Transactional
   public Optional<ResultatReset> reinitialiserMdp(
@@ -237,11 +215,9 @@ public class AdminService {
   }
 
   /**
-   * Réinitialise la 2FA TOTP d'un utilisateur : efface le secret et désactive la 2FA.
-   *
-   * <p>Utilisé quand un utilisateur perd l'accès à son application d'authentification (ou que son
-   * secret est désynchronisé) : il pourra se reconnecter sans code, puis ré-enrôler son TOTP.
-   *
+   * Réinitialise la 2FA TOTP (efface le secret, désactive) — pour un
+   * utilisateur ayant perdu l'accès à son authenticator (ou secret
+   * désynchronisé) : reconnexion sans code, puis ré-enrôlement.
    * @param userId identifiant de l'utilisateur cible
    * @param adminId identifiant de l'admin à l'origine de l'action
    * @return {@code true} si l'utilisateur existait, {@code false} sinon
@@ -268,11 +244,9 @@ public class AdminService {
   }
 
   /**
-   * Révoque immédiatement toutes les sessions actives d'un utilisateur (ex. compte compromis,
-   * départ, demande explicite de l'utilisateur) — indépendant de la révocation admin ({@link
-   * AdminRevocationService#initierRevocationAdmin}), qui ne concerne que la rétrogradation d'un
-   * rôle.
-   *
+   * Révoque immédiatement toutes les sessions d'un utilisateur — indépendant
+   * de la révocation admin ({@link
+   * AdminRevocationService#initierRevocationAdmin}, rétrogradation de rôle).
    * @param userId identifiant de l'utilisateur cible
    * @param adminId identifiant de l'admin à l'origine de l'action
    * @return {@code true} si l'utilisateur existait, {@code false} sinon
