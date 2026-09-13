@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionXpathFilter Experimental Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2_xpath_experimental.dtd">
+
+<!--
+  Suppressions ciblées par emplacement exact (pas par règle globale) : les 3 seuls
+  constructeurs compacts de record du projet. PMD 7.17 ne rattache pas leur Javadoc au
+  constructeur (violation DanglingJavadoc, non contournable côté PMD) — documentés par un
+  commentaire // à la place, ce qui déclenche à son tour MissingJavadocMethod côté Checkstyle.
+  Le contrat public de chaque record reste documenté via les @param de la classe.
+-->
+<suppressions>
+  <suppress-xpath
+      checks="MissingJavadocMethod"
+      files="ConcertBrut\.java"
+      query="//COMPACT_CTOR_DEF"/>
+  <suppress-xpath
+      checks="MissingJavadocMethod"
+      files="FiltreConcerts\.java"
+      query="//COMPACT_CTOR_DEF"/>
+  <suppress-xpath
+      checks="MissingJavadocMethod"
+      files="EnrichissementArtiste\.java"
+      query="//COMPACT_CTOR_DEF"/>
+</suppressions>

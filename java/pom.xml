@@ -76,6 +76,9 @@
                     <version>${checkstyle.version}</version>
                     <configuration>
                         <configLocation>${maven.multiModuleProjectDirectory}/checkstyle.xml</configLocation>
+                        <!-- config_loc : résout le SuppressionXpathFilter référencé depuis checkstyle.xml
+                             (chemin relatif au fichier de configuration lui-même, non auto-résolu). -->
+                        <propertyExpansion>config_loc=${maven.multiModuleProjectDirectory}</propertyExpansion>
                         <!-- Mesure d'abord (v2.9.1) — bascule en bloquant une fois l'existant nettoyé. -->
                         <failOnViolation>false</failOnViolation>
                         <violationSeverity>warning</violationSeverity>

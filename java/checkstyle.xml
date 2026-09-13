@@ -10,6 +10,12 @@
 -->
 <module name="Checker">
   <module name="TreeWalker">
+    <!-- Suppressions ciblées par emplacement exact (constructeurs compacts de record, voir le
+         fichier référencé) — jamais une exclusion de règle globale. -->
+    <module name="SuppressionXpathFilter">
+      <property name="file" value="${config_loc}/checkstyle-suppressions-xpath.xml"/>
+    </module>
+
     <!-- Complexité et taille (java.md : < 10/méthode, < 50/classe, méthodes ≤ 50 lignes) -->
     <module name="CyclomaticComplexity">
       <property name="max" value="10"/>
