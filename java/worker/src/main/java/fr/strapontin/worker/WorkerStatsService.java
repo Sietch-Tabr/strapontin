@@ -49,15 +49,8 @@ public class WorkerStatsService {
   private final DeriveVolumeFetchService deriveVolumeFetchService;
 
   /**
-   * @param sources sources de concerts (bilan de panne par source)
-   * @param tm source Ticketmaster (bilan des concerts manqués par pagination plafonnée)
-   * @param resolveur résolveur Deezer (bilan de panne dédié)
-   * @param jdbc accès JDBC pour {@code fetch_jobs}/{@code fetch_jobs_historique}
-   * @param logsAdminWorker journalisation des bilans dans {@code logs_admin}
-   * @param meterRegistry registre Micrometer pour la métrique de durée par type de job
-   * @param suiviChronicite suivi des cycles consécutifs en échec par job/source
-   * @param deriveVolumeFetchService détection de repli de volume significatif par rapport à
-   *     l'historique récent
+   * Bilan agrégé par source, cadencement/métriques et détection de repli de
+   * volume — dépendances injectées par Spring (voir noms de champs).
    */
   public WorkerStatsService(
       final List<SourceConcerts> sources,
@@ -79,13 +72,12 @@ public class WorkerStatsService {
   }
 
   /**
-   * Enregistre le résultat d'un job dans {@code fetch_jobs}/{@code fetch_jobs_historique}, puis
-   * remonte les bilans de panne agrégés pour les jobs de type {@code fetch:}.
-   *
-   * @param typeJob type de job (ex. {@code "fetch:region"}, {@code "purger:concerts"})
+   * Enregistre le résultat d'un job (fetch_jobs/fetch_jobs_historique),
+   * remonte les bilans de panne agrégés pour les jobs {@code fetch:}.
+   * @param typeJob type de job (ex. "fetch:region", "purger:concerts")
    * @param dureeMs durée d'exécution en millisecondes
    * @param resultat bilan de persistance (insertions/mises à jour)
-   * @param erreur message d'erreur, ou {@code null} si le job s'est terminé sans exception
+   * @param erreur message d'erreur, ou {@code null} si le job a réussi
    */
   public void enregistrerStatJob(
       final String typeJob,
@@ -176,15 +168,12 @@ public class WorkerStatsService {
   }
 
   /**
-   * Exécute un job en mesurant sa durée et en enregistrant automatiquement le bilan via {@link
-   * #enregistrerStatJob}, succès ou échec — motif jusqu'ici dupliqué dans
-   * WorkerPurgeService/WorkerRevocationService/WorkerSuiviCyclesService/WorkerService/
-   * WorkerFetchService (chronométrage manuel + try/catch identiques à chaque méthode de job).
-   *
-   * @param callerLog logger de l'appelant, pour journaliser un échec sous son propre nom de classe
-   *     plutôt que celui de ce service
+   * Exécute un job en mesurant sa durée et en enregistrant le bilan via
+   * {@link #enregistrerStatJob} — motif dupliqué dans
+   * WorkerPurgeService/WorkerRevocationService/WorkerFetchService.
+   * @param callerLog logger de l'appelant, pour journaliser sous son nom
    * @param typeJob type de job (voir {@link #enregistrerStatJob})
-   * @param travail travail à exécuter, retournant le bilan de persistance en cas de succès
+   * @param travail travail à exécuter, retournant le bilan si succès
    */
   public void executerAvecStats(
       final Logger callerLog, final String typeJob, final Supplier<ResultatPersistance> travail) {
@@ -203,11 +192,11 @@ public class WorkerStatsService {
   }
 
   /**
-   * Résultat d'un job pouvant se terminer normalement (sans exception) tout en signalant un échec
-   * logique via un message d'erreur explicite — voir {@link #executerAvecStatsToleretErreur}.
-   *
+   * Résultat d'un job pouvant se terminer normalement tout en signalant
+   * un échec logique via un message d'erreur — voir
+   * {@link #executerAvecStatsToleretErreur}.
    * @param resultat bilan de persistance
-   * @param erreur message d'erreur, ou {@code null} si le job s'est vraiment bien terminé
+   * @param erreur message d'erreur, ou {@code null} si succès réel
    */
   public record ResultatJob(ResultatPersistance resultat, String erreur) {
     /**
@@ -220,15 +209,11 @@ public class WorkerStatsService {
   }
 
   /**
-   * Variante de {@link #executerAvecStats} pour les jobs pouvant se terminer par un retour anticipé
-   * sur un cas métier (ex. {@code WorkerFetchService} : "quota insuffisant") plutôt que par une
-   * exception — leur contrôle de flux ne s'accommode pas du contrat plus simple d'{@link
-   * #executerAvecStats} (erreur seulement en cas d'exception).
-   *
-   * @param callerLog logger de l'appelant, pour journaliser un échec sous son propre nom de classe
-   *     plutôt que celui de ce service
+   * Variante de {@link #executerAvecStats} pour les jobs pouvant retourner
+   * un cas métier (ex. "quota insuffisant") plutôt qu'une exception.
+   * @param callerLog logger de l'appelant, pour journaliser sous son nom
    * @param typeJob type de job (voir {@link #enregistrerStatJob})
-   * @param travail travail à exécuter, retournant le bilan et un message d'erreur optionnel
+   * @param travail travail à exécuter, retournant bilan + erreur optionnelle
    */
   public void executerAvecStatsToleretErreur(
       final Logger callerLog, final String typeJob, final Supplier<ResultatJob> travail) {
@@ -247,17 +232,12 @@ public class WorkerStatsService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs d'une source pour le cycle qui
-   * vient de se terminer — mécanisme générique remplaçant les anciennes méthodes dédiées {@code
-   * remonterBilanTm}/{@code remonterBilanEventim} : une panne totale (100% d'échecs sur un nombre
-   * suffisant d'appels — voir {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT}) est remontée en
-   * niveau {@code error}, captée automatiquement par {@code AlerteLogsAdminService} (digest niveau
-   * erreur) ; un échec partiel reste en {@code warn}.
-   *
-   * @param typeJob le type de job de fetch (préfixe {@code fetch:})
-   * @param nomSource nom de la source (ex. {@code "eventim"}, capitalisé pour l'affichage)
+   * Remonte le bilan agrégé d'appels/erreurs d'une source (panne totale
+   * en error, échec partiel en warn — seuil BilanFetch).
+   * @param typeJob le type de job de fetch (préfixe fetch:)
+   * @param nomSource nom de la source, capitalisé pour l'affichage
    * @param bilan bilan prélevé pour cette source depuis le dernier cycle
-   * @return {@code true} si une entrée a été insérée dans {@code logs_admin}
+   * @return {@code true} si une entrée a été insérée dans logs_admin
    */
   private boolean remonterBilan(
       final String typeJob, final String nomSource, final BilanFetch bilan) {
@@ -287,12 +267,11 @@ public class WorkerStatsService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} le nombre de concerts TM non récupérés par plafonnement de la
-   * pagination pour le cycle qui vient de se terminer. Métrique spécifique à TM, distincte du bilan
+   * Remonte le nombre de concerts TM non récupérés (pagination
+   * plafonnée) — métrique spécifique à TM, distincte du bilan
    * appels/erreurs commun porté par {@link #remonterBilan}.
-   *
-   * @param typeJob le type de job de fetch (préfixe {@code fetch:})
-   * @return {@code true} si un warn a été inséré dans {@code logs_admin}
+   * @param typeJob le type de job de fetch (préfixe fetch:)
+   * @return {@code true} si un warn a été inséré dans logs_admin
    */
   private boolean remonterBilanConcertsManquesTm(final String typeJob) {
     final int concertsManques = tm.preleverConcertsManques();
@@ -308,15 +287,12 @@ public class WorkerStatsService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} les correspondances Eventim par containment acceptées pour le
-   * cycle qui vient de se terminer — un containment n'est pas nécessairement une erreur (Eventim ne
-   * persiste aucun identifiant, {@code rechercherAttractionId} est rappelé à chaque cycle) mais
-   * reste invisible jusque-là (log SLF4J niveau INFO uniquement) : signalé en {@code warn} pour
-   * permettre une vérification manuelle rapide plutôt qu'une acceptation silencieuse.
-   *
-   * @param typeJob le type de job de fetch (préfixe {@code fetch:})
-   * @param eventim la source Eventim dont on prélève les containments acceptés
-   * @return {@code true} si un warn a été inséré dans {@code logs_admin}
+   * Remonte les correspondances Eventim par containment acceptées — pas
+   * nécessairement une erreur, mais invisible jusque-là (log INFO seul) :
+   * signalé en warn pour vérification manuelle rapide.
+   * @param typeJob le type de job de fetch (préfixe fetch:)
+   * @param eventim la source Eventim dont on prélève les containments
+   * @return {@code true} si un warn a été inséré dans logs_admin
    */
   private boolean remonterContainmentsEventim(final String typeJob, final EventimSource eventim) {
     final List<String> containments = eventim.preleverContainmentsAcceptes();
