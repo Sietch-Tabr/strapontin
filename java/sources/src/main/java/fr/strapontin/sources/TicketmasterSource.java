@@ -18,13 +18,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Client HTTP pour l'API Ticketmaster Discovery v2.
- *
- * <p>Effectue les appels REST vers TM : par artiste, par salle (venueId), par lot d'attractionIds
- * et par région (géolocalisation département). Respecte le rate limit de 5 req/s via des pauses
- * entre les pages. Le quota journalier est extrait des headers {@code Rate-Limit-*} de chaque
- * réponse.
- *
+ * Client HTTP pour l'API Ticketmaster Discovery v2 — par artiste, par
+ * salle (venueId), par lot d'attractionIds, par région. Respecte le
+ * rate limit de 5 req/s ; quota journalier extrait des headers {@code
+ * Rate-Limit-*}.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -96,11 +93,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Crée une instance avec la clé API et un cadenceur personnalisé (RestClient par défaut) —
-   * utilisé en production pour injecter un cadenceur partagé inter-processus, voir {@link
-   * CadenceurAppels} (Ticketmaster est aussi appelé directement par le module web, hors de ce
-   * processus worker).
-   *
+   * Crée une instance avec la clé API et un cadenceur personnalisé —
+   * utilisé en production pour un cadenceur partagé inter-processus ({@link
+   * CadenceurAppels}, TM aussi appelé directement par le module web).
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
@@ -167,9 +162,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Crée une instance en spécifiant individuellement chacune de ses dépendances (injection de test
-   * complète).
-   *
+   * Crée une instance en spécifiant individuellement chacune de ses
+   * dépendances (injection de test complète).
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param restClient client HTTP Spring à utiliser
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
@@ -235,11 +229,11 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
-   *
+   * Extrait la date et l'heure d'un événement TM depuis les champs
+   * localDate / localTime.
    * @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
-   * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
-   * @return tableau à deux éléments : [date, heure] où heure peut être null
+   * @param heureStr valeur de localTime (null ou "00:00:00" si absente)
+   * @return tableau [date, heure] où heure peut être null
    */
   public static String[] parseDateTM(final String dateStr, final String heureStr) {
     return MapeurEvenementTM.parseDateTM(dateStr, heureStr);
@@ -249,7 +243,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
    *
    * @param evt événement TM sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être null
+   * @param artisteFallback nom recherché (fetch:artiste), null sinon
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
   public static ConcertBrut mapEvenement(
@@ -258,15 +252,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Retire toute clé API Ticketmaster (paramètre {@code apikey=...}) d'un message avant
-   * journalisation. Sur une panne réseau bas niveau, l'exception Spring ({@code
-   * ResourceAccessException}) embarque l'URI complète — y compris sa query string — dans son propre
-   * message, contournant toute rédaction faite en amont sur l'URI seule.
-   *
-   * @param message message à assainir, peut être {@code null}
-   * @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
+   * Retire toute clé API ({@code apikey=...}) d'un message avant
+   * journalisation — {@code ResourceAccessException} embarque l'URI
+   * complète (query string incluse) dans son propre message.
+   * @param message message à assainir, peut être null
+   * @return le message avec toute clé API masquée, ou null si message null
    */
-  /* package-private : appelé par TicketmasterAttractionResolver/TicketmasterHealthCheck/TicketmasterPageFetcher (même package). */
+  /* package-private : appelé par TicketmasterAttractionResolver/
+   * TicketmasterHealthCheck/TicketmasterPageFetcher (même package). */
   static String redigerApiKey(final String message) {
     return message == null ? null : message.replaceAll("apikey=[^&\\s\"]+", "apikey=***");
   }
@@ -311,12 +304,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Récupère les concerts d'une salle TM par identifiant préfixé ou brut.
-   *
-   * <p>Accepte un identifiant préfixé ({@code "tm:rZFSnyZdFvA"}) ou un venueId brut ({@code
-   * "rZFSnyZdFvA"}).
-   *
-   * @param identifiant identifiant de la salle (préfixé {@code "tm:"} ou brut)
+   * Récupère les concerts d'une salle TM par identifiant préfixé ({@code
+   * "tm:rZFSnyZdFvA"}) ou brut ({@code "rZFSnyZdFvA"}).
+   * @param identifiant identifiant de la salle (préfixé "tm:" ou brut)
    * @return liste des concerts à venir dans cette salle
    */
   @Override
@@ -345,14 +335,11 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Recherche l'identifiant TM (attractionId) pour un artiste par son nom.
-   *
-   * <p>Parcourt jusqu'à 10 résultats pour trouver la première correspondance exacte normalisée. TM
-   * peut trier par popularité et retourner un artiste similaire avant l'artiste recherché (ex:
-   * "Shy" avant "Shy'm").
-   *
+   * Recherche l'attractionId TM pour un artiste par son nom — parcourt
+   * jusqu'à 10 résultats pour la première correspondance exacte normalisée
+   * (TM peut trier par popularité, ex. "Shy" avant "Shy'm").
    * @param nom nom de l'artiste
-   * @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
+   * @return attractionId TM, ou null si aucun résultat exact des 10 premiers
    */
   public String rechercherAttractionId(final String nom) {
     return attractionResolver.rechercherAttractionId(nom);
@@ -434,12 +421,12 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Récupère le nom actuel d'une attraction TM (health-check du rattachement — distinct de {@link
-   * #verifierAttraction}, qui ne vérifie que la vivacité HTTP de l'identifiant, jamais que le nom
-   * retourné correspond toujours à l'artiste suivi).
-   *
+   * Récupère le nom actuel d'une attraction TM (health-check du
+   * rattachement, distinct de {@link #verifierAttraction} qui ne vérifie
+   * que la vivacité HTTP, jamais que le nom correspond toujours à
+   * l'artiste suivi).
    * @param attractionId identifiant TM de l'attraction
-   * @return nom actuel retourné par TM, ou {@code null} si introuvable ou en cas d'erreur réseau
+   * @return nom actuel retourné par TM, ou null si introuvable/erreur réseau
    */
   public String recupererNomAttraction(final String attractionId) {
     return healthCheck.recupererNomAttraction(attractionId);
