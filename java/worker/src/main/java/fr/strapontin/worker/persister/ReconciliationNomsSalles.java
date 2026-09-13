@@ -24,14 +24,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Réconciliation des variations mineures de nommage de salle entre fetches successifs — extrait de
- * {@link ReconciliateurSalles} (v2.8.7, dette de taille pure, aucun changement fonctionnel).
- *
- * <p>Deux passes : intra-lot (variantes dans le même fetch) puis contre la base (variantes entre
- * deux fetches). Utilise {@link CorrespondanceSalle#estDoublonSalle} pour déterminer si deux noms
- * désignent la même salle. Gère également l'absorption des renommages détectés par {@code
- * upsertSalleSource} ({@link ResolveurSalleParConcert}) via mise à jour de {@code salles.nom}.
- *
+ * Réconciliation des variations mineures de nommage de salle entre
+ * fetches successifs — deux passes (intra-lot puis contre la base),
+ * {@link CorrespondanceSalle#estDoublonSalle} pour la comparaison, gère
+ * aussi l'absorption des renommages détectés par {@code upsertSalleSource}.
  * @since 2.8.7
  * @author Kwaite
  */
@@ -81,13 +77,11 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Réconcilie les variations mineures de nommage de salle dans un lot et contre la base.
-   *
-   * <p>Filtre temporel : seuls les concerts à partir de 7 jours avant aujourd'hui sont chargés
-   * depuis la base, évitant de ramener des milliers de concerts passés en mémoire.
-   *
+   * Réconcilie les variations mineures de nommage de salle dans un lot et
+   * contre la base — filtre temporel 7 jours, évite de ramener des
+   * milliers de concerts passés en mémoire.
    * @param lot valeurs de concerts à réconcilier
-   * @return lot avec {@code salleNorm} canoniques
+   * @return lot avec salleNorm canoniques
    */
   // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
   // nouvelles.
@@ -126,19 +120,11 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Construit la clé de regroupement de la réconciliation de salle.
-   *
-   * <p>Inclut {@code heure} et {@code dept} en plus d'{@code artisteNorm}/{@code date} — deux
-   * productions différentes d'un même titre générique (ex. deux mises en scène indépendantes de
-   * "Les Misérables") programmées le même jour dans deux salles distinctes n'ont ni la même heure
-   * ni le même département ; sans ces deux champs, {@link CorrespondanceSalle#estDoublonSalle}
-   * pouvait rapprocher à tort leurs {@code salleNorm} respectifs.
-   *
+   * Construit la clé de regroupement (détail : CLAUDE.md, dédoublonnage salle).
    * @param artisteNorm nom d'artiste normalisé
    * @param date date du concert
-   * @param heure heure du concert au format {@code HH:mm} (voir {@link #formaterHeure}), peut être
-   *     {@code null}
-   * @param dept département du concert, peut être {@code null}
+   * @param heure heure au format HH:mm, peut être null
+   * @param dept département du concert, peut être null
    * @return clé de regroupement
    */
   private static String cleReconciliation(
@@ -147,12 +133,10 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Formate une heure au même format que la requête SQL ({@code to_char(heure, 'HH24:MI')}) — la
-   * précision à la minute suffit à distinguer deux représentations d'un même concert, tout en
-   * restant insensible à un éventuel écart de précision entre Java et PostgreSQL.
-   *
-   * @param heure heure du concert, peut être {@code null}
-   * @return heure au format {@code HH:mm}, ou {@code null}
+   * Formate une heure au format {@code to_char(heure, 'HH24:MI')} —
+   * précision minute, suffisante et insensible à l'écart Java/PostgreSQL.
+   * @param heure heure du concert, peut être null
+   * @return heure au format HH:mm, ou null
    */
   private static String formaterHeure(final LocalTime heure) {
     return heure == null ? null : heure.format(DateTimeFormatter.ofPattern("HH:mm"));
@@ -220,17 +204,12 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Réconcilie un concert contre les salles existantes d'une même clé (artiste, date).
-   *
-   * <p>Vérifie d'abord une correspondance exacte sur l'ensemble de la liste avant de retomber sur
-   * une correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête
-   * source (voir {@link #reconcilierSalles}) peut placer un candidat flou avant un candidat exact,
-   * rattachant à tort le concert à la mauvaise salle alors qu'une correspondance exacte existait
-   * plus loin dans la même liste.
-   *
+   * Réconcilie un concert contre les salles existantes d'une même clé
+   * (artiste, date) — priorité à la correspondance exacte sur la floue,
+   * l'absence d'{@code ORDER BY} pouvant sinon inverser l'ordre.
    * @param concert concert à réconcilier
-   * @param indexExistants noms de salle existants indexés par {@link #cleReconciliation}
-   * @return concert réconcilié (salleNorm canonique si un candidat correspond)
+   * @param indexExistants noms de salle indexés par {@link #cleReconciliation}
+   * @return concert réconcilié si un candidat correspond
    */
   private ValeurConcert reconcilierUnConcert(
       final ValeurConcert concert, final Map<String, List<String>> indexExistants) {
