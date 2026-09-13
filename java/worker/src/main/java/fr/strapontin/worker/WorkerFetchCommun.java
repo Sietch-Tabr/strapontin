@@ -22,15 +22,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Briques partagées par les différents pipelines de fetch de {@link WorkerFetchService} (batch
- * artistes, région, salles) — dédoublonnage/résolution du nom canonique, suivi des absences,
- * remontée des échecs de lot, sauvegarde du quota TM.
- *
- * <p>Extrait de {@link WorkerFetchService} pour rester sous la limite de 500 lignes par fichier.
- * Bean Spring (pas seulement assemblé manuellement) pour que {@link WorkerFetchService} et les
- * exécuteurs de fetch (voir {@link FetchArtistesBatchExecutor}) reçoivent jdbc/tm/gestionQuotaTM
- * via cette seule dépendance plutôt que trois paramètres de constructeur supplémentaires chacun.
- *
+ * Briques partagées par les pipelines de fetch de {@link
+ * WorkerFetchService} — dédoublonnage/résolution du nom canonique, suivi
+ * des absences, remontée des échecs de lot, sauvegarde du quota TM.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -136,19 +130,12 @@ public class WorkerFetchCommun {
   }
 
   /**
-   * Remonte dans {@code logs_admin} les échecs de lots d'un job multi-lots, indépendamment du
-   * résultat des autres lots — sans cela, un lot en échec reste invisible tant que le job dans son
-   * ensemble se termine sans exception et que son bilan agrégé reste positif grâce aux autres lots.
-   *
-   * <p>Niveau {@code error} si tous les lots du job ont échoué (panne totale), {@code warn} sinon
-   * (échec partiel, même convention que {@code WorkerStatsService#remonterBilan}). Délègue ensuite
-   * à {@link RetryLotsService} la décision de retenter ou d'abandonner les identifiants en échec, y
-   * compris quand ce cycle est propre (remise à zéro du compteur de tentatives).
-   *
+   * Remonte les échecs de lots dans {@code logs_admin} (détail : CLAUDE.md,
+   * Jobs background) — délègue à {@link RetryLotsService}.
    * @param typeJob type de job (ex. {@code "fetch:salles:all"})
    * @param echecs messages d'échec, un par lot en échec
    * @param totalLots nombre total de lots traités par le job
-   * @param identifiantsEnEchec identifiants des entités des lots en échec, pour un retry ciblé
+   * @param identifiantsEnEchec identifiants en échec, pour un retry ciblé
    */
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   void remonterEchecsLots(
@@ -172,10 +159,9 @@ public class WorkerFetchCommun {
   }
 
   /**
-   * Met à jour le compteur d'absences consécutives des concerts futurs liés aux entités
-   * effectivement retraitées dans ce cycle : remis à zéro pour tout concert réellement revu ({@code
-   * updated_at} avancé par l'upsert), incrémenté sinon.
-   *
+   * Met à jour le compteur d'absences consécutives des entités retraitées
+   * ce cycle (détail : CLAUDE.md, Jobs background) — remis à zéro si revu,
+   * incrémenté sinon.
    * @param colonne "artiste_id" ou "salle_id"
    * @param ids identifiants (texte) des entités traitées dans ce cycle
    * @param debutCycle horodatage capturé avant la persistance du lot
@@ -195,30 +181,24 @@ public class WorkerFetchCommun {
   }
 
   /**
-   * Détermine si un concert est éligible à la résolution du nom canonique via Deezer.
-   *
-   * <p>Exclut les classifications "theatre", "divers" et "sports" (jamais un vrai musicien côté
-   * Deezer) ainsi que, spécifiquement pour Eventim, une classification vide/absente — Digitick omet
-   * aussi sa classification mais uniquement pour de vrais concerts (filtré en amont sur le genre
-   * "Concert"), alors qu'Eventim l'omet fréquemment y compris pour des spectacles non musicaux.
-   *
+   * Exclut de la résolution Deezer les classifications "theatre"/"divers"/
+   * "sports" (jamais un vrai musicien) et, pour Eventim seul, une
+   * classification vide (Digitick l'omet aussi mais uniquement pour de
+   * vrais concerts, déjà filtrés en amont sur le genre "Concert").
    * @param c concert à évaluer
-   * @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
+   * @return {@code true} si la résolution Deezer peut s'appliquer
    */
   private static boolean estEligibleResolutionDeezer(final ConcertBrut concert) {
     return EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source());
   }
 
   /**
-   * Rejette un candidat Deezer divergent du {@code nom_affiche} Wikidata déjà connu pour cet
-   * artiste : un mauvais rapprochement Deezer est une cause de corruption déjà rencontrée (ex. «
-   * Nino Arial » → « Niño Árbol »), détectable avant la persistance quand l'identité de l'artiste
-   * est déjà établie ailleurs par une source plus fiable (Wikidata).
-   *
+   * Rejette un candidat Deezer divergent du {@code nom_affiche} Wikidata
+   * déjà connu (corruption Deezer connue, ex. "Nino Arial" → "Niño Árbol").
    * @param nomBrut nom brut entrant, avant résolution Deezer
    * @param nomDeezer nom canonique proposé par {@link ResolveurNomCanonique}
    * @param log logger de l'appelant, pour tracer un rejet
-   * @return {@code nomDeezer}, ou {@code nomBrut} si un {@code nom_affiche} déjà connu diverge
+   * @return nomDeezer, ou nomBrut si un nom_affiche connu diverge
    */
   private String nomCanoniqueValideOuBrut(
       final String nomBrut, final String nomDeezer, final Logger log) {
