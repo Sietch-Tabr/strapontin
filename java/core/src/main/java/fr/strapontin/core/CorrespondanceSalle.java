@@ -9,11 +9,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Détermine si deux noms de salle normalisés désignent la même salle.
- *
- * <p>Extrait de {@code worker/persister/ReconciliateurSalles} (v2.5.7) vers {@code core} pour être
- * réutilisable par le module {@code sources} (découverte Wikidata par nom, v2.6.0) sans dépendance
- * circulaire {@code sources} → {@code worker}.
+ * Détermine si deux noms de salle normalisés désignent la même salle,
+ * extrait de {@code ReconciliateurSalles} pour être réutilisable par
+ * {@code sources} (découverte Wikidata, sans dépendance circulaire).
  *
  * @since 2.6.0
  * @author Kwaite
@@ -119,12 +117,11 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Découpe une chaîne normalisée en tokens significatifs, en excluant les mots-types de salle
-   * génériques — un token comme "theatre" ou "palais" ne prouve rien seul sur l'identité d'une
-   * salle, partagé nationalement par des centaines de lieux distincts.
-   *
+   * Découpe une chaîne normalisée en tokens significatifs, en excluant les
+   * mots-types de salle génériques — un token comme "theatre" ou "palais"
+   * ne prouve rien seul, partagé nationalement par des centaines de lieux.
    * @param nomNorm chaîne normalisée
-   * @return ensemble des tokens significatifs et spécifiques (hors mots-types génériques)
+   * @return ensemble des tokens significatifs et spécifiques
    */
   private static Set<String> tokensSpecifiques(final String nomNorm) {
     final Set<String> tokens = new HashSet<>(tokensSignificatifs(nomNorm));
@@ -133,11 +130,9 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
-   *
-   * <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
-   * compte (filtre les articles "le", "de", "la"…). Retourne 1.0 si les deux unions sont vides.
-   *
+   * Calcule le coefficient de Jaccard sur les tokens des deux chaînes
+   * (tokens ≥ {@value #LONGUEUR_MIN_TOKEN_JACCARD} car., 1.0 si les deux
+   * unions sont vides).
    * @param nomA première chaîne normalisée
    * @param nomB deuxième chaîne normalisée
    * @return coefficient de Jaccard entre 0.0 et 1.0
@@ -159,20 +154,11 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Vérifie si chaque token spécifique du nom le plus court est contenu (au sens sous-chaîne) dans
-   * au moins un token spécifique du nom le plus long.
-   *
-   * <p>Couvre le cas d'un mot inséré <em>au milieu</em> d'un autre plutôt qu'en préfixe/suffixe
-   * séparé par un espace (ex. "Accor Arena" / "Accorhotels Arena" — "hotels" concaténé sans espace
-   * forme un unique token "accorhotels", jamais égal ni partagé avec "accor"). Chaque token du nom
-   * court doit trouver une correspondance — pas un seul pivot isolé — ce qui limite le risque de
-   * faux positif par rapport à un simple partage d'un mot : contrairement au critère pivot, aucune
-   * longueur minimale de 7 caractères n'est requise ici, la couverture intégrale des tokens
-   * spécifiques du nom court sert de garde-fou à la place.
-   *
+   * Vérifie si chaque token du nom court est contenu dans un token du nom
+   * long (ex. "Accor Arena"/"Accorhotels Arena"), couverture intégrale.
    * @param specCourt tokens spécifiques du nom le plus court
    * @param specLong tokens spécifiques du nom le plus long
-   * @return {@code true} si tous les tokens de {@code specCourt} sont couverts
+   * @return {@code true} si tous les tokens de specCourt sont couverts
    */
   private static boolean estContainmentTokensPartiel(
       final Set<String> specCourt, final Set<String> specLong) {
@@ -199,25 +185,9 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Vérifie si deux noms de salle normalisés désignent la même salle.
-   *
-   * <p>Cinq critères en union :
-   *
-   * <ol>
-   *   <li>Levenshtein ≥ 0.75 ou containment (via {@link Normalisation#similarite})
-   *   <li>Jaccard sur tokens <strong>spécifiques</strong> (hors mots-types génériques) strict
-   *       {@code > 0.5} — insensible à l'ordre des mots
-   *   <li>Token pivot spécifique — token commun ≥ {@value #LONGUEUR_MIN_PIVOT} chars parmi les
-   *       tokens spécifiques et Jaccard spécifique {@code > }{@value #SEUIL_JACCARD_PIVOT}
-   *   <li>Égalité sans espaces — {@link Normalisation#normaliserTexte} remplace l'apostrophe par
-   *       une espace ("L'Olympia" → "l olympia"), mais une source qui omet totalement l'apostrophe
-   *       ("LOlympia") ne produit aucune espace à substituer ("lolympia") : sans ce critère, les
-   *       deux formes ne partagent aucun token commun
-   *   <li>Containment de tokens spécifiques partiel asymétrique — couvre un mot inséré au milieu
-   *       d'un token plutôt qu'ajouté en tant que mot séparé (« Accor Arena » / « Accorhotels Arena
-   *       »)
-   * </ol>
-   *
+   * Vérifie si deux noms normalisés désignent la même salle (union de 5
+   * critères : Levenshtein/containment, Jaccard, pivot, égalité sans
+   * espaces, containment partiel — détail : CLAUDE.md, Dédoublonnage).
    * @param nomA premier nom normalisé
    * @param nomB deuxième nom normalisé
    * @return {@code true} si les salles sont considérées identiques
@@ -227,19 +197,11 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Variante de {@link #estDoublonSalle(String, String)} permettant de désactiver, en plus du
-   * critère pivot, le containment de caractères du premier critère (les deux plus faibles des cinq)
-   * — un adjectif générique français très courant (ex. "nouvelle") peut satisfaire le pivot sans
-   * pouvoir discriminant réel, et un nom court peut se retrouver préfixe strict d'un nom plus long
-   * sans rapport (ex. "la prade" / "la pradella") ; les deux cas constatés en production sur un
-   * rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
-   * indépendant. Les trois autres critères restent inchangés dans les deux cas.
-   *
+   * Variante désactivant pivot et containment de caractères (les deux plus
+   * faibles des cinq, cf. CLAUDE.md) — réservé sans signal de localisation.
    * @param nomA premier nom normalisé
    * @param nomB deuxième nom normalisé
-   * @param pivotAutorise {@code false} pour exclure le pivot et le containment de caractères de
-   *     l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
-   *     confirmer un candidat validé sur l'un de ces deux seuls critères
+   * @param pivotAutorise {@code false} pour exclure pivot et containment
    * @return {@code true} si les salles sont considérées identiques
    */
   public static boolean estDoublonSalle(
@@ -336,12 +298,12 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Extrait la partie complexe/base d'un nom de salle brut qualifié (ex. "La Seine Musicale -
-   * Grande Seine" → "La Seine Musicale"), pour résoudre la salle du complexe avant de créer ou
-   * retrouver la sous-salle correspondant au qualificatif.
-   *
+   * Extrait la partie complexe/base d'un nom qualifié (ex. "La Seine
+   * Musicale - Grande Seine" → "La Seine Musicale"), pour résoudre le
+   * complexe avant de créer/retrouver la sous-salle correspondante.
    * @param nomBrut nom brut (non normalisé)
-   * @return le nom de base, ou {@code null} si {@code nomBrut} ne porte aucun qualificatif
+   * @return le nom de base, ou {@code null} si nomBrut ne porte aucun
+   *     qualificatif
    */
   public static String extraireBase(final String nomBrut) {
     final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
@@ -353,14 +315,12 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Indique si deux noms de salle bruts (non normalisés) portent chacun un qualificatif de
-   * sous-salle distinct (ex. "La Seine Musicale - Grande Seine" / "Seine Musicale - Auditorium
-   * P.devedjian") — un complexe multi-salles ne doit jamais fusionner deux halls physiquement
-   * distincts au seul motif qu'ils partagent le nom du complexe.
-   *
+   * Indique si deux noms bruts portent un qualificatif de sous-salle
+   * distinct — un complexe multi-salles ne fusionne pas deux halls
+   * distincts au seul motif du nom du complexe partagé.
    * @param nomBrutA premier nom, non normalisé
    * @param nomBrutB second nom, non normalisé
-   * @return {@code true} si les deux portent un qualificatif et que ceux-ci ne correspondent pas
+   * @return {@code true} si les deux portent un qualificatif divergent
    */
   public static boolean qualificatifsDivergents(final String nomBrutA, final String nomBrutB) {
     final String qualifA = extraireQualificatif(nomBrutA);
