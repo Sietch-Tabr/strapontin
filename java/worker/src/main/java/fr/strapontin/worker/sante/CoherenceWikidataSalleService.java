@@ -25,29 +25,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Contrôle de cohérence *a posteriori* entre {@code salles.wikidata_id} (déjà connu) et {@code
- * salles.ville} (découvert en marge de l'investigation) : 7 salles sur 12 avaient un {@code
- * wikidata_id} pointant vers une entité totalement étrangère — Q-ID matché sur un homonyme d'une
- * autre ville (ex. « Theatre Municipal » de Béthune rattaché au musée des Beaux-Arts de Nancy) —
- * jamais détecté faute de contrôle après coup, uniquement trouvé par un audit manuel ponctuel.
- *
- * <p>{@link WikidataSalleSource#enrichirLot} rejette déjà ce type d'incohérence *au moment du
- * matching* ({@code villeIncompatible}) mais seulement quand {@code salle.ville} et la commune du
- * candidat sont toutes les deux connues — une ville locale inconnue ou fausse au moment de
- * l'enrichissement (le cas des 7 salles ci-dessus) ne bloque rien, choix assumé pour ne pas réduire
- * la couverture d'enrichissement des salles légitimement sans ville. Ce service ne change rien à ce
- * comportement : il journalise seulement les incohérences déjà présentes en base pour un examen
- * manuel ultérieur, en réutilisant la commune déjà récupérée par le mode batch de {@link
- * WikidataSalleSource} (aucune requête SPARQL supplémentaire par rapport à un enrichissement
- * classique à {@code wikidata_id} connu).
- *
- * <p>Angle mort corrigé : la comparaison initiale contre {@code salles.ville} seule est aveugle par
- * construction quand le mauvais rapprochement a corrompu {@code ville} en même temps que {@code
- * wikidata_id} (la mauvaise entité écrase les deux au même moment) — les deux valeurs corrompues
- * sont alors toujours cohérentes entre elles. {@code concerts.ville}, dérivée du code postal brut
- * de la source et jamais touchée par l'enrichissement, sert désormais de référence prioritaire
- * quand elle est disponible ; {@code salles.ville} reste le repli pour une salle sans concert avec
- * ville connue (ex. tous ses concerts passés déjà purgés).
+ * Contrôle a posteriori (journalisation seule) entre wikidata_id et la
+ * commune Wikidata réelle — priorise concerts.ville sur salles.ville
+ * (détails et incidents réels : wiki Sources-de-données).
  *
  * @since 2.7.5
  * @author Kwaite
@@ -162,15 +142,10 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Revalide le type Wikidata de tous les {@code wikidata_id} déjà stockés contre les types
-   * actuellement exclus par {@link WikidataSalleSource} — un garde-fou de type introduit après coup
-   * ne s'applique qu'aux nouvelles découvertes, jamais rétroactivement. Un type structurel invalide
-   * (gare, arrêt de tram, bar, restaurant...) est un signal sûr, contrairement à une incohérence de
-   * ville qui peut avoir une cause légitime : {@code wikidata_id} est donc remis à {@code null}
-   * directement, ce qui permettra une redécouverte au prochain cycle nocturne ({@code COALESCE} ne
-   * réécrit jamais un {@code wikidata_id} déjà posé). {@code ville}/{@code nom_affiche} restent
-   * inchangés.
-   *
+   * Revalide le type Wikidata de tous les wikidata_id stockés (garde-fou
+   * introduit après coup, jamais appliqué rétroactivement) — type invalide
+   * (gare/tram/commerce) remis à null directement, redécouvert au prochain
+   * cycle. ville/nom_affiche inchangés.
    * @return nombre de {@code wikidata_id} invalidés
    */
   public int revaliderTypes() {
@@ -240,13 +215,10 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Charge, pour chaque salle candidate, les villes réelles distinctes de ses concerts ({@code
-   * concerts.ville}) — dérivées du code postal brut de la source, jamais touchées par
-   * l'enrichissement Wikidata, contrairement à {@code salles.ville}.
-   *
+   * Charge les villes réelles des concerts de chaque salle (concerts.ville,
+   * jamais touchée par l'enrichissement, contrairement à salles.ville).
    * @param salleIds identifiants des salles candidates
-   * @return villes réelles par salle, absente si la salle n'a aucun concert avec une ville connue
-   *     (ex. tous les concerts passés déjà purgés)
+   * @return villes réelles par salle, absente si aucun concert avec ville
    */
   private Map<UUID, List<String>> chargerVillesConcertsReelles(final List<UUID> salleIds) {
     if (salleIds.isEmpty()) {
@@ -279,24 +251,11 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Évalue la cohérence de la commune Wikidata contre une source de vérité indépendante.
-   *
-   * <p>Si le mauvais rapprochement a corrompu {@code salles.ville} en même temps que {@code
-   * wikidata_id} (constaté systématiquement dans les 3 cas confirmés), une comparaison contre
-   * {@code salles.ville} seule trouve toujours les deux cohérents entre eux — angle mort total,
-   * silencieux. {@code concerts.ville} sert de référence prioritaire quand elle est disponible ;
-   * repli sur {@code salles.ville} uniquement pour une salle sans concert avec ville connue.
-   *
-   * <p>Toutes les villes réelles doivent être cohérentes pour ne rien journaliser — un simple
-   * {@code anyMatch} devient aveugle dès qu'une salle mal fusionnée récupère ne serait-ce qu'un
-   * concert cohérent, masquant silencieusement la contamination restante. Une contamination
-   * partielle (au moins une ville cohérente, au moins une non) reste journalisée avec un message
-   * dédié plutôt que d'être confondue avec un mauvais rapprochement total.
-   *
+   * Évalue la cohérence contre concerts.ville (prioritaire) ou salles.ville
+   * en repli — contamination partielle journalisée distinctement du total.
    * @param salle salle candidate
-   * @param communeWikidata commune Wikidata (P131) du {@code wikidata_id} déjà associé
-   * @param villesConcertsReelles villes réelles des concerts rattachés, ou {@code null}/vide si
-   *     aucune
+   * @param communeWikidata commune Wikidata (P131) du wikidata_id associé
+   * @param villesConcertsReelles villes réelles des concerts, ou vide
    * @return la classification de cohérence
    */
   private static Coherence evaluerCoherence(
@@ -347,10 +306,10 @@ public class CoherenceWikidataSalleService {
 
   /**
    * @param salle salle candidate
-   * @param communeWikidata commune Wikidata (P131) du {@code wikidata_id} déjà associé
-   * @param partielle {@code true} si seule une partie des concerts réels est incohérente — message
-   *     distinct signalant une contamination partielle plutôt qu'un mauvais rapprochement total,
-   *     pour ne pas induire un examinateur en erreur sur l'ampleur réelle
+   * @param communeWikidata commune Wikidata (P131) du wikidata_id associé
+   * @param partielle {@code true} si seule une partie des concerts est
+   *     incohérente (message distinct pour ne pas induire en erreur sur
+   *     l'ampleur réelle)
    */
   private void loggerIncoherence(
       final SalleAEnrichir salle, final String communeWikidata, final boolean partielle) {
