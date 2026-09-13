@@ -20,16 +20,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de réconciliation des noms d'artiste et de résolution des {@code artiste_id}.
- *
- * <p>Deux passes de réconciliation : intra-lot (variantes dans le même fetch) puis contre la base
- * (variantes entre deux fetches). Utilise {@link CorrespondanceArtiste#estDoublonArtiste} (module
- * {@code core}, partagé avec {@code web} — voir {@code ArtisteService.ajouter}) pour déterminer si
- * deux noms désignent le même artiste.
- *
- * <p>La résolution par nom ({@link #resoudreArtisteParNomNorm}) couvre toutes les sources sans
- * {@code artiste_id}, y compris Digitick qui ne fournit pas d'identifiant artiste externe.
- *
+ * Service de réconciliation des noms d'artiste et de résolution des
+ * {@code artiste_id} — deux passes (intra-lot puis contre la base),
+ * {@link CorrespondanceArtiste#estDoublonArtiste} partagé avec le module
+ * web. La résolution par nom couvre Digitick (sans identifiant externe).
  * @since 2.5.7
  * @author Kwaite
  */
@@ -83,15 +77,10 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Réconcilie les variations mineures de nommage d'artiste dans un lot et contre la base.
-   *
-   * <p>Le regroupement se fait par {@code (date, salleNorm)} — déjà canonique à ce stade puisque
-   * cette méthode s'exécute après {@code ReconciliateurSalles} — plutôt que par {@code
-   * artisteNorm}, qui est précisément la valeur à corriger.
-   *
-   * <p>Filtre temporel : seuls les concerts à partir de 7 jours avant aujourd'hui sont chargés
-   * depuis la base.
-   *
+   * Réconcilie les variations mineures de nommage d'artiste dans un lot et
+   * contre la base — regroupe par {@code (date, salleNorm)} (déjà canonique,
+   * après {@code ReconciliateurSalles}), jamais par {@code artisteNorm} qui
+   * est la valeur à corriger. Filtre temporel : concerts depuis 7 jours.
    * @param lot valeurs de concerts après réconciliation des salles
    * @return lot avec {@code artisteNorm} réconcilié
    */
@@ -136,17 +125,9 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Corrige un artiste corrompu déjà persisté en s'ancrant sur l'identité de l'URL de l'événement
-   * plutôt que sur la similarité de nom.
-   *
-   * <p>{@link #reconcilierUnArtiste} ne guérit une ligne existante que si {@link
-   * CorrespondanceArtiste#estDoublonArtiste} relie encore l'ancien nom corrompu au nouveau — un
-   * mauvais rapprochement Deezer peut produire un nom sans aucune parenté textuelle avec l'original
-   * (ex. "nino arial" → "nino arbol"), rendant cette guérison structurellement impossible. Deux
-   * fiches de la même URL désignent nécessairement le même événement réel : cette voie corrige donc
-   * la ligne existante indépendamment de toute similarité de nom, dès que l'entrant est inéligible
-   * à la résolution Deezer (nom brut fiable par construction).
-   *
+   * Corrige un artiste corrompu déjà persisté en s'ancrant sur l'URL de
+   * l'événement plutôt que sur la similarité de nom — détail : CLAUDE.md,
+   * Fiches package/VIP et concerts sans artiste suivi.
    * @param lot concerts après résolution des identités sources
    */
   /* package-private : appelé par PersisterConcerts (même package). */
@@ -207,17 +188,12 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Réconcilie un concert contre les candidats existants d'une même clé (date, salle).
-   *
-   * <p>Scanne toute la liste à la recherche d'une correspondance exacte avant de retomber sur une
-   * correspondance floue : sans cette priorité, l'absence de {@code ORDER BY} sur la requête source
-   * (voir {@link #reconcilierArtistes}) peut placer un candidat flou avant un candidat exact dans
-   * le result set, faisant rattacher à tort le concert au mauvais artiste alors qu'une
-   * correspondance exacte existait plus loin dans la même liste.
-   *
+   * Réconcilie un concert contre les candidats existants d'une même clé
+   * (date, salle) — priorité à la correspondance exacte sur la floue,
+   * l'absence d'{@code ORDER BY} pouvant sinon inverser l'ordre.
    * @param concert concert à réconcilier
-   * @param indexExistants candidats existants indexés par {@code date|salleNorm}
-   * @return concert réconcilié (artisteNorm/artisteId propagés si un candidat correspond)
+   * @param indexExistants candidats indexés par {@code date|salleNorm}
+   * @return concert réconcilié si un candidat correspond
    */
   private ValeurConcert reconcilierUnArtiste(
       final ValeurConcert concert, final Map<String, List<ArtisteExistant>> indexExistants) {
@@ -341,15 +317,12 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.
-   *
-   * <p>Couvre toutes les sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
-   * d'identifiant artiste externe ({@code artisteSourceId == null}). Les mappings trouvés pour les
-   * sources avec identifiant externe sont persistés dans {@code artiste_sources} (ON CONFLICT DO
-   * NOTHING) pour accélérer les fetches suivants.
-   *
+   * Résout les {@code artiste_id} manquants par lookup sur {@code
+   * artistes.nom_norm} — couvre Digitick (sans identifiant externe). Les
+   * mappings trouvés sont persistés dans {@code artiste_sources} (ON
+   * CONFLICT DO NOTHING) pour accélérer les fetches suivants.
    * @param concerts concerts après résolution par source
-   * @return liste enrichie avec les {@code artiste_id} résolus par nom
+   * @return liste enrichie avec les artiste_id résolus par nom
    */
   /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> resoudreArtisteParNomNorm(final List<ValeurConcert> concerts) {
