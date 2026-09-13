@@ -19,11 +19,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * Accès aux données pour les salles suivies ({@code salles}, {@code user_salles}).
- *
- * <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité, normalisation)
- * appartiennent à {@link SalleService}.
- *
+ * Accès aux données pour les salles suivies ({@code salles}, {@code
+ * user_salles}) — SQL pur, aucune logique métier (cap/unicité/
+ * normalisation dans {@link SalleService}).
  * @since 2.1.0
  * @author Kwaite
  */
@@ -44,11 +42,9 @@ class SalleRepository {
   }
 
   /**
-   * Retourne les salles suivies par l'utilisateur, triées par nom.
-   *
-   * <p>Le champ {@code aDigitick} est {@code true} si la salle possède un slug Digitick configuré
-   * dans {@code salle_sources}.
-   *
+   * Retourne les salles suivies par l'utilisateur, triées par nom —
+   * {@code aDigitick} vrai si un slug Digitick est configuré dans {@code
+   * salle_sources}.
    * @param userId identifiant de l'utilisateur
    * @return liste des salles suivies
    */
@@ -77,20 +73,12 @@ class SalleRepository {
   }
 
   /**
-   * Recherche des salles dans les concerts existants, le référentiel Digitick et les salles connues
-   * avec concerts.
-   *
-   * <p>Union de trois sources :
-   *
-   * <ol>
-   *   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern
-   *   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern
-   *   <li>Salles connues avec concerts ({@code salle_id IS NOT NULL}) — évite un appel TM inutile
-   *       et permet à {@code estMemeSalle} de filtrer les doublons de venueId
-   * </ol>
-   *
-   * @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
-   * @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
+   * Recherche des salles dans les concerts existants, le référentiel
+   * Digitick et les salles connues avec concerts — union de trois sources
+   * (concert sans UUID, salle Digitick, salle connue avec concert), pour
+   * filtrer les doublons de venueId côté appelant ({@code estMemeSalle}).
+   * @param pattern valeur LIKE sur la clé normalisée
+   * @return lignes salle/ville/digitick_slug distinctes (max 10)
    */
   /* package-private : accès SQL réservé à SalleService (même package), pattern
    * service/repository. */
@@ -157,13 +145,12 @@ class SalleRepository {
   }
 
   /**
-   * Recherche les salles du référentiel dont la {@code salle_cle} partage au moins un des tokens
-   * fournis — pré-filtre SQL avant application de la correspondance floue ({@code
-   * CorrespondanceSalle.estDoublonSalle} sur {@code nom}, non exprimable en SQL).
-   *
-   * @param tokens clés normalisées ({@code SalleService.normaliserSalleCle}) des mots du nom
-   *     recherché, filtrées aux tokens d'au moins 3 caractères
-   * @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
+   * Recherche les salles du référentiel dont la {@code salle_cle} partage
+   * au moins un des tokens fournis — pré-filtre SQL avant la correspondance
+   * floue ({@code CorrespondanceSalle.estDoublonSalle}, non exprimable en
+   * SQL).
+   * @param tokens clés normalisées, filtrées aux tokens ≥ 3 caractères
+   * @return jusqu'à 50 candidats (id, salle_cle, nom), vide si tokens vide
    */
   /* package-private : accès SQL réservé à SalleService (même package), pattern
    * service/repository. */
@@ -218,10 +205,7 @@ class SalleRepository {
   }
 
   /**
-   * Insère ou met à jour une salle avec ville et code postal (usage admin Digitick).
-   *
-   * <p>En cas de conflit sur {@code salle_cle}, met à jour le nom, la ville et le CP si fournis.
-   *
+   * Insère/MAJ une salle (admin Digitick), conflit MAJ nom/ville/CP.
    * @param salleCle clé naturelle normalisée
    * @param nom nom affiché
    * @param ville ville (null si inconnue)
@@ -253,16 +237,12 @@ class SalleRepository {
   }
 
   /**
-   * Met à jour le nom, la ville et le CP d'une salle existante.
-   *
-   * <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via cette méthode
-   * laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching Wikidata/Overpass
-   * pour cette salle.
-   *
+   * Met à jour nom/ville/CP — recalcule {@code nom_norm} (sinon
+   * désynchronisé, cassant le matching Wikidata/Overpass).
    * @param salleId UUID de la salle
    * @param nom nouveau nom (null = inchangé)
    * @param ville nouvelle ville (null = inchangée)
-   * @param dept nouveau numéro de département (null = inchangé)
+   * @param dept nouveau département (null = inchangé)
    */
   /* package-private : accès SQL réservé à SalleService (même package), pattern
    * service/repository. */
@@ -287,16 +267,12 @@ class SalleRepository {
   }
 
   /**
-   * Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
-   *
-   * <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
-   * préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur canonique
-   * de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle} n'accepte
-   * que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait jamais rien
-   * (mismatch silencieux, aucune exception).
-   *
+   * Identifiants préfixés CSV de toutes les sources d'une salle (ex. {@code
+   * "tm:rZFSnyZdFvA,digitick:lempreinte"}) — préfixe TM abrégé ({@code
+   * "tm"}, pas {@code "ticketmaster"}), seul accepté par {@link
+   * TicketmasterSource#accepteIdentifiantSalle} (sinon fetch TM muet).
    * @param salleId UUID de la salle
-   * @return CSV d'identifiants ou {@code null} si aucune source connue
+   * @return CSV d'identifiants ou null si aucune source connue
    */
   /* package-private : accès SQL réservé à SalleService (même package), pattern
    * service/repository. */
@@ -349,11 +325,10 @@ class SalleRepository {
   }
 
   /**
-   * Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur déjà résolue
-   * par le job nocturne ({@code COALESCE}). Peut lever {@link
-   * org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à la charge
-   * de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
-   *
+   * Met à jour {@code wikidata_id} si absent ({@code COALESCE}, jamais
+   * une valeur déjà résolue) — peut lever {@link
+   * org.springframework.dao.DuplicateKeyException}, à la charge de
+   * l'appelant.
    * @param salleId UUID stable de la salle
    * @param wikidataId Q-ID Wikidata
    */
@@ -369,12 +344,11 @@ class SalleRepository {
   }
 
   /**
-   * Recherche une salle différente de {@code exclureSalleId} déjà associée à un slug Digitick
-   * permet de détecter un conflit avant l'attribution plutôt que d'échouer silencieusement sur
-   * {@code ON CONFLICT DO NOTHING}.
-   *
+   * Recherche une salle différente de {@code exclureSalleId} déjà associée
+   * à un slug Digitick — détecte un conflit avant l'attribution plutôt que
+   * d'échouer silencieusement sur {@code ON CONFLICT DO NOTHING}.
    * @param slug slug Digitick à vérifier
-   * @param exclureSalleId salle en cours d'attribution, exclue de la recherche
+   * @param exclureSalleId salle en cours d'attribution, exclue
    * @return le nom affiché de la salle en conflit, si elle existe
    */
   /* package-private : accès SQL réservé à SalleService (même package), pattern
