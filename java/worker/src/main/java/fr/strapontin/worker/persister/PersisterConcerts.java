@@ -28,30 +28,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Orchestrateur de persistance des concerts dédoublonnés.
- *
- * <p>Délègue les responsabilités spécialisées à trois services :
- *
- * <ul>
- *   <li>{@link ReconciliateurSalles} — réconciliation des noms de salle
- *   <li>{@link ReconciliateurArtistes} — réconciliation des noms d'artiste
- *   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID)
- * </ul>
- *
- * <p>Traitement par lots de 500. Pour chaque lot :
- *
- * <ol>
- *   <li>Résolution des UUIDs par identifiants sources ({@code salle_sources}, {@code
- *       artiste_sources})
- *   <li>Première réconciliation des noms de salle (intra-lot puis contre la base)
- *   <li>Réconciliation des noms d'artiste (intra-lot puis contre la base)
- *   <li>Deuxième réconciliation des noms de salle (couvre les variantes simultanées)
- *   <li>Déduplication sur la clé de conflit finale
- *   <li>Rattachement des salles par {@code nom_norm} exact
- *   <li>Résolution de l'événement canonique (existant ou nouveau) puis upsert de l'observation de
- *       la source (#1192, plus de suppression a posteriori)
- * </ol>
- *
+ * Orchestrateur de persistance des concerts dédoublonnés par lots de 500
+ * (délègue à {@link ReconciliateurSalles}/{@link ReconciliateurArtistes}/
+ * {@link PersisteurConcertsDb}) — pipeline détaillé : CLAUDE.md,
+ * Dédoublonnage inter-sources.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -86,13 +66,9 @@ public class PersisterConcerts {
   }
 
   /**
-   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-   * éviter le problème d'auto-référence à la construction — l'appel à {@link
-   * #persisterLotTransactionnel} passe ainsi par le proxy AOP Spring et commit sa propre
-   * transaction par sous-lot, plutôt qu'une transaction unique englobant toute la boucle. En dehors
-   * d'un contexte Spring (tests unitaires n'exerçant pas ce chemin), {@code self} reste {@code
-   * null} sans effet — seul {@link #persisterConcerts} avec une liste non vide l'exerce.
-   *
+   * Injection par setter (pas par constructeur, évite l'auto-référence à la
+   * construction) — {@link #persisterLotTransactionnel} passe par le proxy
+   * AOP Spring, commit par sous-lot plutôt qu'une transaction unique.
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
@@ -150,13 +126,10 @@ public class PersisterConcerts {
   }
 
   /**
-   * Dédoublonne par clé de conflit {@code (artiste_norm, date, heure, salle_norm)}.
-   *
-   * <p>Deux concerts du même artiste dans la même salle le même jour avec des heures différentes
-   * (matinée + soirée) sont considérés distincts. Deux concerts sans heure (null) sont considérés
-   * identiques et fusionnés. En cas de doublon, conserve la version avec le meilleur score
-   * (diacritiques et casse mixte préférés).
-   *
+   * Dédoublonne par clé de conflit {@code (artiste_norm, date, heure,
+   * salle_norm)} — deux concerts avec heures différentes le même jour sont
+   * distincts, sans heure sont fusionnés ; garde la version au meilleur
+   * score (diacritiques/casse mixte préférés).
    * @param liste concerts bruts à dédoublonner
    * @return liste sans doublons
    */
@@ -182,17 +155,11 @@ public class PersisterConcerts {
   }
 
   /**
-   * Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleId)}.
-   *
-   * <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id} (NULLS
-   * NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même salle
-   * différemment ont le même {@code salle_id} après résolution — ils conflicteraient au sein d'un
-   * même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
-   *
-   * <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que tous
-   * les {@code salle_id} soient résolus.
-   *
-   * @param lot valeurs de concerts après réconciliation complète des salles
+   * Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure,
+   * salleId)} — la contrainte {@code uq_evenements} porte sur {@code
+   * salle_id} ; deux noms résolus au même identifiant conflicteraient
+   * sinon. Après {@link ReconciliateurSalles#raccrocherSallesParNomNorm}.
+   * @param lot valeurs après réconciliation complète des salles
    * @return lot sans doublons
    */
   public static List<ValeurConcert> deduplicerLotReconcilie(final List<ValeurConcert> lot) {
@@ -218,25 +185,10 @@ public class PersisterConcerts {
   }
 
   /**
-   * Résout les UUIDs internes depuis les identifiants sources préfixés.
-   *
-   * <p>Pour chaque concert portant un {@code salleSourceId} ou {@code artisteSourceId}, consulte
-   * {@code salle_sources} et {@code artiste_sources} pour trouver l'UUID stable. En cas de
-   * renommage de salle, met à jour {@code salles.nom}.
-   *
-   * <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
-   * effectue un upsert dans {@code salles} et {@code salle_sources}.
-   *
-   * <p>Pour les concerts sans {@code salleSourceId} du tout (TM omet parfois {@code venue.id} pour
-   * un événement donné, sans identifiant source exploitable), tente un repli par correspondance
-   * floue ({@link ReconciliateurSalles#chercherSalleParTokens}) plutôt que de laisser {@code
-   * salle_id} indéfiniment {@code null} — sans identifiant source fiable, aucune salle n'est créée
-   * si le repli échoue (pas de salle fantôme).
-   *
-   * <p>Pour les concerts sans {@code artiste_id} après résolution par source (y compris les
-   * concerts Digitick sans {@code artisteSourceId}), effectue un lookup batch par {@code nom_norm}
-   * dans la table {@code artistes}.
-   *
+   * Résout les UUIDs internes depuis les identifiants sources préfixés
+   * (upsert des salles TM absentes de {@code salle_sources}, repli flou
+   * ou lookup {@code nom_norm} si aucun identifiant source n'est résolu) —
+   * détail : CLAUDE.md, Dédoublonnage inter-sources.
    * @param concerts valeurs normalisées avant upsert
    * @return liste enrichie avec les UUIDs résolus
    */
@@ -352,14 +304,12 @@ public class PersisterConcerts {
   }
 
   /**
-   * Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de la
-   * salle qu'il désigne.
-   *
-   * @param salleMappee salle résolue via le mapping source, ou {@code null} si non résolue
-   * @param deptEntrant département du concert entrant, ou {@code null} si inconnu
-   * @param deptsConnus départements connus par salle (voir {@link
-   *     ReconciliateurSalles#deptsConnus})
-   * @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
+   * Indique si un mapping {@code salle_sources} réutilisé contredit le
+   * département déjà connu de la salle qu'il désigne.
+   * @param salleMappee salle résolue via le mapping, ou null si non résolue
+   * @param deptEntrant département du concert entrant, ou null si inconnu
+   * @param deptsConnus départements connus par salle (cf. deptsConnus)
+   * @return {@code true} si le mapping doit être écarté
    */
   private static boolean mappingSalleIncoherent(
       final UUID salleMappee, final String deptEntrant, final Map<UUID, String> deptsConnus) {
@@ -379,14 +329,10 @@ public class PersisterConcerts {
   public record ResultatPersistance(int nbInseres, int nbMisAJour) {}
 
   /**
-   * Persiste les concerts dédoublonnés en base via upsert par lots de {@value #TAILLE_LOT}.
-   *
-   * <p>Chaque sous-lot est persisté dans sa propre transaction ({@link
-   * #persisterLotTransactionnel}) plutôt que dans une transaction unique englobant toute la boucle
-   * — une interruption (exception sur un sous-lot) ne perd ainsi que le sous-lot en cours, pas les
-   * sous-lots déjà committés, conformément au motif de résilience "persistance par lot" déjà
-   * appliqué ailleurs dans le worker (enrichissement, fetch).
-   *
+   * Persiste les concerts dédoublonnés via upsert par lots de {@value
+   * #TAILLE_LOT}, chaque sous-lot dans sa propre transaction ({@link
+   * #persisterLotTransactionnel}) — une interruption ne perd que le
+   * sous-lot en cours, pas ceux déjà committés.
    * @param liste concerts à persister
    * @return résultat avec nombre d'insertions et de mises à jour
    */
