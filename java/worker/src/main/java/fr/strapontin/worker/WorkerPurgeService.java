@@ -18,12 +18,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Jobs de purge (concerts, salles, artistes orphelins, logs admin) — extrait de {@code
- * WorkerService}.
- *
- * <p>Délégué par les jobs Quartz {@code PurgerConcertsJob}, {@code PurgerSallesJob}, {@code
- * PurgerArtistesJob}, {@code PurgerLogsAdminJob}.
- *
+ * Jobs de purge (concerts, salles, artistes orphelins, logs admin) —
+ * extrait de {@code WorkerService}. Délégué par les jobs Quartz {@code
+ * PurgerConcertsJob}/{@code PurgerSallesJob}/{@code PurgerArtistesJob}/
+ * {@code PurgerLogsAdminJob}.
  * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
  */
@@ -82,17 +80,11 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Signale pour suppression les concerts futurs dont le compteur d'absences consécutives dépasse
-   * {@value #SEUIL_PURGE_ABSENCES} — un concert signalé "à vérifier" (voir {@code
-   * WorkerFetchService.mettreAJourAbsences}) qui n'a plus été confirmé par aucune source depuis
-   * bien plus longtemps que le seuil de détection initial n'a manifestement plus de raison d'être
-   * affiché indéfiniment tel quel.
-   *
-   * <p>Pose {@code suppression_suggeree_le} plutôt que de supprimer directement — un doublon de
-   * salle jamais fusionné entre sources, ou un concert catalogué sous une autre attraction que
-   * l'artiste suivi, peuvent faire grimper ce compteur pour un concert pourtant réel et toujours en
-   * vente. La suppression définitive reste une action manuelle, revue depuis l'admin (onglet
-   * Concerts).
+   * Signale (jamais supprime directement — {@code suppression_suggeree_le},
+   * revue manuelle admin) les concerts futurs dont les absences consécutives
+   * dépassent {@value #SEUIL_PURGE_ABSENCES} : un doublon de salle jamais
+   * fusionné, ou un concert catalogué sous une autre attraction, peuvent
+   * gonfler ce compteur pour un concert pourtant réel.
    */
   public void executerPurgerConcertsNonConfirmes() {
     LOG.info("purger:concerts-non-confirmes seuilAbsences={}", SEUIL_PURGE_ABSENCES);
@@ -112,13 +104,11 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Signale pour suppression les concerts futurs sans {@code salle_id} ni {@code artiste_id},
-   * jamais réévalués par aucun mécanisme de fetch (tous scopés par entité ou département suivi) et
-   * donc jamais atteints par {@link #executerPurgerConcertsNonConfirmes} — plus de {@value
-   * #SEUIL_JOURS_HORS_PORTEE} jours sans mise à jour sert de signal de substitution.
-   *
-   * <p>Même mécanisme non destructif que {@link #executerPurgerConcertsNonConfirmes} : {@code
-   * suppression_suggeree_le}, revue manuelle depuis l'admin.
+   * Signale (même mécanisme non destructif que {@link
+   * #executerPurgerConcertsNonConfirmes}) les concerts futurs sans {@code
+   * salle_id} ni {@code artiste_id} — jamais réévalués par aucun fetch
+   * (tous scopés par entité/département suivi), {@value
+   * #SEUIL_JOURS_HORS_PORTEE} jours sans mise à jour sert de signal.
    */
   public void executerPurgerConcertsHorsPortee() {
     LOG.info("purger:concerts-hors-portee seuilJours={}", SEUIL_JOURS_HORS_PORTEE);
@@ -139,25 +129,12 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Supprime les salles orphelines (sans concerts futurs, sans utilisateurs et sans slug Digitick).
-   * Une salle est conservée si :
-   *
-   * <ul>
-   *   <li>elle possède au moins un concert futur ({@code date >= CURRENT_DATE}), ou
-   *   <li>au moins un utilisateur la suit, ou
-   *   <li>elle a un slug Digitick configuré (salle source Digitick dans {@code salle_sources}).
-   * </ul>
-   *
-   * <p>Doit s'exécuter après {@link #executerPurgerConcerts()} pour travailler sur un jeu de
-   * données cohérent (cf. {@code PurgerSallesJob}).
-   *
-   * <p>Supprime les candidates une par une plutôt qu'en un seul {@code DELETE} en masse : la
-   * suppression d'une salle peut déclencher en cascade (FK {@code ON DELETE SET NULL}) un {@code
-   * UPDATE evenements SET salle_id = NULL} qui entre en conflit avec la contrainte unique {@code
-   * uq_evenements} si un doublon TM/Eventim du même événement existe déjà avec {@code salle_id =
-   * NULL} — un seul cas de ce type faisait jusqu'ici échouer toute la transaction du {@code DELETE}
-   * en masse, bloquant la purge de <strong>toutes</strong> les salles orphelines légitimes, pas
-   * seulement celle en cause.
+   * Supprime les salles orphelines (sans concert futur, utilisateur suivi
+   * ni slug Digitick) — une par une, jamais en un seul {@code DELETE} en
+   * masse : la cascade FK ({@code ON DELETE SET NULL}) peut entrer en
+   * conflit avec {@code uq_evenements} sur un doublon TM/Eventim existant à
+   * {@code salle_id = NULL}, ce qui bloquerait sinon toute la purge.
+   * Après {@link #executerPurgerConcerts()}.
    */
   public void executerPurgerSalles() {
     LOG.info("purger:salles démarré");
@@ -198,16 +175,8 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Supprime les artistes orphelins (sans concerts futurs ni utilisateurs).
-   *
-   * <p>Un artiste est conservé si :
-   *
-   * <ul>
-   *   <li>il possède au moins un concert futur ({@code date >= CURRENT_DATE}), ou
-   *   <li>au moins un utilisateur le suit.
-   * </ul>
-   *
-   * <p>Doit s'exécuter après {@link #executerPurgerSalles()} (cf. {@code PurgerArtistesJob}).
+   * Supprime les artistes orphelins (sans concert futur ni utilisateur
+   * suivi) — après {@link #executerPurgerSalles()}.
    */
   public void executerPurgerArtistes() {
     LOG.info("purger:artistes démarré");
@@ -231,12 +200,11 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Supprime les entrées de {@code logs_admin} plus anciennes que 30 jours, les entrées de {@code
-   * fetch_jobs_historique} plus anciennes que 7 jours, et les vérifications (tokens d'invitation,
-   * emails de confirmation) expirées depuis plus de 7 jours.
-   *
-   * <p>Remplace l'ancien plafond de 200 entrées purgé à chaque insertion : la rétention est
-   * désormais temporelle et la purge planifiée (cf. {@code PurgerLogsAdminJob}).
+   * Supprime les entrées {@code logs_admin} > 30 jours, {@code
+   * fetch_jobs_historique} > 7 jours, et les vérifications (tokens
+   * d'invitation, emails de confirmation) expirées > 7 jours — rétention
+   * temporelle et purge planifiée, remplace l'ancien plafond de 200
+   * entrées purgé à chaque insertion.
    */
   public void executerPurgerLogsAdmin() {
     final long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
