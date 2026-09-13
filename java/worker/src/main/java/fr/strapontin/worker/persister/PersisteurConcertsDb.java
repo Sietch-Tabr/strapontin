@@ -20,13 +20,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de persistance SQL pur pour les concerts, sur le modèle événement canonique ({@code
- * evenements}) + observations par source ({@code observations}) — un événement réel est résolu (ou
- * créé) avant toute écriture, jamais choisi après coup par suppression d'une source perdante
- * (ancien modèle, trois mécanismes de suppression de doublon distincts).
- *
- * <p>Résout les UUIDs internes depuis les identifiants sources préfixés ({@code salle_sources},
- * {@code artiste_sources}).
+ * Service de persistance SQL pur pour les concerts (modèle canonique
+ * evenements+observations, résolution avant écriture) — résout les UUIDs
+ * depuis les identifiants sources préfixés (salle_sources, artiste_sources).
  *
  * @since 2.5.7
  * @author Kwaite
@@ -60,13 +56,10 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Résout les UUIDs internes depuis les identifiants sources préfixés.
-   *
-   * <p>Consulte {@code salle_sources} et {@code artiste_sources} par lot pour chaque source
-   * distincte. Retourne un cache {@code "source:identifiant" → UUID}.
-   *
+   * Résout les UUIDs internes depuis les identifiants sources préfixés
+   * (salle_sources/artiste_sources par lot).
    * @param concerts concerts à résoudre
-   * @param type {@code "salle"} ou {@code "artiste"}
+   * @param type "salle" ou "artiste"
    * @return cache des UUIDs résolus par identifiant préfixé
    */
   // computeIfAbsent n'instancie une ArrayList que pour les sources réellement
@@ -121,20 +114,10 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
-   * ses observations partage la même {@code url}, même {@code date}, heure différente, nouveau
-   * statut {@link AlignementReportTM}).
-   *
-   * <p>Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
-   * heure — sans cette étape, la résolution par clé (qui inclut l'heure) créerait un nouvel
-   * événement à côté de l'ancien au lieu de le mettre à jour.
-   *
-   * <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
-   * date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
-   * un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en présence
-   * de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un nouvel
-   * événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
-   *
+   * Aligne l'heure d'un événement TM sur celle d'un report entrant (même
+   * url/date, heure différente) — évite qu'un nouvel événement soit créé
+   * au lieu de mettre à jour l'ancien. Ne s'applique que si une seule
+   * heure distincte existe déjà (ambiguïté sinon : nouvel événement créé).
    * @param concerts concerts après réconciliation, avant upsert
    */
   /* package-private : appelé par PersisterConcerts (même package). */
@@ -167,17 +150,10 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Résout l'événement canonique correspondant à un concert entrant, ou en crée un nouveau — point
-   * unique de dédoublonnage (#1192), remplaçant les trois mécanismes de suppression a posteriori de
-   * l'ancien modèle.
-   *
-   * <p>Trois niveaux : correspondance exacte sur la clé {@code (artiste_norm, date, heure,
-   * salle_id)} (NULLS NOT DISTINCT) ; à défaut, repli flou parmi les événements de la même salle à
-   * la même date, avec tolérance d'heure package/normal ({@link #heuresCompatibles}) et comparaison
-   * floue de l'artiste ({@link CorrespondanceArtiste#estDoublonArtiste}) quand aucun {@code
-   * artiste_id} n'est résolu des deux côtés — mêmes critères que les anciens {@code
-   * supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant l'écriture
-   * plutôt qu'en nettoyage après coup ; sinon, création.
+   * Résout l'événement canonique d'un concert entrant, ou en crée un
+   * nouveau (#1192) : correspondance exacte (artiste_norm/date/heure/salle_id),
+   * sinon repli flou même salle/date ({@link #heuresCompatibles}, {@link
+   * CorrespondanceArtiste#estDoublonArtiste}), sinon création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
     final UUID exactId = chercherEvenementExact(concert);
@@ -289,16 +265,11 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Met à jour les champs dénormalisés d'un événement déjà résolu — jamais {@code artiste_norm} ni
-   * {@code heure} (identité stable une fois l'événement résolu) — priorité à la valeur entrante,
-   * repli sur la valeur déjà connue si absente, même politique que l'ancien {@code
-   * SQL_UPSERT_CONFLIT}. {@code statut} ne recule jamais depuis un état terminal ({@code
-   * cancelled}/{@code rescheduled}/{@code postponed}). {@code salle_norm} est resynchronisé sur la
-   * même observation que la vue {@code concerts} retiendrait comme référence ({@link
-   * #meilleurSalleBrut}) — utile quand {@code salle_id} n'est pas encore résolu (l'identité repose
-   * alors sur {@code artiste_norm}+date+heure seuls, {@code salle_norm} restant purement
-   * informatif) ; appelé après {@link #upsertObservation} pour refléter l'observation qui vient
-   * d'être upsertée.
+   * Met à jour les champs dénormalisés d'un événement déjà résolu (jamais
+   * {@code artiste_norm}/{@code heure}, identité stable) — priorité à la
+   * valeur entrante, {@code statut} ne recule jamais depuis un état terminal.
+   * {@code salle_norm} resynchronisé via {@link #meilleurSalleBrut}, appelé
+   * après {@link #upsertObservation}.
    */
   private void mettreAJourChampsEvenement(final UUID evenementId, final ValeurConcert concert) {
     final String salleBrutReference = meilleurSalleBrut(evenementId);
@@ -371,12 +342,10 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Résout ou crée l'événement canonique de chaque concert du lot, upsert l'observation de sa
-   * source puis met à jour les champs dénormalisés de l'événement — un aller-retour par concert
-   * plutôt qu'un unique {@code INSERT} multi-lignes (volume trivial en production, ~4000
-   * événements), en échange d'une résolution correcte avant écriture plutôt qu'un nettoyage après
-   * coup.
-   *
+   * Résout ou crée l'événement canonique de chaque concert du lot, upsert
+   * l'observation de sa source puis met à jour ses champs dénormalisés (un
+   * aller-retour par concert plutôt qu'un {@code INSERT} multi-lignes, volume
+   * trivial en production).
    * @param valeurs concerts réconciliés et dédupliqués du lot
    * @return décompte des événements créés et mis à jour du lot
    */

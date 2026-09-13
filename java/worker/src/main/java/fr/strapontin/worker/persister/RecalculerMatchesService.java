@@ -45,11 +45,10 @@ public class RecalculerMatchesService {
   private static final String CLE_USER_ID = "userId";
 
   /**
-   * Exclut une fiche package Ticketmaster (voir {@code
-   * PersisteurConcertsDb.SQL_EST_PACKAGE`) tant qu'aucune fiche normale du même
-   * événement réel (même artiste/salle/date) n'existe — elle redevient visible
-   * dès qu'une fiche normale apparaît et que
-   * {@code supprimerDoublonsParSalleId} les fusionne.
+   * Exclut une fiche package Ticketmaster (URL {@code /pack/}) tant qu'aucune
+   * fiche normale du même événement réel (même artiste/salle/date) n'existe
+   * dans la vue {@code concerts} — elle redevient visible dès qu'une fiche
+   * normale apparaît.
    */
   private static final String SQL_PAS_PACKAGE_ISOLE =
       " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
