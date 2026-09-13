@@ -21,23 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Détecte et fusionne automatiquement, en cycle nocturne, des paires de salles déjà établies
- * (chacune avec ses propres concerts déjà résolus) qui désignent en réalité le même bâtiment
- * physique — repérées par un concert partageant exactement artiste+date+heure+dept entre les deux,
- * et validées par {@link CorrespondanceSalle#estDoublonSalle} sur leurs noms. Le seul critère
- * artiste+date+heure+dept, sans comparaison de nom, s'est révélé insuffisant en production : un
- * concert coïncidant par erreur upstream (ex. un mapping {@code salle_sources} corrompu) suffisait
- * à fusionner deux salles réellement distinctes.
- *
- * <p>Complète {@link ReconciliateurSalles#chercherSalleParCleForte}, qui n'agit qu'au moment de la
- * résolution d'un nouveau concert entrant : deux salles déjà établies sous des identités distinctes
- * (chacune avec ses propres {@code salle_sources}, éventuellement un {@code wikidata_id}) n'étaient
- * jamais reconsidérées après coup, laissant la scission s'accumuler à chaque nouveau concert de la
- * même série.
- *
- * <p>Porte le même gabarit de fusion que {@code ReferentielSallesService.fusionner} (module web,
- * non accessible depuis le worker) : dédoublonnage des {@code salle_sources} en conflit avant
- * réassignation, puis concerts, puis abonnements utilisateurs.
+ * Détecte et fusionne en cycle nocturne des paires de salles désignant le
+ * même bâtiment (clé forte + {@link CorrespondanceSalle#estDoublonSalle}),
+ * complétant {@link ReconciliateurSalles} (détails : wiki Sources-de-données).
  *
  * @since 2.8.4
  * @author Kwaite
@@ -74,11 +60,9 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Détecte puis fusionne les paires de salles distinctes partageant un concert à venir identique
-   * (artiste+date+heure+dept). Une paire dont l'une des deux salles a déjà disparu (fusionnée plus
-   * tôt dans le même cycle) est ignorée silencieusement — elle est nécessairement redondante avec
-   * une fusion déjà effectuée.
-   *
+   * Détecte puis fusionne les paires de salles partageant un concert à
+   * venir identique — une paire déjà disparue (fusionnée plus tôt dans le
+   * même cycle) est ignorée silencieusement (redondante).
    * @return nombre de fusions effectuées
    */
   public int fusionner() {
@@ -101,13 +85,10 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Repère, parmi les concerts à venir, les paires de {@code salle_id} distincts partageant
-   * exactement le même artiste, la même date, la même heure et le même département — même clé que
-   * {@link ReconciliateurSalles#chercherSalleParCleForte}, appliquée ici rétroactivement à des
-   * salles déjà résolues chacune de leur côté plutôt qu'au moment de l'insertion — puis filtrées
-   * par {@link CorrespondanceSalle#estDoublonSalle} sur les noms des deux salles : un seul concert
-   * coïncidant par erreur upstream ne doit jamais suffire à fusionner deux salles sans rapport réel
-   * (voir le rationale de classe).
+   * Repère les paires de salle_id distincts partageant exactement même
+   * artiste/date/heure/dept (clé forte, appliquée rétroactivement), filtrées
+   * par estDoublonSalle sur les noms — un seul concert coïncidant par erreur
+   * ne doit jamais suffire à fusionner (voir le rationale de classe).
    */
   private List<PaireSalles> detecterPaires() {
     final List<Map<String, Object>> lignes =
@@ -165,14 +146,11 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Vérifie que deux salles ont chacune des coordonnées connues et suffisamment proches pour
-   * justifier une fusion automatique sans aucun autre signal positif — contrairement à {@link
-   * #distanceExcessive}, qui reste permissif quand une coordonnée manque (nom+dept déjà validés par
-   * ailleurs), une collision {@code wikidata_id} seule n'a aucun autre garde-fou géographique :
-   * l'absence de preuve positive doit alors empêcher la fusion plutôt que l'autoriser par défaut.
-   *
-   * @return {@code true} si les deux salles ont des coordonnées connues et sont à moins de {@value
-   *     #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
+   * Vérifie que deux salles ont des coordonnées connues et proches, seul
+   * signal positif suffisant pour une fusion automatique (contrairement à
+   * distanceExcessive, permissif si une coordonnée manque).
+   * @return {@code true} si coordonnées connues et à moins de
+   *     {@value #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
    */
   public static boolean coordonneesConnuesEtProches(
       final Double latA, final Double lonA, final Double latB, final Double lonB) {
@@ -200,12 +178,11 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Choisit la salle à conserver (cible) entre les deux membres de la paire : priorité au {@code
-   * wikidata_id} déjà connu (donnée la plus coûteuse à reconstituer), puis au nombre de concerts
-   * déjà rattachés (établissement le plus riche), puis à l'UUID le plus petit pour un résultat
-   * déterministe entre deux cycles.
-   *
-   * @return {@code [cible, source]}, ou {@code null} si l'une des deux salles n'existe plus
+   * Choisit la salle à conserver (cible) entre les deux membres de la paire
+   * : priorité au wikidata_id déjà connu (donnée coûteuse à reconstituer),
+   * puis au nombre de concerts déjà rattachés, puis à l'UUID le plus petit
+   * pour un résultat déterministe entre deux cycles.
+   * @return [cible, source], ou {@code null} si l'une des deux n'existe plus
    */
   // Le tableau représente une paire cible/source, pas une collection à agréger
   // — l'appelant teste explicitement null pour distinguer "salle disparue" d'un
@@ -245,11 +222,9 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Fusionne deux salles déjà établies : réassigne concerts/abonnements/sources externes/
-   * sous-salles de la source vers la cible, récupère les métadonnées manquantes, puis supprime la
-   * source. Rendu public pour être réutilisé par {@code EnrichissementSallesService} (collision
-   * {@code wikidata_id}, #1189) — appelant distinct du cycle nocturne de cette classe.
-   *
+   * Fusionne deux salles établies (réassigne concerts/abonnements/sources/
+   * sous-salles, récupère les métadonnées manquantes, supprime la source).
+   * Public : réutilisé par EnrichissementSallesService (collision wikidata_id).
    * @param cibleId salle à conserver
    * @param sourceId salle à absorber puis supprimer
    */
@@ -376,12 +351,12 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
-   * celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL}) plutôt
-   * que laissée pointer vers la source sur le point d'être supprimée, et signalée pour revue
-   * manuelle — cas limite jamais rencontré en pratique mais non exclu par le seul cas direct déjà
-   * géré à l'étape 6.
+   * Réassigne à la cible chaque sous-salle de la source (hors cible
+   * elle-même, déjà traitée), sauf celle dont la cible est déjà un
+   * descendant — la réassigner créerait un cycle enfant → cible → ... →
+   * enfant (#1201). Une telle sous-salle est détachée (parent à NULL)
+   * plutôt que laissée pointer vers la source supprimée, et signalée pour
+   * revue manuelle (cas limite non exclu par le seul cas direct géré).
    */
   private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
     final List<UUID> enfants =
