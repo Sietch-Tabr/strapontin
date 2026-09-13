@@ -20,14 +20,36 @@
   <!-- UnnecessaryConstructor exclue après mesure : 23 sites — contradiction directe avec
        AtLeastOneConstructor (design.xml, non exclue) pour un constructeur vide explicite :
        AtLeastOneConstructor exige ce constructeur, UnnecessaryConstructor le rejette une fois
-       qu'il est vide. Conflit structurel du ruleset, pas une dette réelle. -->
+       qu'il est vide. Conflit structurel du ruleset, pas une dette réelle.
+
+       OnlyOneReturn exclue après mesure : 554 sites, tout le codebase utilise systématiquement le
+       style retour anticipé/garde (if (...) return ...;) — restructurer en un seul retour final
+       dégraderait nettement la lisibilité et irait à l'encontre du style déjà en place partout
+       ailleurs dans le projet.
+
+       LongVariable exclue après mesure : 455 sites, tous des noms français explicites conformes à
+       l'exigence de nommage du projet (ex. emailAlerteService, SEUIL_APPELS_MIN_ALERTE_DEFAUT) —
+       le seuil par défaut de 17 caractères est directement contradictoire avec cette exigence. -->
   <rule ref="category/java/codestyle.xml">
     <exclude name="UnnecessaryConstructor"/>
+    <exclude name="OnlyOneReturn"/>
+    <exclude name="LongVariable"/>
   </rule>
   <!-- UncommentedEmptyConstructor (Documentation, pas codestyle) exclue pour la même raison que
        UnnecessaryConstructor ci-dessus — même conflit avec AtLeastOneConstructor. -->
   <rule ref="category/java/documentation.xml">
     <exclude name="UncommentedEmptyConstructor"/>
+    <exclude name="CommentRequired"/>
+  </rule>
+  <!-- CommentRequired reconfigurée plutôt qu'exclue : fieldCommentRequirement=Ignored (935 sites
+       mesurés, PMD exige par défaut un Javadoc sur CHAQUE champ y compris privé — contradictoire
+       avec la convention du projet, Javadoc obligatoire uniquement sur classes/méthodes
+       publiques/protégées) ; publicMethodCommentRequirement reste Required (26 vraies lacunes de
+       Javadoc public, corrigées séparément). -->
+  <rule ref="category/java/documentation.xml/CommentRequired">
+    <properties>
+      <property name="fieldCommentRequirement" value="Ignored"/>
+    </properties>
   </rule>
   <rule ref="category/java/errorprone.xml"/>
   <rule ref="category/java/performance.xml"/>
