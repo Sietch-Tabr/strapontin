@@ -35,10 +35,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.client.RestClient;
 
 /**
- * Service de gestion des salles suivies.
- *
- * <p>Orchestration : recherche en base + API Ticketmaster, vérification du cap, déclenchement du
- * worker.
+ * Service de gestion des salles suivies (recherche en base + API
+ * Ticketmaster, vérification du cap, déclenchement du worker).
  *
  * @since 2.1.0
  * @author Kwaite
@@ -64,7 +62,7 @@ public class SalleService {
    *     fr.strapontin.web.WebConfiguration})
    * @param logAdminService journalisation des suppressions dans {@code logs_admin}
    * @param salleRechercheNominatimService recherche de salles via Nominatim (OSM)
-   * @param salleRechercheTicketmasterService recherche de salles via l'API Ticketmaster
+   * @param salleRechercheTicketmasterService recherche via l'API Ticketmaster
    */
   public SalleService(
       final SalleRepository salleRepository,
@@ -80,12 +78,9 @@ public class SalleService {
   }
 
   /**
-   * Injection par setter de la référence proxifiée de ce bean — nécessaire pour que {@link
-   * #mettreAJourWikidataIdEnSavepoint} bénéficie réellement de la propagation {@code NESTED}
-   * (l'appel doit passer par le proxy AOP Spring, un appel direct via {@code this} l'ignorerait
-   * silencieusement). En dehors d'un contexte Spring (tests unitaires), {@code self} peut être
-   * positionné manuellement.
-   *
+   * Injection par setter de la référence proxifiée (proxy AOP requis pour que
+   * {@link #mettreAJourWikidataIdEnSavepoint} bénéficie de la propagation
+   * {@code NESTED} — un appel direct via {@code this} l'ignorerait).
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
@@ -94,12 +89,9 @@ public class SalleService {
   }
 
   /**
-   * Liste les salles suivies, avec suggestions si {@code q} est fourni.
-   *
-   * <p>Complète la base avec Nominatim si moins de 3 résultats locaux, puis avec l'API Ticketmaster
-   * si Nominatim retourne moins de 2 résultats. Une salle retournée par les deux sources externes
-   * est fusionnée en une seule suggestion (osmId + tmVenueId).
-   *
+   * Liste les salles suivies, avec suggestions si {@code q} est fourni :
+   * complète la base avec Nominatim puis Ticketmaster (moins de 3, puis 2
+   * résultats), fusionne une salle retournée par les deux (osmId + tmVenueId).
    * @param userId identifiant de l'utilisateur
    * @param terme terme de recherche (optionnel, min 2 caractères)
    * @return la liste des salles et les suggestions
@@ -144,17 +136,11 @@ public class SalleService {
   }
 
   /**
-   * Complète {@code listeResultats} avec Nominatim/Ticketmaster si la base n'a pas retourné assez
-   * de résultats.
-   *
-   * <p>Nominatim et Ticketmaster sont interrogés en parallèle (chacun jusqu'à 10 s de timeout côté
-   * RestClient partagé) plutôt que séquentiellement : un enchaînement séquentiel peut approcher les
-   * 20 s dans le pire cas, constaté en E2E (mobile-safari, timeout d'assertion 25 s dépassé — même
-   * famille que le correctif équivalent côté ArtisteService.lister). En parallèle, l'attente totale
-   * est bornée par le plus lent des deux appels, pas leur somme.
-   *
+   * Complète {@code listeResultats} avec Nominatim/Ticketmaster si la base
+   * n'a pas assez de résultats — interrogés en parallèle, l'attente totale
+   * bornée par le plus lent des deux plutôt que leur somme.
    * @param listeResultats résultats déjà trouvés en base, complétés en place
-   * @param sallesDejaAjoutees clés normalisées des salles déjà suivies (exclues des suggestions)
+   * @param sallesDejaAjoutees clés normalisées des salles déjà suivies
    * @param recherche terme de recherche
    */
   private void completerAvecSourcesExternes(
@@ -180,17 +166,11 @@ public class SalleService {
   }
 
   /**
-   * Ajoute une salle à la liste de suivi dans une transaction atomique.
-   *
-   * <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
-   * résolution de la salle dans le référentiel global tolère les variantes orthographiques mineures
-   * (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle déjà
-   * présente sous une graphie légèrement différente.
-   *
+   * Ajoute une salle (délégation vers {@link #ajouter(DonneesAjoutSalle)}).
    * @param userId identifiant de l'utilisateur
    * @param nom nom de la salle (non-vide, max 200 car.)
    * @param tmVenueId identifiant Ticketmaster (nullable)
-   * @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
+   * @throws ErreurMetier si le nom est vide ou le cap de 200 salles atteint
    * @throws RessourceDejaExistante si la salle est déjà suivie
    */
   @Transactional
@@ -200,7 +180,6 @@ public class SalleService {
 
   /**
    * Données d'ajout d'une salle à la liste de suivi.
-   *
    * @param userId identifiant de l'utilisateur
    * @param nom nom de la salle (non-vide, max 200 car.)
    * @param tmVenueId identifiant Ticketmaster, peut être {@code null}
@@ -211,21 +190,11 @@ public class SalleService {
       String userId, String nom, String tmVenueId, String osmId, String wikidataId) {}
 
   /**
-   * Ajoute une salle à la liste de suivi dans une transaction atomique.
-   *
-   * <p>Normalise le nom, vérifie le doublon et le cap, puis crée la salle et la relation. La
-   * résolution de la salle dans le référentiel global tolère les variantes orthographiques mineures
-   * (voir {@link #resoudreSalleId}) pour éviter de créer un doublon d'UUID pour une salle déjà
-   * présente sous une graphie légèrement différente.
-   *
-   * <p>Si {@code osmId}/{@code wikidataId} sont fournis (l'utilisateur a choisi une suggestion
-   * Nominatim), les IDs stables sont persistés immédiatement sans attendre le job d'enrichissement
-   * nocturne. Un conflit sur l'index unique {@code idx_salles_wikidata_id} (Q-ID déjà porté par une
-   * autre salle) est rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que
-   * {@code EnrichissementSallesService} (jalon 2.6.0).
-   *
+   * Ajoute une salle (normalise, vérifie doublon/cap, résout via {@link
+   * #resoudreSalleId}). osmId/wikidataId fournis : persistés immédiatement
+   * (conflit d'index rattrapé et loggé).
    * @param donnees données d'ajout (voir {@link DonneesAjoutSalle})
-   * @throws ErreurMetier si le nom normalisé est vide ou le cap de 200 salles atteint
+   * @throws ErreurMetier si le nom est vide ou le cap de 200 salles atteint
    * @throws RessourceDejaExistante si la salle est déjà suivie
    */
   @Transactional
@@ -278,15 +247,10 @@ public class SalleService {
   }
 
   /**
-   * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction.
-   *
-   * <p>Sans cela, le déclenchement synchrone (thread virtuel, appel HTTP immédiat vers le worker)
-   * pouvait s'exécuter avant que l'{@code INSERT}/{@code UPDATE} ne soit visible en base (isolation
-   * {@code READ COMMITTED}), faisant manquer la salle tout juste ajoutée au cycle de fetch qu'elle
-   * vient elle-même de déclencher — même correctif que {@code ArtisteService#executerApresCommit}.
-   * Exécute immédiatement si aucune transaction n'est active (ex. tests unitaires sans contexte
-   * Spring).
-   *
+   * Diffère le déclenchement du worker après le commit (isolation READ
+   * COMMITTED : sans ce délai, la salle ajoutée pourrait manquer son propre
+   * cycle de fetch — même correctif qu'ArtisteService). Exécute immédiatement
+   * hors transaction (tests unitaires).
    * @param salleId UUID de la salle ajoutée/créée dans la transaction en cours
    */
   private void executerApresCommit(final UUID salleId) {
@@ -305,25 +269,12 @@ public class SalleService {
   }
 
   /**
-   * Met à jour le wikidataId d'une salle sous savepoint (conflit possible sur l'index unique {@code
-   * idx_salles_wikidata_id} si le Q-ID est déjà porté par une autre salle).
-   *
-   * <p>{@code Propagation.NESTED} isole ce conflit du reste de {@link #ajouter} via un savepoint
-   * sur la connexion existante (pas une nouvelle transaction/connexion, contrairement à {@code
-   * REQUIRES_NEW}) : sans ce savepoint, PostgreSQL marque toute la transaction englobante « annulée
-   * » dès la violation de contrainte, faisant échouer le {@code INSERT INTO user_salles} suivant
-   * même si l'exception est capturée côté Java (constaté en E2E réel — invisible en test unitaire,
-   * {@code salleRepository} y étant mocké).
-   *
-   * <p>L'exception doit se propager en dehors de cette méthode (pas de try/catch ici) pour que
-   * l'intercepteur transactionnel Spring exécute un {@code ROLLBACK TO SAVEPOINT} — la capturer ici
-   * ferait au contraire tenter une <em>libération</em> du savepoint sur une connexion déjà en
-   * échec, provoquant un second échec ({@code TransactionSystemException}). Capturée par
-   * l'appelant.
-   *
+   * Met à jour le wikidataId sous savepoint {@code NESTED} (isole le conflit
+   * d'index de {@link #ajouter}, sans try/catch : l'exception doit se
+   * propager pour le ROLLBACK TO SAVEPOINT Spring).
    * @param salleId UUID de la salle
    * @param wikidataId Q-ID Wikidata à attribuer
-   * @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
+   * @throws DuplicateKeyException si déjà attribué à une autre salle
    */
   @Transactional(propagation = Propagation.NESTED)
   /* package-private : requis pour auto-invocation via proxy self (NESTED). */
@@ -332,20 +283,9 @@ public class SalleService {
   }
 
   /**
-   * Résout l'UUID d'une salle dans le référentiel global, en réutilisant une salle existante dont
-   * le nom est un doublon flou plutôt que d'en créer une nouvelle. La comparaison floue utilise
-   * {@link CorrespondanceSalle#estDoublonSalle} sur le nom normalisé au sens de {@link
-   * Normalisation#normaliserTexte} — même algorithme que {@code ReconciliateurSalles} côté worker,
-   * {@code WikidataSalleSource} côté enrichissement, et {@link #fusionnerOuAjouter} côté
-   * suggestions (un seul algorithme de dédoublonnage salle dans tout le projet). En cas de
-   * correspondance exacte de {@code salle_cle}, passe par {@code upsertSalle} pour conserver le
-   * comportement existant de mise à jour du nom affiché ; en cas de correspondance floue seulement,
-   * réutilise l'UUID existant sans toucher au nom déjà établi.
-   *
-   * <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par {@code
-   * PreferencesService.importerSalles} pour que l'import de préférences applique la même dédup
-   * floue que l'ajout interactif, plutôt qu'une égalité stricte sur {@code salle_cle}.
-   *
+   * Résout l'UUID d'une salle, réutilisant un doublon flou (même algorithme
+   * que ReconciliateurSalles/WikidataSalleSource/{@link #fusionnerOuAjouter}).
+   * Public : aussi utilisé par PreferencesService.importerSalles.
    * @param nom nom affiché tel que saisi
    * @param salleCle clé normalisée ({@link #normaliserSalleCle})
    * @return UUID de la salle existante ou nouvellement créée
@@ -402,16 +342,8 @@ public class SalleService {
   }
 
   /**
-   * Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
-   *
-   * <p>Upsert sur {@code salle_cle}, enregistre le slug dans {@code salle_sources}, puis déclenche
-   * le worker.
-   *
-   * <p>Si le slug est déjà attribué à une autre salle, lève une erreur 409 plutôt que de créer une
-   * salle sans source Digitick fonctionnelle — {@code enregistrerSalleSource} fait un {@code ON
-   * CONFLICT DO NOTHING} silencieux, qui laissait auparavant la nouvelle salle créée avec un 201
-   * "succès" trompeur mais aucune source réelle.
-   *
+   * Crée une salle Digitick (upsert + slug + déclenche worker). Si le slug
+   * est déjà attribué, lève 409 plutôt qu'une salle sans source réelle.
    * @param nom nom affiché de la salle
    * @param slug slug Digitick
    * @param ville ville, peut être {@code null}
