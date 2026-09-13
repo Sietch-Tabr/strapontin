@@ -30,6 +30,8 @@ public final class Dedoublonner {
   private static final int TOLERANCE_HEURE_MINUTES = 3;
   // Taille d'un groupe ne contenant aucun doublon potentiel (rien à rapprocher).
   private static final int TAILLE_GROUPE_SANS_DOUBLON = 1;
+  private static final String SUPPRESS_INSTANCIATION_BOUCLE =
+      "PMD.AvoidInstantiatingObjectsInLoops";
 
   private Dedoublonner() {}
 
@@ -70,7 +72,7 @@ public final class Dedoublonner {
   // à tort dès cette première passe.
   // Chaque bucket de regroupement doit rester une liste indépendante par clé — computeIfAbsent
   // n'instancie une ArrayList que pour les clés réellement nouvelles, jamais à chaque itération.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertEnrichi> passeExacte(final List<ConcertEnrichi> enrichis) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
     for (final ConcertEnrichi c : enrichis) {
@@ -84,7 +86,7 @@ public final class Dedoublonner {
 
   // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil.
   // Même regroupement par clé que passeExacte — une ArrayList par clé nouvelle, pas par itération.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertEnrichi> passeFuzzyDateVille(
       final List<ConcertEnrichi> apresPasseExacte) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
@@ -105,7 +107,7 @@ public final class Dedoublonner {
 
   // Fallback : (date, salle_norm) pour les grandes salles avec villes divergentes entre sources.
   // Même regroupement par clé que passeExacte — une ArrayList par clé nouvelle, pas par itération.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertBrut> passeFallbackDateSalle(
       final List<ConcertEnrichi> apresPasseFuzzy) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
@@ -126,7 +128,7 @@ public final class Dedoublonner {
 
   // sousGroupe doit être une nouvelle liste indépendante à chaque élément non déjà traité — pas
   // hissable hors boucle, son contenu dépend de l'itération courante.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertEnrichi> grouperParSimilarite(final List<ConcertEnrichi> groupe) {
     final List<ConcertEnrichi> fusionnes = new ArrayList<>();
     final boolean[] traites = new boolean[groupe.size()];
