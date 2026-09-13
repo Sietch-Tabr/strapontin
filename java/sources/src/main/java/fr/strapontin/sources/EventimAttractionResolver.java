@@ -17,10 +17,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Résolution de l'attractionId Eventim correspondant à un nom d'artiste, via l'API attractions.
- *
- * <p>Extrait d'{@link EventimSource} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Résolution de l'attractionId Eventim correspondant à un nom d'artiste,
+ * via l'API attractions — extrait d'{@link EventimSource}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -63,11 +61,10 @@ final class EventimAttractionResolver {
   }
 
   /**
-   * Retourne les correspondances par containment acceptées depuis le dernier prélèvement et vide la
-   * liste — contrairement au bilan de panne, un containment mal résolu peut réapparaître à chaque
-   * fetch tant qu'il n'est pas corrigé manuellement, l'attractionId n'étant jamais persisté.
-   *
-   * @return messages décrivant chaque containment accepté depuis le dernier prélèvement
+   * Retourne les correspondances par containment acceptées depuis le
+   * dernier prélèvement et vide la liste — un containment mal résolu peut
+   * réapparaître à chaque fetch, l'attractionId n'étant jamais persisté.
+   * @return messages décrivant chaque containment accepté
    */
   /* package-private : appelé par EventimSource (même package). */
   List<String> preleverContainmentsAcceptes() {
@@ -83,12 +80,10 @@ final class EventimAttractionResolver {
 
   /**
    * Recherche l'attractionId Eventim correspondant à un terme de recherche.
-   *
    * @param terme nom de l'artiste cherché
-   * @param identiteConfirmee {@code true} si l'artiste a déjà une identité confirmée par une source
-   *     indépendante — désactive le repli par containment, n'accepte plus qu'une correspondance
-   *     exacte
-   * @return attractionId trouvé, ou {@code null} si aucune correspondance acceptable
+   * @param identiteConfirmee true désactive le repli par containment,
+   *     n'accepte plus qu'une correspondance exacte
+   * @return attractionId trouvé, ou null si aucune correspondance
    */
   @SuppressWarnings("unchecked")
   /* package-private : appelé par EventimSource (même package). */
@@ -128,14 +123,12 @@ final class EventimAttractionResolver {
   }
 
   /**
-   * Sélectionne la meilleure correspondance parmi les attractions retournées : égalité exacte
-   * (normalisée ou sans espaces) en priorité, repli sur un containment du terme dans le nom si
-   * l'identité n'est pas déjà confirmée par ailleurs.
-   *
+   * Sélectionne la meilleure correspondance : égalité exacte en priorité,
+   * repli sur containment si l'identité n'est pas déjà confirmée.
    * @param attractions résultats bruts de l'API attractions Eventim
    * @param terme terme recherché
    * @param identiteConfirmee désactive le repli par containment si vrai
-   * @return l'attraction retenue, ou {@code null} si aucune correspondance acceptable
+   * @return l'attraction retenue, ou null si aucune correspondance
    */
   // La map représente une attraction unique (un enregistrement), pas une
   // collection à agréger — l'appelant teste explicitement null pour distinguer

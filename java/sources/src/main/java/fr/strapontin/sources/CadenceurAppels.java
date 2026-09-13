@@ -5,15 +5,9 @@
 package fr.strapontin.sources;
 
 /**
- * Garantit un écart minimal entre deux appels HTTP vers un même service externe.
- *
- * <p>{@code sources} reste volontairement sans dépendance JDBC/DB — {@link CadenceurAppelsMemoire}
- * (implémentation par défaut, verrou en mémoire) ne coordonne que les appels d'un même processus.
- * Un service externe appelé depuis plusieurs processus indépendants (ex. Ticketmaster, appelé à la
- * fois par le worker et par la recherche interactive du module web) nécessite une implémentation
- * portée par l'appelant, adossée à un état partagé (ex. Postgres) — voir les implémentations JDBC
- * des modules {@code web} et {@code worker}.
- *
+ * Garantit un écart minimal entre deux appels HTTP vers un même service
+ * externe — détail (implémentations mémoire/JDBC) : CLAUDE.md, Jobs
+ * background.
  * @since 2.8.1
  * @author Kwaite
  */

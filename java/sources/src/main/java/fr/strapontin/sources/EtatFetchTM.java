@@ -11,13 +11,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * État mutable partagé entre {@link TicketmasterSource} et {@link TicketmasterPageFetcher} :
- * dernier quota TM extrait, concerts manqués par plafonnement de pagination et bilan
- * d'appels/erreurs HTTP.
- *
- * <p>Regroupe ces trois compteurs en un seul type injecté, pour réduire le couplage entre objets de
- * {@link TicketmasterSource} (auparavant trois champs de types distincts).
- *
+ * État mutable partagé entre {@link TicketmasterSource} et {@link
+ * TicketmasterPageFetcher} : quota TM, concerts manqués (pagination),
+ * bilan d'appels/erreurs — regroupe trois compteurs en un type injecté.
  * @since 2.9.1
  * @author Kwaite
  */

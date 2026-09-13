@@ -16,11 +16,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Résolution de l'attractionId Ticketmaster correspondant à un nom d'artiste, via l'API
- * attractions.
- *
- * <p>Extrait de {@link TicketmasterSource} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Résolution de l'attractionId Ticketmaster correspondant à un nom
+ * d'artiste, via l'API attractions — extrait de {@link
+ * TicketmasterSource}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -75,14 +73,11 @@ final class TicketmasterAttractionResolver {
   }
 
   /**
-   * Recherche l'identifiant TM (attractionId) pour un artiste par son nom.
-   *
-   * <p>Parcourt jusqu'à 10 résultats pour trouver la première correspondance exacte normalisée. TM
-   * peut trier par popularité et retourner un artiste similaire avant l'artiste recherché (ex:
-   * "Shy" avant "Shy'm").
-   *
+   * Recherche l'attractionId TM pour un artiste par son nom — parcourt
+   * jusqu'à 10 résultats pour la première correspondance exacte normalisée
+   * (TM peut trier par popularité, ex. "Shy" avant "Shy'm").
    * @param nom nom de l'artiste
-   * @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
+   * @return attractionId TM, ou null si aucun résultat exact des 10 premiers
    */
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */

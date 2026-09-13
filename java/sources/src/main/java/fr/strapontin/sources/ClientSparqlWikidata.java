@@ -23,10 +23,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.UnknownContentTypeException;
 
 /**
- * Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et {@link WikidataArtisteSource}
- * : User-Agent obligatoire, timeout 60s, retry 429 (Retry-After + backoff exponentiel) et erreurs
- * transitoires 502/503/content-type inattendu (×3).
- *
+ * Client SPARQL Wikidata partagé entre {@link WikidataSalleSource} et
+ * {@link WikidataArtisteSource} : User-Agent obligatoire, timeout 60s,
+ * retry 429 (Retry-After + backoff) et erreurs transitoires 502/503/
+ * content-type inattendu (×3).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -106,12 +106,11 @@ final class ClientSparqlWikidata {
   }
 
   /**
-   * Exécute une requête SPARQL avec retry sur 429 (Retry-After + backoff exponentiel) et 503 (×3).
-   * Retourne une map vide si toutes les tentatives échouent — l'appelant traite cela comme une
-   * absence de résultat, sans lever d'exception.
-   *
+   * Exécute une requête SPARQL avec retry sur 429 (Retry-After +
+   * backoff) et 503 (×3). Retourne une map vide si toutes les
+   * tentatives échouent (traité comme une absence de résultat).
    * @param sparql corps de la requête SPARQL
-   * @return corps JSON désérialisé, ou une map vide en cas d'échec définitif
+   * @return corps JSON désérialisé, ou une map vide en cas d'échec
    */
   /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource
    * (même package). */
@@ -158,11 +157,9 @@ final class ClientSparqlWikidata {
   }
 
   /**
-   * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement et remet les
-   * compteurs à zéro — client partagé entre {@link WikidataSalleSource} et {@link
-   * WikidataArtisteSource}, mais une instance par source (non partagée) : chacune prélève son
-   * propre bilan sans interférer avec l'autre.
-   *
+   * Retourne le bilan agrégé des appels SPARQL depuis le dernier
+   * prélèvement et remet les compteurs à zéro — une instance par
+   * source (non partagée), chacune prélève son propre bilan.
    * @return le bilan depuis le dernier prélèvement
    */
   /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource
@@ -234,10 +231,9 @@ final class ClientSparqlWikidata {
   }
 
   /**
-   * Échappe une chaîne pour insertion sûre dans un littéral SPARQL délimité par des guillemets
-   * doubles (ex. {@code mwapi:search "..."}). L'antislash est échappé avant le guillemet, sinon le
-   * {@code \"} produit par l'échappement du guillemet serait lui-même ré-échappé.
-   *
+   * Échappe une chaîne pour un littéral SPARQL entre guillemets doubles —
+   * l'antislash est échappé avant le guillemet, sinon le {@code \"}
+   * produit serait lui-même ré-échappé.
    * @param texte la chaîne à insérer dans le littéral
    * @return la chaîne échappée
    */
@@ -252,10 +248,9 @@ final class ClientSparqlWikidata {
   }
 
   /**
-   * Vérifie qu'une chaîne est un Q-ID Wikidata valide (ex. {@code Q3438008}), avant de la
-   * concaténer nue (sans guillemets) dans une clause {@code VALUES ?item { wd:... }} —
-   * contrairement à {@link #echapperLitteral}, qui ne protège que les littéraux entre guillemets.
-   *
+   * Vérifie qu'une chaîne est un Q-ID Wikidata valide, avant concaténation
+   * nue dans une clause {@code VALUES} — contrairement à {@link
+   * #echapperLitteral}, qui ne protège que les littéraux entre guillemets.
    * @param qId identifiant à vérifier
    * @return {@code true} si le format est un Q-ID valide
    */

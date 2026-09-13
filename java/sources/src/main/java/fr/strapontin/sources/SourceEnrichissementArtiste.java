@@ -9,13 +9,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Source capable d'enrichir un lot d'artistes avec des métadonnées canoniques.
- *
- * Ajouter une source d'enrichissement = créer une implémentation + un bean Spring dans
- * {@code EnrichissementConfiguration} (module worker), sans modifier l'orchestrateur. Aucun
- * parent commun avec {@link SourceEnrichissementSalle} : les deux hiérarchies évoluent
- * indépendamment.
- *
+ * Source capable d'enrichir un lot d'artistes avec des métadonnées
+ * canoniques — ajouter une source = implémentation + bean Spring dans
+ * {@code EnrichissementConfiguration}, sans modifier l'orchestrateur.
  * @since 2.6.0
  * @author Kwaite
  */

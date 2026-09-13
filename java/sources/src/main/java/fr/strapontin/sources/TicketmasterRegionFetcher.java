@@ -12,12 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Récupération des concerts par région (géolocalisation centre de département).
- *
- * <p>Extrait de {@link TicketmasterSource} pour rester sous le seuil de couplage entre objets (20)
- * — sans état propre (méthodes statiques), pour ne pas introduire de nouveau champ déclaré dans
- * {@link TicketmasterSource}.
- *
+ * Récupération des concerts par région (géolocalisation centre de
+ * département) — extrait de {@link TicketmasterSource} pour rester sous
+ * le seuil de couplage (20), sans état propre (méthodes statiques).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -29,10 +26,9 @@ final class TicketmasterRegionFetcher {
 
   /**
    * Récupère les concerts par région (géolocalisation centre de département).
-   *
-   * @param pageFetcher pagination bas niveau partagée avec {@link TicketmasterSource}
+   * @param pageFetcher pagination bas niveau partagée avec TicketmasterSource
    * @param depts liste de codes département (ex: ["75", "92"])
-   * @param classifs classifications TM à inclure ; par défaut music, opera, musical
+   * @param classifs classifications TM à inclure ; défaut music/opera/musical
    * @return liste des concerts trouvés pour tous les départements
    */
   /* package-private : appelé par TicketmasterSource (même package). */

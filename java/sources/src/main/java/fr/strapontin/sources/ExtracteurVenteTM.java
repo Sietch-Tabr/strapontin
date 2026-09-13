@@ -73,13 +73,11 @@ final class ExtracteurVenteTM {
   }
 
   /**
-   * Détermine si un statut "offsale" doit en réalité être requalifié "presale" — prévente connue
-   * encore à venir, ou à défaut vente publique connue encore à venir.
-   *
+   * Détermine si "offsale" doit être requalifié "presale" (détail :
+   * CLAUDE.md, Statut de vente cross-source).
    * @param sales bloc "sales" brut de l'event TM
-   * @param presaleDebut date de début de la prévente déjà extraite, ou {@code null}
-   * @return la date de début à utiliser pour la prévente si une requalification s'applique, {@code
-   *     null} sinon (le statut "offsale" reste inchangé)
+   * @param presaleDebut date de début de prévente déjà extraite, ou null
+   * @return date à utiliser si requalification, null sinon (inchangé)
    */
   @SuppressWarnings(UNCHECKED)
   private static String requalifierOffsaleEnPresale(

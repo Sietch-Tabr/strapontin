@@ -8,12 +8,9 @@ import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 
 /**
- * Contrat minimal d'une source de concerts.
- *
- * <p>Chaque implémentation gère une billetterie (Ticketmaster, Eventim, Digitick…). Les méthodes
- * non pertinentes pour une source ont une implémentation par défaut qui retourne une liste vide ou
- * {@code false}.
- *
+ * Contrat minimal d'une source de concerts (Ticketmaster, Eventim,
+ * Digitick...) — méthodes non pertinentes pour une source ont une
+ * implémentation par défaut (liste vide ou false).
  * @since 2.3.1
  * @author Kwaite
  */
@@ -39,20 +36,12 @@ public interface SourceConcerts {
   }
 
   /**
-   * Recherche les concerts d'un artiste par son nom, avec son identité déjà confirmée par une
-   * source indépendante si connue.
-   *
-   * <p>Par défaut, délègue à {@link #fetchArtiste(String)} en ignorant {@code deezerId}/{@code
-   * wikidataId} — seule une source dont le matching par nom accepte un repli approximatif (ex.
-   * containment Eventim) a besoin de ce signal pour restreindre ce repli aux artistes dont
-   * l'identité n'est pas encore confirmée.
-   *
+   * Recherche par nom, identité déjà confirmée si connue — délègue par
+   * défaut à {@link #fetchArtiste(String)} en ignorant les deux identifiants.
    * @param nom nom de l'artiste
-   * @param deezerId identifiant Deezer déjà connu, ou {@code null} si l'identité n'est pas
-   *     confirmée par cette source
-   * @param wikidataId identifiant Wikidata déjà connu, ou {@code null} si l'identité n'est pas
-   *     confirmée par cette source
-   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette opération
+   * @param deezerId identifiant Deezer déjà connu, ou null si non confirmé
+   * @param wikidataId identifiant Wikidata déjà connu, ou null si non confirmé
+   * @return concerts trouvés, ou liste vide si non supporté
    */
   default List<ConcertBrut> fetchArtiste(
       final String nom, final String deezerId, final String wikidataId) {
@@ -60,11 +49,8 @@ public interface SourceConcerts {
   }
 
   /**
-   * Indique si la source accepte cet identifiant de salle.
-   *
-   * <p>Les identifiants sont préfixés par la source : {@code "tm:rZFSnyZdFvA"}, {@code
-   * "digitick:lempreinte"}, etc.
-   *
+   * Indique si la source accepte cet identifiant de salle préfixé (ex.
+   * "tm:rZFSnyZdFvA", "digitick:lempreinte").
    * @param identifiant identifiant préfixé de la salle
    * @return {@code true} si la source peut fetcher cette salle
    */
@@ -89,7 +75,7 @@ public interface SourceConcerts {
    *
    * @param depts codes département (ex. {@code ["75", "92"]})
    * @param classifs classifications à inclure
-   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette opération
+   * @return concerts trouvés, ou liste vide si non supporté
    */
   default List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
     return List.of();

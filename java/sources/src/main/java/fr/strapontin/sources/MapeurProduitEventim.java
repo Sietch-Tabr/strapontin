@@ -26,18 +26,12 @@ final class MapeurProduitEventim {
   private MapeurProduitEventim() {}
 
   /**
-   * Corrige une incohérence connue d'Eventim : certaines salles de banlieue parisienne (ex. Accor
-   * Arena, Zénith de Paris) sont taguées ville="Paris" alors que leur code postal n'est pas dans le
-   * 75 — on retombe sur la commune extraite du nom de salle Eventim (forme "Nom de la salle -
-   * Commune"), quand disponible.
-   *
+   * Corrige une incohérence connue d'Eventim (salle taguée ville=Paris
+   * hors 75) — retombe sur la commune extraite du nom ("Nom - Commune").
    * @param ville ville brute renvoyée par Eventim
-   * @param dept département dérivé du code postal, peut être {@code null}
-   * @param salle nom de la salle, utilisé comme source alternative de la commune
-   * @return ville corrigée, la ville d'origine si aucune incohérence détectée, ou {@code null} si
-   *     une incohérence est détectée sans pouvoir être corrigée — une valeur qu'on vient soi-même
-   *     de qualifier d'incohérente ne doit jamais écraser une valeur déjà connue en base ({@code
-   *     COALESCE(:ville, ville)} à la persistance)
+   * @param dept département dérivé du code postal, peut être null
+   * @param salle nom de la salle, source alternative de la commune
+   * @return ville corrigée, l'originale si cohérente, null sinon
    */
   /* package-private : appelé par EventimSource (même package). */
   static String corrigerVilleEventim(final String ville, final String dept, final String salle) {
@@ -64,7 +58,7 @@ final class MapeurProduitEventim {
   /**
    * Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
    *
-   * <p>L'heure "00:00" est considérée comme absente (Eventim utilise minuit par défaut).
+   * <p>L'heure "00:00" est considérée comme absente (minuit par défaut).
    *
    * @param dateStr chaîne de date ISO 8601
    * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
@@ -83,14 +77,11 @@ final class MapeurProduitEventim {
   }
 
   /**
-   * Extrait le nom de l'artiste depuis un titre d'événement Eventim.
-   *
-   * <p>Le titre Eventim est de la forme "Artiste - Tournée" ou "Artiste : Spectacle". On extrait la
-   * partie avant le premier séparateur " - " ou " : ", après normalisation des espaces
-   * insécables/fines (U+00A0, U+202F) qu'Eventim place parfois autour du tiret.
-   *
+   * Extrait l'artiste d'un titre Eventim ("Artiste - Tournée"/"Artiste :
+   * Spectacle") — normalise les espaces insécables/fines autour du
+   * séparateur (détail : CLAUDE.md, Dédoublonnage inter-sources).
    * @param titre titre de l'événement Eventim
-   * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
+   * @return nom de l'artiste extrait, ou le titre complet si non trouvé
    */
   /* package-private : appelé par EventimSource (même package). */
   static String extraireNomArtiste(final String titre) {
@@ -106,12 +97,11 @@ final class MapeurProduitEventim {
   }
 
   /**
-   * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
-   *
+   * Mappe un produit Eventim brut (JSON désérialisé) vers un ConcertBrut.
    * @param produit produit Eventim sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
-   * @param artisteSourceId identifiant source préfixé de l'artiste (ex. {@code "eventim:12345"}),
-   *     null si inconnu (fetch région ou salle)
+   * @param artisteFallback nom recherché (fetchArtiste), null sinon
+   * @param artisteSourceId identifiant préfixé (ex. "eventim:12345"), null
+   *     si inconnu (fetch région ou salle)
    * @return concert extrait, ou null si le produit est invalide
    */
   @SuppressWarnings("unchecked")

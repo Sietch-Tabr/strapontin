@@ -8,9 +8,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Implémentation en mémoire de {@link CadenceurAppels} : verrou sur l'instance, coordonne les
- * appels d'un seul processus quel que soit le nombre de jobs Quartz en parallèle. Une instance par
- * source ayant son propre rythme de cadence.
+ * Implémentation en mémoire de {@link CadenceurAppels} : verrou sur
+ * l'instance, coordonne les appels d'un seul processus quel que soit le
+ * nombre de jobs Quartz en parallèle. Une instance par source.
  *
  * @since 2.7.0
  * @author Kwaite

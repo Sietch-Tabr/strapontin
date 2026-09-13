@@ -18,25 +18,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client Deezer pour l'enrichissement des artistes (étape 3).
- *
- * <p>Deux modes, indépendants l'un de l'autre :
- *
- * <ul>
- *   <li>{@code deezerId} connu (renseigné au préalable par {@link WikidataArtisteSource} via P2722)
- *       → confirmation directe du nom canonique par {@code GET /artist/{id}}.
- *   <li>{@code deezerId} absent → recherche par nom ({@code GET /search/artist?q=}). Le P2722
- *       Wikidata est fréquemment absent en pratique (constaté en production sur Yelle, Mademoiselle
- *       K, Ycare — Deezer référence pourtant bien ces artistes) : ne pas dépendre uniquement de
- *       Wikidata pour peupler {@code deezer_id} reviendrait à ignorer une source de données déjà
- *       exploitée ailleurs dans le projet.
- * </ul>
- *
- * Seule une correspondance exacte de nom normalisé est retenue (pas de seuil de similarité comme
- * dans {@link ResolveurNomCanonique}) : cette découverte assigne un identifiant persistant, un
- * enjeu plus élevé qu'une simple confirmation cosmétique de nom affiché — même prudence que {@code
- * TicketmasterSource.rechercherAttractionId} (anti- JAIN/ANUV JAIN).
- *
+ * Client Deezer pour l'enrichissement des artistes (étape 3) — détail
+ * (deux modes, seuil de correspondance exacte) : CLAUDE.md,
+ * Enrichissement Wikidata/OSM.
  * @since 2.6.0
  * @author Kwaite
  */

@@ -15,13 +15,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client de géocodage Nominatim (OSM), public — réutilisable depuis le module {@code worker} en dernier
- * recours avant de créer une salle sans aucune correspondance par nom, contrairement à {@code
- * ClientSparqlWikidata} (interne à {@code sources}, jamais appelé hors des sources Wikidata).
- *
- * <p>Politique d'usage Nominatim (1 requête/seconde) cadencée en interne (voir {@link
- * #DELAI_MIN_ENTRE_APPELS_MS}) — jamais imposée à l'appelant.
- *
+ * Client de géocodage Nominatim (OSM), public — réutilisable depuis
+ * {@code worker} en dernier recours, contrairement à {@code
+ * ClientSparqlWikidata} (interne aux sources Wikidata). Cadencé en
+ * interne (1 req/s, {@link #DELAI_MIN_ENTRE_APPELS_MS}).
  * @since 2.9.0
  * @author Kwaite
  */
@@ -72,11 +69,9 @@ public final class ClientNominatim {
   public record Coordonnees(double latitude, double longitude) {}
 
   /**
-   * Géocode un nom de lieu en France — retourne le meilleur résultat Nominatim, s'il existe.
-   *
-   * @param nom texte à géocoder (ex. nom de salle brut, éventuellement approximatif)
-   * @return les coordonnées du meilleur résultat, vide si aucun résultat ou en cas d'erreur
-   *   (journalisée, jamais propagée)
+   * Géocode un nom de lieu en France — meilleur résultat Nominatim.
+   * @param nom texte à géocoder (ex. nom de salle brut, approximatif)
+   * @return coordonnées du meilleur résultat, vide si aucun/erreur (log)
    */
   public Optional<Coordonnees> geocoder(final String nom) {
     cadenceur.attendre();

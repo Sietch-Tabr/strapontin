@@ -24,14 +24,9 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client de scraping pour la billetterie Digitick (web.digitick.com).
- *
- * <p>Scrape la page de billetterie d'une salle identifiée par son slug Digitick. L'identifiant
- * préfixé attendu est {@code "digitick:{slug}"}, ex. {@code "digitick:lempreinte"}.
- *
- * <p>Filtre appliqué : genre {@code "Concert"} et code postal présent (exclut les adhésions et
- * packs multi-dates sans salle fixe).
- *
+ * Client de scraping pour la billetterie Digitick (identifiant préfixé
+ * {@code "digitick:{slug}"}) — filtre genre {@code "Concert"} et code
+ * postal présent (exclut adhésions/packs multi-dates sans salle fixe).
  * @since 2.4.0
  * @author Kwaite
  */
@@ -247,13 +242,11 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Convertit un nom Digitick en ALL CAPS vers une casse lisible.
-   *
-   * <p>Capitalise la première lettre de chaque mot ; un mot commence après tout caractère
-   * non-alphabétique (espace, tiret, {@code +}, {@code :}, etc.).
-   *
-   * @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
-   * @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
+   * Convertit un nom Digitick ALL CAPS vers une casse lisible — capitalise
+   * la première lettre de chaque mot (mot = après tout caractère
+   * non-alphabétique : espace, tiret, +, :).
+   * @param nom nom brut en ALL CAPS (ex. "RONNIE ROMERO + GUS G")
+   * @return nom en casse normale (ex. "Ronnie Romero + Gus G")
    */
   /* package-private : visibilité élargie pour DigitickSourceTest (même
    * package). */
@@ -277,12 +270,10 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Parse un datetime ISO 8601 Digitick et retourne {@code [date, heure]}.
-   *
-   * <p>L'heure {@code "00:00"} est considérée absente (Digitick utilise minuit par défaut).
-   *
-   * @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
-   * @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
+   * Parse un datetime ISO 8601 Digitick vers {@code [date, heure]} —
+   * l'heure "00:00" est considérée absente (minuit par défaut).
+   * @param datetime valeur de l'attribut datetime, ex. "2026-10-07T20:00:00"
+   * @return tableau [date, heure] ou null si le format est invalide
    */
   // Le tableau représente une paire date/heure, pas une collection à agréger —
   // l'appelant teste explicitement null pour distinguer "format invalide" d'un

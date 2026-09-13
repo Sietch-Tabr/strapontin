@@ -22,23 +22,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client SPARQL Wikidata pour l'enrichissement des artistes (étape 3 +).
- *
- * <p>Deux modes selon que le Q-ID est déjà connu :
- *
- * <ul>
- *   <li>{@code wikidataId != null} : requête batch classique (clause {@code VALUES}, ≤50)
- *   <li>{@code wikidataId == null} : découverte par recherche de nom via {@code SERVICE
- *       wikibase:mwapi} (une requête par artiste, non batchable), filtrée par les types
- *       intrinsèques Wikidata (humain+musicien, humain+humoriste depuis, ou groupe) —
- *       <strong>jamais validée contre l'attractionId Ticketmaster existant</strong> : Wikidata fait
- *       autorité pour l'identité de l'artiste, indépendamment de TM (décision actée, cf. plan du
- *       jalon 2.6.0). Le P6262 éventuellement porté par le Q-ID trouvé sert ensuite à corriger
- *       notre lien vers TM, jamais l'inverse. En cas d'homonymie groupe/personne (ex. « Van Halen
- *       ») détectée via la diversité de {@code ?typeMatch} parmi les meilleurs candidats, aucun
- *       Q-ID n'est retenu plutôt que de deviner — cf. {@link #decouvrir}.
- * </ul>
- *
+ * Client SPARQL Wikidata pour l'enrichissement des artistes — deux
+ * modes selon que le Q-ID est connu (batch classique vs découverte par
+ * nom, non validée contre l'attractionId TM existant) : détail :
+ * CLAUDE.md, Enrichissement Wikidata/OSM.
  * @since 2.6.0
  * @author Kwaite
  */
@@ -193,14 +180,11 @@ public class WikidataArtisteSource
   // --- Mode découverte (Q-ID inconnu) ---
 
   /**
-   * Résout un candidat par découverte mwapi, en refusant de deviner en cas d'homonymie
-   * groupe/personne — ex. « Van Halen », où le groupe porte le vrai nom de famille de son
-   * fondateur, guitariste et chanteur du groupe éponyme. Structurellement, {@code ?typeMatch} ne
-   * peut valoir {@code "humain"} et {@code "groupe"} pour le même {@code ?item} ({@code wdt:P31
-   * wd:Q5} exige une personne physique, incompatible avec l'appartenance à {@code wd:Q215380}) :
-   * toute diversité de {@code ?typeMatch} parmi les {@value #TAILLE_CANDIDATS_DECOUVERTE} meilleurs
-   * candidats mwapi signale donc deux entités distinctes en concurrence, jamais un faux positif sur
-   * une même entité aux occupations multiples.
+   * Résout un candidat par découverte mwapi, refuse de deviner sur
+   * homonymie groupe/personne (Van Halen — détail : CLAUDE.md,
+   * Enrichissement Wikidata/OSM) : {@code ?typeMatch} ne peut valoir
+   * humain et groupe pour le même item, toute diversité signale deux
+   * entités distinctes en concurrence.
    */
   private Optional<EnrichissementArtiste> decouvrir(final ArtisteAEnrichir artiste) {
     final String sparql = construireRequeteDecouverte(artiste.nom());
@@ -239,14 +223,9 @@ public class WikidataArtisteSource
   }
 
   /**
-   * Filtre de découverte par nom : humain de profession musicien, humoriste ou auteur comique (un
-   * humoriste, ex. Pierre-Emmanuel Barré, n'entrait dans aucune des deux branches d'origine; — sa
-   * fiche réelle porte en fait {@code Q12406482} « auteur comique », dont la fermeture transitive
-   * P279* ne remonte jamais vers {@code Q245068}, un troisième branchement est donc nécessaire
-   * plutôt qu'une correction du premier), ou groupe musical. Les trois occupations humaines
-   * partagent le même {@code ?typeMatch} (« humain ») car elles exigent toutes {@code wdt:P31
-   * wd:Q5} — seule la branche « groupe » (organisation, jamais une personne physique) peut produire
-   * un {@code ?typeMatch} distinct pour la même recherche, cf. {@link #decouvrir}.
+   * Filtre de découverte par nom : humain (musicien, humoriste/auteur
+   * comique — trois branches SPARQL distinctes, détail : CLAUDE.md,
+   * Enrichissement Wikidata/OSM), ou groupe musical.
    */
   private static String construireRequeteDecouverte(final String nom) {
     return """

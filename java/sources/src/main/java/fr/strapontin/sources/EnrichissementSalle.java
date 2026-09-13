@@ -5,18 +5,8 @@
 package fr.strapontin.sources;
 
 /**
- * Résultat d'enrichissement d'une salle par une {@link SourceEnrichissementSalle}.
- *
- * Tous les champs sont nullable — une source ne renseigne que ce qu'elle sait produire (ex.
- * Overpass ne fournit pas toujours {@code wikidataId}, Wikidata ne fournit pas {@code capacite}).
- *
- * @param wikidataId Q-ID Wikidata découvert
- * @param nomAffiche nom canonique français
- * @param ville commune associée
- * @param website site officiel
- * @param capacite capacité d'accueil
- * @param latitude latitude WGS84 (Wikidata P625), ou {@code null} si non fournie
- * @param longitude longitude WGS84 (Wikidata P625), ou {@code null} si non fournie
+ * Résultat d'enrichissement d'une salle — tous nullable (une source ne
+ * renseigne que ce qu'elle sait produire).
  * @since 2.6.0
  * @author Kwaite
  */

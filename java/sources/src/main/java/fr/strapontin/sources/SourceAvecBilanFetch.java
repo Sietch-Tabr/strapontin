@@ -26,13 +26,11 @@ public interface SourceAvecBilanFetch {
   BilanFetch preleverBilan();
 
   /**
-   * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100% escalade en alerte {@code
-   * error} plutôt qu'un simple {@code warn} — voir {@link BilanFetch#evaluer}. Une source dotée
-   * d'un disjoncteur qui abandonne après peu d'échecs doit surcharger cette valeur au-dessus de ce
-   * que son propre disjoncteur peut produire à lui seul, pour ne pas transformer chaque
-   * déclenchement du disjoncteur en alerte email automatique.
-   *
-   * @return seuil minimal d'appels, {@link BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT} par défaut
+   * Nombre minimal d'appels pour qu'un taux d'échec de 100% escalade en
+   * {@code error} plutôt que {@code warn} — détail : CLAUDE.md,
+   * Enrichissement Wikidata/OSM.
+   * @return seuil minimal d'appels, {@link
+   *     BilanFetch#SEUIL_APPELS_MIN_ALERTE_DEFAUT} par défaut
    */
   default int seuilAppelsMinAlerte() {
     return BilanFetch.SEUIL_APPELS_MIN_ALERTE_DEFAUT;

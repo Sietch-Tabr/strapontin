@@ -10,13 +10,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
 /**
- * Fenêtre temporelle (aujourd'hui → +6 mois) au format attendu par l'API Ticketmaster Discovery v2,
- * pour les requêtes {@code startDateTime}/{@code endDateTime}.
- *
- * <p>Extrait de {@link TicketmasterSource} pour rester sous la limite de 500 lignes par fichier.
- *
- * @param debut date/heure de début formatée
- * @param fin date/heure de fin formatée
+ * Fenêtre temporelle (aujourd'hui → +6 mois) au format API TM
+ * ({@code startDateTime}/{@code endDateTime}) — extrait de {@link
+ * TicketmasterSource}.
  * @since 2.9.1
  * @author Kwaite
  */

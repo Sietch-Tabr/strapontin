@@ -26,27 +26,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client Overpass (OSM) pour l'enrichissement initial des salles par nom.
- *
- * <p>Recherche par lot les salles de spectacle taguées {@code
- * amenity=music_venue|arts_centre|theatre}. Utilisé en première étape : les salles sans {@code
- * wikidataId} connu sont recherchées ici ; si le tag {@code wikidata=Qxxx} est présent, il alimente
- * directement l'enrichissement Wikidata par Q-ID. Les salles qu'Overpass ne trouve pas (nom absent
- * d'OSM, service indisponible) restent éligibles à la recherche Wikidata directe par nom, voir
- * {@link WikidataSalleSource} — Overpass n'est donc plus un passage obligé.
- *
- * <p>Chaque lot interroge une zone géographique <strong>par département</strong> (rayon {@code
- * around:} centré sur {@link CentresDepartement#PAR_DEPT}) plutôt qu'une bounding box couvrant la
- * France entière : une requête sur tout le territoire échoue quasi systématiquement par timeout sur
- * les instances publiques Overpass (surchargées), alors que la même requête restreinte à un
- * département répond en 2-3s. Un basculement précédent vers {@code overpass.osm.ch} (association
- * OSM suisse) s'est révélé une impasse — cette instance ne couvre en réalité que la Suisse (+ 10 km
- * de frontière), confirmé en test direct (0 résultat sur des salles françaises pourtant bien
- * référencées sur OSM) : un succès HTTP {@code 200 OK} avec un tableau d'éléments vide avait été
- * confondu avec un succès fonctionnel, masquant 12 jours de contribution nulle sans la moindre
- * erreur journalisée. Les salles sans département connu ne sont pas interrogées (aucune zone à
- * requêter) — elles restent éligibles à la découverte Wikidata par nom, indépendante d'Overpass.
- *
+ * Client Overpass (OSM) pour l'enrichissement initial des salles par
+ * nom — non trouvées, elles restent éligibles à la recherche Wikidata
+ * directe ({@link WikidataSalleSource}). Détail (requête par
+ * département, incident overpass.osm.ch) : CLAUDE.md.
  * @since 2.6.0
  * @author Kwaite
  */

@@ -20,12 +20,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 /**
- * Résolution des noms canoniques d'artistes via Deezer.
- *
- * <p>Stratégie : Deezer (similarité ≥ 0.7) → nom inchangé. Les résultats sont mis en cache Caffeine
- * TTL 7 jours pour limiter les appels. La résolution de salle retourne toujours le nom inchangé
- * (Deezer ne référence pas les salles).
- *
+ * Résolution des noms canoniques d'artistes via Deezer — similarité ≥
+ * 0.7, résultats en cache Caffeine (TTL 7j). Salles : toujours le nom
+ * inchangé (Deezer ne les référence pas).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -149,14 +146,12 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   }
 
   /**
-   * Sélectionne le meilleur candidat Deezer parmi les résultats de recherche : une correspondance
-   * exacte (nom normalisé identique) l'emporte toujours sur un homonyme approximatif mieux
-   * référencé, la popularité ne départageant qu'entre candidats eux-mêmes exacts.
-   *
+   * Sélectionne le meilleur candidat Deezer (correspondance exacte
+   * toujours prioritaire sur un homonyme mieux référencé, détail :
+   * CLAUDE.md, Dédoublonnage inter-sources).
    * @param dataList résultats bruts de la recherche Deezer
    * @param nom nom recherché (non normalisé)
-   * @return le candidat retenu, ou {@code null} si aucun ne dépasse {@value
-   *     #SEUIL_CONFIANCE_DEEZER}
+   * @return le candidat retenu, ou null si aucun ne dépasse le seuil
    */
   private Map<String, Object> trouverMeilleurCandidatDeezer(
       final List<Map<String, Object>> dataList, final String nom) {
@@ -219,12 +214,9 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   }
 
   /**
-   * Résout le nom canonique d'un artiste ou d'une salle.
-   *
-   * <p>Les résultats sont mis en cache par clé {@code "type:nom"}. La résolution de salle retourne
-   * toujours {@code INCHANGE} (Deezer ne référence pas les salles).
-   *
-   * @param type {@code "artiste"} ou {@code "salle"}
+   * Résout le nom canonique d'un artiste/salle — cache par clé
+   * "type:nom", résolution salle toujours {@code INCHANGE}.
+   * @param type "artiste" ou "salle"
    * @param nom nom brut à résoudre
    * @return résultat contenant le nom canonique et la source utilisée
    */

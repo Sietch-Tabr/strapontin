@@ -39,14 +39,12 @@ final class MapeurEvenementTM {
   private MapeurEvenementTM() {}
 
   /**
-   * Extrait la date et l'heure d'un événement TM depuis les champs localDate / localTime.
-   *
-   * <p>L'heure "00:00" est considérée comme absente — TM utilise minuit par défaut pour les
-   * événements sans heure précise, symétrique au comportement d'Eventim.
-   *
+   * Extrait la date et l'heure d'un événement TM depuis localDate /
+   * localTime — l'heure "00:00" est considérée absente (minuit par
+   * défaut, symétrique à Eventim).
    * @param dateStr valeur de localDate (format ISO 8601, au moins 10 chars)
-   * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
-   * @return tableau à deux éléments : [date, heure] où heure peut être null
+   * @param heureStr valeur de localTime (null ou "00:00:00" si absente)
+   * @return tableau [date, heure] où heure peut être null
    */
   /* package-private : visibilité élargie pour les tests du même package. */
   static String[] parseDateTM(final String dateStr, final String heureStr) {
@@ -70,7 +68,7 @@ final class MapeurEvenementTM {
    * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
    *
    * @param evt événement TM sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être null
+   * @param artisteFallback nom recherché (fetch:artiste), null sinon
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
   /* package-private : appelé par TicketmasterSource (même package). */

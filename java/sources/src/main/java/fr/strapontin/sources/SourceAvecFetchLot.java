@@ -8,12 +8,9 @@ import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 
 /**
- * Extension de {@link SourceConcerts} pour les sources supportant le fetch groupé d'artistes.
- *
- * <p>Le fetch par lot réduit la consommation de quota : Ticketmaster accepte jusqu'à 20
- * {@code attractionId} par requête, ce qui divise la consommation par 20 par rapport au
- * fetch artiste-par-artiste.
- *
+ * Extension de {@link SourceConcerts} pour les sources supportant le
+ * fetch groupé d'artistes — TM accepte jusqu'à 20 {@code attractionId}
+ * par requête, divisant la consommation de quota par 20.
  * @since 2.3.1
  * @author Kwaite
  */

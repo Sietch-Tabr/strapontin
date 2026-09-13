@@ -20,11 +20,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Pagination bas niveau des appels Ticketmaster Discovery v2 (une page, ou toutes les pages
- * disponibles bornées à {@code NB_PAGES_MAX}).
- *
- * <p>Extrait d'{@link TicketmasterSource} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Pagination bas niveau des appels Ticketmaster Discovery v2 (une page,
+ * ou toutes les pages bornées à {@code NB_PAGES_MAX}) — extrait
+ * d'{@link TicketmasterSource}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -46,9 +44,9 @@ final class TicketmasterPageFetcher {
    * @param restClient client HTTP Ticketmaster partagé
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
-   * @param etatFetch état partagé (quota, concerts manqués, bilan) avec {@link TicketmasterSource}
-   * @param taillePage taille de page utilisée par l'appelant (pour le calcul du nombre de pages
-   *     total dans le log de plafonnement)
+   * @param etatFetch état partagé (quota, concerts manqués, bilan)
+   * @param taillePage taille de page (calcul du nombre de pages total
+   *     dans le log de plafonnement)
    */
   /* package-private : instancié uniquement par TicketmasterSource (même
    * package). */
@@ -172,15 +170,12 @@ final class TicketmasterPageFetcher {
   }
 
   /**
-   * Récupère toutes les pages disponibles (bornées à {@code NB_PAGES_MAX}) pour une requête TM.
-   *
+   * Récupère toutes les pages disponibles (bornées à NB_PAGES_MAX).
    * @param uriBase URI de base de la requête, sans pagination
-   * @param artisteFallback nom de l'artiste cherché (fetch:artiste uniquement), peut être null
-   * @param contexte identifiant du centre de recherche (ex. {@code "dept=75"}) inclus dans le log
-   *     de plafonnement de pagination, pour distinguer les départements/salles chroniquement
-   *     affectés
-   * @return les concerts récupérés sur toutes les pages parcourues, et si toutes les pages ont été
-   *     récupérées avec succès (voir {@link ResultatPage#succes})
+   * @param artisteFallback nom recherché (fetch:artiste), null sinon
+   * @param contexte identifiant du centre de recherche (ex. "dept=75"),
+   *     inclus dans le log de plafonnement
+   * @return concerts récupérés sur toutes les pages, succès si complet
    */
   /* package-private : appelé par TicketmasterSource (même package). */
   ResultatMultiPage fetchToutesPages(
