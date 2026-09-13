@@ -37,6 +37,7 @@ class SalleRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   SalleRepository(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -50,6 +51,7 @@ class SalleRepository {
    * @param userId identifiant de l'utilisateur
    * @return liste des salles suivies
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   List<SalleUtilisateur> listerPourUtilisateur(final String userId) {
     return jdbc.query(
         """
@@ -88,6 +90,7 @@ class SalleRepository {
    * @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
    * @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   List<Map<String, Object>> rechercherEnBase(final String pattern) {
     return jdbc.queryForList(
         """
@@ -120,6 +123,7 @@ class SalleRepository {
    * @param salleId UUID stable de la salle
    * @return {@code true} si déjà présente
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   boolean existePourUtilisateur(final String userId, final UUID salleId) {
     return !jdbc.queryForList(
             """
@@ -137,6 +141,7 @@ class SalleRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre de salles suivies
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   int compterPourUtilisateur(final String userId) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
@@ -155,6 +160,7 @@ class SalleRepository {
    *     recherché, filtrées aux tokens d'au moins 3 caractères
    * @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   List<Map<String, Object>> chercherCandidatsParCle(final Set<String> tokens) {
     if (tokens.isEmpty()) {
       return List.of();
@@ -186,6 +192,7 @@ class SalleRepository {
    * @param nom nom affiché
    * @return UUID stable de la salle (existant ou nouvellement créé)
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   UUID upsertSalle(final String salleCle, final String nom) {
     final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
@@ -213,6 +220,7 @@ class SalleRepository {
    * @param dept numéro de département (null si inconnu)
    * @return UUID stable de la salle
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   UUID upsertSalleAvecLoc(
       final String salleCle, final String nom, final String ville, final String dept) {
     final Map<String, Object> params = new HashMap<>();
@@ -247,6 +255,7 @@ class SalleRepository {
    * @param ville nouvelle ville (null = inchangée)
    * @param dept nouveau numéro de département (null = inchangé)
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   void mettreAJourSalle(
       final UUID salleId, final String nom, final String ville, final String dept) {
     final MapSqlParameterSource params = new MapSqlParameterSource();
@@ -279,6 +288,7 @@ class SalleRepository {
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucune source connue
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   String lireIdentifiantsSources(final UUID salleId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -308,6 +318,7 @@ class SalleRepository {
    * @param salleId UUID de la salle
    * @return {@code true} si supprimée, {@code false} si des contraintes empêchent la suppression
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   boolean supprimerSalleDigitick(final UUID salleId) {
     final int nb =
         jdbc.update(
@@ -332,6 +343,7 @@ class SalleRepository {
    * @param salleId UUID stable de la salle
    * @param wikidataId Q-ID Wikidata
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   void mettreAJourWikidataId(final UUID salleId, final String wikidataId) {
     jdbc.update(
         """
@@ -350,6 +362,7 @@ class SalleRepository {
    * @param exclureSalleId salle en cours d'attribution, exclue de la recherche
    * @return le nom affiché de la salle en conflit, si elle existe
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   Optional<String> trouverConflitDigitickSlug(final String slug, final UUID exclureSalleId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -371,6 +384,7 @@ class SalleRepository {
    * @param source nom de la source (ex. {@code "ticketmaster"})
    * @param identifiantExterne identifiant dans la source externe
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   void enregistrerSalleSource(
       final UUID salleId, final String source, final String identifiantExterne) {
     jdbc.update(
@@ -394,6 +408,7 @@ class SalleRepository {
    * @param userId identifiant de l'utilisateur
    * @param salleId UUID stable de la salle
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   void ajouterPourUtilisateur(final String userId, final UUID salleId) {
     jdbc.update(
         """
@@ -410,6 +425,7 @@ class SalleRepository {
    * @param salleId UUID stable de la salle
    * @return le nombre de lignes réellement supprimées (0 si la salle n'était pas suivie)
    */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern service/repository. */
   int supprimerPourUtilisateur(final String userId, final UUID salleId) {
     return jdbc.update(
         """

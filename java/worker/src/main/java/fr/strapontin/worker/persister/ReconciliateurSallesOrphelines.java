@@ -28,6 +28,7 @@ class ReconciliateurSallesOrphelines {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : instancié uniquement par Spring (même package). */
   ReconciliateurSallesOrphelines(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -45,6 +46,7 @@ class ReconciliateurSallesOrphelines {
    *
    * @return nombre de concerts orphelins résolus
    */
+  /* package-private : appelé par le cycle nocturne du même package. */
   int retenterSallesOrphelines() {
     final List<Map<String, Object>> orphelins =
         jdbc.queryForList(

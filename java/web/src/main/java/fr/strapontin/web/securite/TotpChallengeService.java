@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TotpChallengeService {
 
-  static final int MAX_ECHECS_TOTP = 5;
+  private static final int MAX_ECHECS_TOTP = 5;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final UserController userController;

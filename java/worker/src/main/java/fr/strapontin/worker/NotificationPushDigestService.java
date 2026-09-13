@@ -43,6 +43,7 @@ class NotificationPushDigestService {
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
+  /* package-private : instancié uniquement par Spring et les tests du même package. */
   NotificationPushDigestService(
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
@@ -59,6 +60,7 @@ class NotificationPushDigestService {
    * vient de se terminer, même mécanisme générique que le bilan de panne des sources de concerts
    * (voir {@code WorkerStatsService#remonterBilan}).
    */
+  /* package-private : appelé par NotificationDigestService (même package). */
   void remonterBilanPush() {
     final BilanFetch bilan = compteurPush.preleverBilan();
     bilan
@@ -72,6 +74,7 @@ class NotificationPushDigestService {
   /**
    * Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push service.
    */
+  /* package-private : type interne, utilisé uniquement au sein de cette classe/des tests du même package. */
   enum ResultatEnvoiPush {
     SUCCES,
     ABONNEMENT_MORT,
@@ -88,6 +91,7 @@ class NotificationPushDigestService {
    * @param status statut HTTP retourné par le push service
    * @return issue de l'envoi
    */
+  /* package-private : appelé par les tests du même package. */
   static ResultatEnvoiPush interpreterStatutPush(final int status) {
     if (status == 404 || status == 410) {
       return ResultatEnvoiPush.ABONNEMENT_MORT;
@@ -98,6 +102,7 @@ class NotificationPushDigestService {
     return ResultatEnvoiPush.ECHEC;
   }
 
+  /* package-private : appelé par NotificationDigestService (même package). */
   boolean envoyerPush(
       final String userId, final List<NotificationDigestService.ConcertNotif> concerts) {
     if (concerts.isEmpty()) {

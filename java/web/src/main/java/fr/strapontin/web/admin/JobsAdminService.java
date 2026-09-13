@@ -164,6 +164,7 @@ public class JobsAdminService {
    *     worker sur les jobs existants)
    * @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
    */
+  /* package-private : visibilité élargie pour les tests du même package. */
   static List<StatJob> completerAvecJobsJamaisExecutes(
       final List<StatJob> statsConnus, final Map<String, Instant> prochainesExec) {
     final Set<String> typesConnus =

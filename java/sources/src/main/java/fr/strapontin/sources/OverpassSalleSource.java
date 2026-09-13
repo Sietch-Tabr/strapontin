@@ -264,6 +264,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
    * @param e exception levée par l'appel HTTP
    * @return délai en millisecondes avant le prochain essai
    */
+  /* package-private : visibilité élargie pour OverpassSalleSourceTest (même package). */
   static long delaiAvantRetry(final Exception e) {
     return e instanceof HttpClientErrorException.TooManyRequests
         ? DELAI_APRES_429_MS

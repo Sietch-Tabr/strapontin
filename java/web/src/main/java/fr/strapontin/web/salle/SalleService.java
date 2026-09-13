@@ -326,6 +326,7 @@ public class SalleService {
    * @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
    */
   @Transactional(propagation = Propagation.NESTED)
+  /* package-private : requis pour l'auto-invocation via le proxy self (transaction NESTED). */
   void mettreAJourWikidataIdEnSavepoint(final UUID salleId, final String wikidataId) {
     salleRepository.mettreAJourWikidataId(salleId, wikidataId);
   }

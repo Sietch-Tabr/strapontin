@@ -21,6 +21,7 @@ final class EnrichissementUtils {
    * @param nom nom à capitaliser
    * @return le nom avec sa première lettre en majuscule, inchangé si vide
    */
+  /* package-private : appelé par les sources d'enrichissement du même package. */
   static String capitaliser(final String nom) {
     return nom.isEmpty() ? nom : Character.toUpperCase(nom.charAt(0)) + nom.substring(1);
   }
@@ -34,6 +35,7 @@ final class EnrichissementUtils {
   // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
   // s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
+  /* package-private : appelé par les sources d'enrichissement du même package. */
   static void attendreEntreLots(final long delaiMs) {
     try {
       Thread.sleep(delaiMs);

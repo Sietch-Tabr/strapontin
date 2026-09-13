@@ -46,6 +46,7 @@ public class WorkerFetchCommun {
   // — 5 absences correspond à environ une demi-journée de silence continu). Package-private :
   // référencé par WorkerPurgeService pour dériver le seuil de purge définitive (voir
   // WorkerPurgeService.SEUIL_PURGE_ABSENCES).
+  /* package-private : réutilisé par les exécuteurs de fetch (même package). */
   static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
 
   private static final String SQL_ABSENCES_BASE =
@@ -99,6 +100,7 @@ public class WorkerFetchCommun {
   /**
    * @return accès JDBC partagé
    */
+  /* package-private : accesseur réservé aux exécuteurs de fetch (même package). */
   NamedParameterJdbcTemplate obtenirJdbc() {
     return jdbc;
   }
@@ -106,6 +108,7 @@ public class WorkerFetchCommun {
   /**
    * @return source Ticketmaster partagée
    */
+  /* package-private : accesseur réservé aux exécuteurs de fetch (même package). */
   TicketmasterSource obtenirTm() {
     return tm;
   }
@@ -113,10 +116,12 @@ public class WorkerFetchCommun {
   /**
    * @return gestion du quota Ticketmaster partagée
    */
+  /* package-private : accesseur réservé aux exécuteurs de fetch (même package). */
   GestionQuotaTM obtenirGestionQuotaTM() {
     return gestionQuotaTM;
   }
 
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
   static ResultatPersistance accumuler(final ResultatPersistance a, final ResultatPersistance b) {
     return new ResultatPersistance(a.nbInseres() + b.nbInseres(), a.nbMisAJour() + b.nbMisAJour());
   }
@@ -136,6 +141,7 @@ public class WorkerFetchCommun {
    * @param totalLots nombre total de lots traités par le job
    * @param identifiantsEnEchec identifiants des entités des lots en échec, pour un retry ciblé
    */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
   void remonterEchecsLots(
       final String typeJob,
       final List<String> echecs,
@@ -165,6 +171,7 @@ public class WorkerFetchCommun {
    * @param ids identifiants (texte) des entités traitées dans ce cycle
    * @param debutCycle horodatage capturé avant la persistance du lot
    */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
   void mettreAJourAbsences(final String colonne, final List<String> ids, final String debutCycle) {
     if (ids.isEmpty()) {
       return;
@@ -232,6 +239,7 @@ public class WorkerFetchCommun {
     return nomBrut;
   }
 
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
   List<ConcertBrut> resoudreEtDeduplicer(final List<ConcertBrut> concerts, final Logger log) {
     final List<ConcertBrut> dedoublonnes = Dedoublonner.dedoublonner(concerts);
 
@@ -279,6 +287,7 @@ public class WorkerFetchCommun {
         .toList();
   }
 
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
   void sauvegarderQuota() {
     final QuotaTM quota = tm.obtenirQuota();
     if (quota != null) {
@@ -290,6 +299,7 @@ public class WorkerFetchCommun {
   // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
   // s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
   void attendreRateLimit() {
     try {
       Thread.sleep(DELAI_ENTRE_ARTISTES_MS);

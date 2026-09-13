@@ -12,6 +12,7 @@ import java.util.Map;
  */
 final class CentresDepartement {
 
+  /* package-private : réutilisé par OverpassSalleSource/TicketmasterRegionFetcher (même package). */
   static final Map<String, CentreDept> PAR_DEPT =
       Map.ofEntries(
           Map.entry("01", new CentreDept(46.0654, 5.4489, 76)),

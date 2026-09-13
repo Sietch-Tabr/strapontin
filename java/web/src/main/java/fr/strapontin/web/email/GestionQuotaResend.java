@@ -34,7 +34,9 @@ class GestionQuotaResend {
 
   private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaResend.class);
 
+  /* package-private : réutilisé par AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   static final int LIMITE_JOUR = 100;
+  /* package-private : réutilisé par AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   static final int LIMITE_MOIS = 3000;
   private static final double SEUIL_ALERTE = 0.8;
   private static final String CLE_QUOTA = "RESEND_QUOTA_JSON";
@@ -42,6 +44,7 @@ class GestionQuotaResend {
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
+  /* package-private : instancié uniquement par EmailSender (même package). */
   GestionQuotaResend(final JdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
@@ -109,6 +112,7 @@ class GestionQuotaResend {
    *
    * @return le compteur courant, ou un compteur initial à zéro si absent de la base
    */
+  /* package-private : appelé par AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   CompteurEnvoisResend lireCompteurCourant() {
     final String jour = jourCourant();
     final String mois = moisCourant(jour);
@@ -124,6 +128,7 @@ class GestionQuotaResend {
    *     si le quota jour ou mois est atteint (rollover éventuel tout de même persisté, pour que le
    *     prochain appel reparte d'un état à jour)
    */
+  /* package-private : appelé par AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   boolean reserverEnvoi() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
@@ -154,6 +159,7 @@ class GestionQuotaResend {
    * @param compteur le compteur courant (voir {@link #lireCompteurCourant()})
    * @return {@code true} si une alerte doit être envoyée
    */
+  /* package-private : appelé par AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   boolean seuilFranchiNonSignale(final CompteurEnvoisResend compteur) {
     final boolean jourSeuil =
         compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE && !compteur.alerteJourEnvoyee();
@@ -168,6 +174,7 @@ class GestionQuotaResend {
    *
    * @param compteur le compteur courant au moment de l'envoi de l'alerte
    */
+  /* package-private : appelé par AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */
   void marquerAlerteEnvoyee(final CompteurEnvoisResend compteur) {
     final boolean jourSeuil = compteur.envoyesJour() >= LIMITE_JOUR * SEUIL_ALERTE;
     final boolean moisSeuil = compteur.envoyesMois() >= LIMITE_MOIS * SEUIL_ALERTE;

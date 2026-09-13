@@ -33,6 +33,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterSource.class);
 
   // Package-private (pas private) : réutilisé par TicketmasterRegionFetcher.
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 
   /**
@@ -50,6 +51,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   public static final String PREFIXE_IDENTIFIANT = "tm";
 
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final int TAILLE_PAGE_REGION = 200;
   // TM applique un Spike Arrest strict de 200ms minimum entre requêtes, sans tolérance de rafale
   // (maxBurstMessageCount=1.0) : le cadenceur n'espace que les instants de départ côté client, la
@@ -59,10 +61,15 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   // Public : réutilisé par les cadenceurs partagés inter-processus (web, worker) pour rester
   // aligné sur ce même délai plutôt que de dupliquer la valeur.
   public static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final String CHEMIN_EVENTS = "/events.json";
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final String TRI_DATE_ASC = "date,asc";
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final String PARAM_SIZE = "size";
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final String PARAM_SORT = "sort";
+  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
   static final String PARAM_START_DATE_TIME = "startDateTime";
 
   private final String apiKey;
@@ -122,6 +129,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param restClient client HTTP Spring à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
+  /* package-private : maillon intermédiaire de la chaîne d'injection de test, jamais appelé hors de cette classe/des tests du même package. */
   TicketmasterSource(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this(
@@ -139,6 +147,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param restClient client HTTP Spring à utiliser
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    */
+  /* package-private : maillon intermédiaire de la chaîne d'injection de test, jamais appelé hors de cette classe/des tests du même package. */
   TicketmasterSource(
       final String apiKey,
       final RestClient restClient,
@@ -159,6 +168,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
+  /* package-private : constructeur d'injection de test complète, jamais appelé hors des tests du même package. */
   TicketmasterSource(
       final String apiKey,
       final RestClient restClient,
@@ -247,6 +257,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param message message à assainir, peut être {@code null}
    * @return le message avec toute clé API masquée, ou {@code null} si {@code message} est null
    */
+  /* package-private : appelé par TicketmasterAttractionResolver/TicketmasterHealthCheck/TicketmasterPageFetcher (même package). */
   static String redigerApiKey(final String message) {
     return message == null ? null : message.replaceAll("apikey=[^&\\s\"]+", "apikey=***");
   }

@@ -35,6 +35,7 @@ final class TicketmasterRegionFetcher {
    * @param classifs classifications TM à inclure ; par défaut music, opera, musical
    * @return liste des concerts trouvés pour tous les départements
    */
+  /* package-private : appelé par TicketmasterSource (même package). */
   static List<ConcertBrut> fetchRegion(
       final TicketmasterPageFetcher pageFetcher,
       final List<String> depts,

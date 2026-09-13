@@ -117,7 +117,7 @@ public final class DistanceTexte {
     return 1.0 - (double) levenshtein(a, b) / longueur;
   }
 
-  static int levenshtein(final String a, final String b) {
+  private static int levenshtein(final String a, final String b) {
     final int m = a.length();
     final int n = b.length();
     final int[][] dp = new int[m + 1][n + 1];

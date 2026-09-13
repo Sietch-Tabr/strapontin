@@ -42,6 +42,7 @@ class ResolveurSalleParConcert {
   private final ClientNominatim clientNominatim;
   private final RaccrocheurSallesParNomNorm raccrocheur;
 
+  /* package-private : instancié uniquement par ReconciliateurSalles (même package). */
   ResolveurSalleParConcert(
       final NamedParameterJdbcTemplate jdbc, final ClientNominatim clientNominatim) {
     this.jdbc = jdbc;
@@ -61,6 +62,7 @@ class ResolveurSalleParConcert {
    * @return UUID de la salle résolue ou créée, ou {@code null} si le {@code salleSourceId} est mal
    *     formé
    */
+  /* package-private : appelé par ReconciliateurSalles (même package). */
   UUID upsertSalleSource(final ValeurConcert c) {
     final int sep = c.salleSourceId().indexOf(':');
     if (sep <= 0) {
@@ -206,6 +208,7 @@ class ResolveurSalleParConcert {
    * @param dept département connu du concert (nullable — désactive le filtre si absent)
    * @return UUID de la salle existante correspondante, ou {@code null} si aucune trouvée
    */
+  /* package-private : appelé par ReconciliateurSalles/RaccrocheurSallesParNomNorm (même package). */
   UUID chercherSalleParTokens(final String nom, final String dept) {
     final String nomNorm = Normalisation.normaliserTexte(nom);
     final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(nomNorm);
@@ -375,6 +378,7 @@ class ResolveurSalleParConcert {
    * @param c concert dont la salle reste à résoudre
    * @return UUID de la salle du concert existant correspondant, ou {@code null} si aucun
    */
+  /* package-private : appelé par ReconciliateurSalles (même package). */
   UUID chercherSalleParCleForte(final ValeurConcert c) {
     if (c.heure() == null || c.dept() == null || c.artisteNorm() == null) {
       return null;
@@ -450,6 +454,7 @@ class ResolveurSalleParConcert {
    * @return liste enrichie avec les {@code salleId} résolus ou réalignés par nom_norm — voir {@link
    *     RaccrocheurSallesParNomNorm}
    */
+  /* package-private : appelé par ReconciliateurSalles (même package). */
   List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {
     return raccrocheur.raccrocher(concerts);
   }
@@ -464,6 +469,7 @@ class ResolveurSalleParConcert {
    * @return département connu par salle, absente si aucun département connu (ni {@code
    *     salles.dept}, ni aucun concert déjà rattaché)
    */
+  /* package-private : appelé par ReconciliateurSalles (même package). */
   Map<UUID, String> deptsConnus(final Set<UUID> salleIds) {
     if (salleIds.isEmpty()) {
       return Map.of();

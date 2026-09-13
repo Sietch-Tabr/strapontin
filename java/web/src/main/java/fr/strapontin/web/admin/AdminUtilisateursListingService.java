@@ -31,6 +31,7 @@ class AdminUtilisateursListingService {
   /**
    * @param jdbc accès JDBC
    */
+  /* package-private : instancié uniquement par AdminService (même package). */
   AdminUtilisateursListingService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -41,6 +42,7 @@ class AdminUtilisateursListingService {
    * @param page numéro de page (0-indexé)
    * @return page d'utilisateurs triés par date de création
    */
+  /* package-private : appelé par AdminService (même package). */
   ReponseUtilisateursAdmin lister(final int page) {
     final int pageNum = Math.max(0, page);
     final List<Map<String, Object>> pageUsers = chargerPageUtilisateurs(pageNum);

@@ -132,6 +132,7 @@ public class PushService {
    * @throws ErreurMetier 429 si le cap est atteint
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
+  /* package-private : requis pour l'auto-invocation via le proxy self (@Transactional/SERIALIZABLE). */
   void abonnerTransactionnel(final String userId, final RequeteAbonnement requete) {
     final int total =
         Objects.requireNonNullElse(

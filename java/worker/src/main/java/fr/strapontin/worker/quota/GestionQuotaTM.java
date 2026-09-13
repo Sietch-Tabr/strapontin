@@ -36,9 +36,9 @@ public class GestionQuotaTM {
 
   private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaTM.class);
 
-  static final int SEUIL_QUOTA_CRON = 500;
-  static final int SEUIL_QUOTA_ABORT = 50;
-  static final int SEUIL_QUOTA_WARN = 200;
+  private static final int SEUIL_QUOTA_CRON = 500;
+  private static final int SEUIL_QUOTA_ABORT = 50;
+  private static final int SEUIL_QUOTA_WARN = 200;
 
   private static final String CLE_QUOTA = "TM_QUOTA_JSON";
   private static final String CLE_DISPO = "dispo";

@@ -34,6 +34,17 @@
     <exclude name="UnnecessaryConstructor"/>
     <exclude name="OnlyOneReturn"/>
     <exclude name="LongVariable"/>
+    <exclude name="CommentDefaultAccessModifier"/>
+  </rule>
+  <!-- CommentDefaultAccessModifier reconfigurée plutôt qu'exclue : le motif par défaut
+       (/\*\s*(default|package)\s*\*\/) n'accepte que le marqueur nu, sans justification — à
+       l'inverse de la convention "commenter le pourquoi" du projet. Motif étendu pour accepter un
+       marqueur suivi d'une explication réelle (ex. "/* package-private : Bean Spring, jamais
+       appelé directement hors du conteneur. */"), jamais le marqueur seul. -->
+  <rule ref="category/java/codestyle.xml/CommentDefaultAccessModifier">
+    <properties>
+      <property name="regex" value="/\*\s*(default|package)\b[\s\S]*\*/"/>
+    </properties>
   </rule>
   <!-- UncommentedEmptyConstructor (Documentation, pas codestyle) exclue pour la même raison que
        UnnecessaryConstructor ci-dessus — même conflit avec AtLeastOneConstructor. -->

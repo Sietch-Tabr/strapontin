@@ -37,7 +37,7 @@ public class ControleIntegriteService {
    * WorkerPurgeService.executerPurgerConcertsHorsPortee} (seuil 30 jours) ne le suggère à la
    * suppression — un signal précoce distinct d'une action déjà en cours.
    */
-  static final int SEUIL_JOURS_EVENEMENT_ORPHELIN = 14;
+  private static final int SEUIL_JOURS_EVENEMENT_ORPHELIN = 14;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalementMatchingService;

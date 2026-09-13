@@ -33,11 +33,13 @@ final class NotificationDigestStats {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
 
+  /* package-private : instancié uniquement par NotificationDigestService (même package). */
   NotificationDigestStats(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
     this.jackson = jackson;
   }
 
+  /* package-private : appelé par NotificationDigestService (même package). */
   void logAdminDigest(final int nbEmails, final int nbPush, final int nbErreurs) {
     try {
       final String metaJson =
@@ -61,6 +63,7 @@ final class NotificationDigestStats {
     }
   }
 
+  /* package-private : appelé par NotificationDigestService (même package). */
   void enregistrerStat(final long dureeMs, final int nbNotifies, final String erreur) {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
@@ -86,6 +89,7 @@ final class NotificationDigestStats {
     }
   }
 
+  /* package-private : appelé par NotificationDigestService (même package). */
   static String formaterDate(final String dateIso) {
     final LocalDate date = LocalDate.parse(dateIso);
     return DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)

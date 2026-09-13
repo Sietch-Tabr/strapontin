@@ -46,6 +46,7 @@ final class EmailDigestTemplate {
 
   private EmailDigestTemplate() {}
 
+  /* package-private : appelé par NotificationEmailDigestService (même package). */
   static String construireCorpsEmail(
       final String sujet,
       final List<NotificationDigestService.ConcertNotif> concerts,

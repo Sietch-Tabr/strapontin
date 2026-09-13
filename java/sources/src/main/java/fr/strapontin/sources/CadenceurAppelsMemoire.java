@@ -24,6 +24,7 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   /**
    * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
    */
+  /* package-private : instancié uniquement au sein du package sources. */
   CadenceurAppelsMemoire(final long delaiMinMs) {
     this.delaiMinMs = delaiMinMs;
   }

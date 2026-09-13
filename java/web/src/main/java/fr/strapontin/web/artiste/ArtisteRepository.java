@@ -32,6 +32,7 @@ class ArtisteRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   ArtisteRepository(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -42,6 +43,7 @@ class ArtisteRepository {
    * @param userId identifiant de l'utilisateur
    * @return liste des artistes suivis
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   List<ArtisteUtilisateur> listerPourUtilisateur(final String userId) {
     return jdbc.query(
         """
@@ -64,6 +66,7 @@ class ArtisteRepository {
    * @param pattern valeur LIKE (ex. {@code "%pattern%"})
    * @return noms d'artistes distincts (max 5)
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   List<String> rechercherEnBase(final String pattern) {
     return jdbc.queryForList(
         """
@@ -83,6 +86,7 @@ class ArtisteRepository {
    * @param artisteId UUID stable de l'artiste
    * @return {@code true} si déjà présent
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   boolean existePourUtilisateur(final String userId, final UUID artisteId) {
     return !jdbc.queryForList(
             """
@@ -100,6 +104,7 @@ class ArtisteRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre d'artistes suivis
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   int compterPourUtilisateur(final String userId) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
@@ -117,6 +122,7 @@ class ArtisteRepository {
    * @param tokens tokens significatifs (≥3 caractères) du nom recherché
    * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   List<Map<String, Object>> chercherCandidatsParTokens(final Set<String> tokens) {
     if (tokens.isEmpty()) {
       return List.of();
@@ -148,6 +154,7 @@ class ArtisteRepository {
    * @param nomNorm nom normalisé (clé unique)
    * @return UUID stable de l'artiste (existant ou nouvellement créé)
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   UUID upsertArtiste(final String nom, final String nomNorm) {
     return jdbc.queryForObject(
         """
@@ -167,6 +174,7 @@ class ArtisteRepository {
    * @param nom nom affiché
    * @param artisteId UUID stable de l'artiste dans le référentiel global
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   void ajouter(final String userId, final String nom, final UUID artisteId) {
     jdbc.update(
         """
@@ -183,6 +191,7 @@ class ArtisteRepository {
    * @param source nom de la source (ex. {@code "wikidata"}, {@code "deezer"})
    * @param identifiantExterne identifiant dans la source externe
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   void enregistrerArtisteSource(
       final UUID artisteId, final String source, final String identifiantExterne) {
     jdbc.update(
@@ -210,6 +219,7 @@ class ArtisteRepository {
    * @param wikidataId Q-ID Wikidata (peut être {@code null})
    * @param deezerId identifiant Deezer (peut être {@code null})
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   void mettreAJourIdsWikidata(
       final UUID artisteId, final String wikidataId, final String deezerId) {
     final Map<String, Object> params = new HashMap<>();
@@ -233,6 +243,7 @@ class ArtisteRepository {
    * @param artisteId UUID stable de l'artiste à supprimer
    * @return le nombre de lignes réellement supprimées (0 si l'artiste n'était pas suivi)
    */
+  /* package-private : accès SQL réservé à ArtisteService (même package), pattern service/repository. */
   int supprimer(final String userId, final UUID artisteId) {
     return jdbc.update(
         """

@@ -49,6 +49,7 @@ class SalleRechercheTicketmasterService {
    * @param objectMapper désérialiseur JSON
    * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker
    */
+  /* package-private : instancié uniquement par SalleService (même package). */
   SalleRechercheTicketmasterService(
       final ConfigService configService,
       final RestClient restClient,
@@ -64,6 +65,7 @@ class SalleRechercheTicketmasterService {
    * @param terme terme de recherche saisi par l'utilisateur
    * @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en cas d'échec réseau
    */
+  /* package-private : appelé par SalleService (même package). */
   List<ResultatSalle> rechercher(final String terme) {
     final Optional<String> tmKey = configService.lireConfig("TICKETMASTER_API_KEY");
     if (tmKey.isEmpty()) {

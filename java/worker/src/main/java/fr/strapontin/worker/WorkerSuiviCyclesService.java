@@ -90,6 +90,7 @@ public class WorkerSuiviCyclesService {
   /**
    * @return nombre de types de job détectés en retard
    */
+  /* package-private : visibilité élargie pour WorkerSuiviCyclesServiceTest (même package). */
   int verifier() {
     final Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;

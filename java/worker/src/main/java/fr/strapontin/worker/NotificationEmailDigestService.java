@@ -29,6 +29,7 @@ class NotificationEmailDigestService {
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
   private final NotificationDigestService.FabriqueResend fabriqueResend;
 
+  /* package-private : instancié uniquement par NotificationDigestService (même package). */
   NotificationEmailDigestService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker,
@@ -38,6 +39,7 @@ class NotificationEmailDigestService {
     this.fabriqueResend = fabriqueResend;
   }
 
+  /* package-private : appelé par NotificationDigestService (même package). */
   boolean envoyerEmail(
       final String email, final List<NotificationDigestService.ConcertNotif> concerts) {
     if (concerts.isEmpty()) {

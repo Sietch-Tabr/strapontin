@@ -52,6 +52,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * {@code User-Agent} honnête de bot — jamais une chaîne {@code Mozilla/5.0...}, voir Javadoc du
    * constructeur par défaut pour la justification complète.
    */
+  /* package-private : visibilité élargie pour EventimSourceTest (même package). */
   static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private final RestClient restClient;
@@ -97,6 +98,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    *
    * @return le builder configuré, prêt à recevoir une requestFactory
    */
+  /* package-private : visibilité élargie pour EventimSourceTest (même package). */
   static RestClient.Builder builderAvecHeadersParDefaut() {
     return RestClient.builder()
         .defaultHeader("Accept", "application/json, text/plain, */*")
@@ -221,9 +223,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   private record ResultatPageEventim(List<ConcertBrut> concerts, int total, boolean succes) {
     // Page légitimement vide (0 résultat, pas d'échec HTTP) — distinct de ECHEC ci-dessous.
+    /* package-private : membre du record privé ResultatPageEventim, sans portée réelle hors de EventimSource. */
     static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0, true);
+    /* package-private : membre du record privé ResultatPageEventim, sans portée réelle hors de EventimSource. */
     static final ResultatPageEventim ECHEC = new ResultatPageEventim(List.of(), 0, false);
 
+    /* package-private : membre du record privé ResultatPageEventim, sans portée réelle hors de EventimSource. */
     boolean estVide() {
       return concerts.isEmpty();
     }

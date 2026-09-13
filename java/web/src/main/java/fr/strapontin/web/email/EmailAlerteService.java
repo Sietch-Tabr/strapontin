@@ -42,6 +42,7 @@ public class EmailAlerteService {
   private final ConfigService configService;
   private final EmailSender emailSender;
 
+  /* package-private : instancié uniquement par Spring (même package). */
   EmailAlerteService(final ConfigService configService, final EmailSender emailSender) {
     this.configService = configService;
     this.emailSender = emailSender;

@@ -33,8 +33,10 @@ final class ExtracteurVenteTM {
 
   private ExtracteurVenteTM() {}
 
+  /* package-private : appelé par MapeurEvenementTM (même package). */
   record InfosVenteTM(String statut, String presaleDebut, String presaleNom) {}
 
+  /* package-private : appelé par MapeurEvenementTM (même package). */
   static boolean estEvenementPackage(final String url) {
     return url != null && URL_PACKAGE_TM.matcher(url).find();
   }
@@ -43,6 +45,7 @@ final class ExtracteurVenteTM {
   // une vente qui n'a simplement pas encore ouvert (prévente à venir, ou vente publique future) —
   // seule la seconde doit être requalifiée en "presale" plutôt que rester "offsale" à tort.
   @SuppressWarnings(UNCHECKED)
+  /* package-private : appelé par MapeurEvenementTM (même package). */
   static InfosVenteTM extraireInfosVenteTM(
       final Map<String, Object> dates, final Map<String, Object> evt) {
     final Map<String, String> statusMap = (Map<String, String>) dates.get("status");

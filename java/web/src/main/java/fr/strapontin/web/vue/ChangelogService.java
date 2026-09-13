@@ -23,6 +23,7 @@ class ChangelogService {
   /**
    * @param jdbc template JDBC nommé
    */
+  /* package-private : instancié uniquement par le contrôleur du même package. */
   ChangelogService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -34,6 +35,7 @@ class ChangelogService {
    * @param versionCourante version actuelle de l'application
    * @return {@code true} si la dernière version vue diffère de {@code versionCourante}
    */
+  /* package-private : appelé par le contrôleur du même package. */
   boolean estNonVu(final String userId, final String versionCourante) {
     final List<String> lignes =
         jdbc.queryForList(
@@ -55,6 +57,7 @@ class ChangelogService {
    * @param userId identifiant de l'utilisateur
    * @param versionCourante version actuelle de l'application
    */
+  /* package-private : appelé par le contrôleur du même package. */
   void marquerVue(final String userId, final String versionCourante) {
     jdbc.update(
         """

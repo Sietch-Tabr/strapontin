@@ -50,6 +50,7 @@ public class NotificationDigestService {
    * Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail} testable
    * sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
    */
+  /* package-private : fabrique interne substituable en test, utilisée uniquement par cette classe. */
   @FunctionalInterface
   interface FabriqueResend {
     /**
@@ -60,6 +61,7 @@ public class NotificationDigestService {
   }
 
   /** Fabrique du client push VAPID — même motif que {@link FabriqueResend}. */
+  /* package-private : fabrique interne substituable en test, utilisée aussi par NotificationPushDigestService (même package). */
   @FunctionalInterface
   interface FabriquePushService {
     /**
@@ -99,6 +101,7 @@ public class NotificationDigestService {
    * Constructeur de test — permet d'injecter des fabriques Resend/PushService mockables pour
    * exercer le chemin nominal de succès de l'envoi email/push.
    */
+  /* package-private : instancié uniquement par Spring et les tests du même package. */
   NotificationDigestService(
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
@@ -151,6 +154,7 @@ public class NotificationDigestService {
       List<ConcertNotif> concertsEmail,
       List<ConcertNotif> concertsPush) {}
 
+  /* package-private : type de retour interne, utilisé par NotificationPushDigestService (même package). */
   record ConfigNotifUser(
       boolean notifArtistes,
       boolean notifSalles,
@@ -314,6 +318,7 @@ public class NotificationDigestService {
     stats.enregistrerStat(dureeMs, nbNotifies, erreur);
   }
 
+  /* package-private : appelé par NotificationPushDigestService/EmailDigestTemplate (même package). */
   static String formaterDate(final String dateIso) {
     return NotificationDigestStats.formaterDate(dateIso);
   }

@@ -48,7 +48,7 @@ public class EnrichissementSallesService {
 
   private static final Logger LOG = LoggerFactory.getLogger(EnrichissementSallesService.class);
 
-  static final int TAILLE_LOT_PERSISTANCE = 25;
+  private static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
   // OverpassSalleSource et WikidataSalleSource) — laisse Overpass et Wikidata respirer entre deux
   // lots plutôt que d'enchaîner immédiatement, sur des instances publiques déjà sous tension.

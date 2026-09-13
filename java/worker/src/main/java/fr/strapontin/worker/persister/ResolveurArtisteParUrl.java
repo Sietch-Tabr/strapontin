@@ -43,6 +43,7 @@ class ResolveurArtisteParUrl {
   /**
    * @param jdbc template JDBC injecté par Spring
    */
+  /* package-private : instancié uniquement par PersisteurConcertsDb (même package). */
   ResolveurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -54,6 +55,7 @@ class ResolveurArtisteParUrl {
    * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour Eventim
    *     uniquement
    */
+  /* package-private : appelé par PersisteurConcertsDb (même package). */
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> avecUrl =
         concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();

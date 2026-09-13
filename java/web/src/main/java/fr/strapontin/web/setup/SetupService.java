@@ -117,6 +117,7 @@ public class SetupService {
    * @throws ErreurMetier si les données sont invalides
    */
   @Transactional(isolation = Isolation.SERIALIZABLE)
+  /* package-private : requis pour l'auto-invocation via le proxy self (@Transactional/SERIALIZABLE). */
   void initialiserTransactionnel(final RequeteSetup requete) {
     if (estDejaConfiguree()) {
       throw new RessourceDejaExistante("L'application est déjà configurée.");

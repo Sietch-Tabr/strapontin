@@ -46,6 +46,7 @@ final class AlignementReportTM {
 
   private record CleUrlDate(String url, LocalDate date) {}
 
+  /* package-private : instancié uniquement par PersisteurConcertsDb (même package). */
   AlignementReportTM(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -67,6 +68,7 @@ final class AlignementReportTM {
    *
    * @param concerts concerts après réconciliation, avant upsert
    */
+  /* package-private : appelé par PersisteurConcertsDb (même package). */
   void aligner(final List<ValeurConcert> concerts) {
     final List<ValeurConcert> reports =
         concerts.stream()

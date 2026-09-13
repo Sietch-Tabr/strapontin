@@ -37,7 +37,7 @@ public class SuiviSanteSourcesService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SuiviSanteSourcesService.class);
 
-  static final int SEUIL_SUSPECT = 3;
+  private static final int SEUIL_SUSPECT = 3;
 
   /**
    * Préfixes abrégés utilisés par le déclenchement manuel (voir {@code TriggerController}, {@code

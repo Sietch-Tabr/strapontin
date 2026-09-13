@@ -318,6 +318,7 @@ public class ArtisteService {
    * @param nomsNorm noms normalisés des artistes déjà suivis
    * @return {@code true} si un artiste déjà suivi contient la recherche
    */
+  /* package-private : visibilité élargie pour ArtisteServiceTest (même package). */
   static boolean contientCorrespondancePartielle(
       final String rechercheNorm, final Set<String> nomsNorm) {
     return nomsNorm.stream().anyMatch(nom -> nom.contains(rechercheNorm));
@@ -359,6 +360,7 @@ public class ArtisteService {
    *     ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
    *     motif que {@link #resoudreDeezerId}.
    */
+  /* package-private : substituable par mock partiel dans ArtisteServiceTest (même package). */
   List<SuggestionArtiste> rechercherWikidata(final String terme) {
     try {
       final String url =
@@ -400,6 +402,7 @@ public class ArtisteService {
    * @return identifiant Deezer, ou {@code null} si absent ou en cas d'échec réseau
    */
   @SuppressWarnings("unchecked")
+  /* package-private : substituable par mock partiel dans ArtisteServiceTest (même package). */
   String resoudreDeezerId(final String wikidataId) {
     try {
       final String url =
@@ -452,6 +455,7 @@ public class ArtisteService {
    *     <p>Package-private pour permettre un test par substitution ({@code Mockito.spy}), même
    *     motif que {@link #rechercherWikidata}.
    */
+  /* package-private : substituable par mock partiel dans ArtisteServiceTest (même package). */
   List<SuggestionArtiste> rechercherDeezer(final String terme) {
     try {
       final String url =

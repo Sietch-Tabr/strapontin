@@ -27,7 +27,7 @@ public final class CorrespondanceSalle {
   private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
   private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
   // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre "le", "de", "la"…).
-  static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
+  private static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
   private static final double SEUIL_JACCARD_SALLE = 0.5;
   // Critère pivot : token commun ≥ LONGUEUR_MIN_PIVOT + Jaccard > SEUIL_JACCARD_PIVOT.
   // Couvre les variantes Eventim "grand kursaal"/"kursaal besancon" (Jaccard=0.33, pivot≥7).

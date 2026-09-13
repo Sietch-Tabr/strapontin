@@ -30,6 +30,7 @@ final class TicketmasterHealthCheck {
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
 
+  /* package-private : instancié uniquement par TicketmasterSource (même package). */
   TicketmasterHealthCheck(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this.apiKey = apiKey;
@@ -37,10 +38,12 @@ final class TicketmasterHealthCheck {
     this.cadenceur = cadenceur;
   }
 
+  /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierVenue(final String venueId) {
     return verifierRessource("/venues/" + venueId + ".json");
   }
 
+  /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierAttraction(final String attractionId) {
     return verifierRessource("/attractions/" + attractionId + ".json");
   }
@@ -67,6 +70,7 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par TicketmasterSource (même package). */
   String recupererNomAttraction(final String attractionId) {
     final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
@@ -87,6 +91,7 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par TicketmasterSource (même package). */
   List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
     final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
@@ -125,6 +130,7 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par TicketmasterSource (même package). */
   int compterEventsVenue(final String venueId) {
     final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")

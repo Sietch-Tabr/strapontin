@@ -30,6 +30,7 @@ final class ResolveurArtisteParNomNorm {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : instancié uniquement par ReconciliateurArtistes (même package). */
   ResolveurArtisteParNomNorm(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -45,6 +46,7 @@ final class ResolveurArtisteParNomNorm {
    * @param concerts concerts après résolution par source
    * @return liste enrichie avec les {@code artiste_id} résolus par nom
    */
+  /* package-private : appelé par ReconciliateurArtistes (même package). */
   List<ValeurConcert> resoudre(final List<ValeurConcert> concerts) {
     final List<String> nomsNormSansId =
         concerts.stream()

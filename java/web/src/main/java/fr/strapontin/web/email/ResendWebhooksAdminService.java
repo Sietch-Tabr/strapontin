@@ -51,6 +51,7 @@ public class ResendWebhooksAdminService {
    * d'injection HTTP public (contrairement à {@code RestClient} pour les autres sources), la
    * fabrique est le seul moyen de substituer un client {@link Resend} mocké en test.
    */
+  /* package-private : injection de test (fabrique Resend personnalisée). */
   ResendWebhooksAdminService(
       final ConfigService configService, final Function<String, Resend> fabriqueResend) {
     this.configService = configService;

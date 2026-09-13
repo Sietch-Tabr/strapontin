@@ -30,6 +30,7 @@ public class EmailServiceAdmin {
   /**
    * @param emailSender infrastructure d'envoi Resend partagée
    */
+  /* package-private : instancié uniquement par Spring (même package). */
   EmailServiceAdmin(final EmailSender emailSender) {
     this.emailSender = emailSender;
   }

@@ -39,6 +39,7 @@ class EmailSender {
   private final JdbcTemplate jdbcTemplate;
   private final GestionQuotaResend gestionQuotaResend;
 
+  /* package-private : instancié uniquement par EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   EmailSender(
       final ConfigService configService,
       final JdbcTemplate jdbcTemplate,
@@ -48,8 +49,10 @@ class EmailSender {
     this.gestionQuotaResend = gestionQuotaResend;
   }
 
+  /* package-private : type de retour interne, utilisé par EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   record ContexteEmail(Resend client, String expediteur, String baseUrl) {}
 
+  /* package-private : appelé par EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   Optional<ContexteEmail> obtenirContexte() {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
@@ -83,10 +86,12 @@ class EmailSender {
    *
    * @return l'adresse à notifier, vide si ni {@code ADMIN_ALERT_EMAIL} ni aucun admin n'existe
    */
+  /* package-private : appelé par EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   Optional<String> obtenirDestinataireAlerte() {
     return configService.lireConfig("ADMIN_ALERT_EMAIL").or(this::obtenirEmailPremierAdmin);
   }
 
+  /* package-private : appelé par EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   void envoyer(
       final ContexteEmail ctx,
       final String destinataire,

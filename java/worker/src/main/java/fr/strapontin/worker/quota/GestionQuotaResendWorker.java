@@ -43,8 +43,8 @@ public class GestionQuotaResendWorker {
 
   private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaResendWorker.class);
 
-  static final int LIMITE_JOUR = 100;
-  static final int LIMITE_MOIS = 3000;
+  private static final int LIMITE_JOUR = 100;
+  private static final int LIMITE_MOIS = 3000;
   private static final int MAX_TENTATIVES = 3;
   private static final String CLE_QUOTA = "RESEND_QUOTA_JSON";
 
@@ -165,6 +165,7 @@ public class GestionQuotaResendWorker {
    * transaction dédiée même si appelée depuis une transaction déjà ouverte.
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
+  /* package-private : requis pour l'auto-invocation via le proxy self (@Transactional/SERIALIZABLE). */
   boolean reserverEnvoiTransactionnel() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {

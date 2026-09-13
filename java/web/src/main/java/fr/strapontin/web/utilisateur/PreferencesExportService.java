@@ -24,6 +24,7 @@ final class PreferencesExportService {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : instancié uniquement par PreferencesService (même package). */
   PreferencesExportService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -34,6 +35,7 @@ final class PreferencesExportService {
    * @param userId identifiant de l'utilisateur
    * @return l'export complet
    */
+  /* package-private : appelé par PreferencesService (même package). */
   ExportComplet exporter(final String userId) {
     final List<ArtisteExport> artistes = exporterArtistes(userId);
     final List<SalleExport> salles = exporterSalles(userId);

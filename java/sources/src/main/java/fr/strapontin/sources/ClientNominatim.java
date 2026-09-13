@@ -50,6 +50,7 @@ public final class ClientNominatim {
    * @param restClient client HTTP à utiliser
    * @param cadenceur limiteur de débit à utiliser
    */
+  /* package-private : injection de test (RestClient/CadenceurAppels personnalisés). */
   ClientNominatim(final RestClient restClient, final CadenceurAppels cadenceur) {
     this.restClient = restClient;
     this.cadenceur = cadenceur;

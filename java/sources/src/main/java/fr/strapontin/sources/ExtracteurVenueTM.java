@@ -21,8 +21,10 @@ final class ExtracteurVenueTM {
 
   private ExtracteurVenueTM() {}
 
+  /* package-private : appelé par MapeurEvenementTM (même package). */
   record InfosVenueTM(String salle, String ville, String dept, String salleSourceId) {}
 
+  /* package-private : appelé par MapeurEvenementTM (même package). */
   static InfosVenueTM extraireInfosVenueTM(final Map<String, Object> venue) {
     return new InfosVenueTM(
         extraireNomSalleTM(venue),

@@ -26,6 +26,7 @@ final class EtablisseurSession {
   private EtablisseurSession() {}
 
   /** Résultat de {@link #ouvrir} : la session nouvellement créée et l'utilisateur associé. */
+  /* package-private : appelé par le contrôleur du même package. */
   record SessionOuverte(HttpSession session, UtilisateurDetails details) {}
 
   /**
@@ -34,6 +35,7 @@ final class EtablisseurSession {
    * @param messageErreur message de l'exception si le principal n'est pas du type attendu
    * @return la session nouvellement créée et les détails de l'utilisateur authentifié
    */
+  /* package-private : appelé par le contrôleur du même package. */
   static SessionOuverte ouvrir(
       final Authentication auth, final HttpServletRequest httpRequest, final String messageErreur) {
     final HttpSession sessionExistante = httpRequest.getSession(false);

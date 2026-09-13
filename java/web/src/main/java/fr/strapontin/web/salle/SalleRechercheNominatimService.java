@@ -55,6 +55,7 @@ class SalleRechercheNominatimService {
    * @param restClient client HTTP partagé
    * @param objectMapper désérialiseur JSON
    */
+  /* package-private : instancié uniquement par SalleService (même package). */
   SalleRechercheNominatimService(
       final ConfigService configService,
       final RestClient restClient,
@@ -74,6 +75,7 @@ class SalleRechercheNominatimService {
    * @return suggestions filtrées par type de lieu pertinent, vide si aucune ou en cas d'échec
    *     réseau
    */
+  /* package-private : appelé par SalleService (même package). */
   List<ResultatSalle> rechercher(final String terme) {
     try {
       final String contact =
@@ -119,6 +121,7 @@ class SalleRechercheNominatimService {
    * @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
    */
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par SalleService (même package). */
   List<ResultatSalle> parseNominatimResultats(final String json) {
     final List<ResultatSalle> resultats = new ArrayList<>();
     try {

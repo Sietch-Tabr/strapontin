@@ -34,6 +34,7 @@ final class ClientSparqlWikidata {
 
   private static final Logger LOG = LoggerFactory.getLogger(ClientSparqlWikidata.class);
 
+  /* package-private : réutilisée par WikidataSalleSource/WikidataArtisteSource (même package). */
   static final String BASE_URL = "https://query.wikidata.org/sparql";
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
@@ -62,6 +63,7 @@ final class ClientSparqlWikidata {
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
   /** Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s). */
+  /* package-private : constructeur par défaut réservé aux tests du même package. */
   ClientSparqlWikidata() {
     this(construireRestClientParDefaut());
   }
@@ -71,6 +73,7 @@ final class ClientSparqlWikidata {
    *
    * @param restClient client HTTP à utiliser
    */
+  /* package-private : injection de test (RestClient personnalisé). */
   ClientSparqlWikidata(final RestClient restClient) {
     this.restClient = restClient;
   }
@@ -103,6 +106,7 @@ final class ClientSparqlWikidata {
    * @param sparql corps de la requête SPARQL
    * @return corps JSON désérialisé, ou une map vide en cas d'échec définitif
    */
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   Map<String, Object> executer(final String sparql) {
     // un appel logique = un executer, quel que soit le nombre de retries internes —
     // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
@@ -152,6 +156,7 @@ final class ClientSparqlWikidata {
    *
    * @return le bilan depuis le dernier prélèvement
    */
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   fr.strapontin.core.BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
@@ -191,6 +196,7 @@ final class ClientSparqlWikidata {
    * @return valeur textuelle, ou null si absente
    */
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   static String valeurBinding(final Map<String, Object> binding, final String cle) {
     final Map<String, Object> v = (Map<String, Object>) binding.get(cle);
     return v != null ? (String) v.get("value") : null;
@@ -205,6 +211,7 @@ final class ClientSparqlWikidata {
    * @return la liste des bindings, vide si absente
    */
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   static List<Map<String, Object>> extraireBindings(final Map<String, Object> data) {
     final Map<String, Object> results = (Map<String, Object>) data.get("results");
     if (results == null) {
@@ -222,6 +229,7 @@ final class ClientSparqlWikidata {
    * @param s la chaîne à insérer dans le littéral
    * @return la chaîne échappée
    */
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   static String echapperLitteral(final String s) {
     return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
@@ -234,6 +242,7 @@ final class ClientSparqlWikidata {
    * @param qId identifiant à vérifier
    * @return {@code true} si le format est un Q-ID valide
    */
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   static boolean estQIdValide(final String qId) {
     return qId != null && MOTIF_Q_ID.matcher(qId).matches();
   }
@@ -248,6 +257,7 @@ final class ClientSparqlWikidata {
   // Le tableau représente une paire de coordonnées, pas une collection à agréger — les appelants
   // testent explicitement null pour distinguer "absent" d'un tableau vide, sémantiques différentes.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
+  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   static double[] parserCoordonnees(final String wkt) {
     if (wkt == null) {
       return null;

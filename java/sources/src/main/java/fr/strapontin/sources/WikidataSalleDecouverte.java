@@ -95,6 +95,7 @@ final class WikidataSalleDecouverte {
   // à {@code CoherenceWikidataSalleService} de revalider les {@code wikidata_id} déjà stockés
   // contre ces mêmes types (garde-fou introduit après coup ne s'appliquant pas rétroactivement aux
   // découvertes antérieures).
+  /* package-private : réutilisé par WikidataSalleSource (même package). */
   static final Set<String> TYPES_EXCLUS =
       Set.of(
           "Q3455524",
@@ -114,12 +115,14 @@ final class WikidataSalleDecouverte {
    * @param client client SPARQL Wikidata partagé
    * @param cache cache des enrichissements découverts, partagé avec {@link WikidataSalleSource}
    */
+  /* package-private : instancié uniquement par WikidataSalleSource (même package). */
   WikidataSalleDecouverte(
       final ClientSparqlWikidata client, final Cache<String, EnrichissementSalle> cache) {
     this.client = client;
     this.cache = cache;
   }
 
+  /* package-private : appelé par WikidataSalleSource (même package). */
   Optional<EnrichissementSalle> decouvrir(final SalleAEnrichir salle) {
     Optional<EnrichissementSalle> resultat = decouvrirParNom(salle, salle.nom());
     if (resultat.isPresent()) {

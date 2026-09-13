@@ -38,6 +38,7 @@ class FetchSallesExecutor {
   private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
 
+  /* package-private : instancié uniquement par Spring (même package). */
   FetchSallesExecutor(
       final List<SourceConcerts> sources,
       final PersisterConcerts persisterConcerts,
@@ -86,6 +87,7 @@ class FetchSallesExecutor {
    *
    * @param identifiantsStr identifiants préfixés séparés par des virgules
    */
+  /* package-private : appelé par WorkerFetchService (même package). */
   void executerUneSalle(final String identifiantsStr) {
     LOG.info("fetch:salle démarré identifiants={}", identifiantsStr);
     if (!commun.obtenirGestionQuotaTM().verifier("fetch:salle")) {
@@ -125,6 +127,7 @@ class FetchSallesExecutor {
    * @param salleIdsCibles identifiants ({@code salles.id}, texte) à retenter, ou {@code null} pour
    *     un cycle complet (toutes les salles suivies avec source configurée)
    */
+  /* package-private : appelé par WorkerFetchService (même package). */
   void executerToutes(final List<String> salleIdsCibles) {
     final boolean retry = salleIdsCibles != null;
     LOG.info("fetch:salles:all démarré{}", retry ? " (retry ciblé)" : "");

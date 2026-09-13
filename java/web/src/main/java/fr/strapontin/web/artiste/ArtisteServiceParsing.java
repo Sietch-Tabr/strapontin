@@ -39,6 +39,7 @@ final class ArtisteServiceParsing {
   private ArtisteServiceParsing() {}
 
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par ArtisteService (même package). */
   static List<SuggestionArtiste> parseWikidataResultats(
       final ObjectMapper objectMapper, final String json) {
     final List<SuggestionArtiste> resultats = new ArrayList<>();
@@ -71,6 +72,7 @@ final class ArtisteServiceParsing {
   }
 
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par ArtisteService (même package). */
   static List<SuggestionArtiste> parseDeezerResultats(
       final ObjectMapper objectMapper, final String json) {
     final List<SuggestionArtiste> resultats = new ArrayList<>();

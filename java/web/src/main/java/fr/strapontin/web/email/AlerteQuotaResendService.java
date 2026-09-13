@@ -32,6 +32,7 @@ class AlerteQuotaResendService {
   private final GestionQuotaResend gestionQuotaResend;
   private final EmailAlerteService emailAlerteService;
 
+  /* package-private : instancié uniquement par Spring (même package). */
   AlerteQuotaResendService(
       final GestionQuotaResend gestionQuotaResend, final EmailAlerteService emailAlerteService) {
     this.gestionQuotaResend = gestionQuotaResend;
@@ -43,6 +44,7 @@ class AlerteQuotaResendService {
    * pour la fenêtre jour/mois courante.
    */
   @Scheduled(cron = "0 */15 * * * *")
+  /* package-private : appelé par le scheduler Spring (même package). */
   void verifier() {
     final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
     if (!gestionQuotaResend.seuilFranchiNonSignale(compteur)) {

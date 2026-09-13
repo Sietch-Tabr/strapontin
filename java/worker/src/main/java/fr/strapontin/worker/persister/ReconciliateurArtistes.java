@@ -97,6 +97,7 @@ public class ReconciliateurArtistes {
   // ArtisteExistant porte les champs de la ligne courante ; computeIfAbsent n'instancie une
   // ArrayList que pour les clés réellement nouvelles — rien de hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> reconcilierArtistes(final List<ValeurConcert> lot) {
     final Map<String, String> remplacementsIntraLot = construireRemplacementsArtisteIntraLot(lot);
     final List<ValeurConcert> lotApresIntraLot =
@@ -146,6 +147,7 @@ public class ReconciliateurArtistes {
    *
    * @param lot concerts après résolution des identités sources
    */
+  /* package-private : appelé par PersisterConcerts (même package). */
   void corrigerParUrl(final List<ValeurConcert> lot) {
     correcteurArtisteParUrl.corrigerParUrl(lot);
   }
@@ -337,6 +339,7 @@ public class ReconciliateurArtistes {
    * @param concerts concerts après résolution par source
    * @return liste enrichie avec les {@code artiste_id} résolus par nom
    */
+  /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> resoudreArtisteParNomNorm(final List<ValeurConcert> concerts) {
     return resolveurArtisteParNomNorm.resoudre(concerts);
   }

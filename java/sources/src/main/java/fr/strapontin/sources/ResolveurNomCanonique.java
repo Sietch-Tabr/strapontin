@@ -135,7 +135,7 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     private double meilleurePopularite = -1;
     private double meilleurePopulariteExacte = -1;
 
-    Map<String, Object> resultat() {
+    private Map<String, Object> resultat() {
       return meilleurExact != null ? meilleurExact : meilleur;
     }
   }

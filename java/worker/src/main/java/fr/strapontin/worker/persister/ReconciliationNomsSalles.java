@@ -43,6 +43,7 @@ class ReconciliationNomsSalles {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : instancié uniquement par PersisterConcerts (même package). */
   ReconciliationNomsSalles(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -87,6 +88,7 @@ class ReconciliationNomsSalles {
    */
   // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
     final Map<String, String> remplacementsIntraLot = construireRemplacementsIntraLot(lot);
     final List<ValeurConcert> lotApresIntraLot =
@@ -250,6 +252,7 @@ class ReconciliationNomsSalles {
    * @param concerts concerts avec {@code salleSourceId} résolus
    * @param cachesSalles map sourceId → UUID
    */
+  /* package-private : appelé par PersisterConcerts (même package). */
   void absorberRenommagesSalles(
       final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     final Map<UUID, String> meilleurNom = new HashMap<>();

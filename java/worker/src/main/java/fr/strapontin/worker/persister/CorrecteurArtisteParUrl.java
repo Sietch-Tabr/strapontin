@@ -26,6 +26,7 @@ final class CorrecteurArtisteParUrl {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : instancié uniquement par ReconciliateurArtistes (même package). */
   CorrecteurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -45,6 +46,7 @@ final class CorrecteurArtisteParUrl {
    *
    * @param lot concerts après résolution des identités sources
    */
+  /* package-private : appelé par ReconciliateurArtistes (même package). */
   void corrigerParUrl(final List<ValeurConcert> lot) {
     final List<ValeurConcert> candidats =
         lot.stream()

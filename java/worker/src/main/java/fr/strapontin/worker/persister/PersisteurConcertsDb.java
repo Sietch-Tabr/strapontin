@@ -70,6 +70,7 @@ public class PersisteurConcertsDb {
    */
   // computeIfAbsent n'instancie une ArrayList que pour les sources réellement nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  /* package-private : appelé par PersisterConcerts (même package). */
   Map<String, UUID> resoudreUuidsParSource(final List<ValeurConcert> concerts, final String type) {
     final Map<String, List<String>> parSource = new HashMap<>();
     for (final ValeurConcert c : concerts) {
@@ -112,6 +113,7 @@ public class PersisteurConcertsDb {
    * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour Eventim
    *     uniquement — voir {@link ResolveurArtisteParUrl}
    */
+  /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
     return resolveurArtisteParUrl.resoudreParUrl(concerts);
   }
@@ -133,6 +135,7 @@ public class PersisteurConcertsDb {
    *
    * @param concerts concerts après réconciliation, avant upsert
    */
+  /* package-private : appelé par PersisterConcerts (même package). */
   void alignerHeureReportTM(final List<ValeurConcert> concerts) {
     alignementReportTM.aligner(concerts);
   }
@@ -370,6 +373,7 @@ public class PersisteurConcertsDb {
    * @param valeurs concerts réconciliés et dédupliqués du lot
    * @return décompte des événements créés et mis à jour du lot
    */
+  /* package-private : appelé par PersisterConcerts (même package). */
   PersisterConcerts.ResultatPersistance upsertLot(final List<ValeurConcert> valeurs) {
     if (valeurs.isEmpty()) {
       return new PersisterConcerts.ResultatPersistance(0, 0);

@@ -38,6 +38,7 @@ final class SalleSuggestions {
    * @param liste suggestions déjà collectées (modifiée en place)
    * @param candidat nouveau résultat externe à intégrer
    */
+  /* package-private : appelé par SalleService (même package). */
   static void fusionnerOuAjouter(final List<ResultatSalle> liste, final ResultatSalle candidat) {
     for (int i = 0; i < liste.size(); i++) {
       final ResultatSalle existant = liste.get(i);
@@ -79,6 +80,7 @@ final class SalleSuggestions {
    * @param clesNorm clés normalisées des salles déjà suivies
    * @return {@code true} si une salle déjà suivie contient la recherche
    */
+  /* package-private : appelé par SalleService (même package). */
   static boolean contientCorrespondancePartielle(
       final String rechercheNorm, final Set<String> clesNorm) {
     return clesNorm.stream().anyMatch(cle -> cle.contains(rechercheNorm));

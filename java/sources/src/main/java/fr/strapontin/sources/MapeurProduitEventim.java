@@ -38,6 +38,7 @@ final class MapeurProduitEventim {
    *     de qualifier d'incohérente ne doit jamais écraser une valeur déjà connue en base ({@code
    *     COALESCE(:ville, ville)} à la persistance)
    */
+  /* package-private : appelé par EventimSource (même package). */
   static String corrigerVilleEventim(final String ville, final String dept, final String salle) {
     if (ville == null || dept == null) {
       return ville;
@@ -67,6 +68,7 @@ final class MapeurProduitEventim {
    * @param dateStr chaîne de date ISO 8601
    * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
    */
+  /* package-private : appelé par EventimSource (même package). */
   static String[] parseDateEventim(final String dateStr) {
     Objects.requireNonNull(dateStr, "dateStr");
     final String datePart = dateStr.substring(0, 10);
@@ -89,6 +91,7 @@ final class MapeurProduitEventim {
    * @param titre titre de l'événement Eventim
    * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
    */
+  /* package-private : appelé par EventimSource (même package). */
   static String extraireNomArtiste(final String titre) {
     Objects.requireNonNull(titre, "titre");
     final String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
@@ -111,6 +114,7 @@ final class MapeurProduitEventim {
    * @return concert extrait, ou null si le produit est invalide
    */
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par EventimSource (même package). */
   static ConcertBrut mapper(
       final Map<String, Object> produit,
       final String artisteFallback,

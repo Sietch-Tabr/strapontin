@@ -74,6 +74,7 @@ public class ReconciliateurSalles {
   /**
    * @see ReconciliationNomsSalles#reconcilierSalles
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
     return reconciliationNoms.reconcilierSalles(lot);
   }
@@ -81,6 +82,7 @@ public class ReconciliateurSalles {
   /**
    * @see ReconciliationNomsSalles#absorberRenommagesSalles
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   void absorberRenommagesSalles(
       final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     reconciliationNoms.absorberRenommagesSalles(concerts, cachesSalles);
@@ -89,6 +91,7 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#upsertSalleSource
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   UUID upsertSalleSource(final ValeurConcert c) {
     return resolveurSalle.upsertSalleSource(c);
   }
@@ -96,6 +99,7 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#chercherSalleParTokens
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   UUID chercherSalleParTokens(final String nom, final String dept) {
     return resolveurSalle.chercherSalleParTokens(nom, dept);
   }
@@ -103,6 +107,7 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#chercherSalleParCleForte
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   UUID chercherSalleParCleForte(final ValeurConcert c) {
     return resolveurSalle.chercherSalleParCleForte(c);
   }
@@ -110,6 +115,7 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#raccrocherSallesParNomNorm
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {
     return resolveurSalle.raccrocherSallesParNomNorm(concerts);
   }
@@ -117,6 +123,7 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#deptsConnus
    */
+  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
   Map<UUID, String> deptsConnus(final Set<UUID> salleIds) {
     return resolveurSalle.deptsConnus(salleIds);
   }

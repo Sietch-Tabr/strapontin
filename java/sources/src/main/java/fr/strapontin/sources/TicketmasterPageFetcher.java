@@ -49,6 +49,7 @@ final class TicketmasterPageFetcher {
    * @param taillePage taille de page utilisée par l'appelant (pour le calcul du nombre de pages
    *     total dans le log de plafonnement)
    */
+  /* package-private : instancié uniquement par TicketmasterSource (même package). */
   TicketmasterPageFetcher(
       final RestClient restClient,
       final String apiKey,
@@ -67,14 +68,17 @@ final class TicketmasterPageFetcher {
    *     (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi les deux se traduisent
    *     identiquement par {@code concerts} vide et {@code total=0}.
    */
+  /* package-private : type de retour interne, utilisé par TicketmasterSource (même package). */
   record ResultatPage(
       List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota, boolean succes) {}
 
   /**
    * @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPage#succes}).
    */
+  /* package-private : type de retour interne, utilisé par TicketmasterSource (même package). */
   record ResultatMultiPage(List<ConcertBrut> concerts, boolean succes) {}
 
+  /* package-private : appelé par TicketmasterSource (même package). */
   ResultatPage fetchPage(
       final UriComponentsBuilder uriBase, final int numPage, final String artisteFallback) {
     cadenceur.attendre();
@@ -171,6 +175,7 @@ final class TicketmasterPageFetcher {
    * @return les concerts récupérés sur toutes les pages parcourues, et si toutes les pages ont été
    *     récupérées avec succès (voir {@link ResultatPage#succes})
    */
+  /* package-private : appelé par TicketmasterSource (même package). */
   ResultatMultiPage fetchToutesPages(
       final UriComponentsBuilder uriBase, final String artisteFallback, final String contexte) {
     final List<ConcertBrut> tousLesEvents = new ArrayList<>();

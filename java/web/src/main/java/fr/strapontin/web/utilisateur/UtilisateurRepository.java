@@ -32,6 +32,7 @@ class UtilisateurRepository {
   private final NamedParameterJdbcTemplate jdbc;
   private final ConfigCipher cipher;
 
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   UtilisateurRepository(
       final NamedParameterJdbcTemplate jdbc,
       @Value("${app.config.secret}") final String secretConfig) {
@@ -45,6 +46,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return emails, ou {@link Optional#empty()} si l'utilisateur n'existe pas
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   Optional<EmailsUtilisateur> lireEmails(final String userId) {
     return jdbc
         .query(
@@ -62,6 +64,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur courant (exclu)
    * @return {@code true} si l'identifiant est pris
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   boolean identifiantDejaUtilise(final String identifiant, final String userId) {
     return !jdbc.queryForList(
             "SELECT 1 FROM users WHERE lower(username) = :ident AND id != :userId",
@@ -81,6 +84,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @param identifiant nouvel identifiant (déjà validé, en minuscules)
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   void majIdentifiant(final String userId, final String identifiant) {
     jdbc.update(
         """
@@ -100,6 +104,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @param nouveauHash hash bcrypt du nouveau mot de passe
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   void changerMotDePasse(final String userId, final String nouveauHash) {
     jdbc.update(
         "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
@@ -114,6 +119,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @param secret secret Base32 TOTP en clair
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   void activerTotp(final String userId, final String secret) {
     jdbc.update(
         "UPDATE users SET two_factor_secret = :secret, two_factor_enabled = true WHERE id = :id",
@@ -131,6 +137,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return secret Base32 en clair, ou {@code null} si absent
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   String lireSecretTotp(final String userId) {
     final List<String> lignes =
         jdbc.queryForList(
@@ -155,6 +162,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre d'échecs, ou 0 si l'utilisateur n'existe pas
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   int lireEchecsTotp(final String userId) {
     final Integer echecs =
         jdbc.queryForObject(
@@ -169,6 +177,7 @@ class UtilisateurRepository {
    *
    * @param userId identifiant de l'utilisateur
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   void desactiverTotp(final String userId) {
     jdbc.update(
         "UPDATE users SET two_factor_secret = NULL, two_factor_enabled = false WHERE id = :id",
@@ -180,6 +189,7 @@ class UtilisateurRepository {
    *
    * @return nombre d'utilisateurs ayant le rôle {@code admin}
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   int compterAdmins() {
     final Integer n =
         jdbc.queryForObject(
@@ -192,6 +202,7 @@ class UtilisateurRepository {
    *
    * @param userId identifiant de l'utilisateur à supprimer
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   void supprimer(final String userId) {
     jdbc.update("DELETE FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
   }
@@ -205,6 +216,7 @@ class UtilisateurRepository {
    * @param userId identifiant de l'utilisateur
    * @return nombre de concerts non vus pour les artistes suivis
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   int compterNouveauxMatchesArtistes(final String userId) {
     final Integer count =
         jdbc.queryForObject(
@@ -228,5 +240,6 @@ class UtilisateurRepository {
   /**
    * Données email lues depuis la base (utilisées pour construire {@link ProfilUtilisateur}).
    */
+  /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   record EmailsUtilisateur(String email, String pendingEmail) {}
 }

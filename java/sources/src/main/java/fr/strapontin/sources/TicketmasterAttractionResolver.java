@@ -46,6 +46,7 @@ final class TicketmasterAttractionResolver {
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    * @param avertissementsAttractionIntrouvable cache de throttle des avertissements
    */
+  /* package-private : instancié uniquement par TicketmasterSource (même package). */
   TicketmasterAttractionResolver(
       final RestClient restClient,
       final String apiKey,
@@ -65,6 +66,7 @@ final class TicketmasterAttractionResolver {
    *
    * @return un nouveau cache de throttle
    */
+  /* package-private : appelé par TicketmasterSource (même package). */
   static Cache<String, Boolean> creerCacheAvertissementsParDefaut() {
     return Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build();
   }
@@ -80,6 +82,7 @@ final class TicketmasterAttractionResolver {
    * @return attractionId TM, ou null si aucun résultat exact dans les 10 premiers
    */
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par TicketmasterSource (même package). */
   String rechercherAttractionId(final String nom) {
     final String uri =
         UriComponentsBuilder.fromUriString(baseUrl + "/attractions.json")

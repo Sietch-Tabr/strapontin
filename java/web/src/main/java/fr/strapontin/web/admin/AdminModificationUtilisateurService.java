@@ -52,6 +52,7 @@ class AdminModificationUtilisateurService {
    * @param adminRevocationService révocation admin différée
    * @param emailServiceAdmin notification email de promotion admin
    */
+  /* package-private : instancié uniquement par AdminService (même package). */
   AdminModificationUtilisateurService(
       final NamedParameterJdbcTemplate jdbc,
       final LogAdminService logAdminService,
@@ -76,6 +77,7 @@ class AdminModificationUtilisateurService {
    *     (rétrogradation d'un admin) combinée à un autre champ
    */
   @Transactional
+  /* package-private : appelé par AdminService (même package). */
   void modifierUtilisateur(
       final String userId, final RequeteModifierUtilisateur requete, final String adminId) {
     final ChampsModification champs = validerEtNormaliser(requete, userId);

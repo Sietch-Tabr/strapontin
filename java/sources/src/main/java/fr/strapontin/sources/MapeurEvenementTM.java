@@ -47,6 +47,7 @@ final class MapeurEvenementTM {
    * @param heureStr valeur de localTime (peut être null ou "00:00:00" si non définie)
    * @return tableau à deux éléments : [date, heure] où heure peut être null
    */
+  /* package-private : visibilité élargie pour les tests du même package. */
   static String[] parseDateTM(final String dateStr, final String heureStr) {
     Objects.requireNonNull(dateStr, "dateStr");
     final String date = dateStr.substring(0, 10);
@@ -71,6 +72,7 @@ final class MapeurEvenementTM {
    * @param artisteFallback nom de l'artiste cherché (pour fetch:artiste uniquement), peut être null
    * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
    */
+  /* package-private : appelé par TicketmasterSource (même package). */
   static ConcertBrut mapper(final Map<String, Object> evt, final String artisteFallback) {
     try {
       return parseEvenementTM(evt, artisteFallback);

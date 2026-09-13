@@ -31,6 +31,7 @@ enum TypeEntiteSource {
   /**
    * @return nom de la table ({@code salle_sources} ou {@code artiste_sources})
    */
+  /* package-private : appelé par SuiviSanteSourcesService (même package). */
   String table() {
     return nomTable;
   }
@@ -38,6 +39,7 @@ enum TypeEntiteSource {
   /**
    * @return nom de la colonne de rattachement ({@code salle_id} ou {@code artiste_id})
    */
+  /* package-private : appelé par SuiviSanteSourcesService (même package). */
   String colonneId() {
     return nomColonneId;
   }

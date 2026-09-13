@@ -30,7 +30,7 @@ public class WatchdogWorkerService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WatchdogWorkerService.class);
 
-  static final int SEUIL_HEURES = 3;
+  private static final int SEUIL_HEURES = 3;
   private static final Duration SEUIL_INACTIVITE = Duration.ofHours(SEUIL_HEURES);
 
   private final NamedParameterJdbcTemplate jdbc;

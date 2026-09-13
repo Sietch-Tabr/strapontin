@@ -44,6 +44,7 @@ final class RaccrocheurSallesParNomNorm {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : instancié uniquement par ReconciliateurSalles (même package). */
   RaccrocheurSallesParNomNorm(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -52,6 +53,7 @@ final class RaccrocheurSallesParNomNorm {
    * @param concerts concerts après déduplication
    * @return liste enrichie avec les {@code salleId} résolus ou réalignés par nom_norm
    */
+  /* package-private : appelé par ReconciliateurSalles (même package). */
   List<ValeurConcert> raccrocher(final List<ValeurConcert> concerts) {
     final Set<UUID> salleIdsExistants = new HashSet<>();
     for (final ValeurConcert c : concerts) {

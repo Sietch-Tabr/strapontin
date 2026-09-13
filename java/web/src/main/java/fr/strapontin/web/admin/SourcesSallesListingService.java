@@ -34,6 +34,7 @@ class SourcesSallesListingService {
   /**
    * @param jdbc accès JDBC
    */
+  /* package-private : instancié uniquement par SourcesService (même package). */
   SourcesSallesListingService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -48,6 +49,7 @@ class SourcesSallesListingService {
    * @param nom filtre nom partiel (insensible à la casse), peut être null
    * @return page de résultats
    */
+  /* package-private : appelé par SourcesService (même package). */
   ReponseSallesSources lister(final boolean digitick, final int page, final String nom) {
     return digitick ? listerSallesAvecDigitick(page, nom) : listerSallesSansTmNiEventim(page, nom);
   }

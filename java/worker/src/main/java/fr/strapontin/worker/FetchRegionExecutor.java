@@ -39,6 +39,7 @@ class FetchRegionExecutor {
   private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
 
+  /* package-private : instancié uniquement par Spring (même package). */
   FetchRegionExecutor(
       final List<SourceConcerts> sources,
       final PersisterConcerts persisterConcerts,
@@ -56,6 +57,7 @@ class FetchRegionExecutor {
    * @param deptsCibles départements à retenter, ou {@code null} pour un cycle complet (tous les
    *     départements configurés)
    */
+  /* package-private : appelé par WorkerFetchService (même package). */
   void executer(final List<String> deptsCibles) {
     final boolean retry = deptsCibles != null;
     LOG.info("fetch:region démarré{}", retry ? " (retry ciblé)" : "");

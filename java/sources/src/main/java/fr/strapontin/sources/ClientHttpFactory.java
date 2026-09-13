@@ -27,6 +27,7 @@ final class ClientHttpFactory {
    * @param lecture   durée maximale d'attente d'une réponse une fois la connexion établie
    * @return fabrique configurée
    */
+  /* package-private : appelé par les clients HTTP du même package. */
   static SimpleClientHttpRequestFactory creerRequestFactory(
       final Duration connexion, final Duration lecture) {
     final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

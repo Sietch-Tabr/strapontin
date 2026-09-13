@@ -47,6 +47,7 @@ final class EventimAttractionResolver {
    * @param baseUrl URL de base de l'API exploration Eventim
    * @param webId identifiant web Eventim (paramètre {@code webId} de chaque requête)
    */
+  /* package-private : instancié uniquement par EventimSource (même package). */
   EventimAttractionResolver(
       final RestClient restClient,
       final CompteurBilanFetch compteurBilan,
@@ -65,6 +66,7 @@ final class EventimAttractionResolver {
    *
    * @return messages décrivant chaque containment accepté depuis le dernier prélèvement
    */
+  /* package-private : appelé par EventimSource (même package). */
   List<String> preleverContainmentsAcceptes() {
     verrouContainments.lock();
     try {
@@ -86,6 +88,7 @@ final class EventimAttractionResolver {
    * @return attractionId trouvé, ou {@code null} si aucune correspondance acceptable
    */
   @SuppressWarnings("unchecked")
+  /* package-private : appelé par EventimSource (même package). */
   String rechercherAttractionId(final String terme, final boolean identiteConfirmee) {
     final String uri = construireUriRechercheAttractions(terme);
 

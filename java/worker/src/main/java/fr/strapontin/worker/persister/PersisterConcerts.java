@@ -436,6 +436,7 @@ public class PersisterConcerts {
    * @return résultat du sous-lot
    */
   @Transactional
+  /* package-private : requis pour l'auto-invocation via le proxy self (transaction dédiée par lot). */
   ResultatPersistance persisterLotTransactionnel(final List<ConcertBrut> lot) {
     final List<ValeurConcert> valeursBrutes =
         lot.stream()

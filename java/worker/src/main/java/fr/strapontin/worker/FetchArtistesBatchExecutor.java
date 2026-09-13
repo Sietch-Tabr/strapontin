@@ -39,6 +39,7 @@ class FetchArtistesBatchExecutor {
   private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
 
+  /* package-private : instancié uniquement par Spring (même package). */
   FetchArtistesBatchExecutor(
       final List<SourceConcerts> sources,
       final PersisterConcerts persisterConcerts,
@@ -56,6 +57,7 @@ class FetchArtistesBatchExecutor {
    * @param artisteIdsCibles identifiants ({@code artistes.id}, texte) à retenter, ou {@code null}
    *     pour un cycle complet
    */
+  /* package-private : appelé par WorkerFetchService (même package). */
   void executer(final List<String> artisteIdsCibles) {
     final boolean retry = artisteIdsCibles != null;
     LOG.info("fetch:artistes:batch démarré{}", retry ? " (retry ciblé)" : "");
