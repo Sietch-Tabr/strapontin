@@ -43,10 +43,8 @@ class ResolveurArtisteParUrl {
   /**
    * @param jdbc template JDBC injecté par Spring
    */
-  /*
-   * package-private : instancié uniquement par PersisteurConcertsDb (même
-   * package).
-   */
+  /* package-private : instancié uniquement par PersisteurConcertsDb (même
+   * package). */
   ResolveurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

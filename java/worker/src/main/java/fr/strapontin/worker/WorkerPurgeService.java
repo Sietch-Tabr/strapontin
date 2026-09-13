@@ -40,10 +40,8 @@ public class WorkerPurgeService {
   // doit pas rester affiché indéfiniment sans jamais évoluer. ×10 correspond à
   // environ 5 jours de silence continu (cron ~11 cycles/jour), largement
   // au-delà de toute panne transitoire de source déjà observée.
-  /*
-   * package-private : visibilité élargie pour WorkerPurgeServiceTest (même
-   * package).
-   */
+  /* package-private : visibilité élargie pour WorkerPurgeServiceTest (même
+   * package). */
   static final int SEUIL_PURGE_ABSENCES = WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES * 10;
 
   // Un concert sans salle_id ni artiste_id n'est jamais retouché par aucun job

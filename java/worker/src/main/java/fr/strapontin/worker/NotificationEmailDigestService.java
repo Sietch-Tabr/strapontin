@@ -29,10 +29,8 @@ class NotificationEmailDigestService {
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
   private final NotificationDigestService.FabriqueResend fabriqueResend;
 
-  /*
-   * package-private : instancié uniquement par NotificationDigestService (même
-   * package).
-   */
+  /* package-private : instancié uniquement par NotificationDigestService (même
+   * package). */
   NotificationEmailDigestService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker,

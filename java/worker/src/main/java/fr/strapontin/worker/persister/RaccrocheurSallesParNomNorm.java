@@ -44,10 +44,8 @@ final class RaccrocheurSallesParNomNorm {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /*
-   * package-private : instancié uniquement par ReconciliateurSalles (même
-   * package).
-   */
+  /* package-private : instancié uniquement par ReconciliateurSalles (même
+   * package). */
   RaccrocheurSallesParNomNorm(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

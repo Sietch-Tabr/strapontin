@@ -45,9 +45,8 @@ public class WebConfiguration implements WebMvcConfigurer {
   /**
    * ObjectMapper partagé : dates ISO-8601, module java.time.
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper()
@@ -62,9 +61,8 @@ public class WebConfiguration implements WebMvcConfigurer {
    *
    * <p>Timeout connexion : 5 s — timeout lecture : 10 s.
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   RestClient restClient() {
     final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -81,9 +79,8 @@ public class WebConfiguration implements WebMvcConfigurer {
    * @param jdbc accès à la base partagée entre web et worker
    * @return cadenceur adossé à Postgres
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(

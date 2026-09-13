@@ -25,10 +25,8 @@ final class PreferencesExportService {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /*
-   * package-private : instancié uniquement par PreferencesService (même
-   * package).
-   */
+  /* package-private : instancié uniquement par PreferencesService (même
+   * package). */
   PreferencesExportService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

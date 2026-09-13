@@ -54,9 +54,8 @@ public final class HealthCheckSallesTM {
   /**
    * @return tableau {@code [verifiees, redecouvertes, ambigues]}
    */
-  /*
-   * package-private : appelé par ReconciliationNocturneService (même package).
-   */
+  /* package-private : appelé par ReconciliationNocturneService (même
+   * package). */
   int[] verifier() {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
@@ -167,9 +166,8 @@ public final class HealthCheckSallesTM {
    * Signale les slugs Digitick suspects — pas de redécouverte automatique
    * (slugs manuels).
    */
-  /*
-   * package-private : appelé par ReconciliationNocturneService (même package).
-   */
+  /* package-private : appelé par ReconciliationNocturneService (même
+   * package). */
   void alerterDigitickSuspect() {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(

@@ -43,9 +43,8 @@ public class SessionSecurityConfiguration {
    *
    * @return l'encodeur de mots de passe
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
@@ -65,9 +64,8 @@ public class SessionSecurityConfiguration {
    * @param eventPublisher l'éditeur d'événements applicatif Spring
    * @return l'AuthenticationManager configuré
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   AuthenticationManager authenticationManager(
       final UserDetailsService userDetailsService,
@@ -90,9 +88,8 @@ public class SessionSecurityConfiguration {
    *
    * @return le customizer de dépôt de sessions
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionTimeoutCustomizer() {
     return repository -> repository.setDefaultMaxInactiveInterval(Duration.ofDays(30));
@@ -104,9 +101,8 @@ public class SessionSecurityConfiguration {
    *
    * @return le publisher d'événements de session
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   HttpSessionEventPublisher httpSessionEventPublisher() {
     return new HttpSessionEventPublisher();
@@ -127,9 +123,8 @@ public class SessionSecurityConfiguration {
    * @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
    * @return le sérialiseur de cookies configuré
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   CookieSerializer cookieSerializer(
       @Value("${app.cookie.secure:true}") final boolean cookieSecure) {

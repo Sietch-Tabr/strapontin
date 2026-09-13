@@ -107,10 +107,8 @@ public class AdminRevocationService {
    *     pas admin (400)
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  /*
-   * package-private : requis pour l'auto-invocation via le proxy self
-   * (@Transactional/SERIALIZABLE).
-   */
+  /* package-private : requis pour l'auto-invocation via le proxy self
+   * (@Transactional/SERIALIZABLE). */
   void initierRevocationAdminTransactionnel(final String userId, final String adminId) {
     final List<Map<String, Object>> cible =
         jdbc.queryForList(

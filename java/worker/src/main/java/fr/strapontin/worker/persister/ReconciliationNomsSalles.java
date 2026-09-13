@@ -43,10 +43,8 @@ class ReconciliationNomsSalles {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /*
-   * package-private : instancié uniquement par PersisterConcerts (même
-   * package).
-   */
+  /* package-private : instancié uniquement par PersisterConcerts (même
+   * package). */
   ReconciliationNomsSalles(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

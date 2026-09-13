@@ -26,10 +26,8 @@ final class CorrecteurArtisteParUrl {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /*
-   * package-private : instancié uniquement par ReconciliateurArtistes (même
-   * package).
-   */
+  /* package-private : instancié uniquement par ReconciliateurArtistes (même
+   * package). */
   CorrecteurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

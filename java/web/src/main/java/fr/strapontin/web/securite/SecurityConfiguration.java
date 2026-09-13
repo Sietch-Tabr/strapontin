@@ -62,9 +62,8 @@ public class SecurityConfiguration {
    * @param sessionRepository le dépôt de sessions Spring Session JDBC
    * @return le registre de sessions
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   SpringSessionBackedSessionRegistry<? extends Session> sessionRegistry(
       final FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
@@ -88,9 +87,8 @@ public class SecurityConfiguration {
   // modifiable.
   @Bean
   @SuppressWarnings("PMD.SignatureDeclareThrowsException")
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   SecurityFilterChain securityFilterChain(
       final HttpSecurity http,
       final CorrelationIdFilter correlationIdFilter,

@@ -14,10 +14,8 @@ package fr.strapontin.web.securite;
  */
 final class TotpSuccessHandler {
 
-  /*
-   * package-private : réutilisé par AuthController/TotpGuardFilter (même
-   * package).
-   */
+  /* package-private : réutilisé par AuthController/TotpGuardFilter (même
+   * package). */
   static final String SESSION_TOTP_EN_ATTENTE = "TOTP_EN_ATTENTE";
 
   private TotpSuccessHandler() {}

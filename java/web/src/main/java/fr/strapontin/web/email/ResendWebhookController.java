@@ -129,10 +129,8 @@ public class ResendWebhookController {
    * @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta {@code
    *     logs_admin} pour permettre un rejeu ciblé depuis l'admin
    */
-  /*
-   * package-private : visibilité élargie pour ResendWebhookControllerTest (même
-   * package).
-   */
+  /* package-private : visibilité élargie pour ResendWebhookControllerTest (même
+   * package). */
   void traiterEvenement(final String corpsRaw, final String svixId) {
     try {
       final JsonNode racine = objectMapper.readTree(corpsRaw);

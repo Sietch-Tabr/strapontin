@@ -98,196 +98,172 @@ public class Planificateur {
         .build();
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailFetchArtistesBatch() {
     return creerJobDetail(FetchArtistesBatchJob.class, "fetchArtistesBatch");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerFetchArtistesBatch(final JobDetail jobDetailFetchArtistesBatch) {
     return creerTrigger(
         jobDetailFetchArtistesBatch, "triggerFetchArtistesBatch", cronFetchArtistes);
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailFetchRegion() {
     return creerJobDetail(FetchRegionJob.class, "fetchRegion");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerFetchRegion(final JobDetail jobDetailFetchRegion) {
     return creerTrigger(jobDetailFetchRegion, "triggerFetchRegion", cronFetchRegion);
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailFetchSallesAll() {
     return creerJobDetail(FetchSallesAllJob.class, "fetchSallesAll");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerFetchSallesAll(final JobDetail jobDetailFetchSallesAll) {
     return creerTrigger(jobDetailFetchSallesAll, "triggerFetchSallesAll", cronFetchSalles);
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailRecalculerMatches() {
     return creerJobDetail(RecalculerMatchesJob.class, "recalculerMatches");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerRecalculerMatches(final JobDetail jobDetailRecalculerMatches) {
     return creerTrigger(
         jobDetailRecalculerMatches, "triggerRecalculerMatches", cronRecalculerMatches);
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailPurgerConcerts() {
     return creerJobDetail(PurgerConcertsJob.class, "purgerConcerts");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerPurgerConcerts(final JobDetail jobDetailPurgerConcerts) {
     return creerTrigger(jobDetailPurgerConcerts, "triggerPurgerConcerts", "0 0 0 * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailPurgerSalles() {
     return creerJobDetail(PurgerSallesJob.class, "purgerSalles");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerPurgerSalles(final JobDetail jobDetailPurgerSalles) {
     return creerTrigger(jobDetailPurgerSalles, "triggerPurgerSalles", "0 5 0 * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailPurgerArtistes() {
     return creerJobDetail(PurgerArtistesJob.class, "purgerArtistes");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerPurgerArtistes(final JobDetail jobDetailPurgerArtistes) {
     return creerTrigger(jobDetailPurgerArtistes, "triggerPurgerArtistes", "0 6 0 * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailPurgerLogsAdmin() {
     return creerJobDetail(PurgerLogsAdminJob.class, "purgerLogsAdmin");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerPurgerLogsAdmin(final JobDetail jobDetailPurgerLogsAdmin) {
     return creerTrigger(jobDetailPurgerLogsAdmin, "triggerPurgerLogsAdmin", "0 15 0 * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailNotifierDigest() {
     return creerJobDetail(NotifierDigestJob.class, "notifierDigest");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerNotifierDigest(final JobDetail jobDetailNotifierDigest) {
     return creerTrigger(jobDetailNotifierDigest, "triggerNotifierDigest", "0 0 8 * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailRevoquerAdmins() {
     return creerJobDetail(RevoquerAdminsJob.class, "revoquerAdmins");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerRevoquerAdmins(final JobDetail jobDetailRevoquerAdmins) {
     return creerTrigger(jobDetailRevoquerAdmins, "triggerRevoquerAdmins", "0 0 * * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailReconciliationNocturne() {
     return creerJobDetail(ReconciliationNocturneJob.class, "reconciliationNocturne");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerReconciliationNocturne(final JobDetail jobDetailReconciliationNocturne) {
     return creerTrigger(
         jobDetailReconciliationNocturne, "triggerReconciliationNocturne", "0 0 3 * * ?");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   JobDetail jobDetailSuiviCyclesJobs() {
     return creerJobDetail(SuiviCyclesJobsJob.class, "suiviCyclesJobs");
   }
 
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   Trigger triggerSuiviCyclesJobs(final JobDetail jobDetailSuiviCyclesJobs) {
     return creerTrigger(jobDetailSuiviCyclesJobs, "triggerSuiviCyclesJobs", "0 30 * * * ?");

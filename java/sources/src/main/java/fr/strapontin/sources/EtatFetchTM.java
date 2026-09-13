@@ -27,10 +27,8 @@ final class EtatFetchTM {
   private final AtomicInteger concertsManquesCumules = new AtomicInteger();
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /*
-   * package-private : instancié uniquement par TicketmasterSource (même
-   * package).
-   */
+  /* package-private : instancié uniquement par TicketmasterSource (même
+   * package). */
   EtatFetchTM() {}
 
   /**
@@ -39,10 +37,8 @@ final class EtatFetchTM {
    *
    * @return quota courant ou null
    */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   QuotaTM quota() {
     return dernierQuota.get();
   }
@@ -52,10 +48,8 @@ final class EtatFetchTM {
    *
    * @param quota nouveau quota, ignoré si {@code null}
    */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   void mettreAJourQuota(final QuotaTM quota) {
     if (quota != null) {
       dernierQuota.set(quota);
@@ -68,10 +62,8 @@ final class EtatFetchTM {
    *
    * @param nombre nombre de concerts manqués à ajouter
    */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   void ajouterConcertsManques(final int nombre) {
     concertsManquesCumules.addAndGet(nombre);
   }
@@ -82,28 +74,22 @@ final class EtatFetchTM {
    *
    * @return le nombre de concerts manqués depuis le dernier prélèvement
    */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   int preleverConcertsManques() {
     return concertsManquesCumules.getAndSet(0);
   }
 
   /** Enregistre un appel HTTP effectué. */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   void enregistrerAppel() {
     compteurBilan.enregistrerAppel();
   }
 
   /** Enregistre une erreur d'appel HTTP. */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   void enregistrerErreur() {
     compteurBilan.enregistrerErreur();
   }
@@ -114,10 +100,8 @@ final class EtatFetchTM {
    *
    * @return le bilan depuis le dernier prélèvement
    */
-  /*
-   * package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
-   * (même package).
-   */
+  /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher
+   * (même package). */
   BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }

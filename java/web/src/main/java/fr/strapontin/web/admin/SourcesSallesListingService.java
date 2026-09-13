@@ -34,9 +34,8 @@ class SourcesSallesListingService {
   /**
    * @param jdbc accès JDBC
    */
-  /*
-   * package-private : instancié uniquement par SourcesService (même package).
-   */
+  /* package-private : instancié uniquement par SourcesService (même
+   * package). */
   SourcesSallesListingService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

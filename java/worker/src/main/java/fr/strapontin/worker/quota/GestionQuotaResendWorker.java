@@ -167,10 +167,8 @@ public class GestionQuotaResendWorker {
    * une transaction déjà ouverte.
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  /*
-   * package-private : requis pour l'auto-invocation via le proxy self
-   * (@Transactional/SERIALIZABLE).
-   */
+  /* package-private : requis pour l'auto-invocation via le proxy self
+   * (@Transactional/SERIALIZABLE). */
   boolean reserverEnvoiTransactionnel() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {

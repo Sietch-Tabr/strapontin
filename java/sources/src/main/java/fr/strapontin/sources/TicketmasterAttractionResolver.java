@@ -48,10 +48,8 @@ final class TicketmasterAttractionResolver {
    * @param avertissementsAttractionIntrouvable cache de throttle des
    *     avertissements
    */
-  /*
-   * package-private : instancié uniquement par TicketmasterSource (même
-   * package).
-   */
+  /* package-private : instancié uniquement par TicketmasterSource (même
+   * package). */
   TicketmasterAttractionResolver(
       final RestClient restClient,
       final String apiKey,

@@ -16,10 +16,8 @@ import java.util.stream.Collectors;
  */
 final class NomsJobs {
 
-  /*
-   * package-private : réutilisé par LogAdminJobListener/TriggerController (même
-   * package).
-   */
+  /* package-private : réutilisé par LogAdminJobListener/TriggerController (même
+   * package). */
   static final Map<String, String> PAR_CLE_QUARTZ =
       Map.ofEntries(
           Map.entry("fetchArtistesBatch", "fetch:artistes:batch"),
@@ -35,10 +33,8 @@ final class NomsJobs {
           Map.entry("reconciliationNocturne", "reconciliation:nocturne"),
           Map.entry("suiviCyclesJobs", "suivi:cycles-jobs"));
 
-  /*
-   * package-private : réutilisé par LogAdminJobListener/TriggerController (même
-   * package).
-   */
+  /* package-private : réutilisé par LogAdminJobListener/TriggerController (même
+   * package). */
   static final Map<String, String> CLE_QUARTZ_PAR_TYPE_JOB =
       PAR_CLE_QUARTZ.entrySet().stream()
           .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));

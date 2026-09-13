@@ -44,10 +44,8 @@ class NotificationPushDigestService {
   // logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
-  /*
-   * package-private : instancié uniquement par Spring et les tests du même
-   * package.
-   */
+  /* package-private : instancié uniquement par Spring et les tests du même
+   * package. */
   NotificationPushDigestService(
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
@@ -80,10 +78,8 @@ class NotificationPushDigestService {
    * Issue possible d'un envoi push individuel, selon le statut HTTP retourné
    * par le push service.
    */
-  /*
-   * package-private : type interne, utilisé uniquement au sein de cette
-   * classe/des tests du même package.
-   */
+  /* package-private : type interne, utilisé uniquement au sein de cette
+   * classe/des tests du même package. */
   enum ResultatEnvoiPush {
     SUCCES,
     ABONNEMENT_MORT,

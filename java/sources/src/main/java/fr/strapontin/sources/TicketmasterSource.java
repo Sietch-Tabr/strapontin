@@ -134,10 +134,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param restClient client HTTP Spring à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  /*
-   * package-private : maillon intermédiaire de la chaîne d'injection de test,
-   * jamais appelé hors de cette classe/des tests du même package.
-   */
+  /* package-private : maillon intermédiaire de la chaîne d'injection de test,
+   * jamais appelé hors de cette classe/des tests du même package. */
   TicketmasterSource(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this(
@@ -155,10 +153,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param restClient client HTTP Spring à utiliser
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    */
-  /*
-   * package-private : maillon intermédiaire de la chaîne d'injection de test,
-   * jamais appelé hors de cette classe/des tests du même package.
-   */
+  /* package-private : maillon intermédiaire de la chaîne d'injection de test,
+   * jamais appelé hors de cette classe/des tests du même package. */
   TicketmasterSource(
       final String apiKey,
       final RestClient restClient,
@@ -179,10 +175,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  /*
-   * package-private : constructeur d'injection de test complète, jamais appelé
-   * hors des tests du même package.
-   */
+  /* package-private : constructeur d'injection de test complète, jamais appelé
+   * hors des tests du même package. */
   TicketmasterSource(
       final String apiKey,
       final RestClient restClient,

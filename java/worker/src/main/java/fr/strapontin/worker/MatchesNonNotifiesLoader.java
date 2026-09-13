@@ -83,10 +83,8 @@ class MatchesNonNotifiesLoader {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /*
-   * package-private : instancié uniquement par NotificationDigestService (même
-   * package).
-   */
+  /* package-private : instancié uniquement par NotificationDigestService (même
+   * package). */
   MatchesNonNotifiesLoader(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -98,10 +96,8 @@ class MatchesNonNotifiesLoader {
    * @param configsUtilisateurs préférences de notification de chaque utilisateur
    * @param parUtilisateur concerts non notifiés, groupés par utilisateur
    */
-  /*
-   * package-private : type de retour interne, utilisé par
-   * NotificationDigestService (même package).
-   */
+  /* package-private : type de retour interne, utilisé par
+   * NotificationDigestService (même package). */
   record MatchesGroupes(
       Map<String, String> emailsUtilisateurs,
       Map<String, NotificationDigestService.ConfigNotifUser> configsUtilisateurs,

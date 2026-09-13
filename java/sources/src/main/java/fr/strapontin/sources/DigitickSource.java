@@ -153,10 +153,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    *     {@code salleSourceId}
    * @return liste de concerts filtrés
    */
-  /*
-   * package-private : visibilité élargie pour DigitickSourceTest (même
-   * package).
-   */
+  /* package-private : visibilité élargie pour DigitickSourceTest (même
+   * package). */
   static List<ConcertBrut> parserConcerts(final String html, final String slug) {
     final Document doc = Jsoup.parse(html);
     final List<Element> evenements = doc.select(SEL_EVENEMENTS);
@@ -257,10 +255,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
    * @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
    */
-  /*
-   * package-private : visibilité élargie pour DigitickSourceTest (même
-   * package).
-   */
+  /* package-private : visibilité élargie pour DigitickSourceTest (même
+   * package). */
   static String normaliserCasse(final String nom) {
     if (nom == null || nom.isBlank()) {
       return nom;
@@ -292,10 +288,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   // l'appelant teste explicitement null pour distinguer "format invalide" d'un
   // tableau vide, sémantiques différentes.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-  /*
-   * package-private : visibilité élargie pour DigitickSourceTest (même
-   * package).
-   */
+  /* package-private : visibilité élargie pour DigitickSourceTest (même
+   * package). */
   static String[] parserDatetime(final String datetime) {
     if (datetime == null || datetime.length() < 10) {
       return null;

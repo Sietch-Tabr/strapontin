@@ -30,10 +30,8 @@ final class ResolveurArtisteParNomNorm {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /*
-   * package-private : instancié uniquement par ReconciliateurArtistes (même
-   * package).
-   */
+  /* package-private : instancié uniquement par ReconciliateurArtistes (même
+   * package). */
   ResolveurArtisteParNomNorm(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

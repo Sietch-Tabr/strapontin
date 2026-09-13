@@ -31,10 +31,8 @@ final class TicketmasterHealthCheck {
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
 
-  /*
-   * package-private : instancié uniquement par TicketmasterSource (même
-   * package).
-   */
+  /* package-private : instancié uniquement par TicketmasterSource (même
+   * package). */
   TicketmasterHealthCheck(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this.apiKey = apiKey;

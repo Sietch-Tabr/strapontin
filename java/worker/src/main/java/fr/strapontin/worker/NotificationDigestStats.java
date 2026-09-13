@@ -33,10 +33,8 @@ final class NotificationDigestStats {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper jackson;
 
-  /*
-   * package-private : instancié uniquement par NotificationDigestService (même
-   * package).
-   */
+  /* package-private : instancié uniquement par NotificationDigestService (même
+   * package). */
   NotificationDigestStats(final NamedParameterJdbcTemplate jdbc, final ObjectMapper jackson) {
     this.jdbc = jdbc;
     this.jackson = jackson;

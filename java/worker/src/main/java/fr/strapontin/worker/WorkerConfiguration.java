@@ -33,9 +33,8 @@ public class WorkerConfiguration {
    *
    * @return instance partagée
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper();
@@ -48,9 +47,8 @@ public class WorkerConfiguration {
    * @param listener le listener à enregistrer
    * @return le customizer Spring Boot
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   SchedulerFactoryBeanCustomizer globalJobListeners(final LogAdminJobListener listener) {
     return factory -> factory.setGlobalJobListeners(listener);
@@ -64,9 +62,8 @@ public class WorkerConfiguration {
    * @param jdbc accès à la base partagée entre web et worker
    * @return cadenceur adossé à Postgres
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
@@ -83,9 +80,8 @@ public class WorkerConfiguration {
    * @param cadenceurTicketmaster cadenceur partagé inter-processus
    * @return instance configurée avec la clé API
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   TicketmasterSource ticketmasterSource(
       final ConfigServiceWorker configService, final CadenceurAppels cadenceurTicketmaster) {
@@ -104,9 +100,8 @@ public class WorkerConfiguration {
    *
    * @return instance avec User-Agent par défaut
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   EventimSource eventimSource() {
     return new EventimSource();
@@ -117,9 +112,8 @@ public class WorkerConfiguration {
    *
    * @return instance avec User-Agent par défaut
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   DigitickSource digitickSource() {
     return new DigitickSource();
@@ -130,9 +124,8 @@ public class WorkerConfiguration {
    *
    * @return instance configurée
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   ResolveurNomCanonique resolveurNomCanonique() {
     return new ResolveurNomCanonique();
@@ -145,9 +138,8 @@ public class WorkerConfiguration {
    *
    * @return instance avec RestClient et cadenceur (1 req/s) par défaut
    */
-  /*
-   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
-   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   ClientNominatim clientNominatim() {
     return new ClientNominatim();

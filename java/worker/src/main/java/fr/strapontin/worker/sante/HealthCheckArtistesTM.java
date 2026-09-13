@@ -74,9 +74,8 @@ public final class HealthCheckArtistesTM {
    *
    * @return nombre d'incohérences détectées
    */
-  /*
-   * package-private : appelé par ReconciliationNocturneService (même package).
-   */
+  /* package-private : appelé par ReconciliationNocturneService (même
+   * package). */
   int verifierNoms() {
     final List<Map<String, Object>> lies =
         jdbc.queryForList(
@@ -207,9 +206,8 @@ public final class HealthCheckArtistesTM {
             nomAttraction));
   }
 
-  /*
-   * package-private : appelé par ReconciliationNocturneService (même package).
-   */
+  /* package-private : appelé par ReconciliationNocturneService (même
+   * package). */
   void verifierVivacite() {
     final List<Map<String, Object>> suspects =
         jdbc.queryForList(

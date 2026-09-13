@@ -46,10 +46,8 @@ final class AlignementReportTM {
 
   private record CleUrlDate(String url, LocalDate date) {}
 
-  /*
-   * package-private : instancié uniquement par PersisteurConcertsDb (même
-   * package).
-   */
+  /* package-private : instancié uniquement par PersisteurConcertsDb (même
+   * package). */
   AlignementReportTM(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

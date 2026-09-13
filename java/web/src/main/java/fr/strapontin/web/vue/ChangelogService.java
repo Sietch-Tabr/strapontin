@@ -23,9 +23,8 @@ class ChangelogService {
   /**
    * @param jdbc template JDBC nommé
    */
-  /*
-   * package-private : instancié uniquement par le contrôleur du même package.
-   */
+  /* package-private : instancié uniquement par le contrôleur du même
+   * package. */
   ChangelogService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

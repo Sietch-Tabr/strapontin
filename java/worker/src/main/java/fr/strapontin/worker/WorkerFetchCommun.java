@@ -103,9 +103,8 @@ public class WorkerFetchCommun {
   /**
    * @return accès JDBC partagé
    */
-  /*
-   * package-private : accesseur réservé aux exécuteurs de fetch (même package).
-   */
+  /* package-private : accesseur réservé aux exécuteurs de fetch (même
+   * package). */
   NamedParameterJdbcTemplate obtenirJdbc() {
     return jdbc;
   }
@@ -113,9 +112,8 @@ public class WorkerFetchCommun {
   /**
    * @return source Ticketmaster partagée
    */
-  /*
-   * package-private : accesseur réservé aux exécuteurs de fetch (même package).
-   */
+  /* package-private : accesseur réservé aux exécuteurs de fetch (même
+   * package). */
   TicketmasterSource obtenirTm() {
     return tm;
   }
@@ -123,9 +121,8 @@ public class WorkerFetchCommun {
   /**
    * @return gestion du quota Ticketmaster partagée
    */
-  /*
-   * package-private : accesseur réservé aux exécuteurs de fetch (même package).
-   */
+  /* package-private : accesseur réservé aux exécuteurs de fetch (même
+   * package). */
   GestionQuotaTM obtenirGestionQuotaTM() {
     return gestionQuotaTM;
   }

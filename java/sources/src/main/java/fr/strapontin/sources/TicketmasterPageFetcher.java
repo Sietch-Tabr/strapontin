@@ -50,10 +50,8 @@ final class TicketmasterPageFetcher {
    * @param taillePage taille de page utilisée par l'appelant (pour le calcul du nombre de pages
    *     total dans le log de plafonnement)
    */
-  /*
-   * package-private : instancié uniquement par TicketmasterSource (même
-   * package).
-   */
+  /* package-private : instancié uniquement par TicketmasterSource (même
+   * package). */
   TicketmasterPageFetcher(
       final RestClient restClient,
       final String apiKey,
@@ -73,10 +71,8 @@ final class TicketmasterPageFetcher {
    *     faute de quoi les deux se traduisent identiquement par
    *     {@code concerts} vide et {@code total=0} .
    */
-  /*
-   * package-private : type de retour interne, utilisé par TicketmasterSource
-   * (même package).
-   */
+  /* package-private : type de retour interne, utilisé par TicketmasterSource
+   * (même package). */
   record ResultatPage(
       List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota, boolean succes) {}
 
@@ -84,10 +80,8 @@ final class TicketmasterPageFetcher {
    * @param succes {@code false} si au moins une page a échoué (voir
    *     {@link ResultatPage#succes} ).
    */
-  /*
-   * package-private : type de retour interne, utilisé par TicketmasterSource
-   * (même package).
-   */
+  /* package-private : type de retour interne, utilisé par TicketmasterSource
+   * (même package). */
   record ResultatMultiPage(List<ConcertBrut> concerts, boolean succes) {}
 
   /* package-private : appelé par TicketmasterSource (même package). */
