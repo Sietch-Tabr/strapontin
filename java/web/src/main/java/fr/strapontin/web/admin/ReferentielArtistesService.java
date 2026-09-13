@@ -14,23 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Gestion du référentiel artistes pour l'onglet admin : liste paginée, édition du nom affiché,
- * fusion de doublons.
- *
- * <p>La fusion dédoublonne désormais les concerts en conflit avant remapping, à l'image de {@link
- * ReferentielSallesService#fusionner} : même si la contrainte unique {@code
- * uq_concerts_artiste_date_heure_salle} porte sur {@code artiste_norm} (texte, jamais en conflit
- * lors d'un remapping d'{@code artiste_id}), deux artistes distincts fusionnés peuvent chacun avoir
- * enregistré le même concert réel (même salle, même date/heure) sous un {@code artiste_norm}
- * textuel différent selon la source — sans ce nettoyage, les deux lignes subsistaient après fusion,
- * dupliquant le concert sur la fiche de l'artiste cible.
- *
- * <p>Le statut affiché est binaire ({@code a_jour}/{@code invalide}) : contrairement à {@link
- * ReferentielSallesService} (3 états basés sur {@code suspect_depuis}, compteur passif jugé fiable
- * pour les salles), le statut artiste dérive de {@code artiste_sources.necessite_intervention_le},
- * posée uniquement quand la vérification active nocturne a confirmé l'identifiant mort ET échoué à
- * en retrouver un nouveau — le compteur passif seul (trop de faux positifs sur des artistes sans
- * date à venir) ne suffit plus à qualifier un état intermédiaire {@code a_verifier}.
+ * Gestion du référentiel artistes pour l'onglet admin : liste paginée,
+ * édition du nom affiché, fusion de doublons (préserve les observations,
+ * statut a_jour/invalide — CLAUDE.md, Modèle événement canonique).
  *
  * @since 2.6.0
  * @author Kwaite
@@ -78,14 +64,10 @@ public class ReferentielArtistesService {
 
   /**
    * Liste paginée du référentiel artistes, filtrée par nom/statut.
-   *
    * @param page numéro de page (0-indexé)
    * @param nom filtre nom partiel (insensible à la casse), peut être null
-   * @param statut filtre {@code "a_jour"}/{@code "invalide"} (statut binaire — {@code "a_verifier"}
-   *     n'est jamais retourné pour un artiste), peut être null
-   * @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
-   *     — facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-   *     pagination
+   * @param statut filtre {@code "a_jour"}/{@code "invalide"}, peut être null
+   * @param wikidataManquant filtre les artistes sans {@code wikidata_id}
    * @return page de résultats
    */
   public ReponseReferentielArtistes lister(
@@ -175,11 +157,10 @@ public class ReferentielArtistesService {
   }
 
   /**
-   * Efface l'enrichissement automatique d'un artiste ({@code wikidata_id}, {@code deezer_id},
-   * {@code nom_affiche}) pour le remettre candidat à une nouvelle découverte au prochain cycle
-   * nocturne — nécessaire pour corriger une mauvaise correspondance automatique, l'enrichissement
-   * ne pouvant jamais s'auto-corriger via {@code COALESCE}.
-   *
+   * Efface l'enrichissement auto d'un artiste ({@code wikidata_id}/{@code
+   * deezer_id}/{@code nom_affiche}) pour le remettre candidat à une nouvelle
+   * découverte (corrige une mauvaise correspondance, jamais auto-corrigée
+   * via {@code COALESCE}).
    * @param artisteId UUID de l'artiste
    * @return {@code true} si l'artiste existe et a été réinitialisé
    */
@@ -202,17 +183,11 @@ public class ReferentielArtistesService {
   }
 
   /**
-   * Efface {@code necessite_intervention_le} sur toutes les sources d'un artiste sans fusion ni
-   * changement d'identifiant — action minimale pour un admin qui juge la divergence de nom TM
-   * acceptable (ex. convention d'affichage différente, cf. -M-/Matthieu Chédid).
-   *
-   * <p>{@code nom_tm_ignore} est aligné sur {@code nom_tm_incoherent} (le nom TM à l'origine de la
-   * divergence courante) pour que {@code ReconciliationNocturneService} ne resignale pas la même
-   * divergence à chaque cycle nocturne — seul un nouveau changement de nom TM redéclenchera le
-   * flag.
-   *
+   * Efface {@code necessite_intervention_le} sans fusion ni changement
+   * d'identifiant (divergence de nom TM jugée acceptable par un admin) —
+   * détail : CLAUDE.md, Santé/référentiel admin.
    * @param artisteId UUID de l'artiste
-   * @return {@code true} si au moins une ligne {@code artiste_sources} a été mise à jour
+   * @return {@code true} si au moins une ligne a été mise à jour
    */
   public boolean ignorerIntervention(final UUID artisteId) {
     final int nb =
@@ -234,17 +209,12 @@ public class ReferentielArtistesService {
   }
 
   /**
-   * Corrige directement l'identifiant Ticketmaster d'un artiste — alternative à la fusion pour un
-   * simple mauvais lien (attractionId erroné plutôt qu'un doublon de référentiel). Réinitialise le
-   * compteur de santé et efface {@code necessite_intervention_le} : un admin qui corrige
-   * manuellement l'identifiant confirme lui-même la nouvelle identité, il n'y a rien de plus à
-   * revérifier. Un conflit sur la PK {@code (source, identifiant_externe)} (identifiant déjà
-   * attribué à un autre artiste) remonte {@code DuplicateKeyException} vers l'appelant, traduite en
-   * 409 par {@code GlobalExceptionHandler}.
-   *
+   * Corrige directement l'identifiant Ticketmaster d'un artiste (alternative
+   * à la fusion) — réinitialise le compteur de santé, efface {@code
+   * necessite_intervention_le} ; conflit PK remonte en 409.
    * @param artisteId UUID de l'artiste
    * @param identifiantExterne nouvel attractionId Ticketmaster (non vide)
-   * @return {@code true} si l'artiste a une source {@code ticketmaster} et a été mis à jour
+   * @return {@code true} si l'artiste a une source ticketmaster mise à jour
    */
   public boolean corrigerIdentifiantTm(final UUID artisteId, final String identifiantExterne) {
     final int nb =
@@ -267,10 +237,11 @@ public class ReferentielArtistesService {
   }
 
   /**
-   * Modifie le nom affiché d'un artiste (override manuel prioritaire sur l'enrichissement auto).
-   *
+   * Modifie le nom affiché d'un artiste (override manuel prioritaire sur
+   * l'enrichissement auto).
    * @param artisteId UUID de l'artiste
-   * @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
+   * @param nomAffiche nouveau nom affiché, ou null pour revenir à
+   *     l'enrichissement automatique
    * @return {@code true} si l'artiste existe et a été mis à jour
    */
   public boolean modifierNomAffiche(final UUID artisteId, final String nomAffiche) {
@@ -285,12 +256,11 @@ public class ReferentielArtistesService {
   }
 
   /**
-   * Fusionne deux artistes : l'artiste source est absorbé par l'artiste cible (concerts,
-   * abonnements, sources externes réassignés), puis supprimé.
-   *
+   * Fusionne deux artistes : l'artiste source est absorbé par l'artiste
+   * cible (concerts, abonnements, sources externes), puis supprimé.
    * @param cibleId UUID de l'artiste à conserver
    * @param sourceId UUID de l'artiste à absorber
-   * @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
+   * @return {@code true} si fusionnée, {@code false} si UUID inconnu
    */
   @Transactional
   public boolean fusionner(final UUID cibleId, final UUID sourceId) {
@@ -409,13 +379,10 @@ public class ReferentielArtistesService {
   }
 
   /**
-   * Supprime, avant réassignation, les doublons d'{@code artiste_sources} qu'une fusion créerait
-   * sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante de {@code
-   * artiste_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants {@code
-   * ticketmaster} différents) peuvent coexister indéfiniment sur l'artiste fusionné sans jamais
-   * entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis {@code
-   * nb_zero_consecutifs} le plus bas) et supprime l'autre.
-   *
+   * Supprime, avant réassignation, les doublons d'{@code artiste_sources}
+   * qu'une fusion créerait sinon (PK {@code (source, identifiant_externe)}
+   * indépendante d'{@code artiste_id}) — garde la ligne la plus saine (non
+   * suspecte, puis {@code nb_zero_consecutifs} le plus bas).
    * @param cibleId UUID de l'artiste à conserver
    * @param sourceId UUID de l'artiste à absorber
    */
