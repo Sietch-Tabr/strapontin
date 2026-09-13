@@ -15,13 +15,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
- * Watchdog surveille l'activité du module worker toutes les heures.
- *
- * <p>Si aucun job réussi n'est enregistré depuis {@value #SEUIL_HEURES} heures, un email d'alerte
- * est envoyé à l'adresse retournée par {@link EmailAlerteService#obtenirDestinataireAlerte}. Une
- * nouvelle alerte ne peut être envoyée qu'après {@value #SEUIL_HEURES} heures depuis la dernière,
- * pour éviter le spam en cas de panne prolongée.
- *
+ * Watchdog surveille l'activité du worker toutes les heures — alerte
+ * email ({@link EmailAlerteService#obtenirDestinataireAlerte}) si
+ * aucun job réussi depuis {@value #SEUIL_HEURES} heures, jamais avant
+ * ce même délai depuis la dernière alerte (anti-spam).
  * @since 2.2.5
  * @author Kwaite
  */

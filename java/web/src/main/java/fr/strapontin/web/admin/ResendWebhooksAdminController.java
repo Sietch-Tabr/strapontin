@@ -17,13 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour la section admin « Webhooks Resend » — liste et rejeu des événements en
- * échec de livraison, sans exposer directement l'API Resend au frontend.
- *
- * <p>HTTP pur — délègue toute la logique métier à {@link ResendWebhooksAdminService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
- * /api/admin/**}).
- *
+ * Contrôleur REST pour la section admin « Webhooks Resend » — liste et
+ * rejeu des événements en échec de livraison — HTTP pur, délègue à
+ * {@link ResendWebhooksAdminService}, accessible aux seuls {@code ADMIN}.
  * @since 2.9.0
  * @author Kwaite
  */

@@ -21,12 +21,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour l'onglet admin « Salles » du référentiel.
- *
- * <p>HTTP pur — délègue toute la logique métier à {@link ReferentielSallesService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
- * /api/admin/**}).
- *
+ * Contrôleur REST pour l'onglet admin « Salles » du référentiel — HTTP
+ * pur, délègue à {@link ReferentielSallesService}, accessible aux
+ * seuls {@code ADMIN} (cf. {@code SecurityConfiguration}).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -44,14 +41,8 @@ public class ReferentielSallesController {
   }
 
   /**
-   * Liste paginée du référentiel salles.
-   *
-   * @param page numéro de page (0-indexé, défaut 0)
-   * @param nom filtre nom partiel
-   * @param ville filtre ville partielle
-   * @param dept filtre département exact
-   * @param statut filtre {@code a_jour}/{@code a_verifier}/{@code invalide}
-   * @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
+   * Liste paginée du référentiel salles — mêmes filtres que {@link
+   * ReferentielSallesService.FiltresRechercheSalles}.
    * @return 200 avec la page de résultats
    */
   // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP
@@ -95,12 +86,11 @@ public class ReferentielSallesController {
   }
 
   /**
-   * Réinitialise l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code
-   * nom_affiche}, {@code ville}) — corrige une mauvaise correspondance automatique (ex. homonyme
-   * international) en la remettant candidate à une nouvelle découverte.
-   *
+   * Réinitialise l'enrichissement auto d'une salle ({@code wikidata_id}/
+   * {@code nom_affiche}/{@code ville}), la remet candidate à une
+   * nouvelle découverte (corrige un homonyme international).
    * @param uuid UUID de la salle
-   * @return 200 si réinitialisée, 400 si UUID invalide, 404 si salle inconnue
+   * @return 200 si réinitialisée, 400 si UUID invalide, 404 si inconnue
    */
   @PostMapping("/salles/{uuid}/reinitialiser-enrichissement")
   public ResponseEntity<Map<String, Object>> reinitialiserEnrichissement(

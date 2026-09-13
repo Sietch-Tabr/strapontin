@@ -14,10 +14,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Pagination des utilisateurs pour l'onglet admin, avec dernière activité et compteurs de suivi.
- *
- * <p>Extrait d'{@link AdminService} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Pagination des utilisateurs (dernière activité, compteurs de suivi)
+ * pour l'onglet admin — extrait d'{@link AdminService}.
  * @since 2.9.1
  * @author Kwaite
  */

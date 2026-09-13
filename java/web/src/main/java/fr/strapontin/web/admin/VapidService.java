@@ -12,11 +12,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de gestion des clés VAPID pour les notifications push PWA.
- *
- * <p>Génère une paire de clés EC P-256 (secp256r1) encodées en Base64 URL-safe, les persiste dans
- * {@code app_config} et invalide tous les abonnements push existants.
- *
+ * Service de gestion des clés VAPID pour les notifications push PWA —
+ * génère une paire EC P-256 (secp256r1) en Base64 URL-safe, les
+ * persiste dans {@code app_config} et invalide les abonnements push.
  * @since 2.2.0
  * @author Kwaite
  */

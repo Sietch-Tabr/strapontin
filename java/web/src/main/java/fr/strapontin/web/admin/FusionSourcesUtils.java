@@ -8,8 +8,7 @@ import java.util.Map;
 
 /**
  * Utilitaires partagés entre {@link ReferentielSallesService} et {@link
- * ReferentielArtistesService} pour la fusion de doublons — jusqu'ici domicilié dans {@code
- * ReferentielSallesService} seul, bien que déjà réutilisé tel quel côté artistes.
+ * ReferentielArtistesService} pour la fusion de doublons.
  *
  * @since 2.8.7
  * @author Kwaite
@@ -19,12 +18,9 @@ final class FusionSourcesUtils {
   private FusionSourcesUtils() {}
 
   /**
-   * Compare la santé de deux lignes {@code salle_sources} (ou {@code artiste_sources}) en conflit
-   * lors d'une fusion : une ligne non suspecte l'emporte toujours sur une ligne suspecte, à
-   * égalité de statut la ligne avec le moins d'échecs consécutifs l'emporte.
-   *
-   * @param conflit ligne agrégée contenant {@code suspect_source}/{@code suspect_cible} et {@code
-   *   sante_source}/{@code sante_cible}
+   * Compare la santé de deux lignes en conflit lors d'une fusion : non
+   * suspecte l'emporte sur suspecte, sinon le moins d'échecs consécutifs.
+   * @param conflit ligne agrégée {@code suspect_*}/{@code sante_*}
    * @return {@code true} si la ligne côté source doit être conservée
    */
   /* package-private : appelé par

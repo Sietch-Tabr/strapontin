@@ -14,11 +14,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Liste paginée des salles pour l'onglet admin « Sources » (candidates Digitick / déjà
- * configurées).
- *
- * <p>Extrait d'{@link SourcesService} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Liste paginée des salles pour l'onglet admin « Sources » (candidates
+ * Digitick / déjà configurées) — extrait de {@link SourcesService}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -42,12 +39,10 @@ class SourcesSallesListingService {
 
   /**
    * Liste paginée des salles pour l'onglet admin « Sources ».
-   *
-   * @param digitick {@code true} pour les salles déjà configurées avec un slug Digitick, {@code
-   *     false} pour celles sans identifiant Ticketmaster ni Eventim (candidates à une configuration
-   *     manuelle)
+   * @param digitick true pour slug Digitick configuré, false pour sans
+   *     identifiant TM ni Eventim (candidates à une config manuelle)
    * @param page numéro de page (0-indexé)
-   * @param nom filtre nom partiel (insensible à la casse), peut être null
+   * @param nom filtre nom partiel, peut être null
    * @return page de résultats
    */
   /* package-private : appelé par SourcesService (même package). */

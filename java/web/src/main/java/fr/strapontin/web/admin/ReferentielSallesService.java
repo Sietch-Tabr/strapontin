@@ -15,15 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché, fusion
- * de doublons.
- *
- * <p>L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad
- * hoc passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
- * V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec dédoublonnage
- * préalable des conflits, puis des abonnements utilisateurs, puis des sources externes, avant
- * suppression de la salle source.
- *
+ * Gestion du référentiel salles pour l'onglet admin : liste paginée,
+ * édition du nom affiché, fusion de doublons — porte en service runtime
+ * le gabarit des fusions ad hoc passées (réassignation concerts, puis
+ * abonnements, puis sources externes, avant suppression de la source).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -67,17 +62,12 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Filtres de recherche du référentiel salles.
-   *
    * @param page numéro de page (0-indexé)
-   * @param nom filtre nom partiel (insensible à la casse), peut être null
+   * @param nom filtre nom partiel, peut être null
    * @param ville filtre ville partielle, peut être null
    * @param dept filtre département exact, peut être null
-   * @param statut filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut être null
-   * @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id} —
-   *     facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-   *     pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
-   *     si elle a déjà un {@code wikidata_id})
+   * @param statut filtre a_jour/a_verifier/invalide, peut être null
+   * @param wikidataManquant filtre les salles sans wikidata_id
    */
   public record FiltresRechercheSalles(
       int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {}
@@ -192,11 +182,10 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},
-   * {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle nocturne
-   * — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme international,
-   * l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
-   *
+   * Efface l'enrichissement auto d'une salle ({@code wikidata_id}/{@code
+   * nom_affiche}/{@code ville}) pour la remettre candidate à une nouvelle
+   * découverte (corrige un homonyme international, jamais auto-corrigé
+   * via {@code COALESCE}).
    * @param salleId UUID de la salle
    * @return {@code true} si la salle existe et a été réinitialisée
    */
@@ -219,10 +208,11 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Modifie le nom affiché d'une salle (override manuel prioritaire sur l'enrichissement auto).
-   *
+   * Modifie le nom affiché d'une salle (override manuel prioritaire sur
+   * l'enrichissement auto).
    * @param salleId UUID de la salle
-   * @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
+   * @param nomAffiche nouveau nom affiché, ou null pour revenir à
+   *     l'enrichissement automatique
    * @return {@code true} si la salle existe et a été mise à jour
    */
   public boolean modifierNomAffiche(final UUID salleId, final String nomAffiche) {
@@ -237,12 +227,11 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Fusionne deux salles : la salle source est absorbée par la salle cible (concerts, abonnements,
-   * sources externes réassignés), puis supprimée.
-   *
+   * Fusionne deux salles : la salle source est absorbée par la salle
+   * cible (concerts, abonnements, sources externes), puis supprimée.
    * @param cibleId UUID de la salle à conserver
    * @param sourceId UUID de la salle à absorber
-   * @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
+   * @return {@code true} si fusionnée, {@code false} si UUID inconnu
    */
   @Transactional
   public boolean fusionner(final UUID cibleId, final UUID sourceId) {
@@ -418,13 +407,10 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
-   * sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante de {@code
-   * salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants {@code
-   * ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans jamais
-   * entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis {@code
-   * nb_zero_consecutifs} le plus bas) et supprime l'autre.
-   *
+   * Supprime, avant réassignation, les doublons de {@code salle_sources}
+   * qu'une fusion créerait sinon (PK {@code (source, identifiant_externe)}
+   * indépendante de {@code salle_id}) — garde la ligne la plus saine (non
+   * suspecte, puis {@code nb_zero_consecutifs} le plus bas).
    * @param cibleId UUID de la salle à conserver
    * @param sourceId UUID de la salle à absorber
    */

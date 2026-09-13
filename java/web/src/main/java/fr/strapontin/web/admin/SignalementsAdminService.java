@@ -10,11 +10,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Vue unifiée des signalements de matching pour l'onglet admin (#1193) : agrège en lecture la
- * nouvelle table {@code signalements_matching} et les mécanismes déjà établis ({@code
- * necessite_intervention_le}, {@code contamination_signalee}, {@code doublon_signale}) — ces
- * derniers restent résolvables depuis les onglets Salles/Artistes existants, pas ici.
- *
+ * Vue unifiée des signalements de matching : agrège en lecture {@code
+ * signalements_matching} et les mécanismes établis ({@code
+ * necessite_intervention_le}/{@code contamination_signalee}/{@code
+ * doublon_signale}), résolvables depuis Salles/Artistes.
  * @since 2.9.0
  * @author Kwaite
  */
@@ -37,14 +36,9 @@ public class SignalementsAdminService {
   }
 
   /**
-   * Liste paginée des signalements actifs, du plus récemment détecté au plus ancien (les entrées
-   * des mécanismes établis, sans horodatage dédié, apparaissent en dernier).
-   *
-   * <p>Le total est calculé par une requête séparée plutôt que {@code COUNT(*) OVER()} : les 4
-   * sous-requêtes de l'union portent sur des tables différentes, un seul {@code COUNT(*) OVER()}
-   * sur le résultat combiné ne poserait pas de difficulté technique particulière mais une requête
-   * de comptage dédiée reste plus lisible ici.
-   *
+   * Liste paginée des signalements actifs, du plus récent au plus ancien
+   * (entrées sans horodatage dédié en dernier) — total via une requête
+   * séparée, plus lisible que {@code COUNT(*) OVER()} sur 4 sous-requêtes.
    * @param page numéro de page (0-indexé)
    * @return page de signalements actifs
    */

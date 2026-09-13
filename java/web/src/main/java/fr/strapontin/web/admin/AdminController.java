@@ -27,11 +27,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST d'administration.
- *
- * <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link AdminService}.
- * Accessible uniquement aux utilisateurs avec le rôle {@code ADMIN}.
- *
+ * Contrôleur REST d'administration — HTTP pur, délègue à {@link
+ * AdminService}, accessible aux seuls utilisateurs {@code ADMIN}.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -77,17 +74,12 @@ public class AdminController {
   }
 
   /**
-   * Crée un nouveau compte utilisateur et envoie un email d'invitation.
-   *
-   * <p>Le lien d'invitation n'est <strong>pas</strong> renvoyé dans la réponse quand l'email est
-   * configuré (le token ne doit pas transiter côté client). En revanche, si aucun service email
-   * n'est disponible ({@code RESEND_API_KEY} absent), le lien est exposé dans la réponse comme seul
-   * canal de livraison possible : l'admin doit alors le transmettre manuellement.
-   *
+   * Crée un utilisateur et envoie une invitation — le lien n'est exposé
+   * dans la réponse que si aucun service email n'est disponible.
    * @param requete corps JSON avec l'email
    * @param auth contexte d'authentification admin
-   * @return 201 avec l'identifiant temporaire (et le lien si email indisponible), 400 si l'email
-   *     est déjà pris, 503 si {@code PUBLIC_BASE_URL} n'est pas configurée
+   * @return 201 (identifiant + lien si email indisponible), 400 email
+   *     pris, 503 PUBLIC_BASE_URL non configurée
    */
   @PostMapping("/utilisateurs")
   public ResponseEntity<Map<String, Object>> creerUtilisateur(
@@ -162,16 +154,12 @@ public class AdminController {
   }
 
   /**
-   * Envoie un email de réinitialisation de mot de passe à un utilisateur.
-   *
-   * <p>Si Resend n'est pas disponible, inclut {@code lienReset} dans la réponse — comme {@link
-   * #creerUtilisateur} — pour que l'admin puisse transmettre le lien manuellement à un utilisateur
-   * bloqué, plutôt que de n'avoir aucun moyen de récupération.
-   *
+   * Envoie un email de réinitialisation — expose {@code lienReset} dans
+   * la réponse si Resend indisponible (transmission manuelle à un
+   * utilisateur bloqué).
    * @param userId identifiant de l'utilisateur
    * @param auth contexte d'authentification admin
-   * @return 200 si envoyé, 400/404 en cas d'erreur, 503 si {@code PUBLIC_BASE_URL} n'est pas
-   *     configurée
+   * @return 200 si envoyé, 400/404 en cas d'erreur, 503 si non configurée
    */
   @PostMapping("/utilisateurs/{userId}/reset-mdp")
   public ResponseEntity<Map<String, Object>> reinitialiserMdp(

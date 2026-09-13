@@ -18,12 +18,10 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Proxy HTTP vers le worker (port 8081) pour les opérations admin.
- *
- * <p>Centralise les appels internes vers le worker (jobs en cours, prochaines exécutions, relance
- * des fetches) en réutilisant le {@link RestClient} partagé plutôt que d'instancier un {@code
- * HttpClient} jetable par appel.
- *
+ * Proxy HTTP vers le worker (port 8081) pour les opérations admin —
+ * centralise les appels internes (jobs en cours, prochaines exécutions,
+ * relance des fetches) via le {@link RestClient} partagé plutôt qu'un
+ * {@code HttpClient} jetable par appel.
  * @since 2.2.3
  * @author Kwaite
  */
@@ -54,12 +52,11 @@ public class WorkerProxyService {
   }
 
   /**
-   * Ajoute le header {@code X-Correlation-ID} porté par le MDC de la requête entrante courante —
-   * pose par {@code CorrelationIdFilter}, absent si l'appel a lieu hors contexte de requête HTTP
-   * (ex. depuis un thread Quartz).
-   *
+   * Ajoute le header {@code X-Correlation-ID} porté par le MDC courant —
+   * posé par {@code CorrelationIdFilter}, absent hors contexte HTTP
+   * (ex. thread Quartz).
    * @param requete requête en cours de construction
-   * @return la même requête, avec le header ajouté si un correlationId est disponible
+   * @return la même requête, header ajouté si un correlationId existe
    */
   private RestClient.RequestHeadersSpec<?> ajouterCorrelationId(
       final RestClient.RequestHeadersSpec<?> requete) {
@@ -168,16 +165,12 @@ public class WorkerProxyService {
   }
 
   /**
-   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible (ex.
-   * {@code "purger:salles"}, {@code "reconciliation:nocturne"}) via l'endpoint générique du worker
-   * (v2.6.0).
-   *
-   * <p>Distingue trois causes d'échec plutôt que de toutes les renvoyer en 503 : le worker répond
-   * 400 si {@code typeJob} est inconnu (erreur cliente, pas une panne), un autre code d'erreur si
-   * Quartz échoue en interne, ou aucune réponse si le worker est réellement injoignable.
-   *
+   * Déclenche un job de maintenance par son {@code typeJob} lisible (ex.
+   * "purger:salles") via l'endpoint générique du worker — distingue 400
+   * (typeJob inconnu, erreur cliente) d'une panne Quartz ou d'un worker
+   * injoignable, plutôt que de tout renvoyer en 503.
    * @param typeJob identifiant lisible du job à relancer
-   * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause)
+   * @return le résultat métier (succès, ou échec avec message et code HTTP)
    */
   public ResultatRelance relancerJob(final String typeJob) {
     try {

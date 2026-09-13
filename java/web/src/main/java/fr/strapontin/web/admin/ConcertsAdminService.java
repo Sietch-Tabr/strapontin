@@ -13,11 +13,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Revue manuelle des concerts flagués par la purge nocturne ({@code suppression_suggeree_le}) pour
- * l'onglet admin Concerts — la suppression définitive reste une action manuelle plutôt
- * qu'automatique, un concert réel peut être flagué à tort (doublon de salle jamais fusionné entre
- * sources, concert catalogué sous une autre attraction que l'artiste suivi).
- *
+ * Revue manuelle des concerts flagués par la purge nocturne ({@code
+ * suppression_suggeree_le}) — suppression définitive volontairement
+ * manuelle, un concert réel peut être flagué à tort (doublon de salle
+ * jamais fusionné, concert catalogué sous une autre attraction).
  * @since 2.8.3
  * @author Kwaite
  */

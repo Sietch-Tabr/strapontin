@@ -21,11 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 /**
- * Service de gestion de l'onglet admin « Sources ».
- *
- * <p>Agrège les statuts des sources de données et gère la configuration des slugs Digitick par
- * salle.
- *
+ * Service de gestion de l'onglet admin « Sources » — agrège les statuts
+ * des sources de données et gère la configuration des slugs Digitick
+ * par salle.
  * @since 2.3.0
  * @author Kwaite
  */
@@ -64,11 +62,8 @@ public class SourcesService {
   }
 
   /**
-   * Retourne les statuts agrégés de toutes les sources.
-   *
-   * <p>Les deux listes de salles (sans TM ni Eventim / avec Digitick) sont paginées séparément via
-   * {@link #listerSalles}, désormais consommées par un endpoint dédié.
-   *
+   * Retourne les statuts agrégés de toutes les sources — les listes de
+   * salles sont paginées séparément via {@link #listerSalles}.
    * @return map {@code {sources}}
    */
   public Map<String, Object> lireSources() {
@@ -136,13 +131,9 @@ public class SourcesService {
   }
 
   /**
-   * Met à jour le slug Digitick d'une salle dans {@code salle_sources}.
-   *
-   * <p>Si le slug est vide, supprime l'entrée existante. Si le slug est déjà attribué à une autre
-   * salle, lève une erreur 409 plutôt que de le voler silencieusement à cette autre salle le
-   * conflit est vérifié avant toute suppression pour ne pas perdre la configuration existante si
-   * l'opération échoue.
-   *
+   * Met à jour le slug Digitick d'une salle — supprime l'entrée si vide ;
+   * si déjà attribué à une autre salle, 409 (jamais un vol silencieux),
+   * vérifié avant toute suppression pour ne rien perdre si l'op échoue.
    * @param salleId UUID de la salle
    * @param slug nouveau slug Digitick (peut être vide pour supprimer)
    * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
@@ -195,14 +186,9 @@ public class SourcesService {
   }
 
   /**
-   * Teste un slug Digitick et retourne le nombre de concerts trouvés.
-   *
-   * <p>Fait un GET sur l'endpoint AJAX Digitick et compte les {@code dl} portant une classe {@code
-   * evenementN} (chiffre immédiatement après "evenement"), même critère que {@code DigitickSource}
-   * avec {@code dl[class~=evenement\\d+]}. Les sous-éléments ({@code evenementNom}, {@code
-   * evenementDate}…) sont exclus car non suivis d'un chiffre. Retourne -1 si le slug est invalide
-   * ou inaccessible.
-   *
+   * Teste un slug Digitick, compte les {@code dl} de classe {@code
+   * evenementN} (même critère que {@code DigitickSource}, sous-éléments
+   * comme {@code evenementNom} exclus car non suivis d'un chiffre).
    * @param slug slug à tester
    * @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
    */
@@ -369,12 +355,11 @@ public class SourcesService {
   }
 
   /**
-   * Exécute un {@code COUNT(*)} avec repli sur 0 en cas d'échec — motif partagé par les 5 méthodes
-   * de comptage ci-dessus, jusqu'ici dupliqué à l'identique dans chacune.
-   *
+   * Exécute un {@code COUNT(*)} avec repli sur 0 en cas d'échec — motif
+   * partagé par les méthodes de comptage ci-dessus, dupliqué jusqu'ici.
    * @param sql requête {@code SELECT COUNT(*)} paramétrée
    * @param params paramètres nommés de la requête
-   * @param descriptionEchec description de ce qui est compté, pour le message de log en cas d'échec
+   * @param descriptionEchec description de ce qui est compté (log si échec)
    * @return le compte, ou 0 en cas d'échec
    */
   private Integer compterAvecFallback(
@@ -390,12 +375,10 @@ public class SourcesService {
 
   /**
    * Liste paginée des salles pour l'onglet admin « Sources ».
-   *
-   * @param digitick {@code true} pour les salles déjà configurées avec un slug Digitick, {@code
-   *     false} pour celles sans identifiant Ticketmaster ni Eventim (candidates à une configuration
-   *     manuelle)
+   * @param digitick true pour slug Digitick configuré, false pour sans
+   *     identifiant TM ni Eventim (candidates à une config manuelle)
    * @param page numéro de page (0-indexé)
-   * @param nom filtre nom partiel (insensible à la casse), peut être null
+   * @param nom filtre nom partiel, peut être null
    * @return page de résultats
    */
   public ReponseSallesSources listerSalles(

@@ -9,12 +9,10 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 
 /**
- * Gestion de la bannière système (message diffusé à tous les utilisateurs).
- *
- * <p>La bannière est stockée dans {@code app_config} via trois clés :
- * {@code BANNER_MESSAGE}, {@code BANNER_TYPE} et {@code BANNER_ID} (horodatage
- * servant d'identifiant de version côté client).
- *
+ * Gestion de la bannière système (message diffusé à tous les
+ * utilisateurs) — stockée dans {@code app_config} via 3 clés :
+ * {@code BANNER_MESSAGE}/{@code BANNER_TYPE}/{@code BANNER_ID}
+ * (horodatage, identifiant de version côté client).
  * @since 2.2.3
  * @author Kwaite
  */

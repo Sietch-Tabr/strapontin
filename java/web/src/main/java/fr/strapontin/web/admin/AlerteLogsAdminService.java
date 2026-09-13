@@ -14,14 +14,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
- * Alerte l'administrateur par email digest sur les nouvelles entrées {@code logs_admin} de
- * niveau {@code error}, toutes les 15 minutes.
- *
- * <p>Même pattern que {@link WatchdogWorkerService} (alerte proactive sur incident), mais
- * curseur persisté en {@code app_config} plutôt qu'en mémoire — nécessaire pour survivre aux
- * redéploiements fréquents du projet, contrairement au watchdog worker dont le pire cas (une
- * alerte manquée après redéploiement) est sans conséquence.
- *
+ * Alerte l'admin par digest email sur les nouvelles entrées {@code
+ * logs_admin error}, toutes les 15 minutes — comme {@link
+ * WatchdogWorkerService} mais curseur persisté en {@code app_config}
+ * (survit aux redéploiements fréquents, contrairement au watchdog).
  * @since 2.6.1
  * @author Kwaite
  */

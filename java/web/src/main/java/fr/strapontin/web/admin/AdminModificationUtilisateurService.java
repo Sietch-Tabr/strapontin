@@ -19,11 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Modification des champs d'un compte utilisateur (nom, email, rôle) par un admin.
- *
- * <p>Extrait d'{@link AdminService} pour rester sous le seuil de complexité cyclomatique de classe
- * (50).
- *
+ * Modification des champs d'un compte utilisateur (nom, email, rôle)
+ * par un admin — extrait d'{@link AdminService} pour rester sous le
+ * seuil de complexité cyclomatique de classe (50).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -65,16 +63,12 @@ class AdminModificationUtilisateurService {
   }
 
   /**
-   * Modifie le nom, l'email et/ou le rôle d'un utilisateur.
-   *
-   * <p>Une rétrogradation admin ne peut pas être combinée avec une modification de nom/email dans
-   * la même requête (voir le rationale d'{@link AdminService#modifierUtilisateur}).
-   *
+   * Modifie le nom, l'email et/ou le rôle — rétrogradation jamais combinée
+   * avec nom/email (voir {@link AdminService#modifierUtilisateur}).
    * @param userId identifiant de l'utilisateur cible
    * @param requete champs à modifier (nom, email, role — tous optionnels)
    * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si les données sont invalides, l'email est déjà utilisé, ou
-   *     (rétrogradation d'un admin) combinée à un autre champ
+   * @throws ErreurMetier si invalide, email pris, ou combinaison interdite
    */
   @Transactional
   /* package-private : appelé par AdminService (même package). */

@@ -20,12 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 /**
- * Configuration applicative de l'onglet admin : statuts, sauvegarde, validation de format, test de
- * la clé Ticketmaster.
- *
- * <p>Extrait d'{@code AdminService} — {@code AdminService} reste dédié à la seule gestion des
- * comptes utilisateurs.
- *
+ * Configuration applicative de l'onglet admin : statuts, sauvegarde,
+ * validation de format, test de la clé Ticketmaster — extrait
+ * d'{@code AdminService} (resté dédié aux comptes).
  * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
  */

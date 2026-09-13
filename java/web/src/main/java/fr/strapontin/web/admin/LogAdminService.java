@@ -17,12 +17,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de journalisation admin (portage de {@code log-admin.ts}).
- *
- * <p>Remplace la liste Redis {@code strapontin:admin:logs} par la table PostgreSQL {@code
- * logs_admin}. La rétention est temporelle : la purge des entrées de plus de 30 jours est planifiée
- * côté worker ({@code PurgerLogsAdminJob}).
- *
+ * Service de journalisation admin — remplace la liste Redis {@code
+ * strapontin:admin:logs} par la table PostgreSQL {@code logs_admin}
+ * (rétention temporelle, purge > 30 jours côté worker).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -46,9 +43,8 @@ public class LogAdminService {
 
   /**
    * Entrée de log admin.
-   *
    * @param ts horodatage Unix en millisecondes
-   * @param niveau niveau de log ({@code debug}, {@code info}, {@code warn}, {@code error})
+   * @param niveau niveau de log (debug/info/warn/error)
    * @param source module source
    * @param message message
    * @param meta métadonnées JSON brut (peut être null)
@@ -131,11 +127,10 @@ public class LogAdminService {
   }
 
   /**
-   * Retourne les entrées de niveau {@code error} postérieures à {@code tsDepuis}, plafonnées à
-   * {@value #LIMITE_ERREURS_DEPUIS} — un retard important (destinataire d'alerte absent pendant
-   * plusieurs cycles) est ainsi absorbé sur plusieurs digests successifs plutôt que de charger un
-   * lot non borné, le curseur avançant jusqu'au dernier ts retourné sans rien perdre.
-   *
+   * Retourne les entrées {@code error} après {@code tsDepuis}, plafonnées
+   * à {@value #LIMITE_ERREURS_DEPUIS} — un retard (destinataire absent
+   * plusieurs cycles) est absorbé sur plusieurs digests, curseur avancé
+   * jusqu'au dernier ts sans rien perdre.
    * @param tsDepuis horodatage Unix en millisecondes, exclusif
    * @return les entrées d'erreur, de la plus ancienne à la plus récente
    */

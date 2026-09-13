@@ -18,12 +18,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour l'onglet admin « Concerts » (revue des concerts flagués pour suppression).
- *
- * <p>HTTP pur — délègue toute la logique métier à {@link ConcertsAdminService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
- * /api/admin/**}).
- *
+ * Contrôleur REST pour l'onglet admin « Concerts » (revue des concerts
+ * flagués pour suppression) — HTTP pur, délègue à {@link
+ * ConcertsAdminService}, accessible aux seuls {@code ADMIN}.
  * @since 2.8.3
  * @author Kwaite
  */

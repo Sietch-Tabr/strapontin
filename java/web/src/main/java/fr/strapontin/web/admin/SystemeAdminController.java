@@ -26,12 +26,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST d'administration système : configuration applicative, VAPID, bannière, logs, jobs
- * Quartz.
- *
- * <p>Extrait d'{@link AdminController} (qui reste dédié aux comptes utilisateurs) pour rester sous
- * le seuil de couplage entre objets (20). HTTP pur — délègue toute la logique métier.
- *
+ * Contrôleur REST d'administration système : configuration applicative,
+ * VAPID, bannière, logs, jobs Quartz — extrait d'{@link AdminController}
+ * pour rester sous le seuil de couplage entre objets (20).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -52,13 +49,8 @@ public class SystemeAdminController {
   private final VapidService vapidService;
 
   /**
-   * @param adminService service d'administration (lecture des logs admin)
-   * @param configAdminService service de configuration applicative
-   * @param jobsAdminService service de statistiques des jobs Quartz
-   * @param banniereService service de gestion de la bannière système
-   * @param workerProxyService proxy HTTP vers le worker (relance des fetches)
-   * @param emailServiceAdmin emails déclenchés par une action d'administration
-   * @param vapidService service de gestion des clés VAPID
+   * Injection Spring : services admin (comptes, config, jobs, bannière,
+   * proxy worker, emails, VAPID) — paramètres homonymes des champs.
    */
   public SystemeAdminController(
       final AdminService adminService,
@@ -223,15 +215,11 @@ public class SystemeAdminController {
   }
 
   /**
-   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible
-   * (v2.6.0) — bouton « Relancer » par job dans l'onglet admin Tableau de bord.
-   *
-   * <p>Le code HTTP renvoyé distingue désormais le job inconnu (400) de l'erreur interne worker
-   * (502) et du worker injoignable (503) — auparavant les trois étaient masqués sous un 503
-   * générique, ce qui égarait le diagnostic d'un admin.
-   *
-   * @param typeJob identifiant lisible du job (ex. {@code "purger:salles"})
-   * @return 200 si déclenché, 400 si le job est inconnu, 502/503 selon la cause de l'échec
+   * Déclenche un job de maintenance par son {@code typeJob} lisible
+   * (bouton « Relancer » du tableau de bord) — distingue job inconnu
+   * (400), erreur interne worker (502), worker injoignable (503).
+   * @param typeJob identifiant lisible du job (ex. "purger:salles")
+   * @return 200 si déclenché, 400 job inconnu, 502/503 selon l'échec
    */
   @PostMapping("/jobs/relancer")
   public ResponseEntity<Map<String, Object>> relancerJob(@RequestParam final String typeJob) {

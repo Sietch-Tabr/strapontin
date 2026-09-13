@@ -61,12 +61,9 @@ public class AdminRevocationService {
   }
 
   /**
-   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-   * éviter le problème d'auto-référence à la construction — l'appel à {@link
-   * #initierRevocationAdminTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de
-   * l'isolation {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code
-   * self} peut être positionné manuellement sur l'instance elle-même.
-   *
+   * Injection par setter (pas par constructeur, évite l'auto-référence à
+   * la construction) — {@link #initierRevocationAdminTransactionnel}
+   * passe par le proxy AOP Spring, isolation {@code SERIALIZABLE}.
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
@@ -75,13 +72,10 @@ public class AdminRevocationService {
   }
 
   /**
-   * Initie une révocation différée du rôle admin (effective dans 7 jours).
-   *
-   * <p>Réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas d'échec de sérialisation
-   * (deux révocations concurrentes détectées par PostgreSQL) — sans cela, deux admins se révoquant
-   * mutuellement au même instant pourraient tous deux passer la garde « dernier admin » avant
-   * qu'aucun des deux {@code UPDATE} ne soit committé.
-   *
+   * Initie une révocation différée du rôle admin (effective dans 7 jours)
+   * — réessaie jusqu'à {@value MAX_TENTATIVES_REVOCATION} fois en cas
+   * d'échec de sérialisation (deux révocations concurrentes détectées par
+   * PostgreSQL), sinon les deux pourraient passer la garde dernier admin.
    * @param userId identifiant de l'administrateur à révoquer
    * @param adminId identifiant de l'admin demandeur
    */
@@ -94,17 +88,12 @@ public class AdminRevocationService {
   }
 
   /**
-   * Partie transactionnelle et isolée de {@link #initierRevocationAdmin}.
-   *
-   * <p>Envoie un email de préavis à l'administrateur concerné et loggue l'action. {@code
-   * REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis une transaction déjà
-   * ouverte (ex. {@code AdminService#modifierUtilisateur}) — sans quoi l'isolation SERIALIZABLE
-   * serait ignorée en cas d'imbrication dans une transaction moins stricte.
-   *
+   * Partie transactionnelle et isolée de {@link #initierRevocationAdmin}
+   * — {@code REQUIRES_NEW} garantit une transaction dédiée même appelée
+   * depuis une transaction ouverte, sinon SERIALIZABLE serait ignorée.
    * @param userId identifiant de l'administrateur à révoquer
    * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur est le seul admin restant (409) ou si l'utilisateur n'est
-   *     pas admin (400)
+   * @throws ErreurMetier si seul admin restant (409) ou non admin (400)
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
   /* package-private : requis pour l'auto-invocation via le proxy self

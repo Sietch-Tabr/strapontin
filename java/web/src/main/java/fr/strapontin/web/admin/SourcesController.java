@@ -24,11 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour l'onglet admin « Sources ».
- *
- * <p>HTTP pur — délègue toute la logique métier à {@link SourcesService}. Accessible uniquement aux
- * utilisateurs avec le rôle {@code ADMIN}.
- *
+ * Contrôleur REST pour l'onglet admin « Sources » — HTTP pur, délègue à
+ * {@link SourcesService}, accessible aux seuls utilisateurs {@code ADMIN}.
  * @since 2.3.0
  * @author Kwaite
  */
@@ -63,9 +60,8 @@ public class SourcesController {
 
   /**
    * Liste paginée des salles pour l'onglet admin « Sources ».
-   *
-   * @param digitick {@code true} pour les salles avec un slug Digitick configuré, {@code false}
-   *     (défaut) pour celles sans identifiant Ticketmaster ni Eventim
+   * @param digitick true pour slug Digitick configuré, false (défaut)
+   *     pour sans identifiant TM ni Eventim
    * @param page numéro de page (0-indexé, défaut 0)
    * @param nom filtre nom partiel
    * @return 200 avec la page de résultats
@@ -97,7 +93,7 @@ public class SourcesController {
   }
 
   /**
-   * Teste un slug Digitick : vérifie l'accessibilité et compte les concerts disponibles.
+   * Teste un slug Digitick : accessibilité et nombre de concerts trouvés.
    *
    * @param salleId UUID de la salle (pour cohérence d'URL)
    * @param corps corps JSON avec {@code slug}

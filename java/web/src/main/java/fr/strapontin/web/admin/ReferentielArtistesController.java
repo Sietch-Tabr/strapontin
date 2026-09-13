@@ -21,12 +21,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour l'onglet admin « Artistes » du référentiel.
- *
- * <p>HTTP pur — délègue toute la logique métier à {@link ReferentielArtistesService}. Accessible
- * uniquement aux utilisateurs avec le rôle {@code ADMIN} (cf. {@code SecurityConfiguration}, {@code
- * /api/admin/**}).
- *
+ * Contrôleur REST pour l'onglet admin « Artistes » du référentiel — HTTP
+ * pur, délègue à {@link ReferentielArtistesService}, accessible aux
+ * seuls {@code ADMIN} (cf. {@code SecurityConfiguration}).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -48,11 +45,10 @@ public class ReferentielArtistesController {
 
   /**
    * Liste paginée du référentiel artistes.
-   *
    * @param page numéro de page (0-indexé, défaut 0)
    * @param nom filtre nom partiel
-   * @param statut filtre {@code a_jour}/{@code invalide} (statut binaire)
-   * @param wikidataManquant si {@code true}, ne retourne que les artistes sans {@code wikidata_id}
+   * @param statut filtre a_jour/invalide (statut binaire)
+   * @param wikidataManquant filtre les artistes sans wikidata_id
    * @return 200 avec la page de résultats
    */
   @GetMapping("/artistes")
@@ -87,12 +83,11 @@ public class ReferentielArtistesController {
   }
 
   /**
-   * Réinitialise l'enrichissement automatique d'un artiste ({@code wikidata_id}, {@code deezer_id},
-   * {@code nom_affiche}) — corrige une mauvaise correspondance automatique en le remettant candidat
-   * à une nouvelle découverte.
-   *
+   * Réinitialise l'enrichissement auto d'un artiste ({@code wikidata_id}/
+   * {@code deezer_id}/{@code nom_affiche}), le remet candidat à une
+   * nouvelle découverte.
    * @param uuid UUID de l'artiste
-   * @return 200 si réinitialisé, 400 si UUID invalide, 404 si artiste inconnu
+   * @return 200 si réinitialisé, 400 si UUID invalide, 404 si inconnu
    */
   @PostMapping("/artistes/{uuid}/reinitialiser-enrichissement")
   public ResponseEntity<Map<String, Object>> reinitialiserEnrichissement(
@@ -130,13 +125,12 @@ public class ReferentielArtistesController {
   }
 
   /**
-   * Corrige directement l'identifiant Ticketmaster d'un artiste — alternative à la fusion pour un
-   * simple mauvais lien.
-   *
+   * Corrige directement l'identifiant Ticketmaster d'un artiste
+   * (alternative à la fusion pour un lien erroné).
    * @param uuid UUID de l'artiste
-   * @param corps corps JSON avec {@code identifiantExterne} (non vide)
-   * @return 200 si mis à jour, 400 si UUID invalide ou identifiant vide, 404 si l'artiste n'a pas
-   *     de source Ticketmaster, 409 si l'identifiant est déjà attribué à un autre artiste
+   * @param corps corps JSON avec identifiantExterne (non vide)
+   * @return 200 si mis à jour, 400 UUID/identifiant invalide, 404 sans
+   *     source TM, 409 identifiant déjà attribué
    */
   @PatchMapping("/artistes/{uuid}/identifiant-tm")
   public ResponseEntity<Map<String, Object>> corrigerIdentifiantTm(
@@ -153,11 +147,11 @@ public class ReferentielArtistesController {
   }
 
   /**
-   * Fusionne deux artistes (la source est absorbée par la cible puis supprimée).
-   *
+   * Fusionne deux artistes (la source est absorbée par la cible puis
+   * supprimée).
    * @param uuid UUID de l'artiste source
    * @param uuidCible UUID de l'artiste cible
-   * @return 200 si fusionné, 400 si UUID invalide ou identiques, 404 si un artiste est inconnu
+   * @return 200 si fusionné, 400 UUID invalide/identiques, 404 inconnu
    */
   @PostMapping("/artistes/{uuid}/fusionner/{uuidCible}")
   public ResponseEntity<Map<String, Object>> fusionner(
