@@ -53,6 +53,7 @@ public class TotpService {
   private final Cache<String, Set<String>> codesConsommes =
       Caffeine.newBuilder().expireAfterWrite(90, TimeUnit.SECONDS).maximumSize(10_000).build();
 
+  /** Constructeur par défaut. */
   public TotpService() {}
 
   /**

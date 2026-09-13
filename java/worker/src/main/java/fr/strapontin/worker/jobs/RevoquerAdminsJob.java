@@ -19,6 +19,7 @@ public class RevoquerAdminsJob extends QuartzJobBean {
 
   private WorkerRevocationService workerRevocationService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public RevoquerAdminsJob() {
     super();
   }

@@ -19,6 +19,7 @@ public class SuiviCyclesJobsJob extends QuartzJobBean {
 
   private WorkerSuiviCyclesService workerSuiviCyclesService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public SuiviCyclesJobsJob() {
     super();
   }

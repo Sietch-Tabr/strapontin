@@ -160,15 +160,10 @@ public class ParametresService {
     }
   }
 
-  /**
-   * Valide le token et applique le changement d'email si tout est correct.
-   *
-   * @param token token de confirmation (hexadécimal brut)
-   * @param userIdAuthentifie identifiant de l'utilisateur authentifié
-   * @return résultat indiquant le statut et l'identifiant utilisateur cible
-   */
   private record TokenResolu(ResultatConfirmation.Statut echec, String userId) {}
 
+  // Résout le token en userId, sans appliquer aucun changement — la validation d'échec est
+  // séparée de son application dans confirmerEmail.
   private TokenResolu resoudreUserIdDepuisToken(
       final String token, final String userIdAuthentifie) {
     if (token == null || token.isBlank()) {
@@ -199,6 +194,13 @@ public class ParametresService {
     return new TokenResolu(null, userId);
   }
 
+  /**
+   * Valide le token et applique le changement d'email si tout est correct.
+   *
+   * @param token token de confirmation (hexadécimal brut)
+   * @param userIdAuthentifie identifiant de l'utilisateur authentifié
+   * @return résultat indiquant le statut et l'identifiant utilisateur cible
+   */
   @Transactional
   public ResultatConfirmation confirmerEmail(final String token, final String userIdAuthentifie) {
     final TokenResolu resolu = resoudreUserIdDepuisToken(token, userIdAuthentifie);

@@ -21,6 +21,7 @@ public class PurgerConcertsJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public PurgerConcertsJob() {
     super();
   }

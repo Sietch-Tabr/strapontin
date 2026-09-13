@@ -19,6 +19,7 @@ public class NotifierDigestJob extends QuartzJobBean {
 
   private NotificationDigestService notificationDigestService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public NotifierDigestJob() {
     super();
   }

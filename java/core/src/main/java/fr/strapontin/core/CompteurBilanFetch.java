@@ -18,6 +18,7 @@ public final class CompteurBilanFetch {
   private final AtomicInteger appelsCumules = new AtomicInteger();
   private final AtomicInteger erreursCumulees = new AtomicInteger();
 
+  /** Constructeur par défaut. */
   public CompteurBilanFetch() {}
 
   /** Enregistre une tentative d'appel (HTTP ou envoi). */

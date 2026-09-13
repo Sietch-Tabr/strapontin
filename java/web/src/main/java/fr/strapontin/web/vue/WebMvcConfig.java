@@ -19,6 +19,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
+  /** Constructeur par défaut. */
   public WebMvcConfig() {}
 
   @Override

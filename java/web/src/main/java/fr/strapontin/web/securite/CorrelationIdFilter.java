@@ -32,6 +32,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
   private static final String HEADER = "X-Correlation-ID";
   private static final Pattern CORRELATION_ID_PATTERN = Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
 
+  /** Constructeur par défaut, instancié par Spring. */
   public CorrelationIdFilter() {
     super();
   }

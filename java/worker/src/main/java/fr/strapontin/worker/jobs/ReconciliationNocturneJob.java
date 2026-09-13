@@ -25,6 +25,7 @@ public class ReconciliationNocturneJob extends QuartzJobBean {
 
   private WorkerService workerService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public ReconciliationNocturneJob() {
     super();
   }

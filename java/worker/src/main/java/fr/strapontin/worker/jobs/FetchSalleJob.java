@@ -28,6 +28,7 @@ public class FetchSalleJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public FetchSalleJob() {
     super();
   }

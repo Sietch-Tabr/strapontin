@@ -29,6 +29,7 @@ public class FetchArtistesBatchJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public FetchArtistesBatchJob() {
     super();
   }

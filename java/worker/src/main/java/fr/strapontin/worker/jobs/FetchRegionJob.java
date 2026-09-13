@@ -29,6 +29,7 @@ public class FetchRegionJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
+  /** Constructeur par défaut, instancié par Spring. */
   public FetchRegionJob() {
     super();
   }

@@ -35,6 +35,7 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 @Configuration
 public class SessionSecurityConfiguration {
 
+  /** Constructeur par défaut. */
   public SessionSecurityConfiguration() {}
 
   /**

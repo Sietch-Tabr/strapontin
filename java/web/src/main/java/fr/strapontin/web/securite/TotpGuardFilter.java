@@ -34,6 +34,7 @@ public class TotpGuardFilter extends OncePerRequestFilter {
   private static final Set<String> API_TOTP_AUTORISES =
       Set.of("/api/auth/totp", "/api/auth/logout");
 
+  /** Constructeur par défaut, instancié par Spring. */
   public TotpGuardFilter() {
     super();
   }

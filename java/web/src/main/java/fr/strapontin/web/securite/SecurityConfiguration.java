@@ -53,6 +53,7 @@ public class SecurityConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
 
+  /** Constructeur par défaut. */
   public SecurityConfiguration() {}
 
   /**

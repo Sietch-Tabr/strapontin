@@ -25,6 +25,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 @Configuration
 public class WorkerConfiguration {
 
+  /** Constructeur par défaut. */
   public WorkerConfiguration() {}
 
   /**
@@ -50,8 +51,8 @@ public class WorkerConfiguration {
 
   /**
    * Cadenceur des appels Ticketmaster partagé avec le module web (recherche interactive de salle,
-   * test de clé API admin) — un verrou en mémoire ne coordonnerait pas deux processus
-   * indépendants, voir {@link CadenceurAppelsPartage}.
+   * test de clé API admin) — un verrou en mémoire ne coordonnerait pas deux processus indépendants,
+   * voir {@link CadenceurAppelsPartage}.
    *
    * @param jdbc accès à la base partagée entre web et worker
    * @return cadenceur adossé à Postgres
@@ -65,8 +66,8 @@ public class WorkerConfiguration {
   /**
    * Client Ticketmaster Discovery v2.
    *
-   * Lit {@code TICKETMASTER_API_KEY} depuis {@code app_config} (AES-256-GCM). Lève une {@code IllegalStateException}
-   * au démarrage si la clé est absente.
+   * <p>Lit {@code TICKETMASTER_API_KEY} depuis {@code app_config} (AES-256-GCM). Lève une {@code
+   * IllegalStateException} au démarrage si la clé est absente.
    *
    * @param configService service de configuration chiffrée
    * @param cadenceurTicketmaster cadenceur partagé inter-processus

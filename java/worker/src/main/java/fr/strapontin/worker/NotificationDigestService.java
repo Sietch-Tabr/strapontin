@@ -52,12 +52,23 @@ public class NotificationDigestService {
    */
   @FunctionalInterface
   interface FabriqueResend {
+    /**
+     * @param cle clé API Resend
+     * @return client Resend prêt à l'emploi
+     */
     Resend creer(String cle);
   }
 
   /** Fabrique du client push VAPID — même motif que {@link FabriqueResend}. */
   @FunctionalInterface
   interface FabriquePushService {
+    /**
+     * @param clePublique clé publique VAPID
+     * @param clePrivee clé privée VAPID
+     * @param sujet identifiant {@code mailto:}/{@code https:} requis par la spec VAPID
+     * @return client push prêt à l'emploi
+     * @throws java.security.GeneralSecurityException si les clés sont invalides
+     */
     PushService creer(String clePublique, String clePrivee, String sujet)
         throws java.security.GeneralSecurityException;
   }
