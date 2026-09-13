@@ -34,9 +34,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.client.RestClient;
 
 /**
- * Service de gestion des artistes suivis.
- *
- * <p>Orchestration : recherche en base + API Deezer, vérification du cap, déclenchement du worker.
+ * Service de gestion des artistes suivis (recherche en base + API Deezer,
+ * vérification du cap, déclenchement du worker).
  *
  * @since 2.1.0
  * @author Kwaite
@@ -77,12 +76,9 @@ public class ArtisteService {
   }
 
   /**
-   * Liste les artistes suivis, avec suggestions si {@code q} est fourni.
-   *
-   * <p>Complète la base avec Wikidata Search puis, si toujours moins de 3 résultats, avec l'API
-   * Deezer (comportement historique conservé en dernier repli — utile pour les artistes émergents
-   * sans page Wikidata).
-   *
+   * Liste les artistes suivis, avec suggestions si {@code q} est fourni :
+   * complète la base avec Wikidata Search puis Deezer si toujours moins de
+   * 3 résultats (repli historique, utile aux artistes sans page Wikidata).
    * @param userId identifiant de l'utilisateur
    * @param terme terme de recherche (optionnel, min 2 caractères)
    * @return la liste des artistes et les suggestions
@@ -152,18 +148,11 @@ public class ArtisteService {
   }
 
   /**
-   * Ajoute un artiste à la liste de suivi dans une transaction atomique.
-   *
-   * <p>Vérifie le doublon et le cap avant l'insertion. La résolution de l'artiste dans le
-   * référentiel global tolère les variantes orthographiques mineures (voir {@link
-   * #resoudreArtisteId}) pour éviter de créer un doublon d'UUID pour un artiste déjà présent sous
-   * une graphie légèrement différente (ex. "Krash Karma" / "KrashKarma" — cas réel ayant nécessité
-   * une fusion manuelle en base avant ce correctif, v2.6.0).
-   *
+   * Ajoute un artiste (délégation vers ajouter(String, String, String)).
    * @param userId identifiant de l'utilisateur
    * @param nom nom de l'artiste (non-vide, max 200 car.)
    * @throws RessourceDejaExistante si l'artiste est déjà suivi
-   * @throws ErreurMetier si le nom est un tribute/hommage ou si le cap de 500 artistes est atteint
+   * @throws ErreurMetier si tribute/hommage ou cap de 500 artistes atteint
    */
   @Transactional
   public void ajouter(final String userId, final String nom) {
@@ -171,27 +160,12 @@ public class ArtisteService {
   }
 
   /**
-   * Ajoute un artiste à la liste de suivi dans une transaction atomique.
-   *
-   * <p>Vérifie le doublon et le cap avant l'insertion. La résolution de l'artiste dans le
-   * référentiel global tolère les variantes orthographiques mineures (voir {@link
-   * #resoudreArtisteId}) pour éviter de créer un doublon d'UUID pour un artiste déjà présent sous
-   * une graphie légèrement différente (ex. "Krash Karma" / "KrashKarma" — cas réel ayant nécessité
-   * une fusion manuelle en base avant ce correctif, v2.6.0).
-   *
-   * <p>Si {@code wikidataId} est fourni (l'utilisateur a choisi une suggestion Wikidata plutôt que
-   * de saisir un nom libre), résout le P2722 (Deezer ID) via {@code wbgetentities} et persiste les
-   * IDs stables immédiatement, sans attendre le job d'enrichissement nocturne. Un conflit sur
-   * l'index unique {@code idx_artistes_wikidata_id} (Q-ID déjà porté par un autre artiste) est
-   * rattrapé et loggé plutôt que de faire échouer l'ajout — même pattern que {@code
-   * EnrichissementArtistesService} (jalon 2.6.0) : mieux vaut suivre l'artiste sans son Q-ID que ne
-   * pas pouvoir le suivre du tout.
-   *
+   * Ajoute un artiste (doublon/cap/résolution). wikidataId : IDs persistés.
    * @param userId identifiant de l'utilisateur
    * @param nom nom de l'artiste (non-vide, max 200 car.)
    * @param wikidataId Q-ID Wikidata optionnel (peut être {@code null})
    * @throws RessourceDejaExistante si l'artiste est déjà suivi
-   * @throws ErreurMetier si le nom est un tribute/hommage ou si le cap de 500 artistes est atteint
+   * @throws ErreurMetier si tribute/hommage ou cap de 500 artistes atteint
    */
   @Transactional
   public void ajouter(final String userId, final String nom, final String wikidataId) {
@@ -215,17 +189,10 @@ public class ArtisteService {
   }
 
   /**
-   * Diffère la résolution Wikidata/Deezer et le déclenchement du worker jusqu'après le commit
-   * effectif de la transaction.
-   *
-   * <p>Sans cela, l'appel HTTP synchrone vers Wikidata ({@link #resoudreDeezerId}) retenait une
-   * connexion JDBC HikariCP pendant toute sa durée (jusqu'à 5s), et le déclenchement du worker
-   * pouvait s'exécuter avant que l'{@code INSERT} ne soit visible en base (isolation {@code READ
-   * COMMITTED}), faisant manquer l'artiste tout juste ajouté au cycle de fetch qu'il vient lui-même
-   * de déclencher. Exécute immédiatement si aucune transaction n'est active (ex. tests unitaires
-   * sans contexte Spring).
-   *
-   * @param artisteId UUID de l'artiste résolu/créé dans la transaction en cours
+   * Diffère la résolution Wikidata/Deezer et le worker après le commit
+   * (évite de retenir une connexion JDBC, et un fetch manquant l'artiste —
+   * READ COMMITTED). Exécute immédiatement hors transaction (tests).
+   * @param artisteId UUID de l'artiste résolu/créé dans la transaction
    * @param nom nom affiché tel que saisi
    * @param wikidataId Q-ID Wikidata optionnel (peut être {@code null})
    */
@@ -274,18 +241,9 @@ public class ArtisteService {
   }
 
   /**
-   * Résout l'UUID d'un artiste dans le référentiel global, en réutilisant un artiste existant dont
-   * le nom est un doublon flou ({@link CorrespondanceArtiste#estDoublonArtiste}) plutôt que d'en
-   * créer un nouveau. En cas de correspondance exacte de {@code nom_norm}, passe par {@code
-   * upsertArtiste} pour conserver le comportement existant de mise à jour du nom affiché global ;
-   * en cas de correspondance floue seulement, réutilise l'UUID existant sans toucher au nom global
-   * déjà établi (le nom tapé par cet utilisateur reste visible via {@code
-   * user_artistes.artiste_affiche}, indépendant du nom global).
-   *
-   * <p>Public (pas seulement utilisé par {@link #ajouter}) : réutilisé par {@code
-   * PreferencesService.importerArtistes} pour que l'import de préférences applique la même dédup
-   * floue que l'ajout interactif, plutôt qu'une égalité stricte sur {@code nom_norm}.
-   *
+   * Résout l'UUID d'un artiste, réutilisant un doublon flou ({@link
+   * CorrespondanceArtiste#estDoublonArtiste}). Public : aussi utilisé par
+   * PreferencesService.importerArtistes.
    * @param nom nom affiché tel que saisi
    * @param normalise nom normalisé ({@link Normalisation#normaliserTexte})
    * @return UUID de l'artiste existant ou nouvellement créé
@@ -306,16 +264,10 @@ public class ArtisteService {
   }
 
   /**
-   * Indique si une recherche correspond, même partiellement, à un artiste déjà suivi.
-   *
-   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un terme
-   * partiel (ex. "Yael" ne matchait pas "yaelnaim") alors que l'artiste a bien été trouvé puis
-   * exclu des suggestions car déjà suivi — l'utilisateur n'avait alors aucun signal expliquant
-   * l'absence de résultat.
-   *
-   * <p>Package-private (plutôt que {@code private}) pour être testable directement.
-   *
-   * @param rechercheNorm nom normalisé de la recherche ({@link Normalisation#normaliserTexte})
+   * Indique si une recherche correspond, même partiellement, à un artiste
+   * déjà suivi (évite un faux "Aucun résultat" sur terme partiel, ex.
+   * "Yael" ne matchait pas "yaelnaim"). Package-private pour être testable.
+   * @param rechercheNorm nom normalisé de la recherche
    * @param nomsNorm noms normalisés des artistes déjà suivis
    * @return {@code true} si un artiste déjà suivi contient la recherche
    */
@@ -326,12 +278,9 @@ public class ArtisteService {
   }
 
   /**
-   * Supprime un artiste de la liste de suivi.
-   *
-   * <p>Ne journalise (log applicatif + {@code logs_admin}) que si l'artiste était réellement suivi
-   * — un appel sur un artiste déjà retiré, jamais suivi, ou appartenant à un autre utilisateur ne
-   * doit pas produire une fausse entrée d'audit "artiste supprimé".
-   *
+   * Supprime un artiste de la liste de suivi (ne journalise que s'il était
+   * réellement suivi — évite une fausse entrée d'audit sur un artiste déjà
+   * retiré, jamais suivi, ou d'un autre utilisateur).
    * @param userId identifiant de l'utilisateur
    * @param artisteId UUID stable de l'artiste
    */
@@ -348,18 +297,11 @@ public class ArtisteService {
   }
 
   /**
-   * Recherche des artistes par nom via Wikidata Search ({@code wbsearchentities}).
-   *
-   * <p>Ne résout pas le P2722 (Deezer ID) à ce stade — un appel {@code wbgetentities}
-   * supplémentaire par candidat serait disproportionné pour de l'autocomplete interactif ; le P2722
-   * n'est résolu qu'à la sélection effective (voir {@link #resoudreDeezerId}).
-   *
+   * Recherche des artistes par nom via Wikidata Search (wbsearchentities).
+   * P2722 (Deezer ID) non résolu ici (coût disproportionné en autocomplete),
+   * voir {@link #resoudreDeezerId}. Package-private pour test par mock.
    * @param terme terme de recherche saisi par l'utilisateur
-   * @return suggestions Wikidata filtrées par mots-clés de description, vide si aucune ou en cas
-   *     d'échec réseau
-   *     <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution
-   *     ({@code Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire — même
-   *     motif que {@link #resoudreDeezerId}.
+   * @return suggestions Wikidata, vide si aucune ou en cas d'échec réseau
    */
   /* package-private : substituable par mock partiel en test (même package). */
   List<SuggestionArtiste> rechercherWikidata(final String terme) {
@@ -394,13 +336,10 @@ public class ArtisteService {
   }
 
   /**
-   * Résout le P2722 (Deezer ID) d'un artiste Wikidata via {@code wbgetentities}.
-   *
-   * <p>Package-private (plutôt que {@code private}) pour permettre un test par substitution ({@code
-   * Mockito.spy}) évitant un appel réseau réel vers Wikidata en test unitaire.
-   *
+   * Résout le P2722 (Deezer ID) via wbgetentities. Package-private pour
+   * test par mock (évite un appel réseau réel en test unitaire).
    * @param wikidataId Q-ID Wikidata
-   * @return identifiant Deezer, ou {@code null} si absent ou en cas d'échec réseau
+   * @return identifiant Deezer, ou {@code null} si absent ou échec réseau
    */
   @SuppressWarnings("unchecked")
   /* package-private : substituable par mock partiel en test (même package). */

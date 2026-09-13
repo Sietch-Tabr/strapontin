@@ -18,64 +18,9 @@ import java.util.stream.Collectors;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client SPARQL Wikidata pour l'enrichissement des salles (étape 2).
- *
- * <p>Deux modes selon que le Q-ID est déjà connu :
- *
- * <ul>
- *   <li>{@code wikidataId != null} (fourni par {@link OverpassSalleSource} ou déjà stocké en base)
- *       : requête batch classique (clause {@code VALUES}, ≤50)
- *   <li>{@code wikidataId == null} : découverte par recherche de nom via {@code SERVICE
- *       wikibase:mwapi} (une requête par salle, non batchable) — Overpass n'est plus un passage
- *       obligé pour les salles (son instance publique traverse un incident de surcharge documenté,
- *       voir {@link OverpassSalleSource}). <strong>Pas de filtre de type positif</strong>
- *       (contrairement à {@link WikidataArtisteSource}) : l'ontologie Wikidata des salles de
- *       spectacle est hétérogène (ex. « salle de spectacles polyvalente » Q1763828 est sous-classe
- *       P279 de « gymnase » Q14092), un filtre transitif risquerait de faire correspondre des
- *       équipements sportifs. Un filtre négatif exclut en revanche les entités de type
- *       région/département/commune (P31 région administrative, département français, commune
- *       française) ainsi que les infrastructures de transport (gare, arrêt de tram) : une recherche
- *       par nom peut sinon retourner une entité administrative ou de transport homonyme plutôt que
- *       le lieu physique recherché — constaté en production sur une gare (Villepinte) et un arrêt
- *       de tram (Bordeaux) retenus à tort. Le département de la commune du candidat (déduit de son
- *       code postal, P281) est également confronté au département connu de la salle Strapontin
- *       quand les deux sont disponibles (voir {@link #deptIncompatible}) — {@code salles.ville}
- *       peut rester vide au moment de cet enrichissement quand {@code salles.dept} est déjà fiable
- *       (renseigné dès la création à partir d'un concert réel). En contrepartie, la requête exige
- *       {@code wdt:P625} (coordonnées géographiques) : sans ce garde-fou, une recherche par nom
- *       seul peut retourner en premier résultat une œuvre culturelle homonyme (constaté en
- *       production : pour « L'Olympia », le premier candidat mwapi est un <em>album</em> d'Émilie
- *       Simon sorti en 2007, pas la salle) — un album/single/livre n'a pas de coordonnées, une
- *       salle en a toujours une. Exception vérifiée : un candidat typé {@code wd:Q1060829}
- *       (bâtiment de salle de concert) est accepté même sans coordonnées — constaté en production
- *       sur « salle Paul-Fort » (Nantes), correcte mais structurellement exclue par l'exigence de
- *       coordonnées seule, laissant un homonyme sans rapport (« salle Paul Bouin », Basse-Goulaine)
- *       devenir l'unique candidat retourné. La désambiguïsation finale réutilise {@link
- *       CorrespondanceSalle#estDoublonSalle} (module {@code core}, même algorithme que {@code
- *       ReconciliateurSalles} côté worker : Levenshtein ≥ 0.75, Jaccard tokens, critère pivot)
- *       plutôt qu'une simple égalité de chaîne — nécessaire pour absorber à la fois l'article
- *       défini français (« L'Olympia » ↔ « Olympia », via containment) et les suffixes descriptifs
- *       fréquents côté Strapontin absents du libellé Wikidata (« Zenith Paris - la Villette » ↔ «
- *       Zénith Paris », via Jaccard tokens). La comparaison porte aussi sur les
- *       <strong>alias</strong> ({@code skos:altLabel}) : les grandes salles changent régulièrement
- *       de nom commercial (sponsoring) et Wikidata conserve souvent l'ancien nom comme libellé
- *       principal, le nom actuel n'étant qu'un alias — constaté en production : « Accor Arena »
- *       (nom Strapontin, actuel) n'est qu'un alias de l'entité dont le libellé principal Wikidata
- *       est resté « Palais Omnisports de Paris-Bercy ». Sans vérifier les alias, ces salles ne
- *       seraient jamais enrichies malgré une entrée Wikidata existante. Réutiliser l'algorithme
- *       flou du projet plutôt qu'une correspondance exacte reste raisonnablement sûr ici : les
- *       candidats mwapi sont déjà restreints aux résultats les plus pertinents pour le nom
- *       recherché, et les seuils (Jaccard 0.5, pivot ≥7 chars) ont été calibrés dans le projet
- *       précisément pour rejeter les homonymes inter-villes (« zenith bordeaux » vs « zenith caen
- *       »). <strong>Ce calibrage ne couvre pas les homonymes internationaux</strong> — un nom
- *       propre français perd son identité après suppression des accents et peut coïncider avec un
- *       nom anglais sans rapport (constaté en production : « Orléans Arena » → « orleans arena »,
- *       strictement identique à « Orleans Arena » Q3356467, une salle de Las Vegas, Nevada —
- *       correspondance exacte immédiate, aucun seuil flou impliqué). La requête exige donc {@code
- *       wdt:P17 wd:Q142} (pays = France) : Strapontin ne suit que des concerts français
- *       (TM/Eventim/Digitick France), toute salle hors de ce périmètre est nécessairement une
- *       fausse correspondance.
- * </ul>
+ * Client SPARQL Wikidata pour l'enrichissement des salles (étape 2) :
+ * requête batch si Q-ID connu, sinon découverte par nom déléguée à {@link
+ * WikidataSalleDecouverte} (détails wiki Sources-de-données).
  *
  * @since 2.6.0
  * @author Kwaite
@@ -245,13 +190,11 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   /**
-   * Revalide le type Wikidata (P31) des {@code wikidataId} déjà stockés contre {@link
-   * WikidataSalleDecouverte#TYPES_EXCLUS} — un garde-fou de type introduit après coup (ex.
-   * bar/restaurant, #1084) ne s'applique qu'aux nouvelles découvertes, jamais rétroactivement aux
-   * {@code wikidata_id} posés avant son existence.
-   *
+   * Revalide le type Wikidata (P31) des wikidataId déjà stockés contre
+   * {@link WikidataSalleDecouverte#TYPES_EXCLUS} — un garde-fou introduit
+   * après coup ne s'applique jamais rétroactivement aux ids déjà posés.
    * @param wikidataIds Q-IDs déjà stockés à revalider
-   * @return le sous-ensemble de {@code wikidataIds} dont le type Wikidata est désormais exclu
+   * @return le sous-ensemble dont le type Wikidata est désormais exclu
    */
   public Set<String> typesInvalides(final List<String> wikidataIds) {
     final Set<String> invalides = new HashSet<>();
