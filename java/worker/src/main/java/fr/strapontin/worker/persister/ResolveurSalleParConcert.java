@@ -58,20 +58,20 @@ class ResolveurSalleParConcert {
    * forte (voir {@link #chercherSalleParCleForte}). Si aucune correspondance, crée une nouvelle
    * salle.
    *
-   * @param c concert portant le {@code salleSourceId} à résoudre
+   * @param concert concert portant le {@code salleSourceId} à résoudre
    * @return UUID de la salle résolue ou créée, ou {@code null} si le {@code salleSourceId} est mal
    *     formé
    */
   /* package-private : appelé par ReconciliateurSalles (même package). */
-  UUID upsertSalleSource(final ValeurConcert c) {
-    final int sep = c.salleSourceId().indexOf(':');
+  UUID upsertSalleSource(final ValeurConcert concert) {
+    final int sep = concert.salleSourceId().indexOf(':');
     if (sep <= 0) {
       return null;
     }
-    final String source = c.salleSourceId().substring(0, sep);
-    final String identifiant = c.salleSourceId().substring(sep + 1);
+    final String source = concert.salleSourceId().substring(0, sep);
+    final String identifiant = concert.salleSourceId().substring(sep + 1);
 
-    final UUID salleId = resoudreOuCreerSalleId(c);
+    final UUID salleId = resoudreOuCreerSalleId(concert);
     if (salleId == null) {
       return null;
     }
@@ -80,10 +80,10 @@ class ResolveurSalleParConcert {
     // sans dept en prod avaient pourtant l'info via un concert déjà lié. COALESCE : n'écrase
     // jamais une valeur déjà connue, même pattern que wikidata_id/nom_affiche
     // (EnrichissementSallesService).
-    if (c.dept() != null) {
+    if (concert.dept() != null) {
       jdbc.update(
           "UPDATE salles SET dept = COALESCE(dept, :dept) WHERE id = CAST(:uuid AS uuid)",
-          Map.of(CLE_DEPT, c.dept(), "uuid", salleId.toString()));
+          Map.of(CLE_DEPT, concert.dept(), "uuid", salleId.toString()));
     }
 
     jdbc.update(
@@ -94,53 +94,53 @@ class ResolveurSalleParConcert {
 
     LOG.info(
         "salle upsert source salle={} source={} identifiant={} uuid={}",
-        c.salle(),
+        concert.salle(),
         source,
         identifiant,
         salleId);
     return salleId;
   }
 
-  private UUID resoudreOuCreerSalleId(final ValeurConcert c) {
+  private UUID resoudreOuCreerSalleId(final ValeurConcert concert) {
     final List<UUID> existants =
         jdbc.query(
             "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
-            Map.of(CLE_NOM, c.salle()),
+            Map.of(CLE_NOM, concert.salle()),
             (rs, _) -> rs.getObject("id", UUID.class));
     UUID salleId = existants.isEmpty() ? null : existants.get(0);
 
     if (salleId == null) {
-      salleId = chercherSalleParTokens(c.salle(), c.dept());
+      salleId = chercherSalleParTokens(concert.salle(), concert.dept());
     }
 
     if (salleId == null) {
-      salleId = resoudreSousSalle(c.salle(), c.dept());
+      salleId = resoudreSousSalle(concert.salle(), concert.dept());
     }
 
     if (salleId == null) {
-      salleId = chercherSalleParCleForte(c);
+      salleId = chercherSalleParCleForte(concert);
     }
 
     Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
     if (salleId == null) {
-      coordsGeocodees = clientNominatim.geocoder(c.salle());
+      coordsGeocodees = clientNominatim.geocoder(concert.salle());
       if (coordsGeocodees.isPresent()) {
-        salleId = chercherSalleParProximiteGps(coordsGeocodees.get(), c.dept());
+        salleId = chercherSalleParProximiteGps(coordsGeocodees.get(), concert.dept());
       }
     }
 
-    return salleId != null ? salleId : creerNouvelleSalle(c, coordsGeocodees);
+    return salleId != null ? salleId : creerNouvelleSalle(concert, coordsGeocodees);
   }
 
   private UUID creerNouvelleSalle(
-      final ValeurConcert c, final Optional<ClientNominatim.Coordonnees> coordsGeocodees) {
-    final String salleCle = Normalisation.normaliserTexte(c.salle());
+      final ValeurConcert concert, final Optional<ClientNominatim.Coordonnees> coordsGeocodees) {
+    final String salleCle = Normalisation.normaliserTexte(concert.salle());
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue(CLE_SALLE_CLE, salleCle)
-            .addValue(CLE_NOM, c.salle())
+            .addValue(CLE_NOM, concert.salle())
             .addValue("nomNorm", salleCle)
-            .addValue(CLE_DEPT, c.dept())
+            .addValue(CLE_DEPT, concert.dept())
             .addValue(
                 "latitude", coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
             .addValue(
@@ -375,12 +375,12 @@ class ResolveurSalleParConcert {
    * peuvent structurellement pas désigner deux évènements réels distincts — restreint aux cas où
    * l'heure et le département sont tous deux connus pour ne pas affaiblir la spécificité de la clé.
    *
-   * @param c concert dont la salle reste à résoudre
+   * @param concert concert dont la salle reste à résoudre
    * @return UUID de la salle du concert existant correspondant, ou {@code null} si aucun
    */
   /* package-private : appelé par ReconciliateurSalles (même package). */
-  UUID chercherSalleParCleForte(final ValeurConcert c) {
-    if (c.heure() == null || c.dept() == null || c.artisteNorm() == null) {
+  UUID chercherSalleParCleForte(final ValeurConcert concert) {
+    if (concert.heure() == null || concert.dept() == null || concert.artisteNorm() == null) {
       return null;
     }
     final List<UUID> candidats =
@@ -392,25 +392,25 @@ class ResolveurSalleParConcert {
                 + " LIMIT 20",
             Map.of(
                 "artisteNorm",
-                c.artisteNorm(),
+                concert.artisteNorm(),
                 "date",
-                c.date(),
+                concert.date(),
                 "heure",
-                c.heure(),
+                concert.heure(),
                 CLE_DEPT,
-                c.dept()),
+                concert.dept()),
             (rs, _) -> rs.getObject("salle_id", UUID.class));
     if (candidats.isEmpty()) {
       return null;
     }
 
-    final UUID salleId = premierCandidatGeographiquementCoherent(candidats, c.dept());
+    final UUID salleId = premierCandidatGeographiquementCoherent(candidats, concert.dept());
     if (salleId == null) {
       LOG.warn(
           "clé forte (artiste+date+heure+dept) sans candidat géographiquement cohérent"
               + " artiste={} date={} candidats={}",
-          c.artiste(),
-          c.date(),
+          concert.artiste(),
+          concert.date(),
           candidats);
       return null;
     }
@@ -418,9 +418,9 @@ class ResolveurSalleParConcert {
     LOG.info(
         "salle rattachée par clé forte (artiste+date+heure+dept) artiste={} date={} salle={}"
             + " uuid={}",
-        c.artiste(),
-        c.date(),
-        c.salle(),
+        concert.artiste(),
+        concert.date(),
+        concert.salle(),
         salleId);
     return salleId;
   }

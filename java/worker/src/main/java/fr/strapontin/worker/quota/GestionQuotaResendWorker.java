@@ -119,19 +119,19 @@ public class GestionQuotaResendWorker {
   }
 
   private static CompteurEnvoisResend appliquerRollover(
-      final CompteurEnvoisResend c, final String jour, final String mois) {
-    final boolean jourChange = !jour.equals(c.jour());
-    final boolean moisChange = !mois.equals(c.mois());
+      final CompteurEnvoisResend compteur, final String jour, final String mois) {
+    final boolean jourChange = !jour.equals(compteur.jour());
+    final boolean moisChange = !mois.equals(compteur.mois());
     if (!jourChange && !moisChange) {
-      return c;
+      return compteur;
     }
     return new CompteurEnvoisResend(
         jour,
-        jourChange ? 0 : c.envoyesJour(),
+        jourChange ? 0 : compteur.envoyesJour(),
         mois,
-        moisChange ? 0 : c.envoyesMois(),
-        !jourChange && c.alerteJourEnvoyee(),
-        !moisChange && c.alerteMoisEnvoyee());
+        moisChange ? 0 : compteur.envoyesMois(),
+        !jourChange && compteur.alerteJourEnvoyee(),
+        !moisChange && compteur.alerteMoisEnvoyee());
   }
 
   private CompteurEnvoisResend lireCompteurCourant() {

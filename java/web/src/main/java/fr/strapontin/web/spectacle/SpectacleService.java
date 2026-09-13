@@ -165,7 +165,7 @@ public class SpectacleService {
               + " 'postponed'))");
     }
 
-    final String recherche = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
+    final String recherche = FiltreConcertsBuilder.tronquer(filtre.recherche(), 100);
     if (!recherche.isEmpty()) {
       where.append(" AND c.artiste ILIKE :recherche");
       params.put("recherche", "%" + recherche + "%");

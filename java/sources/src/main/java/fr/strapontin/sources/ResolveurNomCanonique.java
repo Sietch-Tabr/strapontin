@@ -205,8 +205,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     return compteurBilan.preleverBilan();
   }
 
-  private static String encode(final String s) {
-    return URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
+  private static String encode(final String texte) {
+    return URLEncoder.encode(texte, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   /**

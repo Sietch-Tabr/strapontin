@@ -113,8 +113,7 @@ class UtilisateurRepository {
   }
 
   /**
-   * Active le TOTP en persistant le secret, chiffré (AES-256-GCM, même clé que {@code
-   * app_config}).
+   * Active le TOTP en persistant le secret, chiffré (AES-256-GCM, même clé que {@code app_config}).
    *
    * @param userId identifiant de l'utilisateur
    * @param secret secret Base32 TOTP en clair
@@ -191,10 +190,10 @@ class UtilisateurRepository {
    */
   /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   int compterAdmins() {
-    final Integer n =
+    final Integer nombre =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM users WHERE role = 'admin'", Map.of(), Integer.class);
-    return n == null ? 0 : n;
+    return nombre == null ? 0 : nombre;
   }
 
   /**
@@ -221,25 +220,23 @@ class UtilisateurRepository {
     final Integer count =
         jdbc.queryForObject(
             """
-                SELECT COUNT(*) FROM user_matches um
-                JOIN concerts c ON c.id = um.concert_id
-                WHERE um.user_id = :userId
-                  AND um.vu_le IS NULL
-                  AND um.masque_le IS NULL
-                  AND EXISTS (
-                    SELECT 1 FROM user_artistes ua
-                    WHERE ua.user_id = :userId
-                      AND c.artiste_id = ua.artiste_id
-                  )
-                """,
+            SELECT COUNT(*) FROM user_matches um
+            JOIN concerts c ON c.id = um.concert_id
+            WHERE um.user_id = :userId
+              AND um.vu_le IS NULL
+              AND um.masque_le IS NULL
+              AND EXISTS (
+                SELECT 1 FROM user_artistes ua
+                WHERE ua.user_id = :userId
+                  AND c.artiste_id = ua.artiste_id
+              )
+            """,
             Map.of(CLE_USER_ID, userId),
             Integer.class);
     return count != null ? count : 0;
   }
 
-  /**
-   * Données email lues depuis la base (utilisées pour construire {@link ProfilUtilisateur}).
-   */
+  /** Données email lues depuis la base (utilisées pour construire {@link ProfilUtilisateur}). */
   /* package-private : accès SQL réservé à ParametresService/UserController (même package). */
   record EmailsUtilisateur(String email, String pendingEmail) {}
 }

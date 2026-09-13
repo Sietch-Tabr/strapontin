@@ -329,11 +329,11 @@ public class CoherenceWikidataSalleService {
     return Set.of(villeNorm);
   }
 
-  private static boolean containmentCoherent(final String a, final String b) {
-    if (a.length() < LONGUEUR_MIN_CONTAINMENT || b.length() < LONGUEUR_MIN_CONTAINMENT) {
+  private static boolean containmentCoherent(final String nomA, final String nomB) {
+    if (nomA.length() < LONGUEUR_MIN_CONTAINMENT || nomB.length() < LONGUEUR_MIN_CONTAINMENT) {
       return false;
     }
-    return a.contains(b) || b.contains(a);
+    return nomA.contains(nomB) || nomB.contains(nomA);
   }
 
   /**

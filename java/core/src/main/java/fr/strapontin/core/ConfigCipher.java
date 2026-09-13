@@ -36,9 +36,9 @@ public final class ConfigCipher {
 
   private static final SecureRandom RNG = new SecureRandom();
 
-  private static final int N = 16_384;
-  private static final int R = 8;
-  private static final int P = 1;
+  private static final int SCRYPT_N = 16_384;
+  private static final int SCRYPT_R = 8;
+  private static final int SCRYPT_P = 1;
   private static final int DK_LEN = 32;
 
   private final byte[] cleChiffrement;
@@ -59,9 +59,9 @@ public final class ConfigCipher {
         SCrypt.generate(
             secret.getBytes(StandardCharsets.UTF_8),
             "strapontin-app-config".getBytes(StandardCharsets.UTF_8),
-            N,
-            R,
-            P,
+            SCRYPT_N,
+            SCRYPT_R,
+            SCRYPT_P,
             DK_LEN);
   }
 

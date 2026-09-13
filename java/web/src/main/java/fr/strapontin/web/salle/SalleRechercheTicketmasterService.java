@@ -122,17 +122,17 @@ class SalleRechercheTicketmasterService {
   }
 
   @SuppressWarnings("unchecked")
-  private ResultatSalle mapperVenueTM(final Map<String, Object> v) {
-    final String nomBrut = (String) v.get("name");
+  private ResultatSalle mapperVenueTM(final Map<String, Object> venue) {
+    final String nomBrut = (String) venue.get("name");
     if (nomBrut == null) {
       return new ResultatSalle(null, null, null, null, "ticketmaster");
     }
     final String nom = Normalisation.normaliserCasse(nomBrut);
     if (nomBrut.contains("??")) {
-      LOG.warn("TM salle nom corrompu id={} nom='{}'", v.get("id"), nomBrut);
+      LOG.warn("TM salle nom corrompu id={} nom='{}'", venue.get("id"), nomBrut);
     }
-    final String id = (String) v.get("id");
-    final Map<String, Object> city = (Map<String, Object>) v.get("city");
+    final String id = (String) venue.get("id");
+    final Map<String, Object> city = (Map<String, Object>) venue.get("city");
     final String ville = city != null ? (String) city.get("name") : null;
     return new ResultatSalle(nom, ville, id, null, "ticketmaster");
   }

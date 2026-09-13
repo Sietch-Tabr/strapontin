@@ -160,8 +160,8 @@ public class NotificationPushService {
     logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
   }
 
-  private static int extraireCodeHttp(final Exception e) {
-    final String msg = e.getMessage();
+  private static int extraireCodeHttp(final Exception exception) {
+    final String msg = exception.getMessage();
     if (msg == null) {
       return -1;
     }

@@ -198,8 +198,8 @@ final class ClientSparqlWikidata {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
   static String valeurBinding(final Map<String, Object> binding, final String cle) {
-    final Map<String, Object> v = (Map<String, Object>) binding.get(cle);
-    return v != null ? (String) v.get("value") : null;
+    final Map<String, Object> valeur = (Map<String, Object>) binding.get(cle);
+    return valeur != null ? (String) valeur.get("value") : null;
   }
 
   /**
@@ -226,12 +226,16 @@ final class ClientSparqlWikidata {
    * doubles (ex. {@code mwapi:search "..."}). L'antislash est échappé avant le guillemet, sinon le
    * {@code \"} produit par l'échappement du guillemet serait lui-même ré-échappé.
    *
-   * @param s la chaîne à insérer dans le littéral
+   * @param texte la chaîne à insérer dans le littéral
    * @return la chaîne échappée
    */
   /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
-  static String echapperLitteral(final String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+  static String echapperLitteral(final String texte) {
+    return texte
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r");
   }
 
   /**

@@ -50,24 +50,24 @@ public final class VapidKeyGenerator {
     final KeyPair paire = kpg.generateKeyPair();
 
     final ECPublicKey pubKey = (ECPublicKey) paire.getPublic();
-    final ECPoint w = pubKey.getW();
+    final ECPoint point = pubKey.getW();
     final byte[] uncompressed = new byte[65];
     uncompressed[0] = 0x04;
-    final byte[] x = vers32Octets(w.getAffineX());
-    final byte[] y = vers32Octets(w.getAffineY());
-    System.arraycopy(x, 0, uncompressed, 1, TAILLE_COORDONNEE_P256);
-    System.arraycopy(y, 0, uncompressed, 1 + TAILLE_COORDONNEE_P256, TAILLE_COORDONNEE_P256);
+    final byte[] coordX = vers32Octets(point.getAffineX());
+    final byte[] coordY = vers32Octets(point.getAffineY());
+    System.arraycopy(coordX, 0, uncompressed, 1, TAILLE_COORDONNEE_P256);
+    System.arraycopy(coordY, 0, uncompressed, 1 + TAILLE_COORDONNEE_P256, TAILLE_COORDONNEE_P256);
     final String clePublique = Base64.getUrlEncoder().withoutPadding().encodeToString(uncompressed);
 
     final ECPrivateKey privKey = (ECPrivateKey) paire.getPrivate();
-    final byte[] d = vers32Octets(privKey.getS());
-    final String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(d);
+    final byte[] scalairePrive = vers32Octets(privKey.getS());
+    final String clePrivee = Base64.getUrlEncoder().withoutPadding().encodeToString(scalairePrive);
 
     return new PaireVapid(clePublique, clePrivee);
   }
 
-  private static byte[] vers32Octets(final BigInteger n) {
-    final byte[] raw = n.toByteArray();
+  private static byte[] vers32Octets(final BigInteger valeur) {
+    final byte[] raw = valeur.toByteArray();
     if (raw.length == TAILLE_COORDONNEE_P256) {
       return raw;
     }

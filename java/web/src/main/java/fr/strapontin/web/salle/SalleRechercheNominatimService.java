@@ -174,8 +174,8 @@ class SalleRechercheNominatimService {
     }
     for (final String cle : List.of("city", "town", "village", "municipality")) {
       final Object valeur = address.get(cle);
-      if (valeur instanceof String s && !s.isBlank()) {
-        return s;
+      if (valeur instanceof String chaine && !chaine.isBlank()) {
+        return chaine;
       }
     }
     return null;

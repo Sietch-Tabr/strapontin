@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.BindParam;
  * HTTP au singulier ({@code source}/{@code dept}) tandis que le constructeur compact restitue les
  * valeurs par défaut (chaîne vide, {@code "date"}) qu'un paramètre absent ne porte pas nativement.
  *
- * @param q terme de recherche artiste/salle (optionnel, vide = pas de filtre)
+ * @param recherche terme de recherche artiste/salle (optionnel, vide = pas de filtre)
  * @param mois filtre mois YYYY-MM (optionnel)
  * @param genre filtre genre (optionnel)
  * @param classification filtre classification (optionnel)
@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.BindParam;
  * @author Kwaite
  */
 public record FiltreConcerts(
-    String q,
+    @BindParam("q") String recherche,
     String mois,
     String genre,
     String classification,
@@ -48,7 +48,7 @@ public record FiltreConcerts(
 
   // Restitue les valeurs par défaut qu'un paramètre de requête absent ne porte pas.
   public FiltreConcerts {
-    q = q != null ? q : "";
+    recherche = recherche != null ? recherche : "";
     mois = mois != null ? mois : "";
     genre = genre != null ? genre : "";
     classification = classification != null ? classification : "";

@@ -101,11 +101,11 @@ public class SalleService {
    * est fusionnée en une seule suggestion (osmId + tmVenueId).
    *
    * @param userId identifiant de l'utilisateur
-   * @param q terme de recherche (optionnel, min 2 caractères)
+   * @param terme terme de recherche (optionnel, min 2 caractères)
    * @return la liste des salles et les suggestions
    */
-  public ReponseSalles lister(final String userId, final String q) {
-    final String recherche = q.strip().substring(0, Math.min(q.strip().length(), 100));
+  public ReponseSalles lister(final String userId, final String terme) {
+    final String recherche = terme.strip().substring(0, Math.min(terme.strip().length(), 100));
 
     final List<SalleUtilisateur> salles = salleRepository.listerPourUtilisateur(userId);
 

@@ -62,18 +62,18 @@ public final class Normalisation {
    * @return le texte normalisé, éventuellement vide
    */
   public static String normaliserTexte(final String texte) {
-    String s = texte.toLowerCase(Locale.ROOT);
+    String texteNorm = texte.toLowerCase(Locale.ROOT);
     for (final Map.Entry<Character, String> e : SUBSTITUTIONS_NFD.entrySet()) {
-      s = s.replace(String.valueOf(e.getKey()), e.getValue());
+      texteNorm = texteNorm.replace(String.valueOf(e.getKey()), e.getValue());
     }
-    s = Normalizer.normalize(s, Normalizer.Form.NFD);
-    s = ACCENTS.matcher(s).replaceAll("");
-    s = APOSTROPHES.matcher(s).replaceAll(" ");
-    s = TIRETS.matcher(s).replaceAll(" ");
-    s = DOLLAR.matcher(s).replaceAll("");
-    s = ESPERLUETTE.matcher(s).replaceAll(" and ");
-    s = NON_ALPHANUM.matcher(s).replaceAll(" ");
-    return ESPACES_MULTIPLES.matcher(s).replaceAll(" ").trim();
+    texteNorm = Normalizer.normalize(texteNorm, Normalizer.Form.NFD);
+    texteNorm = ACCENTS.matcher(texteNorm).replaceAll("");
+    texteNorm = APOSTROPHES.matcher(texteNorm).replaceAll(" ");
+    texteNorm = TIRETS.matcher(texteNorm).replaceAll(" ");
+    texteNorm = DOLLAR.matcher(texteNorm).replaceAll("");
+    texteNorm = ESPERLUETTE.matcher(texteNorm).replaceAll(" and ");
+    texteNorm = NON_ALPHANUM.matcher(texteNorm).replaceAll(" ");
+    return ESPACES_MULTIPLES.matcher(texteNorm).replaceAll(" ").trim();
   }
 
   /**
@@ -134,12 +134,12 @@ public final class Normalisation {
     if (!nom.equals(nom.toUpperCase(Locale.ROOT))) {
       return nom;
     }
-    final Matcher m = SEP_NORMALISER_CASSE.matcher(nom);
+    final Matcher matcher = SEP_NORMALISER_CASSE.matcher(nom);
     final StringBuilder sb = new StringBuilder();
     boolean debutPhrase = true;
     int dernier = 0;
-    while (m.find()) {
-      final String mot = nom.substring(dernier, m.start());
+    while (matcher.find()) {
+      final String mot = nom.substring(dernier, matcher.start());
       if (!mot.isEmpty()) {
         final String bas = mot.toLowerCase(Locale.ROOT);
         if (!debutPhrase && ARTICLES_FR.contains(bas)) {
@@ -148,10 +148,10 @@ public final class Normalisation {
           sb.append(capitaliserAvecApostrophe(bas));
         }
       }
-      final String sep = m.group();
+      final String sep = matcher.group();
       sb.append(sep);
       debutPhrase = "-".equals(sep);
-      dernier = m.end();
+      dernier = matcher.end();
     }
     final String fin = nom.substring(dernier);
     if (!fin.isEmpty()) {
@@ -172,15 +172,15 @@ public final class Normalisation {
     final StringBuilder sb = new StringBuilder();
     boolean majSuivante = true;
     for (int i = 0; i < mot.length(); i++) {
-      final char c = mot.charAt(i);
-      if (c == '\'' || c == '’') {
-        sb.append(c);
+      final char caractere = mot.charAt(i);
+      if (caractere == '\'' || caractere == '’') {
+        sb.append(caractere);
         majSuivante = true;
       } else if (majSuivante) {
-        sb.append(Character.toUpperCase(c));
+        sb.append(Character.toUpperCase(caractere));
         majSuivante = false;
       } else {
-        sb.append(c);
+        sb.append(caractere);
       }
     }
     return sb.toString();

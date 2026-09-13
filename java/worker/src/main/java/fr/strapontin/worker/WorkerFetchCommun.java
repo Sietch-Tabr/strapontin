@@ -122,8 +122,11 @@ public class WorkerFetchCommun {
   }
 
   /* package-private : appelé par les exécuteurs de fetch (même package). */
-  static ResultatPersistance accumuler(final ResultatPersistance a, final ResultatPersistance b) {
-    return new ResultatPersistance(a.nbInseres() + b.nbInseres(), a.nbMisAJour() + b.nbMisAJour());
+  static ResultatPersistance accumuler(
+      final ResultatPersistance resultatA, final ResultatPersistance resultatB) {
+    return new ResultatPersistance(
+        resultatA.nbInseres() + resultatB.nbInseres(),
+        resultatA.nbMisAJour() + resultatB.nbMisAJour());
   }
 
   /**
@@ -196,8 +199,8 @@ public class WorkerFetchCommun {
    * @param c concert à évaluer
    * @return {@code true} si la résolution Deezer peut s'appliquer à ce concert
    */
-  private static boolean estEligibleResolutionDeezer(final ConcertBrut c) {
-    return EligibiliteResolutionDeezer.estEligible(c.classification(), c.source());
+  private static boolean estEligibleResolutionDeezer(final ConcertBrut concert) {
+    return EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source());
   }
 
   /**

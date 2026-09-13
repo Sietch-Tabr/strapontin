@@ -267,9 +267,11 @@ public class PreferencesService {
     return new int[] {traites, rejetes};
   }
 
-  private void importerConfig(final String userId, final ConfigExport c) {
+  private void importerConfig(final String userId, final ConfigExport config) {
     final String[] depts =
-        c.departements() != null ? c.departements().toArray(String[]::new) : new String[0];
+        config.departements() != null
+            ? config.departements().toArray(String[]::new)
+            : new String[0];
     jdbc.update(
         """
         INSERT INTO user_config
@@ -296,19 +298,19 @@ public class PreferencesService {
             "depts",
             depts,
             "filtreDisponibles",
-            c.filtreDisponibles(),
+            config.filtreDisponibles(),
             "frequence",
-            c.frequenceNotifications() != null ? c.frequenceNotifications() : "jamais",
+            config.frequenceNotifications() != null ? config.frequenceNotifications() : "jamais",
             "notifArtistes",
-            c.notifArtistes(),
+            config.notifArtistes(),
             "notifSalles",
-            c.notifSalles(),
+            config.notifSalles(),
             "notifArtistesPush",
-            c.notifArtistesPush(),
+            config.notifArtistesPush(),
             "notifSallesPush",
-            c.notifSallesPush(),
+            config.notifSallesPush(),
             "theme",
-            c.theme() != null ? c.theme() : "auto"));
+            config.theme() != null ? config.theme() : "auto"));
   }
 
   private void fusionnerDepartements(final String userId, final String... nouveauxDepts) {

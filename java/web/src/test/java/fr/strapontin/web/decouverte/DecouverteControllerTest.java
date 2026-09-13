@@ -103,7 +103,7 @@ class DecouverteControllerTest {
         org.mockito.ArgumentCaptor.forClass(FiltreConcerts.class);
     org.mockito.Mockito.verify(decouverteService).decouvrir(eq("user-1"), captor.capture());
     final FiltreConcerts filtre = captor.getValue();
-    assertEquals("q", filtre.q());
+    assertEquals("q", filtre.recherche());
     assertEquals("2026-05", filtre.mois());
     assertEquals("Pop", filtre.genre());
     assertEquals("concert", filtre.classification());

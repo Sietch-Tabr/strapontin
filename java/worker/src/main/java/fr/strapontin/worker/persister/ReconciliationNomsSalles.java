@@ -185,26 +185,28 @@ class ReconciliationNomsSalles {
       final List<String> sallesNorm, final Map<String, String> remplacements) {
     for (int i = 0; i < sallesNorm.size(); i++) {
       for (int j = i + 1; j < sallesNorm.size(); j++) {
-        final String a = sallesNorm.get(i);
-        final String b = sallesNorm.get(j);
-        if (CorrespondanceSalle.estDoublonSalle(a, b)) {
-          final String canonique = a.length() >= b.length() ? a : b;
-          remplacements.put(a, canonique);
-          remplacements.put(b, canonique);
+        final String nomA = sallesNorm.get(i);
+        final String nomB = sallesNorm.get(j);
+        if (CorrespondanceSalle.estDoublonSalle(nomA, nomB)) {
+          final String canonique = nomA.length() >= nomB.length() ? nomA : nomB;
+          remplacements.put(nomA, canonique);
+          remplacements.put(nomB, canonique);
         }
       }
     }
   }
 
   private ValeurConcert appliquerRemplacementSalle(
-      final ValeurConcert c, final Map<String, String> remplacements) {
-    final String canonique = remplacements.get(c.salleNorm());
-    if (canonique == null || canonique.equals(c.salleNorm())) {
-      return c;
+      final ValeurConcert concert, final Map<String, String> remplacements) {
+    final String canonique = remplacements.get(concert.salleNorm());
+    if (canonique == null || canonique.equals(concert.salleNorm())) {
+      return concert;
     }
     LOG.debug(
-        "doublon salle intra-lot réconcilié entrant={} canonique={}", c.salleNorm(), canonique);
-    return c.avecSalleNorm(canonique);
+        "doublon salle intra-lot réconcilié entrant={} canonique={}",
+        concert.salleNorm(),
+        canonique);
+    return concert.avecSalleNorm(canonique);
   }
 
   private List<ValeurConcert> reconcilierContreBase(

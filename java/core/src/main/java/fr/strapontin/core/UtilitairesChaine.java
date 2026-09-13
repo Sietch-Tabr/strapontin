@@ -19,15 +19,19 @@ public final class UtilitairesChaine {
   /**
    * Échappe une chaîne pour insertion sûre dans une valeur JSON construite à la main.
    *
-   * Échappe les antislashs, guillemets doubles et retours à la ligne. Destiné aux petits payloads
-   * JSON assemblés sans dépendance Jackson (notifications push).
+   * <p>Échappe les antislashs, guillemets doubles et retours à la ligne. Destiné aux petits
+   * payloads JSON assemblés sans dépendance Jackson (notifications push).
    *
-   * @param s la chaîne à échapper (non null)
+   * @param texte la chaîne à échapper (non null)
    * @return la chaîne échappée
    * @since 2.2.3
    */
-  public static String echapperJson(final String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+  public static String echapperJson(final String texte) {
+    return texte
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r");
   }
 
   /**
@@ -36,7 +40,7 @@ public final class UtilitairesChaine {
    * l'identique dans les deux (gabarits d'email HTML).
    *
    * @param valeur la valeur à échapper, convertie en chaîne via {@link String#valueOf} ({@code
-   *   null} devient une chaîne vide)
+   *     null} devient une chaîne vide)
    * @return la chaîne échappée
    * @since 2.8.7
    */
@@ -54,26 +58,26 @@ public final class UtilitairesChaine {
 
   /**
    * Vérifie si la plus courte des deux chaînes est incluse dans la plus longue, avec un ratio de
-   * longueur minimal — critère de repli couvrant les troncatures et variantes partielles entre
-   * deux formes d'un même nom (partagé par {@link CorrespondanceSalle} et {@link
+   * longueur minimal — critère de repli couvrant les troncatures et variantes partielles entre deux
+   * formes d'un même nom (partagé par {@link CorrespondanceSalle} et {@link
    * CorrespondanceArtiste}).
    *
-   * @param a première chaîne
-   * @param b deuxième chaîne
+   * @param nomA première chaîne
+   * @param nomB deuxième chaîne
    * @param longueurMinContainment longueur minimale de la chaîne la plus courte pour appliquer le
-   *   critère
+   *     critère
    * @param ratioMinContainment ratio minimal longueur(court)/longueur(long) requis
    * @return {@code true} si la plus courte est contenue dans la plus longue et que le ratio de
-   *   longueur est respecté
+   *     longueur est respecté
    * @since 2.7.11
    */
   public static boolean estContainmentRatio(
-      final String a,
-      final String b,
+      final String nomA,
+      final String nomB,
       final int longueurMinContainment,
       final double ratioMinContainment) {
-    final String court = a.length() <= b.length() ? a : b;
-    final String plusLong = a.length() <= b.length() ? b : a;
+    final String court = nomA.length() <= nomB.length() ? nomA : nomB;
+    final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;
     final double ratio = (double) court.length() / plusLong.length();
     return court.length() >= longueurMinContainment
         && ratio >= ratioMinContainment
@@ -82,17 +86,17 @@ public final class UtilitairesChaine {
 
   /**
    * Vérifie l'égalité de deux chaînes une fois tous les espaces retirés — couvre le cas où {@link
-   * Normalisation#normaliserTexte} remplace une apostrophe par une espace (ex. "N'Dour" → "n
-   * dour") alors qu'une source omet totalement cette apostrophe (ex. "NDour" → "ndour") : sans ce
-   * critère, les deux formes ne partagent aucun token commun. Partagé par {@link
-   * CorrespondanceSalle} et {@link CorrespondanceArtiste}.
+   * Normalisation#normaliserTexte} remplace une apostrophe par une espace (ex. "N'Dour" → "n dour")
+   * alors qu'une source omet totalement cette apostrophe (ex. "NDour" → "ndour") : sans ce critère,
+   * les deux formes ne partagent aucun token commun. Partagé par {@link CorrespondanceSalle} et
+   * {@link CorrespondanceArtiste}.
    *
-   * @param a première chaîne
-   * @param b deuxième chaîne
+   * @param nomA première chaîne
+   * @param nomB deuxième chaîne
    * @return {@code true} si les deux chaînes sont identiques une fois les espaces retirés
    * @since 2.9.1
    */
-  public static boolean estEgaliteSansEspaces(final String a, final String b) {
-    return a.replace(" ", "").equals(b.replace(" ", ""));
+  public static boolean estEgaliteSansEspaces(final String nomA, final String nomB) {
+    return nomA.replace(" ", "").equals(nomB.replace(" ", ""));
   }
 }

@@ -24,49 +24,52 @@ public final class DistanceTexte {
    * pondère les correspondances positionnelles sans over-pénaliser les transpositions. Utilisé à la
    * place de {@link #similarite} dans la réconciliation des artistes.
    *
-   * @param a première chaîne
-   * @param b deuxième chaîne
+   * @param chaineA première chaîne
+   * @param chaineB deuxième chaîne
    * @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
-  public static double jaro(final String a, final String b) {
-    if (a.equals(b)) {
+  public static double jaro(final String chaineA, final String chaineB) {
+    if (chaineA.equals(chaineB)) {
       return 1.0;
     }
-    final int m = a.length();
-    final int n = b.length();
-    if (m == 0 || n == 0) {
+    final int longueurA = chaineA.length();
+    final int longueurB = chaineB.length();
+    if (longueurA == 0 || longueurB == 0) {
       return 0.0;
     }
-    final int fenetre = Math.max(0, Math.max(m, n) / 2 - 1);
-    final boolean[] matchA = new boolean[m];
-    final boolean[] matchB = new boolean[n];
-    final int matchs = rechercherCorrespondances(a, b, fenetre, matchA, matchB);
+    final int fenetre = Math.max(0, Math.max(longueurA, longueurB) / 2 - 1);
+    final boolean[] matchA = new boolean[longueurA];
+    final boolean[] matchB = new boolean[longueurB];
+    final int matchs = rechercherCorrespondances(chaineA, chaineB, fenetre, matchA, matchB);
     if (matchs == 0) {
       return 0.0;
     }
-    final int transpositions = compterTranspositions(a, b, matchA, matchB);
-    return ((double) matchs / m + (double) matchs / n + (matchs - transpositions / 2.0) / matchs)
+    final int transpositions = compterTranspositions(chaineA, chaineB, matchA, matchB);
+    return ((double) matchs / longueurA
+            + (double) matchs / longueurB
+            + (matchs - transpositions / 2.0) / matchs)
         / 3.0;
   }
 
-  // Marque dans matchA/matchB les caractères de a et b qui se correspondent dans la fenêtre
+  // Marque dans matchA/matchB les caractères de chaineA et chaineB qui se correspondent dans la
+  // fenêtre
   // Jaro, et retourne leur nombre. matchA/matchB sont des tampons de sortie mutés en place, pas
   // une liste variadique de valeurs — varargs induirait en erreur sur leur rôle réel.
   @SuppressWarnings("PMD.UseVarargs")
   private static int rechercherCorrespondances(
-      final String a,
-      final String b,
+      final String chaineA,
+      final String chaineB,
       final int fenetre,
       final boolean[] matchA,
       final boolean[] matchB) {
-    final int m = a.length();
-    final int n = b.length();
+    final int longueurA = chaineA.length();
+    final int longueurB = chaineB.length();
     int matchs = 0;
-    for (int i = 0; i < m; i++) {
+    for (int i = 0; i < longueurA; i++) {
       final int debut = Math.max(0, i - fenetre);
-      final int fin = Math.min(n - 1, i + fenetre);
+      final int fin = Math.min(longueurB - 1, i + fenetre);
       for (int j = debut; j <= fin; j++) {
-        if (!matchB[j] && a.charAt(i) == b.charAt(j)) {
+        if (!matchB[j] && chaineA.charAt(i) == chaineB.charAt(j)) {
           matchA[i] = true;
           matchB[j] = true;
           matchs++;
@@ -78,22 +81,23 @@ public final class DistanceTexte {
   }
 
   // Compte, parmi les caractères déjà marqués correspondants, ceux dont l'ordre relatif diffère
-  // entre a et b. matchA/matchB sont des tampons remplis par rechercherCorrespondances, pas une
+  // entre chaineA et chaineB. matchA/matchB sont des tampons remplis par rechercherCorrespondances,
+  // pas une
   // liste variadique de valeurs.
   @SuppressWarnings("PMD.UseVarargs")
   private static int compterTranspositions(
-      final String a, final String b, final boolean[] matchA, final boolean[] matchB) {
+      final String chaineA, final String chaineB, final boolean[] matchA, final boolean[] matchB) {
     int transpositions = 0;
-    int k = 0;
-    for (int i = 0; i < a.length(); i++) {
+    int indexB = 0;
+    for (int i = 0; i < chaineA.length(); i++) {
       if (matchA[i]) {
-        while (!matchB[k]) {
-          k++;
+        while (!matchB[indexB]) {
+          indexB++;
         }
-        if (a.charAt(i) != b.charAt(k)) {
+        if (chaineA.charAt(i) != chaineB.charAt(indexB)) {
           transpositions++;
         }
-        k++;
+        indexB++;
       }
     }
     return transpositions;
@@ -102,40 +106,40 @@ public final class DistanceTexte {
   /**
    * Calcule la similarité Levenshtein normalisée entre deux chaînes.
    *
-   * @param a première chaîne
-   * @param b deuxième chaîne
+   * @param chaineA première chaîne
+   * @param chaineB deuxième chaîne
    * @return score entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
-  public static double similarite(final String a, final String b) {
-    if (a.equals(b)) {
+  public static double similarite(final String chaineA, final String chaineB) {
+    if (chaineA.equals(chaineB)) {
       return 1.0;
     }
-    if (a.isEmpty() || b.isEmpty()) {
+    if (chaineA.isEmpty() || chaineB.isEmpty()) {
       return 0.0;
     }
-    final int longueur = Math.max(a.length(), b.length());
-    return 1.0 - (double) levenshtein(a, b) / longueur;
+    final int longueur = Math.max(chaineA.length(), chaineB.length());
+    return 1.0 - (double) levenshtein(chaineA, chaineB) / longueur;
   }
 
-  private static int levenshtein(final String a, final String b) {
-    final int m = a.length();
-    final int n = b.length();
-    final int[][] dp = new int[m + 1][n + 1];
-    for (int i = 0; i <= m; i++) {
+  private static int levenshtein(final String chaineA, final String chaineB) {
+    final int longueurA = chaineA.length();
+    final int longueurB = chaineB.length();
+    final int[][] dp = new int[longueurA + 1][longueurB + 1];
+    for (int i = 0; i <= longueurA; i++) {
       dp[i][0] = i;
     }
-    for (int j = 0; j <= n; j++) {
+    for (int j = 0; j <= longueurB; j++) {
       dp[0][j] = j;
     }
-    for (int i = 1; i <= m; i++) {
-      for (int j = 1; j <= n; j++) {
-        if (a.charAt(i - 1) == b.charAt(j - 1)) {
+    for (int i = 1; i <= longueurA; i++) {
+      for (int j = 1; j <= longueurB; j++) {
+        if (chaineA.charAt(i - 1) == chaineB.charAt(j - 1)) {
           dp[i][j] = dp[i - 1][j - 1];
         } else {
           dp[i][j] = 1 + Math.min(dp[i - 1][j], Math.min(dp[i][j - 1], dp[i - 1][j - 1]));
         }
       }
     }
-    return dp[m][n];
+    return dp[longueurA][longueurB];
   }
 }

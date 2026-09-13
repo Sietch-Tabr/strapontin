@@ -55,11 +55,11 @@ final class EtatFetchTM {
   /**
    * Ajoute au compteur de concerts non récupérés par plafonnement de la pagination.
    *
-   * @param n nombre de concerts manqués à ajouter
+   * @param nombre nombre de concerts manqués à ajouter
    */
   /* package-private : appelé par TicketmasterSource/TicketmasterPageFetcher (même package). */
-  void ajouterConcertsManques(final int n) {
-    concertsManquesCumules.addAndGet(n);
+  void ajouterConcertsManques(final int nombre) {
+    concertsManquesCumules.addAndGet(nombre);
   }
 
   /**

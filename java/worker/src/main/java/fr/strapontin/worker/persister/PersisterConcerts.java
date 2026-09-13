@@ -103,37 +103,37 @@ public class PersisterConcerts {
   /**
    * Vérifie si deux noms de salle normalisés désignent la même salle.
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @return {@code true} si les salles sont considérées identiques
    * @see ReconciliateurSalles#estDoublonSalle
    */
-  public static boolean estDoublonSalle(final String a, final String b) {
-    return ReconciliateurSalles.estDoublonSalle(a, b);
+  public static boolean estDoublonSalle(final String nomA, final String nomB) {
+    return ReconciliateurSalles.estDoublonSalle(nomA, nomB);
   }
 
   /**
    * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @return {@code true} si les artistes sont considérés identiques
    * @see ReconciliateurArtistes#estDoublonArtiste
    */
-  public static boolean estDoublonArtiste(final String a, final String b) {
-    return ReconciliateurArtistes.estDoublonArtiste(a, b);
+  public static boolean estDoublonArtiste(final String nomA, final String nomB) {
+    return ReconciliateurArtistes.estDoublonArtiste(nomA, nomB);
   }
 
   /**
    * Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
    *
-   * @param a première chaîne normalisée
-   * @param b deuxième chaîne normalisée
+   * @param nomA première chaîne normalisée
+   * @param nomB deuxième chaîne normalisée
    * @return coefficient de Jaccard entre 0.0 et 1.0
    * @see ReconciliateurSalles#jaccardTokens
    */
-  public static double jaccardTokens(final String a, final String b) {
-    return ReconciliateurSalles.jaccardTokens(a, b);
+  public static double jaccardTokens(final String nomA, final String nomB) {
+    return ReconciliateurSalles.jaccardTokens(nomA, nomB);
   }
 
   // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom lui-même (déjà entièrement
@@ -306,7 +306,7 @@ public class PersisterConcerts {
   }
 
   private void journaliserMappingIncoherent(
-      final UUID salleMappee, final ValeurConcert c, final Map<UUID, String> deptsConnus) {
+      final UUID salleMappee, final ValeurConcert concert, final Map<UUID, String> deptsConnus) {
     logsAdminWorker.inserer(
         "warn",
         "persistance",
@@ -315,10 +315,10 @@ public class PersisterConcerts {
             + " deptConnu="
             + deptsConnus.get(salleMappee)
             + " deptEntrant="
-            + c.dept()
+            + concert.dept()
             + " artiste="
-            + c.artisteNorm(),
-        Map.of("salleId", salleMappee.toString(), "artiste", c.artisteNorm()));
+            + concert.artisteNorm(),
+        Map.of("salleId", salleMappee.toString(), "artiste", concert.artisteNorm()));
   }
 
   private List<ValeurConcert> appliquerResolutionUuids(

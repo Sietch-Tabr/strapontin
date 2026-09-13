@@ -160,8 +160,8 @@ public class AuthController {
   private static UtilisateurDetails principalAuthentifie(final Authentication auth) {
     return auth != null
             && auth.isAuthenticated()
-            && auth.getPrincipal() instanceof UtilisateurDetails p
-        ? p
+            && auth.getPrincipal() instanceof UtilisateurDetails principal
+        ? principal
         : null;
   }
 

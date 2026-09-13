@@ -12,12 +12,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
- * Façade de réconciliation des salles entre fetches successifs — délègue à trois collaborateurs
- * par responsabilité (v2.8.7, extraction pure, aucun changement fonctionnel ni de contrat) :
- * {@link ReconciliationNomsSalles} (variantes de nommage intra-lot/inter-jobs, absorption des
- * renommages), {@link ResolveurSalleParConcert} (résolution/création d'une salle pour un concert
- * entrant, par identifiant source/tokens/clé forte) et {@link ReconciliateurSallesOrphelines}
- * (retentative nocturne des concerts sans salle).
+ * Façade de réconciliation des salles entre fetches successifs — délègue à trois collaborateurs par
+ * responsabilité (v2.8.7, extraction pure, aucun changement fonctionnel ni de contrat) : {@link
+ * ReconciliationNomsSalles} (variantes de nommage intra-lot/inter-jobs, absorption des renommages),
+ * {@link ResolveurSalleParConcert} (résolution/création d'une salle pour un concert entrant, par
+ * identifiant source/tokens/clé forte) et {@link ReconciliateurSallesOrphelines} (retentative
+ * nocturne des concerts sans salle).
  *
  * <p>Utilise {@link CorrespondanceSalle#estDoublonSalle} (module {@code core}, partagé avec {@code
  * sources} — voir {@code WikidataSalleSource}) pour déterminer si deux noms désignent la même
@@ -50,25 +50,25 @@ public class ReconciliateurSalles {
   /**
    * Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
    *
-   * @param a première chaîne normalisée
-   * @param b deuxième chaîne normalisée
+   * @param nomA première chaîne normalisée
+   * @param nomB deuxième chaîne normalisée
    * @return coefficient de Jaccard entre 0.0 et 1.0
    * @see CorrespondanceSalle#jaccardTokens
    */
-  public static double jaccardTokens(final String a, final String b) {
-    return CorrespondanceSalle.jaccardTokens(a, b);
+  public static double jaccardTokens(final String nomA, final String nomB) {
+    return CorrespondanceSalle.jaccardTokens(nomA, nomB);
   }
 
   /**
    * Vérifie si deux noms de salle normalisés désignent la même salle.
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @return {@code true} si les salles sont considérées identiques
    * @see CorrespondanceSalle#estDoublonSalle
    */
-  public static boolean estDoublonSalle(final String a, final String b) {
-    return CorrespondanceSalle.estDoublonSalle(a, b);
+  public static boolean estDoublonSalle(final String nomA, final String nomB) {
+    return CorrespondanceSalle.estDoublonSalle(nomA, nomB);
   }
 
   /**
@@ -92,8 +92,8 @@ public class ReconciliateurSalles {
    * @see ResolveurSalleParConcert#upsertSalleSource
    */
   /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
-  UUID upsertSalleSource(final ValeurConcert c) {
-    return resolveurSalle.upsertSalleSource(c);
+  UUID upsertSalleSource(final ValeurConcert concert) {
+    return resolveurSalle.upsertSalleSource(concert);
   }
 
   /**
@@ -108,8 +108,8 @@ public class ReconciliateurSalles {
    * @see ResolveurSalleParConcert#chercherSalleParCleForte
    */
   /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
-  UUID chercherSalleParCleForte(final ValeurConcert c) {
-    return resolveurSalle.chercherSalleParCleForte(c);
+  UUID chercherSalleParCleForte(final ValeurConcert concert) {
+    return resolveurSalle.chercherSalleParCleForte(concert);
   }
 
   /**

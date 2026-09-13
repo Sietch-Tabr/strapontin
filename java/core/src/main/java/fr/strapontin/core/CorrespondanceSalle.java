@@ -76,34 +76,34 @@ public final class CorrespondanceSalle {
   private CorrespondanceSalle() {}
 
   private static boolean estDoublonTexte(
-      final String a,
-      final String b,
+      final String nomA,
+      final String nomB,
       final double seuilSimilarite,
       final int longueurMinContainment,
       final double ratioMinContainment,
       final boolean containmentAutorise) {
-    if (a.equals(b)) {
+    if (nomA.equals(nomB)) {
       return true;
     }
     // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)
     // n'a aucun pouvoir discriminant propre — "la prade" est un préfixe strict de "la pradella",
     // deux lieux réels sans rapport — désactivé au même titre que le pivot quand aucun signal de
     // localisation indépendant ne peut confirmer le candidat.
-    return DistanceTexte.similarite(a, b) >= seuilSimilarite
+    return DistanceTexte.similarite(nomA, nomB) >= seuilSimilarite
         || (containmentAutorise
             && UtilitairesChaine.estContainmentRatio(
-                a, b, longueurMinContainment, ratioMinContainment));
+                nomA, nomB, longueurMinContainment, ratioMinContainment));
   }
 
   /**
    * Découpe une chaîne normalisée en tokens significatifs (filtre les mots de moins de {@value
    * #LONGUEUR_MIN_TOKEN_JACCARD} caractères — articles "le", "de", "la"…).
    *
-   * @param s chaîne normalisée
+   * @param nomNorm chaîne normalisée
    * @return ensemble des tokens significatifs
    */
-  public static Set<String> tokensSignificatifs(final String s) {
-    final Set<String> tokens = new HashSet<>(Arrays.asList(s.split("\\s+")));
+  public static Set<String> tokensSignificatifs(final String nomNorm) {
+    final Set<String> tokens = new HashSet<>(Arrays.asList(nomNorm.split("\\s+")));
     tokens.removeIf(t -> t.length() < LONGUEUR_MIN_TOKEN_JACCARD);
     return tokens;
   }
@@ -113,11 +113,11 @@ public final class CorrespondanceSalle {
    * génériques — un token comme "theatre" ou "palais" ne prouve rien seul sur l'identité d'une
    * salle, partagé nationalement par des centaines de lieux distincts.
    *
-   * @param s chaîne normalisée
+   * @param nomNorm chaîne normalisée
    * @return ensemble des tokens significatifs et spécifiques (hors mots-types génériques)
    */
-  private static Set<String> tokensSpecifiques(final String s) {
-    final Set<String> tokens = new HashSet<>(tokensSignificatifs(s));
+  private static Set<String> tokensSpecifiques(final String nomNorm) {
+    final Set<String> tokens = new HashSet<>(tokensSignificatifs(nomNorm));
     tokens.removeAll(MOTS_GENERIQUES_SALLE);
     return tokens;
   }
@@ -128,13 +128,13 @@ public final class CorrespondanceSalle {
    * <p>Seuls les tokens d'au moins {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères sont pris en
    * compte (filtre les articles "le", "de", "la"…). Retourne 1.0 si les deux unions sont vides.
    *
-   * @param a première chaîne normalisée
-   * @param b deuxième chaîne normalisée
+   * @param nomA première chaîne normalisée
+   * @param nomB deuxième chaîne normalisée
    * @return coefficient de Jaccard entre 0.0 et 1.0
    */
-  public static double jaccardTokens(final String a, final String b) {
-    final Set<String> tokensA = tokensSignificatifs(a);
-    final Set<String> tokensB = tokensSignificatifs(b);
+  public static double jaccardTokens(final String nomA, final String nomB) {
+    final Set<String> tokensA = tokensSignificatifs(nomA);
+    final Set<String> tokensB = tokensSignificatifs(nomB);
     if (tokensA.isEmpty() && tokensB.isEmpty()) {
       return 1.0;
     }
@@ -207,12 +207,12 @@ public final class CorrespondanceSalle {
    *       »)
    * </ol>
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @return {@code true} si les salles sont considérées identiques
    */
-  public static boolean estDoublonSalle(final String a, final String b) {
-    return estDoublonSalle(a, b, true);
+  public static boolean estDoublonSalle(final String nomA, final String nomB) {
+    return estDoublonSalle(nomA, nomB, true);
   }
 
   /**
@@ -224,32 +224,32 @@ public final class CorrespondanceSalle {
    * rapprochement Wikidata sans aucune donnée de localisation permettant un contrôle croisé
    * indépendant. Les trois autres critères restent inchangés dans les deux cas.
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @param pivotAutorise {@code false} pour exclure le pivot et le containment de caractères de
    *     l'union — à réserver aux cas où aucun signal indépendant (ville, département) ne peut
    *     confirmer un candidat validé sur l'un de ces deux seuls critères
    * @return {@code true} si les salles sont considérées identiques
    */
   public static boolean estDoublonSalle(
-      final String a, final String b, final boolean pivotAutorise) {
+      final String nomA, final String nomB, final boolean pivotAutorise) {
     if (estDoublonTexte(
-        a,
-        b,
+        nomA,
+        nomB,
         SEUIL_SIMILARITE_SALLE,
         LONGUEUR_MIN_CONTAINMENT_SALLE,
         RATIO_MIN_CONTAINMENT_SALLE,
         pivotAutorise)) {
       return true;
     }
-    if (UtilitairesChaine.estEgaliteSansEspaces(a, b)) {
+    if (UtilitairesChaine.estEgaliteSansEspaces(nomA, nomB)) {
       return true;
     }
 
-    final Set<String> tokA = tokensSignificatifs(a);
-    final Set<String> tokB = tokensSignificatifs(b);
-    final Set<String> specA = tokensSpecifiques(a);
-    final Set<String> specB = tokensSpecifiques(b);
+    final Set<String> tokA = tokensSignificatifs(nomA);
+    final Set<String> tokB = tokensSignificatifs(nomB);
+    final Set<String> specA = tokensSpecifiques(nomA);
+    final Set<String> specB = tokensSpecifiques(nomB);
     final Set<String> intersectionSpec = intersection(specA, specB);
     final double jaccardSpec = jaccard(specA, specB, intersectionSpec);
 
@@ -260,16 +260,17 @@ public final class CorrespondanceSalle {
         || estContainmentPartielSuffisant(specA, specB);
   }
 
-  private static Set<String> intersection(final Set<String> a, final Set<String> b) {
-    final Set<String> resultat = new HashSet<>(a);
-    resultat.retainAll(b);
+  private static Set<String> intersection(
+      final Set<String> ensembleA, final Set<String> ensembleB) {
+    final Set<String> resultat = new HashSet<>(ensembleA);
+    resultat.retainAll(ensembleB);
     return resultat;
   }
 
   private static double jaccard(
-      final Set<String> a, final Set<String> b, final Set<String> intersection) {
-    final Set<String> union = new HashSet<>(a);
-    union.addAll(b);
+      final Set<String> ensembleA, final Set<String> ensembleB, final Set<String> intersection) {
+    final Set<String> union = new HashSet<>(ensembleA);
+    union.addAll(ensembleB);
     return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
   }
 

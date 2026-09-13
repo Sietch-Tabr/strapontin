@@ -250,24 +250,26 @@ public class EnrichissementSallesService {
     return candidats.stream()
         .map(
             s -> {
-              final EnrichissementSalle e = accumule.get(s.id());
+              final EnrichissementSalle enrichissement = accumule.get(s.id());
               final String qid =
-                  e != null && e.wikidataId() != null ? e.wikidataId() : s.wikidataId();
+                  enrichissement != null && enrichissement.wikidataId() != null
+                      ? enrichissement.wikidataId()
+                      : s.wikidataId();
               return new SalleAEnrichir(s.id(), s.nom(), s.nomNorm(), s.ville(), s.dept(), qid);
             })
         .toList();
   }
 
   private static EnrichissementSalle fusionner(
-      final EnrichissementSalle a, final EnrichissementSalle b) {
+      final EnrichissementSalle existant, final EnrichissementSalle nouveau) {
     return new EnrichissementSalle(
-        b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
-        b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
-        b.ville() != null ? b.ville() : a.ville(),
-        b.website() != null ? b.website() : a.website(),
-        b.capacite() != null ? b.capacite() : a.capacite(),
-        b.latitude() != null ? b.latitude() : a.latitude(),
-        b.longitude() != null ? b.longitude() : a.longitude());
+        nouveau.wikidataId() != null ? nouveau.wikidataId() : existant.wikidataId(),
+        nouveau.nomAffiche() != null ? nouveau.nomAffiche() : existant.nomAffiche(),
+        nouveau.ville() != null ? nouveau.ville() : existant.ville(),
+        nouveau.website() != null ? nouveau.website() : existant.website(),
+        nouveau.capacite() != null ? nouveau.capacite() : existant.capacite(),
+        nouveau.latitude() != null ? nouveau.latitude() : existant.latitude(),
+        nouveau.longitude() != null ? nouveau.longitude() : existant.longitude());
   }
 
   /**
@@ -278,13 +280,13 @@ public class EnrichissementSallesService {
    *     le cycle de réconciliation.
    */
   private boolean mettreAJourSalle(
-      final UUID salleId, final String nom, final EnrichissementSalle e) {
+      final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
     final Map<String, Object> params = new HashMap<>();
-    params.put(CLE_WIKIDATA_ID, e.wikidataId());
-    params.put("nomAffiche", e.nomAffiche());
-    params.put("ville", e.ville());
-    params.put("latitude", e.latitude());
-    params.put("longitude", e.longitude());
+    params.put(CLE_WIKIDATA_ID, enrichissement.wikidataId());
+    params.put("nomAffiche", enrichissement.nomAffiche());
+    params.put("ville", enrichissement.ville());
+    params.put("latitude", enrichissement.latitude());
+    params.put("longitude", enrichissement.longitude());
     params.put("id", salleId.toString());
     try {
       jdbc.update(
@@ -300,7 +302,7 @@ public class EnrichissementSallesService {
           params);
       return true;
     } catch (DuplicateKeyException ex) {
-      return gererCollisionWikidataId(salleId, nom, e);
+      return gererCollisionWikidataId(salleId, nom, enrichissement);
     }
   }
 
@@ -314,13 +316,13 @@ public class EnrichissementSallesService {
    * défaut.
    */
   private boolean gererCollisionWikidataId(
-      final UUID salleId, final String nom, final EnrichissementSalle e) {
-    final Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
+      final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
+    final Map<String, Object> porteuse = trouverPorteuseWikidataId(enrichissement.wikidataId());
     if (porteuse != null && tenterFusionParCoordonnees(salleId, porteuse)) {
       LOG.info(
           "collision wikidata_id résolue par fusion automatique salle={} wikidataId={} cible={}",
           nom,
-          e.wikidataId(),
+          enrichissement.wikidataId(),
           porteuse.get("id"));
       return true;
     }
@@ -331,15 +333,19 @@ public class EnrichissementSallesService {
         "wikidataId déjà attribué à une autre salle — conflit ignoré salle="
             + nom
             + " wikidataId="
-            + e.wikidataId(),
-        Map.of("salleId", salleId.toString(), CLE_WIKIDATA_ID, e.wikidataId()));
+            + enrichissement.wikidataId(),
+        Map.of("salleId", salleId.toString(), CLE_WIKIDATA_ID, enrichissement.wikidataId()));
     if (porteuse != null) {
       signalementMatchingService.signaler(
           "collision_wikidata_salle",
           "salle",
           salleId,
           "basse",
-          Map.of(CLE_WIKIDATA_ID, e.wikidataId(), "salleExistante", porteuse.get("id").toString()));
+          Map.of(
+              CLE_WIKIDATA_ID,
+              enrichissement.wikidataId(),
+              "salleExistante",
+              porteuse.get("id").toString()));
     }
     return false;
   }

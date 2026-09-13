@@ -104,26 +104,27 @@ class ResolveurArtisteParUrl {
   }
 
   private ValeurConcert reconcilierArtisteParUrl(
-      final ValeurConcert c, final Map<CleUrl, Map<String, Object>> index) {
-    if (c.url() == null) {
-      return c;
+      final ValeurConcert concert, final Map<CleUrl, Map<String, Object>> index) {
+    if (concert.url() == null) {
+      return concert;
     }
-    final CleUrl cle = new CleUrl(c.source(), c.url(), c.date(), c.heure());
+    final CleUrl cle = new CleUrl(concert.source(), concert.url(), concert.date(), concert.heure());
     final Map<String, Object> existant = index.get(cle);
     if (existant == null) {
-      return c;
+      return concert;
     }
     final String artisteNormExistant = (String) existant.get("artiste_norm");
     final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
-    if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
-      return c;
+    if (artisteNormExistant == null || artisteNormExistant.equals(concert.artisteNorm())) {
+      return concert;
     }
     LOG.debug(
         "url doublon résolu entrant={} existant={} url={}",
-        c.artisteNorm(),
+        concert.artisteNorm(),
         artisteNormExistant,
-        c.url());
-    final UUID artisteIdFinal = c.artisteId() != null ? c.artisteId() : artisteIdExistant;
-    return c.avecArtisteNormEtId(artisteNormExistant, artisteIdFinal);
+        concert.url());
+    final UUID artisteIdFinal =
+        concert.artisteId() != null ? concert.artisteId() : artisteIdExistant;
+    return concert.avecArtisteNormEtId(artisteNormExistant, artisteIdFinal);
   }
 }

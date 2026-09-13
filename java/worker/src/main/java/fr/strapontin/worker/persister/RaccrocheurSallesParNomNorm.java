@@ -115,12 +115,12 @@ final class RaccrocheurSallesParNomNorm {
    *     réalignement sans confirmation positive de la divergence)
    */
   private static boolean salleIdDivergent(
-      final ValeurConcert c, final Map<UUID, String> nomNormParSalleId) {
-    if (c.salleId() == null) {
+      final ValeurConcert concert, final Map<UUID, String> nomNormParSalleId) {
+    if (concert.salleId() == null) {
       return true;
     }
-    final String nomNormActuel = nomNormParSalleId.get(c.salleId());
-    return nomNormActuel != null && !nomNormActuel.equals(c.salleNorm());
+    final String nomNormActuel = nomNormParSalleId.get(concert.salleId());
+    return nomNormActuel != null && !nomNormActuel.equals(concert.salleNorm());
   }
 
   /**

@@ -281,9 +281,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : produits) {
-      final ConcertBrut c = mapProduit(p, artisteFallback, artisteSourceId);
-      if (c != null && (deptFiltre == null || deptFiltre.equals(c.dept()))) {
-        concerts.add(c);
+      final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
+      if (concert != null && (deptFiltre == null || deptFiltre.equals(concert.dept()))) {
+        concerts.add(concert);
       }
     }
     final int total =

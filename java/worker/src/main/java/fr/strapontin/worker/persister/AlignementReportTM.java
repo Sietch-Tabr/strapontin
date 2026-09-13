@@ -116,8 +116,9 @@ final class AlignementReportTM {
   }
 
   private void alignerHeureSiReport(
-      final ValeurConcert c, final Map<CleUrlDate, List<Map<String, Object>>> parCle) {
-    final List<Map<String, Object>> candidats = parCle.get(new CleUrlDate(c.url(), c.date()));
+      final ValeurConcert concert, final Map<CleUrlDate, List<Map<String, Object>>> parCle) {
+    final List<Map<String, Object>> candidats =
+        parCle.get(new CleUrlDate(concert.url(), concert.date()));
     if (candidats == null) {
       return;
     }
@@ -129,18 +130,18 @@ final class AlignementReportTM {
       return;
     }
     final LocalTime heureExistante = heuresDistinctes.iterator().next();
-    if (heureExistante.equals(c.heure())) {
+    if (heureExistante.equals(concert.heure())) {
       return;
     }
     final UUID idExistant = (UUID) candidats.get(0).get("id");
     jdbc.update(
         "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
-        Map.of(CLE_HEURE, c.heure(), "id", idExistant.toString()));
+        Map.of(CLE_HEURE, concert.heure(), "id", idExistant.toString()));
     LOG.info(
         "report Ticketmaster aligné url={} date={} heure {}->{}",
-        c.url(),
-        c.date(),
+        concert.url(),
+        concert.date(),
         heureExistante,
-        c.heure());
+        concert.heure());
   }
 }

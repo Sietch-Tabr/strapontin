@@ -177,30 +177,32 @@ public class PersisteurConcertsDb {
    * supprimerDoublonsParSalleId}/{@code supprimerDoublonsSansArtisteId}, appliqués avant l'écriture
    * plutôt qu'en nettoyage après coup ; sinon, création.
    */
-  private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert v) {
-    final UUID exactId = chercherEvenementExact(v);
+  private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
+    final UUID exactId = chercherEvenementExact(concert);
     if (exactId != null) {
       return new ResolutionEvenement(exactId, false);
     }
 
-    if (v.salleId() != null) {
-      final UUID candidatId = chercherEvenementParSalleEtDate(v);
+    if (concert.salleId() != null) {
+      final UUID candidatId = chercherEvenementParSalleEtDate(concert);
       if (candidatId != null) {
         return new ResolutionEvenement(candidatId, false);
       }
     }
 
-    return new ResolutionEvenement(creerNouvelEvenement(v), true);
+    return new ResolutionEvenement(creerNouvelEvenement(concert), true);
   }
 
-  private UUID chercherEvenementExact(final ValeurConcert v) {
+  private UUID chercherEvenementExact(final ValeurConcert concert) {
     final MapSqlParameterSource paramsExact =
         new MapSqlParameterSource()
-            .addValue("artisteNorm", v.artisteNorm())
-            .addValue(CLE_DATE, v.date(), Types.DATE)
-            .addValue(CLE_HEURE, v.heure(), Types.TIME)
+            .addValue("artisteNorm", concert.artisteNorm())
+            .addValue(CLE_DATE, concert.date(), Types.DATE)
+            .addValue(CLE_HEURE, concert.heure(), Types.TIME)
             .addValue(
-                "salleId", v.salleId() != null ? v.salleId().toString() : null, Types.VARCHAR);
+                "salleId",
+                concert.salleId() != null ? concert.salleId().toString() : null,
+                Types.VARCHAR);
     final List<UUID> exact =
         jdbc.query(
             "SELECT id FROM evenements WHERE artiste_norm = :artisteNorm AND date = :date"
@@ -214,7 +216,7 @@ public class PersisteurConcertsDb {
   // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
   // compatible plutôt que de poursuivre l'itération sans effet utile.
   @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
-  private UUID chercherEvenementParSalleEtDate(final ValeurConcert v) {
+  private UUID chercherEvenementParSalleEtDate(final ValeurConcert concert) {
     final List<Map<String, Object>> candidats =
         jdbc.queryForList(
             """
@@ -224,16 +226,17 @@ public class PersisteurConcertsDb {
                           AND o.url ~* '/pack/') AS a_observation_package
             FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
             """,
-            Map.of("salleId", v.salleId().toString(), CLE_DATE, v.date()));
-    final boolean entrantPackage = estPackage(v.url());
+            Map.of("salleId", concert.salleId().toString(), CLE_DATE, concert.date()));
+    final boolean entrantPackage = estPackage(concert.url());
     for (final Map<String, Object> c : candidats) {
       final UUID candArtisteId = (UUID) c.get("artiste_id");
       final String candArtisteNorm = (String) c.get("artiste_norm");
       final boolean artisteCorrespond =
-          v.artisteId() != null
-              ? v.artisteId().equals(candArtisteId)
+          concert.artisteId() != null
+              ? concert.artisteId().equals(candArtisteId)
               : candArtisteId == null
-                  && CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, v.artisteNorm());
+                  && CorrespondanceArtiste.estDoublonArtiste(
+                      candArtisteNorm, concert.artisteNorm());
       if (!artisteCorrespond) {
         continue;
       }
@@ -241,7 +244,7 @@ public class PersisteurConcertsDb {
       final LocalTime heureExistante =
           heureBrute != null ? ((Time) heureBrute).toLocalTime() : null;
       final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
-      if (!heuresCompatibles(heureExistante, v.heure(), candidatPackage, entrantPackage)) {
+      if (!heuresCompatibles(heureExistante, concert.heure(), candidatPackage, entrantPackage)) {
         continue;
       }
       return (UUID) c.get("id");
@@ -249,7 +252,7 @@ public class PersisteurConcertsDb {
     return null;
   }
 
-  private UUID creerNouvelEvenement(final ValeurConcert v) {
+  private UUID creerNouvelEvenement(final ValeurConcert concert) {
     return jdbc.queryForObject(
         """
         INSERT INTO evenements
@@ -260,26 +263,26 @@ public class PersisteurConcertsDb {
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
         """,
-        paramsCreation(v),
+        paramsCreation(concert),
         UUID.class);
   }
 
-  private static MapSqlParameterSource paramsCreation(final ValeurConcert v) {
+  private static MapSqlParameterSource paramsCreation(final ValeurConcert concert) {
     return new MapSqlParameterSource()
-        .addValue("artisteNorm", v.artisteNorm())
-        .addValue(CLE_DATE, v.date(), Types.DATE)
-        .addValue(CLE_HEURE, v.heure(), Types.TIME)
-        .addValue("salleId", v.salleId() != null ? v.salleId().toString() : null)
-        .addValue(CLE_SALLE, v.salle())
-        .addValue("salleNorm", v.salleNorm())
-        .addValue("ville", v.ville())
-        .addValue("dept", v.dept())
-        .addValue("classification", v.classification())
-        .addValue("genre", v.genre())
-        .addValue("statut", v.statut())
-        .addValue("presaleDebut", v.presaleDebut())
-        .addValue("presaleNom", v.presaleNom())
-        .addValue("artisteId", v.artisteId() != null ? v.artisteId().toString() : null);
+        .addValue("artisteNorm", concert.artisteNorm())
+        .addValue(CLE_DATE, concert.date(), Types.DATE)
+        .addValue(CLE_HEURE, concert.heure(), Types.TIME)
+        .addValue("salleId", concert.salleId() != null ? concert.salleId().toString() : null)
+        .addValue(CLE_SALLE, concert.salle())
+        .addValue("salleNorm", concert.salleNorm())
+        .addValue("ville", concert.ville())
+        .addValue("dept", concert.dept())
+        .addValue("classification", concert.classification())
+        .addValue("genre", concert.genre())
+        .addValue("statut", concert.statut())
+        .addValue("presaleDebut", concert.presaleDebut())
+        .addValue("presaleNom", concert.presaleNom())
+        .addValue("artisteId", concert.artisteId() != null ? concert.artisteId().toString() : null);
   }
 
   /**
@@ -294,7 +297,7 @@ public class PersisteurConcertsDb {
    * informatif) ; appelé après {@link #upsertObservation} pour refléter l'observation qui vient
    * d'être upsertée.
    */
-  private void mettreAJourChampsEvenement(final UUID evenementId, final ValeurConcert v) {
+  private void mettreAJourChampsEvenement(final UUID evenementId, final ValeurConcert concert) {
     final String salleBrutReference = meilleurSalleBrut(evenementId);
     final String salleNormReference =
         salleBrutReference != null ? Normalisation.normaliserTexte(salleBrutReference) : null;
@@ -316,12 +319,12 @@ public class PersisteurConcertsDb {
             updated_at     = now()
         WHERE id = CAST(:id AS uuid)
         """,
-        paramsCreation(v)
+        paramsCreation(concert)
             .addValue("id", evenementId.toString())
             .addValue("salleNormReference", salleNormReference));
   }
 
-  private void upsertObservation(final UUID evenementId, final ValeurConcert v) {
+  private void upsertObservation(final UUID evenementId, final ValeurConcert concert) {
     jdbc.update(
         """
         INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)
@@ -335,10 +338,10 @@ public class PersisteurConcertsDb {
         """,
         new MapSqlParameterSource()
             .addValue("evenementId", evenementId.toString())
-            .addValue("source", v.source())
-            .addValue("url", v.url())
-            .addValue("artiste", v.artiste())
-            .addValue(CLE_SALLE, v.salle()));
+            .addValue("source", concert.source())
+            .addValue("url", concert.url())
+            .addValue("artiste", concert.artiste())
+            .addValue(CLE_SALLE, concert.salle()));
   }
 
   /**
@@ -381,13 +384,13 @@ public class PersisteurConcertsDb {
 
     int inserts = 0;
     int updates = 0;
-    for (final ValeurConcert v : valeurs) {
-      final ResolutionEvenement resolution = resoudreOuCreerEvenement(v);
-      upsertObservation(resolution.id(), v);
+    for (final ValeurConcert concert : valeurs) {
+      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert);
+      upsertObservation(resolution.id(), concert);
       if (resolution.nouveau()) {
         inserts++;
       } else {
-        mettreAJourChampsEvenement(resolution.id(), v);
+        mettreAJourChampsEvenement(resolution.id(), concert);
         updates++;
       }
     }

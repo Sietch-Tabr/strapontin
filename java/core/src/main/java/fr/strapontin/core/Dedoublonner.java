@@ -38,15 +38,16 @@ public final class Dedoublonner {
   private record ConcertEnrichi(
       ConcertBrut concert, String artisteNorm, String villeNorm, String salleNorm) {}
 
-  private static ConcertEnrichi enrichir(final ConcertBrut c) {
-    final String salleNorm = Normalisation.normaliserTexte(c.salle());
+  private static ConcertEnrichi enrichir(final ConcertBrut concert) {
+    final String salleNorm = Normalisation.normaliserTexte(concert.salle());
     // Ville absente : repli sur salleNorm plutôt qu'une chaîne vide partagée par tous les
     // concerts sans ville — deux concerts du même artiste le même jour, dans deux villes
     // réellement différentes mais toutes deux non renseignées, ne fusionnent alors que s'ils
     // partagent aussi la même salle.
     final String villeNorm =
-        c.ville() != null ? Normalisation.normaliserVille(c.ville()) : salleNorm;
-    return new ConcertEnrichi(c, Normalisation.normaliserTexte(c.artiste()), villeNorm, salleNorm);
+        concert.ville() != null ? Normalisation.normaliserVille(concert.ville()) : salleNorm;
+    return new ConcertEnrichi(
+        concert, Normalisation.normaliserTexte(concert.artiste()), villeNorm, salleNorm);
   }
 
   /**
@@ -165,13 +166,14 @@ public final class Dedoublonner {
    * distantes de plus de {@value #TOLERANCE_HEURE_MINUTES} minutes signent deux concerts distincts,
    * une heure absente d'un côté (ou des deux) ne permet ni de confirmer ni d'exclure la fusion.
    *
-   * @param a premier concert enrichi
-   * @param b second concert enrichi
+   * @param concertA premier concert enrichi
+   * @param concertB second concert enrichi
    * @return {@code true} si les heures ne s'opposent pas à une fusion
    */
-  private static boolean heuresCompatibles(final ConcertEnrichi a, final ConcertEnrichi b) {
-    final String heureA = a.concert().heure();
-    final String heureB = b.concert().heure();
+  private static boolean heuresCompatibles(
+      final ConcertEnrichi concertA, final ConcertEnrichi concertB) {
+    final String heureA = concertA.concert().heure();
+    final String heureB = concertB.concert().heure();
     if (heureA == null || heureB == null || heureA.equals(heureB)) {
       return true;
     }
@@ -260,14 +262,14 @@ public final class Dedoublonner {
     return (int) nom.codePoints().filter(cp -> cp > 127).count();
   }
 
-  private static int scoreCompletude(final ConcertBrut c) {
-    return (c.heure() != null ? 1 : 0)
-        + (c.ville() != null ? 1 : 0)
-        + (c.dept() != null ? 1 : 0)
-        + (c.url() != null ? 1 : 0)
+  private static int scoreCompletude(final ConcertBrut concert) {
+    return (concert.heure() != null ? 1 : 0)
+        + (concert.ville() != null ? 1 : 0)
+        + (concert.dept() != null ? 1 : 0)
+        + (concert.url() != null ? 1 : 0)
         // Une source qui connaît le statut de vente (TM) ne doit jamais perdre cette
         // information au profit d'une source qui ne le détermine pas (Eventim/Digitick,
         // toujours null) lors d'un départage par complétude.
-        + (c.statut() != null ? 1 : 0);
+        + (concert.statut() != null ? 1 : 0);
   }
 }

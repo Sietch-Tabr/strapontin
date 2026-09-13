@@ -217,27 +217,32 @@ public class EnrichissementArtistesService {
       final List<ArtisteAEnrichir> candidats, final Map<UUID, EnrichissementArtiste> accumule) {
     return candidats.stream()
         .map(
-            a -> {
-              final EnrichissementArtiste e = accumule.get(a.id());
+            candidat -> {
+              final EnrichissementArtiste enrichissementConnu = accumule.get(candidat.id());
               final String wikidataId =
-                  e != null && e.wikidataId() != null ? e.wikidataId() : a.wikidataId();
+                  enrichissementConnu != null && enrichissementConnu.wikidataId() != null
+                      ? enrichissementConnu.wikidataId()
+                      : candidat.wikidataId();
               final String deezerId =
-                  e != null && e.deezerId() != null ? e.deezerId() : a.deezerId();
-              return new ArtisteAEnrichir(a.id(), a.nom(), a.nomNorm(), wikidataId, deezerId);
+                  enrichissementConnu != null && enrichissementConnu.deezerId() != null
+                      ? enrichissementConnu.deezerId()
+                      : candidat.deezerId();
+              return new ArtisteAEnrichir(
+                  candidat.id(), candidat.nom(), candidat.nomNorm(), wikidataId, deezerId);
             })
         .toList();
   }
 
   private static EnrichissementArtiste fusionner(
-      final EnrichissementArtiste a, final EnrichissementArtiste b) {
+      final EnrichissementArtiste existant, final EnrichissementArtiste nouveau) {
     return new EnrichissementArtiste(
-        b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
-        b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
-        b.deezerId() != null ? b.deezerId() : a.deezerId(),
-        b.ticketmasterAttractionId() != null
-            ? b.ticketmasterAttractionId()
-            : a.ticketmasterAttractionId(),
-        b.aliasWikidata().isEmpty() ? a.aliasWikidata() : b.aliasWikidata());
+        nouveau.wikidataId() != null ? nouveau.wikidataId() : existant.wikidataId(),
+        nouveau.nomAffiche() != null ? nouveau.nomAffiche() : existant.nomAffiche(),
+        nouveau.deezerId() != null ? nouveau.deezerId() : existant.deezerId(),
+        nouveau.ticketmasterAttractionId() != null
+            ? nouveau.ticketmasterAttractionId()
+            : existant.ticketmasterAttractionId(),
+        nouveau.aliasWikidata().isEmpty() ? existant.aliasWikidata() : nouveau.aliasWikidata());
   }
 
   /**
@@ -251,14 +256,16 @@ public class EnrichissementArtistesService {
    *     réel d'un doublon.
    */
   private boolean mettreAJourArtiste(
-      final UUID artisteId, final String nom, final EnrichissementArtiste e) {
+      final UUID artisteId, final String nom, final EnrichissementArtiste enrichissement) {
     final Map<String, Object> params = new HashMap<>();
-    params.put("wikidataId", e.wikidataId());
-    params.put("nomAffiche", e.nomAffiche());
-    params.put("deezerId", e.deezerId());
+    params.put("wikidataId", enrichissement.wikidataId());
+    params.put("nomAffiche", enrichissement.nomAffiche());
+    params.put("deezerId", enrichissement.deezerId());
     params.put(
         "aliasWikidata",
-        e.aliasWikidata().isEmpty() ? null : e.aliasWikidata().toArray(String[]::new));
+        enrichissement.aliasWikidata().isEmpty()
+            ? null
+            : enrichissement.aliasWikidata().toArray(String[]::new));
     params.put("id", artisteId.toString());
     try {
       jdbc.update(
@@ -279,14 +286,14 @@ public class EnrichissementArtistesService {
           "wikidataId déjà attribué à un autre artiste — conflit ignoré artiste="
               + nom
               + " wikidataId="
-              + e.wikidataId(),
-          Map.of("artisteId", artisteId.toString(), "wikidataId", e.wikidataId()));
+              + enrichissement.wikidataId(),
+          Map.of("artisteId", artisteId.toString(), "wikidataId", enrichissement.wikidataId()));
       signalementMatchingService.signaler(
           "collision_wikidata_artiste",
           "artiste",
           artisteId,
           "basse",
-          Map.of("wikidataId", e.wikidataId()));
+          Map.of("wikidataId", enrichissement.wikidataId()));
       return false;
     }
   }

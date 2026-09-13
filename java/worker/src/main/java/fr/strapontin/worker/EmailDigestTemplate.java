@@ -63,19 +63,22 @@ final class EmailDigestTemplate {
   // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
   // digest couvrant plusieurs artistes se lit comme une liste continue.
   private static String construireLigneConcertEmail(
-      final NotificationDigestService.ConcertNotif c, final String artistePrecedent) {
-    final String lieu = c.ville() != null ? e(c.salle()) + " · " + e(c.ville()) : e(c.salle());
+      final NotificationDigestService.ConcertNotif concert, final String artistePrecedent) {
+    final String lieu =
+        concert.ville() != null
+            ? e(concert.salle()) + " · " + e(concert.ville())
+            : e(concert.salle());
     final String lien =
-        c.url() != null
+        concert.url() != null
             ? " — <a href=\"%s\" style=\"color:#111;font-size:13px\">Billets →</a>"
-                .formatted(e(c.url()))
+                .formatted(e(concert.url()))
             : "";
     final String prevente =
-        "presale".equals(c.statut())
+        "presale".equals(concert.statut())
             ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
             : "";
     final String stylecel =
-        artistePrecedent != null && !artistePrecedent.equals(c.artiste())
+        artistePrecedent != null && !artistePrecedent.equals(concert.artiste())
             ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
             : "padding:10px 0;border-bottom:1px solid #f0f0f0;vertical-align:top";
     return """
@@ -89,8 +92,8 @@ final class EmailDigestTemplate {
     """
         .formatted(
             stylecel,
-            e(c.artiste()),
-            NotificationDigestService.formaterDate(c.date()),
+            e(concert.artiste()),
+            NotificationDigestService.formaterDate(concert.date()),
             prevente,
             lien,
             lieu);

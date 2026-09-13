@@ -57,13 +57,13 @@ public class ReconciliateurArtistes {
   /**
    * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @return {@code true} si les artistes sont considérés identiques
    * @see CorrespondanceArtiste#estDoublonArtiste
    */
-  public static boolean estDoublonArtiste(final String a, final String b) {
-    return CorrespondanceArtiste.estDoublonArtiste(a, b);
+  public static boolean estDoublonArtiste(final String nomA, final String nomB) {
+    return CorrespondanceArtiste.estDoublonArtiste(nomA, nomB);
   }
 
   /**
@@ -179,26 +179,28 @@ public class ReconciliateurArtistes {
       final List<String> artistesNorm, final Map<String, String> remplacements) {
     for (int i = 0; i < artistesNorm.size(); i++) {
       for (int j = i + 1; j < artistesNorm.size(); j++) {
-        final String a = artistesNorm.get(i);
-        final String b = artistesNorm.get(j);
-        if (estDoublonArtiste(a, b)) {
-          final String canonique = a.length() >= b.length() ? a : b;
-          remplacements.put(a, canonique);
-          remplacements.put(b, canonique);
+        final String nomA = artistesNorm.get(i);
+        final String nomB = artistesNorm.get(j);
+        if (estDoublonArtiste(nomA, nomB)) {
+          final String canonique = nomA.length() >= nomB.length() ? nomA : nomB;
+          remplacements.put(nomA, canonique);
+          remplacements.put(nomB, canonique);
         }
       }
     }
   }
 
   private ValeurConcert appliquerRemplacementArtiste(
-      final ValeurConcert c, final Map<String, String> remplacements) {
-    final String canonique = remplacements.get(c.artisteNorm());
-    if (canonique == null || canonique.equals(c.artisteNorm())) {
-      return c;
+      final ValeurConcert concert, final Map<String, String> remplacements) {
+    final String canonique = remplacements.get(concert.artisteNorm());
+    if (canonique == null || canonique.equals(concert.artisteNorm())) {
+      return concert;
     }
     LOG.debug(
-        "doublon artiste intra-lot réconcilié entrant={} canonique={}", c.artisteNorm(), canonique);
-    return c.avecArtisteNorm(canonique);
+        "doublon artiste intra-lot réconcilié entrant={} canonique={}",
+        concert.artisteNorm(),
+        canonique);
+    return concert.avecArtisteNorm(canonique);
   }
 
   /**

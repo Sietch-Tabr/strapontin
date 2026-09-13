@@ -39,31 +39,32 @@ public final class CorrespondanceArtiste {
    * plus substantiel (co-tête d'affiche, suffixe de tournée) qui fait chuter le ratio de
    * containment sous le seuil.
    *
-   * @param a premier nom normalisé
-   * @param b deuxième nom normalisé
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
    * @return {@code true} si les artistes sont considérés identiques
    */
-  public static boolean estDoublonArtiste(final String a, final String b) {
-    Objects.requireNonNull(a, "a");
-    Objects.requireNonNull(b, "b");
-    if (a.equals(b)) {
+  public static boolean estDoublonArtiste(final String nomA, final String nomB) {
+    Objects.requireNonNull(nomA, "nomA");
+    Objects.requireNonNull(nomB, "nomB");
+    if (nomA.equals(nomB)) {
       return true;
     }
-    if (DistanceTexte.jaro(a, b) >= SEUIL_JARO_ARTISTE) {
+    if (DistanceTexte.jaro(nomA, nomB) >= SEUIL_JARO_ARTISTE) {
       return true;
     }
     if (UtilitairesChaine.estContainmentRatio(
-        a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
+        nomA, nomB, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
       return true;
     }
-    return UtilitairesChaine.estEgaliteSansEspaces(a, b) || estPrefixeDeMotComplet(a, b);
+    return UtilitairesChaine.estEgaliteSansEspaces(nomA, nomB)
+        || estPrefixeDeMotComplet(nomA, nomB);
   }
 
   // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul, préfixe trivial
   // d'un artiste sans rapport) et se couper sur un mot complet, sans exigence de ratio.
-  private static boolean estPrefixeDeMotComplet(final String a, final String b) {
-    final String court = a.length() <= b.length() ? a : b;
-    final String plusLong = a.length() <= b.length() ? b : a;
+  private static boolean estPrefixeDeMotComplet(final String nomA, final String nomB) {
+    final String court = nomA.length() <= nomB.length() ? nomA : nomB;
+    final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;
     return court.contains(" ") && plusLong.startsWith(court + " ");
   }
 }

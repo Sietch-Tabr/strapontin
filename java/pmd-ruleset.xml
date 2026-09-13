@@ -35,6 +35,16 @@
     <exclude name="OnlyOneReturn"/>
     <exclude name="LongVariable"/>
     <exclude name="CommentDefaultAccessModifier"/>
+    <exclude name="ShortVariable"/>
+  </rule>
+  <!-- ShortVariable reconfigurée plutôt qu'exclue : seuil relevé à 2 (au lieu du minimum
+       PMD par défaut de 3) pour accepter les abréviations à 2 caractères déjà établies dans le
+       projet (id, tm, db, ip, ms, ok...) tout en continuant de flaguer les noms à 1 seul
+       caractère (a, b, c, n, s, v...). -->
+  <rule ref="category/java/codestyle.xml/ShortVariable">
+    <properties>
+      <property name="minimum" value="2"/>
+    </properties>
   </rule>
   <!-- CommentDefaultAccessModifier reconfigurée plutôt qu'exclue : le motif par défaut
        (/\*\s*(default|package)\s*\*\/) n'accepte que le marqueur nu, sans justification — à
@@ -93,6 +103,21 @@
   <rule ref="category/java/design.xml">
     <exclude name="LawOfDemeter"/>
     <exclude name="AvoidCatchingGenericException"/>
+    <exclude name="LoosePackageCoupling"/>
+  </rule>
+  <!-- LoosePackageCoupling : sans packages/classes configurés, la règle ne vérifie rien
+       (configerror "No packages or classes specified") — les 13 jobs Quartz ne doivent être
+       instanciés que par le scheduler (Planificateur, enregistrement des JobDetail) ou déclenchés
+       explicitement (TriggerController, déclenchement manuel via API) ; classes liste ces deux
+       points d'entrée documentés (table "Jobs background", CLAUDE.md) comme seuls autorisés à
+       importer directement les classes du package jobs. -->
+  <rule ref="category/java/design.xml/LoosePackageCoupling">
+    <properties>
+      <property name="packages" value="fr.strapontin.worker.jobs"/>
+      <property
+          name="classes"
+          value="fr.strapontin.worker.jobs.FetchArtistesBatchJob,fr.strapontin.worker.jobs.FetchRegionJob,fr.strapontin.worker.jobs.FetchSalleJob,fr.strapontin.worker.jobs.FetchSallesAllJob,fr.strapontin.worker.jobs.NotifierDigestJob,fr.strapontin.worker.jobs.PurgerArtistesJob,fr.strapontin.worker.jobs.PurgerConcertsJob,fr.strapontin.worker.jobs.PurgerLogsAdminJob,fr.strapontin.worker.jobs.PurgerSallesJob,fr.strapontin.worker.jobs.RecalculerMatchesJob,fr.strapontin.worker.jobs.ReconciliationNocturneJob,fr.strapontin.worker.jobs.RevoquerAdminsJob,fr.strapontin.worker.jobs.SuiviCyclesJobsJob"/>
+    </properties>
   </rule>
   <rule ref="category/java/design.xml/CyclomaticComplexity">
     <properties>

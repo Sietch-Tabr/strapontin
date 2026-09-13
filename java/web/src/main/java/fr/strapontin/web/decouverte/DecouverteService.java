@@ -73,7 +73,7 @@ public class DecouverteService {
     final Map<String, Object> params = new HashMap<>();
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
-    final String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
+    final String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.recherche(), 100);
     final String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
     final StringBuilder where =
         construireFiltresWhere(

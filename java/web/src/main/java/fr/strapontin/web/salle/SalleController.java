@@ -64,16 +64,16 @@ public class SalleController {
   /**
    * Liste les salles suivies, avec suggestions de recherche si {@code q} est fourni.
    *
-   * @param q terme de recherche (optionnel, min 2 caractères)
+   * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification
    * @return la liste des salles et les suggestions
    */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(
-      @RequestParam(required = false, defaultValue = "") final String q,
+      @RequestParam(name = "q", required = false, defaultValue = "") final String recherche,
       final Authentication auth) {
     final String userId = utilisateur(auth).id();
-    return ResponseEntity.ok(salleService.lister(userId, q));
+    return ResponseEntity.ok(salleService.lister(userId, recherche));
   }
 
   /**

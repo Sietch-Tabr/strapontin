@@ -261,12 +261,12 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
    * Détermine le délai avant retry selon la nature de l'échec — accessible aux tests sans
    * déclencher d'attente réelle.
    *
-   * @param e exception levée par l'appel HTTP
+   * @param exception exception levée par l'appel HTTP
    * @return délai en millisecondes avant le prochain essai
    */
   /* package-private : visibilité élargie pour OverpassSalleSourceTest (même package). */
-  static long delaiAvantRetry(final Exception e) {
-    return e instanceof HttpClientErrorException.TooManyRequests
+  static long delaiAvantRetry(final Exception exception) {
+    return exception instanceof HttpClientErrorException.TooManyRequests
         ? DELAI_APRES_429_MS
         : DELAI_APRES_ERREUR_MS;
   }

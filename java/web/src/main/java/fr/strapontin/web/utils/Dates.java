@@ -35,12 +35,12 @@ public final class Dates {
   /**
    * Formate une date ISO-8601 ({@code yyyy-MM-dd}) en français.
    *
-   * Pour le format court, l'année est ajoutée si la date n'est pas dans l'année courante
-   * (ex. "jeu. 8 avr. 2027" vs "jeu. 8 avr.").
+   * <p>Pour le format court, l'année est ajoutée si la date n'est pas dans l'année courante (ex.
+   * "jeu. 8 avr. 2027" vs "jeu. 8 avr.").
    *
-   * @param dateIso  la date au format {@code yyyy-MM-dd}, ou {@code null}
-   * @param longue   {@code true} pour le format long (ex. "lundi 15 septembre 2026"),
-   *                 {@code false} pour le format court (ex. "lun. 15 sept.")
+   * @param dateIso la date au format {@code yyyy-MM-dd}, ou {@code null}
+   * @param longue {@code true} pour le format long (ex. "lundi 15 septembre 2026"), {@code false}
+   *     pour le format court (ex. "lun. 15 sept.")
    * @return la date formatée, ou chaîne vide si l'entrée est {@code null} ou invalide
    */
   public static String formater(final String dateIso, final boolean longue) {
@@ -62,9 +62,9 @@ public final class Dates {
   /**
    * Formate une date ISO-8601 avec une heure optionnelle en français.
    *
-   * L'heure est affichée sous la forme "20h" (minutes omises si {@code 00}) ou "20h30".
+   * <p>L'heure est affichée sous la forme "20h" (minutes omises si {@code 00}) ou "20h30".
    *
-   * @param dateIso  date au format {@code yyyy-MM-dd}, ou {@code null}
+   * @param dateIso date au format {@code yyyy-MM-dd}, ou {@code null}
    * @param heureStr heure au format {@code HH:mm:ss} ou {@code HH:mm}, ou {@code null}
    * @return la date (et l'heure) formatée, ex. "mer. 4 juin 20h30"
    */
@@ -80,9 +80,9 @@ public final class Dates {
         return datePart;
       }
       final String[] parts = heureStr.split(":");
-      final int h = Integer.parseInt(parts[0]);
-      final int m = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
-      return datePart + " " + h + "h" + (m == 0 ? "" : String.format("%02d", m));
+      final int heure = Integer.parseInt(parts[0]);
+      final int minute = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+      return datePart + " " + heure + "h" + (minute == 0 ? "" : String.format("%02d", minute));
     } catch (Exception e) {
       return dateIso;
     }
@@ -91,7 +91,7 @@ public final class Dates {
   /**
    * Formate un epoch en millisecondes en "dim. 22 juin 21h05" (fuseau Europe/Paris).
    *
-   * @param epochMs  timestamp en millisecondes
+   * @param epochMs timestamp en millisecondes
    * @return la date/heure formatée, ou chaîne vide si {@code epochMs <= 0}
    */
   public static String formaterTs(final long epochMs) {
@@ -104,7 +104,7 @@ public final class Dates {
   /**
    * Formate un {@link Instant} en "dim. 22 juin 21h05" (fuseau Europe/Paris).
    *
-   * @param instant  l'instant à formater, ou {@code null}
+   * @param instant l'instant à formater, ou {@code null}
    * @return la date/heure formatée, ou chaîne vide si {@code null}
    */
   public static String formaterInstant(final Instant instant) {
@@ -117,7 +117,7 @@ public final class Dates {
   /**
    * Formate une chaîne ISO-8601 (ex. {@code misAJour} de {@code QuotaTM}) en "dim. 22 juin 21h05".
    *
-   * @param isoInstant  instant au format ISO-8601, ou {@code null}
+   * @param isoInstant instant au format ISO-8601, ou {@code null}
    * @return la date/heure formatée, ou chaîne vide si {@code null} ou invalide
    */
   public static String formaterInstantStr(final String isoInstant) {
@@ -134,7 +134,7 @@ public final class Dates {
   /**
    * Formate un epoch en secondes (ex. header TM {@code Rate-Limit-Reset}) en "dim. 22 juin 21h05".
    *
-   * @param epochSec  timestamp en secondes
+   * @param epochSec timestamp en secondes
    * @return la date/heure formatée, ou chaîne vide si {@code epochSec <= 0}
    */
   public static String formaterEpochSec(final long epochSec) {

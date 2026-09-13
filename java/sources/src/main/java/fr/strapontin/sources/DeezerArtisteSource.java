@@ -142,8 +142,8 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     }
   }
 
-  private static String encode(final String s) {
-    return URLEncoder.encode(s, StandardCharsets.UTF_8);
+  private static String encode(final String texte) {
+    return URLEncoder.encode(texte, StandardCharsets.UTF_8);
   }
 
   @SuppressWarnings("unchecked")

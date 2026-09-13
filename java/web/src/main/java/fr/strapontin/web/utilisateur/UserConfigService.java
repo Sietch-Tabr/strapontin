@@ -314,8 +314,8 @@ public class UserConfigService {
     return colonne;
   }
 
-  private String normaliserDept(final String d) {
-    final String valeur = d.toUpperCase(Locale.ROOT);
+  private String normaliserDept(final String dept) {
+    final String valeur = dept.toUpperCase(Locale.ROOT);
     if (valeur.matches("2[AB]")) {
       return "20";
     }

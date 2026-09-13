@@ -98,20 +98,20 @@ class AdminUtilisateursListingService {
   }
 
   private static UtilisateurAdmin assemblerUtilisateurAdmin(
-      final Map<String, Object> u, final Map<String, Long> activiteParUsername) {
-    final String username = (String) u.get("username");
+      final Map<String, Object> utilisateurBrut, final Map<String, Long> activiteParUsername) {
+    final String username = (String) utilisateurBrut.get("username");
     final Long derniereMs = activiteParUsername.get(username);
-    final Object revocationBrute = u.get("revocation_admin_le");
-    final Number nbSallesNum = (Number) u.get("nb_salles");
-    final Number nbArtistesNum = (Number) u.get("nb_artistes");
+    final Object revocationBrute = utilisateurBrut.get("revocation_admin_le");
+    final Number nbSallesNum = (Number) utilisateurBrut.get("nb_salles");
+    final Number nbArtistesNum = (Number) utilisateurBrut.get("nb_artistes");
     return new UtilisateurAdmin(
-        (String) u.get("id"),
-        (String) u.get("email"),
-        (String) u.get("role"),
+        (String) utilisateurBrut.get("id"),
+        (String) utilisateurBrut.get("email"),
+        (String) utilisateurBrut.get("role"),
         username,
-        (String) u.get("display_username"),
-        (Boolean) u.get("must_change_credentials"),
-        ((Timestamp) u.get("created_at")).toInstant(),
+        (String) utilisateurBrut.get("display_username"),
+        (Boolean) utilisateurBrut.get("must_change_credentials"),
+        ((Timestamp) utilisateurBrut.get("created_at")).toInstant(),
         derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
         revocationBrute != null ? ((Timestamp) revocationBrute).toInstant() : null,
         nbSallesNum != null ? nbSallesNum.intValue() : 0,

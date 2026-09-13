@@ -20,7 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour la gestion des artistes suivis (portage de {@code artistes/+page.server.ts}).
+ * Contrôleur REST pour la gestion des artistes suivis (portage de {@code
+ * artistes/+page.server.ts}).
  *
  * <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link ArtisteService}.
  *
@@ -43,23 +44,23 @@ public class ArtisteController {
   /**
    * Liste les artistes suivis, avec suggestions de recherche si {@code q} est fourni.
    *
-   * @param q    terme de recherche (optionnel, min 2 caractères)
+   * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification Spring Security
    * @return la liste des artistes et les suggestions
    */
   @GetMapping
   public ResponseEntity<ReponseArtistes> listerArtistes(
-      @RequestParam(required = false, defaultValue = "") final String q,
+      @RequestParam(name = "q", required = false, defaultValue = "") final String recherche,
       final Authentication auth) {
     final String userId = utilisateur(auth).id();
-    return ResponseEntity.ok(artisteService.lister(userId, q));
+    return ResponseEntity.ok(artisteService.lister(userId, recherche));
   }
 
   /**
    * Ajoute un artiste à la liste de suivi de l'utilisateur.
    *
    * @param requete corps JSON avec le nom de l'artiste
-   * @param auth    contexte d'authentification
+   * @param auth contexte d'authentification
    * @return 201 si créé — 409 si doublon, 400 si cap atteint (via {@link GlobalExceptionHandler})
    */
   @PostMapping
@@ -74,7 +75,7 @@ public class ArtisteController {
    * Supprime un artiste de la liste de suivi.
    *
    * @param artisteId UUID stable de l'artiste à supprimer
-   * @param auth      contexte d'authentification
+   * @param auth contexte d'authentification
    * @return 204 si supprimé
    */
   @DeleteMapping("/{artisteId}")

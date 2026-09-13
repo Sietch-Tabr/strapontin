@@ -60,7 +60,7 @@ public class FusionSallesClePorteeService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
 
-  private record PaireSalles(UUID a, UUID b) {}
+  private record PaireSalles(UUID idA, UUID idB) {}
 
   /**
    * @param jdbc accès JDBC
@@ -85,10 +85,10 @@ public class FusionSallesClePorteeService {
     final Set<UUID> dejaAbsorbees = new HashSet<>();
     int fusions = 0;
     for (final PaireSalles paire : paires) {
-      if (dejaAbsorbees.contains(paire.a()) || dejaAbsorbees.contains(paire.b())) {
+      if (dejaAbsorbees.contains(paire.idA()) || dejaAbsorbees.contains(paire.idB())) {
         continue;
       }
-      final UUID[] cibleSource = choisirCibleEtSource(paire.a(), paire.b());
+      final UUID[] cibleSource = choisirCibleEtSource(paire.idA(), paire.idB());
       if (cibleSource == null) {
         continue;
       }
@@ -185,14 +185,15 @@ public class FusionSallesClePorteeService {
     final double phi2 = Math.toRadians(lat2);
     final double deltaPhi = Math.toRadians(lat2 - lat1);
     final double deltaLambda = Math.toRadians(lon2 - lon1);
-    final double a =
+    final double termeHaversine =
         Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2)
             + Math.cos(phi1)
                 * Math.cos(phi2)
                 * Math.sin(deltaLambda / 2)
                 * Math.sin(deltaLambda / 2);
-    final double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return RAYON_TERRE_METRES * c;
+    final double distanceAngulaire =
+        2 * Math.atan2(Math.sqrt(termeHaversine), Math.sqrt(1 - termeHaversine));
+    return RAYON_TERRE_METRES * distanceAngulaire;
   }
 
   /**
@@ -206,7 +207,7 @@ public class FusionSallesClePorteeService {
   // Le tableau représente une paire cible/source, pas une collection à agréger — l'appelant teste
   // explicitement null pour distinguer "salle disparue" d'un tableau vide, sémantiques différentes.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-  private UUID[] choisirCibleEtSource(final UUID a, final UUID b) {
+  private UUID[] choisirCibleEtSource(final UUID idA, final UUID idB) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
@@ -214,29 +215,29 @@ public class FusionSallesClePorteeService {
                    (SELECT COUNT(*) FROM concerts c WHERE c.salle_id = s.id) AS nb_concerts
             FROM salles s WHERE s.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
             """,
-            Map.of("a", a.toString(), "b", b.toString()));
+            Map.of("a", idA.toString(), "b", idB.toString()));
     if (lignes.size() < NB_SALLES_PAIRE) {
       return null;
     }
 
     final Map<String, Object> la =
-        lignes.get(0).get("id").equals(a) ? lignes.get(0) : lignes.get(1);
+        lignes.get(0).get("id").equals(idA) ? lignes.get(0) : lignes.get(1);
     final Map<String, Object> lb =
-        lignes.get(0).get("id").equals(a) ? lignes.get(1) : lignes.get(0);
+        lignes.get(0).get("id").equals(idA) ? lignes.get(1) : lignes.get(0);
 
     final boolean aWikidata = la.get("wikidata_id") != null;
     final boolean bWikidata = lb.get("wikidata_id") != null;
     if (aWikidata != bWikidata) {
-      return aWikidata ? new UUID[] {a, b} : new UUID[] {b, a};
+      return aWikidata ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
     }
 
     final long nbA = ((Number) la.get("nb_concerts")).longValue();
     final long nbB = ((Number) lb.get("nb_concerts")).longValue();
     if (nbA != nbB) {
-      return nbA > nbB ? new UUID[] {a, b} : new UUID[] {b, a};
+      return nbA > nbB ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
     }
 
-    return a.compareTo(b) <= 0 ? new UUID[] {a, b} : new UUID[] {b, a};
+    return idA.compareTo(idB) <= 0 ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
   }
 
   /**

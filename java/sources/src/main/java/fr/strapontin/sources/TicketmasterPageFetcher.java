@@ -156,9 +156,9 @@ final class TicketmasterPageFetcher {
 
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> evt : evts) {
-      final ConcertBrut c = TicketmasterSource.mapEvenement(evt, artisteFallback);
-      if (c != null) {
-        concerts.add(c);
+      final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, artisteFallback);
+      if (concert != null) {
+        concerts.add(concert);
       }
     }
     return new ResultatPage(concerts, total, totalPages, quota, true);
