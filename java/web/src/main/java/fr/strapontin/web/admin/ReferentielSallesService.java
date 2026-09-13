@@ -85,7 +85,8 @@ public class ReferentielSallesService {
   /**
    * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
    *
-   * @param filtresRecherche filtres de recherche (voir {@link FiltresRechercheSalles})
+   * @param filtresRecherche filtres de recherche (voir
+   *     {@link FiltresRechercheSalles} )
    * @return page de résultats
    */
   public ReponseReferentielSalles lister(final FiltresRechercheSalles filtresRecherche) {
@@ -98,8 +99,9 @@ public class ReferentielSallesService {
     final PageSalles resultatPage = chargerPageSalles(filtres.where(), paramsPage);
 
     long total = resultatPage.total();
-    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
-    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par
+    // aucune ligne, un second aller-retour reste alors nécessaire pour
+    // connaître le total réel.
     if (resultatPage.salles().isEmpty() && pageNum > 0) {
       total = compterSallesFiltrees(filtres.where(), filtres.params());
     }
@@ -271,11 +273,12 @@ public class ReferentielSallesService {
     return true;
   }
 
-  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
-  // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
-  // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
-  // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
-  // 2. Réassigner les événements restants (ceux sans doublon côté cible).
+  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible)
+  // : leurs observations sont reportées sur l'événement cible plutôt que
+  // perdues (#1192) — celles qui entreraient en conflit sur (evenement_id,
+  // source, url) sont supprimées, déjà représentées côté cible. L'événement
+  // source, vidé de ses observations, est ensuite supprimé. 2. Réassigner les
+  // événements restants (ceux sans doublon côté cible).
   private void fusionnerEvenements(final Map<String, Object> ids) {
     jdbc.update(
         """
@@ -311,11 +314,11 @@ public class ReferentielSallesService {
         ids);
   }
 
-  // 3. Abonnements en double supprimés, le reste réassigné.
-  // 4. Sources externes réassignées (PK indépendante de salle_id, pas de conflit de PK
-  // possible) — dédoublonnage préalable des conflits par type de source (sans lui, deux
-  // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur la salle
-  // fusionnée).
+  // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
+  // réassignées (PK indépendante de salle_id, pas de conflit de PK possible) —
+  // dédoublonnage préalable des conflits par type de source (sans lui, deux
+  // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment
+  // sur la salle fusionnée).
   private void fusionnerAbonnementsEtSources(
       final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
@@ -340,11 +343,12 @@ public class ReferentielSallesService {
         ids);
   }
 
-  // 5. Métadonnées récupérées si la cible ne les a pas déjà.
-  // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
-  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
-  // une sous-salle de la source, elle hérite du parent de la source plutôt que de rester
-  // rattachée à une salle sur le point d'être supprimée.
+  // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
+  // la source réassignées à la cible — sinon la suppression de la source
+  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible
+  // était elle-même une sous-salle de la source, elle hérite du parent de la
+  // source plutôt que de rester rattachée à une salle sur le point d'être
+  // supprimée.
   private void fusionnerMetadonneesEtSousSalles(
       final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
@@ -365,11 +369,12 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
-   * celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-   * cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL}) plutôt
-   * que laissée pointer vers la source sur le point d'être supprimée, et signalée pour revue
-   * manuelle.
+   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même,
+   * déjà traitée), sauf celle dont la cible est déjà un descendant — la
+   * réassigner créerait un cycle {@code enfant → cible → ... → enfant} (#1201).
+   * Une telle sous-salle est détachée (parent à {@code NULL} ) plutôt que
+   * laissée pointer vers la source sur le point d'être supprimée, et signalée
+   * pour revue manuelle.
    */
   private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
     final List<UUID> enfants =
@@ -400,9 +405,9 @@ public class ReferentielSallesService {
     }
   }
 
-  // findFirst() sur un flux contenant un unique élément null lève une NullPointerException
-  // (Optional.of appelé en interne) — un accès direct à la liste évite ce piège pour une salle
-  // racine sans parent.
+  // findFirst() sur un flux contenant un unique élément null lève une
+  // NullPointerException (Optional.of appelé en interne) — un accès direct à la
+  // liste évite ce piège pour une salle racine sans parent.
   private UUID lireSalleParentId(final UUID salleId) {
     final List<UUID> resultat =
         jdbc.query(
@@ -423,7 +428,8 @@ public class ReferentielSallesService {
    * @param cibleId UUID de la salle à conserver
    * @param sourceId UUID de la salle à absorber
    */
-  // paramsSuppression porte des valeurs propres au conflit courant — pas hissable hors boucle.
+  // paramsSuppression porte des valeurs propres au conflit courant — pas
+  // hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =

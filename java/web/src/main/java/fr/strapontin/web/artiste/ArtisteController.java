@@ -42,7 +42,8 @@ public class ArtisteController {
   }
 
   /**
-   * Liste les artistes suivis, avec suggestions de recherche si {@code q} est fourni.
+   * Liste les artistes suivis, avec suggestions de recherche si {@code q} est
+   * fourni.
    *
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification Spring Security
@@ -61,7 +62,8 @@ public class ArtisteController {
    *
    * @param requete corps JSON avec le nom de l'artiste
    * @param auth contexte d'authentification
-   * @return 201 si créé — 409 si doublon, 400 si cap atteint (via {@link GlobalExceptionHandler})
+   * @return 201 si créé — 409 si doublon, 400 si cap atteint (via
+   *     {@link GlobalExceptionHandler} )
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterArtiste(

@@ -48,10 +48,10 @@ public final class ConfigCipher {
    *
    * @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
    */
-  // Le sel SCrypt est volontairement fixe (pas une clé de chiffrement secrète) : la clé réelle
-  // dérive de "secret" (APP_CONFIG_SECRET), jamais codé en dur — changer ce sel rendrait
-  // illisibles toutes les valeurs app_config déjà chiffrées, au même titre qu'un changement
-  // d'APP_CONFIG_SECRET.
+  // Le sel SCrypt est volontairement fixe (pas une clé de chiffrement secrète)
+  // : la clé réelle dérive de "secret" (APP_CONFIG_SECRET), jamais codé en dur
+  // — changer ce sel rendrait illisibles toutes les valeurs app_config déjà
+  // chiffrées, au même titre qu'un changement d'APP_CONFIG_SECRET.
   @SuppressWarnings("PMD.HardCodedCryptoKey")
   public ConfigCipher(final String secret) {
     Objects.requireNonNull(secret, "secret");
@@ -87,7 +87,8 @@ public final class ConfigCipher {
       final byte[] resultat = cipher.doFinal(valeur.getBytes(StandardCharsets.UTF_8));
       final int donneesLen = resultat.length - 16;
 
-      // Réordonne en IV(12) || TAG(16) || données_chiffrées pour correspondre au format Node.js
+      // Réordonne en IV(12) || TAG(16) || données_chiffrées pour correspondre
+      // au format Node.js
       final byte[] stocke = new byte[12 + 16 + donneesLen];
       System.arraycopy(iv, 0, stocke, 0, 12);
       System.arraycopy(resultat, donneesLen, stocke, 12, 16);

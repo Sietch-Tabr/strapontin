@@ -68,7 +68,8 @@ public class ReferentielArtistesController {
    * Modifie le nom affiché d'un artiste.
    *
    * @param uuid UUID de l'artiste
-   * @param corps corps JSON avec {@code nomAffiche} (null/vide pour revenir à l'auto)
+   * @param corps corps JSON avec {@code nomAffiche} (null/vide pour revenir à
+   *     l'auto)
    * @return 200 si mis à jour, 400 si UUID invalide, 404 si artiste inconnu
    */
   @PatchMapping("/artistes/{uuid}")
@@ -108,11 +109,12 @@ public class ReferentielArtistesController {
   }
 
   /**
-   * Efface {@code necessite_intervention_le} sans fusion — l'admin juge la divergence de nom TM
-   * acceptable.
+   * Efface {@code necessite_intervention_le} sans fusion — l'admin juge la
+   * divergence de nom TM acceptable.
    *
    * @param uuid UUID de l'artiste
-   * @return 200 si mis à jour, 400 si UUID invalide, 404 si artiste inconnu/sans intervention
+   * @return 200 si mis à jour, 400 si UUID invalide, 404 si artiste
+   *     inconnu/sans intervention
    */
   @PostMapping("/artistes/{uuid}/ignorer-intervention")
   public ResponseEntity<Map<String, Object>> ignorerIntervention(@PathVariable final String uuid) {

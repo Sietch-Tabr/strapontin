@@ -77,7 +77,8 @@ public class AdminService {
   }
 
   /**
-   * Retourne une page d'utilisateurs avec leur dernière activité et compteurs de suivi.
+   * Retourne une page d'utilisateurs avec leur dernière activité et compteurs
+   * de suivi.
    *
    * @param page numéro de page (0-indexé)
    * @return page d'utilisateurs triés par date de création

@@ -27,8 +27,8 @@ final class ArtisteServiceParsing {
 
   private static final Logger LOG = LoggerFactory.getLogger(ArtisteServiceParsing.class);
 
-  // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou un humoriste
-  // des homonymes non pertinents pour l'autocomplete.
+  // Mots-clés (description Wikidata, fr/en) distinguant un artiste musical ou
+  // un humoriste des homonymes non pertinents pour l'autocomplete.
   private static final Pattern MOTS_CLES_ARTISTE =
       Pattern.compile(
           "chanteur|chanteuse|musicien|musicienne|rappeur|rappeuse|compositeur|compositrice"
@@ -57,9 +57,10 @@ final class ArtisteServiceParsing {
           continue;
         }
         final String description = (String) item.get("description");
-        // Description absente : on ne peut ni confirmer ni exclure — on garde plutôt que de
-        // priver l'utilisateur d'un résultat potentiellement pertinent (simple suggestion,
-        // l'utilisateur reste seul décideur au clic).
+        // Description absente : on ne peut ni confirmer ni exclure — on garde
+        // plutôt que de priver l'utilisateur d'un résultat potentiellement
+        // pertinent (simple suggestion, l'utilisateur reste seul décideur au
+        // clic).
         if (description != null && !MOTS_CLES_ARTISTE.matcher(description).find()) {
           continue;
         }

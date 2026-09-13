@@ -47,7 +47,8 @@ class SalleRechercheTicketmasterService {
    * @param configService lecture de la clé API Ticketmaster
    * @param restClient client HTTP partagé
    * @param objectMapper désérialiseur JSON
-   * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker
+   * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le
+   *     worker
    */
   /* package-private : instancié uniquement par SalleService (même package). */
   SalleRechercheTicketmasterService(
@@ -63,7 +64,8 @@ class SalleRechercheTicketmasterService {
 
   /**
    * @param terme terme de recherche saisi par l'utilisateur
-   * @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en cas d'échec réseau
+   * @return suggestions Ticketmaster, vide si aucune, si non configuré, ou en
+   *     cas d'échec réseau
    */
   /* package-private : appelé par SalleService (même package). */
   List<ResultatSalle> rechercher(final String terme) {

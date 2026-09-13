@@ -326,7 +326,7 @@ public class SalleService {
    * @throws DuplicateKeyException si le wikidataId est déjà attribué à une autre salle
    */
   @Transactional(propagation = Propagation.NESTED)
-  /* package-private : requis pour l'auto-invocation via le proxy self (transaction NESTED). */
+  /* package-private : requis pour auto-invocation via proxy self (NESTED). */
   void mettreAJourWikidataIdEnSavepoint(final UUID salleId, final String wikidataId) {
     salleRepository.mettreAJourWikidataId(salleId, wikidataId);
   }
@@ -374,8 +374,8 @@ public class SalleService {
   /**
    * Déclenche immédiatement un fetch pour une salle identifiée par son UUID.
    *
-   * <p>Lit toutes les sources configurées dans {@code salle_sources} (TM, Digitick…) et les
-   * transmet au worker en une seule requête.
+   * <p>Lit toutes les sources configurées dans {@code salle_sources} (TM,
+   * Digitick…) et les transmet au worker en une seule requête.
    *
    * @param salleId UUID de la salle
    */
@@ -420,7 +420,8 @@ public class SalleService {
   public record DonneesSalleDigitick(String nom, String slug, String ville, String dept) {}
 
   /**
-   * @param donnees données de la salle Digitick à créer (voir {@link DonneesSalleDigitick})
+   * @param donnees données de la salle Digitick à créer (voir
+   *     {@link DonneesSalleDigitick} )
    * @return UUID stable de la salle créée ou retrouvée
    * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
    */
@@ -455,7 +456,8 @@ public class SalleService {
   }
 
   /**
-   * Retourne les identifiants sources CSV d'une salle (ex. {@code "digitick:lempreinte,tm:rZ..."}).
+   * Retourne les identifiants sources CSV d'une salle (ex.
+   * {@code "digitick:lempreinte,tm:rZ..."} ).
    *
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucun
@@ -465,20 +467,22 @@ public class SalleService {
   }
 
   /**
-   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et
+   * sans concerts.
    *
    * @param salleId UUID de la salle
-   * @return {@code true} si supprimée, {@code false} si des contraintes bloquent
+   * @return {@code true} si supprimée, {@code false} si une contrainte bloque
    */
   public boolean supprimerSalleDigitick(final UUID salleId) {
     return salleRepository.supprimerSalleDigitick(salleId);
   }
 
   /**
-   * Normalise un nom de salle en retirant accents, ponctuation et espaces (clé stable).
+   * Normalise un nom de salle en retirant accents, ponctuation et espaces (clé
+   * stable).
    *
    * @param nom nom brut de la salle
-   * @return identifiant normalisé (ex. {@code "olympia"})
+   * @return identifiant normalisé (ex. {@code "olympia"} )
    */
   public static String normaliserSalleCle(final String nom) {
     final String nfd = Normalizer.normalize(nom.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);

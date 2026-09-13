@@ -42,7 +42,10 @@ class ResolveurSalleParConcert {
   private final ClientNominatim clientNominatim;
   private final RaccrocheurSallesParNomNorm raccrocheur;
 
-  /* package-private : instancié uniquement par ReconciliateurSalles (même package). */
+  /*
+   * package-private : instancié uniquement par ReconciliateurSalles (même
+   * package).
+   */
   ResolveurSalleParConcert(
       final NamedParameterJdbcTemplate jdbc, final ClientNominatim clientNominatim) {
     this.jdbc = jdbc;
@@ -76,10 +79,10 @@ class ResolveurSalleParConcert {
       return null;
     }
 
-    // salles.dept n'était écrit qu'à la création puis jamais mis à jour — 281/284 salles
-    // sans dept en prod avaient pourtant l'info via un concert déjà lié. COALESCE : n'écrase
-    // jamais une valeur déjà connue, même pattern que wikidata_id/nom_affiche
-    // (EnrichissementSallesService).
+    // salles.dept n'était écrit qu'à la création puis jamais mis à jour —
+    // 281/284 salles sans dept en prod avaient pourtant l'info via un concert
+    // déjà lié. COALESCE : n'écrase jamais une valeur déjà connue, même pattern
+    // que wikidata_id/nom_affiche (EnrichissementSallesService).
     if (concert.dept() != null) {
       jdbc.update(
           "UPDATE salles SET dept = COALESCE(dept, :dept) WHERE id = CAST(:uuid AS uuid)",
@@ -208,7 +211,10 @@ class ResolveurSalleParConcert {
    * @param dept département connu du concert (nullable — désactive le filtre si absent)
    * @return UUID de la salle existante correspondante, ou {@code null} si aucune trouvée
    */
-  /* package-private : appelé par ReconciliateurSalles/RaccrocheurSallesParNomNorm (même package). */
+  /*
+   * package-private : appelé par
+   * ReconciliateurSalles/RaccrocheurSallesParNomNorm (même package).
+   */
   UUID chercherSalleParTokens(final String nom, final String dept) {
     final String nomNorm = Normalisation.normaliserTexte(nom);
     final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(nomNorm);
@@ -245,11 +251,11 @@ class ResolveurSalleParConcert {
     params.addValue("nomNormSquash", nomNormSquash);
     params.addValue(CLE_DEPT, dept, Types.VARCHAR);
 
-    // salles.dept n'est écrit qu'à la création et n'est jamais mis à jour ensuite,
-    // contrairement à concerts.dept (fiablement renseigné à chaque ingestion) — un simple
-    // "dept IS NULL" désactivait le filtre pour la quasi-totalité des salles existantes. Repli
-    // sur le département d'un concert déjà rattaché à la salle candidate quand salles.dept est
-    // vide.
+    // salles.dept n'est écrit qu'à la création et n'est jamais mis à jour
+    // ensuite, contrairement à concerts.dept (fiablement renseigné à chaque
+    // ingestion) — un simple "dept IS NULL" désactivait le filtre pour la
+    // quasi-totalité des salles existantes. Repli sur le département d'un
+    // concert déjà rattaché à la salle candidate quand salles.dept est vide.
     return jdbc.queryForList(
         "SELECT s.id AS id, s.nom AS nom, s.nom_norm AS nom_norm FROM salles s"
             + " WHERE "
@@ -338,8 +344,8 @@ class ResolveurSalleParConcert {
     }
 
     final String salleCle = Normalisation.normaliserTexte(nom);
-    // MapSqlParameterSource plutôt que Map.of — dept peut être null ici (Map.of lève une NPE sur
-    // toute valeur null).
+    // MapSqlParameterSource plutôt que Map.of — dept peut être null ici (Map.of
+    // lève une NPE sur toute valeur null).
     jdbc.update(
         "INSERT INTO salles (salle_cle, nom, nom_norm, dept, salle_parent_id)"
             + " VALUES (:salleCle, :nom, :nomNorm, :dept, CAST(:parentId AS uuid))"
@@ -451,8 +457,8 @@ class ResolveurSalleParConcert {
 
   /**
    * @param concerts concerts après déduplication
-   * @return liste enrichie avec les {@code salleId} résolus ou réalignés par nom_norm — voir {@link
-   *     RaccrocheurSallesParNomNorm}
+   * @return liste enrichie avec les {@code salleId} résolus ou réalignés par
+   *     nom_norm — voir {@link RaccrocheurSallesParNomNorm}
    */
   /* package-private : appelé par ReconciliateurSalles (même package). */
   List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {

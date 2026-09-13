@@ -45,7 +45,8 @@ public class DecouverteService {
 
   /**
    * @param jdbc accès JDBC
-   * @param restClient client HTTP partagé (module web), pour déclencher le worker
+   * @param restClient client HTTP partagé (module web), pour déclencher le
+   *     worker
    */
   public DecouverteService(final NamedParameterJdbcTemplate jdbc, final RestClient restClient) {
     this.jdbc = jdbc;
@@ -114,7 +115,8 @@ public class DecouverteService {
       CompletableFuture<Instant> syncTs,
       CompletableFuture<List<SyncDept>> syncParDept) {}
 
-  // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
+  // Requêtes indépendantes lancées en parallèle pendant l'exécution de la
+  // requête principale
   private RequetesParalleles lancerRequetesParalleles(
       final StringBuilder where,
       final Map<String, Object> params,

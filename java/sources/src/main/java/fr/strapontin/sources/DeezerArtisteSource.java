@@ -51,7 +51,8 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       new fr.strapontin.core.CompteurBilanFetch();
 
   /**
-   * Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement.
+   * Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier
+   * prélèvement.
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -61,9 +62,10 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   }
 
   /**
-   * Crée une instance avec un RestClient par défaut (timeout connexion 10s, lecture 30s) — sans
-   * borne, un hoquet réseau ou une réponse lente de l'API Deezer ferait pendre indéfiniment un
-   * thread worker (même classe d'incident que celle déjà corrigée pour TM/Eventim, #887).
+   * Crée une instance avec un RestClient par défaut (timeout connexion 10s,
+   * lecture 30s) — sans borne, un hoquet réseau ou une réponse lente de l'API
+   * Deezer ferait pendre indéfiniment un thread worker (même classe d'incident
+   * que celle déjà corrigée pour TM/Eventim, #887).
    */
   public DeezerArtisteSource() {
     this(
@@ -99,9 +101,10 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     return resultats;
   }
 
-  // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
-  // valide plutôt que de poursuivre l'itération sans effet utile. Le record retourné porte les
-  // champs du candidat courant — pas d'instance hissable hors boucle.
+  // return en dernière position de boucle nécessaire : arrête la recherche au
+  // premier candidat valide plutôt que de poursuivre l'itération sans effet
+  // utile. Le record retourné porte les champs du candidat courant — pas
+  // d'instance hissable hors boucle.
   @SuppressWarnings({
     "unchecked",
     "PMD.AvoidBranchingStatementAsLastInLoop",

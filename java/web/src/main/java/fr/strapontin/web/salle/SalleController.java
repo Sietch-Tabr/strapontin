@@ -62,7 +62,8 @@ public class SalleController {
   }
 
   /**
-   * Liste les salles suivies, avec suggestions de recherche si {@code q} est fourni.
+   * Liste les salles suivies, avec suggestions de recherche si {@code q} est
+   * fourni.
    *
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification
@@ -81,7 +82,8 @@ public class SalleController {
    *
    * @param requete corps JSON avec le nom et l'ID TM optionnel
    * @param auth contexte d'authentification
-   * @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link GlobalExceptionHandler})
+   * @return 201 si créée — 409 si doublon, 400 si invalide/cap (via
+   *     {@link GlobalExceptionHandler} )
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
@@ -137,8 +139,9 @@ public class SalleController {
       final HttpServletRequest request) {
     final UtilisateurDetails utilisateur = utilisateur(auth);
 
-    // @Valid rejette une requête invalide avant l'exécution de cette méthode — le rate-limiting
-    // ci-dessous n'est donc jamais consommé par une requête invalide.
+    // @Valid rejette une requête invalide avant l'exécution de cette méthode —
+    // le rate-limiting ci-dessous n'est donc jamais consommé par une requête
+    // invalide.
     final String nom = requete.nom().strip();
     final String ville = requete.ville() == null ? "" : requete.ville().strip();
     final String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();

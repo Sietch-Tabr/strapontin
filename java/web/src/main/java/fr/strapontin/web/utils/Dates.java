@@ -89,7 +89,8 @@ public final class Dates {
   }
 
   /**
-   * Formate un epoch en millisecondes en "dim. 22 juin 21h05" (fuseau Europe/Paris).
+   * Formate un epoch en millisecondes en "dim. 22 juin 21h05" (fuseau
+   * Europe/Paris).
    *
    * @param epochMs timestamp en millisecondes
    * @return la date/heure formatée, ou chaîne vide si {@code epochMs <= 0}
@@ -115,7 +116,8 @@ public final class Dates {
   }
 
   /**
-   * Formate une chaîne ISO-8601 (ex. {@code misAJour} de {@code QuotaTM}) en "dim. 22 juin 21h05".
+   * Formate une chaîne ISO-8601 (ex. {@code misAJour} de {@code QuotaTM} ) en
+   * "dim. 22 juin 21h05".
    *
    * @param isoInstant instant au format ISO-8601, ou {@code null}
    * @return la date/heure formatée, ou chaîne vide si {@code null} ou invalide
@@ -132,7 +134,8 @@ public final class Dates {
   }
 
   /**
-   * Formate un epoch en secondes (ex. header TM {@code Rate-Limit-Reset}) en "dim. 22 juin 21h05".
+   * Formate un epoch en secondes (ex. header TM {@code Rate-Limit-Reset} ) en
+   * "dim. 22 juin 21h05".
    *
    * @param epochSec timestamp en secondes
    * @return la date/heure formatée, ou chaîne vide si {@code epochSec <= 0}

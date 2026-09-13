@@ -54,8 +54,8 @@ class FetchRegionExecutor {
   }
 
   /**
-   * @param deptsCibles départements à retenter, ou {@code null} pour un cycle complet (tous les
-   *     départements configurés)
+   * @param deptsCibles départements à retenter, ou {@code null} pour un cycle
+   *     complet (tous les départements configurés)
    */
   /* package-private : appelé par WorkerFetchService (même package). */
   void executer(final List<String> deptsCibles) {
@@ -173,8 +173,8 @@ class FetchRegionExecutor {
   }
 
   /**
-   * Salles déjà connues (concerts futurs déjà en base) pour un lot de départements — inclut les
-   * salles non suivies.
+   * Salles déjà connues (concerts futurs déjà en base) pour un lot de
+   * départements — inclut les salles non suivies.
    */
   private List<String> sallesConnuesDesDepartements(final List<String> depts) {
     return commun

@@ -9,8 +9,9 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Utilitaires partagés entre contrôleurs REST — jusqu'ici dupliqués verbatim dans une douzaine de
- * contrôleurs ({@code erreur}) et cinq d'entre eux ({@code parseUuid}).
+ * Utilitaires partagés entre contrôleurs REST — jusqu'ici dupliqués verbatim
+ * dans une douzaine de contrôleurs ({@code erreur}) et cinq d'entre eux ({@code
+ * parseUuid}).
  *
  * @since 2.8.7
  * @author Kwaite

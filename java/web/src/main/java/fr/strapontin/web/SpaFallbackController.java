@@ -25,7 +25,8 @@ class SpaFallbackController {
   SpaFallbackController() {}
 
   /**
-   * Capture les routes à un ou plusieurs segments sans extension et renvoie {@code index.html}.
+   * Capture les routes à un ou plusieurs segments sans extension et renvoie
+   * {@code index.html} .
    *
    * @return le forward vers {@code /index.html}
    */

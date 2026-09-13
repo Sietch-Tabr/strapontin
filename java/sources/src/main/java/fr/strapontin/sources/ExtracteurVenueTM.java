@@ -8,8 +8,9 @@ import fr.strapontin.core.Normalisation;
 import java.util.Map;
 
 /**
- * Extraction des informations de salle (venue) d'un événement Ticketmaster brut — extrait de {@link
- * MapeurEvenementTM} pour rester sous le seuil de complexité cyclomatique de classe (50).
+ * Extraction des informations de salle (venue) d'un événement Ticketmaster brut
+ * — extrait de {@link MapeurEvenementTM} pour rester sous le seuil de
+ * complexité cyclomatique de classe (50).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -49,10 +50,11 @@ final class ExtracteurVenueTM {
 
   @SuppressWarnings(UNCHECKED)
   private static String extraireDeptTM(final Map<String, Object> venue) {
-    // Un code postal étranger dont les deux premiers chiffres collisionnent avec un département
-    // français existant (ex. Luxembourg 43xx / Haute-Loire 43) produirait sinon un dept français
-    // plausible mais faux — countryCode absent traité comme française par défaut (comportement
-    // historique, aucun cas contraire connu).
+    // Un code postal étranger dont les deux premiers chiffres collisionnent
+    // avec un département français existant (ex. Luxembourg 43xx / Haute-Loire
+    // 43) produirait sinon un dept français plausible mais faux — countryCode
+    // absent traité comme française par défaut (comportement historique, aucun
+    // cas contraire connu).
     final Map<String, String> countryMap =
         venue != null ? (Map<String, String>) venue.get("country") : null;
     final String countryCode = countryMap != null ? countryMap.get("countryCode") : null;

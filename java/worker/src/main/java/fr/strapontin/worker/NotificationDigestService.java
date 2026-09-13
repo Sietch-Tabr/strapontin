@@ -47,10 +47,14 @@ public class NotificationDigestService {
   private final NotificationDigestStats stats;
 
   /**
-   * Fabrique du client Resend — indirection nécessaire pour rendre {@code envoyerEmail} testable
-   * sur son chemin nominal de succès, le SDK Resend n'étant pas injectable directement.
+   * Fabrique du client Resend — indirection nécessaire pour rendre
+   * {@code envoyerEmail} testable sur son chemin nominal de succès, le SDK
+   * Resend n'étant pas injectable directement.
    */
-  /* package-private : fabrique interne substituable en test, utilisée uniquement par cette classe. */
+  /*
+   * package-private : fabrique interne substituable en test, utilisée
+   * uniquement par cette classe.
+   */
   @FunctionalInterface
   interface FabriqueResend {
     /**
@@ -61,13 +65,17 @@ public class NotificationDigestService {
   }
 
   /** Fabrique du client push VAPID — même motif que {@link FabriqueResend}. */
-  /* package-private : fabrique interne substituable en test, utilisée aussi par NotificationPushDigestService (même package). */
+  /*
+   * package-private : fabrique interne substituable en test, utilisée aussi par
+   * NotificationPushDigestService (même package).
+   */
   @FunctionalInterface
   interface FabriquePushService {
     /**
      * @param clePublique clé publique VAPID
      * @param clePrivee clé privée VAPID
-     * @param sujet identifiant {@code mailto:}/{@code https:} requis par la spec VAPID
+     * @param sujet identifiant {@code mailto:} /{@code https:} requis par la
+     *     spec VAPID
      * @return client push prêt à l'emploi
      * @throws java.security.GeneralSecurityException si les clés sont invalides
      */
@@ -76,9 +84,10 @@ public class NotificationDigestService {
   }
 
   /**
-   * Constructeur Spring — : les fabriques Resend/PushService ne sont explicitement annotées
-   * {@code @Autowired} que sur ce constructeur, sans quoi Spring ne peut pas déterminer lequel des
-   * deux constructeurs utiliser dès qu'il en existe plus d'un.
+   * Constructeur Spring — : les fabriques Resend/PushService ne sont
+   * explicitement annotées {@code @Autowired} que sur ce constructeur, sans
+   * quoi Spring ne peut pas déterminer lequel des deux constructeurs utiliser
+   * dès qu'il en existe plus d'un.
    */
   @Autowired
   public NotificationDigestService(
@@ -98,10 +107,13 @@ public class NotificationDigestService {
   }
 
   /**
-   * Constructeur de test — permet d'injecter des fabriques Resend/PushService mockables pour
-   * exercer le chemin nominal de succès de l'envoi email/push.
+   * Constructeur de test — permet d'injecter des fabriques Resend/PushService
+   * mockables pour exercer le chemin nominal de succès de l'envoi email/push.
    */
-  /* package-private : instancié uniquement par Spring et les tests du même package. */
+  /*
+   * package-private : instancié uniquement par Spring et les tests du même
+   * package.
+   */
   NotificationDigestService(
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
@@ -144,9 +156,11 @@ public class NotificationDigestService {
       String statut) {}
 
   /**
-   * Résultat d'un envoi de digest, avec le sous-ensemble de concerts effectivement tenté par canal
-   * — nécessaire pour ne marquer {@code notification_envoyee_le} que sur les concerts réellement
-   * délivrés par un canal en succès, pas sur l'ensemble du digest dès qu'un seul canal a réussi.
+   * Résultat d'un envoi de digest, avec le sous-ensemble de concerts
+   * effectivement tenté par canal — nécessaire pour ne marquer
+   * {@code notification_envoyee_le} que sur les concerts réellement délivrés
+   * par un canal en succès, pas sur l'ensemble du digest dès qu'un seul canal a
+   * réussi.
    */
   private record ResultatDigest(
       boolean emailOk,
@@ -154,7 +168,10 @@ public class NotificationDigestService {
       List<ConcertNotif> concertsEmail,
       List<ConcertNotif> concertsPush) {}
 
-  /* package-private : type de retour interne, utilisé par NotificationPushDigestService (même package). */
+  /*
+   * package-private : type de retour interne, utilisé par
+   * NotificationPushDigestService (même package).
+   */
   record ConfigNotifUser(
       boolean notifArtistes,
       boolean notifSalles,
@@ -163,10 +180,11 @@ public class NotificationDigestService {
       String frequenceNotifications) {}
 
   /**
-   * Parcourt les matches non notifiés pour une fréquence donnée, envoie le digest, met à jour
-   * {@code notifie_le}.
+   * Parcourt les matches non notifiés pour une fréquence donnée, envoie le
+   * digest, met à jour {@code notifie_le} .
    *
-   * @param frequence {@code "temps_reel"} (après chaque recalcul) ou {@code "quotidien"} (cron 8h)
+   * @param frequence {@code "temps_reel"} (après chaque recalcul) ou
+   *     {@code "quotidien"} (cron 8h)
    */
   public void executerDigest(final String frequence) {
     LOG.info("notifier:digest démarré frequence={}", frequence);
@@ -209,9 +227,11 @@ public class NotificationDigestService {
   }
 
   /**
-   * Bilan de l'envoi du digest à un utilisateur (extrait de {@link #executerDigest}).
+   * Bilan de l'envoi du digest à un utilisateur (extrait de
+   * {@link #executerDigest} ).
    *
-   * @param matchesNotifies nombre de matches marqués notifiés pour cet utilisateur
+   * @param matchesNotifies nombre de matches marqués notifiés pour cet
+   *     utilisateur
    */
   private record BilanDigestUtilisateur(
       boolean emailOk, boolean pushOk, boolean erreur, int matchesNotifies) {}
@@ -234,9 +254,9 @@ public class NotificationDigestService {
               groupes.configsUtilisateurs().get(userId));
       emailOk = res.emailOk();
       pushOk = res.pushOk();
-      // Seuls les concerts du canal effectivement en succès sont marqués notifiés :
-      // un digest mixte email+push où un seul canal échoue ne doit pas marquer à tort les
-      // concerts du canal en échec comme notifiés.
+      // Seuls les concerts du canal effectivement en succès sont marqués
+      // notifiés : un digest mixte email+push où un seul canal échoue ne doit
+      // pas marquer à tort les concerts du canal en échec comme notifiés.
       if (res.emailOk()) {
         res.concertsEmail().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
       }
@@ -273,8 +293,9 @@ public class NotificationDigestService {
         """,
         new MapSqlParameterSource()
             .addValue("userId", userId)
-            // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre de bind —
-            // OffsetDateTime est le seul type JSR-310 supporté automatiquement en écriture.
+            // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en
+            // paramètre de bind — OffsetDateTime est le seul type JSR-310
+            // supporté automatiquement en écriture.
             .addValue("maintenant", maintenant.atOffset(java.time.ZoneOffset.UTC))
             .addValue("concertIds", concertIdsNotifies));
   }
@@ -318,7 +339,10 @@ public class NotificationDigestService {
     stats.enregistrerStat(dureeMs, nbNotifies, erreur);
   }
 
-  /* package-private : appelé par NotificationPushDigestService/EmailDigestTemplate (même package). */
+  /*
+   * package-private : appelé par
+   * NotificationPushDigestService/EmailDigestTemplate (même package).
+   */
   static String formaterDate(final String dateIso) {
     return NotificationDigestStats.formaterDate(dateIso);
   }

@@ -60,9 +60,10 @@ public class TotpChallengeService {
   public record ChallengeTotp(String userId, String identifiant, String code, String ip) {}
 
   /**
-   * Vérifie le code TOTP soumis pour un utilisateur et met à jour le compteur d'échecs.
+   * Vérifie le code TOTP soumis pour un utilisateur et met à jour le compteur
+   * d'échecs.
    *
-   * @param challenge le challenge à vérifier (voir {@link ChallengeTotp})
+   * @param challenge le challenge à vérifier (voir {@link ChallengeTotp} )
    * @return le résultat du challenge
    */
   public ResultatTotp verifier(final ChallengeTotp challenge) {

@@ -22,7 +22,8 @@ public interface SourceAvecFetchLot extends SourceConcerts {
   /**
    * Récupère les concerts de plusieurs artistes en une seule requête.
    *
-   * @param identifiantsSources identifiants source des artistes (attractionId TM, etc.)
+   * @param identifiantsSources identifiants source des artistes (attractionId
+   *     TM, etc.)
    * @return concerts trouvés pour l'ensemble du lot
    */
   List<ConcertBrut> fetchArtistesLot(List<String> identifiantsSources);

@@ -38,7 +38,8 @@ public class WorkerService {
   /**
    * @param recalculerMatchesService recalcul des matches utilisateur
    * @param notificationDigestService envoi du digest de notifications
-   * @param reconciliationNocturneService réconciliation nocturne des identifiants suspects
+   * @param reconciliationNocturneService réconciliation nocturne des
+   *     identifiants suspects
    * @param workerStatsService journalisation des bilans de job
    */
   public WorkerService(
@@ -71,8 +72,9 @@ public class WorkerService {
   }
 
   /**
-   * Job nocturne de réconciliation des sources salles/artistes : health-check et redécouverte des
-   * identifiants suspects, puis enrichissement Wikidata/OSM/Deezer.
+   * Job nocturne de réconciliation des sources salles/artistes : health-check
+   * et redécouverte des identifiants suspects, puis enrichissement
+   * Wikidata/OSM/Deezer.
    */
   public void executerReconciliationNocturne() {
     LOG.info("reconciliation:nocturne démarré");

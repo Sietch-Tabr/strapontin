@@ -47,10 +47,11 @@ public class FusionSallesClePorteeService {
 
   private static final Logger LOG = LoggerFactory.getLogger(FusionSallesClePorteeService.class);
 
-  // Distance au-delà de laquelle deux salles ne peuvent structurellement pas être le même
-  // bâtiment, même en cas de coïncidence artiste+date+heure+dept et de nom similaire — un
-  // complexe multi-salles (La Seine Musicale, #1180) peut partager un nom quasi identique entre
-  // deux halls physiquement distincts de plusieurs centaines de mètres.
+  // Distance au-delà de laquelle deux salles ne peuvent structurellement pas
+  // être le même bâtiment, même en cas de coïncidence artiste+date+heure+dept
+  // et de nom similaire — un complexe multi-salles (La Seine Musicale, #1180)
+  // peut partager un nom quasi identique entre deux halls physiquement
+  // distincts de plusieurs centaines de mètres.
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
   private static final double RAYON_TERRE_METRES = 6_371_000;
   private static final String CLE_CIBLE = "cible";
@@ -146,9 +147,11 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * @return {@code true} si les deux salles ont toutes deux des coordonnées connues et que leur
-   *     distance dépasse {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des deux
-   *     coordonnées est inconnue (comportement actuel nom+dept inchangé dans ce cas).
+   * @return {@code true} si les deux salles ont toutes deux des coordonnées
+   *     connues et que leur distance dépasse
+   *     {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des
+   *     deux coordonnées est inconnue (comportement actuel nom+dept inchangé
+   *     dans ce cas).
    */
   private static boolean distanceExcessive(final Map<String, Object> ligne) {
     final Double latA = (Double) ligne.get("lat_a");
@@ -204,8 +207,9 @@ public class FusionSallesClePorteeService {
    *
    * @return {@code [cible, source]}, ou {@code null} si l'une des deux salles n'existe plus
    */
-  // Le tableau représente une paire cible/source, pas une collection à agréger — l'appelant teste
-  // explicitement null pour distinguer "salle disparue" d'un tableau vide, sémantiques différentes.
+  // Le tableau représente une paire cible/source, pas une collection à agréger
+  // — l'appelant teste explicitement null pour distinguer "salle disparue" d'un
+  // tableau vide, sémantiques différentes.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private UUID[] choisirCibleEtSource(final UUID idA, final UUID idB) {
     final List<Map<String, Object>> lignes =
@@ -265,8 +269,9 @@ public class FusionSallesClePorteeService {
         "reconciliation:nocturne — salles fusionnées par clé forte cible={} source={}",
         cibleId,
         sourceId);
-    // Fusion automatique et destructive (suppression d'une salle établie) : jamais silencieuse,
-    // contrairement au reste du cycle nocturne qui ne fait que journaliser un constat.
+    // Fusion automatique et destructive (suppression d'une salle établie) :
+    // jamais silencieuse, contrairement au reste du cycle nocturne qui ne fait
+    // que journaliser un constat.
     logsAdminWorker.inserer(
         "info",
         "reconciliation-nocturne",
@@ -277,11 +282,12 @@ public class FusionSallesClePorteeService {
         Map.of("salleCible", cibleId.toString(), "salleSource", sourceId.toString()));
   }
 
-  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
-  // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
-  // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
-  // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
-  // 2. Réassigner les événements restants (ceux sans doublon côté cible).
+  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible)
+  // : leurs observations sont reportées sur l'événement cible plutôt que
+  // perdues (#1192) — celles qui entreraient en conflit sur (evenement_id,
+  // source, url) sont supprimées, déjà représentées côté cible. L'événement
+  // source, vidé de ses observations, est ensuite supprimé. 2. Réassigner les
+  // événements restants (ceux sans doublon côté cible).
   private void fusionnerEvenements(final Map<String, Object> ids) {
     jdbc.update(
         """
@@ -317,8 +323,8 @@ public class FusionSallesClePorteeService {
         ids);
   }
 
-  // 3. Abonnements en double supprimés, le reste réassigné.
-  // 4. Sources externes réassignées, dédoublonnage préalable des conflits par type de source.
+  // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
+  // réassignées, dédoublonnage préalable des conflits par type de source.
   private void fusionnerAbonnementsEtSources(
       final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
@@ -343,12 +349,13 @@ public class FusionSallesClePorteeService {
         ids);
   }
 
-  // 5. Métadonnées récupérées si la cible ne les a pas déjà.
-  // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
-  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
-  // une sous-salle de la source (cas limite : un enfant l'emporte sur son propre complexe par
-  // nombre de concerts), elle hérite du parent de la source plutôt que de rester rattachée à une
-  // salle sur le point d'être supprimée.
+  // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
+  // la source réassignées à la cible — sinon la suppression de la source
+  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible
+  // était elle-même une sous-salle de la source (cas limite : un enfant
+  // l'emporte sur son propre complexe par nombre de concerts), elle hérite du
+  // parent de la source plutôt que de rester rattachée à une salle sur le point
+  // d'être supprimée.
   private void fusionnerMetadonneesEtSousSalles(
       final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
@@ -406,9 +413,9 @@ public class FusionSallesClePorteeService {
     }
   }
 
-  // findFirst() sur un flux contenant un unique élément null lève une NullPointerException
-  // (Optional.of appelé en interne) — un accès direct à la liste évite ce piège pour une salle
-  // racine sans parent.
+  // findFirst() sur un flux contenant un unique élément null lève une
+  // NullPointerException (Optional.of appelé en interne) — un accès direct à la
+  // liste évite ce piège pour une salle racine sans parent.
   private UUID lireSalleParentId(final UUID salleId) {
     final List<UUID> resultat =
         jdbc.query(
@@ -418,7 +425,8 @@ public class FusionSallesClePorteeService {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
-  // paramsSuppression porte des valeurs propres au conflit courant — pas hissable hors boucle.
+  // paramsSuppression porte des valeurs propres au conflit courant — pas
+  // hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =
@@ -452,9 +460,10 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Même comparateur que {@code ReferentielSallesService.laSourceEstPlusSaine} (module web) : une
-   * ligne non suspecte l'emporte toujours sur une ligne suspecte, à égalité de statut la ligne avec
-   * le moins d'échecs consécutifs l'emporte.
+   * Même comparateur que {@code ReferentielSallesService.laSourceEstPlusSaine}
+   * (module web) : une ligne non suspecte l'emporte toujours sur une ligne
+   * suspecte, à égalité de statut la ligne avec le moins d'échecs consécutifs
+   * l'emporte.
    *
    * @return {@code true} si la ligne côté source doit être conservée
    */

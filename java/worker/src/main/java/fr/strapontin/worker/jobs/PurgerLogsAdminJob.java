@@ -10,8 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : suppression des entrées de {@code logs_admin} plus anciennes que 30 jours, tous les
- * jours.
+ * Job Quartz : suppression des entrées de {@code logs_admin} plus anciennes que
+ * 30 jours, tous les jours.
  *
  * @since 2.2.4
  * @author Kwaite

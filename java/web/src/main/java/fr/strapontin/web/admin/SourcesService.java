@@ -76,7 +76,8 @@ public class SourcesService {
   }
 
   /**
-   * Retourne le quota TM et l'état du quota pour réutilisation dans d'autres endpoints.
+   * Retourne le quota TM et l'état du quota pour réutilisation dans d'autres
+   * endpoints.
    *
    * @return map {@code {quotaTM, etatQuota}} — valeurs null si quota absent
    */
@@ -87,7 +88,8 @@ public class SourcesService {
   }
 
   /**
-   * Construit la chaîne d'identifiants préfixés pour une salle (ex. {@code "tm:rZFSnyZdFvA"}).
+   * Construit la chaîne d'identifiants préfixés pour une salle (ex.
+   * {@code "tm:rZFSnyZdFvA"} ).
    *
    * @param salleId UUID de la salle
    * @return identifiants CSV ou {@code null} si aucun identifiant connu
@@ -97,7 +99,8 @@ public class SourcesService {
   }
 
   /**
-   * Crée une salle Digitick dans le référentiel et déclenche immédiatement un fetch.
+   * Crée une salle Digitick dans le référentiel et déclenche immédiatement un
+   * fetch.
    *
    * @param donnees données de la salle Digitick à créer (voir {@link
    *     SalleService.DonneesSalleDigitick})
@@ -121,10 +124,12 @@ public class SourcesService {
   }
 
   /**
-   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et
+   * sans concerts.
    *
    * @param salleId UUID de la salle
-   * @return {@code true} si supprimée, {@code false} si des contraintes bloquent la suppression
+   * @return {@code true} si supprimée, {@code false} si des contraintes
+   *     bloquent la suppression
    */
   public boolean supprimerSalleDigitick(final UUID salleId) {
     return salleService.supprimerSalleDigitick(salleId);
@@ -165,7 +170,8 @@ public class SourcesService {
   }
 
   /**
-   * Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que {@code salleId}.
+   * Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que
+   * {@code salleId} .
    *
    * @param salleId salle pour laquelle le slug est en cours d'attribution
    * @param slug slug à vérifier
@@ -307,8 +313,10 @@ public class SourcesService {
   /**
    * Compte les salles reliées à une source externe donnée.
    *
-   * @param source identifiant de la source (ex. {@code "ticketmaster"}, {@code "digitick"})
-   * @return nombre de salles avec un identifiant pour cette source, 0 en cas d'échec
+   * @param source identifiant de la source (ex. {@code "ticketmaster"} ,
+   *     {@code "digitick"} )
+   * @return nombre de salles avec un identifiant pour cette source, 0 en cas
+   *     d'échec
    */
   private Integer compterSallesParSource(final String source) {
     return compterAvecFallback(
@@ -320,8 +328,9 @@ public class SourcesService {
   /**
    * Compte les artistes reliés à une source externe donnée.
    *
-   * @param source identifiant de la source (ex. {@code "ticketmaster"})
-   * @return nombre d'artistes avec un identifiant pour cette source, 0 en cas d'échec
+   * @param source identifiant de la source (ex. {@code "ticketmaster"} )
+   * @return nombre d'artistes avec un identifiant pour cette source, 0 en cas
+   *     d'échec
    */
   private Integer compterArtistesParSource(final String source) {
     return compterAvecFallback(
@@ -331,10 +340,12 @@ public class SourcesService {
   }
 
   /**
-   * Compte les artistes avec un identifiant Deezer — colonne directe sur {@code artistes}, pas
-   * d'entrée dans {@code artiste_sources} pour cette source.
+   * Compte les artistes avec un identifiant Deezer — colonne directe sur
+   * {@code artistes} , pas d'entrée dans {@code artiste_sources} pour cette
+   * source.
    *
-   * @return nombre d'artistes avec {@code deezer_id} renseigné, 0 en cas d'échec
+   * @return nombre d'artistes avec {@code deezer_id} renseigné, 0 en cas
+   *     d'échec
    */
   private Integer compterArtistesDeezer() {
     return compterAvecFallback(

@@ -27,7 +27,10 @@ final class FusionSourcesUtils {
    *   sante_source}/{@code sante_cible}
    * @return {@code true} si la ligne côté source doit être conservée
    */
-  /* package-private : appelé par ReferentielSallesService/ReferentielArtistesService (même package). */
+  /*
+   * package-private : appelé par
+   * ReferentielSallesService/ReferentielArtistesService (même package).
+   */
   static boolean laSourceEstPlusSaine(final Map<String, Object> conflit) {
     final boolean suspectSource = (boolean) conflit.get("suspect_source");
     final boolean suspectCible = (boolean) conflit.get("suspect_cible");

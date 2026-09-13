@@ -20,9 +20,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant — extrait
- * de {@link PersisteurConcertsDb} pour rester sous le seuil de complexité cyclomatique de classe
- * (50).
+ * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report
+ * entrant — extrait de {@link PersisteurConcertsDb} pour rester sous le seuil
+ * de complexité cyclomatique de classe (50).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -32,8 +32,8 @@ final class AlignementReportTM {
   private static final Logger LOG = LoggerFactory.getLogger(AlignementReportTM.class);
 
   /**
-   * Statuts Ticketmaster signant le remplacement d'une représentation existante (report,
-   * annulation) plutôt qu'une représentation supplémentaire.
+   * Statuts Ticketmaster signant le remplacement d'une représentation existante
+   * (report, annulation) plutôt qu'une représentation supplémentaire.
    */
   private static final Set<String> STATUTS_REPORT_TM =
       Set.of("rescheduled", "cancelled", "postponed");
@@ -46,7 +46,10 @@ final class AlignementReportTM {
 
   private record CleUrlDate(String url, LocalDate date) {}
 
-  /* package-private : instancié uniquement par PersisteurConcertsDb (même package). */
+  /*
+   * package-private : instancié uniquement par PersisteurConcertsDb (même
+   * package).
+   */
   AlignementReportTM(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -92,8 +95,9 @@ final class AlignementReportTM {
     }
   }
 
-  // CleUrlDate porte les champs de la ligne courante ; computeIfAbsent n'instancie une ArrayList
-  // que pour les clés réellement nouvelles — rien de hissable hors boucle.
+  // CleUrlDate porte les champs de la ligne courante ; computeIfAbsent
+  // n'instancie une ArrayList que pour les clés réellement nouvelles — rien de
+  // hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<CleUrlDate, List<Map<String, Object>>> chargerEvenementsTmParUrlDate(
       final List<String> urls) {

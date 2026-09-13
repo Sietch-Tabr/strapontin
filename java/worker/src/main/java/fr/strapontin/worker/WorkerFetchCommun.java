@@ -39,12 +39,14 @@ public class WorkerFetchCommun {
 
   private static final int DELAI_ENTRE_ARTISTES_MS = 250;
 
-  // Nombre d'absences consécutives (cycles fetch:artistes:batch/fetch:salles:all successifs sans
-  // qu'un concert précédemment vu ne réapparaisse) à partir duquel il est marqué comme non
-  // confirmé récemment — évite un faux positif sur un simple aléa réseau isolé, tout en restant
-  // assez bas pour signaler une disparition réelle dans un délai raisonnable (cron ~11 cycles/jour
-  // — 5 absences correspond à environ une demi-journée de silence continu). Package-private :
-  // référencé par WorkerPurgeService pour dériver le seuil de purge définitive (voir
+  // Nombre d'absences consécutives (cycles
+  // fetch:artistes:batch/fetch:salles:all successifs sans qu'un concert
+  // précédemment vu ne réapparaisse) à partir duquel il est marqué comme non
+  // confirmé récemment — évite un faux positif sur un simple aléa réseau isolé,
+  // tout en restant assez bas pour signaler une disparition réelle dans un
+  // délai raisonnable (cron ~11 cycles/jour — 5 absences correspond à environ
+  // une demi-journée de silence continu). Package-private : référencé par
+  // WorkerPurgeService pour dériver le seuil de purge définitive (voir
   // WorkerPurgeService.SEUIL_PURGE_ABSENCES).
   /* package-private : réutilisé par les exécuteurs de fetch (même package). */
   static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
@@ -57,8 +59,9 @@ public class WorkerFetchCommun {
           + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
           + "   WHEN absences_consecutives + 1 >= :seuil THEN COALESCE(absence_detectee_le, now())"
           + "   ELSE absence_detectee_le END,"
-          // Un concert flagué pour suppression puis effectivement reconfirmé (ex. après fusion
-          // d'un doublon de salle) n'a plus de raison de rester marqué suppression_suggeree_le.
+          // Un concert flagué pour suppression puis effectivement reconfirmé
+          // (ex. après fusion d'un doublon de salle) n'a plus de raison de
+          // rester marqué suppression_suggeree_le.
           + " suppression_suggeree_le = CASE"
           + "   WHEN updated_at >= CAST(:debut AS timestamptz) THEN NULL"
           + "   ELSE suppression_suggeree_le END"
@@ -100,7 +103,9 @@ public class WorkerFetchCommun {
   /**
    * @return accès JDBC partagé
    */
-  /* package-private : accesseur réservé aux exécuteurs de fetch (même package). */
+  /*
+   * package-private : accesseur réservé aux exécuteurs de fetch (même package).
+   */
   NamedParameterJdbcTemplate obtenirJdbc() {
     return jdbc;
   }
@@ -108,7 +113,9 @@ public class WorkerFetchCommun {
   /**
    * @return source Ticketmaster partagée
    */
-  /* package-private : accesseur réservé aux exécuteurs de fetch (même package). */
+  /*
+   * package-private : accesseur réservé aux exécuteurs de fetch (même package).
+   */
   TicketmasterSource obtenirTm() {
     return tm;
   }
@@ -116,7 +123,9 @@ public class WorkerFetchCommun {
   /**
    * @return gestion du quota Ticketmaster partagée
    */
-  /* package-private : accesseur réservé aux exécuteurs de fetch (même package). */
+  /*
+   * package-private : accesseur réservé aux exécuteurs de fetch (même package).
+   */
   GestionQuotaTM obtenirGestionQuotaTM() {
     return gestionQuotaTM;
   }
@@ -298,9 +307,9 @@ public class WorkerFetchCommun {
     }
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
-  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
-  // s'applique pas ici.
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
+  // disponible — pas un contexte de requête J2EE (appel HTTP sortant en job
+  // Quartz), la justification de la règle ne s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   void attendreRateLimit() {

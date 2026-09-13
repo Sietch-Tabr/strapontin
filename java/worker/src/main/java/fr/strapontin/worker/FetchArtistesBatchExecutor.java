@@ -54,8 +54,8 @@ class FetchArtistesBatchExecutor {
   }
 
   /**
-   * @param artisteIdsCibles identifiants ({@code artistes.id}, texte) à retenter, ou {@code null}
-   *     pour un cycle complet
+   * @param artisteIdsCibles identifiants ({@code artistes.id}, texte) à
+   *     retenter, ou {@code null} pour un cycle complet
    */
   /* package-private : appelé par WorkerFetchService (même package). */
   void executer(final List<String> artisteIdsCibles) {
@@ -210,10 +210,11 @@ class FetchArtistesBatchExecutor {
     return resultats;
   }
 
-  // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK = (source,
-  // identifiant_externe)) — une fusion mal dédupliquée peut laisser deux identifiants TM pour le
-  // même artiste, rendant le MAX() de la requête appelante arbitraire. Mieux vaut ne pas fetcher
-  // avec un identifiant potentiellement faux que de rapatrier silencieusement les concerts d'un
+  // artiste_sources n'a pas de contrainte d'unicité sur artiste_id (PK =
+  // (source, identifiant_externe)) — une fusion mal dédupliquée peut laisser
+  // deux identifiants TM pour le même artiste, rendant le MAX() de la requête
+  // appelante arbitraire. Mieux vaut ne pas fetcher avec un identifiant
+  // potentiellement faux que de rapatrier silencieusement les concerts d'un
   // autre artiste sous cette identité.
   private ResolutionAttractionIds resoudreAttractionIds(final List<Map<String, Object>> rows) {
     final List<String> attractionIds = new ArrayList<>();
@@ -277,8 +278,8 @@ class FetchArtistesBatchExecutor {
     } catch (Exception e) {
       LOG.warn("rechercherAttractionId échoué artiste={} : {}", nom, e.getMessage());
     }
-    // Throttle nécessaire ici : un lot avec plusieurs artistes jamais résolus peut générer une
-    // rafale d'appels /attractions.json sans délai sinon.
+    // Throttle nécessaire ici : un lot avec plusieurs artistes jamais résolus
+    // peut générer une rafale d'appels /attractions.json sans délai sinon.
     commun.attendreRateLimit();
     return attractionId;
   }

@@ -34,8 +34,10 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
 
   /**
    * @param jdbc accès à la base partagée entre web et worker
-   * @param cle identifiant du service externe cadencé (ex. {@code "ticketmaster"})
-   * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
+   * @param cle identifiant du service externe cadencé (ex.
+   *     {@code "ticketmaster"} )
+   * @param delaiMinMs écart minimal en millisecondes entre deux appels
+   *     successifs
    */
   public CadenceurAppelsPartage(
       final NamedParameterJdbcTemplate jdbc, final String cle, final long delaiMinMs) {
@@ -44,9 +46,9 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
     this.delaiMinMs = delaiMinMs;
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
-  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
-  // s'applique pas ici.
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
+  // disponible — pas un contexte de requête J2EE (appel HTTP sortant en job
+  // Quartz), la justification de la règle ne s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   @Override
   public void attendre() {

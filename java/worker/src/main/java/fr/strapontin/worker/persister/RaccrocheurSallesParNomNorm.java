@@ -44,14 +44,18 @@ final class RaccrocheurSallesParNomNorm {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /* package-private : instancié uniquement par ReconciliateurSalles (même package). */
+  /*
+   * package-private : instancié uniquement par ReconciliateurSalles (même
+   * package).
+   */
   RaccrocheurSallesParNomNorm(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
   /**
    * @param concerts concerts après déduplication
-   * @return liste enrichie avec les {@code salleId} résolus ou réalignés par nom_norm
+   * @return liste enrichie avec les {@code salleId} résolus ou réalignés par
+   *     nom_norm
    */
   /* package-private : appelé par ReconciliateurSalles (même package). */
   List<ValeurConcert> raccrocher(final List<ValeurConcert> concerts) {
@@ -109,9 +113,10 @@ final class RaccrocheurSallesParNomNorm {
   }
 
   /**
-   * @return {@code true} si le concert n'a pas encore de {@code salleId}, ou si celui déjà résolu
-   *     pointe vers une salle dont le {@code nom_norm} connu diverge du {@code salleNorm} actuel du
-   *     concert (silencieux si le {@code nom_norm} de la salle résolue n'est pas connu — pas de
+   * @return {@code true} si le concert n'a pas encore de {@code salleId} , ou
+   *     si celui déjà résolu pointe vers une salle dont le {@code nom_norm}
+   *     connu diverge du {@code salleNorm} actuel du concert (silencieux si le
+   *     {@code nom_norm} de la salle résolue n'est pas connu — pas de
    *     réalignement sans confirmation positive de la divergence)
    */
   private static boolean salleIdDivergent(
@@ -124,7 +129,8 @@ final class RaccrocheurSallesParNomNorm {
   }
 
   /**
-   * Charge en une seule requête le {@code nom_norm} connu de chaque salle donnée.
+   * Charge en une seule requête le {@code nom_norm} connu de chaque salle
+   * donnée.
    *
    * @param salleIds identifiants des salles à vérifier
    * @return {@code nom_norm} par salle

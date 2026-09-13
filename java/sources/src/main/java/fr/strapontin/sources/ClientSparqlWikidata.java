@@ -34,26 +34,31 @@ final class ClientSparqlWikidata {
 
   private static final Logger LOG = LoggerFactory.getLogger(ClientSparqlWikidata.class);
 
-  /* package-private : réutilisée par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : réutilisée par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   static final String BASE_URL = "https://query.wikidata.org/sparql";
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
-  // 502 (nginx en amont de l'endpoint SPARQL) et un content-type inattendu (application/octet-
-  // stream au lieu de application/sparql-results+json — constaté en production, réponse
-  // vraisemblablement tronquée ou mal formée par un proxy intermédiaire) partagent le même
-  // caractère transitoire que 503 : un simple retry les résout la plupart du temps.
+  // 502 (nginx en amont de l'endpoint SPARQL) et un content-type inattendu
+  // (application/octet- stream au lieu de application/sparql-results+json —
+  // constaté en production, réponse vraisemblablement tronquée ou mal formée
+  // par un proxy intermédiaire) partagent le même caractère transitoire que 503
+  // : un simple retry les résout la plupart du temps.
   private static final int RETRY_TRANSITOIRE_MAX = 3;
   private static final int RETRY_TOTAL_MAX = 5;
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
   // espacement proactif entre appels, sur le même principe que
-  // OverpassSalleSource.DELAI_MIN_ENTRE_APPELS_MS — le retry réactif sur 429 (Retry-After 120s
-  // constaté) a fait perdre ~4 des 5 minutes d'un cycle nocturne. Aucune politique de rate-limit
-  // publiée par Wikidata pour l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte
-  // de temps réel (cycle nocturne unique).
+  // OverpassSalleSource.DELAI_MIN_ENTRE_APPELS_MS — le retry réactif sur 429
+  // (Retry-After 120s constaté) a fait perdre ~4 des 5 minutes d'un cycle
+  // nocturne. Aucune politique de rate-limit publiée par Wikidata pour
+  // l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte de temps
+  // réel (cycle nocturne unique).
   private static final int DELAI_MIN_ENTRE_APPELS_MS = 2000;
   private static final Pattern MOTIF_Q_ID = Pattern.compile("^Q[0-9]+$");
-  // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis latitude, jamais
-  // l'inverse — convention géographique standard).
+  // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis
+  // latitude, jamais l'inverse — convention géographique standard).
   private static final Pattern COORDONNEES_WKT =
       Pattern.compile("Point\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
 
@@ -62,8 +67,14 @@ final class ClientSparqlWikidata {
       new fr.strapontin.core.CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
 
-  /** Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 60s). */
-  /* package-private : constructeur par défaut réservé aux tests du même package. */
+  /**
+   * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture
+   * 60s).
+   */
+  /*
+   * package-private : constructeur par défaut réservé aux tests du même
+   * package.
+   */
   ClientSparqlWikidata() {
     this(construireRestClientParDefaut());
   }
@@ -106,10 +117,14 @@ final class ClientSparqlWikidata {
    * @param sparql corps de la requête SPARQL
    * @return corps JSON désérialisé, ou une map vide en cas d'échec définitif
    */
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   Map<String, Object> executer(final String sparql) {
-    // un appel logique = un executer, quel que soit le nombre de retries internes —
-    // seul un échec définitif (retries épuisés) compte comme erreur pour le bilan de panne.
+    // un appel logique = un executer, quel que soit le nombre de retries
+    // internes — seul un échec définitif (retries épuisés) compte comme erreur
+    // pour le bilan de panne.
     compteurBilan.enregistrerAppel();
     cadenceur.attendre();
     int tentative = 0;
@@ -156,7 +171,10 @@ final class ClientSparqlWikidata {
    *
    * @return le bilan depuis le dernier prélèvement
    */
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   fr.strapontin.core.BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
@@ -176,9 +194,9 @@ final class ClientSparqlWikidata {
     }
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
-  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
-  // s'applique pas ici.
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
+  // disponible — pas un contexte de requête J2EE (appel HTTP sortant en job
+  // Quartz), la justification de la règle ne s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   private static void dormir(final long ms) {
     try {
@@ -196,22 +214,28 @@ final class ClientSparqlWikidata {
    * @return valeur textuelle, ou null si absente
    */
   @SuppressWarnings("unchecked")
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   static String valeurBinding(final Map<String, Object> binding, final String cle) {
     final Map<String, Object> valeur = (Map<String, Object>) binding.get(cle);
     return valeur != null ? (String) valeur.get("value") : null;
   }
 
   /**
-   * Extrait la liste des bindings d'une réponse SPARQL JSON — partagé entre {@link
-   * WikidataSalleSource} et {@link WikidataArtisteSource}, jusqu'ici dupliqué à l'identique dans
-   * les deux classes.
+   * Extrait la liste des bindings d'une réponse SPARQL JSON — partagé entre
+   * {@link WikidataSalleSource} et {@link WikidataArtisteSource} , jusqu'ici
+   * dupliqué à l'identique dans les deux classes.
    *
    * @param data réponse JSON désérialisée d'une requête SPARQL
    * @return la liste des bindings, vide si absente
    */
   @SuppressWarnings("unchecked")
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   static List<Map<String, Object>> extraireBindings(final Map<String, Object> data) {
     final Map<String, Object> results = (Map<String, Object>) data.get("results");
     if (results == null) {
@@ -229,7 +253,10 @@ final class ClientSparqlWikidata {
    * @param texte la chaîne à insérer dans le littéral
    * @return la chaîne échappée
    */
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   static String echapperLitteral(final String texte) {
     return texte
         .replace("\\", "\\\\")
@@ -246,22 +273,29 @@ final class ClientSparqlWikidata {
    * @param qId identifiant à vérifier
    * @return {@code true} si le format est un Q-ID valide
    */
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   static boolean estQIdValide(final String qId) {
     return qId != null && MOTIF_Q_ID.matcher(qId).matches();
   }
 
   /**
-   * Parse une valeur WKT Wikidata en {@code [longitude, latitude]} — partagé entre {@link
-   * WikidataSalleSource} et {@link WikidataSalleDecouverte}.
+   * Parse une valeur WKT Wikidata en {@code [longitude, latitude]} — partagé
+   * entre {@link WikidataSalleSource} et {@link WikidataSalleDecouverte} .
    *
-   * @param wkt valeur brute du binding {@code ?coord}, ou {@code null}
-   * @return {@code [longitude, latitude]}, ou {@code null} si absent/mal formé
+   * @param wkt valeur brute du binding {@code ?coord} , ou {@code null}
+   * @return {@code [longitude, latitude]} , ou {@code null} si absent/mal formé
    */
-  // Le tableau représente une paire de coordonnées, pas une collection à agréger — les appelants
-  // testent explicitement null pour distinguer "absent" d'un tableau vide, sémantiques différentes.
+  // Le tableau représente une paire de coordonnées, pas une collection à
+  // agréger — les appelants testent explicitement null pour distinguer "absent"
+  // d'un tableau vide, sémantiques différentes.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-  /* package-private : appelé par WikidataSalleSource/WikidataArtisteSource (même package). */
+  /*
+   * package-private : appelé par WikidataSalleSource/WikidataArtisteSource
+   * (même package).
+   */
   static double[] parserCoordonnees(final String wkt) {
     if (wkt == null) {
       return null;

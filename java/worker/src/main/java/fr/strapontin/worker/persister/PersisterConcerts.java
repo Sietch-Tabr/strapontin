@@ -136,8 +136,9 @@ public class PersisterConcerts {
     return ReconciliateurSalles.jaccardTokens(nomA, nomB);
   }
 
-  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom lui-même (déjà entièrement
-  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
+  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom
+  // lui-même (déjà entièrement majuscule ou non), pas sur une comparaison
+  // insensible à la casse entre deux chaînes distinctes.
   private static int scoreArtisteSalle(final String artiste, final String salle) {
     final int artisteDiacr =
         Normalizer.normalize(artiste, Normalizer.Form.NFD).length() - artiste.length();
@@ -279,8 +280,9 @@ public class PersisterConcerts {
     return reconciliateurSalles.deptsConnus(sallesMappees);
   }
 
-  // Un mapping salle_sources réutilisé contourne les garde-fous géographiques appliqués à la
-  // création d'un nouveau mapping — à valider avant de lui faire confiance.
+  // Un mapping salle_sources réutilisé contourne les garde-fous géographiques
+  // appliqués à la création d'un nouveau mapping — à valider avant de lui faire
+  // confiance.
   private Map<String, UUID> resoudreSallesParNomFallback(
       final List<ValeurConcert> concerts,
       final Map<String, UUID> cachesSalles,
@@ -430,13 +432,17 @@ public class PersisterConcerts {
   }
 
   /**
-   * Partie transactionnelle et isolée d'un sous-lot de {@link #persisterConcerts}.
+   * Partie transactionnelle et isolée d'un sous-lot de
+   * {@link #persisterConcerts} .
    *
-   * @param lot sous-lot de concerts bruts (au plus {@value #TAILLE_LOT})
+   * @param lot sous-lot de concerts bruts (au plus {@value #TAILLE_LOT} )
    * @return résultat du sous-lot
    */
   @Transactional
-  /* package-private : requis pour l'auto-invocation via le proxy self (transaction dédiée par lot). */
+  /*
+   * package-private : requis pour l'auto-invocation via le proxy self
+   * (transaction dédiée par lot).
+   */
   ResultatPersistance persisterLotTransactionnel(final List<ConcertBrut> lot) {
     final List<ValeurConcert> valeursBrutes =
         lot.stream()
@@ -470,7 +476,8 @@ public class PersisterConcerts {
     db.alignerHeureReportTM(valeurs);
     valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
     valeurs = reconciliateurArtistes.reconcilierArtistes(valeurs);
-    // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm varient simultanément.
+    // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm
+    // varient simultanément.
     valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
     valeurs = reconciliateurSalles.raccrocherSallesParNomNorm(valeurs);
     valeurs = deduplicerLotReconcilie(valeurs);

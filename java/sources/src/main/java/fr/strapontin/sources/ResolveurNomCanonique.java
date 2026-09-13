@@ -34,19 +34,22 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   private static final Logger LOG = LoggerFactory.getLogger(ResolveurNomCanonique.class);
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
-  // Un seuil trop permissif expose au cas où le vrai artiste n'apparaît pas du tout dans le pool
-  // de candidats Deezer : seul un homonyme sans rapport mais mieux référencé franchit alors le
-  // seuil et est retenu par défaut. Constaté à 0.7 sur des paires réellement corrompues en
-  // production (similarité Levenshtein normalisée) : Monolord/Jon Lord=0.750,
-  // The Brooks/The Kooks=0.800, Sara Correia/Sara Carreira=0.846 — toutes en dessous de 0.85.
-  // Un vrai rapprochement légitime (accent, casse, article) reste identique après normalisation
-  // (similarité 1.0), jamais dans cette zone grise.
+  // Un seuil trop permissif expose au cas où le vrai artiste n'apparaît pas du
+  // tout dans le pool de candidats Deezer : seul un homonyme sans rapport mais
+  // mieux référencé franchit alors le seuil et est retenu par défaut. Constaté
+  // à 0.7 sur des paires réellement corrompues en production (similarité
+  // Levenshtein normalisée) : Monolord/Jon Lord=0.750, The Brooks/The
+  // Kooks=0.800, Sara Correia/Sara Carreira=0.846 — toutes en dessous de 0.85.
+  // Un vrai rapprochement légitime (accent, casse, article) reste identique
+  // après normalisation (similarité 1.0), jamais dans cette zone grise.
   private static final double SEUIL_CONFIANCE_DEEZER = 0.85;
-  // Un seul résultat ne suffit pas à distinguer un artiste connu d'un homonyme marginal : Deezer
-  // classe ses résultats par pertinence textuelle, pas par popularité — une recherche "Young Thug"
-  // peut renvoyer en 1ère position "Young T.H.U.G." (id=1062315, nb_fan=323) avant le vrai rappeur
-  // (id=1590752, nb_fan=1 547 139), présent en 2e position. Élargir la fenêtre de candidats permet
-  // de les comparer entre eux plutôt que de prendre le premier venu.
+  // Un seul résultat ne suffit pas à distinguer un artiste connu d'un homonyme
+  // marginal : Deezer classe ses résultats par pertinence textuelle, pas par
+  // popularité — une recherche "Young Thug" peut renvoyer en 1ère position
+  // "Young T.H.U.G." (id=1062315, nb_fan=323) avant le vrai rappeur
+  // (id=1590752, nb_fan=1 547 139), présent en 2e position. Élargir la fenêtre
+  // de candidats permet de les comparer entre eux plutôt que de prendre le
+  // premier venu.
   private static final int LIMITE_CANDIDATS_DEEZER = 5;
   private static final String TYPE_ARTISTE = "artiste";
 
@@ -70,9 +73,10 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   public record ResultatResolution(String nom, SourceResolution source) {}
 
   /**
-   * Crée une instance avec les URLs distantes, un RestClient borné (timeout connexion 10s, lecture
-   * 30s — sans borne, un hoquet réseau ferait pendre indéfiniment un thread worker, même classe
-   * d'incident que celle déjà corrigée pour TM/Eventim, #887) et un cache TTL 7 jours.
+   * Crée une instance avec les URLs distantes, un RestClient borné (timeout
+   * connexion 10s, lecture 30s — sans borne, un hoquet réseau ferait pendre
+   * indéfiniment un thread worker, même classe d'incident que celle déjà
+   * corrigée pour TM/Eventim, #887) et un cache TTL 7 jours.
    */
   public ResolveurNomCanonique() {
     this(
@@ -85,7 +89,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   }
 
   /**
-   * Crée une instance avec un RestClient et un cache personnalisés (injection de test).
+   * Crée une instance avec un RestClient et un cache personnalisés (injection
+   * de test).
    *
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
@@ -128,7 +133,10 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
     }
   }
 
-  /** Accumulateur mutable du meilleur candidat approximatif et du meilleur candidat exact. */
+  /**
+   * Accumulateur mutable du meilleur candidat approximatif et du meilleur
+   * candidat exact.
+   */
   private static final class MeilleursCandidatsDeezer {
     private Map<String, Object> meilleur;
     private Map<String, Object> meilleurExact;
@@ -161,8 +169,9 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   }
 
   /**
-   * Une correspondance exacte l'emporte toujours sur un homonyme approximatif plus populaire ; la
-   * popularité ne départage qu'entre candidats eux-mêmes exacts.
+   * Une correspondance exacte l'emporte toujours sur un homonyme approximatif
+   * plus populaire ; la popularité ne départage qu'entre candidats eux-mêmes
+   * exacts.
    */
   private static void evaluerCandidatDeezer(
       final MeilleursCandidatsDeezer acc,
@@ -195,8 +204,8 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   }
 
   /**
-   * Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et remet les compteurs
-   * à zéro.
+   * Retourne le bilan agrégé des appels Deezer depuis le dernier prélèvement et
+   * remet les compteurs à zéro.
    *
    * @return le bilan depuis le dernier prélèvement
    */

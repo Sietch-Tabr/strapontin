@@ -48,7 +48,8 @@ public class ParametresService {
   }
 
   /**
-   * Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
+   * Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau"
+   * de navigation).
    *
    * @param userId identifiant de l'utilisateur
    * @return nombre de concerts non vus pour les artistes suivis
@@ -83,7 +84,8 @@ public class ParametresService {
    * Vérifie si une adresse email est déjà utilisée par un autre compte.
    *
    * @param email email à vérifier (normalisé)
-   * @param userId identifiant de l'utilisateur courant (exclu de la vérification)
+   * @param userId identifiant de l'utilisateur courant (exclu de la
+   *     vérification)
    * @return {@code true} si l'email est déjà pris
    */
   public boolean emailDejaUtilise(final String email, final String userId) {
@@ -140,7 +142,8 @@ public class ParametresService {
    * Résultat de la confirmation d'email.
    *
    * @param statut code décrivant l'issue de la confirmation
-   * @param userId identifiant de l'utilisateur ciblé (peut être nul si le token est invalide)
+   * @param userId identifiant de l'utilisateur ciblé (peut être nul si le token
+   *     est invalide)
    */
   public record ResultatConfirmation(Statut statut, String userId) {
     /** Codes de résultat possibles pour la confirmation d'email. */
@@ -162,8 +165,8 @@ public class ParametresService {
 
   private record TokenResolu(ResultatConfirmation.Statut echec, String userId) {}
 
-  // Résout le token en userId, sans appliquer aucun changement — la validation d'échec est
-  // séparée de son application dans confirmerEmail.
+  // Résout le token en userId, sans appliquer aucun changement — la validation
+  // d'échec est séparée de son application dans confirmerEmail.
   private TokenResolu resoudreUserIdDepuisToken(
       final String token, final String userIdAuthentifie) {
     if (token == null || token.isBlank()) {

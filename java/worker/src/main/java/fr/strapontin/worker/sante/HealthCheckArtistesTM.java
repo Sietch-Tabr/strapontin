@@ -74,7 +74,9 @@ public final class HealthCheckArtistesTM {
    *
    * @return nombre d'incohérences détectées
    */
-  /* package-private : appelé par ReconciliationNocturneService (même package). */
+  /*
+   * package-private : appelé par ReconciliationNocturneService (même package).
+   */
   int verifierNoms() {
     final List<Map<String, Object>> lies =
         jdbc.queryForList(
@@ -205,7 +207,9 @@ public final class HealthCheckArtistesTM {
             nomAttraction));
   }
 
-  /* package-private : appelé par ReconciliationNocturneService (même package). */
+  /*
+   * package-private : appelé par ReconciliationNocturneService (même package).
+   */
   void verifierVivacite() {
     final List<Map<String, Object>> suspects =
         jdbc.queryForList(
@@ -229,11 +233,12 @@ public final class HealthCheckArtistesTM {
   }
 
   /**
-   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort un identifiant suspect
-   * alors qu'il s'agit simplement d'un artiste sans événement à venir pour l'instant — la
-   * vérification active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle
-   * confirme que l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect"
-   * perdurer jusqu'à expiration (24h).
+   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort un
+   * identifiant suspect alors qu'il s'agit simplement d'un artiste sans
+   * événement à venir pour l'instant — la vérification active de cette phase
+   * fait autorité et doit effacer ce faux positif dès qu'elle confirme que
+   * l'identifiant TM est toujours vivant, plutôt que de laisser le statut
+   * "suspect" perdurer jusqu'à expiration (24h).
    */
   private void reinitialiserSuspect(final UUID artisteId) {
     jdbc.update(

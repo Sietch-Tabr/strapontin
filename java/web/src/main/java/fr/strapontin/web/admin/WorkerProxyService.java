@@ -68,9 +68,11 @@ public class WorkerProxyService {
   }
 
   /**
-   * Retourne les identifiants des jobs Quartz actuellement en cours d'exécution.
+   * Retourne les identifiants des jobs Quartz actuellement en cours
+   * d'exécution.
    *
-   * @return la liste des jobs actifs, ou une liste vide si le worker est inaccessible
+   * @return la liste des jobs actifs, ou une liste vide si le worker est
+   *     inaccessible
    */
   public List<String> obtenirJobsEnCours() {
     try {
@@ -93,7 +95,8 @@ public class WorkerProxyService {
   /**
    * Retourne les prochaines dates d'exécution planifiées par type de job.
    *
-   * @return map type de job vers prochaine exécution, vide si le worker est inaccessible
+   * @return map type de job vers prochaine exécution, vide si le worker est
+   *     inaccessible
    */
   public Map<String, Instant> obtenirProchainesExec() {
     try {
@@ -120,8 +123,10 @@ public class WorkerProxyService {
   /**
    * Déclenche un {@code FetchSalleJob} immédiat pour les identifiants donnés.
    *
-   * @param identifiants identifiants préfixés par source (ex. {@code "tm:rZFSnyZdFvA"})
-   * @return {@code true} si planifié, {@code false} si le worker est inaccessible
+   * @param identifiants identifiants préfixés par source (ex.
+   *     {@code "tm:rZFSnyZdFvA"} )
+   * @return {@code true} si planifié, {@code false} si le worker est
+   *     inaccessible
    */
   public boolean relancerSalle(final String identifiants) {
     try {
@@ -143,7 +148,8 @@ public class WorkerProxyService {
   /**
    * Déclenche immédiatement tous les fetches via le worker.
    *
-   * @return le résultat métier (succès, ou échec avec message et code HTTP adapté à la cause — )
+   * @return le résultat métier (succès, ou échec avec message et code HTTP
+   *     adapté à la cause — )
    */
   public ResultatRelance relancerFetches() {
     try {

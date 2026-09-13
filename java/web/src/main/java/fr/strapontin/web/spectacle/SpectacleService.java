@@ -100,13 +100,15 @@ public class SpectacleService {
 
     final Map<String, Object> baseParams = Map.of(CLE_USER_ID, userId, CLE_AUJOURDHUI, aujourd8);
 
-    // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête principale
+    // COUNT et nbSuivi démarrés en parallèle pendant l'exécution de la requête
+    // principale
     final CompletableFuture<Integer> futureTotal =
         CompletableFuture.supplyAsync(() -> compterTotal(whereClause, params));
     final CompletableFuture<Integer> futureNbSuivi =
         CompletableFuture.supplyAsync(() -> compterSuivi(baseParams));
 
-    // Requête principale sur le thread courant pendant que les futures s'exécutent
+    // Requête principale sur le thread courant pendant que les futures
+    // s'exécutent
     final List<SpectacleDto> concerts =
         jdbc.query(selectSql, paramsPage, (rs, _) -> mapSpectacle(rs));
 
@@ -231,7 +233,8 @@ public class SpectacleService {
   }
 
   /**
-   * Compte le nombre total de matches correspondant aux filtres (pour la pagination).
+   * Compte le nombre total de matches correspondant aux filtres (pour la
+   * pagination).
    *
    * @param whereClause clause WHERE de la requête principale
    * @param params paramètres nommés

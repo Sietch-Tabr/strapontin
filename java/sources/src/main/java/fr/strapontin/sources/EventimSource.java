@@ -44,20 +44,26 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final int MAX_PAGES = 10;
   private static final int PREMIERE_PAGE = 1;
 
-  /** Catégories Eventim correspondant aux spectacles musicaux (concerts et musique classique). */
+  /**
+   * Catégories Eventim correspondant aux spectacles musicaux (concerts et
+   * musique classique).
+   */
   public static final List<String> CATEGORIES_REGION =
       List.of("Concerts & Festivals", "Classique & Danse");
 
   /**
-   * {@code User-Agent} honnête de bot — jamais une chaîne {@code Mozilla/5.0...}, voir Javadoc du
-   * constructeur par défaut pour la justification complète.
+   * {@code User-Agent} honnête de bot — jamais une chaîne
+   * {@code Mozilla/5.0...} , voir Javadoc du constructeur par défaut pour la
+   * justification complète.
    */
-  /* package-private : visibilité élargie pour EventimSourceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour EventimSourceTest (même package).
+   */
   static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private final RestClient restClient;
-  // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par le worker,
-  // via un composant partagé).
+  // Compteur cumulé depuis le dernier prélèvement (remonté dans logs_admin par
+  // le worker, via un composant partagé).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final EventimAttractionResolver attractionResolver;
 
@@ -98,7 +104,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    *
    * @return le builder configuré, prêt à recevoir une requestFactory
    */
-  /* package-private : visibilité élargie pour EventimSourceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour EventimSourceTest (même package).
+   */
   static RestClient.Builder builderAvecHeadersParDefaut() {
     return RestClient.builder()
         .defaultHeader("Accept", "application/json, text/plain, */*")
@@ -124,8 +132,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Retourne le bilan agrégé des appels HTTP Eventim depuis le dernier prélèvement et remet les
-   * compteurs à zéro.
+   * Retourne le bilan agrégé des appels HTTP Eventim depuis le dernier
+   * prélèvement et remet les compteurs à zéro.
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -173,7 +181,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * Parse une date ISO 8601 Eventim et extrait la date et l'heure locales.
    *
    * @param dateStr chaîne de date ISO 8601
-   * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou null]
+   * @return tableau à deux éléments : [date (yyyy-MM-dd), heure (HH:mm) ou
+   *     null]
    */
   public static String[] parseDateEventim(final String dateStr) {
     return MapeurProduitEventim.parseDateEventim(dateStr);
@@ -183,7 +192,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * Extrait le nom de l'artiste depuis un titre d'événement Eventim.
    *
    * @param titre titre de l'événement Eventim
-   * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur trouvé
+   * @return nom de l'artiste extrait, ou le titre complet si aucun séparateur
+   *     trouvé
    */
   public static String extraireNomArtiste(final String titre) {
     return MapeurProduitEventim.extraireNomArtiste(titre);
@@ -193,7 +203,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut].
    *
    * @param produit produit Eventim sous forme de Map imbriquée
-   * @param artisteFallback nom de l'artiste cherché (pour fetchArtiste uniquement), peut être null
+   * @param artisteFallback nom de l'artiste cherché (pour fetchArtiste
+   *     uniquement), peut être null
    * @return concert extrait, ou null si le produit est invalide
    */
   public static ConcertBrut mapProduit(
@@ -218,25 +229,35 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * @param succes {@code false} si l'appel HTTP a échoué — distingue une page réellement vide
-   *     (succès, 0 résultat) d'un appel qui n'a jamais abouti.
+   * @param succes {@code false} si l'appel HTTP a échoué — distingue une page
+   *     réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti.
    */
   private record ResultatPageEventim(List<ConcertBrut> concerts, int total, boolean succes) {
-    // Page légitimement vide (0 résultat, pas d'échec HTTP) — distinct de ECHEC ci-dessous.
-    /* package-private : membre du record privé ResultatPageEventim, sans portée réelle hors de EventimSource. */
+    // Page légitimement vide (0 résultat, pas d'échec HTTP) — distinct de ECHEC
+    // ci-dessous.
+    /*
+     * package-private : membre du record privé ResultatPageEventim, sans portée
+     * réelle hors de EventimSource.
+     */
     static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0, true);
-    /* package-private : membre du record privé ResultatPageEventim, sans portée réelle hors de EventimSource. */
+    /*
+     * package-private : membre du record privé ResultatPageEventim, sans portée
+     * réelle hors de EventimSource.
+     */
     static final ResultatPageEventim ECHEC = new ResultatPageEventim(List.of(), 0, false);
 
-    /* package-private : membre du record privé ResultatPageEventim, sans portée réelle hors de EventimSource. */
+    /*
+     * package-private : membre du record privé ResultatPageEventim, sans portée
+     * réelle hors de EventimSource.
+     */
     boolean estVide() {
       return concerts.isEmpty();
     }
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
-  // contexte de requête J2EE (appel HTTP sortant en job Quartz), la justification de la règle ne
-  // s'applique pas ici.
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
+  // disponible — pas un contexte de requête J2EE (appel HTTP sortant en job
+  // Quartz), la justification de la règle ne s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   private boolean attendreEntrePagesEventim() {
     try {
@@ -292,7 +313,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPageEventim}).
+   * @param succes {@code false} si au moins une page a échoué (voir
+   *     {@link ResultatPageEventim} ).
    */
   private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
 

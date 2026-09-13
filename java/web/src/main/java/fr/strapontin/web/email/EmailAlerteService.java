@@ -30,10 +30,11 @@ public class EmailAlerteService {
 
   private static final Logger LOG = LoggerFactory.getLogger(EmailAlerteService.class);
 
-  // Garde-fou anti-boucle : au plus une notification de bounce/plainte spam par heure,
-  // persisté en app_config pour survivre aux redéploiements (même pattern que
-  // AlerteLogsAdminService.CLE_CURSEUR) — sans ça, un problème de délivrabilité sur le nouveau
-  // destinataire d'alerte pourrait recréer une boucle du même type que celle du 15/07/2026.
+  // Garde-fou anti-boucle : au plus une notification de bounce/plainte spam par
+  // heure, persisté en app_config pour survivre aux redéploiements (même
+  // pattern que AlerteLogsAdminService.CLE_CURSEUR) — sans ça, un problème de
+  // délivrabilité sur le nouveau destinataire d'alerte pourrait recréer une
+  // boucle du même type que celle du 15/07/2026.
   private static final String CLE_DERNIERE_ALERTE_BOUNCE = "DERNIERE_ALERTE_BOUNCE_ENVOYEE";
   private static final String CLE_DERNIERE_ALERTE_SPAM = "DERNIERE_ALERTE_SPAM_ENVOYEE";
   private static final Duration INTERVALLE_MIN_ALERTE = Duration.ofMinutes(60);
@@ -49,19 +50,20 @@ public class EmailAlerteService {
   }
 
   /**
-   * Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
-   * digest logs_admin) — distincte de l'expéditeur. Voir {@link
+   * Retourne l'adresse destinataire des alertes système (bounce, plainte spam,
+   * worker inactif, digest logs_admin) — distincte de l'expéditeur. Voir {@link
    * EmailSender#obtenirDestinataireAlerte()} pour la justification complète.
    *
-   * @return l'adresse à notifier, vide si ni {@code ADMIN_ALERT_EMAIL} ni aucun admin n'existe
+   * @return l'adresse à notifier, vide si ni {@code ADMIN_ALERT_EMAIL} ni aucun
+   *     admin n'existe
    */
   public Optional<String> obtenirDestinataireAlerte() {
     return emailSender.obtenirDestinataireAlerte();
   }
 
   /**
-   * Indique si une alerte du type donné a déjà été envoyée il y a moins de {@link
-   * #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle.
+   * Indique si une alerte du type donné a déjà été envoyée il y a moins de
+   * {@link #INTERVALLE_MIN_ALERTE} — garde-fou anti-boucle.
    */
   private boolean alerteRecente(final String cleConfig) {
     return configService
@@ -208,10 +210,10 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une alerte à l'admin quand le contrôle d'intégrité AIDE détecte une modification de
-   * fichier hors déploiement légitime sur un LXC prod/dev.
+   * Envoie une alerte à l'admin quand le contrôle d'intégrité AIDE détecte une
+   * modification de fichier hors déploiement légitime sur un LXC prod/dev.
    *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
+   * <p>Destinataire : {@link #obtenirDestinataireAlerte} , jamais l'expéditeur.
    *
    * @param detail sortie résumée d'{@code aide --check}
    */
@@ -248,7 +250,8 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3 heures.
+   * Envoie une alerte à l'admin quand le worker est inactif depuis plus de 3
+   * heures.
    *
    * @param email l'adresse email de l'administrateur
    * @param derniereActiviteIso la date ISO du dernier job complété, ou null

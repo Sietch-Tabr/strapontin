@@ -32,10 +32,11 @@ class SalleRechercheNominatimService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SalleRechercheNominatimService.class);
   private static final String NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-  // Types Nominatim pertinents pour une salle de spectacle — testés sur le type de
-  // premier niveau ET sur extratags.amenity (une salle taguée leisure/tourism, ex. un stade, peut
-  // porter amenity en tag secondaire). community_centre couvre les salles des fêtes/polyvalentes
-  // (petites communes, souvent seule couverture Digitick disponible).
+  // Types Nominatim pertinents pour une salle de spectacle — testés sur le type
+  // de premier niveau ET sur extratags.amenity (une salle taguée
+  // leisure/tourism, ex. un stade, peut porter amenity en tag secondaire).
+  // community_centre couvre les salles des fêtes/polyvalentes (petites
+  // communes, souvent seule couverture Digitick disponible).
   private static final Set<String> TYPES_SALLE_NOMINATIM =
       Set.of(
           "music_venue",

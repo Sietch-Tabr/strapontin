@@ -33,9 +33,10 @@ public class ControleIntegriteService {
   private static final Logger LOG = LoggerFactory.getLogger(ControleIntegriteService.class);
 
   /**
-   * Signale un événement futur sans {@code salle_id} ni {@code artiste_id} avant que {@code
-   * WorkerPurgeService.executerPurgerConcertsHorsPortee} (seuil 30 jours) ne le suggère à la
-   * suppression — un signal précoce distinct d'une action déjà en cours.
+   * Signale un événement futur sans {@code salle_id} ni {@code artiste_id}
+   * avant que {@code WorkerPurgeService.executerPurgerConcertsHorsPortee}
+   * (seuil 30 jours) ne le suggère à la suppression — un signal précoce
+   * distinct d'une action déjà en cours.
    */
   private static final int SEUIL_JOURS_EVENEMENT_ORPHELIN = 14;
 
@@ -54,9 +55,11 @@ public class ControleIntegriteService {
   }
 
   /**
-   * Exécute les 4 invariants et retourne le nombre total de signalements nouvellement posés.
+   * Exécute les 4 invariants et retourne le nombre total de signalements
+   * nouvellement posés.
    *
-   * @return nombre de signalements nouvellement posés, tous invariants confondus
+   * @return nombre de signalements nouvellement posés, tous invariants
+   *     confondus
    */
   public int verifier() {
     int signales = 0;
@@ -69,8 +72,9 @@ public class ControleIntegriteService {
   }
 
   /**
-   * Réutilise {@link SalleHierarchie#creeraitCycle} avec le lien de parenté réel déjà en base
-   * (plutôt qu'un candidat hypothétique) pour détecter un cycle déjà présent dans les données.
+   * Réutilise {@link SalleHierarchie#creeraitCycle} avec le lien de parenté
+   * réel déjà en base (plutôt qu'un candidat hypothétique) pour détecter un
+   * cycle déjà présent dans les données.
    */
   private int verifierCyclesSalleParent() {
     final Map<UUID, UUID> parentParSalle = new HashMap<>();
@@ -100,9 +104,10 @@ public class ControleIntegriteService {
   }
 
   /**
-   * Compare {@code salles.dept} au département majoritaire des événements qui lui sont rattachés —
-   * une divergence signe soit un {@code dept} obsolète (déménagement jamais répercuté), soit un
-   * mauvais rattachement de concerts à cette salle.
+   * Compare {@code salles.dept} au département majoritaire des événements qui
+   * lui sont rattachés — une divergence signe soit un {@code dept} obsolète
+   * (déménagement jamais répercuté), soit un mauvais rattachement de concerts à
+   * cette salle.
    */
   private int verifierCoherenceDeptSalle() {
     final List<Map<String, Object>> lignes =
@@ -154,8 +159,9 @@ public class ControleIntegriteService {
   }
 
   /**
-   * Une source référençant une entité sans le moindre événement associé (jamais un seul, pas
-   * seulement une absence récente) signe un mapping erroné ou un identifiant mort dès l'origine.
+   * Une source référençant une entité sans le moindre événement associé (jamais
+   * un seul, pas seulement une absence récente) signe un mapping erroné ou un
+   * identifiant mort dès l'origine.
    */
   private int verifierSourcesOrphelines() {
     int signalees = 0;
@@ -164,9 +170,9 @@ public class ControleIntegriteService {
     return signalees;
   }
 
-  // TypeEntiteSource exclut structurellement tout appel avec un couple table/colonne non
-  // constant — seule la requête SQL elle-même varie selon le type, jamais construite par
-  // concaténation d'une valeur passée en paramètre.
+  // TypeEntiteSource exclut structurellement tout appel avec un couple
+  // table/colonne non constant — seule la requête SQL elle-même varie selon le
+  // type, jamais construite par concaténation d'une valeur passée en paramètre.
   private int verifierSourcesOrphelines(final TypeEntiteSource type) {
     final String sql =
         switch (type) {

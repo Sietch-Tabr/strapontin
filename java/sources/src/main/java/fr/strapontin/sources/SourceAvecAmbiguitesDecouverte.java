@@ -20,8 +20,8 @@ import java.util.UUID;
 public interface SourceAvecAmbiguitesDecouverte {
 
   /**
-   * Retourne les identifiants signalés comme ambigus depuis le dernier prélèvement et remet
-   * l'ensemble à zéro.
+   * Retourne les identifiants signalés comme ambigus depuis le dernier
+   * prélèvement et remet l'ensemble à zéro.
    *
    * @return les identifiants ambigus depuis le dernier prélèvement
    */

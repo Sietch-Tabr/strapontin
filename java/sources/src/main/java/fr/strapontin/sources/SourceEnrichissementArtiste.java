@@ -22,15 +22,17 @@ import java.util.UUID;
 public interface SourceEnrichissementArtiste {
 
   /**
-   * Identifiant technique de la source (ex. {@code "wikidata"}, {@code "deezer"}).
+   * Identifiant technique de la source (ex. {@code "wikidata"} ,
+   * {@code "deezer"} ).
    *
    * @return identifiant de la source
    */
   String nom();
 
   /**
-   * Enrichit un lot d'artistes. Les entrées sans résultat exploitable sont absentes de la map
-   * retournée — l'appelant ne doit jamais supposer une clé présente pour chaque artiste du lot.
+   * Enrichit un lot d'artistes. Les entrées sans résultat exploitable sont
+   * absentes de la map retournée — l'appelant ne doit jamais supposer une clé
+   * présente pour chaque artiste du lot.
    *
    * @param artistes artistes à enrichir
    * @return résultats indexés par {@link ArtisteAEnrichir#id()}

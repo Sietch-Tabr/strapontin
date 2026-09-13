@@ -49,9 +49,9 @@ public class EnrichissementArtistesService {
   private static final Logger LOG = LoggerFactory.getLogger(EnrichissementArtistesService.class);
 
   private static final int TAILLE_LOT_PERSISTANCE = 25;
-  // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
-  // WikidataArtisteSource en mode découverte) — laisse Wikidata respirer entre deux lots plutôt
-  // que d'enchaîner immédiatement.
+  // Délai entre deux lots de persistance, en plus du délai intra-source
+  // (500ms/appel côté WikidataArtisteSource en mode découverte) — laisse
+  // Wikidata respirer entre deux lots plutôt que d'enchaîner immédiatement.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -61,9 +61,11 @@ public class EnrichissementArtistesService {
 
   /**
    * @param jdbc accès JDBC
-   * @param sources sources d'enrichissement injectées, dans leur ordre de déclaration Spring
+   * @param sources sources d'enrichissement injectées, dans leur ordre de
+   *     déclaration Spring
    * @param logsAdminWorker journalisation du bilan de cycle
-   * @param signalementMatchingService journalisation des ambiguïtés de découverte
+   * @param signalementMatchingService journalisation des ambiguïtés de
+   *     découverte
    */
   public EnrichissementArtistesService(
       final NamedParameterJdbcTemplate jdbc,
@@ -106,9 +108,10 @@ public class EnrichissementArtistesService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
-   * {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
-   * que {@code WorkerStatsService.remonterBilan} et {@link
+   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque
+   * source implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de
+   * se terminer — même mécanisme générique que
+   * {@code WorkerStatsService.remonterBilan} et {@link
    * EnrichissementSallesService#remonterBilans}.
    */
   private void remonterBilans() {
@@ -131,8 +134,9 @@ public class EnrichissementArtistesService {
   }
 
   /**
-   * Signale chaque ambiguïté de découverte prélevée depuis le dernier cycle — distinct d'une
-   * non-découverte ordinaire, pour permettre un traitement différencié.
+   * Signale chaque ambiguïté de découverte prélevée depuis le dernier cycle —
+   * distinct d'une non-découverte ordinaire, pour permettre un traitement
+   * différencié.
    */
   private void remonterAmbiguites() {
     for (final SourceEnrichissementArtiste source : sources) {
@@ -298,7 +302,10 @@ public class EnrichissementArtistesService {
     }
   }
 
-  /** P6262 fait autorité pour le lien TM, indépendamment de la découverte par mot-clé. */
+  /**
+   * P6262 fait autorité pour le lien TM, indépendamment de la découverte par
+   * mot-clé.
+   */
   private void traiterCrossValidationP6262(
       final ArtisteAEnrichir artiste,
       final EnrichissementArtiste enrichissement,
@@ -320,9 +327,10 @@ public class EnrichissementArtistesService {
       if (lignesInserees > 0) {
         LOG.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
       } else {
-        // Conflit réel sur la PK (source, identifiant_externe) — cet identifiant TM est déjà
-        // attribué à un autre artiste, contrairement à la collision wikidata_id, ce cas n'avait
-        // jusqu'ici aucune trace (ni log, ni signalement).
+        // Conflit réel sur la PK (source, identifiant_externe) — cet
+        // identifiant TM est déjà attribué à un autre artiste, contrairement à
+        // la collision wikidata_id, ce cas n'avait jusqu'ici aucune trace (ni
+        // log, ni signalement).
         signalementMatchingService.signaler(
             "reattribution_tm_artiste",
             "artiste",

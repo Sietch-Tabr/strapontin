@@ -84,8 +84,8 @@ public class VerificationRepository {
    * Cherche l'identifiant associé à un token hash non expiré.
    *
    * @param tokenHash hash SHA-256 du token
-   * @return l'identifiant (ex. {@code "reset:email"}), ou {@link Optional#empty()} si
-   *     invalide/expiré
+   * @return l'identifiant (ex. {@code "reset:email"} ), ou
+   *     {@link Optional#empty()} si invalide/expiré
    */
   public Optional<String> lireIdentifiantParTokenHash(final String tokenHash) {
     final List<String> lignes =
@@ -156,11 +156,12 @@ public class VerificationRepository {
   }
 
   /**
-   * Retourne le nom de connexion (username) d'un utilisateur à partir de son email.
+   * Retourne le nom de connexion (username) d'un utilisateur à partir de son
+   * email.
    *
    * @param email email de l'utilisateur (normalisé)
-   * @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe pas ou n'a pas de
-   *     username
+   * @return le username, ou {@link Optional#empty()} si l'utilisateur n'existe
+   *     pas ou n'a pas de username
    */
   public Optional<String> lireUsernameParEmail(final String email) {
     final List<String> lignes =
@@ -174,7 +175,8 @@ public class VerificationRepository {
   }
 
   /**
-   * Vérifie si un identifiant est déjà pris par un autre utilisateur (exclusion par email).
+   * Vérifie si un identifiant est déjà pris par un autre utilisateur (exclusion
+   * par email).
    *
    * @param identifiant identifiant à vérifier (en minuscules)
    * @param email email de l'utilisateur courant (exclu)

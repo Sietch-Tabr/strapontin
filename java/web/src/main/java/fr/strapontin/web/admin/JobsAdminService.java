@@ -40,7 +40,8 @@ public class JobsAdminService {
   /**
    * @param jdbc accès JDBC
    * @param objectMapper désérialiseur JSON (quota TM)
-   * @param workerProxyService proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
+   * @param workerProxyService proxy HTTP vers le worker (jobs en cours,
+   *     prochaines exécutions)
    */
   public JobsAdminService(
       final NamedParameterJdbcTemplate jdbc,
@@ -54,7 +55,8 @@ public class JobsAdminService {
   /**
    * Retourne les statistiques des jobs Quartz et le quota TM.
    *
-   * @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
+   * @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess,
+   *     jobsEnCours
    */
   public Map<String, Object> lireJobs() {
     final List<StatJob> statsJobs = chargerStatsJobsBrutes();

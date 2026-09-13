@@ -32,7 +32,8 @@ final class TicketmasterPageFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterPageFetcher.class);
   private static final String CLE_EMBEDDED = "_embedded";
-  // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7 → 1200 (HTTP 400)
+  // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7
+  // → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 6;
 
   private final RestClient restClient;
@@ -49,7 +50,10 @@ final class TicketmasterPageFetcher {
    * @param taillePage taille de page utilisée par l'appelant (pour le calcul du nombre de pages
    *     total dans le log de plafonnement)
    */
-  /* package-private : instancié uniquement par TicketmasterSource (même package). */
+  /*
+   * package-private : instancié uniquement par TicketmasterSource (même
+   * package).
+   */
   TicketmasterPageFetcher(
       final RestClient restClient,
       final String apiKey,
@@ -64,18 +68,26 @@ final class TicketmasterPageFetcher {
   }
 
   /**
-   * @param succes {@code false} si l'appel HTTP a échoué — distingue une page réellement vide
-   *     (succès, 0 résultat) d'un appel qui n'a jamais abouti, faute de quoi les deux se traduisent
-   *     identiquement par {@code concerts} vide et {@code total=0}.
+   * @param succes {@code false} si l'appel HTTP a échoué — distingue une page
+   *     réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti,
+   *     faute de quoi les deux se traduisent identiquement par
+   *     {@code concerts} vide et {@code total=0} .
    */
-  /* package-private : type de retour interne, utilisé par TicketmasterSource (même package). */
+  /*
+   * package-private : type de retour interne, utilisé par TicketmasterSource
+   * (même package).
+   */
   record ResultatPage(
       List<ConcertBrut> concerts, int total, int totalPages, QuotaTM quota, boolean succes) {}
 
   /**
-   * @param succes {@code false} si au moins une page a échoué (voir {@link ResultatPage#succes}).
+   * @param succes {@code false} si au moins une page a échoué (voir
+   *     {@link ResultatPage#succes} ).
    */
-  /* package-private : type de retour interne, utilisé par TicketmasterSource (même package). */
+  /*
+   * package-private : type de retour interne, utilisé par TicketmasterSource
+   * (même package).
+   */
   record ResultatMultiPage(List<ConcertBrut> concerts, boolean succes) {}
 
   /* package-private : appelé par TicketmasterSource (même package). */
@@ -93,10 +105,11 @@ final class TicketmasterPageFetcher {
     } catch (Exception e) {
       final String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
       final long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
-      // Diagnostic dédié au 429 (Spike Arrest) : la durée réelle de l'appel HTTP objective si le
-      // rejet survient après une latence réseau anormale (jitter) plutôt qu'immédiatement (autre
-      // cause) — le cadenceur n'espace que l'instant de départ côté client, jamais l'instant
-      // d'arrivée effective côté serveur TM.
+      // Diagnostic dédié au 429 (Spike Arrest) : la durée réelle de l'appel
+      // HTTP objective si le rejet survient après une latence réseau anormale
+      // (jitter) plutôt qu'immédiatement (autre cause) — le cadenceur n'espace
+      // que l'instant de départ côté client, jamais l'instant d'arrivée
+      // effective côté serveur TM.
       if (e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode().value() == 429) {
         LOG.warn(
             "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}", uriSafe, dureeAppelMs);

@@ -35,8 +35,10 @@ public class ReconciliateurSalles {
 
   /**
    * @param reconciliationNoms réconciliation des variantes de nommage
-   * @param resolveurSalle résolution/création d'une salle pour un concert entrant
-   * @param reconciliateurOrphelines retentative nocturne des concerts sans salle
+   * @param resolveurSalle résolution/création d'une salle pour un concert
+   *     entrant
+   * @param reconciliateurOrphelines retentative nocturne des concerts sans
+   *     salle
    */
   public ReconciliateurSalles(
       final ReconciliationNomsSalles reconciliationNoms,
@@ -74,7 +76,10 @@ public class ReconciliateurSalles {
   /**
    * @see ReconciliationNomsSalles#reconcilierSalles
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
     return reconciliationNoms.reconcilierSalles(lot);
   }
@@ -82,7 +87,10 @@ public class ReconciliateurSalles {
   /**
    * @see ReconciliationNomsSalles#absorberRenommagesSalles
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   void absorberRenommagesSalles(
       final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     reconciliationNoms.absorberRenommagesSalles(concerts, cachesSalles);
@@ -91,7 +99,10 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#upsertSalleSource
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   UUID upsertSalleSource(final ValeurConcert concert) {
     return resolveurSalle.upsertSalleSource(concert);
   }
@@ -99,7 +110,10 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#chercherSalleParTokens
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   UUID chercherSalleParTokens(final String nom, final String dept) {
     return resolveurSalle.chercherSalleParTokens(nom, dept);
   }
@@ -107,7 +121,10 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#chercherSalleParCleForte
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   UUID chercherSalleParCleForte(final ValeurConcert concert) {
     return resolveurSalle.chercherSalleParCleForte(concert);
   }
@@ -115,7 +132,10 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#raccrocherSallesParNomNorm
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   List<ValeurConcert> raccrocherSallesParNomNorm(final List<ValeurConcert> concerts) {
     return resolveurSalle.raccrocherSallesParNomNorm(concerts);
   }
@@ -123,7 +143,10 @@ public class ReconciliateurSalles {
   /**
    * @see ResolveurSalleParConcert#deptsConnus
    */
-  /* package-private : implémente la façade publique, appelé uniquement au sein du package persister. */
+  /*
+   * package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister.
+   */
   Map<UUID, String> deptsConnus(final Set<UUID> salleIds) {
     return resolveurSalle.deptsConnus(salleIds);
   }

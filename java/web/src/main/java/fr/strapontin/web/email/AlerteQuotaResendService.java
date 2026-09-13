@@ -40,8 +40,8 @@ class AlerteQuotaResendService {
   }
 
   /**
-   * Vérifie le seuil toutes les 15 minutes et envoie une alerte si franchi et pas encore signalé
-   * pour la fenêtre jour/mois courante.
+   * Vérifie le seuil toutes les 15 minutes et envoie une alerte si franchi et
+   * pas encore signalé pour la fenêtre jour/mois courante.
    */
   @Scheduled(cron = "0 */15 * * * *")
   /* package-private : appelé par le scheduler Spring (même package). */

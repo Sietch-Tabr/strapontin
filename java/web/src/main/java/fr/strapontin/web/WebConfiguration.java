@@ -29,7 +29,8 @@ public class WebConfiguration implements WebMvcConfigurer {
   private final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor;
 
   /**
-   * @param appareilEnregistrementInterceptor intercepteur d'enregistrement d'appareil
+   * @param appareilEnregistrementInterceptor intercepteur d'enregistrement
+   *     d'appareil
    */
   public WebConfiguration(
       final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
@@ -44,7 +45,9 @@ public class WebConfiguration implements WebMvcConfigurer {
   /**
    * ObjectMapper partagé : dates ISO-8601, module java.time.
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper()
@@ -54,11 +57,14 @@ public class WebConfiguration implements WebMvcConfigurer {
   }
 
   /**
-   * RestClient partagé pour les appels HTTP vers des API externes (ex. Ticketmaster).
+   * RestClient partagé pour les appels HTTP vers des API externes (ex.
+   * Ticketmaster).
    *
    * <p>Timeout connexion : 5 s — timeout lecture : 10 s.
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   RestClient restClient() {
     final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -68,13 +74,16 @@ public class WebConfiguration implements WebMvcConfigurer {
   }
 
   /**
-   * Cadenceur des appels Ticketmaster partagé avec le worker (fetch programmé) — un verrou en
-   * mémoire ne coordonnerait pas deux processus indépendants, voir {@link CadenceurAppelsPartage}.
+   * Cadenceur des appels Ticketmaster partagé avec le worker (fetch programmé)
+   * — un verrou en mémoire ne coordonnerait pas deux processus indépendants,
+   * voir {@link CadenceurAppelsPartage} .
    *
    * @param jdbc accès à la base partagée entre web et worker
    * @return cadenceur adossé à Postgres
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(

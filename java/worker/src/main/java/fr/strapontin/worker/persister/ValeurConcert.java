@@ -45,9 +45,10 @@ public record ValeurConcert(
     UUID salleId,
     UUID artisteId) {
 
-  // Seul point de reconstruction du record — les méthodes avecXxx ci-dessous ne varient que sur
-  // ces quatre champs (les seuls jamais modifiés après la résolution des identités sources) ;
-  // l'ajout d'un futur champ au record ne demande de mettre à jour que cette seule méthode.
+  // Seul point de reconstruction du record — les méthodes avecXxx ci-dessous ne
+  // varient que sur ces quatre champs (les seuls jamais modifiés après la
+  // résolution des identités sources) ; l'ajout d'un futur champ au record ne
+  // demande de mettre à jour que cette seule méthode.
   private ValeurConcert avec(
       final String artisteNorm, final String salleNorm, final UUID salleId, final UUID artisteId) {
     return new ValeurConcert(
@@ -113,7 +114,8 @@ public record ValeurConcert(
   }
 
   /**
-   * Retourne un nouveau concert avec le {@code salleId} et l'{@code artisteId} remplacés.
+   * Retourne un nouveau concert avec le {@code salleId} et l'{@code artisteId}
+   * remplacés.
    *
    * @param nouvelleSalleId nouveau UUID de salle (null conserve l'existant)
    * @param nouvelArtisteId nouveau UUID d'artiste (null conserve l'existant)
@@ -124,7 +126,8 @@ public record ValeurConcert(
   }
 
   /**
-   * Retourne un nouveau concert avec l'{@code artisteNorm} et l'{@code artisteId} remplacés.
+   * Retourne un nouveau concert avec l'{@code artisteNorm} et l'{@code
+   * artisteId} remplacés.
    *
    * @param nouvelArtisteNorm nouveau nom d'artiste normalisé
    * @param nouvelArtisteId nouveau UUID d'artiste

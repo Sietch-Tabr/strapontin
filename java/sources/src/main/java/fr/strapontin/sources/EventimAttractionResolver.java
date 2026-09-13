@@ -34,18 +34,21 @@ final class EventimAttractionResolver {
   private final CompteurBilanFetch compteurBilan;
   private final String baseUrl;
   private final String webId;
-  // correspondances par containment acceptées depuis le dernier prélèvement — un
-  // containment n'est pas nécessairement une erreur (ex. "-M-" → "-M- Matthieu Chedid" est
-  // correct) mais reste un signal à vérifier manuellement, jusque-là invisible (log SLF4J niveau
-  // INFO uniquement, jamais dans logs_admin).
+  // correspondances par containment acceptées depuis le dernier prélèvement —
+  // un containment n'est pas nécessairement une erreur (ex. "-M-" → "-M-
+  // Matthieu Chedid" est correct) mais reste un signal à vérifier manuellement,
+  // jusque-là invisible (log SLF4J niveau INFO uniquement, jamais dans
+  // logs_admin).
   private final List<String> containmentsAcceptes = new ArrayList<>();
   private final ReentrantLock verrouContainments = new ReentrantLock();
 
   /**
    * @param restClient client HTTP Eventim partagé
-   * @param compteurBilan compteur d'appels/erreurs partagé avec {@link EventimSource}
+   * @param compteurBilan compteur d'appels/erreurs partagé avec
+   *     {@link EventimSource}
    * @param baseUrl URL de base de l'API exploration Eventim
-   * @param webId identifiant web Eventim (paramètre {@code webId} de chaque requête)
+   * @param webId identifiant web Eventim (paramètre {@code webId} de chaque
+   *     requête)
    */
   /* package-private : instancié uniquement par EventimSource (même package). */
   EventimAttractionResolver(
@@ -134,8 +137,9 @@ final class EventimAttractionResolver {
    * @param identiteConfirmee désactive le repli par containment si vrai
    * @return l'attraction retenue, ou {@code null} si aucune correspondance acceptable
    */
-  // La map représente une attraction unique (un enregistrement), pas une collection à agréger —
-  // l'appelant teste explicitement null pour distinguer "aucune correspondance" d'une map vide.
+  // La map représente une attraction unique (un enregistrement), pas une
+  // collection à agréger — l'appelant teste explicitement null pour distinguer
+  // "aucune correspondance" d'une map vide.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private Map<String, Object> selectionnerAttraction(
       final List<Map<String, Object>> attractions,
@@ -161,17 +165,19 @@ final class EventimAttractionResolver {
     return null;
   }
 
-  // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n dour") qu'une
-  // source omet ("NDour"). Non gaté par identiteConfirmee, plus strict que le containment.
+  // Egalité sans espaces : couvre une contraction de nom propre ("N'Dour" → "n
+  // dour") qu'une source omet ("NDour"). Non gaté par identiteConfirmee, plus
+  // strict que le containment.
   private static boolean estCorrespondanceExacte(final String nomNorm, final String termeNorm) {
     return nomNorm.equals(termeNorm) || UtilitairesChaine.estEgaliteSansEspaces(nomNorm, termeNorm);
   }
 
-  // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu Chedid") —
-  // seulement si l'identité n'est pas déjà confirmée par ailleurs : sinon ce repli approximatif a
-  // fini par accepter à répétition un mauvais rapprochement (ex. "Furies" dans "Love & Furies",
-  // deux entités distinctes). Seuil sur la longueur brute pour éviter les faux positifs sur un
-  // seul caractère.
+  // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu
+  // Chedid") — seulement si l'identité n'est pas déjà confirmée par ailleurs :
+  // sinon ce repli approximatif a fini par accepter à répétition un mauvais
+  // rapprochement (ex. "Furies" dans "Love & Furies", deux entités distinctes).
+  // Seuil sur la longueur brute pour éviter les faux positifs sur un seul
+  // caractère.
   private static boolean estContainmentEligible(
       final String terme,
       final String termeNorm,

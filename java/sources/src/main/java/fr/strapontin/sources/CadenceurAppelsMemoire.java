@@ -22,16 +22,17 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   private final ReentrantLock verrou = new ReentrantLock();
 
   /**
-   * @param delaiMinMs écart minimal en millisecondes entre deux appels successifs
+   * @param delaiMinMs écart minimal en millisecondes entre deux appels
+   *     successifs
    */
   /* package-private : instancié uniquement au sein du package sources. */
   CadenceurAppelsMemoire(final long delaiMinMs) {
     this.delaiMinMs = delaiMinMs;
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant disponible — pas un
-  // contexte de requête J2EE (job Quartz/appel HTTP sortant), la justification de la règle ne
-  // s'applique pas ici.
+  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
+  // disponible — pas un contexte de requête J2EE (job Quartz/appel HTTP
+  // sortant), la justification de la règle ne s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   @Override
   public void attendre() {

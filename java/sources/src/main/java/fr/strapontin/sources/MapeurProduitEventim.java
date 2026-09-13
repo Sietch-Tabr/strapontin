@@ -12,8 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut] — extrait de {@link
- * EventimSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+ * Mappe un produit Eventim brut (JSON désérialisé) vers un [ConcertBrut] —
+ * extrait de {@link EventimSource} pour séparer le parsing/mapping JSON de la
+ * logique du client HTTP.
  */
 final class MapeurProduitEventim {
 
@@ -181,12 +182,14 @@ final class MapeurProduitEventim {
     ville = corrigerVilleEventim(ville, dept, salle);
 
     final String url = extraireUrlProduit(produit);
-    // inStock=false couvre à la fois les concerts complets et les préventes : impossible à
-    // distinguer via l'API Eventim. On ne stocke pas de statut pour éviter les faux positifs.
+    // inStock=false couvre à la fois les concerts complets et les préventes :
+    // impossible à distinguer via l'API Eventim. On ne stocke pas de statut
+    // pour éviter les faux positifs.
     final String statut = null;
-    // Eventim n'expose pas de venueId stable : on génère un identifiant interne basé sur
-    // le nom normalisé pour alimenter salle_sources et vider la liste admin "Sans source".
-    // Écrasable par un vrai venueId si Eventim en expose un à l'avenir (ON CONFLICT DO NOTHING).
+    // Eventim n'expose pas de venueId stable : on génère un identifiant interne
+    // basé sur le nom normalisé pour alimenter salle_sources et vider la liste
+    // admin "Sans source". Écrasable par un vrai venueId si Eventim en expose
+    // un à l'avenir (ON CONFLICT DO NOTHING).
     final String salleNorm = Normalisation.normaliserTexte(salle);
     final boolean salleInconnue = "Salle inconnue".equals(salle);
     final String salleSourceId =

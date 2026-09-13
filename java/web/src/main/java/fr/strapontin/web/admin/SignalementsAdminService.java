@@ -112,7 +112,8 @@ public class SignalementsAdminService {
   }
 
   /**
-   * Marque un signalement de la table {@code signalements_matching} comme résolu manuellement.
+   * Marque un signalement de la table {@code signalements_matching} comme
+   * résolu manuellement.
    *
    * @param id identifiant numérique du signalement
    * @return {@code true} si un signalement actif correspondant a été résolu

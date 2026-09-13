@@ -40,7 +40,8 @@ public class ConcertsAdminService {
   }
 
   /**
-   * Liste paginée des concerts flagués, du plus récemment flagué au plus ancien.
+   * Liste paginée des concerts flagués, du plus récemment flagué au plus
+   * ancien.
    *
    * @param page numéro de page (0-indexé)
    * @return page de concerts en attente de revue
@@ -74,8 +75,9 @@ public class ConcertsAdminService {
                   rs.getTimestamp("suppression_suggeree_le").toInstant());
             });
 
-    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
-    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par
+    // aucune ligne, un second aller-retour reste alors nécessaire pour
+    // connaître le total réel.
     if (concerts.isEmpty() && pageNum > 0) {
       final Long totalVide =
           jdbc.queryForObject(
@@ -112,8 +114,9 @@ public class ConcertsAdminService {
   }
 
   /**
-   * Annule le flag de suppression d'un concert (faux positif) — remet aussi le compteur d'absences
-   * à zéro pour éviter un re-flag immédiat au cycle de purge suivant.
+   * Annule le flag de suppression d'un concert (faux positif) — remet aussi le
+   * compteur d'absences à zéro pour éviter un re-flag immédiat au cycle de
+   * purge suivant.
    *
    * @param id UUID du concert
    * @return {@code true} si un concert flagué correspondant a été restauré

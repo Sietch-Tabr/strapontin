@@ -34,7 +34,9 @@ class SourcesSallesListingService {
   /**
    * @param jdbc accès JDBC
    */
-  /* package-private : instancié uniquement par SourcesService (même package). */
+  /*
+   * package-private : instancié uniquement par SourcesService (même package).
+   */
   SourcesSallesListingService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -113,8 +115,9 @@ class SourcesSallesListingService {
     final PageSallesSansTmNiEventim resultatPage = chargerSallesSansTmNiEventim(where, params);
 
     long total = resultatPage.total();
-    // COUNT(*) OVER() porte ici sur les lignes post-HAVING (fenêtre appliquée après le filtrage
-    // par groupe), donc valide même avec ce HAVING — seul le repli page-vide doit le reproduire.
+    // COUNT(*) OVER() porte ici sur les lignes post-HAVING (fenêtre appliquée
+    // après le filtrage par groupe), donc valide même avec ce HAVING — seul le
+    // repli page-vide doit le reproduire.
     if (resultatPage.salles().isEmpty() && pageNum > 0) {
       total = compterSallesSansTmNiEventim(where, params);
     }

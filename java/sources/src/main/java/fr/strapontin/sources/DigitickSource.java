@@ -52,15 +52,17 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String SEL_VILLE = "span.evenementSalleVille";
   private static final String SEL_CODE_POSTAL = "span.evenementSalleCodePostal";
   private static final String SEL_URL = "a.evenementReserver";
-  // Longueur d'un datetime ISO complet avec heure ("yyyy-MM-ddTHH:mm") — en dessous, seule la
-  // date est présente.
+  // Longueur d'un datetime ISO complet avec heure ("yyyy-MM-ddTHH:mm") — en
+  // dessous, seule la date est présente.
   private static final int LONGUEUR_DATETIME_AVEC_HEURE = 16;
 
   private final RestClient restClient;
   // Bilan de panne agrégé, remonté dans logs_admin par le worker.
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
-  /** Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé. */
+  /**
+   * Crée une instance avec User-Agent navigateur standard et HTTP/1.1 forcé.
+   */
   public DigitickSource() {
     this(creerRestClient());
   }
@@ -103,7 +105,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * Récupère les concerts d'une salle Digitick par son identifiant préfixé.
    *
    * @param identifiant identifiant de la forme {@code "digitick:{slug}"}
-   * @return liste des concerts trouvés, vide si la salle est inaccessible ou sans concert
+   * @return liste des concerts trouvés, vide si la salle est inaccessible ou
+   *     sans concert
    */
   @Override
   public List<ConcertBrut> fetchSalle(final String identifiant) {
@@ -132,8 +135,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier prélèvement et remet les
-   * compteurs à zéro.
+   * Retourne le bilan agrégé des appels HTTP Digitick depuis le dernier
+   * prélèvement et remet les compteurs à zéro.
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -146,10 +149,14 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * Parse le HTML Digitick et extrait les concerts.
    *
    * @param html HTML brut (ISO-8859-1 déjà décodé en String)
-   * @param slug slug de la salle, utilisé pour construire le {@code salleSourceId}
+   * @param slug slug de la salle, utilisé pour construire le
+   *     {@code salleSourceId}
    * @return liste de concerts filtrés
    */
-  /* package-private : visibilité élargie pour DigitickSourceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour DigitickSourceTest (même
+   * package).
+   */
   static List<ConcertBrut> parserConcerts(final String html, final String slug) {
     final Document doc = Jsoup.parse(html);
     final List<Element> evenements = doc.select(SEL_EVENEMENTS);
@@ -176,7 +183,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
       return null;
     }
 
-    // Nom de l'artiste : premier lien .evenementNom, entités HTML déjà décodées par Jsoup
+    // Nom de l'artiste : premier lien .evenementNom, entités HTML déjà décodées
+    // par Jsoup
     final Element nomEl = ev.selectFirst(SEL_NOM);
     if (nomEl == null || nomEl.text().isBlank()) {
       return null;
@@ -187,8 +195,8 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Filtre genre (uniquement les concerts) et code postal (exclut les packs multi-dates sans salle
-   * fixe).
+   * Filtre genre (uniquement les concerts) et code postal (exclut les packs
+   * multi-dates sans salle fixe).
    *
    * @param ev élément HTML de l'événement
    * @return {@code true} si l'événement passe les deux filtres
@@ -208,11 +216,13 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
     final Element salleNomEl = ev.selectFirst(SEL_SALLE_NOM);
     final String salle = salleNomEl != null ? salleNomEl.text().trim() : "Salle inconnue";
 
-    // Ville : le premier span.evenementSalleVille commence par "- Ville", le second est la ville
+    // Ville : le premier span.evenementSalleVille commence par "- Ville", le
+    // second est la ville
     final List<Element> villeEls = ev.select(SEL_VILLE);
     final String ville = villeEls.size() >= 2 ? villeEls.get(1).text().trim() : null;
 
-    // Département depuis code postal (déjà validé non vide par estConcertValide)
+    // Département depuis code postal (déjà validé non vide par
+    // estConcertValide)
     final String cp = ev.selectFirst(SEL_CODE_POSTAL).text().trim();
     final String dept = Normalisation.extraireDeptFrancais(cp);
 
@@ -247,7 +257,10 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param nom nom brut en ALL CAPS (ex. {@code "RONNIE ROMERO + GUS G"})
    * @return nom en casse normale (ex. {@code "Ronnie Romero + Gus G"})
    */
-  /* package-private : visibilité élargie pour DigitickSourceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour DigitickSourceTest (même
+   * package).
+   */
   static String normaliserCasse(final String nom) {
     if (nom == null || nom.isBlank()) {
       return nom;
@@ -275,11 +288,14 @@ public class DigitickSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param datetime valeur de l'attribut {@code datetime}, ex. {@code "2026-10-07T20:00:00"}
    * @return tableau {@code [date, heure]} ou {@code null} si le format est invalide
    */
-  // Le tableau représente une paire date/heure, pas une collection à agréger — l'appelant teste
-  // explicitement null pour distinguer "format invalide" d'un tableau vide, sémantiques
-  // différentes.
+  // Le tableau représente une paire date/heure, pas une collection à agréger —
+  // l'appelant teste explicitement null pour distinguer "format invalide" d'un
+  // tableau vide, sémantiques différentes.
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
-  /* package-private : visibilité élargie pour DigitickSourceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour DigitickSourceTest (même
+   * package).
+   */
   static String[] parserDatetime(final String datetime) {
     if (datetime == null || datetime.length() < 10) {
       return null;

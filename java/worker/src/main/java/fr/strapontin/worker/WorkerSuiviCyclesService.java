@@ -35,9 +35,10 @@ public class WorkerSuiviCyclesService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerSuiviCyclesService.class);
 
-  // Fraîcheur maximale attendue par type de job, dérivée du cadencement réel de Planificateur
-  // (marge x2 sur l'écart maximal normal entre deux déclenchements consécutifs) — à réaligner si
-  // les cron expressions de Planificateur changent.
+  // Fraîcheur maximale attendue par type de job, dérivée du cadencement réel de
+  // Planificateur (marge x2 sur l'écart maximal normal entre deux
+  // déclenchements consécutifs) — à réaligner si les cron expressions de
+  // Planificateur changent.
   private static final Map<String, Duration> FRAICHEUR_ATTENDUE =
       Map.ofEntries(
           Map.entry("fetch:artistes:batch", Duration.ofHours(8)),
@@ -72,8 +73,9 @@ public class WorkerSuiviCyclesService {
   }
 
   /**
-   * Compare, pour chaque type de job connu, la dernière exécution enregistrée à la fraîcheur
-   * attendue et journalise un warn pour chaque type resté silencieux au-delà.
+   * Compare, pour chaque type de job connu, la dernière exécution enregistrée à
+   * la fraîcheur attendue et journalise un warn pour chaque type resté
+   * silencieux au-delà.
    */
   public void executerSuiviCycles() {
     LOG.info("suivi:cycles-jobs démarré");
@@ -90,7 +92,10 @@ public class WorkerSuiviCyclesService {
   /**
    * @return nombre de types de job détectés en retard
    */
-  /* package-private : visibilité élargie pour WorkerSuiviCyclesServiceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour WorkerSuiviCyclesServiceTest
+   * (même package).
+   */
   int verifier() {
     final Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;
@@ -98,8 +103,8 @@ public class WorkerSuiviCyclesService {
       final String typeJob = entree.getKey();
       final Duration fraicheurMax = entree.getValue();
       final Instant derniereExec = dernieresExecs.get(typeJob);
-      // Jamais exécuté depuis le démarrage (déploiement récent) — hors périmètre, aucune
-      // référence pour juger d'un retard.
+      // Jamais exécuté depuis le démarrage (déploiement récent) — hors
+      // périmètre, aucune référence pour juger d'un retard.
       if (derniereExec == null) {
         continue;
       }

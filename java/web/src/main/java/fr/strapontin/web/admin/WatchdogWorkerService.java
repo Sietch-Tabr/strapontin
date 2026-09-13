@@ -36,8 +36,9 @@ public class WatchdogWorkerService {
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailAlerteService emailAlerteService;
 
-  // Lu/écrit uniquement depuis verifier(), toujours invoquée séquentiellement par le
-  // TaskScheduler Spring par défaut (pas de concurrence, volatile inutile).
+  // Lu/écrit uniquement depuis verifier(), toujours invoquée séquentiellement
+  // par le TaskScheduler Spring par défaut (pas de concurrence, volatile
+  // inutile).
   private Instant derniereAlerte;
 
   /**
@@ -50,7 +51,10 @@ public class WatchdogWorkerService {
     this.emailAlerteService = emailAlerteService;
   }
 
-  /** Vérifie l'activité du worker toutes les heures et envoie une alerte si inactif. */
+  /**
+   * Vérifie l'activité du worker toutes les heures et envoie une alerte si
+   * inactif.
+   */
   @Scheduled(cron = "0 0 * * * *")
   public void verifier() {
     final Instant derniereExec = lireDerniereExecReussie();

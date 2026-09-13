@@ -67,7 +67,8 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour A→C.
+   * Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour
+   * A→C.
    *
    * @param remplacements table de remplacement à résoudre sur place
    */
@@ -94,8 +95,9 @@ public class ReconciliateurArtistes {
    * @param lot valeurs de concerts après réconciliation des salles
    * @return lot avec {@code artisteNorm} réconcilié
    */
-  // ArtisteExistant porte les champs de la ligne courante ; computeIfAbsent n'instancie une
-  // ArrayList que pour les clés réellement nouvelles — rien de hissable hors boucle.
+  // ArtisteExistant porte les champs de la ligne courante ; computeIfAbsent
+  // n'instancie une ArrayList que pour les clés réellement nouvelles — rien de
+  // hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> reconcilierArtistes(final List<ValeurConcert> lot) {
@@ -152,7 +154,8 @@ public class ReconciliateurArtistes {
     correcteurArtisteParUrl.corrigerParUrl(lot);
   }
 
-  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
+  // nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<String, String> construireRemplacementsArtisteIntraLot(
       final List<ValeurConcert> lot) {
@@ -233,8 +236,9 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * @return le concert propageant l'{@code artisteId} existant si un {@code artisteNorm}
-   *     strictement identique est trouvé, ou {@code null} si aucun candidat exact n'existe.
+   * @return le concert propageant l'{@code artisteId} existant si un
+   *     {@code artisteNorm} strictement identique est trouvé, ou {@code null}
+   *     si aucun candidat exact n'existe.
    */
   private static ValeurConcert reconcilierParCorrespondanceExacte(
       final ValeurConcert concert, final List<ArtisteExistant> artistesExistants) {
@@ -251,10 +255,12 @@ public class ReconciliateurArtistes {
 
   /**
    * @return le concert réconcilié avec le premier candidat flou trouvé ({@link
-   *     CorrespondanceArtiste#estDoublonArtiste}), ou {@code null} si aucun candidat flou n'existe.
+   *     CorrespondanceArtiste#estDoublonArtiste}), ou {@code null} si aucun
+   *     candidat flou n'existe.
    */
-  // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
-  // flou trouvé plutôt que de poursuivre l'itération sans effet utile.
+  // return en dernière position de boucle nécessaire : arrête la recherche au
+  // premier candidat flou trouvé plutôt que de poursuivre l'itération sans
+  // effet utile.
   @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
   private ValeurConcert reconcilierParCorrespondanceFloue(
       final ValeurConcert concert, final List<ArtisteExistant> artistesExistants) {
@@ -266,16 +272,18 @@ public class ReconciliateurArtistes {
       final UUID artisteIdPropague =
           concert.artisteId() == null ? existant.artisteId() : concert.artisteId();
 
-      // Un concert inéligible à la résolution Deezer (théâtre, spectacle "divers", sport — voir
-      // EligibiliteResolutionDeezer) n'est jamais passé par cette résolution : son artisteNorm
-      // vient directement de la source, fiable par construction. Le corriger rétroactivement en
-      // base plutôt que de forcer l'entrant vers l'ancienne valeur permet à une correction de la
-      // cause racine (ex. #1063 sur la résolution Deezer elle-même) de guérir une ligne déjà
-      // persistée sous une identité erronée, au lieu de rester bloquée indéfiniment par ce même
-      // mécanisme de convergence. Pour un concert éligible, le comportement protecteur historique
-      // est conservé (l'existant l'emporte) : la résolution Deezer reste sujette à un mauvais
-      // rapprochement futur (cf. Van Halen, #770), qu'il ne faut pas laisser écraser une valeur
-      // déjà correcte en base.
+      // Un concert inéligible à la résolution Deezer (théâtre, spectacle
+      // "divers", sport — voir EligibiliteResolutionDeezer) n'est jamais passé
+      // par cette résolution : son artisteNorm vient directement de la source,
+      // fiable par construction. Le corriger rétroactivement en base plutôt que
+      // de forcer l'entrant vers l'ancienne valeur permet à une correction de
+      // la cause racine (ex. #1063 sur la résolution Deezer elle-même) de
+      // guérir une ligne déjà persistée sous une identité erronée, au lieu de
+      // rester bloquée indéfiniment par ce même mécanisme de convergence. Pour
+      // un concert éligible, le comportement protecteur historique est conservé
+      // (l'existant l'emporte) : la résolution Deezer reste sujette à un
+      // mauvais rapprochement futur (cf. Van Halen, #770), qu'il ne faut pas
+      // laisser écraser une valeur déjà correcte en base.
       if (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())) {
         corrigerArtisteExistantEnBase(existant, concert);
         return concert.avecArtisteId(artisteIdPropague);
@@ -292,8 +300,9 @@ public class ReconciliateurArtistes {
   }
 
   /**
-   * Corrige rétroactivement une ligne déjà persistée sous une identité d'artiste erronée, désormais
-   * démentie par un fetch fiable (concert inéligible à la résolution Deezer).
+   * Corrige rétroactivement une ligne déjà persistée sous une identité
+   * d'artiste erronée, désormais démentie par un fetch fiable (concert
+   * inéligible à la résolution Deezer).
    *
    * @param existant ancienne identité (erronée) à corriger
    * @param concert concert entrant portant l'identité corrigée
@@ -307,8 +316,9 @@ public class ReconciliateurArtistes {
             .addValue("ancienArtisteNorm", existant.artisteNorm())
             .addValue("date", concert.date().toString())
             .addValue("salleNorm", concert.salleNorm());
-    // Identité (evenements.artiste_norm) et affichage par source (observations.artiste_brut)
-    // vivent désormais sur deux tables distinctes (#1192).
+    // Identité (evenements.artiste_norm) et affichage par source
+    // (observations.artiste_brut) vivent désormais sur deux tables distinctes
+    // (#1192).
     final int nbCorrigees =
         jdbc.update(
             "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"

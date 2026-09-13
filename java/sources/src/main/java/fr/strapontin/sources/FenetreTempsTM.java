@@ -22,7 +22,10 @@ import java.time.temporal.ChronoUnit;
  */
 record FenetreTempsTM(String debut, String fin) {
 
-  /* package-private : appelé par TicketmasterSource/TicketmasterRegionFetcher (même package). */
+  /*
+   * package-private : appelé par TicketmasterSource/TicketmasterRegionFetcher
+   * (même package).
+   */
   static FenetreTempsTM obtenirFenetreTemps() {
     final Instant maintenant = Instant.now();
     final Instant dans6Mois = maintenant.plus(6L * 30, ChronoUnit.DAYS);

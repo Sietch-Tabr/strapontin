@@ -38,7 +38,8 @@ public class BackupAlerteController {
   /**
    * @param emailAlerteService résolution du destinataire d'alerte
    * @param logAdminService journalisation du statut reçu
-   * @param backupSecret secret partagé attendu dans l'en-tête {@code Authorization}
+   * @param backupSecret secret partagé attendu dans l'en-tête
+   *     {@code Authorization}
    */
   public BackupAlerteController(
       final EmailAlerteService emailAlerteService,
@@ -62,8 +63,9 @@ public class BackupAlerteController {
    * @param authorization header {@code Authorization: Bearer <BACKUP_INTERNAL_SECRET>}
    * @return 200 si traité, 403 si le token est absent ou invalide
    */
-  // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP), pas par choix de
-  // conception — hors de la convention DTO du projet, réservée aux endpoints @RequestBody.
+  // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP),
+  // pas par choix de conception — hors de la convention DTO du projet, réservée
+  // aux endpoints @RequestBody.
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @PostMapping("/api/interne/backup-statut")
   public ResponseEntity<Map<String, Object>> signalerStatut(

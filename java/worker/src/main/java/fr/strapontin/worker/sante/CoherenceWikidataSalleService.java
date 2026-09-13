@@ -57,20 +57,22 @@ public class CoherenceWikidataSalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoherenceWikidataSalleService.class);
 
-  // une comparaison texte-à-texte stricte ville/commune Wikidata génère du bruit quasi
-  // systématique sur toute salle parisienne/lyonnaise/marseillaise (arrondissement ≠ ville mère),
-  // en zone urbaine dense (quartiers/districts informels sans commune propre, ex. Bercy, La
-  // Défense) ou sur une commune fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom
-  // d'une des communes d'origine, ou référence l'intercommunalité). Cette normalisation est
-  // volontairement locale à ce contrôle *a posteriori* : {@link
-  // WikidataSalleSource#villeIncompatible}
-  // reste inchangé, il bloque le matching *au moment de l'enrichissement* où une
-  // comparaison plus permissive réduirait la couverture.
+  // une comparaison texte-à-texte stricte ville/commune Wikidata génère du
+  // bruit quasi systématique sur toute salle parisienne/lyonnaise/marseillaise
+  // (arrondissement ≠ ville mère), en zone urbaine dense (quartiers/districts
+  // informels sans commune propre, ex. Bercy, La Défense) ou sur une commune
+  // fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom d'une des
+  // communes d'origine, ou référence l'intercommunalité). Cette normalisation
+  // est volontairement locale à ce contrôle *a posteriori* : {@link
+  // WikidataSalleSource#villeIncompatible} reste inchangé, il bloque le
+  // matching *au moment de l'enrichissement* où une comparaison plus permissive
+  // réduirait la couverture.
   private static final Pattern ARRONDISSEMENT =
       Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
 
-  // Quartiers/districts informels ne correspondant à aucune commune administrative, rattachés à
-  // une ou plusieurs communes possibles (ex. La Défense chevauche Nanterre/Puteaux/Courbevoie).
+  // Quartiers/districts informels ne correspondant à aucune commune
+  // administrative, rattachés à une ou plusieurs communes possibles (ex. La
+  // Défense chevauche Nanterre/Puteaux/Courbevoie).
   private static final String VILLE_PARIS = "paris";
   private static final Map<String, Set<String>> QUARTIERS_EQUIVALENTS =
       Map.of(
@@ -79,12 +81,14 @@ public class CoherenceWikidataSalleService {
           "st germain l auxerrois", Set.of(VILLE_PARIS),
           "notre dame", Set.of(VILLE_PARIS),
           "chaussee d antin", Set.of(VILLE_PARIS),
-          // Quartier administratif du 12e arrondissement de Paris où se trouve l'Opéra Bastille.
+          // Quartier administratif du 12e arrondissement de Paris où se trouve
+          // l'Opéra Bastille.
           "quinze vingts", Set.of(VILLE_PARIS));
 
-  // Longueur minimale pour le repli par containment (commune fusionnée/intercommunalité, ex.
-  // « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite », « Orange » ⊂ « communauté de communes du Pays
-  // d'Orange en Provence ») — évite un containment trivial sur un token court.
+  // Longueur minimale pour le repli par containment (commune
+  // fusionnée/intercommunalité, ex. « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite
+  // », « Orange » ⊂ « communauté de communes du Pays d'Orange en Provence ») —
+  // évite un containment trivial sur un token court.
   private static final int LONGUEUR_MIN_CONTAINMENT = 5;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -93,7 +97,8 @@ public class CoherenceWikidataSalleService {
 
   /**
    * @param jdbc accès JDBC
-   * @param wikidata résolution de la commune Wikidata (P131) pour la revalidation
+   * @param wikidata résolution de la commune Wikidata (P131) pour la
+   *     revalidation
    * @param logsAdminWorker journalisation des incohérences détectées
    */
   public CoherenceWikidataSalleService(
@@ -106,8 +111,9 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Vérifie la cohérence ville/wikidata_id de toutes les salles ayant déjà un {@code wikidata_id}
-   * et une {@code ville} connus, journalise chaque incohérence trouvée dans {@code logs_admin}.
+   * Vérifie la cohérence ville/wikidata_id de toutes les salles ayant déjà un
+   * {@code wikidata_id} et une {@code ville} connus, journalise chaque
+   * incohérence trouvée dans {@code logs_admin} .
    *
    * @return nombre d'incohérences détectées
    */
@@ -201,9 +207,10 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Charge, pour chaque salle candidate, la signature de la dernière incohérence déjà journalisée
-   * (commune Wikidata + type de contamination), absente si jamais signalée ou si la dernière
-   * incohérence signalée a depuis été résolue.
+   * Charge, pour chaque salle candidate, la signature de la dernière
+   * incohérence déjà journalisée (commune Wikidata + type de contamination),
+   * absente si jamais signalée ou si la dernière incohérence signalée a depuis
+   * été résolue.
    */
   private Map<UUID, String> chargerSignaturesDejaSignalees(final List<UUID> salleIds) {
     if (salleIds.isEmpty()) {
@@ -221,7 +228,8 @@ public class CoherenceWikidataSalleService {
     return parSalle;
   }
 
-  // Map.of() refuse une valeur null (réinitialisation d'une signature résolue) — HashMap requis.
+  // Map.of() refuse une valeur null (réinitialisation d'une signature résolue)
+  // — HashMap requis.
   private void memoriserSignature(final UUID salleId, final String signature) {
     final Map<String, Object> params = new HashMap<>();
     params.put("signature", signature);
@@ -258,10 +266,11 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Résultat de {@link #evaluerCoherence} : distingue une contamination *partielle* (certains
-   * concerts cohérents, d'autres non — une minorité de concerts mal rattachée à une salle par
-   * ailleurs correctement enrichie) d'une incohérence *totale* (aucun concert cohérent, signe
-   * classique d'un mauvais rapprochement Wikidata complet).
+   * Résultat de {@link #evaluerCoherence} : distingue une contamination
+   * *partielle* (certains concerts cohérents, d'autres non — une minorité de
+   * concerts mal rattachée à une salle par ailleurs correctement enrichie)
+   * d'une incohérence *totale* (aucun concert cohérent, signe classique d'un
+   * mauvais rapprochement Wikidata complet).
    */
   private enum Coherence {
     COHERENTE,

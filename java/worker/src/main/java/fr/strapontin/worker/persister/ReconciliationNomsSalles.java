@@ -43,7 +43,10 @@ class ReconciliationNomsSalles {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /* package-private : instancié uniquement par PersisterConcerts (même package). */
+  /*
+   * package-private : instancié uniquement par PersisterConcerts (même
+   * package).
+   */
   ReconciliationNomsSalles(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -54,8 +57,9 @@ class ReconciliationNomsSalles {
    * @param salle nom brut de la salle
    * @return score (diacritiques favorisés, casse mixte favorisée)
    */
-  // equalsIgnoreCase ne convient pas ici : le test porte sur le nom lui-même (déjà entièrement
-  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
+  // equalsIgnoreCase ne convient pas ici : le test porte sur le nom lui-même
+  // (déjà entièrement majuscule ou non), pas sur une comparaison insensible à
+  // la casse entre deux chaînes distinctes.
   private static int scoreSalle(final String salle) {
     final int diacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
     final int casseMixte = salle.equals(salle.toUpperCase(Locale.ROOT)) ? 0 : 1;
@@ -63,7 +67,8 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour A→C.
+   * Résout les chaînes de remplacement transitives : si A→B et B→C, met à jour
+   * A→C.
    *
    * @param remplacements table de remplacement à résoudre sur place
    */
@@ -86,7 +91,8 @@ class ReconciliationNomsSalles {
    * @param lot valeurs de concerts à réconcilier
    * @return lot avec {@code salleNorm} canoniques
    */
-  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
+  // nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
@@ -154,7 +160,8 @@ class ReconciliationNomsSalles {
     return heure == null ? null : heure.format(DateTimeFormatter.ofPattern("HH:mm"));
   }
 
-  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement nouvelles.
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
+  // nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<String, String> construireRemplacementsIntraLot(final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();

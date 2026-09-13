@@ -42,9 +42,11 @@ public class VapidService {
   }
 
   /**
-   * Génère une paire de clés VAPID EC P-256, les persiste et supprime les abonnements push.
+   * Génère une paire de clés VAPID EC P-256, les persiste et supprime les
+   * abonnements push.
    *
-   * @return paire de clés encodées en Base64 URL-safe et nombre d'abonnements supprimés
+   * @return paire de clés encodées en Base64 URL-safe et nombre d'abonnements
+   *     supprimés
    * @throws GeneralSecurityException si la génération de clés échoue
    */
   public ResultatVapid genererVapid() throws GeneralSecurityException {

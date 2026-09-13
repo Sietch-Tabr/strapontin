@@ -97,7 +97,8 @@ public class PreferencesController {
   }
 
   /**
-   * Exporte les préférences de l'utilisateur courant (artistes, salles, config) en JSON.
+   * Exporte les préférences de l'utilisateur courant (artistes, salles, config)
+   * en JSON.
    *
    * @param auth contexte d'authentification
    * @return JSON téléchargeable avec les préférences

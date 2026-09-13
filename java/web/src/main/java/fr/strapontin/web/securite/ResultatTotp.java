@@ -20,7 +20,8 @@ public record ResultatTotp(Statut statut, int essaisRestants) {
    */
   public enum Statut {
     /**
-     * Le compte était déjà verrouillé avant même la tentative (aucune vérification effectuée).
+     * Le compte était déjà verrouillé avant même la tentative (aucune
+     * vérification effectuée).
      */
     DEJA_VERROUILLE,
     /**
@@ -32,7 +33,8 @@ public record ResultatTotp(Statut statut, int essaisRestants) {
      */
     ECHEC,
     /**
-     * Code incorrect et ce dernier échec vient de franchir le seuil de verrouillage.
+     * Code incorrect et ce dernier échec vient de franchir le seuil de
+     * verrouillage.
      */
     VERROUILLE_MAINTENANT
   }

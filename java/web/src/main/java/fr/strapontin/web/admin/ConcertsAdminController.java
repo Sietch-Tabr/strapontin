@@ -56,7 +56,8 @@ public class ConcertsAdminController {
    * Supprime définitivement un concert flagué.
    *
    * @param uuid UUID du concert
-   * @return 200 si supprimé, 400 si UUID invalide, 404 si concert inconnu ou non flagué
+   * @return 200 si supprimé, 400 si UUID invalide, 404 si concert inconnu ou
+   *     non flagué
    */
   @PostMapping("/{uuid}/confirmer")
   public ResponseEntity<Map<String, Object>> confirmer(@PathVariable final String uuid) {
@@ -75,7 +76,8 @@ public class ConcertsAdminController {
    * Annule le flag de suppression d'un concert (faux positif).
    *
    * @param uuid UUID du concert
-   * @return 200 si annulé, 400 si UUID invalide, 404 si concert inconnu ou non flagué
+   * @return 200 si annulé, 400 si UUID invalide, 404 si concert inconnu ou non
+   *     flagué
    */
   @PostMapping("/{uuid}/annuler")
   public ResponseEntity<Map<String, Object>> annuler(@PathVariable final String uuid) {

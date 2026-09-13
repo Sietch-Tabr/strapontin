@@ -14,8 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Mappe un événement Ticketmaster brut (JSON désérialisé) vers un [ConcertBrut] — extrait de {@link
- * TicketmasterSource} pour séparer le parsing/mapping JSON de la logique du client HTTP.
+ * Mappe un événement Ticketmaster brut (JSON désérialisé) vers un [ConcertBrut]
+ * — extrait de {@link TicketmasterSource} pour séparer le parsing/mapping JSON
+ * de la logique du client HTTP.
  */
 final class MapeurEvenementTM {
 
@@ -100,8 +101,9 @@ final class MapeurEvenementTM {
   }
 
   /**
-   * Si la recherche était par nom d'artiste, rejette les attractions dont le nom normalisé ne
-   * correspond pas exactement (évite les homonymes partiels, ex: "Anuv Jain" pour "Jain").
+   * Si la recherche était par nom d'artiste, rejette les attractions dont le
+   * nom normalisé ne correspond pas exactement (évite les homonymes partiels,
+   * ex: "Anuv Jain" pour "Jain").
    */
   private static String artisteDepuisAttraction(
       final String nomAttraction, final String artisteFallback) {

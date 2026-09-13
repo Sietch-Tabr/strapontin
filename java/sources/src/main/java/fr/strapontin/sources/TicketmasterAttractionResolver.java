@@ -33,10 +33,11 @@ final class TicketmasterAttractionResolver {
   private final String apiKey;
   private final String baseUrl;
   private final CadenceurAppels cadenceur;
-  // Une absence de correspondance TM pour un nom donné est un résultat stable la plupart du temps
-  // (rappelé à chaque cycle fetch:artistes:batch, aucun état négatif persisté pour permettre une
-  // redécouverte si TM ajoute l'attraction plus tard) — sans throttle, le WARN se répète à chaque
-  // cycle pour le même nom déjà classé introuvable.
+  // Une absence de correspondance TM pour un nom donné est un résultat stable
+  // la plupart du temps (rappelé à chaque cycle fetch:artistes:batch, aucun
+  // état négatif persisté pour permettre une redécouverte si TM ajoute
+  // l'attraction plus tard) — sans throttle, le WARN se répète à chaque cycle
+  // pour le même nom déjà classé introuvable.
   private final Cache<String, Boolean> avertissementsAttractionIntrouvable;
 
   /**
@@ -44,9 +45,13 @@ final class TicketmasterAttractionResolver {
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param baseUrl URL de base de l'API Ticketmaster Discovery v2
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
-   * @param avertissementsAttractionIntrouvable cache de throttle des avertissements
+   * @param avertissementsAttractionIntrouvable cache de throttle des
+   *     avertissements
    */
-  /* package-private : instancié uniquement par TicketmasterSource (même package). */
+  /*
+   * package-private : instancié uniquement par TicketmasterSource (même
+   * package).
+   */
   TicketmasterAttractionResolver(
       final RestClient restClient,
       final String apiKey,
@@ -61,8 +66,8 @@ final class TicketmasterAttractionResolver {
   }
 
   /**
-   * Crée le cache de throttle par défaut des avertissements d'attraction introuvable (expiration 1
-   * jour, taille max 1000).
+   * Crée le cache de throttle par défaut des avertissements d'attraction
+   * introuvable (expiration 1 jour, taille max 1000).
    *
    * @return un nouveau cache de throttle
    */

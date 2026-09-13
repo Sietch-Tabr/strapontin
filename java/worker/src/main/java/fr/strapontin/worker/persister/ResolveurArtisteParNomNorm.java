@@ -17,9 +17,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
- * Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm} — extrait de
- * {@link ReconciliateurArtistes} pour rester sous le seuil de complexité cyclomatique de classe
- * (50).
+ * Résout les {@code artiste_id} manquants par lookup sur
+ * {@code artistes.nom_norm} — extrait de {@link ReconciliateurArtistes} pour
+ * rester sous le seuil de complexité cyclomatique de classe (50).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -30,7 +30,10 @@ final class ResolveurArtisteParNomNorm {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /* package-private : instancié uniquement par ReconciliateurArtistes (même package). */
+  /*
+   * package-private : instancié uniquement par ReconciliateurArtistes (même
+   * package).
+   */
   ResolveurArtisteParNomNorm(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

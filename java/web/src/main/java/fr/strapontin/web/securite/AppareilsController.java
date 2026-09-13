@@ -17,7 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Gestion des sessions actives ("appareils") de l'utilisateur courant, depuis /parametres.
+ * Gestion des sessions actives ("appareils") de l'utilisateur courant, depuis
+ * /parametres.
  *
  * @since 2.7.8
  * @author Kwaite
@@ -55,7 +56,8 @@ public class AppareilsController {
    *
    * @param appareilId identifiant opaque de l'appareil à révoquer
    * @param auth contexte d'authentification
-   * @return 204 si révoqué, 404 si l'appareil n'existe pas ou n'appartient pas à l'utilisateur
+   * @return 204 si révoqué, 404 si l'appareil n'existe pas ou n'appartient pas
+   *     à l'utilisateur
    */
   @DeleteMapping("/{appareilId}")
   public ResponseEntity<Void> revoquer(

@@ -34,8 +34,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class PersisteurConcertsDb {
 
-  // Tolérance sur l'écart d'heure entre deux observations d'un même événement réel (fiches TM de
-  // types différents pour le même évènement) — très en dessous de tout écart matinée/soirée réel.
+  // Tolérance sur l'écart d'heure entre deux observations d'un même événement
+  // réel (fiches TM de types différents pour le même évènement) — très en
+  // dessous de tout écart matinée/soirée réel.
   private static final int TOLERANCE_HEURE_MINUTES = 3;
   private static final String CLE_SALLE = "salle";
   private static final String CLE_DATE = "date";
@@ -68,7 +69,8 @@ public class PersisteurConcertsDb {
    * @param type {@code "salle"} ou {@code "artiste"}
    * @return cache des UUIDs résolus par identifiant préfixé
    */
-  // computeIfAbsent n'instancie une ArrayList que pour les sources réellement nouvelles.
+  // computeIfAbsent n'instancie une ArrayList que pour les sources réellement
+  // nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   /* package-private : appelé par PersisterConcerts (même package). */
   Map<String, UUID> resoudreUuidsParSource(final List<ValeurConcert> concerts, final String type) {
@@ -110,8 +112,8 @@ public class PersisteurConcertsDb {
 
   /**
    * @param concerts concerts après résolution des identités sources
-   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour Eventim
-   *     uniquement — voir {@link ResolveurArtisteParUrl}
+   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés
+   *     par URL, pour Eventim uniquement — voir {@link ResolveurArtisteParUrl}
    */
   /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
@@ -141,9 +143,9 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais accessible à un achat de
-   * billetterie standard, ne doit jamais empêcher le rapprochement avec la fiche normale du même
-   * événement réel.
+   * Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais
+   * accessible à un achat de billetterie standard, ne doit jamais empêcher le
+   * rapprochement avec la fiche normale du même événement réel.
    */
   private static boolean estPackage(final String url) {
     return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
@@ -213,8 +215,9 @@ public class PersisteurConcertsDb {
     return exact.isEmpty() ? null : exact.get(0);
   }
 
-  // return en dernière position de boucle nécessaire : arrête la recherche au premier candidat
-  // compatible plutôt que de poursuivre l'itération sans effet utile.
+  // return en dernière position de boucle nécessaire : arrête la recherche au
+  // premier candidat compatible plutôt que de poursuivre l'itération sans effet
+  // utile.
   @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
   private UUID chercherEvenementParSalleEtDate(final ValeurConcert concert) {
     final List<Map<String, Object>> candidats =
@@ -345,10 +348,11 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Retrouve, parmi les observations déjà attachées à un événement, le {@code salle_brut} de celle
-   * qui servirait de référence dans la vue {@code concerts} — même priorité (package puis TM &gt;
-   * Eventim &gt; Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm} cohérent
-   * avec ce que {@code concerts.salle} affichera.
+   * Retrouve, parmi les observations déjà attachées à un événement, le
+   * {@code salle_brut} de celle qui servirait de référence dans la vue
+   * {@code concerts} — même priorité (package puis TM &gt; Eventim &gt;
+   * Digitick) que la vue elle-même, pour garder {@code evenements.salle_norm}
+   * cohérent avec ce que {@code concerts.salle} affichera.
    */
   private String meilleurSalleBrut(final UUID evenementId) {
     final List<String> resultat =

@@ -73,7 +73,8 @@ public class UserConfigService {
    * Lit le filtre "concerts disponibles uniquement" de l'utilisateur.
    *
    * @param userId identifiant de l'utilisateur
-   * @return {@code true} si seuls les concerts disponibles doivent être affichés (défaut)
+   * @return {@code true} si seuls les concerts disponibles doivent être
+   *     affichés (défaut)
    */
   public boolean lireFiltreDisponibles(final String userId) {
     final List<Boolean> lignes =
@@ -161,7 +162,8 @@ public class UserConfigService {
    *
    * @param userId identifiant de l'utilisateur
    * @param requete données de la requête
-   * @throws ErreurMetier si la fréquence est invalide ou aucun canal de notification sélectionné
+   * @throws ErreurMetier si la fréquence est invalide ou aucun canal de
+   *     notification sélectionné
    */
   public void majNotifications(final String userId, final RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
@@ -217,7 +219,8 @@ public class UserConfigService {
    * Indique si l'utilisateur n'a pas encore vu la modale d'onboarding.
    *
    * @param userId identifiant de l'utilisateur
-   * @return {@code true} si la modale doit être affichée (absence de ligne = jamais vue)
+   * @return {@code true} si la modale doit être affichée (absence de ligne =
+   *     jamais vue)
    */
   public boolean onboardingNonVu(final String userId) {
     final List<Boolean> lignes =
@@ -251,7 +254,8 @@ public class UserConfigService {
    * Met à jour le thème de l'interface.
    *
    * @param userId identifiant de l'utilisateur
-   * @param valeur nouvelle valeur du thème ({@code auto}, {@code clair} ou {@code sombre})
+   * @param valeur nouvelle valeur du thème ({@code auto}, {@code clair} ou
+   *     {@code sombre} )
    * @throws ErreurMetier si la valeur du thème est invalide
    */
   public void majTheme(final String userId, final String valeur) {

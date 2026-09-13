@@ -31,8 +31,9 @@ import org.springframework.stereotype.Component;
 @Component("sources")
 public class SourcesHealthIndicator implements HealthIndicator {
 
-  // Miroir de GestionQuotaTM.SEUIL_QUOTA_ABORT (package-private, non réutilisable ici) — sous ce
-  // seuil, les jobs TM sont annulés côté worker : un état DOWN est justifié.
+  // Miroir de GestionQuotaTM.SEUIL_QUOTA_ABORT (package-private, non
+  // réutilisable ici) — sous ce seuil, les jobs TM sont annulés côté worker :
+  // un état DOWN est justifié.
   private static final int SEUIL_QUOTA_CRITIQUE = 50;
 
   private final GestionQuotaTM gestionQuotaTM;

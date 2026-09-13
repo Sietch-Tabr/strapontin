@@ -12,9 +12,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Normalisation de texte partagée par le dédoublonnage et les sources externes (TM, Eventim,
- * Digitick, Wikidata) : mise en forme d'un nom d'artiste/salle en clé comparable, extraction de
- * département, distances de similarité (Levenshtein, Jaro).
+ * Normalisation de texte partagée par le dédoublonnage et les sources externes
+ * (TM, Eventim, Digitick, Wikidata) : mise en forme d'un nom d'artiste/salle en
+ * clé comparable, extraction de département, distances de similarité
+ * (Levenshtein, Jaro).
  *
  * @author Kwaite
  */
@@ -33,20 +34,23 @@ public final class Normalisation {
           "sous");
 
   /**
-   * Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex. "Chri$tian").
-   * Supprimé sans espace pour éviter un artiste_norm parasite ("chri tian" au lieu de "christian").
+   * Sigles stylistiques TM : "$" utilisé comme "S" dans les noms d'artiste (ex.
+   * "Chri$tian"). Supprimé sans espace pour éviter un artiste_norm parasite
+   * ("chri tian" au lieu de "christian").
    */
   private static final Pattern DOLLAR = Pattern.compile("\\$");
 
   /**
-   * Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and Marielle").
-   * Harmonise avec la version littérale pour que les deux fetches TM produisent le même norm.
+   * Esperluette entourée d'espaces → "and" (ex. "Katia & Marielle" → "Katia and
+   * Marielle"). Harmonise avec la version littérale pour que les deux fetches
+   * TM produisent le même norm.
    */
   private static final Pattern ESPERLUETTE = Pattern.compile(" & ");
 
   /**
-   * Caractères non décomposables par NFD : NFD retourne le même codepoint, le pattern NON_ALPHANUM
-   * les supprime entièrement. Ces substitutions les remplacent avant NFD.
+   * Caractères non décomposables par NFD : NFD retourne le même codepoint, le
+   * pattern NON_ALPHANUM les supprime entièrement. Ces substitutions les
+   * remplacent avant NFD.
    */
   private static final Map<Character, String> SUBSTITUTIONS_NFD =
       Map.of('ø', "o", 'Ø', "o", 'ł', "l", 'Ł', "l", 'đ', "d", 'Đ', "d", 'ŋ', "n", 'Ŋ', "n");
@@ -80,7 +84,8 @@ public final class Normalisation {
    * Normalise un nom de salle en clé alphanumérique minuscule sans accents.
    *
    * @param nom le nom de la salle
-   * @return clé alphanumérique (peut être vide si le nom ne contient aucun caractère valide)
+   * @return clé alphanumérique (peut être vide si le nom ne contient aucun
+   *     caractère valide)
    */
   public static String normaliserSalleCle(final String nom) {
     final String nfd = Normalizer.normalize(nom.toLowerCase(Locale.ROOT), Normalizer.Form.NFD);
@@ -88,8 +93,9 @@ public final class Normalisation {
   }
 
   /**
-   * Normalise un nom de ville : {@link #normaliserTexte}, puis contracte "saint"/"sainte" en
-   * "st"/"ste" pour aligner les formes abrégées et complètes d'une même commune.
+   * Normalise un nom de ville : {@link #normaliserTexte} , puis contracte
+   * "saint"/"sainte" en "st"/"ste" pour aligner les formes abrégées et
+   * complètes d'une même commune.
    *
    * @param ville le nom de la ville
    * @return la ville normalisée, éventuellement vide
@@ -128,8 +134,9 @@ public final class Normalisation {
    * @param nom nom à normaliser
    * @return nom en title case ou nom inchangé
    */
-  // equalsIgnoreCase ne convient pas ici : le test porte sur nom lui-même (déjà entièrement
-  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
+  // equalsIgnoreCase ne convient pas ici : le test porte sur nom lui-même (déjà
+  // entièrement majuscule ou non), pas sur une comparaison insensible à la
+  // casse entre deux chaînes distinctes.
   public static String normaliserCasse(final String nom) {
     if (!nom.equals(nom.toUpperCase(Locale.ROOT))) {
       return nom;

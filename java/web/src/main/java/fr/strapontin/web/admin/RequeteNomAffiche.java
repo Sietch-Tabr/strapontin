@@ -7,7 +7,8 @@ package fr.strapontin.web.admin;
 import jakarta.validation.constraints.Size;
 
 /**
- * Corps JSON de la requête PATCH de modification du nom affiché d'une salle ou d'un artiste.
+ * Corps JSON de la requête PATCH de modification du nom affiché d'une salle ou
+ * d'un artiste.
  *
  * @param nomAffiche null/vide pour revenir au nom automatique
  * @since 2.6.0

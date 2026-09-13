@@ -15,8 +15,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Retente la résolution des concerts orphelins ({@code salle_id IS NULL}) déjà persistés — extrait de
- * {@link ReconciliateurSalles} (v2.8.7, dette de taille pure, aucun changement fonctionnel).
+ * Retente la résolution des concerts orphelins ({@code salle_id IS NULL}) déjà
+ * persistés — extrait de {@link ReconciliateurSalles} (v2.8.7, dette de taille
+ * pure, aucun changement fonctionnel).
  *
  * @since 2.8.7
  * @author Kwaite
@@ -57,9 +58,9 @@ class ReconciliateurSallesOrphelines {
       return 0;
     }
 
-    // candidats chargés une seule fois (pas une requête SQL par orphelin) — le volume de salles
-    // reste compatible avec un score en mémoire, contrairement au N+1 SQL que remplace cette
-    // méthode.
+    // candidats chargés une seule fois (pas une requête SQL par orphelin) — le
+    // volume de salles reste compatible avec un score en mémoire, contrairement
+    // au N+1 SQL que remplace cette méthode.
     final List<CandidatSalleMatching> candidats = chargerCandidatsMatching();
 
     int resolus = 0;
@@ -83,15 +84,15 @@ class ReconciliateurSallesOrphelines {
   }
 
   /**
-   * Salle candidate pour {@link #meilleurCandidatEnMemoire} — {@code deptEffectif} incluant déjà
-   * le repli sur le département d'un concert déjà rattaché ({@code salles.dept} n'étant écrit qu'à
-   * la création).
+   * Salle candidate pour {@link #meilleurCandidatEnMemoire} —
+   * {@code deptEffectif} incluant déjà le repli sur le département d'un concert
+   * déjà rattaché ({@code salles.dept} n'étant écrit qu'à la création).
    */
   private record CandidatSalleMatching(UUID id, String nomNorm, String deptEffectif) {}
 
   /**
-   * Charge en une seule requête l'ensemble des salles utilisables comme candidats de rapprochement
-   * par nom.
+   * Charge en une seule requête l'ensemble des salles utilisables comme
+   * candidats de rapprochement par nom.
    *
    * @return candidats de toutes les salles connues
    */

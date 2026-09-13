@@ -20,6 +20,9 @@ package fr.strapontin.sources;
 @FunctionalInterface
 public interface CadenceurAppels {
 
-  /** Bloque l'appelant si nécessaire pour respecter l'écart minimal depuis le dernier appel. */
+  /**
+   * Bloque l'appelant si nécessaire pour respecter l'écart minimal depuis le
+   * dernier appel.
+   */
   void attendre();
 }

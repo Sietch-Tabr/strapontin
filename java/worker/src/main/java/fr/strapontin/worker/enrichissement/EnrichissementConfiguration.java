@@ -33,7 +33,9 @@ public class EnrichissementConfiguration {
    *
    * @return instance avec RestClient par défaut
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   OverpassSalleSource overpassSalleSource() {
     return new OverpassSalleSource();
@@ -44,7 +46,9 @@ public class EnrichissementConfiguration {
    *
    * @return instance avec cache 24h
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   WikidataSalleSource wikidataSalleSource() {
     return new WikidataSalleSource();
@@ -55,18 +59,23 @@ public class EnrichissementConfiguration {
    *
    * @return instance avec cache 24h
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   WikidataArtisteSource wikidataArtisteSource() {
     return new WikidataArtisteSource();
   }
 
   /**
-   * Client Deezer pour la confirmation du nom canonique d'un artiste par son deezerId.
+   * Client Deezer pour la confirmation du nom canonique d'un artiste par son
+   * deezerId.
    *
    * @return instance avec RestClient par défaut
    */
-  /* package-private : Bean Spring, jamais appelé directement hors du conteneur. */
+  /*
+   * package-private : Bean Spring, jamais appelé directement hors du conteneur.
+   */
   @Bean
   DeezerArtisteSource deezerArtisteSource() {
     return new DeezerArtisteSource();

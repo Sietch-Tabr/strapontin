@@ -117,7 +117,8 @@ public class SourcesController {
    * Déclenche immédiatement un {@code FetchSalleJob} pour la salle donnée.
    *
    * @param salleId UUID de la salle
-   * @return 200 si planifié, 404 si aucun identifiant connu, 503 si worker inaccessible
+   * @return 200 si planifié, 404 si aucun identifiant connu, 503 si worker
+   *     inaccessible
    */
   @PostMapping("/salles/{salleId}/fetch")
   public ResponseEntity<Map<String, Object>> fetchSalle(@PathVariable final String salleId) {
@@ -138,8 +139,8 @@ public class SourcesController {
   /**
    * Crée une salle Digitick dans le référentiel et déclenche un fetch immédiat.
    *
-   * @param requete corps JSON avec {@code nom}, {@code slug}, {@code ville} (opt.), {@code dept}
-   *     (opt.)
+   * @param requete corps JSON avec {@code nom} , {@code slug} , {@code ville}
+   *     (opt.), {@code dept} (opt.)
    * @return 201 avec {@code {salleId}} si créée, 400 si invalide
    */
   @PostMapping("/digitick-salles")
@@ -187,10 +188,12 @@ public class SourcesController {
   }
 
   /**
-   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et sans concerts.
+   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et
+   * sans concerts.
    *
    * @param salleId UUID de la salle
-   * @return 204 si supprimée, 409 si des contraintes empêchent la suppression, 400 si UUID invalide
+   * @return 204 si supprimée, 409 si des contraintes empêchent la suppression,
+   *     400 si UUID invalide
    */
   @DeleteMapping("/digitick-salles/{salleId}")
   public ResponseEntity<?> supprimerSalleDigitick(@PathVariable final String salleId) {

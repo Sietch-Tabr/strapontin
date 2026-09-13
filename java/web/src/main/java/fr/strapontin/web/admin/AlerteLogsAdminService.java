@@ -36,9 +36,10 @@ public class AlerteLogsAdminService {
   private final EmailAlerteService emailAlerteService;
 
   /**
-   * @param logAdminService   lecture des entrées d'erreur depuis le curseur
-   * @param configService     lecture/écriture du curseur
-   * @param emailAlerteService envoi du digest et résolution du destinataire d'alerte
+   * @param logAdminService lecture des entrées d'erreur depuis le curseur
+   * @param configService lecture/écriture du curseur
+   * @param emailAlerteService envoi du digest et résolution du destinataire
+   *     d'alerte
    */
   public AlerteLogsAdminService(
       final LogAdminService logAdminService,
@@ -50,10 +51,12 @@ public class AlerteLogsAdminService {
   }
 
   /**
-   * Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest agrégé.
+   * Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest
+   * agrégé.
    *
-   * <p>Le curseur n'avance qu'après envoi réussi — un échec temporaire de Resend ou l'absence
-   * de {@code CONTACT_EMAIL} laisse les erreurs disponibles pour le prochain cycle.
+   * <p>Le curseur n'avance qu'après envoi réussi — un échec temporaire de
+   * Resend ou l'absence de {@code CONTACT_EMAIL} laisse les erreurs disponibles
+   * pour le prochain cycle.
    */
   @Scheduled(cron = "0 */15 * * * *")
   public void verifier() {

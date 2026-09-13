@@ -36,7 +36,8 @@ public class EmailServiceAdmin {
   }
 
   /**
-   * Notifie un utilisateur de la suppression de son compte par un administrateur.
+   * Notifie un utilisateur de la suppression de son compte par un
+   * administrateur.
    *
    * @param email l'adresse de l'utilisateur supprimé
    */
@@ -143,7 +144,8 @@ public class EmailServiceAdmin {
    * Envoie un préavis de révocation du rôle administrateur (délai de 7 jours).
    *
    * @param email l'adresse de l'administrateur concerné
-   * @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+   * @param dateEffective la date effective de révocation formatée (ex. "22 juin
+   *     2026")
    */
   public void envoyerPreavisRevocationAdmin(final String email, final String dateEffective) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();

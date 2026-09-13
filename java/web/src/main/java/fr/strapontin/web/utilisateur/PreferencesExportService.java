@@ -12,8 +12,9 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Export des préférences utilisateur (artistes, salles, config) — extrait de {@link
- * PreferencesService} pour rester sous le seuil de complexité de classe (GodClass).
+ * Export des préférences utilisateur (artistes, salles, config) — extrait de
+ * {@link PreferencesService} pour rester sous le seuil de complexité de classe
+ * (GodClass).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -24,7 +25,10 @@ final class PreferencesExportService {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /* package-private : instancié uniquement par PreferencesService (même package). */
+  /*
+   * package-private : instancié uniquement par PreferencesService (même
+   * package).
+   */
   PreferencesExportService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }

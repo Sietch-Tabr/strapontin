@@ -87,8 +87,9 @@ public class PasswordResetController {
                       "auth",
                       "Réinitialisation de mot de passe bloquée — PUBLIC_BASE_URL non configurée"));
     }
-    // Réponse identique que l'email existe ou non, et que PUBLIC_BASE_URL soit configurée ou
-    // non — évite toute énumération de compte ou fuite de configuration au client.
+    // Réponse identique que l'email existe ou non, et que PUBLIC_BASE_URL soit
+    // configurée ou non — évite toute énumération de compte ou fuite de
+    // configuration au client.
     return ResponseEntity.ok(Map.of("succes", true));
   }
 

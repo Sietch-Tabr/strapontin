@@ -53,7 +53,8 @@ public class UserController {
   /**
    * @param utilisateurRepository accès aux données utilisateur
    * @param passwordEncoder encodeur bcrypt
-   * @param sessionRepository dépôt de sessions JDBC (révocation multi-appareils)
+   * @param sessionRepository dépôt de sessions JDBC (révocation
+   *     multi-appareils)
    */
   public UserController(
       final UtilisateurRepository utilisateurRepository,

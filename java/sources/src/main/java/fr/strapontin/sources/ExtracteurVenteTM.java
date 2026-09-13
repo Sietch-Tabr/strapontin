@@ -11,9 +11,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Extraction du statut de vente (offsale/presale/package) d'un événement Ticketmaster brut —
- * extrait de {@link MapeurEvenementTM} pour rester sous le seuil de complexité cyclomatique de
- * classe (50).
+ * Extraction du statut de vente (offsale/presale/package) d'un événement
+ * Ticketmaster brut — extrait de {@link MapeurEvenementTM} pour rester sous le
+ * seuil de complexité cyclomatique de classe (50).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -25,10 +25,12 @@ final class ExtracteurVenteTM {
   private static final String STATUT_OFFSALE = "offsale";
   private static final String STATUT_PRESALE = "presale";
 
-  // TM n'expose aucun champ documenté distinguant un event "package" (offre VIP/bundle, ex.
-  // package-angele-.../idpack/...) d'un event standard — repéré uniquement par ce segment d'URL,
-  // constant sur tous les cas observés en production. Un package n'est pas accessible à un achat
-  // de billetterie standard : son statut de vente ne doit jamais être notifié comme une prévente.
+  // TM n'expose aucun champ documenté distinguant un event "package" (offre
+  // VIP/bundle, ex. package-angele-.../idpack/...) d'un event standard — repéré
+  // uniquement par ce segment d'URL, constant sur tous les cas observés en
+  // production. Un package n'est pas accessible à un achat de billetterie
+  // standard : son statut de vente ne doit jamais être notifié comme une
+  // prévente.
   private static final Pattern URL_PACKAGE_TM = Pattern.compile("(?i)/pack/");
 
   private ExtracteurVenteTM() {}
@@ -41,9 +43,10 @@ final class ExtracteurVenteTM {
     return url != null && URL_PACKAGE_TM.matcher(url).find();
   }
 
-  // "offsale" recouvre deux situations distinctes chez TM : un concert réellement complet, ou
-  // une vente qui n'a simplement pas encore ouvert (prévente à venir, ou vente publique future) —
-  // seule la seconde doit être requalifiée en "presale" plutôt que rester "offsale" à tort.
+  // "offsale" recouvre deux situations distinctes chez TM : un concert
+  // réellement complet, ou une vente qui n'a simplement pas encore ouvert
+  // (prévente à venir, ou vente publique future) — seule la seconde doit être
+  // requalifiée en "presale" plutôt que rester "offsale" à tort.
   @SuppressWarnings(UNCHECKED)
   /* package-private : appelé par MapeurEvenementTM (même package). */
   static InfosVenteTM extraireInfosVenteTM(
@@ -94,10 +97,12 @@ final class ExtracteurVenteTM {
   }
 
   /**
-   * Indique si un horodatage ISO 8601 (avec offset ou {@code Z}) est dans le futur.
+   * Indique si un horodatage ISO 8601 (avec offset ou {@code Z} ) est dans le
+   * futur.
    *
    * @param iso horodatage à analyser
-   * @return {@code true} si postérieur à maintenant, {@code false} si passé ou illisible
+   * @return {@code true} si postérieur à maintenant, {@code false} si passé ou
+   *     illisible
    */
   private static boolean estDansLeFutur(final String iso) {
     try {

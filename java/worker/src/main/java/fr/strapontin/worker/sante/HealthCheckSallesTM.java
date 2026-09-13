@@ -54,7 +54,9 @@ public final class HealthCheckSallesTM {
   /**
    * @return tableau {@code [verifiees, redecouvertes, ambigues]}
    */
-  /* package-private : appelé par ReconciliationNocturneService (même package). */
+  /*
+   * package-private : appelé par ReconciliationNocturneService (même package).
+   */
   int[] verifier() {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
@@ -89,7 +91,8 @@ public final class HealthCheckSallesTM {
   }
 
   /**
-   * @return 1 si redécouverte automatique effectuée, -1 si ambigu (0 ou ≥2 candidats), 0 sinon
+   * @return 1 si redécouverte automatique effectuée, -1 si ambigu (0 ou ≥2
+   *     candidats), 0 sinon
    */
   private int redecouvrirSalle(final UUID salleId, final String ancienVenueId, final String nom) {
     final List<CandidatVenueTM> candidats = tm.rechercherVenuesParNom(nom);
@@ -137,11 +140,12 @@ public final class HealthCheckSallesTM {
   }
 
   /**
-   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort une salle suspecte alors
-   * qu'il s'agit simplement d'une salle sans événement à venir pour l'instant — la vérification
-   * active de cette phase fait autorité et doit effacer ce faux positif dès qu'elle confirme que
-   * l'identifiant TM est toujours vivant, plutôt que de laisser le statut "suspect" perdurer
-   * jusqu'à expiration (24h, cf. {@link #verifier()}).
+   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort une
+   * salle suspecte alors qu'il s'agit simplement d'une salle sans événement à
+   * venir pour l'instant — la vérification active de cette phase fait autorité
+   * et doit effacer ce faux positif dès qu'elle confirme que l'identifiant TM
+   * est toujours vivant, plutôt que de laisser le statut "suspect" perdurer
+   * jusqu'à expiration (24h, cf. {@link #verifier()} ).
    */
   private void reinitialiserSuspect(final UUID salleId) {
     jdbc.update(
@@ -159,8 +163,13 @@ public final class HealthCheckSallesTM {
     return !lignes.isEmpty();
   }
 
-  /** Signale les slugs Digitick suspects — pas de redécouverte automatique (slugs manuels). */
-  /* package-private : appelé par ReconciliationNocturneService (même package). */
+  /**
+   * Signale les slugs Digitick suspects — pas de redécouverte automatique
+   * (slugs manuels).
+   */
+  /*
+   * package-private : appelé par ReconciliationNocturneService (même package).
+   */
   void alerterDigitickSuspect() {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(

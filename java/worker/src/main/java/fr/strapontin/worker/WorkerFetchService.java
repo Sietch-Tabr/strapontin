@@ -77,16 +77,16 @@ public class WorkerFetchService {
   }
 
   /**
-   * Fetch par région pour tous les départements configurés. Suspendu si le quota TM est
-   * insuffisant. Voir {@link FetchRegionExecutor}.
+   * Fetch par région pour tous les départements configurés. Suspendu si le
+   * quota TM est insuffisant. Voir {@link FetchRegionExecutor} .
    */
   public void executerFetchRegion() {
     fetchRegionExecutor.executer(null);
   }
 
   /**
-   * Retente un sous-ensemble ciblé de départements, en échec lors d'un cycle précédent — voir
-   * {@link RetryLotsService}.
+   * Retente un sous-ensemble ciblé de départements, en échec lors d'un cycle
+   * précédent — voir {@link RetryLotsService} .
    *
    * @param deptsCibles départements à retenter
    */
@@ -125,8 +125,8 @@ public class WorkerFetchService {
   }
 
   /**
-   * Retente un sous-ensemble ciblé de salles suivies, en échec lors d'un cycle précédent — voir
-   * {@link RetryLotsService}.
+   * Retente un sous-ensemble ciblé de salles suivies, en échec lors d'un cycle
+   * précédent — voir {@link RetryLotsService} .
    *
    * @param salleIdsCibles identifiants ({@code salles.id}, texte) à retenter
    */

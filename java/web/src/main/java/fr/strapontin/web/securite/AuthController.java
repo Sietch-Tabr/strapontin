@@ -44,8 +44,10 @@ public class AuthController {
   private final TotpChallengeService totpChallengeService;
 
   /**
-   * @param authenticationManager gestionnaire d'authentification Spring Security
-   * @param totpChallengeService vérification du challenge TOTP (code + compteur d'échecs)
+   * @param authenticationManager gestionnaire d'authentification Spring
+   *     Security
+   * @param totpChallengeService vérification du challenge TOTP (code + compteur
+   *     d'échecs)
    */
   public AuthController(
       final AuthenticationManager authenticationManager,
@@ -91,7 +93,8 @@ public class AuthController {
   }
 
   /**
-   * Invalide la session courante, efface le cookie SESSION et déconnecte l'utilisateur.
+   * Invalide la session courante, efface le cookie SESSION et déconnecte
+   * l'utilisateur.
    *
    * @param httpRequest la requête HTTP (pour invalider la session)
    * @param httpResponse la réponse HTTP (pour supprimer le cookie SESSION)

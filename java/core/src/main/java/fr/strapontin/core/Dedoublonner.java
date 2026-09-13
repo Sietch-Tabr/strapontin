@@ -13,22 +13,25 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Dédoublonne des concerts issus de plusieurs sources (TM, Eventim, Digitick) en trois passes de
- * rapprochement progressivement plus tolérantes.
+ * Dédoublonne des concerts issus de plusieurs sources (TM, Eventim, Digitick)
+ * en trois passes de rapprochement progressivement plus tolérantes.
  *
  * @author Kwaite
  */
 public final class Dedoublonner {
 
   private static final double SEUIL_SIMILARITE = 0.85;
-  // Poids du score de richesse diacritique dans l'arbitrage du nom de salle retenu par fusionner
-  // — favorise une forme accentuée correcte ("Théâtre") sur une casse mixte sans accent.
+  // Poids du score de richesse diacritique dans l'arbitrage du nom de salle
+  // retenu par fusionner — favorise une forme accentuée correcte ("Théâtre")
+  // sur une casse mixte sans accent.
   private static final int POIDS_DIACRITIQUES = 2;
   private static final String SANS_HEURE = "SANS_HEURE";
-  // Tolérance sous laquelle deux heures distinctes restent compatibles pour la fusion, très en
-  // dessous de tout écart matinée/soirée réel (toujours de l'ordre de l'heure).
+  // Tolérance sous laquelle deux heures distinctes restent compatibles pour la
+  // fusion, très en dessous de tout écart matinée/soirée réel (toujours de
+  // l'ordre de l'heure).
   private static final int TOLERANCE_HEURE_MINUTES = 3;
-  // Taille d'un groupe ne contenant aucun doublon potentiel (rien à rapprocher).
+  // Taille d'un groupe ne contenant aucun doublon potentiel (rien à
+  // rapprocher).
   private static final int TAILLE_GROUPE_SANS_DOUBLON = 1;
   private static final String SUPPRESS_INSTANCIATION_BOUCLE =
       "PMD.AvoidInstantiatingObjectsInLoops";
@@ -40,10 +43,10 @@ public final class Dedoublonner {
 
   private static ConcertEnrichi enrichir(final ConcertBrut concert) {
     final String salleNorm = Normalisation.normaliserTexte(concert.salle());
-    // Ville absente : repli sur salleNorm plutôt qu'une chaîne vide partagée par tous les
-    // concerts sans ville — deux concerts du même artiste le même jour, dans deux villes
-    // réellement différentes mais toutes deux non renseignées, ne fusionnent alors que s'ils
-    // partagent aussi la même salle.
+    // Ville absente : repli sur salleNorm plutôt qu'une chaîne vide partagée
+    // par tous les concerts sans ville — deux concerts du même artiste le même
+    // jour, dans deux villes réellement différentes mais toutes deux non
+    // renseignées, ne fusionnent alors que s'ils partagent aussi la même salle.
     final String villeNorm =
         concert.ville() != null ? Normalisation.normaliserVille(concert.ville()) : salleNorm;
     return new ConcertEnrichi(
@@ -68,11 +71,12 @@ public final class Dedoublonner {
     return passeFallbackDateSalle(apresPasseFuzzy);
   }
 
-  // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est incluse : sans elle,
-  // deux concerts réellement distincts (matinée + soirée, même artiste/date/ville) fusionnaient
-  // à tort dès cette première passe.
-  // Chaque bucket de regroupement doit rester une liste indépendante par clé — computeIfAbsent
-  // n'instancie une ArrayList que pour les clés réellement nouvelles, jamais à chaque itération.
+  // Passe 1 : exacte — (artiste_norm, date, heure, ville_norm). L'heure est
+  // incluse : sans elle, deux concerts réellement distincts (matinée + soirée,
+  // même artiste/date/ville) fusionnaient à tort dès cette première passe.
+  // Chaque bucket de regroupement doit rester une liste indépendante par clé —
+  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
+  // nouvelles, jamais à chaque itération.
   @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertEnrichi> passeExacte(final List<ConcertEnrichi> enrichis) {
     final Map<String, List<ConcertEnrichi>> groupes = new LinkedHashMap<>();
@@ -85,8 +89,9 @@ public final class Dedoublonner {
     return groupes.values().stream().map(Dedoublonner::fusionner).toList();
   }
 
-  // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil.
-  // Même regroupement par clé que passeExacte — une ArrayList par clé nouvelle, pas par itération.
+  // Passe 2 : fuzzy — (date, ville_norm) + similarité artiste >= seuil. Même
+  // regroupement par clé que passeExacte — une ArrayList par clé nouvelle, pas
+  // par itération.
   @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertEnrichi> passeFuzzyDateVille(
       final List<ConcertEnrichi> apresPasseExacte) {
@@ -106,8 +111,9 @@ public final class Dedoublonner {
     return resultat;
   }
 
-  // Fallback : (date, salle_norm) pour les grandes salles avec villes divergentes entre sources.
-  // Même regroupement par clé que passeExacte — une ArrayList par clé nouvelle, pas par itération.
+  // Fallback : (date, salle_norm) pour les grandes salles avec villes
+  // divergentes entre sources. Même regroupement par clé que passeExacte — une
+  // ArrayList par clé nouvelle, pas par itération.
   @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertBrut> passeFallbackDateSalle(
       final List<ConcertEnrichi> apresPasseFuzzy) {
@@ -127,8 +133,9 @@ public final class Dedoublonner {
     return resultat;
   }
 
-  // sousGroupe doit être une nouvelle liste indépendante à chaque élément non déjà traité — pas
-  // hissable hors boucle, son contenu dépend de l'itération courante.
+  // sousGroupe doit être une nouvelle liste indépendante à chaque élément non
+  // déjà traité — pas hissable hors boucle, son contenu dépend de l'itération
+  // courante.
   @SuppressWarnings(SUPPRESS_INSTANCIATION_BOUCLE)
   private static List<ConcertEnrichi> grouperParSimilarite(final List<ConcertEnrichi> groupe) {
     final List<ConcertEnrichi> fusionnes = new ArrayList<>();
@@ -210,8 +217,9 @@ public final class Dedoublonner {
     return meilleur;
   }
 
-  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom lui-même (déjà entièrement
-  // majuscule ou non), pas sur une comparaison insensible à la casse entre deux chaînes distinctes.
+  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom
+  // lui-même (déjà entièrement majuscule ou non), pas sur une comparaison
+  // insensible à la casse entre deux chaînes distinctes.
   private static ConcertEnrichi fusionner(final List<ConcertEnrichi> concerts) {
     final ConcertEnrichi gagnant =
         concerts.stream().reduce(Dedoublonner::choisirMeilleur).orElseThrow();
@@ -267,9 +275,9 @@ public final class Dedoublonner {
         + (concert.ville() != null ? 1 : 0)
         + (concert.dept() != null ? 1 : 0)
         + (concert.url() != null ? 1 : 0)
-        // Une source qui connaît le statut de vente (TM) ne doit jamais perdre cette
-        // information au profit d'une source qui ne le détermine pas (Eventim/Digitick,
-        // toujours null) lors d'un départage par complétude.
+        // Une source qui connaît le statut de vente (TM) ne doit jamais perdre
+        // cette information au profit d'une source qui ne le détermine pas
+        // (Eventim/Digitick, toujours null) lors d'un départage par complétude.
         + (concert.statut() != null ? 1 : 0);
   }
 }

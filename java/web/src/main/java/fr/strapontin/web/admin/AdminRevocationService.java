@@ -28,8 +28,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Révocation différée (préavis 7 jours) du rôle administrateur — extrait d'{@link AdminService}
- * pour rester sous la limite de 500 lignes par fichier.
+ * Révocation différée (préavis 7 jours) du rôle administrateur — extrait
+ * d'{@link AdminService} pour rester sous la limite de 500 lignes par fichier.
  *
  * @since 2.9.1
  * @author Kwaite
@@ -107,7 +107,10 @@ public class AdminRevocationService {
    *     pas admin (400)
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  /* package-private : requis pour l'auto-invocation via le proxy self (@Transactional/SERIALIZABLE). */
+  /*
+   * package-private : requis pour l'auto-invocation via le proxy self
+   * (@Transactional/SERIALIZABLE).
+   */
   void initierRevocationAdminTransactionnel(final String userId, final String adminId) {
     final List<Map<String, Object>> cible =
         jdbc.queryForList(
@@ -152,7 +155,8 @@ public class AdminRevocationService {
    *
    * @param userId identifiant de l'administrateur concerné
    * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation en cours
+   * @throws ErreurMetier si l'utilisateur n'existe pas ou n'a pas de révocation
+   *     en cours
    */
   public void annulerRevocationAdmin(final String userId, final String adminId) {
     final int miseAJour =

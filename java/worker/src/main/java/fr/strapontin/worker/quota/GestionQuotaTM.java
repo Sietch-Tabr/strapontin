@@ -113,7 +113,8 @@ public class GestionQuotaTM {
   }
 
   /**
-   * Vérifie le quota avant un job TM. Retourne {@code false} si le job doit être annulé.
+   * Vérifie le quota avant un job TM. Retourne {@code false} si le job doit
+   * être annulé.
    *
    * @param nomJob nom du job pour les logs
    * @return {@code true} si le job peut continuer

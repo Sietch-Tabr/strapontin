@@ -29,10 +29,10 @@ import java.util.List;
 final class EmailTemplates {
 
   private static final String C_NOIR = "#111";
-  /* package-private : couleur réutilisée par EmailTemplatesAlertes (même package). */
+  /* package-private : couleur réutilisée par EmailTemplatesAlertes (idem). */
   static final String C_TEXTE = "#555";
   private static final String C_MUTE = "#aaa";
-  /* package-private : couleur réutilisée par EmailTemplatesAlertes (même package). */
+  /* package-private : couleur réutilisée par EmailTemplatesAlertes (idem). */
   static final String C_ERREUR = "#c00";
   private static final String C_BORDURE = "#e5e5e5";
 
@@ -47,7 +47,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email d'invitation
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String invitation(final String lienReset, final String baseUrl) {
     final String corps =
         """
@@ -71,7 +71,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de réinitialisation
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String resetMotDePasse(final String lienReset, final String baseUrl) {
     final String corps =
         """
@@ -89,12 +89,13 @@ final class EmailTemplates {
   }
 
   /**
-   * Notification de réinitialisation de la double authentification par un administrateur.
+   * Notification de réinitialisation de la double authentification par un
+   * administrateur.
    *
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de notification
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String reinitialisation2fa(final String baseUrl) {
     final String corps =
         """
@@ -121,7 +122,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de confirmation
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String confirmationEmail(final String lien, final String baseUrl) {
     final String corps =
         """
@@ -148,7 +149,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de signalement
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String signalement(
       final String typeLabel,
       final String expediteurEmail,
@@ -176,7 +177,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML du digest
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String digestConcerts(
       final String sujet, final List<LigneConcert> lignes, final String baseUrl) {
     final StringBuilder lignesHtml = new StringBuilder();
@@ -187,8 +188,9 @@ final class EmailTemplates {
               ? " — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
                   .formatted(e(c.url()), C_NOIR)
               : "";
-      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
-      // digest couvrant plusieurs artistes se lit comme une liste continue.
+      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste
+      // — sans elle, un digest couvrant plusieurs artistes se lit comme une
+      // liste continue.
       final String stylecel =
           artistePrecedent != null && !artistePrecedent.equals(c.artiste())
               ? "padding: 16px 0 10px; border-top: 2px solid #ddd; vertical-align: top"
@@ -223,7 +225,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de notification
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String suppressionCompte(final String baseUrl) {
     final String corps =
         """
@@ -250,7 +252,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de signalement admin
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String signalementSalleManquante(
       final String nom,
       final String ville,
@@ -308,7 +310,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de confirmation
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String confirmationSignalementSalle(final String nom, final String baseUrl) {
     final String corps =
         """
@@ -329,7 +331,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de promotion
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String promotionAdmin(final String baseUrl) {
     final String corps =
         """
@@ -346,11 +348,12 @@ final class EmailTemplates {
   /**
    * Préavis de révocation du rôle administrateur (délai de 7 jours).
    *
-   * @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
+   * @param dateEffective la date effective de révocation formatée (ex. "22 juin
+   *     2026")
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de préavis
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String preavisRevocationAdmin(final String dateEffective, final String baseUrl) {
     final String corps =
         """
@@ -372,7 +375,7 @@ final class EmailTemplates {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email de test
    */
-  /* package-private : appelé uniquement par EmailService/EmailServiceAdmin (même package). */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String emailTest(final String baseUrl) {
     final String corps =
         """
@@ -393,7 +396,7 @@ final class EmailTemplates {
     return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 
-  /* package-private : appelé uniquement par EmailTemplates/EmailTemplatesAlertes (même package). */
+  /* package-private : appelé par EmailTemplates/EmailTemplatesAlertes. */
   static String enveloppErreur(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_ERREUR, titre, corps, baseUrl);
   }
@@ -421,7 +424,7 @@ final class EmailTemplates {
         .formatted(C_BORDURE, couleur, e(titre), corps, C_MUTE, e(baseUrl), C_MUTE);
   }
 
-  /* package-private : appelé uniquement par EmailTemplates/EmailTemplatesAlertes (même package). */
+  /* package-private : appelé par EmailTemplates/EmailTemplatesAlertes. */
   static String bouton(final String href, final String texte) {
     return """
     <a href="%s" style="display: inline-block; background: %s; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
@@ -433,12 +436,14 @@ final class EmailTemplates {
    * Échappe les caractères HTML spéciaux d'une valeur variable.
    *
    * @param valeur la valeur à échapper (null retourne une chaîne vide)
-   * @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
+   * @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud
+   *     HTML
    */
-  // Nom volontairement court : appelé des dizaines de fois dans des lignes de formatage HTML déjà
-  // denses (voir les gabarits ci-dessus) — un nom plus long nuirait à leur lisibilité.
+  // Nom volontairement court : appelé des dizaines de fois dans des lignes de
+  // formatage HTML déjà denses (voir les gabarits ci-dessus) — un nom plus long
+  // nuirait à leur lisibilité.
   @SuppressWarnings("PMD.ShortMethodName")
-  /* package-private : appelé uniquement par EmailTemplates/EmailTemplatesAlertes (même package). */
+  /* package-private : appelé par EmailTemplates/EmailTemplatesAlertes. */
   static String e(final Object valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }

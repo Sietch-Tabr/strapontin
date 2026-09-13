@@ -87,7 +87,8 @@ public class UserConfigController {
    *
    * @param requete corps JSON avec fréquence et types de notification
    * @param auth contexte d'authentification
-   * @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
+   * @return 200 si mis à jour — 400 si invalide (via
+   *     {@link GlobalExceptionHandler} )
    */
   @PatchMapping("/notifications")
   public ResponseEntity<Map<String, Object>> majNotifications(

@@ -45,10 +45,11 @@ public class RecalculerMatchesService {
   private static final String CLE_USER_ID = "userId";
 
   /**
-   * Exclut une fiche package Ticketmaster (voir {@code PersisteurConcertsDb.SQL_EST_PACKAGE`) tant
-   * qu'aucune fiche normale du même événement réel (même artiste/salle/date) n'existe — elle
-   * redevient visible dès qu'une fiche normale apparaît et que {@code supprimerDoublonsParSalleId}
-   * les fusionne.
+   * Exclut une fiche package Ticketmaster (voir {@code
+   * PersisteurConcertsDb.SQL_EST_PACKAGE`) tant qu'aucune fiche normale du même
+   * événement réel (même artiste/salle/date) n'existe — elle redevient visible
+   * dès qu'une fiche normale apparaît et que
+   * {@code supprimerDoublonsParSalleId} les fusionne.
    */
   private static final String SQL_PAS_PACKAGE_ISOLE =
       " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
@@ -100,9 +101,9 @@ public class RecalculerMatchesService {
 
     final String aujourdhui = LocalDate.now().toString();
 
-    // Executors.newVirtualThreadPerTaskExecutor est la primitive Java 21+ recommandée pour un
-    // parallélisme borné par utilisateur — pas un contexte de requête J2EE, la justification de la
-    // règle ne s'applique pas ici.
+    // Executors.newVirtualThreadPerTaskExecutor est la primitive Java 21+
+    // recommandée pour un parallélisme borné par utilisateur — pas un contexte
+    // de requête J2EE, la justification de la règle ne s'applique pas ici.
     @SuppressWarnings("PMD.DoNotUseThreads")
     final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     try (executor) {
@@ -207,9 +208,10 @@ public class RecalculerMatchesService {
     return jdbc.queryForList(sql, params, UUID.class);
   }
 
-  // Suivre le complexe (salle parent) doit aussi remonter les concerts de ses sous-salles — un nom
-  // sans qualificatif (voir ResolveurSalleParConcert) résout précisément vers ce parent, "site,
-  // salle non précisée". Suivre une sous-salle précise reste inchangé (pas de remontée aux frères).
+  // Suivre le complexe (salle parent) doit aussi remonter les concerts de ses
+  // sous-salles — un nom sans qualificatif (voir ResolveurSalleParConcert)
+  // résout précisément vers ce parent, "site, salle non précisée". Suivre une
+  // sous-salle précise reste inchangé (pas de remontée aux frères).
   private List<UUID> rechercherConcertsParSalles(
       final List<UUID> salleIds, final String aujourdhui) {
     return jdbc.queryForList(

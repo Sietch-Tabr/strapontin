@@ -31,7 +31,8 @@ public interface SourceConcerts {
    * Recherche les concerts d'un artiste par son nom.
    *
    * @param nom nom de l'artiste
-   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette opération
+   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
+   *     opération
    */
   default List<ConcertBrut> fetchArtiste(String nom) {
     return List.of();
@@ -74,8 +75,10 @@ public interface SourceConcerts {
   /**
    * Recherche les concerts d'une salle par son identifiant préfixé.
    *
-   * @param identifiant identifiant préfixé de la salle (ex. {@code "tm:rZFSnyZdFvA"})
-   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette opération
+   * @param identifiant identifiant préfixé de la salle (ex.
+   *     {@code "tm:rZFSnyZdFvA"} )
+   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
+   *     opération
    */
   default List<ConcertBrut> fetchSalle(String identifiant) {
     return List.of();

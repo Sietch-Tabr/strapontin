@@ -41,7 +41,8 @@ public class TotpEnrollmentController {
 
   /**
    * @param totpService service TOTP (génération, vérification)
-   * @param userController contrôleur utilisateur (activation/désactivation TOTP)
+   * @param userController contrôleur utilisateur (activation/désactivation
+   *     TOTP)
    * @param logAdminService journal d'administration
    */
   public TotpEnrollmentController(
@@ -54,7 +55,8 @@ public class TotpEnrollmentController {
   }
 
   /**
-   * Génère un nouveau secret TOTP, le stocke en session, et retourne le QR code SVG.
+   * Génère un nouveau secret TOTP, le stocke en session, et retourne le QR code
+   * SVG.
    *
    * @param session la session HTTP courante (stocke le secret)
    * @param auth contexte d'authentification
@@ -64,9 +66,10 @@ public class TotpEnrollmentController {
   public ResponseEntity<Map<String, Object>> setup(
       final HttpSession session, final Authentication auth) {
     final UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
-    // Réutilise le secret déjà en session tant que l'enrollment n'est pas confirmé : éviter de
-    // générer un nouveau secret à chaque appel (rechargement de page), ce qui laisserait des clés
-    // périmées dans l'application TOTP de l'utilisateur. `confirmer`/`desactiver` purgent la
+    // Réutilise le secret déjà en session tant que l'enrollment n'est pas
+    // confirmé : éviter de générer un nouveau secret à chaque appel
+    // (rechargement de page), ce qui laisserait des clés périmées dans
+    // l'application TOTP de l'utilisateur. `confirmer`/`desactiver` purgent la
     // session.
     String secret = (String) session.getAttribute(SESSION_TOTP_SETUP);
     if (secret == null) {

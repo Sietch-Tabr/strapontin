@@ -36,7 +36,8 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$");
   private static final Pattern PATTERN_IPV6 = Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
 
-  // /setup et ressources statiques exemptés pour permettre la configuration initiale par IP
+  // /setup et ressources statiques exemptés pour permettre la configuration
+  // initiale par IP
   private static final Set<String> CHEMINS_EXEMPTS =
       Set.of("/setup", "/api/setup", "/sw.js", "/offline.html");
   private static final String[] PREFIXES_STATIQUES = {"/assets/", "/icons/", "/images/"};

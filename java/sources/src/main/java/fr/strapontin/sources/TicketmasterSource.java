@@ -33,43 +33,47 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterSource.class);
 
   // Package-private (pas private) : réutilisé par TicketmasterRegionFetcher.
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
 
   /**
-   * Classifications Ticketmaster filtrées lors des fetchs (musique, opéra, comédie musicale).
-   * Valeur canonique partagée — référencée par le worker plutôt que redéfinie.
+   * Classifications Ticketmaster filtrées lors des fetchs (musique, opéra,
+   * comédie musicale). Valeur canonique partagée — référencée par le worker
+   * plutôt que redéfinie.
    */
   public static final List<String> CLASSIFICATIONS = List.of("music", "opera", "musical");
 
   /**
-   * Préfixe abrégé attendu par {@link #accepteIdentifiantSalle}/{@link #fetchSalle}, distinct de
-   * {@link #nom()} ({@code "ticketmaster"}, valeur canonique stockée dans {@code
-   * salle_sources.source}). Référencée par les appelants qui construisent l'identifiant préfixé à
-   * partir de cette colonne — sans cette traduction, {@code fetchSalle} n'est jamais invoqué
-   * (mismatch de préfixe silencieux, aucune exception).
+   * Préfixe abrégé attendu par {@link #accepteIdentifiantSalle} /{@link
+   * #fetchSalle}, distinct de {@link #nom()} ({@code "ticketmaster"}, valeur
+   * canonique stockée dans {@code salle_sources.source}). Référencée par les
+   * appelants qui construisent l'identifiant préfixé à partir de cette colonne
+   * — sans cette traduction, {@code fetchSalle} n'est jamais invoqué (mismatch
+   * de préfixe silencieux, aucune exception).
    */
   public static final String PREFIXE_IDENTIFIANT = "tm";
 
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final int TAILLE_PAGE_REGION = 200;
-  // TM applique un Spike Arrest strict de 200ms minimum entre requêtes, sans tolérance de rafale
-  // (maxBurstMessageCount=1.0) : le cadenceur n'espace que les instants de départ côté client, la
-  // latence réseau peut donc faire percevoir deux appels espacés de 250ms comme trop rapprochés
-  // côté serveur. Marge doublée à 100ms au-dessus du minimum strict.
+  // TM applique un Spike Arrest strict de 200ms minimum entre requêtes, sans
+  // tolérance de rafale (maxBurstMessageCount=1.0) : le cadenceur n'espace que
+  // les instants de départ côté client, la latence réseau peut donc faire
+  // percevoir deux appels espacés de 250ms comme trop rapprochés côté serveur.
+  // Marge doublée à 100ms au-dessus du minimum strict.
   //
-  // Public : réutilisé par les cadenceurs partagés inter-processus (web, worker) pour rester
-  // aligné sur ce même délai plutôt que de dupliquer la valeur.
+  // Public : réutilisé par les cadenceurs partagés inter-processus (web,
+  // worker) pour rester aligné sur ce même délai plutôt que de dupliquer la
+  // valeur.
   public static final int DELAI_MIN_ENTRE_APPELS_MS = 300;
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final String CHEMIN_EVENTS = "/events.json";
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final String TRI_DATE_ASC = "date,asc";
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final String PARAM_SIZE = "size";
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final String PARAM_SORT = "sort";
-  /* package-private : partagée avec TicketmasterRegionFetcher (même package). */
+  /* package-private : partagée par TicketmasterRegionFetcher (même package). */
   static final String PARAM_START_DATE_TIME = "startDateTime";
 
   private final String apiKey;
@@ -81,8 +85,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   private final TicketmasterAttractionResolver attractionResolver;
 
   /**
-   * Crée une instance avec la clé API fournie, un RestClient par défaut (timeout connexion 10s,
-   * lecture 30s) et un cadenceur en mémoire (mono-processus).
+   * Crée une instance avec la clé API fournie, un RestClient par défaut
+   * (timeout connexion 10s, lecture 30s) et un cadenceur en mémoire
+   * (mono-processus).
    *
    * @param apiKey clé API Ticketmaster Discovery v2
    */
@@ -111,8 +116,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Crée une instance avec la clé API et un RestClient personnalisé (injection de test), cadencée
-   * en mémoire.
+   * Crée une instance avec la clé API et un RestClient personnalisé (injection
+   * de test), cadencée en mémoire.
    *
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param restClient client HTTP Spring à utiliser
@@ -122,14 +127,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Crée une instance avec la clé API, le RestClient et le cadenceur personnalisés (injection de
-   * test).
+   * Crée une instance avec la clé API, le RestClient et le cadenceur
+   * personnalisés (injection de test).
    *
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param restClient client HTTP Spring à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  /* package-private : maillon intermédiaire de la chaîne d'injection de test, jamais appelé hors de cette classe/des tests du même package. */
+  /*
+   * package-private : maillon intermédiaire de la chaîne d'injection de test,
+   * jamais appelé hors de cette classe/des tests du même package.
+   */
   TicketmasterSource(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this(
@@ -140,14 +148,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Crée une instance avec la clé API, le RestClient et le cache de throttle des avertissements
-   * personnalisés (injection de test), cadencée en mémoire.
+   * Crée une instance avec la clé API, le RestClient et le cache de throttle
+   * des avertissements personnalisés (injection de test), cadencée en mémoire.
    *
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param restClient client HTTP Spring à utiliser
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    */
-  /* package-private : maillon intermédiaire de la chaîne d'injection de test, jamais appelé hors de cette classe/des tests du même package. */
+  /*
+   * package-private : maillon intermédiaire de la chaîne d'injection de test,
+   * jamais appelé hors de cette classe/des tests du même package.
+   */
   TicketmasterSource(
       final String apiKey,
       final RestClient restClient,
@@ -168,7 +179,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
    */
-  /* package-private : constructeur d'injection de test complète, jamais appelé hors des tests du même package. */
+  /*
+   * package-private : constructeur d'injection de test complète, jamais appelé
+   * hors des tests du même package.
+   */
   TicketmasterSource(
       final String apiKey,
       final RestClient restClient,
@@ -193,8 +207,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Retourne le dernier quota TM extrait des headers HTTP, ou {@code null} si aucun appel n'a été
-   * fait.
+   * Retourne le dernier quota TM extrait des headers HTTP, ou {@code null} si
+   * aucun appel n'a été fait.
    *
    * @return quota courant ou null
    */
@@ -203,9 +217,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement et remet les
-   * compteurs à zéro. Le nombre de concerts manqués (pagination plafonnée) reste distinct, voir
-   * {@link #preleverConcertsManques()}.
+   * Retourne le bilan agrégé appels/erreurs HTTP depuis le dernier prélèvement
+   * et remet les compteurs à zéro. Le nombre de concerts manqués (pagination
+   * plafonnée) reste distinct, voir {@link #preleverConcertsManques()} .
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -215,9 +229,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Retourne le nombre cumulé de concerts non récupérés par plafonnement de la pagination
-   * (pagination bornée à {@code NB_PAGES_MAX}) depuis le dernier prélèvement, et remet le compteur
-   * à zéro. Métrique spécifique à TM, distincte du bilan appels/erreurs commun.
+   * Retourne le nombre cumulé de concerts non récupérés par plafonnement de la
+   * pagination (pagination bornée à {@code NB_PAGES_MAX} ) depuis le dernier
+   * prélèvement, et remet le compteur à zéro. Métrique spécifique à TM,
+   * distincte du bilan appels/erreurs commun.
    *
    * @return le nombre de concerts manqués depuis le dernier prélèvement
    */
@@ -360,8 +375,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     if (attractionIds.isEmpty()) {
       return List.of();
     }
-    // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler après coup un
-    // identifiant attendu (base) avec celui réellement transmis en cas d'écart constaté.
+    // Valeur exacte envoyée (pas seulement le nombre) — permet de corréler
+    // après coup un identifiant attendu (base) avec celui réellement transmis
+    // en cas d'écart constaté.
     LOG.info("TM fetchArtistesLot ids envoyés={}", attractionIds);
     final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
     final UriComponentsBuilder uriBase =
@@ -405,7 +421,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * Vérifie qu'un venueId TM existe toujours.
    *
    * @param venueId identifiant de salle TM
-   * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+   * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT}
+   *     sinon
    */
   public StatutIdTM verifierVenue(final String venueId) {
     return healthCheck.verifierVenue(venueId);
@@ -415,7 +432,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * Vérifie qu'un attractionId TM existe toujours.
    *
    * @param attractionId identifiant d'artiste TM
-   * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT} sinon
+   * @return {@link StatutIdTM#MORT} si TM répond 404, {@link StatutIdTM#VIVANT}
+   *     sinon
    */
   public StatutIdTM verifierAttraction(final String attractionId) {
     return healthCheck.verifierAttraction(attractionId);
@@ -444,7 +462,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Compte les événements à venir d'une salle TM (validation d'un candidat de redécouverte).
+   * Compte les événements à venir d'une salle TM (validation d'un candidat de
+   * redécouverte).
    *
    * @param venueId identifiant de salle TM
    * @return nombre d'événements trouvés, 0 en cas d'erreur
@@ -457,7 +476,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * Récupère les concerts par région (géolocalisation centre de département).
    *
    * @param depts liste de codes département (ex: ["75", "92"])
-   * @param classifs classifications TM à inclure ; par défaut music, opera, musical
+   * @param classifs classifications TM à inclure ; par défaut music, opera,
+   *     musical
    * @return liste des concerts trouvés pour tous les départements
    */
   @Override

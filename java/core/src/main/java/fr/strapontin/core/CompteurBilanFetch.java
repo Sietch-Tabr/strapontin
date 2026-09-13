@@ -7,8 +7,9 @@ package fr.strapontin.core;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Compteur mutable thread-safe d'appels/erreurs, prélevé périodiquement en [BilanFetch]. Composable
- * dans toute source de concerts ou tout canal de notification sans imposer d'héritage commun.
+ * Compteur mutable thread-safe d'appels/erreurs, prélevé périodiquement en
+ * [BilanFetch]. Composable dans toute source de concerts ou tout canal de
+ * notification sans imposer d'héritage commun.
  *
  * @since 2.7.0
  * @author Kwaite
@@ -32,7 +33,8 @@ public final class CompteurBilanFetch {
   }
 
   /**
-   * Retourne le bilan cumulé depuis le dernier prélèvement et remet les compteurs à zéro.
+   * Retourne le bilan cumulé depuis le dernier prélèvement et remet les
+   * compteurs à zéro.
    *
    * @return le bilan depuis le dernier appel
    */

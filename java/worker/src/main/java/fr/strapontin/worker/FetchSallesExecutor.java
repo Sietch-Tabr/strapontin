@@ -53,8 +53,9 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch une salle auprès de la source qui accepte son identifiant et enregistre le résultat
-   * auprès de {@link SuiviSanteSourcesService} (phase 1).
+   * Fetch une salle auprès de la source qui accepte son identifiant et
+   * enregistre le résultat auprès de {@link SuiviSanteSourcesService} (phase
+   * 1).
    *
    * @param identifiant identifiant préfixé {@code source:identifiant_externe}
    * @param destination liste dans laquelle ajouter les concerts trouvés
@@ -160,18 +161,21 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Salle suivie à refetcher, avec ses identifiants préfixés agrégés toutes sources confondues.
+   * Salle suivie à refetcher, avec ses identifiants préfixés agrégés toutes
+   * sources confondues.
    *
-   * @param salleId UUID de la salle (texte), pour le suivi d'absences après persistance
+   * @param salleId UUID de la salle (texte), pour le suivi d'absences après
+   *     persistance
    * @param identifiants identifiants préfixés séparés par des virgules
    */
   private record SalleAFetcher(String salleId, String identifiants) {}
 
   // Le préfixe émis ici doit correspondre à celui attendu par
-  // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique "ticketmaster" de
-  // salle_sources.source) — sans cette traduction, fetchSalle n'est jamais invoqué pour aucune
-  // salle TM (mismatch silencieux, aucune exception, aucun log d'erreur). Restreint aux salles
-  // suivies (user_salles) — voir Javadoc de executerToutes.
+  // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique
+  // "ticketmaster" de salle_sources.source) — sans cette traduction, fetchSalle
+  // n'est jamais invoqué pour aucune salle TM (mismatch silencieux, aucune
+  // exception, aucun log d'erreur). Restreint aux salles suivies (user_salles)
+  // — voir Javadoc de executerToutes.
   private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(
       final List<String> salleIdsCibles) {
     final boolean filtre = salleIdsCibles != null;

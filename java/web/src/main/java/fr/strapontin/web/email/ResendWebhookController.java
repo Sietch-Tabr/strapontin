@@ -75,8 +75,9 @@ public class ResendWebhookController {
    * @param corpsRaw corps brut de la requête (sensible à la moindre modification)
    * @return réponse HTTP
    */
-  // Paramètres individuels imposés par le contrat @RequestHeader (liaison HTTP), pas par choix de
-  // conception — hors de la convention DTO du projet, réservée aux endpoints @RequestBody.
+  // Paramètres individuels imposés par le contrat @RequestHeader (liaison
+  // HTTP), pas par choix de conception — hors de la convention DTO du projet,
+  // réservée aux endpoints @RequestBody.
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @PostMapping(value = "/api/webhooks/resend", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Void> recevoirEvenement(
@@ -105,10 +106,11 @@ public class ResendWebhookController {
                   .secret(secret.get())
                   .build());
     } catch (Exception e) {
-      // Exception large (pas seulement ResendException) : la vérification Svix embarquée lève
-      // aussi une NumberFormatException non enveloppée sur un svix-timestamp non numérique
-      // sans ce catch, l'exception technique remonte en 500 (au lieu du 401 attendu
-      // pour une signature invalide) et déclenche une alerte email admin parasite.
+      // Exception large (pas seulement ResendException) : la vérification Svix
+      // embarquée lève aussi une NumberFormatException non enveloppée sur un
+      // svix-timestamp non numérique sans ce catch, l'exception technique
+      // remonte en 500 (au lieu du 401 attendu pour une signature invalide) et
+      // déclenche une alerte email admin parasite.
       LOG.warn("Signature webhook Resend invalide : {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
@@ -127,15 +129,19 @@ public class ResendWebhookController {
    * @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta {@code
    *     logs_admin} pour permettre un rejeu ciblé depuis l'admin
    */
-  /* package-private : visibilité élargie pour ResendWebhookControllerTest (même package). */
+  /*
+   * package-private : visibilité élargie pour ResendWebhookControllerTest (même
+   * package).
+   */
   void traiterEvenement(final String corpsRaw, final String svixId) {
     try {
       final JsonNode racine = objectMapper.readTree(corpsRaw);
       final String type = racine.path("type").asText("");
       final String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
 
-      // email.bounced et email.complained (plainte spam) reçoivent le même traitement :
-      // une plainte spam menace la réputation d'envoi du domaine au moins autant qu'un bounce.
+      // email.bounced et email.complained (plainte spam) reçoivent le même
+      // traitement : une plainte spam menace la réputation d'envoi du domaine
+      // au moins autant qu'un bounce.
       if (EVENEMENT_BOUNCE.equals(type)) {
         traiterIncidentEmail("Bounce", "bounce email reçu", emailDestinataire, svixId);
         emailAlerteService.envoyerNotificationBounce(emailDestinataire);
@@ -149,10 +155,11 @@ public class ResendWebhookController {
   }
 
   /**
-   * Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée — jamais en clair
-   * dans {@code logs_admin}, cohérent avec le hachage déjà appliqué côté SLF4J. Mémorise aussi
-   * {@code svixId} : seul identifiant permettant de retrouver puis rejouer cet événement précis via
-   * l'API Resend (cf. {@code ResendWebhooksAdminService}).
+   * Journalise un incident email (bounce ou plainte spam) avec l'adresse hachée
+   * — jamais en clair dans {@code logs_admin} , cohérent avec le hachage déjà
+   * appliqué côté SLF4J. Mémorise aussi {@code svixId} : seul identifiant
+   * permettant de retrouver puis rejouer cet événement précis via l'API Resend
+   * (cf. {@code ResendWebhooksAdminService} ).
    */
   private void traiterIncidentEmail(
       final String libelle, final String messageLogAdmin, final String email, final String svixId) {

@@ -57,7 +57,8 @@ public class PushController {
    *
    * @param requete corps JSON avec endpoint et clés
    * @param auth contexte d'authentification
-   * @return 201 si créé — 400/429 si invalide/cap (via {@link GlobalExceptionHandler})
+   * @return 201 si créé — 400/429 si invalide/cap (via
+   *     {@link GlobalExceptionHandler} )
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
@@ -103,7 +104,8 @@ public class PushController {
   }
 
   /**
-   * Liste les abonnements push de l'utilisateur courant, pour affichage dans /parametres.
+   * Liste les abonnements push de l'utilisateur courant, pour affichage dans
+   * /parametres.
    *
    * @param auth contexte d'authentification
    * @return les abonnements actifs

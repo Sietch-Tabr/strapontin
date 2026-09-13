@@ -47,13 +47,15 @@ public class WikidataArtisteSource
 
   private static final Logger LOG = LoggerFactory.getLogger(WikidataArtisteSource.class);
 
-  // Rempli par decouvrir() sur ambiguïté humain/groupe, vidé par preleverAmbiguites() — même
-  // patron "prélever" que preleverBilan (BilanFetch), pas de dépendance JDBC dans ce module.
+  // Rempli par decouvrir() sur ambiguïté humain/groupe, vidé par
+  // preleverAmbiguites() — même patron "prélever" que preleverBilan
+  // (BilanFetch), pas de dépendance JDBC dans ce module.
   private final Set<UUID> ambiguites = new HashSet<>();
 
   private static final int TAILLE_LOT_MAX = 50;
   private static final int TAILLE_CANDIDATS_DECOUVERTE = 5;
-  // Au-delà d'un seul type distinct parmi les candidats, l'ambiguïté ne peut plus être tranchée.
+  // Au-delà d'un seul type distinct parmi les candidats, l'ambiguïté ne peut
+  // plus être tranchée.
   private static final int NB_TYPES_DISTINCTS_NON_AMBIGU = 1;
 
   private final ClientSparqlWikidata client;
@@ -67,7 +69,8 @@ public class WikidataArtisteSource
   }
 
   /**
-   * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
+   * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier
+   * prélèvement.
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -84,7 +87,8 @@ public class WikidataArtisteSource
   }
 
   /**
-   * Crée une instance avec un RestClient et un cache personnalisés (injection de test).
+   * Crée une instance avec un RestClient et un cache personnalisés (injection
+   * de test).
    *
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
@@ -165,10 +169,11 @@ public class WikidataArtisteSource
             .filter(ClientSparqlWikidata::estQIdValide)
             .map(q -> "wd:" + q)
             .collect(Collectors.joining(" "));
-    // Les alias (skos:altLabel) sont agrégés dans une sous-requête groupée par ?item avant la
-    // jointure avec deezerId/tmId et le SERVICE label — les grouper dans la requête principale
-    // forcerait un GROUP BY sur toutes les colonnes, y compris ?itemLabel produit procéduralement
-    // par le label service, ce qui n'est pas supporté proprement en SPARQL 1.1.
+    // Les alias (skos:altLabel) sont agrégés dans une sous-requête groupée par
+    // ?item avant la jointure avec deezerId/tmId et le SERVICE label — les
+    // grouper dans la requête principale forcerait un GROUP BY sur toutes les
+    // colonnes, y compris ?itemLabel produit procéduralement par le label
+    // service, ce qui n'est pas supporté proprement en SPARQL 1.1.
     return """
     SELECT ?item ?itemLabel ?deezerId ?tmId ?aliases WHERE {
       {
@@ -291,8 +296,9 @@ public class WikidataArtisteSource
         extraireAlias(binding));
   }
 
-  // GROUP_CONCAT (séparateur "|") produit une chaîne vide, jamais absente, quand aucun alias n'est
-  // connu — filtrée explicitement plutôt que de produire une liste avec un unique élément vide.
+  // GROUP_CONCAT (séparateur "|") produit une chaîne vide, jamais absente,
+  // quand aucun alias n'est connu — filtrée explicitement plutôt que de
+  // produire une liste avec un unique élément vide.
   private static List<String> extraireAlias(final Map<String, Object> binding) {
     final String aliases = ClientSparqlWikidata.valeurBinding(binding, "aliases");
     if (aliases == null || aliases.isBlank()) {

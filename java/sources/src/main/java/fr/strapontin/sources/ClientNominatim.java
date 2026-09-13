@@ -38,19 +38,24 @@ public final class ClientNominatim {
   private final CadenceurAppels cadenceur;
 
   /**
-   * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture 10s).
+   * Crée un client avec un RestClient par défaut (timeout connexion 5s, lecture
+   * 10s).
    */
   public ClientNominatim() {
     this(construireRestClientParDefaut(), new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
   }
 
   /**
-   * Crée un client avec un RestClient et un cadenceur personnalisés (injection de test).
+   * Crée un client avec un RestClient et un cadenceur personnalisés (injection
+   * de test).
    *
    * @param restClient client HTTP à utiliser
    * @param cadenceur limiteur de débit à utiliser
    */
-  /* package-private : injection de test (RestClient/CadenceurAppels personnalisés). */
+  /*
+   * package-private : injection de test (RestClient/CadenceurAppels
+   * personnalisés).
+   */
   ClientNominatim(final RestClient restClient, final CadenceurAppels cadenceur) {
     this.restClient = restClient;
     this.cadenceur = cadenceur;

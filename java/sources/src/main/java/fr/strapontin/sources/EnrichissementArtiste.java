@@ -29,7 +29,7 @@ public record EnrichissementArtiste(
     String ticketmasterAttractionId,
     List<String> aliasWikidata) {
 
-  // Remplace un aliasWikidata null par une liste vide.
+  /** Remplace un aliasWikidata null par une liste vide. */
   public EnrichissementArtiste {
     if (aliasWikidata == null) {
       aliasWikidata = List.of();

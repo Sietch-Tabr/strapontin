@@ -47,9 +47,10 @@ public class ResendWebhooksAdminService {
   }
 
   /**
-   * Constructeur avec fabrique de client injectable — le SDK resend-java ne fournit aucun point
-   * d'injection HTTP public (contrairement à {@code RestClient} pour les autres sources), la
-   * fabrique est le seul moyen de substituer un client {@link Resend} mocké en test.
+   * Constructeur avec fabrique de client injectable — le SDK resend-java ne
+   * fournit aucun point d'injection HTTP public (contrairement à
+   * {@code RestClient} pour les autres sources), la fabrique est le seul moyen
+   * de substituer un client {@link Resend} mocké en test.
    */
   /* package-private : injection de test (fabrique Resend personnalisée). */
   ResendWebhooksAdminService(
@@ -72,8 +73,9 @@ public class ResendWebhooksAdminService {
   /**
    * Liste les événements récents du webhook configuré.
    *
-   * @return la liste des événements, vide si {@code RESEND_API_KEY}/{@code PUBLIC_BASE_URL} absent,
-   *     aucun webhook ne correspond, ou en cas d'erreur API (journalisée, jamais propagée)
+   * @return la liste des événements, vide si {@code RESEND_API_KEY} /{@code
+   *     PUBLIC_BASE_URL} absent, aucun webhook ne correspond, ou en cas
+   *     d'erreur API (journalisée, jamais propagée)
    */
   public List<EvenementWebhook> listerEvenements() {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
@@ -107,11 +109,11 @@ public class ResendWebhooksAdminService {
   }
 
   /**
-   * Rejoue un événement webhook en échec (statut {@code failed}).
+   * Rejoue un événement webhook en échec (statut {@code failed} ).
    *
    * @param eventId identifiant de l'événement à rejouer
-   * @return {@code true} si le rejeu a été accepté par Resend, {@code false} sinon (configuration
-   *     absente, webhook introuvable, erreur API)
+   * @return {@code true} si le rejeu a été accepté par Resend, {@code false}
+   *     sinon (configuration absente, webhook introuvable, erreur API)
    */
   public boolean rejouerEvenement(final String eventId) {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");

@@ -236,7 +236,7 @@ public class EmailService {
   /**
    * Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
    *
-   * @param signalement le signalement à envoyer (voir {@link SignalementSalleManquante})
+   * @param signalement le signalement à envoyer (voir {@link SignalementSalleManquante} )
    */
   public void envoyerSignalementSalleManquante(final SignalementSalleManquante signalement) {
     final String nom = signalement.nom();
@@ -256,31 +256,51 @@ public class EmailService {
     final String texteAdmin =
         "Salle manquante signalée par %s%nNom : %s%nVille : %s%nSite : %s%n%n%s"
             .formatted(emailUtilisateur, nom, ville, urlSite, commentaire);
-
-    try {
-      emailSender.envoyer(
-          ctx.get(),
-          ctx.get().expediteur(),
-          emailUtilisateur,
-          "[Strapontin] Salle manquante — " + nom,
-          corpsAdmin,
-          texteAdmin);
-      LOG.info(
-          "Signalement salle manquante envoyé par : emailHash={}", emailUtilisateur.hashCode());
-    } catch (Exception e) {
-      LOG.error("Échec envoi signalement salle manquante", e);
+    if (!envoyerSignalementAdmin(ctx.get(), emailUtilisateur, nom, corpsAdmin, texteAdmin)) {
       return;
     }
 
     final String corpsUser = EmailTemplates.confirmationSignalementSalle(nom, ctx.get().baseUrl());
     final String texteUser =
         "Votre signalement pour « %s » a été transmis à l'administrateur.".formatted(nom);
+    envoyerConfirmationSignalement(ctx.get(), emailUtilisateur, corpsUser, texteUser);
+  }
 
+  // Extrait pour rester sous la limite de 50 lignes/méthode — comportement
+  // inchangé, uniquement déplacé hors de envoyerSignalementSalleManquante.
+  private boolean envoyerSignalementAdmin(
+      final EmailSender.ContexteEmail ctx,
+      final String emailUtilisateur,
+      final String nom,
+      final String corpsAdmin,
+      final String texteAdmin) {
     try {
       emailSender.envoyer(
-          ctx.get(),
+          ctx,
+          ctx.expediteur(),
           emailUtilisateur,
-          ctx.get().expediteur(),
+          "[Strapontin] Salle manquante — " + nom,
+          corpsAdmin,
+          texteAdmin);
+      LOG.info(
+          "Signalement salle manquante envoyé par : emailHash={}", emailUtilisateur.hashCode());
+      return true;
+    } catch (Exception e) {
+      LOG.error("Échec envoi signalement salle manquante", e);
+      return false;
+    }
+  }
+
+  private void envoyerConfirmationSignalement(
+      final EmailSender.ContexteEmail ctx,
+      final String emailUtilisateur,
+      final String corpsUser,
+      final String texteUser) {
+    try {
+      emailSender.envoyer(
+          ctx,
+          emailUtilisateur,
+          ctx.expediteur(),
           "Votre signalement Strapontin a été transmis",
           corpsUser,
           texteUser);

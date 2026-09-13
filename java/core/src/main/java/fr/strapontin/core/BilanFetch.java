@@ -20,9 +20,10 @@ import java.util.Optional;
 public record BilanFetch(int appels, int erreursHttp) {
 
   /**
-   * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100% déclenche une escalade en
-   * niveau {@code error} plutôt qu'un simple {@code warn} — évite une fausse alerte sur un cycle
-   * mono-appel victime d'un aléa réseau isolé.
+   * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100%
+   * déclenche une escalade en niveau {@code error} plutôt qu'un simple
+   * {@code warn} — évite une fausse alerte sur un cycle mono-appel victime d'un
+   * aléa réseau isolé.
    */
   public static final int SEUIL_APPELS_MIN_ALERTE_DEFAUT = 3;
 
@@ -36,8 +37,8 @@ public record BilanFetch(int appels, int erreursHttp) {
   public record EntreeLog(String niveau, String message, Map<String, Object> meta) {}
 
   /**
-   * Indique si ce bilan représente une panne totale : 100% d'échec sur au moins {@code
-   * seuilAppelsMin} appels.
+   * Indique si ce bilan représente une panne totale : 100% d'échec sur au moins
+   * {@code seuilAppelsMin} appels.
    *
    * @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade
    * @return {@code true} si panne totale

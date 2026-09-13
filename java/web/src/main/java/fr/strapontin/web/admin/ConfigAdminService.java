@@ -53,8 +53,9 @@ public class ConfigAdminService {
   private static final Pattern FORMAT_RESEND_KEY = Pattern.compile("^re_[A-Za-z0-9_-]{10,}$");
   private static final Pattern FORMAT_WEBHOOK_SECRET =
       Pattern.compile("^whsec_[A-Za-z0-9+/=]{16,}$");
-  // Base64 URL-safe sans padding d'une clé EC P-256 : 65 octets (point non compressé, clé
-  // publique) ou 32 octets (scalaire, clé privée) — voir VapidService.genererVapid().
+  // Base64 URL-safe sans padding d'une clé EC P-256 : 65 octets (point non
+  // compressé, clé publique) ou 32 octets (scalaire, clé privée) — voir
+  // VapidService.genererVapid().
   private static final Pattern FORMAT_VAPID_PUBLIC_KEY = Pattern.compile("^[A-Za-z0-9_-]{87}$");
   private static final Pattern FORMAT_VAPID_PRIVATE_KEY = Pattern.compile("^[A-Za-z0-9_-]{43}$");
 
@@ -98,7 +99,8 @@ public class ConfigAdminService {
    * @param configService lecture/écriture de la configuration applicative
    * @param logAdminService journalisation des modifications de configuration
    * @param restClient client HTTP pour les tests d'API externes
-   * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le worker (voir {@link
+   * @param cadenceurTicketmaster cadenceur partagé inter-processus avec le
+   *     worker (voir {@link
    *     fr.strapontin.web.WebConfiguration#cadenceurTicketmaster})
    */
   public ConfigAdminService(
@@ -113,9 +115,11 @@ public class ConfigAdminService {
   }
 
   /**
-   * Teste la validité de la clé Ticketmaster API en effectuant un appel minimal.
+   * Teste la validité de la clé Ticketmaster API en effectuant un appel
+   * minimal.
    *
-   * @return {@code true} si la clé est configurée et acceptée par l'API TM (HTTP 200)
+   * @return {@code true} si la clé est configurée et acceptée par l'API TM
+   *     (HTTP 200)
    */
   public boolean testerApiTm() {
     final Optional<String> cle = configService.lireConfig("TICKETMASTER_API_KEY");

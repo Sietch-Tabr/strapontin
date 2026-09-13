@@ -30,7 +30,8 @@ public final class GenerateurSecrets {
   /**
    * Génère une chaîne hexadécimale aléatoire.
    *
-   * @param nbOctets nombre d'octets aléatoires (la chaîne fait {@code 2 * nbOctets} caractères)
+   * @param nbOctets nombre d'octets aléatoires (la chaîne fait
+   *     {@code 2 * nbOctets} caractères)
    * @return la chaîne hexadécimale
    */
   public static String genererHex(final int nbOctets) {

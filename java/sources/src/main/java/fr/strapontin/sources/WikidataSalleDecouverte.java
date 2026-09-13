@@ -75,26 +75,29 @@ final class WikidataSalleDecouverte {
   private static final Logger LOG = LoggerFactory.getLogger(WikidataSalleDecouverte.class);
 
   /**
-   * Sépare le premier séparateur significatif de sous-salle/qualificatif ({@code -}, {@code /},
-   * {@code (}) d'un nom de salle, le cas échéant.
+   * Sépare le premier séparateur significatif de sous-salle/qualificatif
+   * ({@code -}, {@code /} , {@code (} ) d'un nom de salle, le cas échéant.
    */
   private static final Pattern SEPARATEUR_SOUS_SALLE = Pattern.compile("[-/(]");
 
   private static final Pattern PONCTUATION_FINALE = Pattern.compile("[\\p{Punct}\\s]+$");
 
-  // Nombre minimal de tokens significatifs cibles pour appliquer le containment asymétrique
-  // évite qu'un nom d'un seul mot ("galaxie") soit considéré contenu dans n'importe
-  // quel candidat plus long au seul motif qu'il partage ce mot.
+  // Nombre minimal de tokens significatifs cibles pour appliquer le containment
+  // asymétrique évite qu'un nom d'un seul mot ("galaxie") soit considéré
+  // contenu dans n'importe quel candidat plus long au seul motif qu'il partage
+  // ce mot.
   private static final int TAILLE_MIN_TOKENS_CONTAINMENT = 2;
 
-  // Types Wikidata (P31) structurellement incompatibles avec un lieu de spectacle : gare
-  // (Q3455524), arrêt de tram (Q6465), commune française (Q484170), gare ferroviaire (Q55488),
-  // arrêt de transport en commun (Q2175765), bar (Q187456), restaurant (Q11707), quotidien
-  // régional (Q1002697), journal (Q11032) — un candidat de l'un de ces types est nécessairement
-  // une fausse correspondance, quel que soit son score de similarité de nom. Exposée pour permettre
-  // à {@code CoherenceWikidataSalleService} de revalider les {@code wikidata_id} déjà stockés
-  // contre ces mêmes types (garde-fou introduit après coup ne s'appliquant pas rétroactivement aux
-  // découvertes antérieures).
+  // Types Wikidata (P31) structurellement incompatibles avec un lieu de
+  // spectacle : gare (Q3455524), arrêt de tram (Q6465), commune française
+  // (Q484170), gare ferroviaire (Q55488), arrêt de transport en commun
+  // (Q2175765), bar (Q187456), restaurant (Q11707), quotidien régional
+  // (Q1002697), journal (Q11032) — un candidat de l'un de ces types est
+  // nécessairement une fausse correspondance, quel que soit son score de
+  // similarité de nom. Exposée pour permettre à
+  // {@code CoherenceWikidataSalleService} de revalider les {@code wikidata_id}
+  // déjà stockés contre ces mêmes types (garde-fou introduit après coup ne
+  // s'appliquant pas rétroactivement aux découvertes antérieures).
   /* package-private : réutilisé par WikidataSalleSource (même package). */
   static final Set<String> TYPES_EXCLUS =
       Set.of(
@@ -113,9 +116,13 @@ final class WikidataSalleDecouverte {
 
   /**
    * @param client client SPARQL Wikidata partagé
-   * @param cache cache des enrichissements découverts, partagé avec {@link WikidataSalleSource}
+   * @param cache cache des enrichissements découverts, partagé avec
+   *     {@link WikidataSalleSource}
    */
-  /* package-private : instancié uniquement par WikidataSalleSource (même package). */
+  /*
+   * package-private : instancié uniquement par WikidataSalleSource (même
+   * package).
+   */
   WikidataSalleDecouverte(
       final ClientSparqlWikidata client, final Cache<String, EnrichissementSalle> cache) {
     this.client = client;
@@ -137,12 +144,13 @@ final class WikidataSalleDecouverte {
     return decouvrirSansDernierMot(salle);
   }
 
-  // la recherche mwapi:search échoue quasi systématiquement dès que le nom Strapontin porte un
-  // suffixe de sous-salle/qualificatif ("Zenith Toulouse Metropole" → 0 résultat, "Zenith de
-  // Toulouse" trouvé immédiatement), alors que l'entité existe bien sur Wikidata — l'échec se
-  // produit dans l'appel mwapi, avant même la comparaison des candidats. La validation du candidat
-  // reste faite contre salle.nomNorm() (nom complet), inchangée — seule la requête de recherche
-  // envoyée à Wikidata utilise le nom tronqué.
+  // la recherche mwapi:search échoue quasi systématiquement dès que le nom
+  // Strapontin porte un suffixe de sous-salle/qualificatif ("Zenith Toulouse
+  // Metropole" → 0 résultat, "Zenith de Toulouse" trouvé immédiatement), alors
+  // que l'entité existe bien sur Wikidata — l'échec se produit dans l'appel
+  // mwapi, avant même la comparaison des candidats. La validation du candidat
+  // reste faite contre salle.nomNorm() (nom complet), inchangée — seule la
+  // requête de recherche envoyée à Wikidata utilise le nom tronqué.
   private Optional<EnrichissementSalle> decouvrirNomTronqueParSeparateur(
       final SalleAEnrichir salle) {
     final Matcher matcher = SEPARATEUR_SOUS_SALLE.matcher(salle.nom());
@@ -161,26 +169,31 @@ final class WikidataSalleDecouverte {
     return decouvrirParNom(salle, nomTronque);
   }
 
-  // Convention de nommage fréquente côté sources (Ticketmaster/Eventim/Digitick) : le nom de la
-  // salle est suffixé de sa ville sans séparateur ("Salle Poirel Nancy", "La Belle Electrique
-  // Grenoble") — vérifié en direct contre l'API Wikidata, la recherche mwapi échoue sur le nom
-  // complet mais trouve l'entité sur le seul nom de salle une fois la ville retirée. Un seul mot
-  // est retiré, jamais une troncature récursive : au-delà, le risque de réduire le terme de
-  // recherche à un mot générique non discriminant l'emporte sur le gain (une ville à qualificatif
-  // composé, ex. "Vitry Sur Seine", n'est pas couverte par ce repli). La validation finale reste
-  // faite contre le nom complet ({@link #decouvrirParNom}), ce repli n'élargit que l'ensemble de
-  // candidats interrogés, jamais le critère d'acceptation.
+  // Convention de nommage fréquente côté sources
+  // (Ticketmaster/Eventim/Digitick) : le nom de la salle est suffixé de sa
+  // ville sans séparateur ("Salle Poirel Nancy", "La Belle Electrique
+  // Grenoble") — vérifié en direct contre l'API Wikidata, la recherche mwapi
+  // échoue sur le nom complet mais trouve l'entité sur le seul nom de salle une
+  // fois la ville retirée. Un seul mot est retiré, jamais une troncature
+  // récursive : au-delà, le risque de réduire le terme de recherche à un mot
+  // générique non discriminant l'emporte sur le gain (une ville à qualificatif
+  // composé, ex. "Vitry Sur Seine", n'est pas couverte par ce repli). La
+  // validation finale reste faite contre le nom complet ({@link
+  // #decouvrirParNom}), ce repli n'élargit que l'ensemble de candidats
+  // interrogés, jamais le critère d'acceptation.
   private Optional<EnrichissementSalle> decouvrirSansDernierMot(final SalleAEnrichir salle) {
     final String nom = salle.nom().trim();
     final int dernierEspace = nom.lastIndexOf(' ');
     if (dernierEspace <= 0) {
       return Optional.empty();
     }
-    // trim() ne retire que les espaces — un séparateur ("-", "/") laissé en bout de chaîne
-    // produirait une recherche mwapi inutilement sale (ex. "Zenith Toulouse -")
+    // trim() ne retire que les espaces — un séparateur ("-", "/") laissé en
+    // bout de chaîne produirait une recherche mwapi inutilement sale (ex.
+    // "Zenith Toulouse -")
     final String nomTronque =
         PONCTUATION_FINALE.matcher(nom.substring(0, dernierEspace)).replaceAll("").trim();
-    // au moins deux mots restants — un seul mot est trop générique pour être discriminant
+    // au moins deux mots restants — un seul mot est trop générique pour être
+    // discriminant
     if (!nomTronque.contains(" ")) {
       return Optional.empty();
     }
@@ -260,8 +273,9 @@ final class WikidataSalleDecouverte {
     return Optional.of(enrichissement);
   }
 
-  // regroupe les deux garde-fous de localisation (ville, département) et leur journalisation de
-  // rejet — extrait d'evaluerCandidatDecouverte pour rester sous la limite de 50 lignes/méthode.
+  // regroupe les deux garde-fous de localisation (ville, département) et leur
+  // journalisation de rejet — extrait d'evaluerCandidatDecouverte pour rester
+  // sous la limite de 50 lignes/méthode.
   private boolean localisationIncompatible(
       final SalleAEnrichir salle,
       final String communeLabel,

@@ -40,10 +40,14 @@ class NotificationPushDigestService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final NotificationDigestService.FabriquePushService fabriquePushService;
-  // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans logs_admin.
+  // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans
+  // logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
 
-  /* package-private : instancié uniquement par Spring et les tests du même package. */
+  /*
+   * package-private : instancié uniquement par Spring et les tests du même
+   * package.
+   */
   NotificationPushDigestService(
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
@@ -56,9 +60,10 @@ class NotificationPushDigestService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} le bilan agrégé des envois push pour le cycle de digest qui
-   * vient de se terminer, même mécanisme générique que le bilan de panne des sources de concerts
-   * (voir {@code WorkerStatsService#remonterBilan}).
+   * Remonte dans {@code logs_admin} le bilan agrégé des envois push pour le
+   * cycle de digest qui vient de se terminer, même mécanisme générique que le
+   * bilan de panne des sources de concerts (voir
+   * {@code WorkerStatsService#remonterBilan} ).
    */
   /* package-private : appelé par NotificationDigestService (même package). */
   void remonterBilanPush() {
@@ -72,9 +77,13 @@ class NotificationPushDigestService {
   }
 
   /**
-   * Issue possible d'un envoi push individuel, selon le statut HTTP retourné par le push service.
+   * Issue possible d'un envoi push individuel, selon le statut HTTP retourné
+   * par le push service.
    */
-  /* package-private : type interne, utilisé uniquement au sein de cette classe/des tests du même package. */
+  /*
+   * package-private : type interne, utilisé uniquement au sein de cette
+   * classe/des tests du même package.
+   */
   enum ResultatEnvoiPush {
     SUCCES,
     ABONNEMENT_MORT,
@@ -151,8 +160,8 @@ class NotificationPushDigestService {
     }
   }
 
-  // Subscription/Notification portent les clés/le payload propres à l'abonnement courant — pas
-  // hissables hors boucle.
+  // Subscription/Notification portent les clés/le payload propres à
+  // l'abonnement courant — pas hissables hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private int envoyerPushAAbonnements(
       final PushService pushService,
@@ -172,8 +181,8 @@ class NotificationPushDigestService {
         final int status = response.getStatusLine().getStatusCode();
         switch (interpreterStatutPush(status)) {
           case ABONNEMENT_MORT -> {
-            // Abonnement mort (410/404) : nettoyage attendu, pas une panne du canal push —
-            // n'entre pas dans le bilan de panne.
+            // Abonnement mort (410/404) : nettoyage attendu, pas une panne du
+            // canal push — n'entre pas dans le bilan de panne.
             jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
             LOG.info("Abonnement push révoqué : {} — {}", userId, ab.get(CLE_ENDPOINT));
           }
@@ -181,9 +190,9 @@ class NotificationPushDigestService {
             nbEnvoyes++;
           }
           case ECHEC -> {
-            // tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas un
-            // succès implicite — sans cette branche, un push jamais délivré était compté
-            // comme réussi.
+            // tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas
+            // un succès implicite — sans cette branche, un push jamais délivré
+            // était compté comme réussi.
             compteurPush.enregistrerErreur();
             LOG.warn(
                 "Push: statut inattendu {} pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
@@ -197,11 +206,12 @@ class NotificationPushDigestService {
     return nbEnvoyes;
   }
 
-  // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service worker
-  // (main.js/App.vue) passent cette valeur telle quelle à router.push(), qui ne matche aucune
-  // route déclarée avec un schéma https:// en préfixe si PUBLIC_BASE_URL est configurée
-  // (navigation muette au lieu du scroll/anchor visé). icon reste préfixé par baseUrl (ou
-  // relatif si absente), résolu par le service worker contre sa propre origine dans les deux cas.
+  // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service
+  // worker (main.js/App.vue) passent cette valeur telle quelle à router.push(),
+  // qui ne matche aucune route déclarée avec un schéma https:// en préfixe si
+  // PUBLIC_BASE_URL est configurée (navigation muette au lieu du scroll/anchor
+  // visé). icon reste préfixé par baseUrl (ou relatif si absente), résolu par
+  // le service worker contre sa propre origine dans les deux cas.
   private static String construirePayloadPush(
       final List<NotificationDigestService.ConcertNotif> concerts, final String baseUrl) {
     final NotificationDigestService.ConcertNotif premier = concerts.get(0);

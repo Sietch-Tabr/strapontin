@@ -89,7 +89,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   private final WikidataSalleDecouverte decouverte;
 
   /**
-   * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier prélèvement.
+   * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier
+   * prélèvement.
    *
    * @return le bilan depuis le dernier prélèvement
    */
@@ -106,7 +107,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
   }
 
   /**
-   * Crée une instance avec un RestClient et un cache personnalisés (injection de test).
+   * Crée une instance avec un RestClient et un cache personnalisés (injection
+   * de test).
    *
    * @param restClient client HTTP à utiliser
    * @param cache cache Caffeine à utiliser
@@ -198,7 +200,8 @@ public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAve
         .formatted(values);
   }
 
-  // Le record retourné porte les champs du binding courant — pas d'instance hissable hors boucle.
+  // Le record retourné porte les champs du binding courant — pas d'instance
+  // hissable hors boucle.
   @SuppressWarnings({"unchecked", "PMD.AvoidInstantiatingObjectsInLoops"})
   private Map<UUID, EnrichissementSalle> mapperReponse(
       final Map<String, Object> data, final Map<String, UUID> qidVersUuid) {

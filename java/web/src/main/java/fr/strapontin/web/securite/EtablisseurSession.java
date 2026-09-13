@@ -25,7 +25,10 @@ final class EtablisseurSession {
 
   private EtablisseurSession() {}
 
-  /** Résultat de {@link #ouvrir} : la session nouvellement créée et l'utilisateur associé. */
+  /**
+   * Résultat de {@link #ouvrir} : la session nouvellement créée et
+   * l'utilisateur associé.
+   */
   /* package-private : appelé par le contrôleur du même package. */
   record SessionOuverte(HttpSession session, UtilisateurDetails details) {}
 

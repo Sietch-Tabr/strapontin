@@ -37,7 +37,8 @@ enum TypeEntiteSource {
   }
 
   /**
-   * @return nom de la colonne de rattachement ({@code salle_id} ou {@code artiste_id})
+   * @return nom de la colonne de rattachement ({@code salle_id} ou
+   *     {@code artiste_id} )
    */
   /* package-private : appelé par SuiviSanteSourcesService (même package). */
   String colonneId() {

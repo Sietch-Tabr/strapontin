@@ -39,7 +39,8 @@ public class IntegriteAlerteController {
   /**
    * @param emailAlerteService résolution du destinataire d'alerte
    * @param logAdminService journalisation du statut reçu
-   * @param integriteSecret secret partagé attendu dans l'en-tête {@code Authorization}
+   * @param integriteSecret secret partagé attendu dans l'en-tête
+   *     {@code Authorization}
    */
   public IntegriteAlerteController(
       final EmailAlerteService emailAlerteService,

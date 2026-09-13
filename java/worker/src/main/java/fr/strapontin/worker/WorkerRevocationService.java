@@ -91,7 +91,8 @@ public class WorkerRevocationService {
   /**
    * Supprime les sessions Spring Session actives pour les identifiants fournis.
    *
-   * @param usernames identifiants (colonne {@code username}) des comptes venant d'être rétrogradés
+   * @param usernames identifiants (colonne {@code username} ) des comptes
+   *     venant d'être rétrogradés
    */
   private void revoquerSessions(final List<String> usernames) {
     if (usernames.isEmpty()) {

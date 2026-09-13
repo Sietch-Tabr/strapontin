@@ -29,7 +29,10 @@ class NotificationEmailDigestService {
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
   private final NotificationDigestService.FabriqueResend fabriqueResend;
 
-  /* package-private : instancié uniquement par NotificationDigestService (même package). */
+  /*
+   * package-private : instancié uniquement par NotificationDigestService (même
+   * package).
+   */
   NotificationEmailDigestService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker,
@@ -51,9 +54,9 @@ class NotificationEmailDigestService {
       return false;
     }
     if (!gestionQuotaResendWorker.reserverEnvoi()) {
-      // notification_envoyee_le n'est pas marquée pour ce canal (comportement déjà
-      // existant, cf. clé "RESEND_API_KEY absent" ci-dessus) — retenté au prochain cycle de
-      // digest plutôt que perdu.
+      // notification_envoyee_le n'est pas marquée pour ce canal (comportement
+      // déjà existant, cf. clé "RESEND_API_KEY absent" ci-dessus) — retenté au
+      // prochain cycle de digest plutôt que perdu.
       return false;
     }
     final String expediteur = configService.lireConfig("CONTACT_EMAIL").orElse("");

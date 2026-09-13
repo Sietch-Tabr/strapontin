@@ -29,11 +29,12 @@ import org.springframework.stereotype.Service;
  * @since 2.6.0
  * @author Kwaite
  */
-// 10 collaborateurs indépendants : chacun est une vérification/un enrichissement autonome du
-// job nocturne, sans regroupement thématique naturel (contrairement à FetchRapportage côté
-// fetch) — un tel regroupement serait un simple contournement du seuil, pas une amélioration de
-// conception. HealthCheckArtistesTM/HealthCheckSallesTM (déjà des beans Spring, voir leur propre
-// Javadoc) ont réduit le compte de 11 à 10.
+// 10 collaborateurs indépendants : chacun est une vérification/un
+// enrichissement autonome du job nocturne, sans regroupement thématique naturel
+// (contrairement à FetchRapportage côté fetch) — un tel regroupement serait un
+// simple contournement du seuil, pas une amélioration de conception.
+// HealthCheckArtistesTM/HealthCheckSallesTM (déjà des beans Spring, voir leur
+// propre Javadoc) ont réduit le compte de 11 à 10.
 @SuppressWarnings("PMD.ExcessiveParameterList")
 @Service
 public class ReconciliationNocturneService {

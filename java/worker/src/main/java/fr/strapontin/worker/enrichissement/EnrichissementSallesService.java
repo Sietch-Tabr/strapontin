@@ -49,19 +49,21 @@ public class EnrichissementSallesService {
   private static final Logger LOG = LoggerFactory.getLogger(EnrichissementSallesService.class);
 
   private static final int TAILLE_LOT_PERSISTANCE = 25;
-  // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
-  // OverpassSalleSource et WikidataSalleSource) — laisse Overpass et Wikidata respirer entre deux
-  // lots plutôt que d'enchaîner immédiatement, sur des instances publiques déjà sous tension.
+  // Délai entre deux lots de persistance, en plus du délai intra-source
+  // (500ms/appel côté OverpassSalleSource et WikidataSalleSource) — laisse
+  // Overpass et Wikidata respirer entre deux lots plutôt que d'enchaîner
+  // immédiatement, sur des instances publiques déjà sous tension.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
-  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de réussite déclenche une
-  // alerte — évite un faux positif sur un tout petit lot où un faible nombre de succès est
-  // plausible même en fonctionnement normal (aucune des quelques salles du jour n'existe sur
-  // Wikidata/OSM).
+  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de
+  // réussite déclenche une alerte — évite un faux positif sur un tout petit lot
+  // où un faible nombre de succès est plausible même en fonctionnement normal
+  // (aucune des quelques salles du jour n'existe sur Wikidata/OSM).
   private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
-  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une dégradation
-  // chronique mais non totale (constaté en production : 90-100% d'échec chaque nuit durant 11
-  // nuits, jamais 100% pile) reste alors indéfiniment sous le seuil. Un taux de réussite est
-  // requis, pas seulement une absence totale de résultat.
+  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une
+  // dégradation chronique mais non totale (constaté en production : 90-100%
+  // d'échec chaque nuit durant 11 nuits, jamais 100% pile) reste alors
+  // indéfiniment sous le seuil. Un taux de réussite est requis, pas seulement
+  // une absence totale de résultat.
   private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
   private static final String CLE_WIKIDATA_ID = "wikidataId";
 
@@ -159,11 +161,12 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
-   * {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
-   * que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur les sources d'enrichissement
-   * : la panne Overpass de 3+ mois n'avait ainsi jamais généré la moindre entrée {@code
-   * logs_admin}.
+   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque
+   * source implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de
+   * se terminer — même mécanisme générique que
+   * {@code WorkerStatsService.remonterBilan} , absent jusqu'ici sur les sources
+   * d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré
+   * la moindre entrée {@code logs_admin}.
    */
   private void remonterBilans() {
     for (final SourceEnrichissementSalle source : sources) {
@@ -217,10 +220,10 @@ public class EnrichissementSallesService {
     return nbEnrichis;
   }
 
-  // Repli sur le département d'un concert déjà rattaché quand salles.dept est vide — même pattern
-  // que ResolveurSalleParConcert (module worker.persister), sans quoi une salle sans ville ni dept
-  // renseignés n'a aucun signal de localisation pour écarter un homonyme Wikidata d'une autre
-  // ville (#1188).
+  // Repli sur le département d'un concert déjà rattaché quand salles.dept est
+  // vide — même pattern que ResolveurSalleParConcert (module worker.persister),
+  // sans quoi une salle sans ville ni dept renseignés n'a aucun signal de
+  // localisation pour écarter un homonyme Wikidata d'une autre ville (#1188).
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
@@ -273,11 +276,12 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * @return {@code true} si la mise à jour a été appliquée (directement, ou via une fusion
-   *     automatique en cas de collision {@code wikidata_id} avec une autre salle déjà établie),
-   *     {@code false} si le conflit n'a pu être résolu automatiquement — auquel cas il est signalé
-   *     ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout
-   *     le cycle de réconciliation.
+   * @return {@code true} si la mise à jour a été appliquée (directement, ou via
+   *     une fusion automatique en cas de collision {@code wikidata_id} avec
+   *     une autre salle déjà établie), {@code false} si le conflit n'a pu être
+   *     résolu automatiquement — auquel cas il est signalé ({@link
+   *     SignalementMatchingService}) pour revue manuelle plutôt que de faire
+   *     échouer tout le cycle de réconciliation.
    */
   private boolean mettreAJourSalle(
       final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {

@@ -20,15 +20,17 @@ import java.util.UUID;
 public interface SourceEnrichissementSalle {
 
   /**
-   * Identifiant technique de la source (ex. {@code "overpass"}, {@code "wikidata"}).
+   * Identifiant technique de la source (ex. {@code "overpass"} ,
+   * {@code "wikidata"} ).
    *
    * @return identifiant de la source
    */
   String nom();
 
   /**
-   * Enrichit un lot de salles. Les entrées sans résultat exploitable sont absentes de la map
-   * retournée — l'appelant ne doit jamais supposer une clé présente pour chaque salle du lot.
+   * Enrichit un lot de salles. Les entrées sans résultat exploitable sont
+   * absentes de la map retournée — l'appelant ne doit jamais supposer une clé
+   * présente pour chaque salle du lot.
    *
    * @param salles salles à enrichir
    * @return résultats indexés par {@link SalleAEnrichir#id()}

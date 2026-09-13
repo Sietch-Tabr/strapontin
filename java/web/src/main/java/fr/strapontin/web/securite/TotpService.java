@@ -90,7 +90,8 @@ public class TotpService {
    * Génère un QR code SVG embarquable pour l'URI {@code otpauth://} fournie.
    *
    * @param otpUri l'URI otpauth:// à encoder
-   * @return le contenu SVG (sans déclaration XML), ou {@code null} en cas d'erreur
+   * @return le contenu SVG (sans déclaration XML), ou {@code null} en cas
+   *     d'erreur
    */
   public String genererQrCodeSvg(final String otpUri) {
     try {
@@ -121,8 +122,9 @@ public class TotpService {
     if (secret == null || code == null) {
       return false;
     }
-    // Retire tous les espaces (et non seulement aux extrémités) : les applications TOTP comme
-    // Bitwarden affichent le code par groupes (« 365 493 »), souvent collé tel quel.
+    // Retire tous les espaces (et non seulement aux extrémités) : les
+    // applications TOTP comme Bitwarden affichent le code par groupes (« 365
+    // 493 »), souvent collé tel quel.
     final String codeNorm = code.replaceAll("\\s", "");
     if (!codeNorm.matches("\\d{6}")) {
       return false;
@@ -164,7 +166,9 @@ public class TotpService {
     return String.format("%0" + DIGITS + "d", otp);
   }
 
-  /* package-private : visibilité élargie pour TotpServiceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour TotpServiceTest (même package).
+   */
   static String base32Encoder(final byte[] data) {
     final StringBuilder sb = new StringBuilder();
     int tampon = 0;
@@ -183,7 +187,9 @@ public class TotpService {
     return sb.toString();
   }
 
-  /* package-private : visibilité élargie pour TotpServiceTest (même package). */
+  /*
+   * package-private : visibilité élargie pour TotpServiceTest (même package).
+   */
   static byte[] base32Decoder(final String encoded) {
     final String norm = encoded.toUpperCase(Locale.ROOT).replaceAll("[^A-Z2-7]", "");
     final byte[] resultat = new byte[norm.length() * 5 / 8];

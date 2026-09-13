@@ -28,19 +28,23 @@ public class DeriveVolumeFetchService {
 
   private static final Logger LOG = LoggerFactory.getLogger(DeriveVolumeFetchService.class);
 
-  /** Nombre d'exécutions réussies récentes sur lesquelles porte la moyenne glissante. */
+  /**
+   * Nombre d'exécutions réussies récentes sur lesquelles porte la moyenne
+   * glissante.
+   */
   private static final int NB_EXECUTIONS_MOYENNE = 5;
 
   /**
-   * Écart relatif à partir duquel un cycle est considéré en repli significatif — 30% absorbe la
-   * variance normale (concerts qui expirent, creux saisonniers) sans masquer une dégradation
-   * partielle silencieuse.
+   * Écart relatif à partir duquel un cycle est considéré en repli significatif
+   * — 30% absorbe la variance normale (concerts qui expirent, creux
+   * saisonniers) sans masquer une dégradation partielle silencieuse.
    */
   private static final double SEUIL_DERIVE = 0.30;
 
   /**
-   * Sous cette moyenne, l'écart relatif n'est plus discriminant (ex. 1 -> 0 concert est un repli de
-   * 100% sans rien d'anormal) — aucune comparaison n'est faite en dessous de ce volume moyen.
+   * Sous cette moyenne, l'écart relatif n'est plus discriminant (ex. 1 -> 0
+   * concert est un repli de 100% sans rien d'anormal) — aucune comparaison
+   * n'est faite en dessous de ce volume moyen.
    */
   private static final int VOLUME_MOYEN_MIN_SIGNIFICATIF = 5;
 
@@ -109,9 +113,9 @@ public class DeriveVolumeFetchService {
         ORDER BY exec_le DESC
         LIMIT :limite
         """,
-        // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre de bind —
-        // OffsetDateTime est le seul type JSR-310 supporté automatiquement en écriture par le
-        // driver.
+        // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en
+        // paramètre de bind — OffsetDateTime est le seul type JSR-310 supporté
+        // automatiquement en écriture par le driver.
         Map.of(
             "typeJob",
             typeJob,

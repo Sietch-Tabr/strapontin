@@ -34,8 +34,10 @@ public class ChangelogRestController {
   private final BuildProperties buildProperties;
 
   /**
-   * @param changelogService suivi de la version du changelog vue par utilisateur
-   * @param buildProperties métadonnées de build (version courante de l'application)
+   * @param changelogService suivi de la version du changelog vue par
+   *     utilisateur
+   * @param buildProperties métadonnées de build (version courante de
+   *     l'application)
    */
   public ChangelogRestController(
       final ChangelogService changelogService, final BuildProperties buildProperties) {
@@ -44,7 +46,8 @@ public class ChangelogRestController {
   }
 
   /**
-   * Indique si l'utilisateur n'a pas encore vu le changelog de la version courante.
+   * Indique si l'utilisateur n'a pas encore vu le changelog de la version
+   * courante.
    *
    * @param auth contexte d'authentification
    * @return {@code {"nonVu": true|false}}

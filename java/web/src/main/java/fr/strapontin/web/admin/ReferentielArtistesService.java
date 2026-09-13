@@ -99,8 +99,9 @@ public class ReferentielArtistesService {
     final PageArtistes resultatPage = chargerPageArtistes(filtres.where(), paramsPage);
 
     long total = resultatPage.total();
-    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
-    // second aller-retour reste alors nécessaire pour connaître le total réel.
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par
+    // aucune ligne, un second aller-retour reste alors nécessaire pour
+    // connaître le total réel.
     if (resultatPage.artistes().isEmpty() && pageNum > 0) {
       total = compterArtistesFiltres(filtres.where(), filtres.params());
     }
@@ -320,11 +321,12 @@ public class ReferentielArtistesService {
     return true;
   }
 
-  // 1. Événements en conflit (même salle/date/heure déjà présent côté cible) : leurs
-  // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
-  // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
-  // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
-  // 2. Réassigner les événements restants (ceux sans doublon côté cible).
+  // 1. Événements en conflit (même salle/date/heure déjà présent côté cible) :
+  // leurs observations sont reportées sur l'événement cible plutôt que perdues
+  // (#1192) — celles qui entreraient en conflit sur (evenement_id, source, url)
+  // sont supprimées, déjà représentées côté cible. L'événement source, vidé de
+  // ses observations, est ensuite supprimé. 2. Réassigner les événements
+  // restants (ceux sans doublon côté cible).
   private void fusionnerEvenementsArtiste(final Map<String, Object> ids) {
     jdbc.update(
         """
@@ -378,8 +380,8 @@ public class ReferentielArtistesService {
         ids);
 
     // Dédoublonnage préalable des conflits par type de source (sans lui, deux
-    // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur l'artiste
-    // fusionné).
+    // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment
+    // sur l'artiste fusionné).
     dedupliquerArtisteSourcesAvantFusion(cibleId, sourceId);
     jdbc.update(
         "UPDATE artiste_sources SET artiste_id = CAST(:cible AS uuid) WHERE artiste_id ="
@@ -417,7 +419,8 @@ public class ReferentielArtistesService {
    * @param cibleId UUID de l'artiste à conserver
    * @param sourceId UUID de l'artiste à absorber
    */
-  // paramsSuppression porte des valeurs propres au conflit courant — pas hissable hors boucle.
+  // paramsSuppression porte des valeurs propres au conflit courant — pas
+  // hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerArtisteSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =

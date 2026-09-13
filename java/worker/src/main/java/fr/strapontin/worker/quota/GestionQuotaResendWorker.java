@@ -68,9 +68,10 @@ public class GestionQuotaResendWorker {
   }
 
   /**
-   * Auto-injection par setter (même pattern que {@code web.push.PushService}, v2.6.3) : évite le
-   * problème d'auto-référence à la construction — l'appel à {@link #reserverEnvoiTransactionnel}
-   * passe ainsi par le proxy AOP Spring et bénéficie de l'isolation {@code SERIALIZABLE}.
+   * Auto-injection par setter (même pattern que {@code web.push.PushService} ,
+   * v2.6.3) : évite le problème d'auto-référence à la construction — l'appel à
+   * {@link #reserverEnvoiTransactionnel} passe ainsi par le proxy AOP Spring et
+   * bénéficie de l'isolation {@code SERIALIZABLE} .
    *
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
@@ -161,11 +162,15 @@ public class GestionQuotaResendWorker {
   }
 
   /**
-   * Partie transactionnelle et isolée de {@link #reserverEnvoi}. {@code REQUIRES_NEW} garantit une
-   * transaction dédiée même si appelée depuis une transaction déjà ouverte.
+   * Partie transactionnelle et isolée de {@link #reserverEnvoi} .
+   * {@code REQUIRES_NEW} garantit une transaction dédiée même si appelée depuis
+   * une transaction déjà ouverte.
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  /* package-private : requis pour l'auto-invocation via le proxy self (@Transactional/SERIALIZABLE). */
+  /*
+   * package-private : requis pour l'auto-invocation via le proxy self
+   * (@Transactional/SERIALIZABLE).
+   */
   boolean reserverEnvoiTransactionnel() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
     if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {

@@ -36,9 +36,10 @@ public class SuiviChroniciteService {
   private static final String CLE_CONFIG = "FIABILITE_STREAKS_JSON";
 
   /**
-   * Nombre de cycles consécutifs en échec à partir duquel un message est qualifié de chronique
-   * plutôt que traité comme un warn isolé — 3 couvre aussi bien une cadence à 11 cycles/jour
-   * (Ticketmaster) qu'une cadence à 1 cycle/nuit (Overpass, réconciliation nocturne).
+   * Nombre de cycles consécutifs en échec à partir duquel un message est
+   * qualifié de chronique plutôt que traité comme un warn isolé — 3 couvre
+   * aussi bien une cadence à 11 cycles/jour (Ticketmaster) qu'une cadence à 1
+   * cycle/nuit (Overpass, réconciliation nocturne).
    */
   public static final int SEUIL_CYCLES_CHRONIQUE = 3;
 

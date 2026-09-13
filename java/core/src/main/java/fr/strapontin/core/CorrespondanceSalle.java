@@ -20,26 +20,32 @@ import java.util.Set;
  */
 public final class CorrespondanceSalle {
 
-  // Seuils Levenshtein ≥ 0.75 + containment ratio court/long ≥ 0.5.
-  // 0.75 évite les faux positifs entre villes ("zenith bordeaux"/"zenith caen" sim=0.61 → false)
-  // tout en couvrant les variantes légitimes ("l olympia"/"olympia" sim=0.78 → true).
+  // Seuils Levenshtein ≥ 0.75 + containment ratio court/long ≥ 0.5. 0.75 évite
+  // les faux positifs entre villes ("zenith bordeaux"/"zenith caen" sim=0.61 →
+  // false) tout en couvrant les variantes légitimes ("l olympia"/"olympia"
+  // sim=0.78 → true).
   private static final double SEUIL_SIMILARITE_SALLE = 0.75;
   private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
   private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
-  // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre "le", "de", "la"…).
+  // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre
+  // "le", "de", "la"…).
   private static final int LONGUEUR_MIN_TOKEN_JACCARD = 3;
   private static final double SEUIL_JACCARD_SALLE = 0.5;
-  // Critère pivot : token commun ≥ LONGUEUR_MIN_PIVOT + Jaccard > SEUIL_JACCARD_PIVOT.
-  // Couvre les variantes Eventim "grand kursaal"/"kursaal besancon" (Jaccard=0.33, pivot≥7).
+  // Critère pivot : token commun ≥ LONGUEUR_MIN_PIVOT + Jaccard >
+  // SEUIL_JACCARD_PIVOT. Couvre les variantes Eventim "grand kursaal"/"kursaal
+  // besancon" (Jaccard=0.33, pivot≥7).
   private static final int LONGUEUR_MIN_PIVOT = 7;
   private static final double SEUIL_JACCARD_PIVOT = 0.3;
-  // Mots-types de salle génériques en français, partagés nationalement par de nombreux lieux
-  // sans rapport (des dizaines de "Palais des Congrès"/"Zénith"/"Théâtre Municipal" existent en
-  // France) — exclus du calcul de similarité par tokens (Jaccard et pivot), qui doit porter sur
-  // ce qui distingue réellement deux salles, pas sur leur type architectural commun.
+  // Mots-types de salle génériques en français, partagés nationalement par de
+  // nombreux lieux sans rapport (des dizaines de "Palais des
+  // Congrès"/"Zénith"/"Théâtre Municipal" existent en France) — exclus du
+  // calcul de similarité par tokens (Jaccard et pivot), qui doit porter sur ce
+  // qui distingue réellement deux salles, pas sur leur type architectural
+  // commun.
   //
-  // Visibilité publique : réutilisé tel quel par la suggestion de mots génériques (worker), qui
-  // ne doit jamais re-suggérer un mot déjà connu de cette liste.
+  // Visibilité publique : réutilisé tel quel par la suggestion de mots
+  // génériques (worker), qui ne doit jamais re-suggérer un mot déjà connu de
+  // cette liste.
   public static final Set<String> MOTS_GENERIQUES_SALLE =
       Set.of(
           "theatre",
@@ -60,15 +66,17 @@ public final class CorrespondanceSalle {
           "antique",
           "parc",
           "barriere",
-          // "eglise"/"saint" : des dizaines d'édifices religieux français partagent ces deux
-          // tokens sans aucun rapport entre eux (ex. "Eglise Saint-Ephrem" / "Eglise
-          // Saint-Eustache") — leur seule présence gonflait le Jaccard spécifique bien au-delà
-          // du seuil entre deux salles réellement distinctes.
+          // "eglise"/"saint" : des dizaines d'édifices religieux français
+          // partagent ces deux tokens sans aucun rapport entre eux (ex. "Eglise
+          // Saint-Ephrem" / "Eglise Saint-Eustache") — leur seule présence
+          // gonflait le Jaccard spécifique bien au-delà du seuil entre deux
+          // salles réellement distinctes.
           "eglise",
           "saint");
 
-  // Longueur minimale d'un token spécifique pour servir de base au containment partiel
-  // asymétrique — évite un containment trivial sur un token déjà très court.
+  // Longueur minimale d'un token spécifique pour servir de base au containment
+  // partiel asymétrique — évite un containment trivial sur un token déjà très
+  // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_TOKEN = 4;
 
   private static final String SEPARATEUR_QUALIFICATIF = " - ";
@@ -85,10 +93,11 @@ public final class CorrespondanceSalle {
     if (nomA.equals(nomB)) {
       return true;
     }
-    // Le containment de caractères (un nom court entièrement préfixe/suffixe d'un nom plus long)
-    // n'a aucun pouvoir discriminant propre — "la prade" est un préfixe strict de "la pradella",
-    // deux lieux réels sans rapport — désactivé au même titre que le pivot quand aucun signal de
-    // localisation indépendant ne peut confirmer le candidat.
+    // Le containment de caractères (un nom court entièrement préfixe/suffixe
+    // d'un nom plus long) n'a aucun pouvoir discriminant propre — "la prade"
+    // est un préfixe strict de "la pradella", deux lieux réels sans rapport —
+    // désactivé au même titre que le pivot quand aucun signal de localisation
+    // indépendant ne peut confirmer le candidat.
     return DistanceTexte.similarite(nomA, nomB) >= seuilSimilarite
         || (containmentAutorise
             && UtilitairesChaine.estContainmentRatio(
@@ -96,8 +105,9 @@ public final class CorrespondanceSalle {
   }
 
   /**
-   * Découpe une chaîne normalisée en tokens significatifs (filtre les mots de moins de {@value
-   * #LONGUEUR_MIN_TOKEN_JACCARD} caractères — articles "le", "de", "la"…).
+   * Découpe une chaîne normalisée en tokens significatifs (filtre les mots de
+   * moins de {@value #LONGUEUR_MIN_TOKEN_JACCARD} caractères — articles "le",
+   * "de", "la"…).
    *
    * @param nomNorm chaîne normalisée
    * @return ensemble des tokens significatifs
@@ -173,9 +183,10 @@ public final class CorrespondanceSalle {
       if (tokenCourt.length() < LONGUEUR_MIN_CONTAINMENT_TOKEN) {
         return false;
       }
-      // La garde de longueur doit aussi s'appliquer au token du nom long : sans elle, un article
-      // court comme "les" (issu d'un nom mal désapostrophé, ex. "lessaion") valide trivialement un
-      // containment sans aucun rapport sémantique réel avec le nom recherché.
+      // La garde de longueur doit aussi s'appliquer au token du nom long : sans
+      // elle, un article court comme "les" (issu d'un nom mal désapostrophé,
+      // ex. "lessaion") valide trivialement un containment sans aucun rapport
+      // sémantique réel avec le nom recherché.
       final boolean couvert =
           specLong.stream()
               .filter(t -> t.length() >= LONGUEUR_MIN_CONTAINMENT_TOKEN)
@@ -274,16 +285,17 @@ public final class CorrespondanceSalle {
     return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
   }
 
-  // Au moins un token spécifique en commun requis — sans quoi deux noms entièrement génériques
-  // (déjà couverts par l'égalité stricte) ou sans mot distinctif partagé ne doivent jamais être
-  // déclarés doublons sur ce seul critère.
+  // Au moins un token spécifique en commun requis — sans quoi deux noms
+  // entièrement génériques (déjà couverts par l'égalité stricte) ou sans mot
+  // distinctif partagé ne doivent jamais être déclarés doublons sur ce seul
+  // critère.
   private static boolean estJaccardSpecifiqueSuffisant(
       final Set<String> specA, final Set<String> specB, final double jaccardSpec) {
     return !(specA.isEmpty() && specB.isEmpty()) && jaccardSpec > SEUIL_JACCARD_SALLE;
   }
 
-  // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs de type
-  // "galaxie" (1 token) vs "le galaxie amneville".
+  // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs
+  // de type "galaxie" (1 token) vs "le galaxie amneville".
   private static boolean estPivotSpecifique(
       final Set<String> tokA,
       final Set<String> tokB,
@@ -295,11 +307,13 @@ public final class CorrespondanceSalle {
         && intersectionSpec.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
   }
 
-  // Garde-fou sur le nombre de tokens SPÉCIFIQUES (pas bruts) de chaque côté — sans lui, un nom
-  // réduit à un unique token spécifique après retrait des mots-types génériques ("Casino de
-  // Paris" → seul "paris" reste après retrait de "casino") correspond trivialement à n'importe
-  // quel autre nom partageant ce token comme simple nom de ville ("Théâtre Rive Gauche Paris 14",
-  // "Cathédrale Américaine Paris 08"...), sans aucun rapport avec le lieu recherché.
+  // Garde-fou sur le nombre de tokens SPÉCIFIQUES (pas bruts) de chaque côté —
+  // sans lui, un nom réduit à un unique token spécifique après retrait des
+  // mots-types génériques ("Casino de Paris" → seul "paris" reste après retrait
+  // de "casino") correspond trivialement à n'importe quel autre nom partageant
+  // ce token comme simple nom de ville ("Théâtre Rive Gauche Paris 14",
+  // "Cathédrale Américaine Paris 08"...), sans aucun rapport avec le lieu
+  // recherché.
   private static boolean estContainmentPartielSuffisant(
       final Set<String> specA, final Set<String> specB) {
     if (specA.size() < 2 || specB.size() < 2) {
@@ -310,8 +324,8 @@ public final class CorrespondanceSalle {
     return estContainmentTokensPartiel(specCourt, specLong);
   }
 
-  // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une espace) — l'extraction
-  // opère donc sur le nom brut, jamais sur nom_norm.
+  // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une
+  // espace) — l'extraction opère donc sur le nom brut, jamais sur nom_norm.
   private static String extraireQualificatif(final String nomBrut) {
     final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
     if (idx <= 0) {

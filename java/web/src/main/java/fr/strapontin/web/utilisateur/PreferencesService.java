@@ -185,10 +185,11 @@ public class PreferencesService {
     return preferencesExportService.exporter(userId);
   }
 
-  // résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même dédup floue
-  // (CorrespondanceArtiste.estDoublonArtiste) que l'ajout interactif, plutôt qu'un ON CONFLICT
-  // exact sur nom_norm qui créait un doublon de référentiel pour une variante orthographique
-  // mineure (ex. "The Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
+  // résolution de l'UUID artiste via ArtisteService.resoudreArtisteId — même
+  // dédup floue (CorrespondanceArtiste.estDoublonArtiste) que l'ajout
+  // interactif, plutôt qu'un ON CONFLICT exact sur nom_norm qui créait un
+  // doublon de référentiel pour une variante orthographique mineure (ex. "The
+  // Rolling Stones" importé alors que "Rolling Stones" est déjà suivi).
   private int[] importerArtistes(final String userId, final List<ArtisteExport> artistes) {
     final Integer nbExistants =
         jdbc.queryForObject(
@@ -226,10 +227,11 @@ public class PreferencesService {
     return new int[] {traites, rejetes};
   }
 
-  // résolution de l'UUID salle via SalleService.resoudreSalleId — même dédup floue
-  // (CorrespondanceSalle.estDoublonSalle) que l'ajout interactif, plutôt qu'un ON CONFLICT exact
-  // sur salle_cle. Le salleId de l'export JSON n'est volontairement pas utilisé pour retrouver
-  // une salle existante (comportement inchangé) — le nom est toujours re-normalisé.
+  // résolution de l'UUID salle via SalleService.resoudreSalleId — même dédup
+  // floue (CorrespondanceSalle.estDoublonSalle) que l'ajout interactif, plutôt
+  // qu'un ON CONFLICT exact sur salle_cle. Le salleId de l'export JSON n'est
+  // volontairement pas utilisé pour retrouver une salle existante (comportement
+  // inchangé) — le nom est toujours re-normalisé.
   private int[] importerSalles(final String userId, final List<SalleExport> salles) {
     final Integer nbExistants =
         jdbc.queryForObject(

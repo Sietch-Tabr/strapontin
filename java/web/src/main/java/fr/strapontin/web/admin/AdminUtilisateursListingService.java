@@ -37,7 +37,8 @@ class AdminUtilisateursListingService {
   }
 
   /**
-   * Retourne une page d'utilisateurs avec leur dernière activité et compteurs de suivi.
+   * Retourne une page d'utilisateurs avec leur dernière activité et compteurs
+   * de suivi.
    *
    * @param page numéro de page (0-indexé)
    * @return page d'utilisateurs triés par date de création
@@ -118,8 +119,9 @@ class AdminUtilisateursListingService {
         nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
   }
 
-  // page vide (offset au-delà du total, ex. dernier utilisateur supprimé depuis) : total_filtre
-  // n'est renvoyé par aucune ligne, un second aller-retour reste alors nécessaire.
+  // page vide (offset au-delà du total, ex. dernier utilisateur supprimé
+  // depuis) : total_filtre n'est renvoyé par aucune ligne, un second
+  // aller-retour reste alors nécessaire.
   private long compterUtilisateurs(final int pageNum) {
     if (pageNum == 0) {
       return 0;

@@ -18,10 +18,10 @@ package fr.strapontin.web.artiste;
 public record SuggestionArtiste(String nom, String source, String description, String wikidataId) {
 
   /**
-   * Construit une suggestion sans métadonnées Wikidata (sources {@code "base"}/{@code
-   * "deezer"}).
+   * Construit une suggestion sans métadonnées Wikidata (sources {@code "base"}
+   * /{@code "deezer"}).
    *
-   * @param nom    nom affiché
+   * @param nom nom affiché
    * @param source origine de la suggestion
    */
   public SuggestionArtiste(final String nom, final String source) {

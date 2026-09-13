@@ -27,7 +27,8 @@ public class BanniereController {
   }
 
   /**
-   * Retourne les données de la bannière active, ou {@code null} si aucune n'est configurée.
+   * Retourne les données de la bannière active, ou {@code null} si aucune n'est
+   * configurée.
    *
    * @return le DTO de bannière, ou {@code null}
    */

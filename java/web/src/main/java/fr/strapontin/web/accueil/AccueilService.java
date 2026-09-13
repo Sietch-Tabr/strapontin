@@ -129,11 +129,12 @@ public class AccueilService {
     return where;
   }
 
-  // est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL — cohérent avec
-  // SpectacleDto.estNew et avec l'intention "jamais vu", plutôt que first_seen (fraîcheur en
-  // base, indépendante de l'utilisateur) utilisé auparavant ici. Sans lien avec le paramètre
-  // `nouveau` de cette méthode (filtre chip "Nouveau", basé sur first_seen — fonctionnalité
-  // distincte : concerts récemment détectés, pas concerts jamais vus).
+  // est_nouveau (badge affiché par concert) unifié sur um.vu_le IS NULL —
+  // cohérent avec SpectacleDto.estNew et avec l'intention "jamais vu", plutôt
+  // que first_seen (fraîcheur en base, indépendante de l'utilisateur) utilisé
+  // auparavant ici. Sans lien avec le paramètre `nouveau` de cette méthode
+  // (filtre chip "Nouveau", basé sur first_seen — fonctionnalité distincte :
+  // concerts récemment détectés, pas concerts jamais vus).
   private List<ConcertAccueil> chargerConcertsAccueil(
       final StringBuilder where, final Map<String, Object> params) {
     return jdbc.query(
@@ -165,7 +166,8 @@ public class AccueilService {
                 rs.getBoolean("est_nouveau")));
   }
 
-  // computeIfAbsent n'instancie une ArrayList que pour les artistes réellement nouveaux.
+  // computeIfAbsent n'instancie une ArrayList que pour les artistes réellement
+  // nouveaux.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private List<GroupeArtiste> grouperParArtiste(final List<ConcertAccueil> lignes) {
     final Map<String, List<ConcertAccueil>> groupes = new LinkedHashMap<>();

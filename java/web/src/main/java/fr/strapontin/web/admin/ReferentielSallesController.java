@@ -54,8 +54,9 @@ public class ReferentielSallesController {
    * @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id}
    * @return 200 avec la page de résultats
    */
-  // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP GET), pas par choix
-  // de conception — hors de la convention DTO du projet, réservée aux endpoints @RequestBody.
+  // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP
+  // GET), pas par choix de conception — hors de la convention DTO du projet,
+  // réservée aux endpoints @RequestBody.
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @GetMapping("/salles")
   public ResponseEntity<ReponseReferentielSalles> lister(
@@ -75,7 +76,8 @@ public class ReferentielSallesController {
    * Modifie le nom affiché d'une salle.
    *
    * @param uuid UUID de la salle
-   * @param corps corps JSON avec {@code nomAffiche} (null/vide pour revenir à l'auto)
+   * @param corps corps JSON avec {@code nomAffiche} (null/vide pour revenir à
+   *     l'auto)
    * @return 200 si mis à jour, 400 si UUID invalide, 404 si salle inconnue
    */
   @PatchMapping("/salles/{uuid}")
@@ -119,7 +121,8 @@ public class ReferentielSallesController {
    *
    * @param uuid UUID de la salle source
    * @param uuidCible UUID de la salle cible
-   * @return 200 si fusionnée, 400 si UUID invalide ou identiques, 404 si une salle est inconnue
+   * @return 200 si fusionnée, 400 si UUID invalide ou identiques, 404 si une
+   *     salle est inconnue
    */
   @PostMapping("/salles/{uuid}/fusionner/{uuidCible}")
   public ResponseEntity<Map<String, Object>> fusionner(

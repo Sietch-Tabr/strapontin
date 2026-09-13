@@ -38,7 +38,9 @@ final class EmailTemplatesAlertes {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte backup
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alerteBackup(final String horodatage, final String raison, final String baseUrl) {
     final String horodatageHtml =
         (horodatage != null && !horodatage.isBlank())
@@ -79,7 +81,9 @@ final class EmailTemplatesAlertes {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alerteIntegrite(final String detail, final String baseUrl) {
     final String corps =
         """
@@ -106,7 +110,9 @@ final class EmailTemplatesAlertes {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte bounce
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alerteBounce(final String emailBouncee, final String baseUrl) {
     final String corps =
         """
@@ -131,13 +137,16 @@ final class EmailTemplatesAlertes {
   }
 
   /**
-   * Alerte de plainte spam (destinataire ayant signalé un email Strapontin comme indésirable).
+   * Alerte de plainte spam (destinataire ayant signalé un email Strapontin
+   * comme indésirable).
    *
    * @param emailPlaignant l'adresse email à l'origine de la plainte
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte plainte spam
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alertePlainteSpam(final String emailPlaignant, final String baseUrl) {
     final String corps =
         """
@@ -169,7 +178,9 @@ final class EmailTemplatesAlertes {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte worker
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alerteWorker(final String detail, final String baseUrl) {
     final String corps =
         """
@@ -197,7 +208,9 @@ final class EmailTemplatesAlertes {
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte quota Resend
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alerteQuotaResend(
       final int envoyesJour,
       final int limiteJour,
@@ -227,13 +240,16 @@ final class EmailTemplatesAlertes {
   }
 
   /**
-   * Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur.
+   * Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau
+   * erreur.
    *
    * @param erreurs liste des entrées d'erreur à afficher (non vide)
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML du digest d'erreurs
    */
-  /* package-private : appelé uniquement par EmailAlerteService (même package). */
+  /*
+   * package-private : appelé uniquement par EmailAlerteService (même package).
+   */
   static String alerteLogsAdmin(final List<EntreeLogAdmin> erreurs, final String baseUrl) {
     final String lignesHtml =
         erreurs.stream()

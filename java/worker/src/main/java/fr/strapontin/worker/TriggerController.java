@@ -83,7 +83,8 @@ public class TriggerController {
   /**
    * Retourne les noms traduits des jobs Quartz en cours d'exécution.
    *
-   * @return les noms traduits (ex. {@code "fetch:artistes:batch"}) des jobs actifs
+   * @return les noms traduits (ex. {@code "fetch:artistes:batch"} ) des jobs
+   *     actifs
    */
   @GetMapping("/actif")
   public ResponseEntity<Map<String, Object>> jobsActifs() {
@@ -104,8 +105,9 @@ public class TriggerController {
   }
 
   /**
-   * Déclenche immédiatement {@code fetch:artistes:batch} et {@code fetch:region}, uniquement si
-   * aucun des deux n'est déjà en cours d'exécution.
+   * Déclenche immédiatement {@code fetch:artistes:batch} et
+   * {@code fetch:region} , uniquement si aucun des deux n'est déjà en cours
+   * d'exécution.
    *
    * @return 200 si déclenchés ou déjà en cours, 500 en cas d'erreur Quartz
    */
@@ -128,7 +130,8 @@ public class TriggerController {
   }
 
   /**
-   * Déclenche immédiatement {@code fetch:artistes:batch} uniquement si aucun n'est déjà en cours.
+   * Déclenche immédiatement {@code fetch:artistes:batch} uniquement si aucun
+   * n'est déjà en cours.
    *
    * <p>Appelé automatiquement par le web après l'ajout d'un artiste.
    *

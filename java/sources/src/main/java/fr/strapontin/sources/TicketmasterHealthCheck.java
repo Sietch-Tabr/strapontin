@@ -16,8 +16,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Vérification de vivacité et redécouverte active des identifiants Ticketmaster (salles et
- * artistes) — extrait de {@link TicketmasterSource} pour séparer ce concern du fetch principal.
+ * Vérification de vivacité et redécouverte active des identifiants Ticketmaster
+ * (salles et artistes) — extrait de {@link TicketmasterSource} pour séparer ce
+ * concern du fetch principal.
  */
 final class TicketmasterHealthCheck {
 
@@ -30,7 +31,10 @@ final class TicketmasterHealthCheck {
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
 
-  /* package-private : instancié uniquement par TicketmasterSource (même package). */
+  /*
+   * package-private : instancié uniquement par TicketmasterSource (même
+   * package).
+   */
   TicketmasterHealthCheck(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this.apiKey = apiKey;

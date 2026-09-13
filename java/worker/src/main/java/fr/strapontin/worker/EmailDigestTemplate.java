@@ -46,7 +46,9 @@ final class EmailDigestTemplate {
 
   private EmailDigestTemplate() {}
 
-  /* package-private : appelé par NotificationEmailDigestService (même package). */
+  /*
+   * package-private : appelé par NotificationEmailDigestService (même package).
+   */
   static String construireCorpsEmail(
       final String sujet,
       final List<NotificationDigestService.ConcertNotif> concerts,
@@ -60,8 +62,9 @@ final class EmailDigestTemplate {
     return GABARIT_CORPS_EMAIL.formatted(sujet, sujet, lignes, baseUrl, baseUrl);
   }
 
-  // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
-  // digest couvrant plusieurs artistes se lit comme une liste continue.
+  // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste —
+  // sans elle, un digest couvrant plusieurs artistes se lit comme une liste
+  // continue.
   private static String construireLigneConcertEmail(
       final NotificationDigestService.ConcertNotif concert, final String artistePrecedent) {
     final String lieu =
@@ -99,8 +102,9 @@ final class EmailDigestTemplate {
             lieu);
   }
 
-  // Nom volontairement court : appelé à de nombreuses reprises dans des lignes de formatage HTML
-  // déjà denses (voir le gabarit ci-dessus) — un nom plus long nuirait à leur lisibilité.
+  // Nom volontairement court : appelé à de nombreuses reprises dans des lignes
+  // de formatage HTML déjà denses (voir le gabarit ci-dessus) — un nom plus
+  // long nuirait à leur lisibilité.
   @SuppressWarnings("PMD.ShortMethodName")
   private static String e(final String valeur) {
     return UtilitairesChaine.echapperHtml(valeur);

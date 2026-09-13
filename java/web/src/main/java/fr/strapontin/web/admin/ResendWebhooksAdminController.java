@@ -54,8 +54,8 @@ public class ResendWebhooksAdminController {
    * Rejoue un événement webhook en échec.
    *
    * @param id identifiant de l'événement à rejouer
-   * @return 200 si le rejeu a été accepté, 502 en cas d'échec (configuration absente, webhook
-   *     introuvable, erreur API Resend)
+   * @return 200 si le rejeu a été accepté, 502 en cas d'échec (configuration
+   *     absente, webhook introuvable, erreur API Resend)
    */
   @PostMapping("/evenements/{id}/rejouer")
   public ResponseEntity<Map<String, Object>> rejouerEvenement(@PathVariable final String id) {

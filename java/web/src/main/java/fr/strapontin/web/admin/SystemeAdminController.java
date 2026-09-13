@@ -92,7 +92,8 @@ public class SystemeAdminController {
    *
    * @param requete corps JSON avec {@code cle} et {@code valeur}
    * @param auth contexte d'authentification admin
-   * @return 200 si sauvegardé — 400 si invalide (via {@link GlobalExceptionHandler})
+   * @return 200 si sauvegardé — 400 si invalide (via
+   *     {@link GlobalExceptionHandler} )
    */
   @PatchMapping("/config")
   public ResponseEntity<Map<String, Object>> sauvegarderConfig(
@@ -108,7 +109,8 @@ public class SystemeAdminController {
   /**
    * Génère une nouvelle paire de clés VAPID EC P-256.
    *
-   * @return 200 avec la clé publique générée et le nombre d'abonnements push invalidés
+   * @return 200 avec la clé publique générée et le nombre d'abonnements push
+   *     invalidés
    */
   @PostMapping("/vapid/generer")
   public ResponseEntity<Map<String, Object>> genererVapid() {
@@ -207,7 +209,8 @@ public class SystemeAdminController {
   /**
    * Déclenche immédiatement les fetches via le worker.
    *
-   * @return 200 si déclenché, 502 en cas d'erreur interne worker, 503 si injoignable
+   * @return 200 si déclenché, 502 en cas d'erreur interne worker, 503 si
+   *     injoignable
    */
   @PostMapping("/relancer")
   public ResponseEntity<Map<String, Object>> relancerFetches() {

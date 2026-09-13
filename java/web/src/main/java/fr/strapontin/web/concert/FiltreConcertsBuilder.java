@@ -34,7 +34,8 @@ public final class FiltreConcertsBuilder {
   /**
    * Retourne la clause {@code ORDER BY} selon le critère de tri demandé.
    *
-   * @param tri {@code "nouveaute"} (par date de première détection) ou {@code "date"} (défaut)
+   * @param tri {@code "nouveaute"} (par date de première détection) ou
+   *     {@code "date"} (défaut)
    * @return la clause ORDER BY (sans le mot-clé)
    */
   public static String clauseTri(final String tri) {
@@ -97,7 +98,8 @@ public final class FiltreConcertsBuilder {
   }
 
   /**
-   * Ajoute le filtre classification (égalité) ; sans effet si la classification est vide.
+   * Ajoute le filtre classification (égalité) ; sans effet si la classification
+   * est vide.
    *
    * @param where clause WHERE en construction
    * @param params paramètres nommés

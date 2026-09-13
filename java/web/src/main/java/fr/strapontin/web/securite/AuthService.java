@@ -43,7 +43,8 @@ public class AuthService {
    * @param verificationRepository accès aux tokens de vérification
    * @param emailService service d'envoi d'emails
    * @param passwordEncoder encodeur bcrypt
-   * @param sessionRepository dépôt de sessions JDBC (révocation après reset de mdp)
+   * @param sessionRepository dépôt de sessions JDBC (révocation après reset de
+   *     mdp)
    */
   public AuthService(
       final VerificationRepository verificationRepository,
@@ -132,8 +133,8 @@ public class AuthService {
     try {
       verificationRepository.majUsernameEtActiverParEmail(email, identifiant);
     } catch (DataIntegrityViolationException e) {
-      // Race entre le contrôle ci-dessus et cet UPDATE : deux invitations concurrentes ont
-      // pu choisir le même identifiant entre-temps.
+      // Race entre le contrôle ci-dessus et cet UPDATE : deux invitations
+      // concurrentes ont pu choisir le même identifiant entre-temps.
       final ErreurMetier erreur = new ErreurMetier("Cet identifiant est déjà utilisé.");
       erreur.initCause(e);
       throw erreur;

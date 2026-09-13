@@ -206,7 +206,8 @@ public class AdminController {
    *
    * @param userId identifiant de l'administrateur à révoquer
    * @param auth contexte d'authentification admin
-   * @return 200 si initiée, 400 si déjà user, 404 si introuvable, 409 si seul admin
+   * @return 200 si initiée, 400 si déjà user, 404 si introuvable, 409 si seul
+   *     admin
    */
   @PostMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> initierRevocationAdmin(
@@ -224,7 +225,8 @@ public class AdminController {
    *
    * @param userId identifiant de l'administrateur concerné
    * @param auth contexte d'authentification admin
-   * @return 200 si annulée, 400 si auto-annulation ou aucune révocation en cours
+   * @return 200 si annulée, 400 si auto-annulation ou aucune révocation en
+   *     cours
    */
   @DeleteMapping("/utilisateurs/{userId}/revoquer-admin")
   public ResponseEntity<Map<String, Object>> annulerRevocationAdmin(
@@ -242,7 +244,8 @@ public class AdminController {
    *
    * @param userId identifiant de l'utilisateur
    * @param auth contexte d'authentification admin
-   * @return 200 si réinitialisé, 400 si compte admin courant, 404 si introuvable
+   * @return 200 si réinitialisé, 400 si compte admin courant, 404 si
+   *     introuvable
    */
   @PostMapping("/utilisateurs/{userId}/reset-totp")
   public ResponseEntity<Map<String, Object>> reinitialiserTotp(

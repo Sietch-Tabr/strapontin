@@ -44,17 +44,19 @@ public class ManifestController {
   private final ConfigService configService;
 
   /**
-   * @param configService lecture de {@code PUBLIC_BASE_URL} pour stabiliser {@code id}
+   * @param configService lecture de {@code PUBLIC_BASE_URL} pour stabiliser
+   *     {@code id}
    */
   public ManifestController(final ConfigService configService) {
     this.configService = configService;
   }
 
   /**
-   * Retourne le manifeste PWA au format {@code application/manifest+json}.
+   * Retourne le manifeste PWA au format {@code application/manifest+json} .
    *
    * @param request la requête HTTP courante (pour dériver la base URL)
-   * @return le manifeste JSON avec {@code start_url} dynamique et {@code id} stable
+   * @return le manifeste JSON avec {@code start_url} dynamique et {@code id}
+   *     stable
    */
   @GetMapping(value = "/manifest.json", produces = "application/manifest+json")
   public ResponseEntity<Map<String, Object>> manifest(final HttpServletRequest request) {

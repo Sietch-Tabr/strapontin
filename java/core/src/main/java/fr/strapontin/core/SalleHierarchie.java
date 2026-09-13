@@ -8,17 +8,18 @@ import java.util.UUID;
 import java.util.function.Function;
 
 /**
- * Détection de cycle sur la hiérarchie {@code salles.salle_parent_id} — fonction pure partagée
- * entre {@code web} et {@code worker} sans dépendance JDBC, sur le modèle de {@link
- * CorrespondanceSalle}.
+ * Détection de cycle sur la hiérarchie {@code salles.salle_parent_id} —
+ * fonction pure partagée entre {@code web} et {@code worker} sans dépendance
+ * JDBC, sur le modèle de {@link CorrespondanceSalle}.
  *
  * @since 2.9.0
  * @author Kwaite
  */
 public final class SalleHierarchie {
 
-  // Garde-fou contre une boucle infinie si la chaîne de parenté déjà en base contient elle-même un
-  // cycle préexistant (ne devrait jamais arriver, mais ne doit jamais bloquer indéfiniment).
+  // Garde-fou contre une boucle infinie si la chaîne de parenté déjà en base
+  // contient elle-même un cycle préexistant (ne devrait jamais arriver, mais ne
+  // doit jamais bloquer indéfiniment).
   private static final int PROFONDEUR_MAX = 100;
 
   private SalleHierarchie() {}

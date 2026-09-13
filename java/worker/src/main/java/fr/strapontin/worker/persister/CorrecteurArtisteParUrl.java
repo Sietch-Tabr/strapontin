@@ -26,7 +26,10 @@ final class CorrecteurArtisteParUrl {
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  /* package-private : instancié uniquement par ReconciliateurArtistes (même package). */
+  /*
+   * package-private : instancié uniquement par ReconciliateurArtistes (même
+   * package).
+   */
   CorrecteurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -82,18 +85,20 @@ final class CorrecteurArtisteParUrl {
   }
 
   // Filtre par url plutôt que par (artiste_norm, date, salle_norm) comme
-  // ReconciliateurArtistes.corrigerArtisteExistantEnBase — deux fiches partageant la même url
-  // désignent nécessairement le même événement réel, quels que soient l'ancien nom corrompu et sa
-  // date/salle éventuellement elles-mêmes faussées par le même mauvais rapprochement.
+  // ReconciliateurArtistes.corrigerArtisteExistantEnBase — deux fiches
+  // partageant la même url désignent nécessairement le même événement réel,
+  // quels que soient l'ancien nom corrompu et sa date/salle éventuellement
+  // elles-mêmes faussées par le même mauvais rapprochement.
   private void corrigerArtisteParUrl(final ValeurConcert concert) {
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("nouvelArtiste", concert.artiste())
             .addValue("nouvelArtisteNorm", concert.artisteNorm())
             .addValue("url", concert.url());
-    // Identité (evenements.artiste_norm) et affichage de l'observation concernée
-    // (observations.artiste_brut) vivent désormais sur deux tables distinctes (#1192) — les deux
-    // doivent être corrigés, la seconde ne portant que sur l'observation partageant cette url.
+    // Identité (evenements.artiste_norm) et affichage de l'observation
+    // concernée (observations.artiste_brut) vivent désormais sur deux tables
+    // distinctes (#1192) — les deux doivent être corrigés, la seconde ne
+    // portant que sur l'observation partageant cette url.
     final int nbCorrigees =
         jdbc.update(
             "UPDATE evenements SET artiste_norm = :nouvelArtisteNorm, updated_at = now()"

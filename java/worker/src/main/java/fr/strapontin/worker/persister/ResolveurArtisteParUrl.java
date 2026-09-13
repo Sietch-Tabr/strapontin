@@ -43,7 +43,10 @@ class ResolveurArtisteParUrl {
   /**
    * @param jdbc template JDBC injecté par Spring
    */
-  /* package-private : instancié uniquement par PersisteurConcertsDb (même package). */
+  /*
+   * package-private : instancié uniquement par PersisteurConcertsDb (même
+   * package).
+   */
   ResolveurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -52,8 +55,8 @@ class ResolveurArtisteParUrl {
 
   /**
    * @param concerts concerts après résolution des identités sources
-   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés par URL, pour Eventim
-   *     uniquement
+   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés
+   *     par URL, pour Eventim uniquement
    */
   /* package-private : appelé par PersisteurConcertsDb (même package). */
   List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
@@ -84,7 +87,8 @@ class ResolveurArtisteParUrl {
         Map.of("urls", urls));
   }
 
-  // CleUrl porte les champs de la ligne courante — pas d'instance hissable hors boucle.
+  // CleUrl porte les champs de la ligne courante — pas d'instance hissable hors
+  // boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<CleUrl, Map<String, Object>> construireIndexUrlsExistantes(
       final List<Map<String, Object>> lignesExistantes) {

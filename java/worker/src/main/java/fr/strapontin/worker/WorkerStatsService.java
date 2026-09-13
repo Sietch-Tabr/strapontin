@@ -26,8 +26,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Statistiques et bilans de panne des jobs Quartz — extrait de {@code WorkerService}, mécanisme
- * partagé par tous les jobs (fetch, purge, révocation, réconciliation), pas seulement le fetch.
+ * Statistiques et bilans de panne des jobs Quartz — extrait de
+ * {@code WorkerService} , mécanisme partagé par tous les jobs (fetch, purge,
+ * révocation, réconciliation), pas seulement le fetch.
  *
  * @since 2.7.0
  * @author Kwaite
@@ -116,11 +117,10 @@ public class WorkerStatsService {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
       params.put("typeJob", typeJob);
-      // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre de bind
-      // (contrairement
-      // à la lecture via getObject/queryForObject) — OffsetDateTime est le seul type JSR-310
-      // supporté
-      // automatiquement en écriture par le driver.
+      // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en paramètre
+      // de bind (contrairement à la lecture via getObject/queryForObject) —
+      // OffsetDateTime est le seul type JSR-310 supporté automatiquement en
+      // écriture par le driver.
       params.put("now", maintenant.atOffset(ZoneOffset.UTC));
       params.put("dureeMs", (int) Math.min(dureeMs, Integer.MAX_VALUE));
       params.put("nbInseres", resultat.nbInseres());
@@ -336,8 +336,9 @@ public class WorkerStatsService {
   }
 
   /**
-   * Remonte dans {@code logs_admin} un warn de résultat vide (nb_inseres + nb_mis_a_jour = 0) pour
-   * un fetch qui s'est terminé sans erreur mais sans aucun concert persisté.
+   * Remonte dans {@code logs_admin} un warn de résultat vide (nb_inseres +
+   * nb_mis_a_jour = 0) pour un fetch qui s'est terminé sans erreur mais sans
+   * aucun concert persisté.
    *
    * @param typeJob le type de job de fetch
    * @param execLe l'horodatage de l'exécution

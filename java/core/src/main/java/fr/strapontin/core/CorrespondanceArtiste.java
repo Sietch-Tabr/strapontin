@@ -18,10 +18,11 @@ import java.util.Objects;
  */
 public final class CorrespondanceArtiste {
 
-  // Seuil artiste : Jaro ≥ 0.95 + containment ratio court/long ≥ 0.65.
-  // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
-  // false) tout en couvrant les variantes sans espace ("krash karma"/"krashkarma" Jaro=0.97 →
-  // true). Les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") passent par containment.
+  // Seuil artiste : Jaro ≥ 0.95 + containment ratio court/long ≥ 0.65. Jaro
+  // évite les faux positifs par préfixe commun ("julien dore"/"julien morel"
+  // Jaro=0.914 → false) tout en couvrant les variantes sans espace ("krash
+  // karma"/"krashkarma" Jaro=0.97 → true). Les troncatures TM ("aliz"/"alizee",
+  // "fawn"/"fawnn") passent par containment.
   private static final double SEUIL_JARO_ARTISTE = 0.95;
   private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
   private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
@@ -60,8 +61,9 @@ public final class CorrespondanceArtiste {
         || estPrefixeDeMotComplet(nomA, nomB);
   }
 
-  // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul, préfixe trivial
-  // d'un artiste sans rapport) et se couper sur un mot complet, sans exigence de ratio.
+  // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul,
+  // préfixe trivial d'un artiste sans rapport) et se couper sur un mot complet,
+  // sans exigence de ratio.
   private static boolean estPrefixeDeMotComplet(final String nomA, final String nomB) {
     final String court = nomA.length() <= nomB.length() ? nomA : nomB;
     final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;

@@ -60,8 +60,10 @@ public class RetryLotsService {
   private record ConfigRetry(JobKey jobKey, String cleJobData) {}
 
   /**
-   * @param scheduler planificateur Quartz portant le job cron normal à re-déclencher
-   * @param suiviChronicite comptage des cycles consécutifs en échec, pour l'abandon après 2 retries
+   * @param scheduler planificateur Quartz portant le job cron normal à
+   *     re-déclencher
+   * @param suiviChronicite comptage des cycles consécutifs en échec, pour
+   *     l'abandon après 2 retries
    * @param logsAdminWorker journalisation des retries planifiés
    */
   public RetryLotsService(

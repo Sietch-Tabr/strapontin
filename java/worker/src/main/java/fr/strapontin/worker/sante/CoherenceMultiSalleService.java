@@ -37,10 +37,12 @@ public class CoherenceMultiSalleService {
 
   private static final String PREFIXE_INTERNAL = "internal:";
 
-  // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur une seule lettre.
+  // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur
+  // une seule lettre.
   private static final int LONGUEUR_MIN_SIGLE = 2;
 
-  // Longueur minimale pour éviter un containment trivial sur un nom déjà très court.
+  // Longueur minimale pour éviter un containment trivial sur un nom déjà très
+  // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -108,7 +110,8 @@ public class CoherenceMultiSalleService {
       Map<UUID, String> nomNormParSalle,
       Map<UUID, String> signaleeParSalle) {}
 
-  // computeIfAbsent n'instancie une ArrayList que pour les salles réellement nouvelles.
+  // computeIfAbsent n'instancie une ArrayList que pour les salles réellement
+  // nouvelles.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private DonneesSourcesInternes regrouperParSalle(final List<Map<String, Object>> lignes) {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
@@ -127,8 +130,8 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Évalue les mésententes nom/source d'une salle et met à jour la signature de contamination déjà
-   * signalée si elle a changé.
+   * Évalue les mésententes nom/source d'une salle et met à jour la signature de
+   * contamination déjà signalée si elle a changé.
    *
    * @return {@code true} si une nouvelle contamination a été signalée
    */
@@ -188,9 +191,10 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Vérifie si la plus courte des deux chaînes est le sigle de la plus longue — les initiales de
-   * chaque mot de la plus longue, concaténées sans espace, égalent exactement la plus courte sans
-   * espace (ex. "ed n" pour "espace dollfus noack" → initiales e, d, n).
+   * Vérifie si la plus courte des deux chaînes est le sigle de la plus longue —
+   * les initiales de chaque mot de la plus longue, concaténées sans espace,
+   * égalent exactement la plus courte sans espace (ex. "ed n" pour "espace
+   * dollfus noack" → initiales e, d, n).
    */
   private static boolean estSigleDe(final String nomA, final String nomB) {
     final String court = nomA.length() <= nomB.length() ? nomA : nomB;
@@ -245,8 +249,9 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * @return {@code true} si la paire est un doublon potentiel nouvellement signalé (ni déjà connu,
-   *     ni un complexe/sous-salle apparenté, ni de départements incompatibles).
+   * @return {@code true} si la paire est un doublon potentiel nouvellement
+   *     signalé (ni déjà connu, ni un complexe/sous-salle apparenté, ni de
+   *     départements incompatibles).
    */
   private boolean evaluerPaireDoublon(
       final Map<String, Object> salleA, final Map<String, Object> salleB) {
@@ -254,8 +259,9 @@ public class CoherenceMultiSalleService {
     final UUID idB = (UUID) salleB.get("id");
     final UUID parentA = (UUID) salleA.get("salle_parent_id");
     final UUID parentB = (UUID) salleB.get("salle_parent_id");
-    // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons — leur nom qualifié
-    // ("X - Y") satisferait sinon le containment de tokens ci-dessous par construction.
+    // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons —
+    // leur nom qualifié ("X - Y") satisferait sinon le containment de tokens
+    // ci-dessous par construction.
     if (idA.equals(parentB) || idB.equals(parentA)) {
       return false;
     }
@@ -284,9 +290,10 @@ public class CoherenceMultiSalleService {
     return true;
   }
 
-  // Containment par token complet plutôt que sous-chaîne brute (#1203) : un containment de
-  // caractères validait à tort un article court ("les") trivialement présent dans un token du nom
-  // long ("lessaion") sans aucun rapport sémantique réel — même classe de faux positif que
+  // Containment par token complet plutôt que sous-chaîne brute (#1203) : un
+  // containment de caractères validait à tort un article court ("les")
+  // trivialement présent dans un token du nom long ("lessaion") sans aucun
+  // rapport sémantique réel — même classe de faux positif que
   // CorrespondanceSalle#estContainmentTokensPartiel.
   private static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
     final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;

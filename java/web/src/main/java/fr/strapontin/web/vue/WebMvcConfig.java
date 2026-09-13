@@ -24,7 +24,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
   @Override
   public void addResourceHandlers(final ResourceHandlerRegistry registry) {
-    // sw.js et index.html : no-cache (le navigateur doit toujours vérifier les mises à jour).
+    // sw.js et index.html : no-cache (le navigateur doit toujours vérifier les
+    // mises à jour).
     registry
         .addResourceHandler("/sw.js", "/index.html")
         .addResourceLocations("classpath:/static/")
@@ -37,7 +38,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
         .addResourceLocations("classpath:/static/assets/")
         .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
 
-    // Images et icônes : 1 semaine — URLs stables mais contenu pouvant changer à chaque release.
+    // Images et icônes : 1 semaine — URLs stables mais contenu pouvant changer
+    // à chaque release.
     registry
         .addResourceHandler("/images/**")
         .addResourceLocations("classpath:/static/images/")

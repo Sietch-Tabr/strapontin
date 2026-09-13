@@ -132,7 +132,10 @@ public class PushService {
    * @throws ErreurMetier 429 si le cap est atteint
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
-  /* package-private : requis pour l'auto-invocation via le proxy self (@Transactional/SERIALIZABLE). */
+  /*
+   * package-private : requis pour l'auto-invocation via le proxy self
+   * (@Transactional/SERIALIZABLE).
+   */
   void abonnerTransactionnel(final String userId, final RequeteAbonnement requete) {
     final int total =
         Objects.requireNonNullElse(
@@ -179,7 +182,8 @@ public class PushService {
   }
 
   /**
-   * Liste les abonnements push de l'utilisateur, pour affichage dans /parametres.
+   * Liste les abonnements push de l'utilisateur, pour affichage dans
+   * /parametres.
    *
    * @param userId identifiant de l'utilisateur
    * @return les abonnements actifs, le plus récent en premier

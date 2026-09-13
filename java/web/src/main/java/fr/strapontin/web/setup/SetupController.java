@@ -38,7 +38,8 @@ public class SetupController {
   /**
    * Vérifie si l'application est déjà configurée.
    *
-   * @return {@code { "deja_configure": true }} si au moins un utilisateur existe
+   * @return {@code { "deja_configure": true }} si au moins un utilisateur
+   *     existe
    */
   @GetMapping
   public ResponseEntity<ReponseSetup> verifierSetup() {
@@ -49,7 +50,8 @@ public class SetupController {
    * Crée le premier administrateur et initialise la configuration applicative.
    *
    * @param requete les données d'initialisation
-   * @return 201 si créé — 409 si déjà configuré, 400 si invalide (via {@link GlobalExceptionHandler})
+   * @return 201 si créé — 409 si déjà configuré, 400 si invalide (via
+   *     {@link GlobalExceptionHandler} )
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> initialiser(

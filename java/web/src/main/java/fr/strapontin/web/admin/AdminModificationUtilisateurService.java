@@ -83,12 +83,15 @@ class AdminModificationUtilisateurService {
     final ChampsModification champs = validerEtNormaliser(requete, userId);
     final boolean retrogradationAdmin = detecterRetrogradationAdmin(userId, champs.role());
     // initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
-    // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà @Transactional, elle
-    // consommerait une seconde connexion HikariCP suspendue. Rejeter la combinaison en un seul
-    // PATCH force l'appelant à séquencer deux requêtes distinctes (déjà fait côté front depuis
-    // l'incident v2.6.4), plutôt que de rendre initierRevocationAdminTransactionnel sûr en
-    // imbrication : NESTED perdrait l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence
-    // la transaction imbriquée héritant de l'isolation de la transaction englobante.
+    // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà
+    // @Transactional, elle consommerait une seconde connexion HikariCP
+    // suspendue. Rejeter la combinaison en un seul PATCH force l'appelant à
+    // séquencer deux requêtes distinctes (déjà fait côté front depuis
+    // l'incident v2.6.4), plutôt que de rendre
+    // initierRevocationAdminTransactionnel sûr en imbrication : NESTED perdrait
+    // l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence la
+    // transaction imbriquée héritant de l'isolation de la transaction
+    // englobante.
     if (retrogradationAdmin && (!champs.nom().isEmpty() || !champs.email().isEmpty())) {
       throw new ErreurMetier(
           "Impossible de combiner une rétrogradation admin avec une modification de nom/email en"

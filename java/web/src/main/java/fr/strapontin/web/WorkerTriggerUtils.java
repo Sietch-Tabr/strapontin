@@ -30,9 +30,9 @@ public final class WorkerTriggerUtils {
    * @param url URL complète du endpoint worker à appeler
    * @param messageEchec message de log en cas d'échec (l'exception y est jointe)
    */
-  // Thread.startVirtualThread est la primitive Java 21+ recommandée pour un déclenchement
-  // fire-and-forget — pas un contexte de requête J2EE, la justification de la règle ne s'applique
-  // pas ici.
+  // Thread.startVirtualThread est la primitive Java 21+ recommandée pour un
+  // déclenchement fire-and-forget — pas un contexte de requête J2EE, la
+  // justification de la règle ne s'applique pas ici.
   @SuppressWarnings("PMD.DoNotUseThreads")
   public static void declencherWorkerAsync(
       final RestClient restClient, final Logger log, final String url, final String messageEchec) {
@@ -47,9 +47,10 @@ public final class WorkerTriggerUtils {
   }
 
   /**
-   * Réponse HTTP brute (statut + corps), utilisée pour reproduire avec {@link RestClient} le
-   * comportement de l'ancien {@code java.net.http.HttpClient} : lire le statut sans lever
-   * d'exception sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
+   * Réponse HTTP brute (statut + corps), utilisée pour reproduire avec
+   * {@link RestClient} le comportement de l'ancien
+   * {@code java.net.http.HttpClient} : lire le statut sans lever d'exception
+   * sur les codes non-2xx (contrairement à {@code retrieve()} par défaut).
    */
   public record ReponseHttp(int statut, String corps) {}
 }

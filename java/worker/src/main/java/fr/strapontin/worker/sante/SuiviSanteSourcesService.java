@@ -40,10 +40,12 @@ public class SuiviSanteSourcesService {
   private static final int SEUIL_SUSPECT = 3;
 
   /**
-   * Préfixes abrégés utilisés par le déclenchement manuel (voir {@code TriggerController}, {@code
-   * "tm:venueId"}) vers la valeur canonique stockée dans {@code salle_sources.source}/ {@code
-   * artiste_sources.source} ({@code source_concert} enum). Normalisation défensive uniquement pour
-   * ce suivi — ne corrige pas {@code TicketmasterSource.accepteIdentifiantSalle} (hors périmètre).
+   * Préfixes abrégés utilisés par le déclenchement manuel (voir
+   * {@code TriggerController} , {@code "tm:venueId"}) vers la valeur canonique
+   * stockée dans {@code salle_sources.source} / {@code artiste_sources.source}
+   * ({@code source_concert} enum). Normalisation défensive uniquement pour ce
+   * suivi — ne corrige pas {@code TicketmasterSource.accepteIdentifiantSalle}
+   * (hors périmètre).
    */
   private static final Map<String, String> PREFIXES_ABREGES = Map.of("tm", "ticketmaster");
 
@@ -52,7 +54,8 @@ public class SuiviSanteSourcesService {
 
   /**
    * @param jdbc accès JDBC
-   * @param tm revérification du nom TM avant effacement d'une intervention requise
+   * @param tm revérification du nom TM avant effacement d'une intervention
+   *     requise
    */
   public SuiviSanteSourcesService(
       final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
@@ -105,8 +108,9 @@ public class SuiviSanteSourcesService {
       final String source,
       final String identifiant,
       final boolean succes) {
-    // necessite_intervention_le n'existe que sur artiste_sources — résolution naturelle
-    // dès qu'un fetch redevient positif ET que le nom TM revérifié reste cohérent.
+    // necessite_intervention_le n'existe que sur artiste_sources — résolution
+    // naturelle dès qu'un fetch redevient positif ET que le nom TM revérifié
+    // reste cohérent.
     final boolean estArtisteSources = type == TypeEntiteSource.ARTISTE;
     final String colonneInterventionResolue =
         estArtisteSources

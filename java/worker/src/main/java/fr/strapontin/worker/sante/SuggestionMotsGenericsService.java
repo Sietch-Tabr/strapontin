@@ -43,9 +43,10 @@ public class SuggestionMotsGenericsService {
   private static final String CLE_CONFIG = "MOTS_GENERIQUES_SUGGERES_JSON";
 
   /**
-   * Seuil en occurrences brutes (pas en pourcentage du référentiel, dont le volume total varie trop
-   * peu jalon après jalon pour qu'un pourcentage soit discriminant) au-delà duquel un token
-   * spécifique est suspecté d'être en réalité un mot-type générique national.
+   * Seuil en occurrences brutes (pas en pourcentage du référentiel, dont le
+   * volume total varie trop peu jalon après jalon pour qu'un pourcentage soit
+   * discriminant) au-delà duquel un token spécifique est suspecté d'être en
+   * réalité un mot-type générique national.
    */
   public static final int SEUIL_OCCURRENCES_MOT_GENERIQUE = 15;
 
@@ -68,12 +69,14 @@ public class SuggestionMotsGenericsService {
   }
 
   /**
-   * Calcule la fréquence de chaque token spécifique parmi toutes les salles et signale ceux dont
-   * l'occurrence dépasse {@value #SEUIL_OCCURRENCES_MOT_GENERIQUE}, hors mots déjà suggérés.
+   * Calcule la fréquence de chaque token spécifique parmi toutes les salles et
+   * signale ceux dont l'occurrence dépasse
+   * {@value #SEUIL_OCCURRENCES_MOT_GENERIQUE} , hors mots déjà suggérés.
    *
    * @return nombre de mots nouvellement suggérés
    */
-  // Le HashSet copie les tokens du nom courant (mutable pour removeAll) — pas hissable hors boucle.
+  // Le HashSet copie les tokens du nom courant (mutable pour removeAll) — pas
+  // hissable hors boucle.
   @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   public int suggerer() {
     final List<String> noms =
