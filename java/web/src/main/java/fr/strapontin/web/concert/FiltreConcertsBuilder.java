@@ -9,16 +9,10 @@ import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 /**
- * Fragments SQL communs aux requêtes de listing de concerts.
- *
- * <p>Mutualise la construction des clauses {@code WHERE}/{@code ORDER BY} partagées entre {@code
- * DecouverteService} (catalogue global) et {@code SpectacleService} (matches utilisateur) : filtres
- * mois/genre/classification, tri et bornes de pagination. Les filtres propres à chaque source
- * (départements, masquage, sources suivies) restent dans leur service respectif.
- *
- * <p>Chaque méthode {@code appliquer*} ajoute sa condition au {@link StringBuilder} et ses
- * paramètres nommés à la {@link Map} fournie, sans rien faire si le filtre est absent.
- *
+ * Fragments SQL communs aux requêtes de listing de concerts — mutualise
+ * {@code WHERE}/{@code ORDER BY} entre {@code DecouverteService} et {@code
+ * SpectacleService}. Chaque méthode {@code appliquer*} ajoute sa condition
+ * et ses paramètres, sans effet si le filtre est absent.
  * @since 2.2.3
  * @author Kwaite
  */
@@ -55,13 +49,9 @@ public final class FiltreConcertsBuilder {
   }
 
   /**
-   * Ajoute le filtre mois ({@code YYYY-MM}) ; sans effet si le format est invalide.
-   *
-   * <p>La regex ne valide que la forme (4 chiffres, tiret, 2 chiffres), pas la validité calendaire
-   * — un mois comme {@code 2026-13} la passe puis faisait échouer {@link LocalDate#parse} avec une
-   * exception non interceptée (500 générique au lieu du contrat documenté "sans effet si
-   * invalide").
-   *
+   * Ajoute le filtre mois ({@code YYYY-MM}), sans effet si invalide — la
+   * regex ne valide que la forme, pas la validité calendaire ({@code
+   * 2026-13}), d'où le {@code try/catch} sur {@link LocalDate#parse}.
    * @param where clause WHERE en construction
    * @param params paramètres nommés
    * @param mois mois au format {@code YYYY-MM}
