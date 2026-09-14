@@ -26,11 +26,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Service de découverte de concerts par département.
- *
- * <p>Les requêtes indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via {@link
- * CompletableFuture} sur les threads virtuels Spring.
- *
+ * Service de découverte de concerts par département — les requêtes
+ * indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via
+ * {@link CompletableFuture} sur les threads virtuels Spring.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -54,13 +52,11 @@ public class DecouverteService {
   }
 
   /**
-   * Retourne les concerts filtrés par département et critères.
-   *
-   * <p>COUNT(*), filtres disponibles et données de synchronisation sont calculés en parallèle avec
-   * la requête principale pour réduire les round-trips séquentiels.
-   *
-   * @param userId identifiant de l'utilisateur (pour lire ses départements par défaut)
-   * @param filtre critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
+   * Retourne les concerts filtrés par département et critères (COUNT,
+   * filtres disponibles et sync calculés en parallèle de la requête
+   * principale).
+   * @param userId identifiant de l'utilisateur (départements par défaut)
+   * @param filtre critères ; {@code depts} null = ceux de l'utilisateur
    * @return réponse paginée avec filtres disponibles
    */
   public ReponseDecouverte decouvrir(final String userId, final FiltreConcerts filtre) {
