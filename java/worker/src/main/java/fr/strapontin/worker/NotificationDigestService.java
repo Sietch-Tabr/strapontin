@@ -22,16 +22,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de notification digest (email + push VAPID) pour le worker.
- *
- * <p>Lit les {@code user_matches} non notifiés, groupe par utilisateur, envoie email via Resend et
- * push VAPID, puis met à jour {@code notifie_le}.
- *
- * <p>Si {@code RESEND_API_KEY} ou les clés VAPID sont absentes de {@code app_config}, la
- * notification correspondante est ignorée sans erreur. Depuis, le canal email est de même ignoré
- * sans erreur si le quota d'envoi Resend jour/mois est atteint ({@link GestionQuotaResendWorker},
- * compteur partagé avec le module web).
- *
+ * Service de notification digest (email + push VAPID) pour le worker —
+ * lit les {@code user_matches} non notifiés, groupe par utilisateur,
+ * envoie et met à jour {@code notifie_le}. Canal ignoré sans erreur si
+ * clé/quota absent ({@link GestionQuotaResendWorker} pour Resend).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -126,18 +120,7 @@ public class NotificationDigestService {
     this.stats = new NotificationDigestStats(jdbc, jackson);
   }
 
-  /**
-   * Données d'un concert pour le digest.
-   *
-   * @param artiste nom de l'artiste
-   * @param date date ISO (yyyy-MM-dd)
-   * @param salle nom de la salle
-   * @param ville ville (peut être nulle)
-   * @param url URL de billetterie (peut être nulle)
-   * @param concertId UUID du concert (string)
-   * @param artisteNorm nom de l'artiste normalisé (identique à {@code artiste_norm} en base)
-   * @param source origine du match : {@code "ARTISTE"} ou {@code "SALLE"}
-   */
+  /** Données d'un concert pour le digest. */
   public record ConcertNotif(
       String artiste,
       String date,

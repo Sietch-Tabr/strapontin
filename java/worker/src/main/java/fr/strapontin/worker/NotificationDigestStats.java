@@ -19,9 +19,9 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Journalisation du bilan de cycle ({@code logs_admin}) et des statistiques ({@code fetch_jobs}) du
- * job {@code notifier:digest} — extrait de {@link NotificationDigestService} pour rester sous le
- * seuil de couplage entre objets (20).
+ * Journalisation du bilan de cycle ({@code logs_admin}) et des
+ * statistiques ({@code fetch_jobs}) du job {@code notifier:digest} —
+ * extrait de {@link NotificationDigestService}.
  *
  * @since 2.9.1
  * @author Kwaite

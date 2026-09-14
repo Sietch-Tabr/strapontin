@@ -27,37 +27,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Planification Quartz des jobs récurrents.
- *
- * <p>Déclencheurs configurés :
- *
- * <ul>
- *   <li>{@code fetch:artistes:batch} — 11 cycles/jour : 01h, 05h, puis toutes les 2h de 07h à 23h
- *       (cf. {@code worker.cron.fetch-artistes})
- *   <li>{@code fetch:region} — 1 batch nocturne unique à 02h (cf. {@code worker.cron.fetch-region})
- *       — restreint à ce seul consommateur ({@code DecouverteService}, browse-only, fraîcheur non
- *       critique) depuis l'ancien cron adaptatif 11x/jour n'apportant aucune valeur aux
- *       artistes/salles suivis (couverts indépendamment par {@code fetch:artistes:batch}/{@code
- *       fetch:salles:all})
- *   <li>{@code fetch:salles:all} — mêmes heures que fetch:artistes + 30 min (cf. {@code
- *       worker.cron.fetch-salles}, fréquence inchangée), restreint aux salles suivies ({@code
- *       user_salles}) depuis
- *   <li>{@code recalculer:matches} — mêmes heures que fetch:artistes (cf. {@code
- *       worker.cron.recalculer-matches})
- *   <li>{@code purger:concerts} — tous les jours à minuit
- *   <li>{@code purger:salles} — tous les jours à 0h05 (après purge concerts)
- *   <li>{@code purger:artistes} — tous les jours à 0h06 (après purge salles)
- *   <li>{@code purger:logs-admin} — tous les jours à 0h15
- *   <li>{@code notifier:digest} — tous les jours à 8h
- *   <li>{@code revoquer:admins} — toutes les heures
- *   <li>{@code reconciliation:nocturne} — tous les jours à 3h
- *   <li>{@code suivi:cycles-jobs} — toutes les heures à H:30 (décalé de {@code revoquer:admins})
- * </ul>
- *
- * Le job {@code fetch:salle} est planifié dynamiquement par {@link WorkerService} selon les salles
- * configurées. {@code fetch:salles:all} est le pendant périodique qui boucle sur toutes les salles
- * ayant des sources configurées.
- *
+ * Planification Quartz des jobs récurrents — détail des cadences :
+ * CLAUDE.md, Jobs background. {@code fetch:salle} est planifié
+ * dynamiquement par {@link WorkerService} selon les salles configurées.
  * @since 2.0.0
  * @author Kwaite
  */

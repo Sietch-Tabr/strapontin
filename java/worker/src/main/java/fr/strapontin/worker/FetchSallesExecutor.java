@@ -18,12 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Pipeline complet des jobs {@code fetch:salle} et {@code fetch:salles:all} : fetch par salle
- * suivie auprès de la source qui accepte son identifiant, dédoublonnage, persistance par lot, suivi
- * des absences.
- *
- * <p>Extrait de {@link WorkerFetchService} pour rester sous le seuil de couplage entre objets (20).
- *
+ * Pipeline complet des jobs {@code fetch:salle}/{@code fetch:salles:all}
+ * : fetch par salle suivie, dédoublonnage, persistance par lot, suivi
+ * des absences — extrait de {@link WorkerFetchService} pour rester
+ * sous le seuil de couplage entre objets (20).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -81,11 +79,8 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch les concerts d'une ou plusieurs salles identifiées par leurs identifiants préfixés.
-   *
-   * <p>Le paramètre est une liste d'identifiants séparés par une virgule, chacun préfixé par la
-   * source : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
-   *
+   * Fetch les concerts d'une ou plusieurs salles par identifiants
+   * préfixés séparés par une virgule (ex. "tm:id1,digitick:slug").
    * @param identifiantsStr identifiants préfixés séparés par des virgules
    */
   /* package-private : appelé par WorkerFetchService (même package). */
@@ -114,19 +109,12 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch périodique des salles suivies ({@code user_salles}) ayant des sources configurées dans
-   * {@code salle_sources}, ou retente un sous-ensemble ciblé en échec lors d'un cycle précédent
-   * (voir {@link RetryLotsService}).
-   *
-   * <p>Restreint aux salles réellement suivies par un utilisateur — jusque-là toutes les salles du
-   * référentiel (255 avec source TM en prod le 18/07/2026) étaient refetchées à chaque cycle,
-   * épuisant le quota TM en une journée dès que a débloqué cet appel pour de vrai. Les salles non
-   * suivies n'apportent aucune valeur ici : un artiste suivi qui y jouerait est de toute façon déjà
-   * détecté par {@code fetch:artistes:batch} (recherche nationale par nom, indépendante du
-   * département).
-   *
-   * @param salleIdsCibles identifiants ({@code salles.id}, texte) à retenter, ou {@code null} pour
-   *     un cycle complet (toutes les salles suivies avec source configurée)
+   * Fetch périodique des salles suivies ayant des sources configurées, ou
+   * retente un sous-ensemble ciblé (voir {@link RetryLotsService}) —
+   * restreint aux salles réellement suivies (détail : CLAUDE.md, Jobs
+   * background).
+   * @param salleIdsCibles identifiants (salles.id) à retenter, ou null
+   *     pour un cycle complet
    */
   /* package-private : appelé par WorkerFetchService (même package). */
   void executerToutes(final List<String> salleIdsCibles) {
@@ -221,13 +209,11 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch + dédoublonnage + persistance d'un lot de salles (taille {@value TAILLE_LOT_SALLES}).
-   *
-   * <p>Persistance par lot plutôt qu'en un seul bloc final : chaque chaîne d'identifiants regroupe
-   * déjà toutes les sources d'une même salle ({@code GROUP BY ss.salle_id}), le dédoublonnage
-   * cross-sources reste donc correct à cette granularité.
-   *
-   * @param lotSalles sous-ensemble de salles suivies (taille {@value TAILLE_LOT_SALLES})
+   * Fetch + dédoublonnage + persistance d'un lot de salles ({@value
+   * TAILLE_LOT_SALLES}) — persistance par lot plutôt qu'en bloc final,
+   * chaque chaîne d'identifiants regroupe déjà toutes les sources d'une
+   * même salle ({@code GROUP BY ss.salle_id}).
+   * @param lotSalles sous-ensemble de salles suivies
    * @return bilan de persistance du lot
    */
   private ResultatPersistance traiterLotSalles(final List<SalleAFetcher> lotSalles) {

@@ -16,14 +16,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de lecture de configuration chiffrée pour le worker.
- *
- * Déchiffre les valeurs AES-256-GCM stockées dans {@code app_config},
- * en utilisant la même clé dérivée via SCrypt que le module web.
- *
- * Ce service est en lecture seule : les écritures de configuration sont
- * effectuées par le module web via son propre {@code ConfigService}.
- *
+ * Service de lecture de configuration chiffrée pour le worker —
+ * déchiffre les valeurs AES-256-GCM de {@code app_config} (même clé
+ * SCrypt que le web), lecture seule (écritures côté {@code ConfigService}).
  * @since 2.0.0
  * @author Kwaite
  */

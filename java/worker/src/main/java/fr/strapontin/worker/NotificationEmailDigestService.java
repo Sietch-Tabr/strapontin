@@ -13,11 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Envoi email (Resend) du digest de notification, pour un utilisateur donné.
- *
- * <p>Extrait de {@link NotificationDigestService} pour rester sous le seuil de couplage entre
- * objets (20).
- *
+ * Envoi email (Resend) du digest de notification, pour un utilisateur
+ * donné — extrait de {@link NotificationDigestService}.
  * @since 2.9.1
  * @author Kwaite
  */

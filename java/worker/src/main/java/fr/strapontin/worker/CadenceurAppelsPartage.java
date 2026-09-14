@@ -11,18 +11,9 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Implémentation de {@link CadenceurAppels} adossée à Postgres — coordonne les appels vers un même
- * service externe entre plusieurs processus indépendants. {@code CadenceurAppelsMemoire} (verrou en
- * mémoire, module {@code sources}) ne coordonne que les appels d'un seul processus ; Ticketmaster
- * est aussi appelé directement par le module web (recherche interactive de salle, test de clé API
- * admin), hors de ce processus worker.
- *
- * <p>Réservation atomique par {@code UPDATE ... RETURNING} sur la ligne partagée identifiée par
- * {@code cle} : chaque appelant avance le prochain instant autorisé d'au moins {@code delaiMinMs}
- * en respectant l'instant déjà réservé par un appelant concurrent ({@code GREATEST}) — le verrou de
- * ligne Postgres sérialise nativement les écritures concurrentes, sans transaction {@code
- * SERIALIZABLE}.
- *
+ * Implémentation de {@link CadenceurAppels} adossée à Postgres —
+ * coordonne les appels entre plusieurs processus indépendants (détail :
+ * CLAUDE.md, Jobs background).
  * @since 2.8.1
  * @author Kwaite
  */

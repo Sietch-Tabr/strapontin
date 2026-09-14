@@ -16,15 +16,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Suit, pour une clé donnée (ex. {@code "fetch:salles:all|Ticketmaster"}), le nombre de cycles
- * consécutifs en échec partiel ou total — persisté dans {@code app_config} (même mécanisme que
- * {@code GestionQuotaTM}/{@code TM_QUOTA_JSON}, survit aux redémarrages) plutôt qu'en mémoire.
- *
- * <p>Un taux de 429 Ticketmaster ou d'échec Overpass répété à quasiment chaque cycle avait été
- * documenté à plusieurs reprises comme un événement isolé/ponctuel, faute d'un signal automatique
- * distinguant une occurrence isolée d'une dégradation persistante — seul un dépouillement manuel de
- * plusieurs jours de {@code logs_admin} avait permis de la caractériser.
- *
+ * Suit, par clé (ex. "fetch:salles:all|Ticketmaster"), le nombre de
+ * cycles consécutifs en échec — détail (persistance, seuil chronique) :
+ * CLAUDE.md, Jobs background.
  * @since 2.8.2
  * @author Kwaite
  */
@@ -57,14 +51,11 @@ public class SuiviChroniciteService {
   }
 
   /**
-   * Enregistre le résultat du cycle courant pour {@code cle} : incrémente le compteur de série si
-   * en échec, le remet à zéro sinon.
-   *
-   * @param cle identifiant stable du couple job/source (ex. {@code "fetch:salles:all|Ticketmaster"}
-   *     ou {@code "reconciliation:nocturne|Overpass"})
-   * @param cycleEnEchec {@code true} si ce cycle a rencontré au moins une erreur
-   * @return le nombre de cycles consécutifs en échec après cet enregistrement (0 si ce cycle est
-   *     propre)
+   * Enregistre le résultat du cycle courant : incrémente la série si en
+   * échec, la remet à zéro sinon.
+   * @param cle identifiant stable du couple job/source
+   * @param cycleEnEchec true si ce cycle a rencontré au moins une erreur
+   * @return cycles consécutifs en échec après cet enregistrement (0 si propre)
    */
   public int enregistrerCycle(final String cle, final boolean cycleEnEchec) {
     final Map<String, Integer> streaks = lireStreaks();
@@ -81,12 +72,10 @@ public class SuiviChroniciteService {
   }
 
   /**
-   * Complète un message {@code logs_admin} par une mention explicite de chronicité quand le nombre
-   * de cycles consécutifs en échec atteint {@value #SEUIL_CYCLES_CHRONIQUE}, plutôt que de le
-   * laisser identique à chaque cycle comme s'il s'agissait d'un événement isolé.
-   *
+   * Complète un message {@code logs_admin} par une mention de chronicité
+   * dès {@value #SEUIL_CYCLES_CHRONIQUE} cycles consécutifs en échec.
    * @param message message d'origine
-   * @param streak nombre de cycles consécutifs en échec (voir {@link #enregistrerCycle})
+   * @param streak cycles consécutifs en échec (voir {@link #enregistrerCycle})
    * @return le message complété si chronique, inchangé sinon
    */
   public String enrichirSiChronique(final String message, final int streak) {

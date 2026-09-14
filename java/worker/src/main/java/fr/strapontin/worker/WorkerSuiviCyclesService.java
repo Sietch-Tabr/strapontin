@@ -16,17 +16,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Détecte, par type de job planifié, une absence prolongée et inexpliquée d'exécution — un cycle
- * silencieusement perdu (reboot brutal de l'hôte, OOM, crash) plutôt qu'un ralentissement normal de
- * cadence.
- *
- * <p>Délégué par le job Quartz {@code SuiviCyclesJobsJob}, cadencé toutes les heures.
- *
- * <p>Complète {@code WatchdogWorkerService} (module web) : celui-ci n'alerte que sur l'inactivité
- * globale du worker, tous types de job confondus — un type de job resté silencieusement bloqué
- * alors que les autres continuent de s'exécuter normalement ne déclenche jamais cette alerte
- * globale.
- *
+ * Détecte, par type de job planifié, une absence prolongée et
+ * inexpliquée d'exécution (détail : CLAUDE.md, table Jobs background,
+ * SuiviCyclesJobsJob).
  * @since 2.8.3
  * @author Kwaite
  */

@@ -13,10 +13,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Job de révocation des admins dont le préavis est écoulé — extrait de {@code WorkerService}.
- *
- * <p>Délégué par le job Quartz {@code RevoquerAdminsJob}.
- *
+ * Job de révocation des admins dont le préavis est écoulé — extrait de
+ * {@code WorkerService}, délégué par le job Quartz {@code RevoquerAdminsJob}.
  * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
  */
@@ -39,16 +37,9 @@ public class WorkerRevocationService {
   }
 
   /**
-   * Révoque les admins dont le délai de préavis est écoulé.
-   *
-   * <p>Passe de {@code admin} à {@code user} tous les comptes dont {@code revocation_admin_le} est
-   * dans le passé, puis révoque leurs sessions actives — sans cela, un admin rétrogradé resterait
-   * authentifié avec son ancien rôle {@code admin} (chargé en session à la connexion, jamais
-   * rafraîchi) jusqu'à expiration naturelle de sa session (30 jours). Le module worker n'a pas le
-   * bean {@code FindByIndexNameSessionRepository} (spécifique à Spring Session côté web) :
-   * suppression directe des lignes {@code SPRING_SESSION} par {@code PRINCIPAL_NAME}, table déjà
-   * lue en lecture seule ailleurs (voir {@code AdminService.listerUtilisateurs}). Loggue le bilan
-   * dans {@code logs_admin}.
+   * Révoque les admins dont le délai de préavis est écoulé — détail
+   * (rôle rétrogradé, sessions révoquées) : CLAUDE.md,
+   * Sécurité admin/sessions.
    */
   public void executerRevoquerAdmins() {
     LOG.info("revoquer:admins démarré");

@@ -55,10 +55,9 @@ public class WorkerConfiguration {
   }
 
   /**
-   * Cadenceur des appels Ticketmaster partagé avec le module web (recherche interactive de salle,
-   * test de clé API admin) — un verrou en mémoire ne coordonnerait pas deux processus indépendants,
-   * voir {@link CadenceurAppelsPartage}.
-   *
+   * Cadenceur des appels Ticketmaster partagé avec le module web —
+   * un verrou en mémoire ne coordonnerait pas deux processus
+   * indépendants, voir {@link CadenceurAppelsPartage}.
    * @param jdbc accès à la base partagée entre web et worker
    * @return cadenceur adossé à Postgres
    */
@@ -71,11 +70,9 @@ public class WorkerConfiguration {
   }
 
   /**
-   * Client Ticketmaster Discovery v2.
-   *
-   * <p>Lit {@code TICKETMASTER_API_KEY} depuis {@code app_config} (AES-256-GCM). Lève une {@code
-   * IllegalStateException} au démarrage si la clé est absente.
-   *
+   * Client Ticketmaster Discovery v2 — lit {@code TICKETMASTER_API_KEY}
+   * depuis {@code app_config}, lève {@code IllegalStateException} au
+   * démarrage si absente.
    * @param configService service de configuration chiffrée
    * @param cadenceurTicketmaster cadenceur partagé inter-processus
    * @return instance configurée avec la clé API

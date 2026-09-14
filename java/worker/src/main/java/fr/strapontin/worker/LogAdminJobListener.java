@@ -18,11 +18,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Listener Quartz global : alimente {@code logs_admin} à chaque démarrage et fin de job.
- *
- * <p>Permet d'observer en temps réel les exécutions Quartz depuis la page d'administration, au même
- * titre que les actions manuelles de l'interface web.
- *
+ * Listener Quartz global : alimente {@code logs_admin} à chaque
+ * démarrage et fin de job, pour observer en temps réel depuis
+ * l'admin, au même titre que les actions manuelles.
  * @since 2.0.0
  * @author Kwaite
  */

@@ -11,12 +11,8 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Chargement et regroupement par utilisateur des {@code user_matches} non notifiés, prêts pour
- * l'envoi du digest.
- *
- * <p>Extrait de {@link NotificationDigestService} pour rester sous la limite de 500 lignes par
- * fichier.
- *
+ * Chargement et regroupement par utilisateur des {@code user_matches}
+ * non notifiés — extrait de {@link NotificationDigestService}.
  * @since 2.9.1
  * @author Kwaite
  */

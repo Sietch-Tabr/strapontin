@@ -13,15 +13,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Écriture dans {@code logs_admin} depuis le worker.
- *
- * <p>Le worker n'a pas accès au {@code LogAdminService} du module web (deux applications Spring
- * Boot séparées, ports 8080/8081). Point d'insertion générique utilisé par le bilan de panne
- * mutualisé de {@code WorkerStatsService#remonterBilan} et {@code NotificationDigestService} —
- * sous-utilisé jusqu'ici, plusieurs services {@code worker.Worker*Service} écrivent encore
- * directement en SQL pour certains cas spécifiques non couverts par cette abstraction (ex. {@code
- * WorkerRevocationService#executerRevoquerAdmins}).
- *
+ * Écriture dans {@code logs_admin} depuis le worker — le module n'a pas
+ * accès au {@code LogAdminService} du module web (deux applications
+ * Spring Boot séparées, ports 8080/8081).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -43,11 +37,10 @@ public class LogsAdminWorker {
   }
 
   /**
-   * Insère une entrée dans {@code logs_admin}. Échoue silencieusement (log SLF4J local) — un log
-   * admin manqué ne doit jamais faire échouer le job appelant.
-   *
-   * @param niveau {@code "info"}, {@code "warn"} ou {@code "error"}
-   * @param source source technique (ex. {@code "reconciliation-nocturne"})
+   * Insère une entrée dans {@code logs_admin} — échoue silencieusement
+   * (log SLF4J local), un log manqué ne doit jamais faire échouer le job.
+   * @param niveau "info", "warn" ou "error"
+   * @param source source technique (ex. "reconciliation-nocturne")
    * @param message message lisible
    * @param meta métadonnées structurées, peut être null
    */

@@ -14,14 +14,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Orchestration des jobs de recalcul de matches et de réconciliation nocturne.
- *
- * <p>Depuis, le fetch (voir {@link WorkerFetchService}), la purge (voir {@link WorkerPurgeService})
- * et la révocation admin (voir {@link WorkerRevocationService}) ont été extraits dans des services
- * dédiés — cette classe reste le point d'entrée fin délégué par les jobs Quartz {@code
- * RecalculerMatchesJob} et {@code ReconciliationNocturneJob}, les deux seules méthodes ne
- * partageant pas de logique privée substantielle avec les autres familles.
- *
+ * Orchestration des jobs de recalcul de matches et de réconciliation
+ * nocturne — fetch/purge/révocation admin extraits ({@link
+ * WorkerFetchService}/{@link WorkerPurgeService}/{@link
+ * WorkerRevocationService}), point d'entrée fin restant ici.
  * @since 2.0.0
  * @author Kwaite
  */

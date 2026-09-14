@@ -8,11 +8,8 @@ import fr.strapontin.core.UtilitairesChaine;
 import java.util.List;
 
 /**
- * Construction du corps HTML de l'email de digest.
- *
- * <p>Extrait de {@link NotificationDigestService} pour rester sous la limite de 500 lignes par
- * fichier.
- *
+ * Construction du corps HTML de l'email de digest — extrait de
+ * {@link NotificationDigestService}.
  * @since 2.9.1
  * @author Kwaite
  */

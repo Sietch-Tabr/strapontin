@@ -18,12 +18,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Pipeline complet du job {@code fetch:artistes:batch} : fetch TM par lot d'attractionIds (+
- * fallback keyword) et fetch individuel des autres sources, dédoublonnage, résolution du nom
- * canonique, persistance par lot, suivi des absences.
- *
- * <p>Extrait de {@link WorkerFetchService} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Pipeline complet du job {@code fetch:artistes:batch} : fetch TM par
+ * lot d'attractionIds (+ fallback keyword), fetch individuel des
+ * autres sources, dédoublonnage, résolution du nom canonique,
+ * persistance par lot, suivi des absences.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -134,16 +132,11 @@ class FetchArtistesBatchExecutor {
   }
 
   /**
-   * Fetch + dédoublonnage + persistance d'un lot d'artistes (taille {@value TAILLE_LOT_TM}).
-   *
-   * <p>Persistance par lot plutôt qu'en un seul bloc final : sans cela, une interruption
-   * (redéploiement, crash) avant la fin du cycle complet perdrait tout le travail de fetch déjà
-   * effectué sur ce cycle (quota TM consommé pour rien). Le dédoublonnage cross-sources
-   * (TM/Eventim) reste correct à cette granularité : un même concert n'est jamais rapporté par deux
-   * sources pour deux artistes différents, la comparaison par lot suffit.
-   *
-   * @param lot sous-ensemble de lignes artiste (taille {@value TAILLE_LOT_TM})
-   * @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch individuel par artiste)
+   * Fetch + dédoublonnage + persistance d'un lot ({@value TAILLE_LOT_TM})
+   * — persistance par lot pour ne pas perdre le quota TM déjà consommé.
+   * @param lot sous-ensemble de lignes artiste
+   * @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch
+   *     individuel par artiste)
    * @return bilan de persistance du lot
    */
   private ResultatPersistance traiterLot(
@@ -184,20 +177,11 @@ class FetchArtistesBatchExecutor {
   }
 
   /**
-   * Fetch TM pour une liste d'artistes suivis.
-   *
-   * <p>Deux passes :
-   *
-   * <ol>
-   *   <li>Résolution des {@code attractionId} manquants (1 requête /attractions.json par artiste
-   *       non résolu), puis fetch groupé par lots de {@value TAILLE_LOT_TM} via {@code
-   *       fetchArtistesBatch} — réduit la consommation de quota d'un facteur ×20 par rapport à un
-   *       fetch artiste-par-artiste.
-   *   <li>Fallback keyword ({@code fetchArtiste}) pour les artistes sans {@code attractionId} TM.
-   * </ol>
-   *
-   * @param rows lignes agrégées par {@code artiste_id} avec {@code artiste_affiche}, {@code
-   *     artiste_id_str}, {@code attraction_id}, {@code nb_ids_distincts}
+   * Fetch TM pour une liste d'artistes suivis — résout les
+   * attractionId manquants puis fetch groupé (÷20 le quota), fallback
+   * keyword pour les artistes sans attractionId TM.
+   * @param rows lignes agrégées par artiste_id (artiste_affiche,
+   *     artiste_id_str, attraction_id, nb_ids_distincts)
    * @return concerts bruts collectés depuis TM
    */
   private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}

@@ -14,12 +14,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Détecte un repli de volume significatif d'un cycle de fetch réussi par rapport à son historique
- * récent — {@code fetch_jobs}/{@code fetch_jobs_historique} n'exposent jusqu'ici que le dernier
- * résultat et un historique brut, sans aucune comparaison automatique capable de distinguer une
- * baisse normale (creux saisonnier) d'une dégradation silencieuse (ex. filtre amont trop
- * restrictif) qui ne produit ni exception ni bilan de panne.
- *
+ * Détecte un repli de volume significatif d'un cycle de fetch réussi
+ * par rapport à son historique récent (détail : CLAUDE.md,
+ * Observabilité des jobs).
  * @since 2.9.0
  * @author Kwaite
  */
@@ -62,13 +59,11 @@ public class DeriveVolumeFetchService {
   }
 
   /**
-   * Compare le volume (insertions + mises à jour) du cycle qui vient de réussir à la moyenne de ses
-   * {@value #NB_EXECUTIONS_MOYENNE} dernières exécutions réussies antérieures à {@code avant}.
-   *
-   * @param typeJob type de job (ex. {@code "fetch:region"})
-   * @param volumeCourant nombre total d'insertions + mises à jour du cycle qui vient de réussir
-   * @param avant horodatage du cycle courant — exclut structurellement sa propre ligne d'historique
-   *     de la moyenne, que celle-ci ait déjà été insérée ou non au moment de l'appel
+   * Compare le volume du cycle qui vient de réussir à la moyenne de ses
+   * {@value #NB_EXECUTIONS_MOYENNE} dernières exécutions réussies.
+   * @param typeJob type de job (ex. "fetch:region")
+   * @param volumeCourant insertions + mises à jour du cycle qui réussit
+   * @param avant horodatage du cycle courant (exclu de la moyenne)
    */
   public void verifier(final String typeJob, final int volumeCourant, final Instant avant) {
     final List<Integer> historique = lireVolumesRecents(typeJob, avant);

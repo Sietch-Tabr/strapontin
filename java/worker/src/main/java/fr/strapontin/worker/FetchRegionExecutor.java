@@ -19,12 +19,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Pipeline complet du job {@code fetch:region} : fetch par département auprès de toutes les
- * sources, dédoublonnage, résolution du nom canonique, persistance par lot, suivi des absences des
- * salles connues du lot de départements traité.
- *
- * <p>Extrait de {@link WorkerFetchService} pour rester sous la limite de 500 lignes par fichier.
- *
+ * Pipeline complet du job {@code fetch:region} : fetch par département
+ * auprès de toutes les sources, dédoublonnage, résolution du nom
+ * canonique, persistance par lot, suivi des absences — extrait de
+ * {@link WorkerFetchService}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -134,19 +132,11 @@ class FetchRegionExecutor {
   }
 
   /**
-   * Fetch + dédoublonnage + persistance d'un lot de départements (taille {@value
-   * TAILLE_LOT_DEPTS}).
-   *
-   * <p>Persistance par lot plutôt qu'en un seul bloc final : le dédoublonnage cross-sources reste
-   * correct à cette granularité, un même concert n'étant jamais rapporté par deux sources dans deux
-   * départements différents.
-   *
-   * <p>Met à jour les absences des salles du lot indépendamment de tout suivi utilisateur — {@code
-   * fetch:region} est browse-only, un concert découvert ici peut n'être jamais suivi ni par artiste
-   * ni par salle, auquel cas il n'entrerait autrement dans le périmètre d'aucun suivi de
-   * péremption.
-   *
-   * @param lotDepts sous-ensemble de départements (taille {@value TAILLE_LOT_DEPTS})
+   * Fetch + dédoublonnage + persistance d'un lot de départements ({@value
+   * TAILLE_LOT_DEPTS}) — met à jour les absences des salles du lot
+   * indépendamment de tout suivi utilisateur (détail : CLAUDE.md, Jobs
+   * background).
+   * @param lotDepts sous-ensemble de départements
    * @return bilan de persistance du lot
    */
   private ResultatPersistance traiterLotDepartements(final List<String> lotDepts) {

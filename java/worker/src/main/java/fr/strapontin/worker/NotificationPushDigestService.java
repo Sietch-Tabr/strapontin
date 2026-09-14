@@ -21,11 +21,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Envoi push VAPID du digest de notification, pour un utilisateur donné.
- *
- * <p>Extrait de {@link NotificationDigestService} pour rester sous la limite de 500 lignes par
- * fichier.
- *
+ * Envoi push VAPID du digest de notification, pour un utilisateur
+ * donné — extrait de {@link NotificationDigestService}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -87,12 +84,9 @@ class NotificationPushDigestService {
   }
 
   /**
-   * Interprète le statut HTTP d'un envoi push.
-   *
-   * <p>Seul un statut 2xx est un succès. 404/410 signent un abonnement mort (à supprimer). Tout le
-   * reste (400, 429, 5xx…) est un échec — avant, seuls 404/410 étaient exclus du succès, comptant à
-   * tort tout autre code d'erreur comme un envoi réussi.
-   *
+   * Interprète le statut HTTP d'un envoi push — seul 2xx est un succès,
+   * 404/410 signent un abonnement mort, le reste (400/429/5xx) est un
+   * échec (avant : tout code hors 404/410 comptait à tort en succès).
    * @param status statut HTTP retourné par le push service
    * @return issue de l'envoi
    */
@@ -242,13 +236,10 @@ class NotificationPushDigestService {
   }
 
   /**
-   * Construit le corps texte du push pour un digest à plusieurs concerts, une ligne par concert, en
-   * insérant une ligne vide à chaque changement d'artiste — sans cette séparation, un digest
-   * couvrant plusieurs artistes se lit comme une liste continue sans indication de regroupement.
-   *
-   * @param concerts concerts du digest (triés par date), au moins deux éléments
-   * @return le corps texte du push, une ligne (éventuellement précédée d'une ligne vide) par
-   *     concert
+   * Construit le corps texte du push (une ligne par concert), ligne vide
+   * à chaque changement d'artiste (regroupement visuel).
+   * @param concerts concerts du digest (triés par date), au moins deux
+   * @return le corps texte du push, une ligne par concert
    */
   private static String construireLignesPreventePush(
       final List<NotificationDigestService.ConcertNotif> concerts) {

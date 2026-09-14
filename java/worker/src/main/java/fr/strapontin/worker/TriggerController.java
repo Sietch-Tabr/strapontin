@@ -28,11 +28,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * API interne de déclenchement manuel des jobs Quartz.
- *
- * <p>Accessible uniquement depuis {@code localhost} (filtrée par le pare-feu ou le proxy web).
- * N'expose pas de données sensibles.
- *
+ * API interne de déclenchement manuel des jobs Quartz — accessible
+ * uniquement depuis localhost (pare-feu/proxy web), n'expose pas de
+ * données sensibles.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -155,13 +153,11 @@ public class TriggerController {
   }
 
   /**
-   * Déclenche immédiatement un job de maintenance identifié par son {@code typeJob} lisible (ex.
-   * {@code "purger:salles"}, {@code "reconciliation:nocturne"}), uniquement si aucune instance
-   * n'est déjà en cours. Un seul endpoint générique pour tous les jobs à bouton « Relancer » de
-   * l'onglet admin Tableau de bord — éviter d'en dupliquer un par job.
-   *
-   * @param typeJob identifiant lisible du job (clé de {@link NomsJobs#PAR_CLE_QUARTZ})
-   * @return 200 si déclenché ou déjà en cours, 400 si job inconnu, 500 en cas d'erreur Quartz
+   * Déclenche un job de maintenance par son {@code typeJob} lisible, si
+   * aucune instance n'est déjà en cours — seul endpoint générique pour
+   * tout bouton « Relancer » du tableau de bord admin.
+   * @param typeJob identifiant lisible du job (voir NomsJobs.PAR_CLE_QUARTZ)
+   * @return 200 déclenché/déjà en cours, 400 job inconnu, 500 erreur Quartz
    */
   @PostMapping("/job")
   public ResponseEntity<Map<String, String>> relancerJob(@RequestParam final String typeJob) {
@@ -191,12 +187,10 @@ public class TriggerController {
   }
 
   /**
-   * Planifie un {@code FetchSalleJob} immédiat pour les identifiants donnés, uniquement si aucune
-   * instance n'est déjà en cours pour ce jeu d'identifiants.
-   *
-   * <p>Appelé automatiquement par le web après l'ajout d'une salle.
-   *
-   * @param identifiants identifiants préfixés des sources (ex. {@code "tm:rZFSnyZdFvA"})
+   * Planifie un {@code FetchSalleJob} immédiat, si aucune instance n'est
+   * déjà en cours pour ces identifiants (appelé par le web après l'ajout
+   * d'une salle).
+   * @param identifiants identifiants préfixés des sources (ex. "tm:id")
    * @return 200 si planifié ou déjà en cours, 500 en cas d'erreur Quartz
    */
   @PostMapping("/salle")
