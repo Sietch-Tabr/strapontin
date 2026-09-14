@@ -5,11 +5,9 @@
 package fr.strapontin.core;
 
 /**
- * Distances de similarité textuelle (Levenshtein, Jaro) utilisées par le dédoublonnage flou.
- *
- * <p>Extrait de {@link Normalisation} pour rester sous le seuil de complexité cyclomatique de
- * classe (50) — pure algorithmique de distance, sans dépendance à la normalisation elle-même.
- *
+ * Distances de similarité textuelle (Levenshtein, Jaro)
+ * utilisées par le dédoublonnage flou — extrait de {@link
+ * Normalisation}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -18,15 +16,12 @@ public final class DistanceTexte {
   private DistanceTexte() {}
 
   /**
-   * Calcule la similarité Jaro entre deux chaînes.
-   *
-   * <p>Jaro est empiriquement meilleur que Levenshtein normalisé pour les noms propres courts : il
-   * pondère les correspondances positionnelles sans over-pénaliser les transpositions. Utilisé à la
-   * place de {@link #similarite} dans la réconciliation des artistes.
-   *
+   * Similarité Jaro entre deux chaînes — meilleur que
+   * Levenshtein pour les noms propres courts (détail :
+   * CLAUDE.md, Dédoublonnage inter-sources).
    * @param chaineA première chaîne
    * @param chaineB deuxième chaîne
-   * @return score Jaro entre 0.0 (aucune ressemblance) et 1.0 (identique)
+   * @return score entre 0.0 (aucune ressemblance) et 1.0 (identique)
    */
   public static double jaro(final String chaineA, final String chaineB) {
     if (chaineA.equals(chaineB)) {

@@ -16,19 +16,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.crypto.generators.SCrypt;
 
 /**
- * Chiffrement/déchiffrement AES-256-GCM de {@code app_config}, clé dérivée via SCrypt.
- *
- * <p>Extrait de {@code web.ConfigService}/{@code worker.ConfigServiceWorker} — les deux modules
- * dérivaient et utilisaient une clé strictement identique, dupliquée verbatim ; un correctif de
- * sécurité appliqué à un seul module ne se serait jamais répercuté dans l'autre.
- *
- * <p>La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut
- * Node.js : N=16384, r=8, p=1, dkLen=32) — DIFFÉRENT de {@code BetterAuthPasswordEncoder} (r=16,
- * Better-Auth).
- *
- * <p>Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec
- * les valeurs chiffrées par l'ancien module TypeScript.
- *
+ * Chiffrement/déchiffrement AES-256-GCM de {@code app_config}
+ * (détail : CLAUDE.md, Configuration applicative).
  * @since 2.7.0
  * @author Kwaite
  */

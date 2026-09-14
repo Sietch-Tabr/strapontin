@@ -8,12 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Bilan agrégé d'appels (HTTP ou envois) et d'échecs pour une source ou un canal de notification
- * depuis le dernier prélèvement, avec logique d'escalade partagée vers {@code logs_admin} — remplace les
- * records de bilan précédemment dupliqués entre {@code TicketmasterSource} et {@code EventimSource}.
- *
- * @param appels nombre total d'appels tentés depuis le dernier prélèvement
- * @param erreursHttp nombre d'appels en échec depuis le dernier prélèvement
+ * Bilan agrégé d'appels et d'échecs depuis le dernier
+ * prélèvement (détail : CLAUDE.md, Services notables).
+ * @param appels nombre total d'appels tentés
+ * @param erreursHttp nombre d'appels en échec
  * @since 2.7.0
  * @author Kwaite
  */
@@ -48,13 +46,11 @@ public record BilanFetch(int appels, int erreursHttp) {
   }
 
   /**
-   * Évalue ce bilan et retourne l'entrée à journaliser dans {@code logs_admin}, si quelque chose est à
-   * signaler (panne totale ou échec partiel). Vide si aucun appel n'a été tenté ou si tous ont
-   * réussi.
-   *
-   * @param typeJob type de job ou de cycle courant (ex. {@code "fetch:region"})
-   * @param nomSource nom affiché de la source ou du canal (ex. {@code "Digitick"})
-   * @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade en {@code error}
+   * Évalue ce bilan, entrée à journaliser si signalable (détail :
+   * CLAUDE.md, Services notables).
+   * @param typeJob type de job ou de cycle courant
+   * @param nomSource nom affiché de la source ou du canal
+   * @param seuilAppelsMin appels min. pour escalader en error
    * @return entrée à journaliser, vide si rien à signaler
    */
   public Optional<EntreeLog> evaluer(

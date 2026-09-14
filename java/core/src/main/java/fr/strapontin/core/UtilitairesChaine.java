@@ -17,11 +17,9 @@ public final class UtilitairesChaine {
   }
 
   /**
-   * Échappe une chaîne pour insertion sûre dans une valeur JSON construite à la main.
-   *
-   * <p>Échappe les antislashs, guillemets doubles et retours à la ligne. Destiné aux petits
-   * payloads JSON assemblés sans dépendance Jackson (notifications push).
-   *
+   * Échappe une chaîne pour insertion sûre dans une valeur JSON
+   * construite à la main (petits payloads sans Jackson, ex.
+   * notifications push).
    * @param texte la chaîne à échapper (non null)
    * @return la chaîne échappée
    * @since 2.2.3
@@ -35,12 +33,10 @@ public final class UtilitairesChaine {
   }
 
   /**
-   * Échappe une chaîne pour insertion sûre dans du HTML — partagé entre {@code
-   * web.email.EmailTemplates} et {@code worker.NotificationDigestService}, jusqu'ici dupliqué à
-   * l'identique dans les deux (gabarits d'email HTML).
-   *
-   * @param valeur la valeur à échapper, convertie en chaîne via {@link String#valueOf} ({@code
-   *     null} devient une chaîne vide)
+   * Échappe une chaîne pour insertion sûre dans du HTML —
+   * partagé entre {@code EmailTemplates} et
+   * {@code NotificationDigestService}.
+   * @param valeur la valeur à échapper ({@code null} → chaîne vide)
    * @return la chaîne échappée
    * @since 2.8.7
    */
@@ -57,18 +53,11 @@ public final class UtilitairesChaine {
   }
 
   /**
-   * Vérifie si la plus courte des deux chaînes est incluse dans la plus longue, avec un ratio de
-   * longueur minimal — critère de repli couvrant les troncatures et variantes partielles entre deux
-   * formes d'un même nom (partagé par {@link CorrespondanceSalle} et {@link
-   * CorrespondanceArtiste}).
-   *
-   * @param nomA première chaîne
-   * @param nomB deuxième chaîne
-   * @param longueurMinContainment longueur minimale de la chaîne la plus courte pour appliquer le
-   *     critère
-   * @param ratioMinContainment ratio minimal longueur(court)/longueur(long) requis
-   * @return {@code true} si la plus courte est contenue dans la plus longue et que le ratio de
-   *     longueur est respecté
+   * Containment avec ratio de longueur minimal (détail :
+   * CLAUDE.md, Dédoublonnage inter-sources).
+   * @param longueurMinContainment longueur min. de la plus courte
+   * @param ratioMinContainment ratio minimal longueur(court)/long
+   * @return {@code true} si contenue et ratio respecté
    * @since 2.7.11
    */
   public static boolean estContainmentRatio(
@@ -85,15 +74,9 @@ public final class UtilitairesChaine {
   }
 
   /**
-   * Vérifie l'égalité de deux chaînes une fois tous les espaces retirés — couvre le cas où {@link
-   * Normalisation#normaliserTexte} remplace une apostrophe par une espace (ex. "N'Dour" → "n dour")
-   * alors qu'une source omet totalement cette apostrophe (ex. "NDour" → "ndour") : sans ce critère,
-   * les deux formes ne partagent aucun token commun. Partagé par {@link CorrespondanceSalle} et
-   * {@link CorrespondanceArtiste}.
-   *
-   * @param nomA première chaîne
-   * @param nomB deuxième chaîne
-   * @return {@code true} si les deux chaînes sont identiques une fois les espaces retirés
+   * Égalité de deux chaînes une fois tous les espaces retirés
+   * (détail : CLAUDE.md, Dédoublonnage inter-sources).
+   * @return {@code true} si identiques sans espaces
    * @since 2.9.1
    */
   public static boolean estEgaliteSansEspaces(final String nomA, final String nomB) {

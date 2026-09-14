@@ -7,12 +7,8 @@ package fr.strapontin.core;
 import java.util.Objects;
 
 /**
- * Détermine si deux noms d'artiste normalisés désignent le même artiste.
- *
- * <p>Extrait de {@code worker/persister/ReconciliateurArtistes} (v2.5.7) vers {@code core} pour
- * être réutilisable par le module {@code web} (ajout d'artiste, v2.6.0) sans dépendance {@code web}
- * → {@code worker}.
- *
+ * Détermine si deux noms d'artiste normalisés désignent le
+ * même artiste (détail : CLAUDE.md, Dédoublonnage inter-sources).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -30,16 +26,8 @@ public final class CorrespondanceArtiste {
   private CorrespondanceArtiste() {}
 
   /**
-   * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
-   *
-   * <p>Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
-   * containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
-   * "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1"), par une égalité
-   * sans espaces ({@link UtilitairesChaine#estEgaliteSansEspaces}) pour une contraction de nom
-   * propre qu'une source omet ("N'Dour"/"NDour"), puis par un préfixe de mot complet pour un ajout
-   * plus substantiel (co-tête d'affiche, suffixe de tournée) qui fait chuter le ratio de
-   * containment sous le seuil.
-   *
+   * Vérifie si deux noms d'artiste normalisés désignent le
+   * même artiste (détail : CLAUDE.md, Dédoublonnage inter-sources).
    * @param nomA premier nom normalisé
    * @param nomB deuxième nom normalisé
    * @return {@code true} si les artistes sont considérés identiques

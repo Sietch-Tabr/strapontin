@@ -58,9 +58,9 @@ public final class Normalisation {
   private Normalisation() {}
 
   /**
-   * Normalise un texte libre (artiste, ville) en clé de comparaison : minuscules, sans accents,
-   * apostrophes/tirets remplacés par une espace, {@code $} et {@code &amp;} harmonisés, ponctuation
-   * retirée, espaces multiples réduits.
+   * Normalise un texte libre (artiste, ville) en clé de comparaison :
+   * minuscules, sans accents, apostrophes/tirets remplacés par une
+   * espace, {@code $}/{@code &amp;} harmonisés, ponctuation retirée.
    *
    * @param texte le texte à normaliser
    * @return le texte normalisé, éventuellement vide
@@ -105,13 +105,10 @@ public final class Normalisation {
   }
 
   /**
-   * Extrait le code département depuis un code postal français.
-   *
-   * <p>Les DOM-TOM commençant par 97 retournent les 3 premiers chiffres. La Corse (2A/2B) est déjà
-   * normalisée en "20" à la saisie.
-   *
-   * @param codePostal code postal (peut être null, vide, ou contenir des espaces superflus)
-   * @return code département à 2 ou 3 chiffres, ou null si absent/invalide
+   * Extrait le code département depuis un code postal français
+   * (DOM-TOM 97x sur 3 chiffres, Corse 2A/2B déjà en "20").
+   * @param codePostal peut être null, vide, avec espaces superflus
+   * @return code département à 2 ou 3 chiffres, ou null si absent
    */
   public static String extraireDeptFrancais(final String codePostal) {
     if (codePostal == null || codePostal.isBlank()) {
@@ -126,13 +123,10 @@ public final class Normalisation {
   }
 
   /**
-   * Convertit un nom tout-majuscule en title case français.
-   *
-   * <p>Les articles courants restent en minuscules sauf en début de chaîne. Si la chaîne n'est pas
-   * entièrement en majuscules, elle est retournée sans modification.
-   *
+   * Convertit un nom tout-majuscule en title case français,
+   * articles restant en minuscules sauf en début de chaîne.
    * @param nom nom à normaliser
-   * @return nom en title case ou nom inchangé
+   * @return nom en title case, ou inchangé si pas tout-majuscule
    */
   // equalsIgnoreCase ne convient pas ici : le test porte sur nom lui-même (déjà
   // entièrement majuscule ou non), pas sur une comparaison insensible à la
