@@ -24,10 +24,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour les spectacles (portage de {@code spectacles/+page.server.ts}).
- *
- * <p>HTTP pur — délègue toute la logique à {@link SpectacleService}.
- *
+ * Contrôleur REST pour les spectacles — HTTP pur, délègue toute la logique
+ * à {@link SpectacleService}.
  * @since 2.0.0
  * @author Kwaite
  */

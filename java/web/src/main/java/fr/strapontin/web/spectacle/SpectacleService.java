@@ -26,12 +26,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de gestion des spectacles suivis par un utilisateur.
- *
- * <p>Requêtes SQL dynamiques avec filtres multiples. Pagination à 100 concerts par page. Les
- * requêtes indépendantes (COUNT, filtres disponibles, suivi) sont parallélisées via {@link
+ * Service de gestion des spectacles suivis par un utilisateur — requêtes SQL
+ * dynamiques avec filtres multiples, pagination à 100/page. Les requêtes
+ * indépendantes (COUNT, filtres, suivi) sont parallélisées via {@link
  * CompletableFuture} sur les threads virtuels Spring.
- *
  * @since 2.1.0
  * @author Kwaite
  */
@@ -57,11 +55,8 @@ public class SpectacleService {
   }
 
   /**
-   * Liste les spectacles selon les filtres fournis, paginés à 100 par page.
-   *
-   * <p>COUNT(*), filtres disponibles et nbSuivi sont calculés en parallèle avec la requête
-   * principale pour réduire le nombre de round-trips séquentiels.
-   *
+   * Liste les spectacles selon les filtres fournis, paginés à 100 par page
+   * (COUNT/filtres/nbSuivi calculés en parallèle de la requête principale).
    * @param userId identifiant de l'utilisateur
    * @param filtre critères de filtrage et de pagination
    * @return réponse paginée avec filtres disponibles
@@ -130,14 +125,9 @@ public class SpectacleService {
   }
 
   /**
-   * Construit la clause WHERE de la requête principale et remplit les paramètres nommés.
-   *
-   * @param userId identifiant de l'utilisateur
-   * @param filtre critères de filtrage
-   * @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
-   * @param inclureIndisponibles inclut les concerts non disponibles
-   * @param aujourd8 date du jour
-   * @param params paramètres nommés à remplir
+   * Construit la clause WHERE de la requête principale à partir des filtres
+   * ({@code userId}/{@code filtre}/{@code conditionMasque}/{@code
+   * inclureIndisponibles}/{@code aujourd8}) et remplit {@code params}.
    * @return la clause WHERE construite
    */
   private StringBuilder construireWhere(
@@ -181,8 +171,8 @@ public class SpectacleService {
   }
 
   /**
-   * Restreint les résultats aux concerts des artistes ou salles suivis selon les sources actives.
-   *
+   * Restreint les résultats aux concerts des artistes/salles suivis selon
+   * les sources actives.
    * @param where clause WHERE en construction
    * @param params paramètres nommés
    * @param userId identifiant de l'utilisateur
@@ -268,9 +258,9 @@ public class SpectacleService {
   }
 
   /**
-   * Charge les valeurs distinctes de genre, mois et classification disponibles (CTE unique).
-   *
-   * @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"} selon l'affichage des masqués
+   * Charge les valeurs distinctes de genre, mois et classification
+   * disponibles (CTE unique).
+   * @param conditionMasque {@code "NULL"} ou {@code "NOT NULL"}
    * @param baseParams paramètres de base ({@code userId}, {@code aujourd8})
    * @return les filtres disponibles regroupés par type
    */
@@ -365,14 +355,9 @@ public class SpectacleService {
   }
 
   /**
-   * Masque tous les concerts d'un artiste pour l'utilisateur courant.
-   *
-   * <p>Filtre sur {@code artiste_id} (référentiel, stable) plutôt que {@code artiste_norm} le
-   * worker (réconciliation cross-sources) démontre que {@code artiste_norm} peut diverger pour un
-   * même artiste réel selon la source/le lot de fetch ; un filtre sur ce champ texte ne couvrait
-   * donc qu'un sous-ensemble des concerts du groupe visuellement affiché sur l'accueil (tous
-   * partageant le même {@code artiste_id}, groupés par nom affiché).
-   *
+   * Masque tous les concerts d'un artiste — filtre sur {@code artiste_id}
+   * (référentiel, stable) plutôt que {@code artiste_norm}, qui peut diverger
+   * pour un même artiste réel selon la source/le lot de fetch.
    * @param userId identifiant de l'utilisateur
    * @param artisteId UUID stable de l'artiste dans le référentiel
    */
@@ -397,11 +382,8 @@ public class SpectacleService {
   }
 
   /**
-   * Démasque tous les concerts d'un artiste pour l'utilisateur courant.
-   *
-   * <p>Filtre sur {@code artiste_id} plutôt que {@code artiste_norm} — voir {@link
-   * #masquerArtiste}.
-   *
+   * Démasque tous les concerts d'un artiste — filtre sur {@code artiste_id}
+   * plutôt que {@code artiste_norm}, voir {@link #masquerArtiste}.
    * @param userId identifiant de l'utilisateur
    * @param artisteId UUID stable de l'artiste dans le référentiel
    */

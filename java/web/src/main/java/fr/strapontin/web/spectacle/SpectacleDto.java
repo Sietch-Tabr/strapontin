@@ -8,11 +8,10 @@ import fr.strapontin.web.utils.Dates;
 import java.time.Instant;
 
 /**
- * Concert dans la vue spectacles d'un utilisateur.
- *
- * @param informationNonConfirmee {@code true} si le concert n'a plus été revu depuis plusieurs
- *   cycles de fetch consécutifs (voir {@code WorkerFetchService.mettreAJourAbsences}) — signal
- *   affiché à l'utilisateur, jamais utilisé pour masquer le concert
+ * Concert dans la vue spectacles d'un utilisateur — {@code
+ * informationNonConfirmee} signale une absence détectée sur plusieurs
+ * cycles de fetch ({@code WorkerFetchService.mettreAJourAbsences}), jamais
+ * utilisé pour masquer le concert (affichage seul).
  * @since 2.1.0
  * @author Kwaite
  */
