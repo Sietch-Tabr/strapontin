@@ -15,11 +15,10 @@ import java.security.spec.ECPoint;
 import java.util.Base64;
 
 /**
- * Génération d'une paire de clés VAPID EC P-256 (secp256r1) pour les notifications push PWA,
- * encodées en Base64 URL-safe (point non compressé pour la clé publique) — partagée entre {@link
- * fr.strapontin.web.admin.VapidService} (régénération admin) et {@link
- * fr.strapontin.web.setup.SetupService} (première génération au setup initial).
- *
+ * Génération d'une paire de clés VAPID EC P-256 pour les notifications push
+ * PWA, en Base64 URL-safe (point non compressé pour la clé publique) —
+ * partagée entre {@code VapidService} (régénération) et {@code SetupService}
+ * (première génération).
  * @since 2.8.7
  * @author Kwaite
  */

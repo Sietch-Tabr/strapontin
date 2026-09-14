@@ -24,13 +24,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
- * Gestionnaire centralisé des exceptions pour tous les contrôleurs REST.
- *
- * <p>Retourne systématiquement {@code {"erreur": "..."}}, cohérent avec le format d'erreur de
- * l'API. L'ordre de résolution Spring choisit automatiquement le handler le plus spécifique ({@link
- * DuplicateKeyException} avant {@link DataAccessException}, etc.). Les erreurs 500 sont aussi
- * consignées dans {@code logs_admin} (source {@code web}).
- *
+ * Gestionnaire centralisé des exceptions pour tous les contrôleurs REST —
+ * retourne systématiquement {@code {"erreur": "..."}}. L'ordre de résolution
+ * Spring choisit automatiquement le handler le plus spécifique ; les erreurs
+ * 500 sont aussi consignées dans {@code logs_admin} (source {@code web}).
  * @since 2.1.0
  * @author Kwaite
  */

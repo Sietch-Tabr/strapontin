@@ -8,13 +8,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 /**
- * Fallback SPA Vue 3 : renvoie {@code index.html} pour toute route sans point dans le chemin,
- * laissant Vue Router gérer la navigation côté client.
- *
- * <p>Les assets statiques ({@code .js}, {@code .css}, {@code .ico}, etc.) contiennent un point et ne sont donc
- * pas interceptés par ce mapping. Les routes {@code /api/**} sont gérées par les
- * {@code @RestController} avant d'atteindre ce fallback.
- *
+ * Fallback SPA Vue 3 : renvoie {@code index.html} pour toute route sans
+ * point dans le chemin (laisse Vue Router gérer la navigation), les assets
+ * statiques (.js, .css, .ico) contenant un point n'étant pas interceptés ;
+ * les routes {@code /api/**} sont gérées par les contrôleurs REST avant.
  * @since 2.2.0
  * @author Kwaite
  */

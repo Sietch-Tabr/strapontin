@@ -8,12 +8,10 @@ import org.slf4j.Logger;
 import org.springframework.web.client.RestClient;
 
 /**
- * Déclenchement asynchrone (fire-and-forget) d'un endpoint du worker — motif jusqu'ici dupliqué
- * verbatim dans {@code ArtisteService}, {@code SalleService} et {@code PreferencesService}.
- *
- * <p>Un thread virtuel dédié évite de bloquer l'appelant sans avoir à gérer le cycle de vie d'un
- * executor pour un appel ponctuel.
- *
+ * Déclenchement asynchrone (fire-and-forget) d'un endpoint du worker — motif
+ * jusqu'ici dupliqué verbatim dans {@code ArtisteService}/{@code
+ * SalleService}/{@code PreferencesService}. Un thread virtuel dédié évite de
+ * bloquer l'appelant sans gérer le cycle de vie d'un executor.
  * @since 2.8.7
  * @author Kwaite
  */
@@ -22,13 +20,12 @@ public final class WorkerTriggerUtils {
   private WorkerTriggerUtils() {}
 
   /**
-   * Déclenche un appel POST vers le worker sur un thread virtuel, sans attendre ni propager
-   * d'exception à l'appelant.
-   *
+   * Déclenche un appel POST vers le worker sur un thread virtuel, sans
+   * attendre ni propager d'exception à l'appelant.
    * @param restClient client HTTP partagé
    * @param log logger de l'appelant, pour journaliser un échec
    * @param url URL complète du endpoint worker à appeler
-   * @param messageEchec message de log en cas d'échec (l'exception y est jointe)
+   * @param messageEchec message de log en cas d'échec (exception jointe)
    */
   // Thread.startVirtualThread est la primitive Java 21+ recommandée pour un
   // déclenchement fire-and-forget — pas un contexte de requête J2EE, la

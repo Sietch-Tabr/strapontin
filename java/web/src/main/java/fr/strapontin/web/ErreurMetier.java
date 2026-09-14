@@ -7,11 +7,9 @@ package fr.strapontin.web;
 import java.io.Serial;
 
 /**
- * Exception non-vérifiée pour les violations de règles métier.
- *
- * <p>Interceptée par {@link GlobalExceptionHandler} qui retourne {@code {"erreur": "..."}} avec le
- * code HTTP porté par l'exception (400 par défaut).
- *
+ * Exception non-vérifiée pour les violations de règles métier — interceptée
+ * par {@link GlobalExceptionHandler} qui retourne {@code {"erreur": "..."}}
+ * avec le code HTTP porté par l'exception (400 par défaut).
  * @since 2.1.0
  * @author Kwaite
  */
