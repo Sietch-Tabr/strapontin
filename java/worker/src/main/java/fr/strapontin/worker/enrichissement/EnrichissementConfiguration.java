@@ -12,13 +12,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Beans des sources d'enrichissement Wikidata/OSM/Deezer.
- *
- * <p>Ajouter une nouvelle source d'enrichissement = créer une implémentation de {@link
- * fr.strapontin.sources.SourceEnrichissementSalle} ou {@link
- * fr.strapontin.sources.SourceEnrichissementArtiste} + un bean ici, sans modifier {@link
- * EnrichissementSallesService} ni {@link EnrichissementArtistesService}.
- *
+ * Beans des sources d'enrichissement Wikidata/OSM/Deezer —
+ * ajouter une source = une implémentation + un bean ici, sans
+ * modifier les services d'orchestration.
  * @since 2.6.0
  * @author Kwaite
  */

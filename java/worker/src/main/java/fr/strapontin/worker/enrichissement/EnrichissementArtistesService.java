@@ -23,23 +23,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Orchestrateur d'enrichissement des artistes (étape 3 +).
- *
- * <p>Boucle sur les {@link SourceEnrichissementArtiste} injectées (une nouvelle source = un bean
- * Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
- * EnrichissementConfiguration} importe : {@code WikidataArtisteSource} doit être déclaré avant
- * {@code DeezerArtisteSource} — le {@code deezerId} (P2722) découvert par Wikidata est propagé aux
- * sources suivantes dans la même passe pour que Deezer puisse confirmer le nom.
- *
- * <p>Contient la logique : le P6262 Wikidata sert de cross-validation indépendante de TM pour
- * l'entrée {@code artiste_sources(source='ticketmaster')} — absent → insertion auto, identique →
- * rien, différent → log seul (pas d'écrasement automatique d'un lien déjà établi).
- *
- * <p>Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : la
- * découverte Wikidata sans Q-ID connu est séquentielle (une requête par artiste, rate-limitée) —
- * persister uniquement à la toute fin perdrait tout le travail déjà résolu en cas d'interruption
- * avant la fin du cycle.
- *
+ * Orchestrateur d'enrichissement des artistes (étape 3+),
+ * lots de {@link #TAILLE_LOT_PERSISTANCE} (détail : CLAUDE.md,
+ * Enrichissement Wikidata/OSM/Deezer).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -79,11 +65,8 @@ public class EnrichissementArtistesService {
   }
 
   /**
-   * Enrichit les artistes sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
-   * courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit), priorisés par
-   * nombre de concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code
-   * nom_affiche} déjà présent (override manuel admin).
-   *
+   * Enrichit les artistes sans {@code wikidata_id} du jour_batch
+   * courant (détail : CLAUDE.md, Enrichissement Wikidata/OSM/Deezer).
    * @return nombre d'artistes effectivement mis à jour
    */
   public int enrichir() {
@@ -250,14 +233,9 @@ public class EnrichissementArtistesService {
   }
 
   /**
-   * @return {@code true} si la mise à jour a été appliquée, {@code false} si le {@code wikidataId}
-   *     découvert est déjà porté par un autre artiste (contrainte {@code idx_artistes_wikidata_id})
-   *     — signe d'un faux positif de correspondance ou d'un doublon non encore fusionné; le conflit
-   *     est loggé et signalé ({@link SignalementMatchingService}) plutôt que de faire échouer tout
-   *     le cycle de réconciliation, et la cross-validation P6262 associée est également sautée
-   *     (basée sur le même enrichissement). Jamais de fusion automatique — contrairement aux
-   *     salles, aucun signal géographique de cross-validation n'existe pour départager un homonyme
-   *     réel d'un doublon.
+   * @return {@code true} si appliqué, {@code false} si
+   * {@code wikidataId} déjà porté par un autre artiste
+   * (détail : CLAUDE.md, Enrichissement Wikidata/OSM/Deezer).
    */
   private boolean mettreAJourArtiste(
       final UUID artisteId, final String nom, final EnrichissementArtiste enrichissement) {
