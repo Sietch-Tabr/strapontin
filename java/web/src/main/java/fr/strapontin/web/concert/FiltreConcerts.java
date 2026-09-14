@@ -21,21 +21,29 @@ public record FiltreConcerts(
     String genre,
     String classification,
     String tri,
-    int page,
-    boolean quinzaine,
-    boolean masques,
+    Integer page,
+    Boolean quinzaine,
+    Boolean masques,
     @BindParam("source") List<String> sources,
     String indisponibles,
     @BindParam("dept") List<String> depts) {
 
   // Restitue les valeurs par défaut qu'un paramètre de requête absent ne
-  // porte pas.
+  // porte pas — page/quinzaine/masques en types boîte (pas int/boolean) :
+  // @ModelAttribute sur un record laisse un paramètre absent à null, la
+  // conversion Spring vers un type primitif échoue alors en amont de ce
+  // constructeur compact (@RequestParam(defaultValue=...) est ignoré sur
+  // les composants d'un record lié via @ModelAttribute, contrairement à un
+  // paramètre de méthode de contrôleur classique).
   public FiltreConcerts {
     recherche = recherche != null ? recherche : "";
     mois = mois != null ? mois : "";
     genre = genre != null ? genre : "";
     classification = classification != null ? classification : "";
     tri = tri != null ? tri : "date";
+    page = page != null ? page : 0;
+    quinzaine = quinzaine != null ? quinzaine : false;
+    masques = masques != null ? masques : false;
   }
 
   /**
