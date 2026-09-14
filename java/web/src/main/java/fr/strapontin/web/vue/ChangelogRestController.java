@@ -15,14 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour le journal des modifications.
- *
- * <p>La version courante est lue dynamiquement via {@link BuildProperties} (généré par le goal
- * Maven {@code build-info}, {@code java/web/pom.xml}) plutôt qu'une constante à maintenir
- * manuellement à chaque release — {@code user_config.changelog_version_vue} pilote désormais un
- * badge "nouveautés" ({@link #nouveaute}), complétant l'intention initiale du mécanisme (jusque là
- * une écriture pure sans aucun lecteur).
- *
+ * Contrôleur REST pour le journal des modifications — version courante lue
+ * via {@link BuildProperties} (goal Maven {@code build-info}) plutôt qu'une
+ * constante manuelle. {@code changelog_version_vue} pilote le badge
+ * "nouveautés" ({@link #nouveaute}).
  * @since 2.2.0
  * @author Kwaite
  */

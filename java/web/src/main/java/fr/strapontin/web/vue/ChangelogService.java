@@ -30,11 +30,11 @@ class ChangelogService {
   }
 
   /**
-   * Indique si l'utilisateur n'a pas encore vu le changelog de la version donnée.
-   *
+   * Indique si l'utilisateur n'a pas encore vu le changelog de la version
+   * donnée.
    * @param userId identifiant de l'utilisateur
    * @param versionCourante version actuelle de l'application
-   * @return {@code true} si la dernière version vue diffère de {@code versionCourante}
+   * @return {@code true} si la dernière version vue diffère
    */
   /* package-private : appelé par le contrôleur du même package. */
   boolean estNonVu(final String userId, final String versionCourante) {
@@ -48,13 +48,10 @@ class ChangelogService {
   }
 
   /**
-   * Marque une version du changelog comme vue pour l'utilisateur.
-   *
-   * <p>Upsert plutôt qu'une simple mise à jour : un utilisateur qui n'a encore jamais écrit dans
-   * {@code user_config} (aucun changement de thème, de préférences...) n'y a pas encore de ligne —
-   * un {@code UPDATE} seul ne ferait alors rien, laissant le badge "nouveautés" affiché
-   * indéfiniment malgré un appel réussi.
-   *
+   * Marque une version du changelog comme vue — upsert plutôt qu'un simple
+   * {@code UPDATE}, un utilisateur sans ligne {@code user_config} existante
+   * verrait sinon le badge "nouveautés" rester affiché malgré un appel
+   * réussi.
    * @param userId identifiant de l'utilisateur
    * @param versionCourante version actuelle de l'application
    */
