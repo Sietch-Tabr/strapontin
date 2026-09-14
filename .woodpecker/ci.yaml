@@ -27,6 +27,31 @@ steps:
       - event: push
         branch: main
 
+  # Checkstyle/PMD liés à la phase verify (java/pom.xml) — étape distincte du step
+  # test pour ne pas surcharger l'agent CI (1,5 Go RAM) en parallèle des
+  # Testcontainers ; compile seul, pas de relance de test complet.
+  - name: static-analysis
+    image: maven:3.9-eclipse-temurin-25
+    depends_on: [test]
+    volumes:
+      - /var/cache/woodpecker/maven:/root/.m2
+    commands:
+      - mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check -DskipTests
+    when:
+      - event: push
+        branch: main
+
+  - name: lint-front
+    image: node:26-alpine
+    depends_on: [test-front]
+    volumes:
+      - /var/cache/woodpecker/npm:/root/.npm
+    commands:
+      - cd front && npm ci && npm run lint && npm run lint:css
+    when:
+      - event: push
+        branch: main
+
   - name: build-front
     image: node:26-alpine
     depends_on: [test-front]
@@ -41,7 +66,7 @@ steps:
 
   - name: build
     image: maven:3.9-eclipse-temurin-25
-    depends_on: [test, build-front]
+    depends_on: [test, build-front, static-analysis, lint-front]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:

@@ -2,16 +2,24 @@
   <div>
     <div class="page-entete">
       <h1>Découverte</h1>
-      <p class="page-sous-titre">Explorez tous les concerts disponibles par département.</p>
+      <p class="page-sous-titre">
+        Explorez tous les concerts disponibles par département.
+      </p>
     </div>
 
     <div v-if="donnees" class="decouverte-entete">
-      <span class="synchro-info" v-if="donnees.derniereSyncRegion">
+      <span v-if="donnees.derniereSyncRegion" class="synchro-info">
         Dernière synchro :
-        <time :datetime="donnees.derniereSyncRegion">{{ formaterInstant(donnees.derniereSyncRegion) }}</time>
+        <time :datetime="donnees.derniereSyncRegion">{{
+          formaterInstant(donnees.derniereSyncRegion)
+        }}</time>
       </span>
-      <span class="synchro-info" v-else>Jamais synchronisé</span>
-      <button type="button" class="bouton bouton-petit bouton-secondaire" @click="actualiser">
+      <span v-else class="synchro-info">Jamais synchronisé</span>
+      <button
+        type="button"
+        class="bouton bouton-petit bouton-secondaire"
+        @click="actualiser"
+      >
         <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-refresh-cw" />
         </svg>
@@ -28,13 +36,19 @@
           href="#"
           :class="{ actif: deptsActifs.includes(dept) }"
           :aria-current="deptsActifs.includes(dept) ? 'true' : undefined"
-          :title="syncDepts[dept] ? 'Dernière synchro : ' + syncDepts[dept] : 'Jamais synchronisé'"
+          :title="
+            syncDepts[dept]
+              ? 'Dernière synchro : ' + syncDepts[dept]
+              : 'Jamais synchronisé'
+          "
           @click.prevent="toggleDept(dept)"
-        >{{ dept }}</a>
+          >{{ dept }}</a
+        >
       </div>
       <p v-if="donnees.deptsUtilisateur.length === 0" class="form-aide">
         Configurez vos départements dans
-        <RouterLink to="/parametres#preferences">Paramètres</RouterLink> pour les pré-sélectionner.
+        <RouterLink to="/parametres#preferences">Paramètres</RouterLink> pour
+        les pré-sélectionner.
       </p>
     </div>
 
@@ -48,46 +62,96 @@
         <svg class="icone" aria-hidden="true">
           <use href="/icons/lucide-sprite.svg#icon-sliders-horizontal" />
         </svg>
-        <span>Filtres{{ nbFiltresActifs > 0 ? ' · ' + nbFiltresActifs : '' }}</span>
+        <span
+          >Filtres{{ nbFiltresActifs > 0 ? " · " + nbFiltresActifs : "" }}</span
+        >
       </button>
     </div>
 
-    <form class="filtres-form" :class="{ visible: filtresVisibles }" @submit.prevent="appliquerFiltres">
+    <form
+      class="filtres-form"
+      :class="{ visible: filtresVisibles }"
+      @submit.prevent="appliquerFiltres"
+    >
       <div class="filtres-ligne">
         <input
-          type="text"
           v-model="qLocal"
+          type="text"
           placeholder="Rechercher un artiste ou une salle…"
           aria-label="Rechercher un artiste ou une salle"
           autocomplete="off"
         />
 
-        <label for="filtre-mois-dec" class="lecteur-ecran">Filtrer par mois</label>
-        <select id="filtre-mois-dec" v-model="moisLocal" @change="appliquerFiltres">
+        <label for="filtre-mois-dec" class="lecteur-ecran"
+          >Filtrer par mois</label
+        >
+        <select
+          id="filtre-mois-dec"
+          v-model="moisLocal"
+          @change="appliquerFiltres"
+        >
           <option value="">Tous les mois</option>
-          <option v-for="m in donnees?.moisDisponibles ?? []" :key="m" :value="m">{{ m }}</option>
+          <option
+            v-for="m in donnees?.moisDisponibles ?? []"
+            :key="m"
+            :value="m"
+          >
+            {{ m }}
+          </option>
         </select>
 
-        <label for="filtre-genre-dec" class="lecteur-ecran">Filtrer par genre</label>
-        <select id="filtre-genre-dec" v-model="genreLocal" @change="appliquerFiltres">
+        <label for="filtre-genre-dec" class="lecteur-ecran"
+          >Filtrer par genre</label
+        >
+        <select
+          id="filtre-genre-dec"
+          v-model="genreLocal"
+          @change="appliquerFiltres"
+        >
           <option value="">Tous les genres</option>
-          <option v-for="g in donnees?.genresDisponibles ?? []" :key="g" :value="g">{{ g }}</option>
+          <option
+            v-for="g in donnees?.genresDisponibles ?? []"
+            :key="g"
+            :value="g"
+          >
+            {{ g }}
+          </option>
         </select>
 
-        <label for="filtre-classification-dec" class="lecteur-ecran">Filtrer par classification</label>
-        <select id="filtre-classification-dec" v-model="classificationLocal" @change="appliquerFiltres">
+        <label for="filtre-classification-dec" class="lecteur-ecran"
+          >Filtrer par classification</label
+        >
+        <select
+          id="filtre-classification-dec"
+          v-model="classificationLocal"
+          @change="appliquerFiltres"
+        >
           <option value="">Toutes classifications</option>
-          <option v-for="c in donnees?.classificationsDisponibles ?? []" :key="c" :value="c">{{ c }}</option>
+          <option
+            v-for="c in donnees?.classificationsDisponibles ?? []"
+            :key="c"
+            :value="c"
+          >
+            {{ c }}
+          </option>
         </select>
 
-        <label for="filtre-tri-dec" class="lecteur-ecran">Trier les résultats</label>
-        <select id="filtre-tri-dec" v-model="triLocal" @change="appliquerFiltres">
+        <label for="filtre-tri-dec" class="lecteur-ecran"
+          >Trier les résultats</label
+        >
+        <select
+          id="filtre-tri-dec"
+          v-model="triLocal"
+          @change="appliquerFiltres"
+        >
           <option value="date">Par date</option>
           <option value="nouveaute">Par nouveauté</option>
         </select>
 
         <button type="submit" class="bouton bouton-secondaire">Filtrer</button>
-        <RouterLink to="/decouverte" class="bouton bouton-texte">Réinitialiser</RouterLink>
+        <RouterLink to="/decouverte" class="bouton bouton-texte"
+          >Réinitialiser</RouterLink
+        >
       </div>
     </form>
 
@@ -97,15 +161,22 @@
       aria-live="polite"
       aria-atomic="true"
     >
-      {{ donnees.totalConcerts }} concert{{ donnees.totalConcerts !== 1 ? 's' : '' }} trouvé{{ donnees.totalConcerts !== 1 ? 's' : '' }}
+      {{ donnees.totalConcerts }} concert{{
+        donnees.totalConcerts !== 1 ? "s" : ""
+      }}
+      trouvé{{ donnees.totalConcerts !== 1 ? "s" : "" }}
     </p>
 
     <EtatChargement v-if="chargement && !donnees" />
 
-    <div v-if="!chargement && (!donnees || donnees.concerts.length === 0)" class="etat-vide">
+    <div
+      v-if="!chargement && (!donnees || donnees.concerts.length === 0)"
+      class="etat-vide"
+    >
       <p class="etat-vide-titre">Aucun concert avec ces filtres.</p>
       <p v-if="deptsActifs.length === 0" class="etat-vide-texte">
-        Sélectionnez un département ci-dessus ou configurez vos départements dans
+        Sélectionnez un département ci-dessus ou configurez vos départements
+        dans
         <RouterLink to="/parametres#preferences">Paramètres</RouterLink>.
       </p>
       <p v-else class="etat-vide-texte">
@@ -113,7 +184,10 @@
       </p>
     </div>
 
-    <div v-if="donnees && donnees.concerts.length > 0" class="decouverte-conteneur">
+    <div
+      v-if="donnees && donnees.concerts.length > 0"
+      class="decouverte-conteneur"
+    >
       <div class="table-conteneur">
         <table>
           <thead>
@@ -129,19 +203,48 @@
             <tr v-for="concert in donnees.concerts" :key="concert.id">
               <td data-label="Artiste">
                 <span class="concert-artiste">{{ concert.artiste }}</span>
-                <span v-if="concert.statut === 'cancelled'" class="badge badge-annule">Annulé</span>
-                <span v-if="concert.statut === 'rescheduled' || concert.statut === 'postponed'" class="badge badge-reporte">Reporté</span>
-                <span v-if="concert.statut === 'offsale'" class="badge badge-complet">Complet</span>
+                <span
+                  v-if="concert.statut === 'cancelled'"
+                  class="badge badge-annule"
+                  >Annulé</span
+                >
+                <span
+                  v-if="
+                    concert.statut === 'rescheduled' ||
+                    concert.statut === 'postponed'
+                  "
+                  class="badge badge-reporte"
+                  >Reporté</span
+                >
+                <span
+                  v-if="concert.statut === 'offsale'"
+                  class="badge badge-complet"
+                  >Complet</span
+                >
               </td>
               <td data-label="Date">
-                <time class="concert-date" :datetime="concert.date">{{ formaterAvecHeure(concert.date, concert.heure) }}</time>
+                <time class="concert-date" :datetime="concert.date">{{
+                  formaterAvecHeure(concert.date, concert.heure)
+                }}</time>
               </td>
-              <td data-label="Où" :class="{ 'cel-vide': !concert.salle && !concert.ville }">
+              <td
+                data-label="Où"
+                :class="{ 'cel-vide': !concert.salle && !concert.ville }"
+              >
                 <span v-if="concert.salle">{{ concert.salle }}</span>
-                <span v-if="concert.salle && concert.ville" class="concert-separateur"> · </span>
-                <span v-if="concert.ville" class="concert-ville">{{ concert.ville }}</span>
+                <span
+                  v-if="concert.salle && concert.ville"
+                  class="concert-separateur"
+                >
+                  ·
+                </span>
+                <span v-if="concert.ville" class="concert-ville">{{
+                  concert.ville
+                }}</span>
               </td>
-              <td data-label="Genre" :class="{ 'cel-vide': !concert.genre }">{{ concert.genre }}</td>
+              <td data-label="Genre" :class="{ 'cel-vide': !concert.genre }">
+                {{ concert.genre }}
+              </td>
               <td data-label="" :class="{ 'cel-vide': !concert.url }">
                 <a
                   v-if="concert.url"
@@ -162,232 +265,263 @@
       </div>
     </div>
 
-    <div class="pagination" v-if="donnees && donnees.totalPages > 1">
+    <div v-if="donnees && donnees.totalPages > 1" class="pagination">
       <button
         v-if="donnees.page > 0"
         type="button"
         class="bouton bouton-secondaire"
         @click="changerPage(donnees.page - 1)"
-      >Précédent</button>
+      >
+        Précédent
+      </button>
       <span>Page {{ donnees.page + 1 }} / {{ donnees.totalPages }}</span>
       <button
         v-if="donnees.page + 1 < donnees.totalPages"
         type="button"
         class="bouton bouton-secondaire"
         @click="changerPage(donnees.page + 1)"
-      >Suivant</button>
+      >
+        Suivant
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-defineOptions({ name: 'DecouvertePage' })
+defineOptions({ name: "DecouvertePage" });
 
-import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { formaterAvecHeure, formaterInstant } from '../composables/useDates.js'
-import { useToasts } from '../composables/useToasts.js'
-import EtatChargement from '../components/EtatChargement.vue'
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { formaterAvecHeure, formaterInstant } from "../composables/useDates.js";
+import { useToasts } from "../composables/useToasts.js";
+import EtatChargement from "../components/EtatChargement.vue";
 
-const route = useRoute()
-const router = useRouter()
-const { afficherToast } = useToasts()
+const route = useRoute();
+const router = useRouter();
+const { afficherToast } = useToasts();
 
-const chargement = ref(false)
-const donnees = shallowRef(null)
-const filtresVisibles = ref(false)
+const chargement = ref(false);
+const donnees = shallowRef(null);
+const filtresVisibles = ref(false);
 
-const qLocal = ref('')
-const moisLocal = ref('')
-const genreLocal = ref('')
-const classificationLocal = ref('')
-const triLocal = ref('date')
+const qLocal = ref("");
+const moisLocal = ref("");
+const genreLocal = ref("");
+const classificationLocal = ref("");
+const triLocal = ref("date");
 
 const deptsActifs = computed(() => {
-  const d = route.query.dept
-  if (!d) return []
-  return Array.isArray(d) ? d : [d]
-})
+  const d = route.query.dept;
+  if (!d) return [];
+  return Array.isArray(d) ? d : [d];
+});
 
 const syncDepts = computed(() => {
-  if (!donnees.value?.syncParDept) return {}
+  if (!donnees.value?.syncParDept) return {};
   return Object.fromEntries(
     donnees.value.syncParDept
-      .filter(s => s.derniereExec)
-      .map(s => [s.dept, formaterInstant(s.derniereExec)])
-  )
-})
+      .filter((s) => s.derniereExec)
+      .map((s) => [s.dept, formaterInstant(s.derniereExec)]),
+  );
+});
 
 const nbFiltresActifs = computed(() => {
-  let n = 0
-  if (route.query.q) n++
-  if (route.query.mois) n++
-  if (route.query.genre) n++
-  if (route.query.classification) n++
-  return n
-})
+  let n = 0;
+  if (route.query.q) n++;
+  if (route.query.mois) n++;
+  if (route.query.genre) n++;
+  if (route.query.classification) n++;
+  return n;
+});
 
 function syncFiltresLocaux() {
-  qLocal.value = route.query.q ?? ''
-  moisLocal.value = route.query.mois ?? ''
-  genreLocal.value = route.query.genre ?? ''
-  classificationLocal.value = route.query.classification ?? ''
-  triLocal.value = route.query.tri ?? 'date'
+  qLocal.value = route.query.q ?? "";
+  moisLocal.value = route.query.mois ?? "";
+  genreLocal.value = route.query.genre ?? "";
+  classificationLocal.value = route.query.classification ?? "";
+  triLocal.value = route.query.tri ?? "date";
 }
 
 // Contrôleur dédié au cycle de vie du composant (démontage) — distinct de controleurActuel
 // ci-dessous, propre au fetch de la liste de concerts et à sa logique d'annulation du précédent.
-const controleurComposant = new AbortController()
+const controleurComposant = new AbortController();
 
 // Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
 // annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
 // leurs résultats dans le désordre.
-let controleurActuel = null
+let controleurActuel = null;
 
 async function charger() {
-  controleurActuel?.abort()
-  const controleur = new AbortController()
-  controleurActuel = controleur
-  chargement.value = true
+  controleurActuel?.abort();
+  const controleur = new AbortController();
+  controleurActuel = controleur;
+  chargement.value = true;
   try {
-    const params = new URLSearchParams()
-    deptsActifs.value.forEach(d => params.append('dept', d))
-    if (route.query.q) params.set('q', route.query.q)
-    if (route.query.mois) params.set('mois', route.query.mois)
-    if (route.query.genre) params.set('genre', route.query.genre)
-    if (route.query.classification) params.set('classification', route.query.classification)
-    if (triLocal.value && triLocal.value !== 'date') params.set('tri', triLocal.value)
-    if (route.query.page) params.set('page', route.query.page)
-    const rep = await fetch('/api/decouverte?' + params, { signal: controleur.signal })
-    if (!rep.ok) throw new Error()
-    donnees.value = await rep.json()
+    const params = new URLSearchParams();
+    deptsActifs.value.forEach((d) => params.append("dept", d));
+    if (route.query.q) params.set("q", route.query.q);
+    if (route.query.mois) params.set("mois", route.query.mois);
+    if (route.query.genre) params.set("genre", route.query.genre);
+    if (route.query.classification)
+      params.set("classification", route.query.classification);
+    if (triLocal.value && triLocal.value !== "date")
+      params.set("tri", triLocal.value);
+    if (route.query.page) params.set("page", route.query.page);
+    const rep = await fetch("/api/decouverte?" + params, {
+      signal: controleur.signal,
+    });
+    if (!rep.ok) throw new Error();
+    donnees.value = await rep.json();
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de charger les concerts.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de charger les concerts.", "erreur");
   } finally {
-    if (controleurActuel === controleur) chargement.value = false
+    if (controleurActuel === controleur) chargement.value = false;
   }
 }
 
 function appliquerFiltres() {
-  const q = { ...route.query }
-  delete q.page
-  if (qLocal.value) q.q = qLocal.value; else delete q.q
-  if (moisLocal.value) q.mois = moisLocal.value; else delete q.mois
-  if (genreLocal.value) q.genre = genreLocal.value; else delete q.genre
-  if (classificationLocal.value) q.classification = classificationLocal.value; else delete q.classification
-  if (triLocal.value && triLocal.value !== 'date') q.tri = triLocal.value; else delete q.tri
-  router.push({ query: q })
+  const q = { ...route.query };
+  delete q.page;
+  if (qLocal.value) q.q = qLocal.value;
+  else delete q.q;
+  if (moisLocal.value) q.mois = moisLocal.value;
+  else delete q.mois;
+  if (genreLocal.value) q.genre = genreLocal.value;
+  else delete q.genre;
+  if (classificationLocal.value) q.classification = classificationLocal.value;
+  else delete q.classification;
+  if (triLocal.value && triLocal.value !== "date") q.tri = triLocal.value;
+  else delete q.tri;
+  router.push({ query: q });
 }
 
 function toggleDept(dept) {
-  const q = { ...route.query }
-  delete q.page
-  const actuel = deptsActifs.value
+  const q = { ...route.query };
+  delete q.page;
+  const actuel = deptsActifs.value;
   const nouveau = actuel.includes(dept)
-    ? actuel.filter(d => d !== dept)
-    : [...actuel, dept]
+    ? actuel.filter((d) => d !== dept)
+    : [...actuel, dept];
   if (nouveau.length > 0) {
-    q.dept = nouveau
+    q.dept = nouveau;
   } else {
-    delete q.dept
+    delete q.dept;
   }
-  router.push({ query: q })
+  router.push({ query: q });
 }
 
 function changerPage(page) {
-  router.push({ query: { ...route.query, page: String(page) } })
+  router.push({ query: { ...route.query, page: String(page) } });
 }
 
 async function actualiser() {
   try {
-    const rep = await fetch('/api/decouverte/fetcher', {
-      method: 'POST',
+    const rep = await fetch("/api/decouverte/fetcher", {
+      method: "POST",
       signal: controleurComposant.signal,
-    })
-    if (!rep.ok) throw new Error()
-    afficherToast('Synchronisation déclenchée — résultats mis à jour dans quelques minutes.', 'succes')
+    });
+    if (!rep.ok) throw new Error();
+    afficherToast(
+      "Synchronisation déclenchée — résultats mis à jour dans quelques minutes.",
+      "succes",
+    );
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de déclencher la synchronisation.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de déclencher la synchronisation.", "erreur");
   }
 }
 
-watch(() => route.query, () => {
-  syncFiltresLocaux()
-  charger()
-}, { deep: true })
+watch(
+  () => route.query,
+  () => {
+    syncFiltresLocaux();
+    charger();
+  },
+  { deep: true },
+);
 
 onMounted(() => {
-  syncFiltresLocaux()
-  charger()
-})
+  syncFiltresLocaux();
+  charger();
+});
 
 onUnmounted(() => {
-  controleurComposant.abort()
-  controleurActuel?.abort()
-})
+  controleurComposant.abort();
+  controleurActuel?.abort();
+});
 </script>
 
 <style scoped>
-  .decouverte-conteneur {
-    container-type: inline-size;
-    container-name: decouverte;
-  }
-  @container decouverte (max-width: 700px) {
-    .decouverte-conteneur table,
+.decouverte-conteneur {
+  container-type: inline-size;
+  container-name: decouverte;
+}
+
+@container decouverte (max-width: 700px) {
+  .decouverte-conteneur table,
   .decouverte-conteneur tbody {
-      display: block;
-    }
-    .decouverte-conteneur thead {
-      display: none;
-    }
-    .decouverte-conteneur tr {
-      display: block;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--bg-card);
-      margin-bottom: 0.5rem;
-      overflow: hidden;
-    }
-    .decouverte-conteneur td {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.875rem;
-    }
-    .decouverte-conteneur td:last-child {
-      border-bottom: none;
-    }
-    .decouverte-conteneur td::before {
-      content: attr(data-label);
-      font-weight: 500;
-      color: var(--fg-muted);
-      font-size: 0.75rem;
-      flex-shrink: 0;
-    }
-    .decouverte-conteneur td[data-label=""]::before {
-      display: none;
-    }
-    .decouverte-conteneur td[data-label=""] {
-      justify-content: flex-end;
-    }
+    display: block;
   }
-  .decouverte-entete {
+
+  .decouverte-conteneur thead {
+    display: none;
+  }
+
+  .decouverte-conteneur tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+
+  .decouverte-conteneur td {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
   }
-  .decouverte-depts {
-    margin-bottom: 1rem;
+
+  .decouverte-conteneur td:last-child {
+    border-bottom: none;
   }
-  .synchro-info {
-    font-size: 0.75rem;
+
+  .decouverte-conteneur td::before {
+    content: attr(data-label);
+    font-weight: 500;
     color: var(--fg-muted);
+    font-size: 0.75rem;
+    flex-shrink: 0;
   }
+
+  .decouverte-conteneur td[data-label=""]::before {
+    display: none;
+  }
+
+  .decouverte-conteneur td[data-label=""] {
+    justify-content: flex-end;
+  }
+}
+
+.decouverte-entete {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.decouverte-depts {
+  margin-bottom: 1rem;
+}
+
+.synchro-info {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
 </style>

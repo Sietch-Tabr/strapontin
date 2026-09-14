@@ -5,7 +5,9 @@
     </div>
     <p class="auth-sous-titre">Créez le premier compte administrateur</p>
 
-    <div v-if="erreur" class="alerte alerte-erreur" role="alert">{{ erreur }}</div>
+    <div v-if="erreur" class="alerte alerte-erreur" role="alert">
+      {{ erreur }}
+    </div>
 
     <form @submit.prevent="soumettre">
       <div class="form-groupe">
@@ -59,7 +61,11 @@
           autocomplete="off"
         />
       </div>
-      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
+      <button
+        type="submit"
+        class="bouton bouton-primaire bouton-pleine-largeur"
+        :disabled="chargement"
+      >
         Créer le compte
       </button>
     </form>
@@ -67,65 +73,65 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'SetupPage' })
+defineOptions({ name: "SetupPage" });
 
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import AuthLayout from '../../components/auth/AuthLayout.vue'
-import { corpsJsonOuVide } from '../../utils/reponseJson.js'
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import AuthLayout from "../../components/auth/AuthLayout.vue";
+import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
-const router = useRouter()
+const router = useRouter();
 
-const identifiant = ref('')
-const email = ref('')
-const motDePasse = ref('')
-const baseUrl = ref('')
-const erreur = ref('')
-const chargement = ref(false)
-const champIdentifiant = ref(null)
+const identifiant = ref("");
+const email = ref("");
+const motDePasse = ref("");
+const baseUrl = ref("");
+const erreur = ref("");
+const chargement = ref(false);
+const champIdentifiant = ref(null);
 
 onMounted(async () => {
-  champIdentifiant.value?.focus()
+  champIdentifiant.value?.focus();
   try {
-    const rep = await fetch('/api/setup')
+    const rep = await fetch("/api/setup");
     if (rep.ok) {
-      const data = await rep.json()
+      const data = await rep.json();
       if (data.deja_configure) {
-        router.replace('/login')
+        router.replace("/login");
       }
     }
   } catch (e) {
-    console.error('Échec vérification statut setup', e)
+    console.error("Échec vérification statut setup", e);
   }
-})
+});
 
 async function soumettre() {
-  erreur.value = ''
-  chargement.value = true
+  erreur.value = "";
+  chargement.value = true;
   try {
-    const rep = await fetch('/api/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const rep = await fetch("/api/setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         identifiant: identifiant.value,
         email: email.value,
         motDePasse: motDePasse.value,
         baseUrl: baseUrl.value || null,
       }),
-    })
+    });
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep)
-      erreur.value = data.erreur || 'Une erreur est survenue.'
-      return
+      const data = await corpsJsonOuVide(rep);
+      erreur.value = data.erreur || "Une erreur est survenue.";
+      return;
     }
     const cible = baseUrl.value
-      ? baseUrl.value.replace(/\/+$/, '') + '/login?configure=true'
-      : '/login?configure=true'
-    window.location.href = cible
+      ? baseUrl.value.replace(/\/+$/, "") + "/login?configure=true"
+      : "/login?configure=true";
+    window.location.href = cible;
   } catch {
-    erreur.value = 'Impossible de se connecter au serveur.'
+    erreur.value = "Impossible de se connecter au serveur.";
   } finally {
-    chargement.value = false
+    chargement.value = false;
   }
 }
 </script>

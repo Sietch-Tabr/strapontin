@@ -44,7 +44,12 @@
             valider la configuration.
           </p>
 
-          <div v-if="erreurCode" class="alerte alerte-erreur" role="alert" aria-live="assertive">
+          <div
+            v-if="erreurCode"
+            class="alerte alerte-erreur"
+            role="alert"
+            aria-live="assertive"
+          >
             {{ erreurCode }}
           </div>
 
@@ -66,10 +71,17 @@
               />
             </div>
             <div class="form-actions">
-              <button type="submit" class="bouton bouton-primaire" :disabled="enCours">
+              <button
+                type="submit"
+                class="bouton bouton-primaire"
+                :disabled="enCours"
+              >
                 Confirmer
               </button>
-              <RouterLink to="/parametres#compte" class="bouton bouton-secondaire">
+              <RouterLink
+                to="/parametres#compte"
+                class="bouton bouton-secondaire"
+              >
                 Annuler
               </RouterLink>
             </div>
@@ -81,7 +93,7 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'ParametresTotpPage' })
+defineOptions({ name: "ParametresTotpPage" });
 
 import { ref, computed, onMounted } from "vue";
 import EtatChargement from "../components/EtatChargement.vue";
@@ -98,8 +110,9 @@ const totpSecret = ref("");
 const qrCodeSvg = ref("");
 const svgDataUri = computed(() =>
   qrCodeSvg.value
-    ? 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(qrCodeSvg.value)))
-    : ''
+    ? "data:image/svg+xml;base64," +
+      btoa(unescape(encodeURIComponent(qrCodeSvg.value)))
+    : "",
 );
 const code = ref("");
 const erreurCode = ref(null);
@@ -160,31 +173,35 @@ onMounted(chargerSetup);
 </script>
 
 <style scoped>
-  .param-aide--mt {
-    margin-top: 0.5rem;
-  }
-  .totp-qr {
-    width: 200px;
-    height: 200px;
-    margin: 1rem 0;
-  }
-  .totp-secret-code {
-    display: block;
-    font-size: 1.1rem;
-    letter-spacing: 0.15em;
-    padding: 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    word-break: break-all;
-    margin: 0.5rem 0;
-  }
-  .totp-manuel {
-    margin-top: 0.75rem;
-  }
-  .totp-manuel summary {
-    cursor: pointer;
-    font-size: 0.875rem;
-    color: var(--fg-muted);
-  }
+.param-aide--mt {
+  margin-top: 0.5rem;
+}
+
+.totp-qr {
+  width: 200px;
+  height: 200px;
+  margin: 1rem 0;
+}
+
+.totp-secret-code {
+  display: block;
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  padding: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  word-break: break-all;
+  margin: 0.5rem 0;
+}
+
+.totp-manuel {
+  margin-top: 0.75rem;
+}
+
+.totp-manuel summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
 </style>
