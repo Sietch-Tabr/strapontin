@@ -10,12 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : suppression des artistes orphelins (sans concerts futurs ni utilisateurs), tous les
- * jours à 0h06.
- *
- * <p>S'exécute après {@link PurgerSallesJob} pour éviter de laisser des salles fantômes référencées
- * par des concerts orphelins déjà supprimés.
- *
+ * Job Quartz : suppression des artistes orphelins, cron
+ * quotidien 0h06 après {@link PurgerSallesJob} (détail :
+ * CLAUDE.md, Jobs background).
  * @since 2.3.2
  * @author Kwaite
  */

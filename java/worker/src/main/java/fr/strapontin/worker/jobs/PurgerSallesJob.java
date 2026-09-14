@@ -10,11 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : suppression des salles orphelines (sans concerts futurs, sans utilisateurs et sans
- * slug Digitick configuré), tous les jours à 0h05.
- *
- * <p>S'exécute après {@link PurgerConcertsJob} pour travailler sur un jeu de données cohérent.
- *
+ * Job Quartz : suppression des salles orphelines, cron
+ * quotidien 0h05 après {@link PurgerConcertsJob} (détail :
+ * CLAUDE.md, Jobs background).
  * @since 2.3.2
  * @author Kwaite
  */

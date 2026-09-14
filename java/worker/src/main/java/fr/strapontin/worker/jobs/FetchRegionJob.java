@@ -13,12 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : fetch par région pour tous les départements configurés, toutes les 2 heures.
- *
- * <p>Un retry ciblé ({@code RetryLotsService}) transmet via la {@code JobDataMap} du trigger la
- * liste (virgule-séparée) des départements en échec du cycle précédent, au format {@link
- * #CLE_IDS_RETRY} — sinon le cycle complet s'exécute normalement.
- *
+ * Job Quartz : fetch par région pour tous les départements
+ * configurés, 1 batch nocturne quotidien (détail : CLAUDE.md,
+ * Jobs background).
  * @since 2.0.0
  * @author Kwaite
  */

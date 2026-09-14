@@ -12,11 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : fetch d'une salle par ses identifiants préfixés, toutes les 2 heures.
- *
- * <p>Les identifiants sont transmis via la {@code JobDataMap} lors de la planification, au format
- * virgule-séparé : {@code "tm:rZFSnyZdFvA"} ou {@code "tm:id1,digitick:slug"}.
- *
+ * Job Quartz : fetch d'une salle par ses identifiants préfixés,
+ * déclenché à la demande (ajout salle, API — détail : CLAUDE.md,
+ * Jobs background).
  * @since 2.0.0
  * @author Kwaite
  */

@@ -11,12 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : réconciliation nocturne des sources salles/artistes, tous les jours à 3h.
- *
- * <p>Health-check et redécouverte des identifiants TM suspects, puis enrichissement
- * Wikidata/OSM/Deezer. Durée variable selon les appels externes rate-limités —
- * {@code @DisallowConcurrentExecution} empêche tout chevauchement avec un déclenchement manuel.
- *
+ * Job Quartz : réconciliation nocturne des sources salles/
+ * artistes, cron quotidien 3h (détail : CLAUDE.md, Jobs
+ * background).
  * @since 2.6.0
  * @author Kwaite
  */
