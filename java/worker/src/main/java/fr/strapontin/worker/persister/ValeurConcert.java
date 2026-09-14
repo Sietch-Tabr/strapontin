@@ -9,18 +9,9 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 /**
- * Valeurs normalisées d'un concert prêtes pour l'upsert en base.
- *
- * La colonne {@code disponible} est exclue : elle est {@code GENERATED ALWAYS AS} dans le schéma PostgreSQL et
- * ne doit jamais être insérée ni mise à jour.
- *
- * {@code salleSourceId} et {@code artisteSourceId} portent les identifiants externes préfixés (ex. {@code
- * "tm:rZFSnyZdFvA"}) utilisés par {@code PersisteurConcertsDb} pour la résolution UUID-first via
- * {@code salle_sources} / {@code artiste_sources}.
- *
- * {@code salleId} et {@code artisteId} sont remplis par la résolution des identités sources ; null si aucune
- * correspondance trouvée.
- *
+ * Valeurs normalisées d'un concert prêtes pour l'upsert en base
+ * (noms de champs auto-descriptifs ; {@code disponible} exclu,
+ * colonne {@code GENERATED ALWAYS}).
  * @since 2.0.0
  * @author Kwaite
  */

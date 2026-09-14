@@ -25,16 +25,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Service de recalcul des correspondances utilisateurs (table {@code user_matches}).
- *
- * <p>Pour chaque utilisateur, calcule l'intersection entre ses artistes/salles suivis et les
- * concerts futurs. Met à jour {@code user_matches} en conséquence. Les concerts indisponibles sont
- * marqués {@code notification_envoyee_le = now()} immédiatement pour ne pas déclencher de badge
- * "Nouveau".
- *
- * <p>Les recalculs par utilisateur sont parallélisés via des threads virtuels, chacun dans sa
- * propre transaction ({@link TransactionTemplate}).
- *
+ * Service de recalcul des correspondances utilisateurs ({@code
+ * user_matches}) — un thread virtuel par utilisateur, chacun dans
+ * sa propre transaction.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -72,12 +65,10 @@ public class RecalculerMatchesService {
   }
 
   /**
-   * Recalcule les matches pour tous les utilisateurs ou un sous-ensemble.
-   *
-   * <p>Les recalculs sont exécutés en parallèle via des threads virtuels. Chaque utilisateur est
-   * traité dans sa propre transaction : un échec isolé n'interrompt pas les autres recalculs.
-   *
-   * @param userIds liste d'IDs à recalculer, ou {@code null} pour tous les utilisateurs
+   * Recalcule les matches, en parallèle (thread virtuel par
+   * utilisateur, transaction isolée — un échec n'interrompt pas
+   * les autres).
+   * @param userIds IDs à recalculer, ou {@code null} pour tous
    * @return nombre d'utilisateurs traités
    */
   public int recalculerMatches(final List<String> userIds) {

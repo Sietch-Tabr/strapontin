@@ -12,17 +12,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
- * Façade de réconciliation des salles entre fetches successifs — délègue à trois collaborateurs par
- * responsabilité (v2.8.7, extraction pure, aucun changement fonctionnel ni de contrat) : {@link
- * ReconciliationNomsSalles} (variantes de nommage intra-lot/inter-jobs, absorption des renommages),
- * {@link ResolveurSalleParConcert} (résolution/création d'une salle pour un concert entrant, par
- * identifiant source/tokens/clé forte) et {@link ReconciliateurSallesOrphelines} (retentative
- * nocturne des concerts sans salle).
- *
- * <p>Utilise {@link CorrespondanceSalle#estDoublonSalle} (module {@code core}, partagé avec {@code
- * sources} — voir {@code WikidataSalleSource}) pour déterminer si deux noms désignent la même
- * salle.
- *
+ * Façade de réconciliation des salles entre fetches successifs
+ * (détail : CLAUDE.md, Enrichissement Wikidata/OSM/Deezer).
  * @since 2.5.7
  * @author Kwaite
  */

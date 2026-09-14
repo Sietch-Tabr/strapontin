@@ -53,20 +53,8 @@ final class AlignementReportTM {
   }
 
   /**
-   * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report entrant (une de
-   * ses observations partage la même {@code url}, même {@code date}, heure différente, nouveau
-   * statut {@link #STATUTS_REPORT_TM}).
-   *
-   * <p>Ticketmaster réutilise le même idmanif (url stable) pour un évènement reporté à une autre
-   * heure — sans cette étape, la résolution par clé (qui inclut l'heure) créerait un nouvel
-   * événement à côté de l'ancien au lieu de le mettre à jour.
-   *
-   * <p>Ne s'applique que si une seule heure distincte existe déjà pour ce couple {@code (url,
-   * date)} : certaines productions à représentations multiples (théâtre, cirque, ballet) partagent
-   * un seul idmanif Ticketmaster pour plusieurs séances le même jour (matinée/soirée) — en présence
-   * de cette ambiguïté, impossible de déterminer laquelle est concernée par le report, un nouvel
-   * événement est alors créé plutôt que de risquer d'altérer la mauvaise représentation.
-   *
+   * Aligne l'heure d'un événement TM déjà en base sur celle d'un
+   * report entrant (détail : CLAUDE.md, section resoudreParUrl).
    * @param concerts concerts après réconciliation, avant upsert
    */
   /* package-private : appelé par PersisteurConcertsDb (même package). */

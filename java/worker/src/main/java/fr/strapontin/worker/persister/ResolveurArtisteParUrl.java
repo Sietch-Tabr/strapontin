@@ -18,18 +18,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Résout les concerts Eventim dont l'URL existe déjà en base (via une observation) sous un {@code
- * artiste_norm} différent.
- *
- * <p>Extrait de {@link PersisteurConcertsDb} pour rester sous la limite de 500 lignes par fichier.
- * Couvre le cas des pages festival Eventim : une même URL peut exposer des artistes différents
- * selon le fetch. Sans cette résolution, deux événements coexisteraient en base avec le même {@code
- * (source, url, date)} mais des {@code artiste_norm} différents.
- *
- * <p>Restreint à Eventim (seule source concernée par le cas documenté ci-dessus) : appliqué à
- * toutes les sources, ce mécanisme empêcherait toute guérison d'une corruption de {@code
- * artiste_norm} déjà persistée une fois sa cause racine corrigée en amont.
- *
+ * Résout les concerts Eventim dont l'URL existe déjà en base
+ * sous un {@code artiste_norm} différent (détail : CLAUDE.md,
+ * resoudreParUrl).
  * @since 2.9.1
  * @author Kwaite
  */

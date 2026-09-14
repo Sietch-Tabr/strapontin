@@ -35,16 +35,8 @@ class ReconciliateurSallesOrphelines {
   }
 
   /**
-   * Couvre le résidu structurel laissé par {@code upsertSalleSource} ({@link
-   * ResolveurSalleParConcert}) : un concert sans {@code salleSourceId} (TM omet parfois {@code
-   * venue.id}) et sans salle suffisamment proche par nom au moment de son insertion reste orphelin
-   * indéfiniment, sans jamais être retenté — la salle correspondante peut pourtant apparaître plus
-   * tard via une autre source (un autre événement TM avec {@code venue.id} renseigné, Eventim,
-   * Digitick). Appelé une fois par nuit (voir {@code ReconciliationNocturneService}) plutôt qu'à
-   * chaque cycle de fetch : le volume concerné reste faible (quelques dizaines de concerts) et une
-   * résolution par nom n'a pas de raison de réussir plusieurs fois par jour si elle a échoué la
-   * veille.
-   *
+   * Couvre le résidu structurel laissé par {@code upsertSalleSource}
+   * (détail : CLAUDE.md, Hiérarchie des salles).
    * @return nombre de concerts orphelins résolus
    */
   /* package-private : appelé par le cycle nocturne du même package. */
@@ -112,15 +104,12 @@ class ReconciliateurSallesOrphelines {
   }
 
   /**
-   * Équivalent en mémoire de {@code chercherSalleParTokens} ({@link ResolveurSalleParConcert}),
-   * appliqué à des candidats déjà chargés — mêmes critères d'acceptation ({@link
-   * CorrespondanceSalle#estDoublonSalle}, filtre dept, meilleur score Jaccard), sans requête SQL
-   * par appel.
-   *
+   * Équivalent en mémoire de {@code chercherSalleParTokens} (détail :
+   * CLAUDE.md, Hiérarchie des salles).
    * @param nom nom brut de la salle à rapprocher
-   * @param dept département connu du concert (nullable — désactive le filtre si absent)
+   * @param dept département connu (nullable — désactive le filtre)
    * @param candidats toutes les salles connues, préchargées
-   * @return UUID de la meilleure salle candidate, ou {@code null} si aucune ne correspond
+   * @return UUID de la meilleure salle candidate, ou {@code null}
    */
   private UUID meilleurCandidatEnMemoire(
       final String nom, final String dept, final List<CandidatSalleMatching> candidats) {

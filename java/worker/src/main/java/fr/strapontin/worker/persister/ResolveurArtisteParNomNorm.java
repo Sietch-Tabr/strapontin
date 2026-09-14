@@ -37,15 +37,11 @@ final class ResolveurArtisteParNomNorm {
   }
 
   /**
-   * Résout les {@code artiste_id} manquants par lookup sur {@code artistes.nom_norm}.
-   *
-   * <p>Couvre toutes les sources sans {@code artiste_id}, y compris Digitick qui ne fournit pas
-   * d'identifiant artiste externe ({@code artisteSourceId == null}). Les mappings trouvés pour les
-   * sources avec identifiant externe sont persistés dans {@code artiste_sources} (ON CONFLICT DO
-   * NOTHING) pour accélérer les fetches suivants.
-   *
+   * Résout les {@code artiste_id} manquants par lookup sur
+   * {@code artistes.nom_norm} (couvre Digitick, sans identifiant
+   * externe) ; persiste les mappings trouvés dans artiste_sources.
    * @param concerts concerts après résolution par source
-   * @return liste enrichie avec les {@code artiste_id} résolus par nom
+   * @return liste enrichie avec les artiste_id résolus par nom
    */
   /* package-private : appelé par ReconciliateurArtistes (même package). */
   List<ValeurConcert> resoudre(final List<ValeurConcert> concerts) {
@@ -89,14 +85,11 @@ final class ResolveurArtisteParNomNorm {
   }
 
   /**
-   * Persiste dans {@code artiste_sources} les mappings nouvellement résolus par nom.
-   *
-   * <p>N'insère que les concerts dont {@code artisteId} vient d'être résolu (nom_norm présent dans
-   * {@code nomNormsResolus}) et dont la source externe est connue ({@code artisteSourceId != null}
-   * — Digitick n'en a pas).
-   *
+   * Persiste dans {@code artiste_sources} les mappings
+   * nouvellement résolus par nom (source externe connue
+   * uniquement — Digitick n'en a pas).
    * @param concerts concerts après résolution par nom
-   * @param nomNormsResolus noms normalisés effectivement résolus par le lookup
+   * @param nomNormsResolus noms normalisés résolus par le lookup
    */
   private void persistersArtistesSources(
       final List<ValeurConcert> concerts, final Set<String> nomNormsResolus) {

@@ -13,10 +13,8 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Corrige un artiste corrompu déjà persisté en s'ancrant sur l'identité de l'URL de l'événement
- * plutôt que sur la similarité de nom — extrait de {@link ReconciliateurArtistes} pour rester sous
- * le seuil de complexité cyclomatique de classe (50).
- *
+ * Corrige un artiste corrompu déjà persisté en s'ancrant sur
+ * l'identité de l'URL (détail : CLAUDE.md, Fiches package/VIP).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -33,18 +31,8 @@ final class CorrecteurArtisteParUrl {
   }
 
   /**
-   * Corrige un artiste corrompu déjà persisté en s'ancrant sur l'identité de l'URL de l'événement
-   * plutôt que sur la similarité de nom.
-   *
-   * <p>{@code ReconciliateurArtistes.reconcilierUnArtiste} ne guérit une ligne existante que si
-   * {@link fr.strapontin.core.CorrespondanceArtiste#estDoublonArtiste} relie encore l'ancien nom
-   * corrompu au nouveau — un mauvais rapprochement Deezer peut produire un nom sans aucune parenté
-   * textuelle avec l'original (ex. "nino arial" → "nino arbol"), rendant cette guérison
-   * structurellement impossible. Deux fiches de la même URL désignent nécessairement le même
-   * événement réel : cette voie corrige donc la ligne existante indépendamment de toute similarité
-   * de nom, dès que l'entrant est inéligible à la résolution Deezer (nom brut fiable par
-   * construction).
-   *
+   * Corrige un artiste corrompu en s'ancrant sur l'URL de
+   * l'événement (détail : CLAUDE.md, Fiches package/VIP).
    * @param lot concerts après résolution des identités sources
    */
   /* package-private : appelé par ReconciliateurArtistes (même package). */

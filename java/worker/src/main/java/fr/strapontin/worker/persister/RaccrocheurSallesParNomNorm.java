@@ -14,29 +14,10 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Rattache à leur salle les concerts sans {@code salleId}, ou réaligne ceux dont le {@code salleId}
- * déjà résolu pointe vers une salle dont le {@code nom_norm} diverge désormais du {@code salleNorm}
- * du concert.
- *
- * <p>Extrait de {@link ResolveurSalleParConcert} pour rester sous la limite de 500 lignes par
- * fichier — via correspondance exacte sur {@code salle_norm} / {@code nom_norm}.
- *
- * <p>(rattrapage) : une simple égalité de {@code nom_norm} ignorait le département, défaisant
- * silencieusement le filtre dept de {@link ResolveurSalleParConcert#chercherSalleParTokens} pour
- * deux salles homonymes au texte strictement identique (ex. "Casino - Barriere" Toulouse/Lille,
- * {@code chercherSalleParTokens} rejette correctement le candidat en amont, mais ce repli par
- * égalité exacte le retrouvait quand même en aval, sans filtre). Même repli sur le département d'un
- * concert déjà rattaché que {@code chercherSalleParTokens} quand {@code salles.dept} est vide.
- *
- * <p>Le réalignement couvre le cas d'un concert résolu par nom avant réconciliation (ex. une fiche
- * Eventim sans indication de sous-salle, résolue au complexe parent) dont le {@code salleNorm}
- * converge ensuite, via {@code reconcilierSalles}, vers celui d'une sous-salle déjà établie — sans
- * ce réalignement, le {@code salleId} restait celui du complexe, créant un événement cross-source
- * distinct pour la même date/artiste. Une correspondance exacte de {@code nom_norm} n'existant que
- * pour une salle réellement homonyme, ce réalignement laisse inchangés les concerts résolus par clé
- * forte sur un nom sans rapport ({@link ResolveurSalleParConcert#chercherSalleParCleForte} — leur
- * {@code salleNorm} ne partage par construction aucune correspondance exacte en base).
- *
+ * Rattache à leur salle les concerts sans {@code salleId}, ou
+ * réaligne ceux dont le {@code salleId} déjà résolu diverge du
+ * {@code salleNorm} actuel (détail : CLAUDE.md, Hiérarchie des
+ * salles).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -52,8 +33,7 @@ final class RaccrocheurSallesParNomNorm {
 
   /**
    * @param concerts concerts après déduplication
-   * @return liste enrichie avec les {@code salleId} résolus ou réalignés par
-   *     nom_norm
+   * @return liste enrichie avec les salleId résolus ou réalignés
    */
   /* package-private : appelé par ReconciliateurSalles (même package). */
   List<ValeurConcert> raccrocher(final List<ValeurConcert> concerts) {
@@ -111,11 +91,9 @@ final class RaccrocheurSallesParNomNorm {
   }
 
   /**
-   * @return {@code true} si le concert n'a pas encore de {@code salleId} , ou
-   *     si celui déjà résolu pointe vers une salle dont le {@code nom_norm}
-   *     connu diverge du {@code salleNorm} actuel du concert (silencieux si le
-   *     {@code nom_norm} de la salle résolue n'est pas connu — pas de
-   *     réalignement sans confirmation positive de la divergence)
+   * @return {@code true} si non résolu, ou si le {@code nom_norm}
+   * connu de la salle résolue diverge du {@code salleNorm} actuel
+   * (silencieux si {@code nom_norm} inconnu).
    */
   private static boolean salleIdDivergent(
       final ValeurConcert concert, final Map<UUID, String> nomNormParSalleId) {
@@ -127,9 +105,8 @@ final class RaccrocheurSallesParNomNorm {
   }
 
   /**
-   * Charge en une seule requête le {@code nom_norm} connu de chaque salle
-   * donnée.
-   *
+   * Charge en une seule requête le {@code nom_norm} connu de chaque
+   * salle donnée.
    * @param salleIds identifiants des salles à vérifier
    * @return {@code nom_norm} par salle
    */
