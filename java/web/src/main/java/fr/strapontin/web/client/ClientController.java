@@ -16,12 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint de remontée des erreurs JavaScript côté client.
- *
- * <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs JS non catchées
- * et les rejections de promesses. Les entrées sont stockées dans {@code logs_admin} avec la source
- * {@code client-js}.
- *
+ * Endpoint de remontée des erreurs JavaScript côté client — permet aux
+ * navigateurs des utilisateurs authentifiés de signaler erreurs JS et
+ * rejections de promesses non catchées, stockées dans {@code logs_admin}
+ * (source {@code client-js}).
  * @since 2.1.2
  * @author Kwaite
  */

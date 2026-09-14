@@ -21,17 +21,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de configuration chiffrée (portage de {@code config.ts}).
- *
- * <p>La clé AES-256 est dérivée de {@code APP_CONFIG_SECRET} via SCrypt (paramètres par défaut
- * Node.js : N=16 384, r=8, p=1, dkLen=32).
- *
- * <p>Format de stockage : {@code base64(IV(12) || TAG(16) || données_chiffrées)}. Compatible avec
- * les valeurs chiffrées par le module TypeScript.
- *
- * <p>Les valeurs sont mises en cache Caffeine 5 minutes. [sauvegarderConfig] invalide immédiatement
- * le cache de la clé modifiée.
- *
+ * Service de configuration chiffrée — format de chiffrement détaillé :
+ * CLAUDE.md, section Configuration applicative. Valeurs mises en cache
+ * Caffeine 5 min, {@link #sauvegarderConfig} invalide immédiatement le
+ * cache de la clé modifiée.
  * @since 2.0.0
  * @author Kwaite
  */

@@ -33,15 +33,12 @@ public final class Dates {
   private Dates() {}
 
   /**
-   * Formate une date ISO-8601 ({@code yyyy-MM-dd}) en français.
-   *
-   * <p>Pour le format court, l'année est ajoutée si la date n'est pas dans l'année courante (ex.
-   * "jeu. 8 avr. 2027" vs "jeu. 8 avr.").
-   *
+   * Formate une date ISO-8601 ({@code yyyy-MM-dd}) en français — pour le
+   * format court, l'année est ajoutée si hors année courante (ex. "jeu. 8
+   * avr. 2027" vs "jeu. 8 avr.").
    * @param dateIso la date au format {@code yyyy-MM-dd}, ou {@code null}
-   * @param longue {@code true} pour le format long (ex. "lundi 15 septembre 2026"), {@code false}
-   *     pour le format court (ex. "lun. 15 sept.")
-   * @return la date formatée, ou chaîne vide si l'entrée est {@code null} ou invalide
+   * @param longue {@code true} pour le format long, {@code false} pour court
+   * @return la date formatée, vide si l'entrée est {@code null}/invalide
    */
   public static String formater(final String dateIso, final boolean longue) {
     if (dateIso == null || dateIso.isBlank()) {
@@ -60,12 +57,10 @@ public final class Dates {
   }
 
   /**
-   * Formate une date ISO-8601 avec une heure optionnelle en français.
-   *
-   * <p>L'heure est affichée sous la forme "20h" (minutes omises si {@code 00}) ou "20h30".
-   *
+   * Formate une date ISO-8601 avec une heure optionnelle en français —
+   * heure affichée "20h" (minutes omises si {@code 00}) ou "20h30".
    * @param dateIso date au format {@code yyyy-MM-dd}, ou {@code null}
-   * @param heureStr heure au format {@code HH:mm:ss} ou {@code HH:mm}, ou {@code null}
+   * @param heureStr heure {@code HH:mm:ss} ou {@code HH:mm}, ou {@code null}
    * @return la date (et l'heure) formatée, ex. "mer. 4 juin 20h30"
    */
   public static String formaterAvecHeure(final String dateIso, final String heureStr) {
