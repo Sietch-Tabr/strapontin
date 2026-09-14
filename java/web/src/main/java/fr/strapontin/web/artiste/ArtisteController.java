@@ -20,11 +20,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour la gestion des artistes suivis (portage de {@code
- * artistes/+page.server.ts}).
- *
- * <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link ArtisteService}.
- *
+ * Contrôleur REST pour la gestion des artistes suivis — HTTP pur, délègue
+ * toute la logique métier et l'accès aux données à {@link ArtisteService}.
  * @since 2.0.0
  * @author Kwaite
  */

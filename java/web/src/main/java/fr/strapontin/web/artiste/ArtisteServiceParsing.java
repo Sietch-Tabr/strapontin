@@ -13,13 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Analyse des réponses JSON brutes Wikidata Search et Deezer Search en suggestions d'artiste.
- *
- * <p>Extrait d'{@link ArtisteService} pour rester sous la limite de 500 lignes par fichier — pure
- * analyse sans état, sans appel réseau (contrairement à {@link ArtisteService#rechercherWikidata}/
- * {@link ArtisteService#rechercherDeezer}, qui restent sur {@link ArtisteService} pour préserver
- * leur substitution par {@code Mockito.spy} en test).
- *
+ * Analyse des réponses JSON brutes Wikidata/Deezer Search en suggestions
+ * d'artiste — extrait d'{@link ArtisteService} (limite 500 lignes), pure
+ * analyse sans état ni appel réseau (les méthodes d'appel restent sur
+ * {@link ArtisteService} pour leur substitution {@code Mockito.spy} en test).
  * @since 2.9.1
  * @author Kwaite
  */

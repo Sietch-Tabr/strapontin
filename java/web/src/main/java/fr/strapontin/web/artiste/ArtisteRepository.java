@@ -16,11 +16,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * Accès aux données pour les artistes suivis ({@code user_artistes}).
- *
- * <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité) appartiennent à {@link
+ * Accès aux données pour les artistes suivis ({@code user_artistes}) — SQL
+ * pur, toutes les décisions (cap, unicité) appartiennent à {@link
  * ArtisteService}.
- *
  * @since 2.1.0
  * @author Kwaite
  */
@@ -120,12 +118,11 @@ class ArtisteRepository {
   }
 
   /**
-   * Recherche les artistes du référentiel dont le {@code nom_norm} partage au moins un des tokens
-   * fournis — pré-filtre SQL avant application de la correspondance floue ({@code
-   * CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
-   *
+   * Recherche les artistes du référentiel dont le {@code nom_norm} partage
+   * un des tokens fournis — pré-filtre SQL avant correspondance floue
+   * ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
    * @param tokens tokens significatifs (≥3 caractères) du nom recherché
-   * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} est vide
+   * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} vide
    */
   /* package-private : accès SQL réservé à ArtisteService (même package),
    * pattern service/repository. */
@@ -220,11 +217,9 @@ class ArtisteRepository {
   }
 
   /**
-   * Met à jour {@code wikidata_id}/{@code deezer_id} d'un artiste si absents — ne touche jamais une
-   * valeur déjà résolue par le job nocturne ({@code COALESCE}). Peut lever {@link
-   * org.springframework.dao.DuplicateKeyException} ({@code idx_artistes_wikidata_id}) — à la charge
-   * de l'appelant (même piège qu'{@code EnrichissementArtistesService}, jalon 2.6.0).
-   *
+   * Met à jour {@code wikidata_id}/{@code deezer_id} si absents ({@code
+   * COALESCE}, ne touche jamais une valeur déjà résolue). Peut lever {@link
+   * org.springframework.dao.DuplicateKeyException}, à la charge de l'appelant.
    * @param artisteId UUID stable de l'artiste
    * @param wikidataId Q-ID Wikidata (peut être {@code null})
    * @param deezerId identifiant Deezer (peut être {@code null})

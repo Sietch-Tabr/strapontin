@@ -5,13 +5,9 @@
 package fr.strapontin.web.artiste;
 
 /**
- * Suggestion d'artiste pour la recherche ({@code "base"}, {@code "deezer"} ou {@code
- * "wikidata"}).
- *
- * @param nom         nom affiché
- * @param source      origine de la suggestion
- * @param description description Wikidata ({@code null} pour les autres sources)
- * @param wikidataId Q-ID Wikidata ({@code null} pour les autres sources)
+ * Suggestion d'artiste pour la recherche ({@code "base"}, {@code "deezer"}
+ * ou {@code "wikidata"}) — {@code description}/{@code wikidataId} restent
+ * {@code null} pour les sources autres que Wikidata.
  * @since 2.1.0
  * @author Kwaite
  */
