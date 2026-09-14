@@ -20,11 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour la configuration utilisateur (portage de {@code
- * parametres/+page.server.ts}).
- *
- * <p>HTTP pur — délègue toute la logique et l'accès aux données à {@link UserConfigService}.
- *
+ * Contrôleur REST pour la configuration utilisateur — HTTP
+ * pur, délègue à {@link UserConfigService}.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -116,7 +113,7 @@ public class UserConfigController {
   /**
    * Met à jour le thème de l'interface.
    *
-   * @param requete corps JSON avec {@code valeur} ({@code auto}, {@code clair} ou {@code sombre})
+   * @param requete corps JSON avec {@code valeur} (auto/clair/sombre)
    * @param auth contexte d'authentification
    * @return 200 si mis à jour — 400 si invalide (via {@link GlobalExceptionHandler})
    */

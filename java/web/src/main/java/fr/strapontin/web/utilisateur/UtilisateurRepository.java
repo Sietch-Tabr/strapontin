@@ -15,11 +15,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * Accès aux données pour les utilisateurs ({@code users}, {@code accounts}).
- *
- * <p>SQL pur — aucune logique métier. Les validations (format, unicité métier) appartiennent aux
- * couches supérieures.
- *
+ * Accès aux données pour les utilisateurs ({@code users},
+ * {@code accounts}) — SQL pur, aucune logique métier.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -77,15 +74,10 @@ class UtilisateurRepository {
   }
 
   /**
-   * Met à jour l'identifiant (username).
-   *
-   * <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais été
-   * personnalisé par un admin — sinon un nom affiché personnalisé ({@link
-   * fr.strapontin.web.admin.AdminService}, champ {@code nom}) serait écrasé silencieusement à
-   * chaque changement d'identifiant par l'utilisateur lui-même.
-   *
+   * Met à jour l'identifiant (username) (détail : CLAUDE.md,
+   * Authentification — display_username).
    * @param userId identifiant de l'utilisateur
-   * @param identifiant nouvel identifiant (déjà validé, en minuscules)
+   * @param identifiant nouvel identifiant (déjà validé, minuscules)
    */
   /* package-private : accès SQL réservé à ParametresService/UserController
    * (même package). */
@@ -133,13 +125,8 @@ class UtilisateurRepository {
   }
 
   /**
-   * Retourne le secret TOTP stocké en base, déchiffré.
-   *
-   * <p>Tolère un secret encore stocké en clair (valeurs activées avant l'introduction du
-   * chiffrement) : le déchiffrement échoue proprement sur une valeur non chiffrée (échec
-   * d'authentification GCM ou base64 invalide), auquel cas la valeur brute est retournée telle
-   * quelle plutôt que de bloquer la vérification TOTP de l'utilisateur concerné.
-   *
+   * Retourne le secret TOTP stocké en base, déchiffré (détail :
+   * CLAUDE.md, Sécurité admin/sessions).
    * @param userId identifiant de l'utilisateur
    * @return secret Base32 en clair, ou {@code null} si absent
    */
@@ -219,11 +206,8 @@ class UtilisateurRepository {
   }
 
   /**
-   * Compte les concerts non vus/masqués pour un artiste suivi (badge "nouveau" de navigation).
-   *
-   * <p>Extrait de {@code securite.SessionController} — le contrôleur exécutait ce SQL directement,
-   * en violation du pattern Controller (HTTP pur) → Service → Repository.
-   *
+   * Compte les concerts non vus/masqués pour un artiste suivi
+   * (badge "nouveau" de navigation).
    * @param userId identifiant de l'utilisateur
    * @return nombre de concerts non vus pour les artistes suivis
    */

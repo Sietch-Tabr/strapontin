@@ -47,13 +47,12 @@ public class PreferencesController {
   }
 
   /**
-   * Importe les préférences depuis un fichier JSON exporté par Strapontin.
-   *
+   * Importe les préférences depuis un fichier JSON exporté.
    * @param fichier le fichier JSON (multipart)
    * @param mode {@code fusionner} ou {@code ecraser}
    * @param importerConfig remplacer la config utilisateur si vrai
    * @param auth contexte d'authentification
-   * @return 200 avec stats si importé, 400 si format invalide, 422 si version inconnue
+   * @return 200 avec stats, 400 si invalide, 422 si version inconnue
    */
   @PostMapping(value = "/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> importer(

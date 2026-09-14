@@ -18,11 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service pour les paramètres utilisateur : statistiques et flux de changement d'email.
- *
- * <p>Regroupe la logique métier extraite de {@code ParametresRestController} : accès JDBC,
- * génération de tokens et envoi d'emails de confirmation.
- *
+ * Service pour les paramètres utilisateur : statistiques
+ * et flux de changement d'email — logique extraite de
+ * {@code ParametresRestController}.
  * @since 2.5.4
  * @author Kwaite
  */
@@ -106,14 +104,11 @@ public class ParametresService {
   }
 
   /**
-   * Déclenche le flux de confirmation de changement d'email.
-   *
-   * <p>Génère un token sécurisé, l'insère dans {@code verifications}, met à jour {@code
-   * pending_email} et envoie le lien de confirmation.
-   *
+   * Déclenche le flux de confirmation de changement d'email
+   * (token sécurisé, {@code pending_email}, lien envoyé).
    * @param details utilisateur courant
    * @param emailNorm nouvelle adresse email normalisée
-   * @param baseUrl URL de base de l'application (pour construire le lien de confirmation)
+   * @param baseUrl URL de base (pour le lien de confirmation)
    */
   @Transactional
   public void demanderChangementEmail(

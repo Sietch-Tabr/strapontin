@@ -29,7 +29,7 @@ import org.springframework.web.client.RestClient;
 /**
  * Service d'import/export des préférences utilisateur.
  *
- * <p>L'import est atomique ({@code @Transactional}) — un échec partiel annule toute l'opération.
+ * <p>L'import est atomique — un échec partiel annule tout.
  *
  * @since 2.1.0
  * @author Kwaite
@@ -91,12 +91,11 @@ public class PreferencesService {
 
   /**
    * Importe les préférences dans une transaction atomique.
-   *
    * @param userId identifiant de l'utilisateur
    * @param export export désérialisé
-   * @param ecraser {@code true} pour remplacer artistes et salles existants
+   * @param ecraser {@code true} pour remplacer artistes/salles existants
    * @param importerConfig {@code true} pour remplacer toute la config
-   * @return résultat de l'import (artistes et salles traités/rejetés)
+   * @return résultat de l'import (traités/rejetés)
    */
   @Transactional
   public ResultatImportComplet importer(
@@ -332,14 +331,11 @@ public class PreferencesService {
   }
 
   /**
-   * Diffère le déclenchement du worker jusqu'après le commit effectif de la transaction d'import
-   * (même pattern que {@code ArtisteService.executerApresCommit}).
-   *
-   * <p>Sans cela, le worker pouvait être sollicité avant que les artistes/salles importés ne soient
-   * visibles en base (isolation {@code READ COMMITTED}), faisant manquer l'import tout juste
-   * effectué au cycle de fetch qu'il vient lui-même de déclencher.
-   *
-   * @param salles salles de l'export, utilisées pour cibler les déclenchements par salle
+   * Diffère le déclenchement du worker jusqu'après le commit
+   * de la transaction d'import — sans cela, le worker pouvait
+   * être sollicité avant que l'import ne soit visible en base
+   * (READ COMMITTED), manquant son propre cycle de fetch.
+   * @param salles salles de l'export (ciblage par salle)
    */
   private void declencherWorkerApresImport(final List<SalleExport> salles) {
     final Runnable action =

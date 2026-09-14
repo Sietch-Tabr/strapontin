@@ -27,16 +27,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour le profil utilisateur courant.
- *
- * <p>HTTP pur — délègue l'accès aux données à {@link UtilisateurRepository}. Gère la lecture du
- * profil, l'identifiant, le mot de passe et la suppression de compte.
- *
- * <p>La modification d'email n'est volontairement pas exposée ici : le seul chemin autorisé est le
- * flux à confirmation par token {@code POST /api/parametres/email-change} ({@link
- * ParametresRestController}), qui vérifie la possession de la nouvelle adresse avant de l'appliquer
- * — contrairement à un simple {@code PATCH} qui l'aurait acceptée immédiatement.
- *
+ * Contrôleur REST pour le profil utilisateur courant — HTTP
+ * pur, délègue à {@link UtilisateurRepository}. Modification
+ * d'email volontairement absente (voir
+ * {@link ParametresRestController}, flux à confirmation).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -110,15 +104,11 @@ public class UserController {
   }
 
   /**
-   * Change le mot de passe de l'utilisateur courant et révoque toutes ses sessions actives.
-   *
-   * <p>Révoque les sessions sur tous les appareils, pas seulement celle de la requête en cours —
-   * sinon une session compromise sur un autre appareil survivrait jusqu'à expiration naturelle (30
-   * jours) malgré le changement de mot de passe.
-   *
-   * @param requete corps JSON avec {@code motDePasseActuel} et {@code motDePasseNouveau}
+   * Change le mot de passe et révoque toutes les sessions
+   * actives (tous appareils, pas seulement la requête en cours).
+   * @param requete corps JSON avec motDePasseActuel/Nouveau
    * @param auth contexte d'authentification
-   * @return 200 si changé, 400 si invalide ou mot de passe actuel incorrect
+   * @return 200 si changé, 400 si invalide/mdp actuel incorrect
    */
   @PostMapping("/password")
   public ResponseEntity<Map<String, Object>> changerMotDePasse(
@@ -191,10 +181,8 @@ public class UserController {
   }
 
   /**
-   * Supprime le compte de l'utilisateur courant (cascade sur toutes ses données).
-   *
-   * <p>Interdit si l'utilisateur est le seul administrateur de l'instance (retourne 409).
-   *
+   * Supprime le compte courant (cascade), interdit si seul
+   * admin de l'instance (409).
    * @param auth contexte d'authentification
    * @param httpRequest pour invalider la session
    * @return 204 si supprimé, 409 si dernier admin

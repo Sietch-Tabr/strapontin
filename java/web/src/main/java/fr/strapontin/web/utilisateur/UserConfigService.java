@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 /**
  * Service de gestion de la configuration utilisateur ({@code user_config}).
  *
- * <p>Couvre la lecture, la mise à jour des départements, notifications, filtres et thème.
+ * <p>Lecture, mise à jour départements/notifications/filtres/thème.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -135,10 +135,8 @@ public class UserConfigService {
   }
 
   /**
-   * Met à jour les départements de l'utilisateur.
-   *
-   * <p>Les codes non reconnus sont retournés dans la liste {@code ignores}.
-   *
+   * Met à jour les départements, codes non reconnus retournés
+   * dans la liste {@code ignores}.
    * @param userId identifiant de l'utilisateur
    * @param bruts liste brute des codes département (peuvent être invalides)
    * @return résultat avec la liste des codes ignorés

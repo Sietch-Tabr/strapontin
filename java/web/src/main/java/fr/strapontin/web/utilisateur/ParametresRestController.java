@@ -23,11 +23,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints REST pour les paramètres utilisateur non couverts par les contrôleurs existants.
- *
- * <p>Gère le changement d'email (flux de confirmation), les compteurs artistes/salles et la
- * confirmation du changement d'email depuis le lien envoyé par email.
- *
+ * Endpoints REST pour les paramètres utilisateur non couverts
+ * par les contrôleurs existants (changement email, compteurs).
  * @since 2.2.0
  * @author Kwaite
  */
@@ -60,14 +57,12 @@ public class ParametresRestController {
   }
 
   /**
-   * Déclenche un flux de confirmation pour un changement d'adresse email.
-   *
-   * <p>Envoie un email de confirmation à la nouvelle adresse. L'email est mis à jour uniquement
-   * après validation du lien (24 h) via {@link #confirmerEmail}.
-   *
+   * Déclenche un flux de confirmation pour un changement
+   * d'adresse email, appliqué après validation du lien (24h)
+   * via {@link #confirmerEmail}.
    * @param corps corps JSON avec {@code email} (nouvelle adresse)
    * @param auth contexte d'authentification
-   * @return 200 {@code {succes: true}} ou 400/503 {@code {erreur: "..."}}
+   * @return 200 {@code {succes: true}} ou 400/503 {@code {erreur}}
    */
   @PostMapping("/email-change")
   public ResponseEntity<Map<String, Object>> emailChange(
@@ -95,14 +90,11 @@ public class ParametresRestController {
   }
 
   /**
-   * Confirme le changement d'email via le token envoyé par email.
-   *
-   * <p>L'utilisateur doit être connecté (session active). En cas de succès, redirige vers
-   * {@code /parametres?succes=email-confirme#compte}.
-   *
+   * Confirme le changement d'email via le token envoyé par
+   * email — utilisateur connecté requis (session active).
    * @param token le token de confirmation (paramètre URL)
    * @param auth contexte d'authentification
-   * @return redirect 302 vers {@code /parametres?succes=email-confirme#compte} ou une page d'erreur
+   * @return redirect 302 vers /parametres (succès ou erreur)
    */
   @GetMapping("/confirmer-email")
   public ResponseEntity<Void> confirmerEmail(
@@ -127,14 +119,10 @@ public class ParametresRestController {
   }
 
   /**
-   * Résout l'URL de base publique pour construire le lien de confirmation envoyé par email.
-   *
-   * <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
-   * : un attaquant contrôlant ce header pourrait rediriger le lien de confirmation vers un domaine
-   * sous son contrôle et voler le token dès qu'un utilisateur clique dessus (Host Header
-   * Injection).
-   *
-   * @return l'URL configurée, vide si {@code PUBLIC_BASE_URL} n'est pas configurée
+   * Résout l'URL de base pour le lien de confirmation envoyé
+   * par email (détail : CLAUDE.md, Sécurité admin/sessions —
+   * Host Header Injection).
+   * @return l'URL configurée, vide si PUBLIC_BASE_URL absente
    */
   private Optional<String> resoudreBaseUrl() {
     return configService.lireConfig("PUBLIC_BASE_URL").filter(s -> !s.isBlank());
