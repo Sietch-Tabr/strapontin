@@ -4,6 +4,31 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 2.9.1 — 15 septembre 2026",
+    categories: [
+      {
+        categorie: "Concerts",
+        items: [
+          "Un nom d'artiste contenant une apostrophe (ex. Youssou N'Dour) pouvait ne pas être reconnu comme le même artiste selon la source d'origine des concerts.",
+          "Un complexe multi-salles suivi (ex. La Seine Musicale) pouvait afficher certains concerts en double lorsque les sources ne s'accordaient pas sur la sous-salle exacte.",
+          "La page Spectacles ou Découverte pouvait échouer à se charger lors d'une première visite sans aucun filtre actif.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "La ville affichée pour un concert pouvait redevenir incorrecte lors d'un nouveau cycle de récupération, après avoir déjà été corrigée.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Le signalement automatique de salles en doublon dans le référentiel ne signale plus à tort deux salles légitimement distinctes reliées par une hiérarchie complexe/sous-salle, ni une salle dont l'identifiant technique n'est que son propre nom complété d'une ville.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.9.0 — 10 septembre 2026",
     categories: [
       {
