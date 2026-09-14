@@ -25,16 +25,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Garde-fou quota d'envoi Resend jour/mois côté worker (suite de l'incident).
- *
- * <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé {@code
- * RESEND_QUOTA_JSON}) — même clé que {@code web.email.GestionQuotaResend}, même pattern que {@link
- * fr.strapontin.worker.quota.GestionQuotaTM}/{@code TM_QUOTA_JSON}. Contournement nécessaire :
- * {@code ConfigServiceWorker} est explicitement en lecture seule. L'alerte de seuil (80%) est
- * portée exclusivement côté web ({@code AlerteQuotaResendService}, polling 15 min sur le même
- * compteur partagé) — le blocage effectif ici insère directement un {@code logs_admin} niveau
- * {@code error}, capté par l'{@code AlerteLogsAdminService} existant, sans nouveau canal d'envoi.
- *
+ * Garde-fou quota d'envoi Resend jour/mois côté worker (détail :
+ * CLAUDE.md, section Resend).
  * @since 2.7.2
  * @author Kwaite
  */
@@ -144,17 +136,10 @@ public class GestionQuotaResendWorker {
   }
 
   /**
-   * Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
-   *
-   * <p>Sur blocage, insère un {@code logs_admin} niveau {@code error} (capté par {@code
-   * AlerteLogsAdminService}, digest 15 min). Le COUNT+INSERT est rendu atomique via une transaction
-   * {@code SERIALIZABLE} avec retry (même pattern que {@code web.push.PushService.abonner}) — sans
-   * cela, deux cycles de digest concurrents lisant tous deux le même compteur avant qu'aucune des
-   * deux écritures ne soit committée pouvaient tous deux réserver un envoi, dépassant le quota réel
-   * Resend.
-   *
-   * @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté), {@code false}
-   *     si le quota jour ou mois est atteint
+   * Réserve un envoi si le quota jour/mois le permet, bloque
+   * avant l'appel réseau Resend (détail : CLAUDE.md, section
+   * Resend).
+   * @return {@code true} si l'envoi est autorisé
    */
   public boolean reserverEnvoi() {
     return RetrySerialisable.executer(

@@ -18,16 +18,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Gestion du quota journalier Ticketmaster stocké dans {@code app_config}.
- *
- * <p>Seuils de protection :
- *
- * <ul>
- *   <li>{@code SEUIL_QUOTA_CRON = 500} : les jobs cron sont suspendus en dessous.
- *   <li>{@code SEUIL_QUOTA_ABORT = 50} : tous les jobs TM sont annulés en dessous.
- *   <li>{@code SEUIL_QUOTA_WARN = 200} : un avertissement est émis en dessous.
- * </ul>
- *
+ * Gestion du quota journalier Ticketmaster ({@code app_config})
+ * (détail : CLAUDE.md, Jobs background).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -57,12 +49,8 @@ public class GestionQuotaTM {
   }
 
   /**
-   * Lit le quota courant depuis {@code app_config}.
-   *
-   * <p>Si le timestamp {@code Rate-Limit-Reset} (en ms) est dépassé, retourne un quota synthétique
-   * {@code dispo = total} et persiste la mise à jour pour débloquer les jobs cron. Le premier vrai
-   * appel TM réécrira la valeur réelle depuis les headers.
-   *
+   * Lit le quota courant depuis {@code app_config} (détail :
+   * CLAUDE.md, Jobs background).
    * @return quota lu, ou vide si absent ou malformé
    */
   public Optional<QuotaTM> lireQuota() {
