@@ -17,16 +17,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Infrastructure d'envoi Resend partagée par {@link EmailService} (emails transactionnels) et
- * {@link EmailAlerteService} (alertes système) — extrait lors de leur scission pour
- * éviter de dupliquer le contexte Resend (client, expéditeur, URL de base) et la résolution du
- * destinataire d'alerte entre les deux classes.
- *
- * <p>Choke-point unique des envois Resend côté web : {@link #envoyer} vérifie le quota
- * jour/mois ({@link GestionQuotaResend}) avant tout appel réseau — bloque silencieusement (log
- * {@code warn}, pas d'exception) comme le fait déjà l'absence de {@code RESEND_API_KEY} en amont
- * dans {@link #obtenirContexte()}.
- *
+ * Infrastructure d'envoi Resend partagée par {@link EmailService}
+ * et {@link EmailAlerteService} (détail : CLAUDE.md, section
+ * Resend).
  * @since 2.7.0
  * @author Kwaite
  */
@@ -79,15 +72,10 @@ class EmailSender {
   }
 
   /**
-   * Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
-   * digest logs_admin) — distincte de l'expéditeur.
-   *
-   * <p>Priorité à {@code ADMIN_ALERT_EMAIL} si configurée, sinon repli sur le premier admin. Ne se
-   * replie volontairement jamais sur {@code CONTACT_EMAIL}/l'expéditeur : c'est cette confusion qui a
-   * provoqué la boucle de bounces du 15/07/2026 (une adresse {@code noreply} sans boîte de réception
-   * réutilisée comme destinataire).
-   *
-   * @return l'adresse à notifier, vide si ni {@code ADMIN_ALERT_EMAIL} ni aucun admin n'existe
+   * Retourne l'adresse destinataire des alertes système,
+   * distincte de l'expéditeur (détail : CLAUDE.md, section
+   * Resend).
+   * @return l'adresse à notifier, vide si aucune résolution
    */
   /* package-private : appelé par
    * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */

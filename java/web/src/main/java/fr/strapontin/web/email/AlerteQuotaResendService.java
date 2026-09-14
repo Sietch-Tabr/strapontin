@@ -12,15 +12,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
- * Alerte l'administrateur par email quand le quota d'envoi Resend jour ou mois franchit 80% (suite
- * de l'incident — boucle de bounces ayant épuisé le quota en 14 minutes sans garde-fou local).
- *
- * <p>Même pattern que {@code AlerteLogsAdminService} (polling toutes les 15 minutes, ne re-signale
- * pas un seuil déjà signalé) mais l'état "déjà signalé" est porté par {@link
- * CompteurEnvoisResend#alerteJourEnvoyee()}/{@link CompteurEnvoisResend#alerteMoisEnvoyee()}
- * plutôt qu'un curseur séparé — remis à {@code false} au rollover jour/mois par {@link
- * GestionQuotaResend}, dans le même document {@code app_config}.
- *
+ * Alerte l'admin par email au franchissement du seuil quota
+ * Resend (80%, détail : CLAUDE.md, section Resend).
  * @since 2.7.2
  * @author Kwaite
  */

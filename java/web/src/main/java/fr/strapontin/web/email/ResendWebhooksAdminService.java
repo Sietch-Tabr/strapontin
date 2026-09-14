@@ -19,14 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Liste et rejoue les événements du webhook Resend configuré ({@code RESEND_API_KEY}) — capacité
- * admin exposée par le SDK resend-java 4.23.0 ({@code Webhooks.listEvents}/{@code replayEvent}).
- *
- * <p>Le {@code webhookId} n'est jamais configuré explicitement : résolu à chaque appel en filtrant
- * {@code webhooks().list()} sur l'endpoint déjà connu ({@code PUBLIC_BASE_URL +
- * "/api/webhooks/resend"}) plutôt que d'ajouter une clé {@code app_config} de plus à maintenir en
- * cohérence avec le dashboard Resend.
- *
+ * Liste et rejoue les événements du webhook Resend configuré
+ * (détail : CLAUDE.md, Configuration applicative).
  * @since 2.9.0
  * @author Kwaite
  */
@@ -61,12 +55,10 @@ public class ResendWebhooksAdminService {
 
   /**
    * Un événement webhook Resend, tel qu'affiché dans l'admin.
-   *
    * @param id identifiant de l'événement (svix-id)
    * @param type type d'événement (ex. {@code "email.bounced"})
-   * @param statut statut de livraison ({@code pending}/{@code attempting}/{@code success}/{@code
-   *     failed}), ou {@code null} si inconnu
-   * @param creeLe horodatage de création (format ISO renvoyé par l'API Resend)
+   * @param statut statut de livraison, ou {@code null} si inconnu
+   * @param creeLe horodatage de création (format ISO Resend)
    */
   public record EvenementWebhook(String id, String type, String statut, String creeLe) {}
 

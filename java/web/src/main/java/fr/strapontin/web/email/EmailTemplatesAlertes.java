@@ -14,12 +14,8 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
- * Génération des corps HTML des emails d'alerte technique (backup, intégrité, bounce/plainte spam,
- * worker inactif, quota Resend, digest de logs admin).
- *
- * <p>Extrait d'{@link EmailTemplates} (dont elle réutilise les helpers {@code enveloppErreur}/
- * {@code bouton}/{@code e}) pour rester sous la limite de 500 lignes par fichier.
- *
+ * Génération des corps HTML des emails d'alerte technique
+ * — extrait d'{@link EmailTemplates} (helpers partagés).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -73,10 +69,10 @@ final class EmailTemplatesAlertes {
   }
 
   /**
-   * Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur un
-   * LXC prod/dev.
+   * Alerte de contrôle d'intégrité (AIDE) — modification
+   * détectée hors déploiement légitime sur un LXC prod/dev.
    *
-   * @param detail sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
+   * @param detail sortie résumée d'{@code aide --check}
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'alerte
    */
@@ -194,14 +190,12 @@ final class EmailTemplatesAlertes {
   }
 
   /**
-   * Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (suite de l'incident).
-   *
-   * @param envoyesJour nombre d'envois comptabilisés pour le jour courant
+   * Alerte de seuil (80%) sur le quota d'envoi Resend jour
+   * et/ou mois.
+   * @param envoyesJour nombre d'envois comptabilisés (jour)
    * @param limiteJour limite journalière Resend (tier gratuit : 100)
-   * @param envoyesMois nombre d'envois comptabilisés pour le mois courant
+   * @param envoyesMois nombre d'envois comptabilisés (mois)
    * @param limiteMois limite mensuelle Resend (tier gratuit : 3000)
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'alerte quota Resend
    */
   /* package-private : appelé uniquement par EmailAlerteService (même
    * package). */

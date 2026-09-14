@@ -17,15 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Garde-fou quota d'envoi Resend jour/mois (suite de l'incident — boucle de bounces ayant épuisé le
- * quota Resend en 14 minutes sans garde-fou local).
- *
- * <p>Lecture/écriture SQL brute non chiffrée dans {@code app_config} (clé {@code
- * RESEND_QUOTA_JSON}) — même pattern que {@code worker.quota.GestionQuotaTM} pour {@code
- * TM_QUOTA_JSON}. Compteur partagé avec le worker ({@code worker.quota.GestionQuotaResendWorker},
- * même clé) : une race read-increment-write non atomique entre les deux JVM peut sous-compter,
- * jamais sur-bloquer dangereusement — risque assumé, proportionné à un projet mono-instance.
- *
+ * Garde-fou quota d'envoi Resend jour/mois (détail : CLAUDE.md,
+ * section Resend).
  * @since 2.7.2
  * @author Kwaite
  */
@@ -108,8 +101,9 @@ class GestionQuotaResend {
   }
 
   /**
-   * Lit le compteur courant, en appliquant le rollover jour/mois si nécessaire (sans persister — la
-   * persistance n'a lieu que sur un changement d'état réel, via {@link #reserverEnvoi()} ou {@link
+   * Lit le compteur courant, applique le rollover jour/mois si
+   * nécessaire (sans persister — la persistance n'a lieu que sur un
+   * changement d'état réel, {@link #reserverEnvoi()}/{@link
    * #marquerAlerteEnvoyee(CompteurEnvoisResend)}).
    *
    * @return le compteur courant, ou un compteur initial à zéro si absent de la base
@@ -125,11 +119,11 @@ class GestionQuotaResend {
   }
 
   /**
-   * Réserve un envoi si le quota jour/mois le permet — bloque avant l'appel réseau Resend.
-   *
-   * @return {@code true} si l'envoi est autorisé (compteur incrémenté et persisté), {@code false}
-   *     si le quota jour ou mois est atteint (rollover éventuel tout de même persisté, pour que le
-   *     prochain appel reparte d'un état à jour)
+   * Réserve un envoi si le quota le permet, bloque avant
+   * l'appel réseau Resend.
+   * @return {@code true} si autorisé (compteur incrémenté et
+   *     persisté), {@code false} sinon (rollover éventuel
+   *     persisté quand même)
    */
   /* package-private : appelé par
    * AlerteQuotaResendService/EmailAlerteService/EmailSender (même package). */

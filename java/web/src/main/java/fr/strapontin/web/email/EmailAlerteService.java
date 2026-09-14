@@ -16,12 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Alertes email système (bounce, plainte spam, backup, worker inactif, digest logs_admin) — extrait
- * d'{@code EmailService}, qui reste dédié aux emails transactionnels utilisateur.
- *
- * <p>Si {@code RESEND_API_KEY} est absent de la configuration, toutes les méthodes retournent
- * silencieusement sans erreur. Les corps HTML sont générés par {@link EmailTemplates}.
- *
+ * Alertes email système (bounce, spam, backup, worker inactif,
+ * digest logs_admin) — extrait d'{@code EmailService} (détail :
+ * CLAUDE.md, section Resend).
  * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
  * @author Kwaite
  */
@@ -76,12 +73,8 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une notification à l'admin quand un email Strapontin est rejeté en bounce.
-   *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur (c'est cette
-   * confusion qui a provoqué la boucle de bounces du 15/07/2026). Throttlée à une notification par
-   * heure maximum.
-   *
+   * Envoie une notification bounce (détail : CLAUDE.md, section
+   * Resend).
    * @param emailBouncee l'adresse email qui a produit le bounce
    */
   public void envoyerNotificationBounce(final String emailBouncee) {
@@ -122,13 +115,8 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une notification à l'admin quand un destinataire signale un email Strapontin comme spam
-   * — même traitement que le bounce, une plainte spam menaçant la réputation d'envoi du domaine au
-   * moins autant qu'un rejet définitif.
-   *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur. Throttlée à une
-   * notification par heure maximum.
-   *
+   * Envoie une notification plainte spam, même traitement que
+   * le bounce (détail : CLAUDE.md, section Resend).
    * @param emailPlaignant l'adresse email à l'origine de la plainte
    */
   public void envoyerNotificationPlainteSpam(final String emailPlaignant) {
@@ -175,7 +163,7 @@ public class EmailAlerteService {
    *
    * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur.
    *
-   * @param horodatage l'horodatage du backup (format YYYYMMDD_HHMMSS), ou chaîne vide
+   * @param horodatage l'horodatage du backup (YYYYMMDD_HHMMSS), ou chaîne vide
    * @param raison la commande bash ayant déclenché l'échec, ou chaîne vide
    */
   public void envoyerAlerteBackup(final String horodatage, final String raison) {
@@ -287,18 +275,11 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie une alerte à l'admin quand le quota d'envoi Resend jour ou mois approche de sa limite
-   * (80%, suite de l'incident).
-   *
-   * <p>Destinataire : {@link #obtenirDestinataireAlerte}, jamais l'expéditeur. Ne consomme
-   * volontairement pas le garde-fou {@code GestionQuotaResend.reserverEnvoi()} avant son propre
-   * envoi — au seuil de 80%, il reste toujours de la marge sous la limite dure.
-   *
+   * Envoie une alerte quota Resend (80%, détail : CLAUDE.md,
+   * section Resend) sans consommer le garde-fou dur.
    * @param email l'adresse email de l'administrateur
    * @param compteur le compteur courant ayant déclenché le seuil
-   * @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon (RESEND_API_KEY
-   *     absent ou échec d'envoi) — dans ce cas l'appelant ne doit pas marquer l'alerte comme
-   *     signalée, pour ne pas la perdre en cas de panne temporaire de Resend
+   * @return {@code true} si effectivement envoyé
    */
   public boolean envoyerAlerteQuotaResend(final String email, final CompteurEnvoisResend compteur) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
@@ -338,13 +319,12 @@ public class EmailAlerteService {
   }
 
   /**
-   * Envoie un digest des nouvelles entrées {@code logs_admin} de niveau erreur.
-   *
+   * Envoie un digest des nouvelles entrées {@code logs_admin}
+   * de niveau erreur.
    * @param email l'adresse email de l'administrateur
-   * @param erreurs les entrées d'erreur à inclure dans le digest (non vide)
-   * @return {@code true} si l'email a effectivement été envoyé, {@code false} sinon (RESEND_API_KEY
-   *     absent ou échec d'envoi) — dans ce cas le curseur ne doit pas avancer côté appelant, pour
-   *     ne perdre aucune erreur en cas de panne temporaire de Resend
+   * @param erreurs les entrées d'erreur à inclure (non vide)
+   * @return {@code true} si effectivement envoyé (sinon curseur
+   *     non avancé côté appelant)
    */
   public boolean envoyerAlerteLogsAdmin(
       final String email, final List<LogAdminService.EntreeLogAdmin> erreurs) {

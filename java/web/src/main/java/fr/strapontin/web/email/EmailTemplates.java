@@ -8,21 +8,9 @@ import fr.strapontin.core.UtilitairesChaine;
 import java.util.List;
 
 /**
- * Génération des corps HTML de tous les emails transactionnels Strapontin.
- *
- * <p>Chaque méthode publique retourne un document HTML complet, prêt à être transmis à l'API
- * Resend. Le contenu variable est systématiquement passé par {@link #e(Object)} pour prévenir toute
- * injection HTML.
- *
- * <p>Structure commune factorisée :
- *
- * <ul>
- *   <li>{@link #envelopper} — cadre centré blanc + footer "Gérer mes préférences"
- *   <li>{@link #enveloppErreur} — idem avec titre en rouge
- *   <li>{@link #bouton} — CTA noir réutilisé dans la majorité des emails
- *   <li>{@link #e} — échappement HTML des valeurs variables
- * </ul>
- *
+ * Génération des corps HTML de tous les emails transactionnels
+ * Strapontin — helpers factorisés : {@link #envelopper},
+ * {@link #enveloppErreur}, {@link #bouton}, {@link #e}.
  * @since 2.2.0
  * @author Kwaite
  */
@@ -142,12 +130,11 @@ final class EmailTemplates {
 
   /**
    * Signalement utilisateur transmis à l'adresse de contact.
-   *
-   * @param typeLabel le libellé du type ("Bug", "Amélioration", "Question")
-   * @param expediteurEmail l'adresse email de l'expéditeur
-   * @param message le corps du signalement
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'email de signalement
+   * @param typeLabel libellé du type ("Bug", "Amélioration"...)
+   * @param expediteurEmail adresse email de l'expéditeur
+   * @param message corps du signalement
+   * @param baseUrl URL publique de base
+   * @return le HTML de l'email
    */
   /* package-private : appelé par EmailService(Admin) (même package). */
   static String signalement(
@@ -242,15 +229,9 @@ final class EmailTemplates {
   }
 
   /**
-   * Signalement d'une salle manquante transmis à l'administrateur.
-   *
-   * @param nom le nom de la salle signalée
-   * @param ville la ville/code postal (peut être vide)
-   * @param urlSite l'URL du site ou de la billetterie (peut être vide)
-   * @param commentaire le commentaire libre (peut être vide)
-   * @param emailUtilisateur l'adresse email de l'utilisateur
-   * @param baseUrl l'URL publique de base de l'application
-   * @return le HTML de l'email de signalement admin
+   * Signalement d'une salle manquante transmis à l'admin,
+   * paramètres auto-descriptifs.
+   * @return le HTML de l'email
    */
   /* package-private : appelé par EmailService(Admin) (même package). */
   static String signalementSalleManquante(

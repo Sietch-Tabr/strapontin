@@ -23,14 +23,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint de réception des webhooks Resend.
- *
- * <p>Le endpoint est public (non authentifié) mais protégé par vérification HMAC via la librairie
- * Svix embarquée dans le SDK resend-java.
- *
- * <p>La clé de signature doit être configurée dans {@code app_config} sous la clé {@code
- * RESEND_WEBHOOK_SECRET} (visible depuis {@code /admin}).
- *
+ * Endpoint de réception des webhooks Resend, public mais
+ * protégé par vérification HMAC Svix (détail : CLAUDE.md,
+ * Configuration applicative).
  * @since 2.1.0
  * @author Kwaite
  */
@@ -64,16 +59,12 @@ public class ResendWebhookController {
   }
 
   /**
-   * Reçoit et traite un événement webhook Resend.
-   *
-   * <p>Retourne 400 si la clé {@code RESEND_WEBHOOK_SECRET} n'est pas configurée, 401 si la
-   * signature Svix est invalide, 200 sinon.
-   *
-   * @param svixId header {@code svix-id} (identifiant unique de l'événement)
-   * @param svixTimestamp header {@code svix-timestamp}
-   * @param svixSignature header {@code svix-signature}
-   * @param corpsRaw corps brut de la requête (sensible à la moindre modification)
-   * @return réponse HTTP
+   * Reçoit et traite un événement webhook Resend — 400 si
+   * RESEND_WEBHOOK_SECRET absent, 401 si signature invalide.
+   * @param svixId header svix-id (identifiant unique)
+   * @param svixTimestamp header svix-timestamp
+   * @param svixSignature header svix-signature
+   * @param corpsRaw corps brut, sensible à la moindre modification
    */
   // Paramètres individuels imposés par le contrat @RequestHeader (liaison
   // HTTP), pas par choix de conception — hors de la convention DTO du projet,
@@ -120,14 +111,10 @@ public class ResendWebhookController {
   }
 
   /**
-   * Traite un événement webhook Resend déjà authentifié (signature Svix vérifiée).
-   *
-   * <p>Visibilité package-private pour permettre un test unitaire direct — la vérification de
-   * signature Svix ({@link #recevoirEvenement}) ne peut pas être simulée simplement en test.
-   *
+   * Traite un événement webhook Resend déjà authentifié.
    * @param corpsRaw corps JSON brut de l'événement
-   * @param svixId identifiant de l'événement (header {@code svix-id}), mémorisé dans le meta {@code
-   *     logs_admin} pour permettre un rejeu ciblé depuis l'admin
+   * @param svixId identifiant de l'événement, mémorisé dans le
+   *     meta logs_admin pour permettre un rejeu ciblé
    */
   /* package-private : visibilité élargie pour ResendWebhookControllerTest (même
    * package). */

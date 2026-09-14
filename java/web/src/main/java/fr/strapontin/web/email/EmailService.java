@@ -16,15 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Service d'email transactionnel via Resend.
- *
- * <p>Si {@code RESEND_API_KEY} est absent de la configuration, toutes les méthodes retournent
- * silencieusement sans erreur.
- *
- * <p>Les corps HTML sont générés par {@link EmailTemplates}. Les alertes système
- * (bounce/spam/backup/watchdog/logs-admin) sont dans {@link EmailAlerteService}; l'infrastructure
- * d'envoi Resend partagée par les deux est dans {@link EmailSender}.
- *
+ * Service d'email transactionnel via Resend (détail :
+ * CLAUDE.md, section Resend).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -43,13 +36,8 @@ public class EmailService {
   }
 
   /**
-   * Paramètres d'un concert pour le digest email.
-   *
-   * @param artiste le nom de l'artiste
-   * @param date la date ISO (yyyy-MM-dd)
-   * @param salle le nom de la salle
-   * @param ville la ville (peut être nulle)
-   * @param url l'URL de billetterie (peut être nulle)
+   * Paramètres d'un concert pour le digest email, champs
+   * auto-descriptifs (nullable : ville, url).
    */
   public record ConcertDigest(
       String artiste, String date, String salle, String ville, String url) {}
@@ -131,7 +119,7 @@ public class EmailService {
   }
 
   /**
-   * Notifie un utilisateur que sa double authentification a été réinitialisée par un admin.
+   * Notifie un utilisateur que sa 2FA a été réinitialisée par un admin.
    *
    * @param email l'adresse de l'utilisateur concerné
    */
@@ -222,21 +210,16 @@ public class EmailService {
   }
 
   /**
-   * Signalement d'une salle manquante par un utilisateur.
-   *
-   * @param nom le nom de la salle signalée
-   * @param ville la ville/code postal, peut être vide
-   * @param urlSite l'URL du site ou de la billetterie, peut être vide
-   * @param commentaire le commentaire libre, peut être vide
-   * @param emailUtilisateur l'adresse email de l'utilisateur connecté
+   * Signalement d'une salle manquante par un utilisateur,
+   * champs auto-descriptifs (nullable sauf nom/emailUtilisateur).
    */
   public record SignalementSalleManquante(
       String nom, String ville, String urlSite, String commentaire, String emailUtilisateur) {}
 
   /**
-   * Envoie un signalement de salle manquante à l'admin, puis une confirmation à l'utilisateur.
-   *
-   * @param signalement le signalement à envoyer (voir {@link SignalementSalleManquante} )
+   * Envoie un signalement salle manquante à l'admin, puis une
+   * confirmation à l'utilisateur.
+   * @param signalement le signalement à envoyer
    */
   public void envoyerSignalementSalleManquante(final SignalementSalleManquante signalement) {
     final String nom = signalement.nom();
@@ -404,9 +387,8 @@ public class EmailService {
   }
 
   /**
-   * Notifie un utilisateur que son compte a été supprimé par un administrateur.
-   *
-   * @param email l'adresse de l'utilisateur supprimé
+   * @param dateIso date au format ISO (yyyy-MM-dd)
+   * @return la date en français, format long
    */
   private static String formaterDate(final String dateIso) {
     final LocalDate date = LocalDate.parse(dateIso);

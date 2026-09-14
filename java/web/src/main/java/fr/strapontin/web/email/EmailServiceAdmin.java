@@ -10,13 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Emails transactionnels déclenchés par une action d'administration (suppression de compte,
- * changement de rôle, test de configuration).
- *
- * <p>Extrait d'{@link EmailService} (dont il partage l'infrastructure d'envoi {@link EmailSender})
- * pour rester sous la limite de 500 lignes par fichier — même principe de scission par
- * responsabilité qu'{@link EmailAlerteService}.
- *
+ * Emails transactionnels déclenchés par une action d'admin
+ * (suppression compte, changement de rôle, test config) —
+ * extrait d'{@link EmailService}.
  * @since 2.9.1
  * @author Kwaite
  */

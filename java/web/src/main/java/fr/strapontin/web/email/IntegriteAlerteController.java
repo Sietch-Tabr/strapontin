@@ -16,14 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint interne appelé par {@code scripts/aide-check.sh} pour signaler le statut du contrôle
- * d'intégrité quotidien (AIDE) sur un LXC prod/dev.
- *
- * <p>Protégé par un secret partagé : l'appelant doit présenter le header {@code Authorization:
- * Bearer <INTEGRITY_INTERNAL_SECRET>}. Si la variable {@code INTEGRITY_INTERNAL_SECRET} est absente
- * ou que le token ne correspond pas, l'accès est refusé (403). Enregistre le statut dans {@code
- * logs_admin} et envoie un email d'alerte sur détection de modification.
- *
+ * Endpoint interne appelé par {@code scripts/aide-check.sh}
+ * pour signaler le statut AIDE quotidien (détail : CLAUDE.md,
+ * Sécurité admin/sessions).
  * @since 2.7.3
  * @author Kwaite
  */
@@ -52,15 +47,12 @@ public class IntegriteAlerteController {
   }
 
   /**
-   * Notifie l'app du statut du contrôle d'intégrité AIDE quotidien.
-   *
-   * <p>Sur {@code statut=modifie} : log error dans {@code logs_admin} + email admin. Sur {@code
-   * statut=ok} : log info dans {@code logs_admin}.
-   *
+   * Notifie l'app du statut AIDE (détail : CLAUDE.md, Sécurité
+   * admin/sessions).
    * @param statut {@code ok} ou {@code modifie}
-   * @param detail sortie résumée d'{@code aide --check} (optionnel, {@code modifie} uniquement)
-   * @param authorization header {@code Authorization: Bearer <INTEGRITY_INTERNAL_SECRET>}
-   * @return 200 si traité, 403 si le token est absent ou invalide
+   * @param detail sortie résumée d'{@code aide --check} (optionnel)
+   * @param authorization header Bearer INTEGRITY_INTERNAL_SECRET
+   * @return 200 si traité, 403 si le token est absent/invalide
    */
   @PostMapping("/api/interne/integrite-statut")
   public ResponseEntity<Map<String, Object>> signalerStatut(
