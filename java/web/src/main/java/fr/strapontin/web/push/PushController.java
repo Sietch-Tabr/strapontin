@@ -68,11 +68,8 @@ public class PushController {
   }
 
   /**
-   * Envoie une notification de test à l'abonnement de l'utilisateur courant.
-   *
-   * <p>Cible l'abonnement de l'appareil demandeur si {@code endpoint} est fourni, plutôt que de
-   * sélectionner arbitrairement le plus récent.
-   *
+   * Envoie une notification de test, ciblant l'abonnement de l'appareil
+   * demandeur si {@code endpoint} est fourni (plutôt que le plus récent).
    * @param requete corps JSON optionnel avec {@code endpoint}
    * @param auth contexte d'authentification
    * @return 200 si envoyée, 400 si aucun abonnement actif

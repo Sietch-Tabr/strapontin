@@ -15,19 +15,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur servant le manifeste PWA dynamiquement.
- *
- * <p>{@code start_url} est dérivé de la requête HTTP entrante — fonctionne sans configuration
- * {@code PUBLIC_BASE_URL}, en dev comme en prod.
- *
- * <p>{@code id} est en revanche dérivé de {@code PUBLIC_BASE_URL} quand cette clé est configurée,
- * pour rester stable quel que soit l'hôte utilisé pour accéder à l'instance (IP LAN, domaine
- * public…) — un {@code id} variable ferait traiter chaque hôte comme une installation PWA distincte
- * plutôt qu'une mise à jour de la même application. Repli sur le comportement dynamique historique
- * si {@code PUBLIC_BASE_URL} n'est pas configurée.
- *
- * <p>Le manifeste est servi sans cache navigateur.
- *
+ * Contrôleur servant le manifeste PWA dynamiquement, sans cache navigateur.
+ * {@code start_url} dérive de la requête entrante ; {@code id} dérive de
+ * {@code PUBLIC_BASE_URL} quand configurée, pour rester stable quel que
+ * soit l'hôte d'accès (sinon chaque hôte serait une installation distincte).
  * @since 2.0.0
  * @author Kwaite
  */

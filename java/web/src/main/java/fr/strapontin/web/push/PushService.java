@@ -23,10 +23,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service de gestion des abonnements Web Push.
- *
- * <p>Limite à 10 abonnements par utilisateur. Vérifie la clé VAPID avant d'abonner.
- *
+ * Service de gestion des abonnements Web Push — limite à 10 abonnements par
+ * utilisateur, vérifie la clé VAPID avant d'abonner.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -58,12 +56,11 @@ public class PushService {
   }
 
   /**
-   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-   * éviter le problème d'auto-référence à la construction — l'appel à {@link
-   * #abonnerTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de l'isolation {@code
-   * SERIALIZABLE} (même pattern que {@code AdminService}, v2.6.3). En dehors d'un contexte Spring
-   * (tests unitaires), {@code self} peut être positionné manuellement.
-   *
+   * Injection par setter (plutôt que constructeur) de la référence proxifiée
+   * de ce bean, pour éviter l'auto-référence à la construction — l'appel à
+   * {@link #abonnerTransactionnel} passe par le proxy AOP Spring et
+   * bénéficie de l'isolation {@code SERIALIZABLE} (même pattern que {@code
+   * AdminService}). Hors contexte Spring (tests), positionnable à la main.
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
@@ -84,16 +81,12 @@ public class PushService {
   }
 
   /**
-   * Enregistre un nouvel abonnement push.
-   *
-   * <p>Le COUNT+INSERT est rendu atomique via une transaction {@code SERIALIZABLE} avec retry (même
-   * pattern que {@code AdminService.initierRevocationAdmin}) — sans cela, deux abonnements
-   * concurrents lisant tous deux {@code count = 9 < 10} avant qu'aucun des deux {@code INSERT} ne
-   * soit committé pouvaient tous deux réussir, dépassant le cap documenté comme une limite dure.
-   *
+   * Enregistre un nouvel abonnement push — COUNT+INSERT atomique via
+   * transaction {@code SERIALIZABLE} avec retry, sans quoi deux abonnements
+   * concurrents pouvaient tous deux dépasser le cap avant commit.
    * @param userId identifiant de l'utilisateur
    * @param requete données de l'abonnement
-   * @throws ErreurMetier 400 si données incomplètes/invalides, 429 si cap atteint
+   * @throws ErreurMetier 400 si invalide, 429 si cap atteint
    */
   public void abonner(final String userId, final RequeteAbonnement requete) {
     validerAbonnementComplet(requete);
@@ -124,9 +117,9 @@ public class PushService {
   }
 
   /**
-   * Partie transactionnelle et isolée de {@link #abonner}. {@code REQUIRES_NEW} garantit une
-   * transaction dédiée même si appelée depuis une transaction déjà ouverte.
-   *
+   * Partie transactionnelle et isolée de {@link #abonner}. {@code
+   * REQUIRES_NEW} garantit une transaction dédiée même appelée depuis une
+   * transaction déjà ouverte.
    * @param userId identifiant de l'utilisateur
    * @param requete données de l'abonnement (déjà validées)
    * @throws ErreurMetier 429 si le cap est atteint

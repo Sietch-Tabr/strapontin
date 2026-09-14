@@ -20,13 +20,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Service de notifications Web Push VAPID (portage de {@code push.ts}).
- *
- * <p>Envoie des notifications aux abonnements enregistrés dans {@code push_abonnements}. Sur
- * réponse 404 ou 410 de l'endpoint push, l'abonnement est automatiquement supprimé.
- *
- * <p>Les clés VAPID sont lues depuis la configuration chiffrée (Caffeine 5 min).
- *
+ * Service de notifications Web Push VAPID — envoie des notifications aux
+ * abonnements de {@code push_abonnements} (supprime automatiquement un
+ * abonnement en 404/410). Clés VAPID lues depuis la config chiffrée.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -93,17 +89,11 @@ public class NotificationPushService {
   }
 
   /**
-   * Envoie une notification de test à l'abonnement de l'utilisateur courant.
-   *
-   * <p>Si {@code endpoint} est fourni (l'appareil demandeur, disponible côté client via {@code
-   * PushManager.getSubscription()}), cible précisément cet abonnement plutôt que de sélectionner
-   * arbitrairement le plus récent par {@code id} — un utilisateur abonné sur plusieurs appareils
-   * cliquant "Test" depuis l'un d'eux recevait auparavant la notification sur un autre appareil,
-   * sans lien garanti avec la session courante (un UUID v4 n'a pas de corrélation temporelle).
-   * Repli sur le plus récent si {@code endpoint} absent.
-   *
+   * Envoie une notification de test — cible l'abonnement de l'appareil
+   * demandeur si {@code endpoint} est fourni plutôt que le plus récent
+   * (sinon un utilisateur multi-appareils recevait le test sur un autre).
    * @param userId l'identifiant de l'utilisateur
-   * @param endpoint l'endpoint de l'abonnement de l'appareil demandeur, ou {@code null}
+   * @param endpoint l'endpoint de l'appareil demandeur, ou {@code null}
    * @return {@code true} si la notification a été envoyée
    */
   public boolean envoyerNotificationTest(final String userId, final String endpoint) {
