@@ -14,11 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint REST de configuration initiale de l'application.
- *
- * <p>HTTP pur — délègue toute la logique à {@link SetupService}.
- * Accessible sans authentification ({@code permitAll}).
- *
+ * Endpoint REST de configuration initiale — HTTP pur, délègue à {@link
+ * SetupService}. Accessible sans authentification ({@code permitAll}).
  * @since 2.0.0
  * @author Kwaite
  */

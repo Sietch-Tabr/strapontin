@@ -25,14 +25,10 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service de configuration initiale de l'application.
- *
- * <p>Crée le premier administrateur et initialise les clés VAPID. L'opération {@link
- * #initialiserTransactionnel} est atomique et isolée ({@code @Transactional(isolation =
- * SERIALIZABLE)}) : sans cela, deux appels concurrents à {@code POST /api/setup} passent tous les
- * deux la garde {@link #estDejaConfiguree} avant que l'un ou l'autre ne committe, créant deux
- * comptes admin distincts.
- *
+ * Service de configuration initiale — crée le premier administrateur et
+ * initialise les clés VAPID. {@link #initialiserTransactionnel} est
+ * atomique et isolée ({@code SERIALIZABLE}), sans quoi deux appels
+ * concurrents passent tous deux la garde {@link #estDejaConfiguree}.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -58,12 +54,11 @@ public class SetupService {
   }
 
   /**
-   * Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-   * éviter le problème d'auto-référence à la construction — l'appel à {@link
-   * #initialiserTransactionnel} passe ainsi par le proxy AOP Spring et bénéficie de l'isolation
-   * {@code SERIALIZABLE}. En dehors d'un contexte Spring (tests unitaires), {@code self} peut être
-   * positionné manuellement sur l'instance elle-même.
-   *
+   * Injection par setter (plutôt que constructeur) de la référence
+   * proxifiée de ce bean, pour éviter l'auto-référence à la construction —
+   * l'appel à {@link #initialiserTransactionnel} passe ainsi par le proxy
+   * AOP Spring (isolation {@code SERIALIZABLE}). Hors contexte Spring
+   * (tests), positionnable à la main.
    * @param self référence proxifiée de ce bean ({@code @Lazy})
    */
   @Autowired
@@ -82,12 +77,9 @@ public class SetupService {
   }
 
   /**
-   * Crée le premier administrateur et initialise la configuration.
-   *
-   * <p>Réessaie jusqu'à {@value MAX_TENTATIVES} fois en cas d'échec de sérialisation (deux appels
-   * concurrents détectés par PostgreSQL) — seul le perdant de la course réessaie et échoue alors
-   * normalement sur {@link RessourceDejaExistante} puisque l'autre a déjà committé.
-   *
+   * Crée le premier administrateur — réessaie jusqu'à {@value
+   * MAX_TENTATIVES} fois en cas d'échec de sérialisation entre appels
+   * concurrents.
    * @param requete données d'initialisation
    * @throws RessourceDejaExistante si l'application est déjà configurée
    * @throws ErreurMetier si les données sont invalides
