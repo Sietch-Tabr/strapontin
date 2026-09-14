@@ -35,15 +35,8 @@ import org.springframework.session.Session;
 import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 
 /**
- * Configuration Spring Security 7 pour le mode SPA Vue 3.
- *
- * <p>Sessions persistantes JDBC (survivent aux redémarrages). Rate limiting login via {@link
- * RateLimitingLoginFilter} (intercepte {@code /api/auth/login}). Accès direct par IP bloqué via
- * {@link BloquerAccesDirectIpFilter}. CSRF désactivé (sessions {@code SameSite=Lax} — pas {@code
- * Strict}, compatibilité Safari sur navigation entrante, voir {@link
- * SessionSecurityConfiguration#cookieSerializer} — + {@code form-action 'self'} en CSP). Login via
- * {@code POST /api/auth/login}, logout via {@code POST /api/auth/logout}.
- *
+ * Configuration Spring Security 7 pour le mode SPA Vue 3
+ * (détail : CLAUDE.md, Authentification).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -71,15 +64,8 @@ public class SecurityConfiguration {
   }
 
   /**
-   * Chaîne de filtres de sécurité principale.
-   *
-   * @param http le constructeur de configuration Spring Security
-   * @param correlationIdFilter le filtre de corrélation MDC (premier dans la chaîne)
-   * @param rateLimitingFilter le filtre de rate limiting sur le login
-   * @param bloquerIpFilter le filtre de blocage d'accès direct par IP
-   * @param totpGuardFilter le filtre de garde TOTP post-login
-   * @param sessionRegistry le registre de sessions persisté en JDBC
-   * @param logAdminService le service de journalisation admin
+   * Chaîne de filtres de sécurité principale (paramètres
+   * auto-descriptifs, injectés par Spring).
    * @return la SecurityFilterChain configurée
    * @throws Exception en cas d'erreur de configuration
    */

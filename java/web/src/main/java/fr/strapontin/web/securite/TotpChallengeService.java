@@ -11,13 +11,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Vérifie un challenge TOTP post-login et gère le compteur d'échecs/verrouillage.
- *
- * <p>Extrait de {@code AuthController.verifierTotp} — le contrôleur ne portait pas seulement la
- * vérification du code (déjà déléguée à {@link TotpService}) mais aussi toute la logique métier de
- * compteur d'échecs et de verrouillage, en violation du pattern Controller (HTTP pur) → Service →
- * Repository.
- *
+ * Vérifie un challenge TOTP post-login, gère le compteur
+ * d'échecs/verrouillage (détail : CLAUDE.md, Authentification).
  * @since 2.7.0
  * @author Kwaite
  */
@@ -33,8 +28,8 @@ public class TotpChallengeService {
 
   /**
    * @param jdbc accès JDBC pour le compteur d'échecs
-   * @param userController accès au secret TOTP déchiffré ({@code UtilisateurRepository} est
-   *     package-privé, hors du package {@code securite})
+   * @param userController accès au secret TOTP déchiffré (repository
+   *     package-privé, hors du package securite)
    * @param totpService vérification du code TOTP (RFC 6238)
    * @param logAdminService journalisation des succès/échecs dans {@code logs_admin}
    */

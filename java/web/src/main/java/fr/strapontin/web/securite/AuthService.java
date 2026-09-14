@@ -20,11 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service d'authentification et de réinitialisation de mot de passe.
- *
- * <p>Orchestration atomique des flux mot de passe oublié et réinitialisation, via {@link
- * VerificationRepository} et {@link EmailService}.
- *
+ * Service d'authentification et de réinitialisation de mot
+ * de passe (détail : CLAUDE.md, Authentification).
  * @since 2.1.0
  * @author Kwaite
  */
@@ -60,7 +57,7 @@ public class AuthService {
   /**
    * Déclenche un email de réinitialisation de mot de passe.
    *
-   * <p>Ne fait rien (sans erreur) si l'email est inconnu — prévention de l'énumération de comptes.
+   * <p>Ne fait rien (sans erreur) si l'email est inconnu — anti-énumération.
    *
    * @param email adresse email (déjà normalisée)
    * @param baseUrl URL de base de l'application pour construire le lien de reset
@@ -99,13 +96,12 @@ public class AuthService {
   }
 
   /**
-   * Active un compte invité : définit identifiant et mot de passe en une seule opération.
-   *
-   * @param token token brut (non hashé), doit être de type {@code invite:}
-   * @param identifiant identifiant choisi (déjà normalisé en minuscules, format validé)
+   * Active un compte invité, identifiant+mdp en une opération.
+   * @param token token brut, doit être de type {@code invite:}
+   * @param identifiant identifiant choisi (normalisé, format validé)
    * @param motDePasse mot de passe en clair (longueur validée)
    * @return l'identifiant normalisé, pour l'auto-login en aval
-   * @throws ErreurMetier si le token est invalide, expiré, non-invite ou l'identifiant pris
+   * @throws ErreurMetier si token invalide/expiré/non-invite ou identifiant pris
    */
   @Transactional
   public String activerCompteInvite(

@@ -13,16 +13,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * Enregistre l'appareil courant dans {@code session_appareils}, au premier appel API qui suit la
- * connexion — jamais pendant la requête de login elle-même.
- *
- * <p>Spring Session (JDBC) ne persiste la session en base qu'à la toute fin de son propre filtre,
- * après que le contrôleur de login a déjà rendu sa réponse : une écriture dans {@code
- * session_appareils} (qui référence {@code SPRING_SESSION} par clé étrangère) tentée depuis le
- * contrôleur de login viole systématiquement cette contrainte, la ligne n'existant pas encore. Cet
- * intercepteur, exécuté par Spring MVC sur les requêtes API suivantes, s'exécute nécessairement
- * après qu'une réponse précédente (donc la persistance de session qu'elle déclenche) est terminée.
- *
+ * Enregistre l'appareil courant dans {@code session_appareils},
+ * au premier appel API suivant la connexion (détail : CLAUDE.md,
+ * Authentification).
  * @since 2.7.8
  * @author Kwaite
  */

@@ -13,11 +13,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /**
- * Accès aux données de la table {@code verifications} (tokens reset MDP et invitation).
- *
- * <p>SQL pur — aucune logique métier. Utilisé par {@link AuthService} et {@link
- * fr.strapontin.web.admin.AdminService}.
- *
+ * Accès aux données de la table {@code verifications} (tokens
+ * reset MDP et invitation) — SQL pur, aucune logique métier.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -133,14 +130,11 @@ public class VerificationRepository {
   }
 
   /**
-   * Définit l'identifiant et désactive le flag {@code must_change_credentials} par email.
-   *
-   * <p>Ne resynchronise {@code display_username} sur le nouvel identifiant que s'il n'a jamais été
-   * personnalisé par un admin, même garde que {@link
-   * fr.strapontin.web.utilisateur.UtilisateurRepository#majIdentifiant}.
-   *
+   * Définit l'identifiant et désactive {@code
+   * must_change_credentials} par email (détail : CLAUDE.md,
+   * Authentification).
    * @param email email de l'utilisateur
-   * @param identifiant nouvel identifiant (déjà normalisé en minuscules)
+   * @param identifiant nouvel identifiant (déjà normalisé)
    */
   public void majUsernameEtActiverParEmail(final String email, final String identifiant) {
     jdbc.update(

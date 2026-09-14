@@ -23,12 +23,8 @@ import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
 /**
- * Beans d'infrastructure d'authentification et de session (encodeur de mot de passe, {@code
- * AuthenticationManager}, timeout/sérialisation de session JDBC).
- *
- * <p>Extrait de {@link SecurityConfiguration} pour rester sous le seuil de couplage entre objets
- * (20).
- *
+ * Beans d'infrastructure d'authentification/session (encodeur,
+ * AuthenticationManager, timeout/sérialisation de session JDBC).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -51,14 +47,8 @@ public class SessionSecurityConfiguration {
   }
 
   /**
-   * Gestionnaire d'authentification avec chargement depuis la base de données.
-   *
-   * <p>Attache un {@link org.springframework.security.authentication.AuthenticationEventPublisher}
-   * explicitement : un {@link ProviderManager} construit à la main, hors du chemin
-   * d'auto-configuration Spring Boot standard, n'en reçoit aucun par défaut — sans lui, {@code
-   * AuthenticationSuccessEvent}/ {@code AbstractAuthenticationFailureEvent} ne sont jamais publiés
-   * et {@link AuthEvenementListener} reste du code mort.
-   *
+   * Gestionnaire d'authentification avec chargement depuis la
+   * base de données (détail : CLAUDE.md, Authentification).
    * @param userDetailsService le service de chargement des utilisateurs
    * @param passwordEncoder l'encodeur de mots de passe
    * @param eventPublisher l'éditeur d'événements applicatif Spring
@@ -80,12 +70,8 @@ public class SessionSecurityConfiguration {
   }
 
   /**
-   * Force le timeout d'inactivité des sessions JDBC à 30 jours.
-   *
-   * <p>{@code spring.session.timeout=30d} n'est pas appliqué par Spring Session 4 — ce customizer
-   * le remplace de façon programmatique. La session est prolongée à chaque requête ; elle expire
-   * uniquement après 30 jours sans activité.
-   *
+   * Force le timeout d'inactivité des sessions JDBC à 30 jours
+   * (détail : CLAUDE.md, Authentification).
    * @return le customizer de dépôt de sessions
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -109,18 +95,10 @@ public class SessionSecurityConfiguration {
   }
 
   /**
-   * Sérialiseur de cookies Spring Session — force {@code Secure}, {@code SameSite=Lax} et {@code
-   * max-age} 30 jours.
-   *
-   * <p>Les propriétés {@code server.servlet.session.cookie.*} sont ignorées par Spring Session JDBC
-   * ; ce bean prend le relais.
-   *
-   * <p>{@code SameSite=Lax} (et non Strict) : Safari applique Strict plus strictement que Chrome et
-   * bloque le cookie sur toute navigation entrante (lien mail, barre d'adresse depuis un autre
-   * site, retour d'une autre app iOS). Lax autorise le cookie sur les navigations GET entrantes
-   * tout en le bloquant sur les requêtes cross-site non-GET — protection CSRF équivalente.
-   *
-   * @param cookieSecure {@code true} si le flag Secure doit être positionné (désactivé en dev)
+   * Sérialiseur de cookies Spring Session — force Secure,
+   * SameSite=Lax et max-age 30 jours (détail : CLAUDE.md,
+   * Authentification).
+   * @param cookieSecure {@code true} si Secure doit être positionné
    * @return le sérialiseur de cookies configuré
    */
   /* package-private : Bean Spring, jamais appelé directement hors du

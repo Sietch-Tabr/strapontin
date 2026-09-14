@@ -14,11 +14,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 /**
- * Chargement des utilisateurs depuis la base de données pour Spring Security.
- *
- * <p>Charge l'utilisateur depuis la table {@code users} jointe à {@code accounts} (provider {@code
- * credential}). Le login est insensible à la casse (correspondance sur {@code lower(username)}).
- *
+ * Chargement des utilisateurs depuis la base pour Spring
+ * Security — login insensible à la casse (lower(username)).
  * @since 2.0.0
  * @author Kwaite
  */

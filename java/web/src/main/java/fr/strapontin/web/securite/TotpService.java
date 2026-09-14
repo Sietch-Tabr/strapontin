@@ -28,12 +28,8 @@ import uk.org.okapibarcode.graphics.Color;
 import uk.org.okapibarcode.output.SvgRenderer;
 
 /**
- * Service TOTP (Time-based One-Time Password, RFC 6238) — implémentation Java pur.
- *
- * <p>Secret : 20 octets aléatoires encodés en Base32 (160 bits, conforme RFC 4648). Code :
- * HMAC-SHA1 tronqué à 6 chiffres toutes les 30 secondes. Vérification : tolérance ±1 fenêtre (30 s)
- * pour la dérive d'horloge.
- *
+ * Service TOTP (RFC 6238) — implémentation Java pure (détail :
+ * CLAUDE.md, Authentification).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -108,15 +104,12 @@ public class TotpService {
   }
 
   /**
-   * Vérifie un code TOTP saisi par l'utilisateur.
-   *
-   * <p>Accepte une dérive de ±1 fenêtre (30 s) pour la tolérance réseau/horloge. Un code valide ne
-   * peut être accepté qu'une seule fois dans sa fenêtre (prévention du rejeu).
-   *
+   * Vérifie un code TOTP saisi, tolérance ±1 fenêtre, un code
+   * valide n'est acceptable qu'une fois (détail : CLAUDE.md,
+   * Authentification).
    * @param secret le secret Base32 du compte
    * @param code le code à 6 chiffres saisi
-   * @return {@code true} si le code est valide dans la fenêtre courante ou adjacente, et non déjà
-   *     utilisé
+   * @return {@code true} si valide dans la fenêtre et non déjà utilisé
    */
   public boolean verifierCode(final String secret, final String code) {
     if (secret == null || code == null) {

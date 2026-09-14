@@ -25,12 +25,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints d'authentification de l'API REST.
- *
- * <p>HTTP pur — délègue les flux reset MDP à {@link AuthService} et la vérification TOTP (code +
- * compteur d'échecs + verrouillage) à {@link TotpChallengeService}. Gère le login, logout,
- * challenge TOTP, récupération de l'utilisateur courant et la réinitialisation de mot de passe.
- *
+ * Endpoints d'authentification de l'API REST — HTTP pur
+ * (détail : CLAUDE.md, Authentification).
  * @since 2.0.0
  * @author Kwaite
  */
@@ -119,17 +115,12 @@ public class AuthController {
   }
 
   /**
-   * Vérifie le code TOTP soumis pendant le challenge post-login.
-   *
-   * <p>Le compteur d'échecs et la logique de verrouillage sont délégués à {@link
-   * TotpChallengeService}. Un admin peut débloquer via {@code POST
-   * /api/admin/utilisateurs/{id}/reset-totp}.
-   *
+   * Vérifie le code TOTP soumis pendant le challenge post-login
+   * (détail : CLAUDE.md, Authentification).
    * @param req le corps contenant le code à 6 chiffres
-   * @param httpRequest la requête HTTP (pour lire et modifier la session)
+   * @param httpRequest la requête HTTP (pour lire/modifier la session)
    * @param auth le contexte d'authentification Spring Security
-   * @return 200 si valide — 422 si code incorrect — 409 si pas de challenge en attente — 401 si
-   *     trop d'échecs ou compte verrouillé
+   * @return 200/422/409/401 selon le résultat du challenge
    */
   @PostMapping("/api/auth/totp")
   public ResponseEntity<Map<String, Object>> verifierTotp(
@@ -198,13 +189,10 @@ public class AuthController {
   }
 
   /**
-   * Retourne l'utilisateur actuellement authentifié.
-   *
-   * <p>Le champ {@code totpRequis} est {@code true} si un challenge TOTP est encore en attente pour
-   * la session courante (l'utilisateur s'est connecté mais n'a pas encore validé le 2FA).
-   *
-   * @param auth l'authentification Spring Security (injectée automatiquement)
-   * @param httpRequest la requête HTTP (pour lire l'état TOTP de la session)
+   * Retourne l'utilisateur actuellement authentifié (détail :
+   * CLAUDE.md, Authentification).
+   * @param auth l'authentification Spring Security (injectée)
+   * @param httpRequest la requête HTTP (pour lire l'état TOTP)
    * @return l'utilisateur courant ou 401 si non authentifié
    */
   @GetMapping("/api/auth/me")

@@ -11,11 +11,9 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Génération de secrets et de hachages pour l'invitation et la réinitialisation de comptes.
- *
- * <p>Primitives techniques : identifiants temporaires, tokens d'invitation/reset et
- * empreinte SHA-256 des tokens persistés. Le {@link SecureRandom} est partagé (thread-safe).
- *
+ * Génération de secrets et de hachages pour l'invitation et
+ * la réinitialisation de comptes ({@link SecureRandom} partagé,
+ * thread-safe).
  * @since 2.2.3
  * @author Kwaite
  */

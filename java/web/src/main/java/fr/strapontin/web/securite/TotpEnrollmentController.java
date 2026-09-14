@@ -21,11 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints REST pour l'enrollment et la désactivation TOTP depuis la SPA Vue.
- *
- * <p>HTTP pur — délègue la cryptographie à {@link TotpService} et la persistance à {@link
- * UserController}.
- *
+ * Endpoints REST pour l'enrollment et la désactivation TOTP
+ * depuis la SPA Vue — HTTP pur, délègue à {@link TotpService}
+ * et {@link UserController}.
  * @since 2.2.0
  * @author Kwaite
  */

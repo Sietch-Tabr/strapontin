@@ -15,15 +15,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Gestion des sessions actives ("appareils") d'un utilisateur.
- *
- * <p>{@code SPRING_SESSION} (schéma tiers géré par Spring Session JDBC) ne porte aucune colonne
- * exploitable pour identifier un appareil — {@code session_appareils} lui est associée séparément
- * à la connexion, sans modifier son schéma. Le véritable {@code session_id} n'est jamais exposé
- * côté client : un {@code appareil_id} opaque sert d'identifiant public, sans rapport avec le
- * cookie {@code SESSION} — sinon un XSS pourrait lire la liste et usurper n'importe quelle session
- * active de l'utilisateur, pas seulement celle déjà compromise.
- *
+ * Gestion des sessions actives ("appareils") d'un utilisateur
+ * (détail : CLAUDE.md, Authentification).
  * @since 2.7.8
  * @author Kwaite
  */
@@ -42,17 +35,12 @@ public class AppareilsService {
   }
 
   /**
-   * Enregistre l'appareil associé à une session déjà persistée.
-   *
-   * <p>Best-effort : appelé depuis {@link AppareilEnregistrementInterceptor}, jamais depuis le
-   * contrôleur de login lui-même — la ligne {@code SPRING_SESSION} référencée par la clé étrangère
-   * n'existe pas encore au moment où ce dernier répond (voir la Javadoc de l'intercepteur). Une
-   * erreur ici (ex. session invalidée entre-temps par une déconnexion concurrente) ne doit jamais
-   * faire échouer la requête qui a déclenché l'enregistrement.
-   *
+   * Enregistre l'appareil associé à une session déjà persistée
+   * (détail : CLAUDE.md, Authentification) — best-effort, ne
+   * fait jamais échouer la requête appelante.
    * @param sessionId identifiant de session Spring Session
    * @param userId identifiant de l'utilisateur
-   * @param userAgent en-tête {@code User-Agent} de la requête de connexion, peut être {@code null}
+   * @param userAgent en-tête {@code User-Agent}, peut être {@code null}
    */
   public void enregistrerAppareil(
       final String sessionId, final String userId, final String userAgent) {
@@ -74,11 +62,11 @@ public class AppareilsService {
   }
 
   /**
-   * Liste les appareils (sessions actives) de l'utilisateur, les plus récemment actifs en tête.
-   *
+   * Liste les appareils (sessions actives), les plus récemment
+   * actifs en tête.
    * @param userId identifiant de l'utilisateur
-   * @param sessionIdCourante identifiant de la session de la requête courante (jamais exposé tel
-   *   quel), pour marquer l'appareil actuellement utilisé
+   * @param sessionIdCourante identifiant de la session courante
+   *   (jamais exposé tel quel), pour marquer l'appareil utilisé
    * @return les appareils actifs
    */
   public List<AppareilDto> listerAppareils(final String userId, final String sessionIdCourante) {
@@ -101,13 +89,11 @@ public class AppareilsService {
   }
 
   /**
-   * Révoque un appareil (supprime sa session) — n'agit que sur les sessions appartenant à
-   * l'utilisateur demandeur, empêchant de révoquer la session d'un autre utilisateur en devinant
-   * un identifiant d'appareil.
-   *
+   * Révoque un appareil (supprime sa session) — n'agit que sur
+   * les sessions de l'utilisateur demandeur.
    * @param userId identifiant de l'utilisateur demandeur
    * @param appareilId identifiant opaque de l'appareil à révoquer
-   * @return {@code true} si une session a effectivement été supprimée
+   * @return {@code true} si une session a été supprimée
    */
   public boolean revoquerAppareil(final String userId, final String appareilId) {
     final int supprimees =
@@ -120,13 +106,8 @@ public class AppareilsService {
   }
 
   /**
-   * Appareil (session active) exposé côté client.
-   *
-   * @param appareilId identifiant opaque de l'appareil, sans rapport avec la session réelle
-   * @param userAgent en-tête User-Agent capturé à la connexion, peut être vide
-   * @param creeLe date de création de la session
-   * @param derniereActivite date de dernière activité de la session
-   * @param sessionCourante {@code true} si c'est la session de la requête en cours
+   * Appareil (session active) exposé côté client, identifiant
+   * opaque sans rapport avec la session réelle.
    */
   public record AppareilDto(
       String appareilId,

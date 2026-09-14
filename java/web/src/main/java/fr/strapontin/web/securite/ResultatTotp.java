@@ -5,11 +5,9 @@
 package fr.strapontin.web.securite;
 
 /**
- * Résultat d'une vérification de challenge TOTP ({@link TotpChallengeService#verifier}).
- *
- * @param statut         issue du challenge
- * @param essaisRestants nombre d'essais restants avant verrouillage (uniquement pertinent pour
- *                       {@link Statut#ECHEC})
+ * Résultat d'une vérification de challenge TOTP.
+ * @param statut issue du challenge
+ * @param essaisRestants essais restants avant verrouillage (ECHEC)
  * @since 2.7.0
  * @author Kwaite
  */

@@ -26,11 +26,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints de réinitialisation de mot de passe et d'activation de compte invité.
- *
- * <p>Extrait d'{@link AuthController} pour rester sous le seuil de couplage entre objets (20). HTTP
- * pur — délègue au {@link AuthService}.
- *
+ * Endpoints de réinitialisation de mot de passe et d'activation
+ * de compte invité — HTTP pur, délègue à {@link AuthService}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -47,11 +44,10 @@ public class PasswordResetController {
   private final LogAdminService logAdminService;
 
   /**
-   * @param authenticationManager gestionnaire d'authentification Spring Security (activation d'une
-   *     invitation avec ouverture de session immédiate)
+   * @param authenticationManager ouverture de session lors d'une activation
    * @param authService service de réinitialisation de mot de passe
    * @param configService service de configuration pour lire PUBLIC_BASE_URL
-   * @param logAdminService audit des tentatives bloquées faute de PUBLIC_BASE_URL configurée
+   * @param logAdminService audit des tentatives bloquées (URL absente)
    */
   public PasswordResetController(
       final AuthenticationManager authenticationManager,
@@ -96,7 +92,7 @@ public class PasswordResetController {
   /**
    * Retourne le type d'un token de vérification sans le consommer.
    *
-   * <p>Retourne toujours 200 — {@code "reset"} si le token est absent ou invalide (opacité).
+   * <p>Retourne toujours 200 — {@code "reset"} si absent/invalide (opacité).
    *
    * @param token token brut (non hashé)
    * @return {@code {type: "invite"}} ou {@code {type: "reset"}}
@@ -108,13 +104,10 @@ public class PasswordResetController {
   }
 
   /**
-   * Réinitialise le mot de passe via un token de vérification.
-   *
-   * <p>Si le token est de type {@code invite:} et que {@code identifiant} est fourni, active le
-   * compte en une seule opération (identifiant + mot de passe) et ouvre une session.
-   *
-   * @param req le corps contenant le token, le mot de passe et optionnellement l'identifiant
-   * @param httpRequest pour créer la session lors de l'activation d'une invitation
+   * Réinitialise le mot de passe via un token de vérification
+   * (détail : CLAUDE.md, Authentification).
+   * @param req token, mot de passe, identifiant optionnel
+   * @param httpRequest pour créer la session (activation invitation)
    * @return 200 si réinitialisé — 400 si invalide
    */
   @PostMapping("/api/auth/reset-password")
@@ -157,14 +150,9 @@ public class PasswordResetController {
   }
 
   /**
-   * Résout l'URL de base publique pour construire un lien envoyé par email (reset de mot de passe).
-   *
-   * <p>Ne retombe jamais sur le header {@code Host}/{@code getServerName()} de la requête entrante
-   * : un attaquant contrôlant ce header pourrait rediriger le lien de réinitialisation vers un
-   * domaine sous son contrôle et voler le token dès qu'un utilisateur clique dessus (Host Header
-   * Injection). {@link Optional#empty()} plutôt qu'un repli non sûr si {@code PUBLIC_BASE_URL}
-   * n'est pas configurée — l'appelant doit alors refuser d'envoyer le lien.
-   *
+   * Résout l'URL de base publique pour un lien envoyé par email
+   * (détail : CLAUDE.md, Sécurité admin/sessions — Host Header
+   * Injection).
    * @return l'URL de base configurée, ou vide si absente
    */
   private Optional<String> resoudreBaseUrl() {

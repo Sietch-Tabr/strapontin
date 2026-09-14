@@ -18,14 +18,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Filtre bloquant les accès directs par adresse IP.
- *
- * <p>Rejette les requêtes dont le header {@code Host} est une adresse IP (IPv4 avec port optionnel,
- * ou IPv6 entre crochets).
- *
- * <p>En profil {@code dev}, la vérification est ignorée pour faciliter le développement local et
- * les tests E2E depuis une IP privée.
- *
+ * Filtre bloquant les accès directs par adresse IP (header
+ * {@code Host} en IPv4/IPv6) — ignoré en profil {@code dev}.
  * @since 2.0.0
  * @author Kwaite
  */

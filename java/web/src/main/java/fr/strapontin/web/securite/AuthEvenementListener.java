@@ -16,11 +16,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.stereotype.Component;
 
 /**
- * Écoute les événements Spring Security et les consigne dans {@code logs_admin}.
- *
- * <p>Couvre : connexion réussie (info), échec d'authentification (warn). Le rate-limit est géré
- * séparément par [RateLimitingLoginFilter].
- *
+ * Écoute les événements Spring Security et les consigne dans
+ * {@code logs_admin} (connexion réussie, échec).
  * @since 2.0.0
  * @author Kwaite
  */

@@ -12,12 +12,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 
 /**
- * Invalidation de la session existante et ouverture d'une nouvelle session pour une
- * authentification déjà validée — partagé entre {@link AuthController#login} et le flux
- * d'activation d'invitation.
- *
- * <p>Extrait d'{@link AuthController} pour rester sous le seuil de couplage entre objets (20).
- *
+ * Invalidation de la session existante et ouverture d'une
+ * nouvelle session pour une authentification déjà validée —
+ * partagé login/activation invitation.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -33,10 +30,10 @@ final class EtablisseurSession {
   record SessionOuverte(HttpSession session, UtilisateurDetails details) {}
 
   /**
-   * @param auth authentification déjà validée par l'{@code AuthenticationManager}
+   * @param auth authentification déjà validée par l'AuthenticationManager
    * @param httpRequest la requête HTTP (pour invalider/créer la session)
-   * @param messageErreur message de l'exception si le principal n'est pas du type attendu
-   * @return la session nouvellement créée et les détails de l'utilisateur authentifié
+   * @param messageErreur message si le principal n'est pas du type attendu
+   * @return la session créée et les détails de l'utilisateur authentifié
    */
   /* package-private : appelé par le contrôleur du même package. */
   static SessionOuverte ouvrir(
