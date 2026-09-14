@@ -9,13 +9,10 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Corps JSON de la requête POST /api/salles.
- *
- * @param nom nom de la salle
- * @param tmVenueId identifiant Ticketmaster optionnel
- * @param osmId identifiant OSM {@code "type/id"} optionnel
- * @param wikidataId Q-ID Wikidata optionnel. Format contraint : ce champ est concaténé dans une
- *   requête SPARQL exécutée par le job d'enrichissement nocturne ({@code WikidataSalleSource}).
+ * Corps JSON de la requête POST /api/salles — {@code nom} obligatoire,
+ * {@code tmVenueId}/{@code osmId}/{@code wikidataId} optionnels ;
+ * {@code wikidataId} est concaténé dans une requête SPARQL par
+ * {@code WikidataSalleSource}, d'où son format contraint.
  * @since 2.1.0
  * @author Kwaite
  */

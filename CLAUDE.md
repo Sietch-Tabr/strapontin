@@ -111,6 +111,8 @@ Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SE
 | Bandsintown                                           | Abandonné — HTTP 401 depuis 2026-04-10 (#65)                                                                                                                                                                                                                                               |
 | MusicBrainz                                           | Bloqué — IP SFR blacklistée par Cloudflare (#293)                                                                                                                                                                                                                                          |
 
+`SalleRechercheNominatimService` (web, extrait de `SalleService` en v2.9.1) : détail du filtre de pertinence `TYPES_SALLE_NOMINATIM` déjà documenté, [wiki Sources-de-données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-donn%C3%A9es).
+
 ## Jobs background (Quartz)
 
 Paradigme : **pré-fetch en arrière-plan, jamais d'appel API depuis le browser**.

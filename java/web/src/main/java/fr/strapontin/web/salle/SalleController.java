@@ -30,9 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Contrôleur REST pour la gestion des salles suivies (portage de {@code salles/+page.server.ts}).
- *
- * <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link SalleService}.
+ * Contrôleur REST pour la gestion des salles suivies — HTTP pur, délègue
+ * toute la logique métier et l'accès aux données à {@link SalleService}.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -122,15 +121,11 @@ public class SalleController {
   }
 
   /**
-   * Enregistre le signalement d'une salle absente du référentiel.
-   *
-   * <p>Envoie un email à l'administrateur et un email de confirmation à l'utilisateur. Rate-limité
-   * à 3 signalements par heure par IP.
-   *
+   * Signale une salle absente (email admin + confirmation), rate-limité.
    * @param requete corps JSON avec nom, ville, urlSite, commentaire
    * @param auth contexte d'authentification
    * @param request la requête HTTP (pour rate limiting par IP)
-   * @return 204 si transmis, 400 si validation échoue, 429 si rate limit atteint
+   * @return 204 si transmis, 400 si invalide, 429 si rate limit atteint
    */
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
@@ -160,9 +155,9 @@ public class SalleController {
   }
 
   /**
-   * Réinitialise tous les buckets de signalement (actif uniquement sur le profil {@code dev}).
-   *
-   * <p>Appelé par le global-setup E2E avant chaque suite de tests pour repartir d'un quota plein.
+   * Réinitialise tous les buckets de signalement (profil {@code dev}
+   * uniquement) — appelé par le global-setup E2E avant chaque suite pour
+   * repartir d'un quota plein.
    *
    * @return 204
    */

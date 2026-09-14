@@ -5,17 +5,10 @@
 package fr.strapontin.web.salle;
 
 /**
- * Résultat de recherche d'une salle ({@code "base"}, {@code "base-digitick"},
- * {@code "ticketmaster"} ou {@code "osm"}).
- *
- * @param salle        nom de la salle
- * @param ville        ville (null si inconnue)
- * @param tmVenueId    identifiant Ticketmaster (null si non issu de TM)
- * @param digitickSlug slug Digitick pré-configuré (null si non configuré)
- * @param source       origine du résultat : {@code "base"}, {@code "base-digitick"},
- *                     {@code "ticketmaster"}, {@code "osm"}
- * @param osmId identifiant OSM {@code "type/id"} (null si non issu de Nominatim)
- * @param wikidataId Q-ID Wikidata (null si absent des extratags Nominatim)
+ * Résultat de recherche d'une salle — {@code source} vaut {@code "base"},
+ * {@code "base-digitick"}, {@code "ticketmaster"} ou {@code "osm"} ; tous
+ * les champs sauf {@code salle} et {@code source} sont nullables selon
+ * l'origine (ex. {@code osmId}/{@code wikidataId} uniquement pour Nominatim).
  * @since 2.1.0
  * @author Kwaite
  */
@@ -29,13 +22,9 @@ public record ResultatSalle(
     String wikidataId) {
 
   /**
-   * Construit un résultat sans métadonnées OSM/Wikidata (sources historiques).
-   *
-   * @param salle        nom de la salle
-   * @param ville        ville (null si inconnue)
-   * @param tmVenueId    identifiant Ticketmaster (null si non issu de TM)
-   * @param digitickSlug slug Digitick pré-configuré (null si non configuré)
-   * @param source       origine du résultat
+   * Construit un résultat sans métadonnées OSM/Wikidata, pour les sources
+   * historiques (base, Digitick, Ticketmaster) — {@code osmId}/{@code
+   * wikidataId} restent {@code null}.
    */
   public ResultatSalle(
       final String salle,

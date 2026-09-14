@@ -23,9 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 /**
- * Recherche de salles par nom via l'API Ticketmaster (recherche interactive à l'ajout, module web).
- *
- * <p>Extrait de {@link SalleService} pour rester sous la limite de 500 lignes par fichier.
+ * Recherche de salles par nom via l'API Ticketmaster (recherche interactive
+ * à l'ajout) — extrait de {@link SalleService} (limite 500 lignes).
  *
  * @since 2.9.1
  * @author Kwaite

@@ -20,9 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 /**
- * Recherche de salles par nom via Nominatim (OSM) — sans clé API.
- *
- * <p>Extrait de {@link SalleService} pour rester sous la limite de 500 lignes par fichier.
+ * Recherche de salles par nom via Nominatim (OSM), sans clé API — extrait de
+ * {@link SalleService} (limite 500 lignes).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -67,14 +66,12 @@ class SalleRechercheNominatimService {
   }
 
   /**
-   * Recherche des salles par nom via Nominatim (OSM).
-   *
-   * <p>Sans clé API — couvre les salles hors référentiel Ticketmaster. User-Agent obligatoire selon
-   * la politique d'usage Nominatim.
+   * Recherche des salles par nom via Nominatim (OSM), sans clé API — couvre
+   * les salles hors référentiel Ticketmaster. User-Agent obligatoire selon la
+   * politique d'usage Nominatim.
    *
    * @param terme terme de recherche saisi par l'utilisateur
-   * @return suggestions filtrées par type de lieu pertinent, vide si aucune ou en cas d'échec
-   *     réseau
+   * @return suggestions filtrées par type, vide si aucune ou échec réseau
    */
   /* package-private : appelé par SalleService (même package). */
   List<ResultatSalle> rechercher(final String terme) {
@@ -107,19 +104,11 @@ class SalleRechercheNominatimService {
   }
 
   /**
-   * Filtre et convertit les résultats bruts Nominatim en suggestions de salle.
-   *
-   * <p>Un résultat est pertinent si son {@code type} de premier niveau ou son {@code
-   * extratags.amenity} (tag secondaire) figure dans {@link #TYPES_SALLE_NOMINATIM} — {@code
-   * class=amenity} seul n'est plus suffisant (trop large : laissait passer des bornes de recharge
-   * électrique) et une salle classée sous {@code leisure}/{@code tourism} (ex. un stade avec {@code
-   * extratags.amenity=music_venue}) n'est plus rejetée à tort.
-   *
-   * <p>Package-private (plutôt que {@code private}) pour être testable directement, sans appel
-   * réseau réel.
-   *
+   * Filtre/convertit les résultats bruts Nominatim (critère de pertinence :
+   * détail CLAUDE.md, section Sources de données) ; package-private pour
+   * être testable sans appel réseau réel.
    * @param json corps de la réponse Nominatim (tableau JSON)
-   * @return suggestions filtrées par pertinence, vide si aucune ou en cas d'échec de parsing
+   * @return suggestions filtrées, vide si aucune ou échec de parsing
    */
   @SuppressWarnings("unchecked")
   /* package-private : appelé par SalleService (même package). */

@@ -10,10 +10,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Fusion/déduplication des suggestions de salle collectées depuis plusieurs sources (base,
- * Nominatim, Ticketmaster).
- *
- * <p>Extrait de {@link SalleService} pour rester sous la limite de 500 lignes par fichier.
+ * Fusion/déduplication des suggestions de salle (base, Nominatim,
+ * Ticketmaster) — extrait de {@link SalleService} (limite 500 lignes).
  *
  * @since 2.9.1
  * @author Kwaite
@@ -23,18 +21,9 @@ final class SalleSuggestions {
   private SalleSuggestions() {}
 
   /**
-   * Fusionne un candidat externe avec une suggestion déjà présente désignant la même salle ({@link
-   * CorrespondanceSalle#estDoublonSalle}), ou l'ajoute comme nouvelle suggestion sinon.
-   *
-   * <p>Utilise le même algorithme que {@link SalleService#resoudreSalleId} — avant correctif,
-   * {@code fusionnerOuAjouter} utilisait sa propre implémentation Levenshtein locale ({@code
-   * estMemeSalle}), ce qui pouvait afficher deux suggestions distinctes dans l'UI alors qu'un clic
-   * sur l'une ou l'autre aurait résolu vers le même UUID via {@code resoudreSalleId} — un seul
-   * algorithme de dédoublonnage salle dans tout le projet.
-   *
-   * <p>Permet à Nominatim et Ticketmaster de contribuer chacun leurs identifiants (osmId,
-   * tmVenueId) à une même suggestion plutôt que de créer deux entrées dupliquées.
-   *
+   * Fusionne un candidat externe avec une suggestion désignant la même salle
+   * ({@link CorrespondanceSalle#estDoublonSalle}, même algorithme que {@link
+   * SalleService#resoudreSalleId}), ou l'ajoute sinon.
    * @param liste suggestions déjà collectées (modifiée en place)
    * @param candidat nouveau résultat externe à intégrer
    */
@@ -69,14 +58,10 @@ final class SalleSuggestions {
   }
 
   /**
-   * Indique si une recherche correspond, même partiellement, à une salle déjà suivie.
-   *
-   * <p>Une égalité stricte laissait passer un faux "Aucun résultat" quand la recherche est un terme
-   * partiel (ex. "Zenith" ne matchait pas "zenithparis") alors que la salle a bien été trouvée puis
-   * exclue des suggestions car déjà suivie — l'utilisateur n'avait alors aucun signal expliquant
-   * l'absence de résultat.
-   *
-   * @param rechercheNorm clé normalisée de la recherche ({@link SalleService#normaliserSalleCle})
+   * Indique si une recherche correspond, même partiellement, à une salle
+   * déjà suivie (évite un faux "Aucun résultat" pour un terme partiel, ex.
+   * "Zenith" absent de "zenithparis").
+   * @param rechercheNorm clé normalisée de la recherche
    * @param clesNorm clés normalisées des salles déjà suivies
    * @return {@code true} si une salle déjà suivie contient la recherche
    */
