@@ -35,10 +35,9 @@ public class AccueilController {
   }
 
   /**
-   * Marque tous les matches non encore vus comme vus pour l'utilisateur courant.
-   *
-   * <p>Appelé par le SPA Vue à l'ouverture de la page d'accueil pour réinitialiser le badge.
-   *
+   * Marque tous les matches non encore vus comme vus pour l'utilisateur
+   * courant — appelé par le SPA Vue à l'ouverture de l'accueil pour
+   * réinitialiser le badge.
    * @param auth contexte d'authentification
    * @return 204 No Content
    */
@@ -49,13 +48,10 @@ public class AccueilController {
   }
 
   /**
-   * Retourne les prochains concerts des artistes suivis, groupés par artiste.
-   *
-   * @param masques       {@code true} pour afficher les concerts masqués
-   * @param indisponibles {@code "1"} pour inclure les concerts non disponibles
-   * @param nouveau       {@code true} pour afficher uniquement les concerts ajoutés
-   *                      en base depuis moins de 7 jours
-   * @param auth          contexte d'authentification
+   * Retourne les prochains concerts des artistes suivis, groupés par
+   * artiste (masqués/indisponibles/nouveau : voir {@link
+   * AccueilService#accueil}).
+   * @param auth contexte d'authentification
    * @return les groupes artiste/concerts avec compteurs
    */
   @GetMapping

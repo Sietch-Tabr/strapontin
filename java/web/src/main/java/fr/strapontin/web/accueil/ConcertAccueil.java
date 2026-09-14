@@ -7,12 +7,9 @@ package fr.strapontin.web.accueil;
 import fr.strapontin.web.utils.Dates;
 
 /**
- * Concert dans la vue accueil d'un utilisateur.
- *
- * @param artisteId UUID stable de l'artiste dans le référentiel — utilisé pour le
- *     masquage/démasquage par groupe, contrairement à {@code artisteNorm} (texte par source,
- *     conservé pour les ancres de navigation) qui peut diverger entre concerts d'un même artiste
- *     réel selon la source de fetch.
+ * Concert dans la vue accueil d'un utilisateur — {@code artisteId} (UUID
+ * référentiel) sert au masquage par groupe, {@code artisteNorm} (texte par
+ * source, pouvant diverger selon le fetch) aux ancres de navigation.
  * @since 2.1.0
  * @author Kwaite
  */

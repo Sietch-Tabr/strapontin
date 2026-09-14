@@ -40,13 +40,10 @@ public class AccueilService {
   }
 
   /**
-   * Marque comme vus les matches artiste non encore vus pour l'utilisateur.
-   *
-   * <p>Appelé à la visite de l'accueil pour réinitialiser le badge de navigation. Restreint aux
-   * matchs artiste — l'accueil n'affiche jamais les matchs salle (voir {@link #accueil}), donc
-   * marquer aussi ces derniers effaçait à tort l'indicateur « Nouveau » par concert sur {@code
-   * /spectacles} avant même que l'utilisateur n'ait visité cette page.
-   *
+   * Marque comme vus les matches artiste non encore vus, pour réinitialiser
+   * le badge de navigation — restreint aux matchs artiste (l'accueil
+   * n'affiche jamais les matchs salle), sans quoi l'indicateur « Nouveau »
+   * de {@code /spectacles} s'effaçait avant même la visite de cette page.
    * @param userId identifiant de l'utilisateur
    */
   public void marquerVus(final String userId) {
@@ -67,13 +64,11 @@ public class AccueilService {
   }
 
   /**
-   * Retourne les prochains concerts des artistes suivis, groupés par artiste.
-   *
+   * Retourne les prochains concerts des artistes suivis, groupés par
+   * artiste — {@code masques}/{@code indisponibles}/{@code nouveau}
+   * filtrent respectivement les concerts masqués, non disponibles et
+   * récents (moins de 7 jours).
    * @param userId identifiant de l'utilisateur
-   * @param masques {@code true} pour afficher les concerts masqués
-   * @param indisponibles {@code "1"} pour inclure les concerts non disponibles
-   * @param nouveau {@code true} pour afficher uniquement les concerts ajoutés en base depuis moins
-   *     de 7 jours
    * @return groupes artiste/concerts avec compteurs
    */
   public ReponseAccueil accueil(

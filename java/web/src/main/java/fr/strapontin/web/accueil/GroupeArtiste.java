@@ -7,10 +7,9 @@ package fr.strapontin.web.accueil;
 import java.util.List;
 
 /**
- * Groupe de concerts par artiste dans la vue accueil.
- *
- * @param artisteId UUID stable de l'artiste, utilisé pour le masquage/démasquage par
- *     groupe — {@code artisteNorm} reste utilisé pour les clés Vue et ancres de navigation.
+ * Groupe de concerts par artiste dans la vue accueil — {@code artisteId}
+ * sert au masquage/démasquage par groupe, {@code artisteNorm} aux clés
+ * Vue et ancres de navigation.
  * @since 2.1.0
  * @author Kwaite
  */
