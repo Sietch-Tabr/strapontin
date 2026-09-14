@@ -11,21 +11,10 @@ import fr.strapontin.worker.persister.ReconciliateurSalles;
 import org.springframework.stereotype.Service;
 
 /**
- * Orchestrateur du job nocturne de réconciliation des sources salles/artistes.
- *
- * <p>Phase 1 — health-check des identifiants TM suspects ({@code suspect_depuis IS NOT NULL}) et
- * redécouverte active si l'identifiant est mort. Digitick : alerte seule (pas de redécouverte auto,
- * slugs gérés manuellement). Eventim : ignoré (IDs synthétiques, pas de health-check pertinent).
- *
- * <p>Phase 2 — délègue à {@link EnrichissementSallesService} et {@link
- * EnrichissementArtistesService}.
- *
- * <p>La redécouverte passive décrite dans le ticket (scanner les concerts des dernières 24h) n'est
- * pas implémentée : le pipeline temps réel existant ({@code
- * ReconciliateurSalles.upsertSalleSource}, exécuté à chaque fetch) réalise déjà cette association
- * par correspondance de nom, et {@code concerts} ne conserve pas l'identifiant brut une fois résolu
- * — un scan nocturne dédié ne découvrirait rien de plus (décision actée pour le jalon 2.6.0).
- *
+ * Orchestrateur du job nocturne de réconciliation des sources
+ * salles/artistes — 2 phases (health-check/redécouverte IDs TM,
+ * enrichissement Wikidata/OSM/Deezer), détail : CLAUDE.md,
+ * Santé/référentiel admin.
  * @since 2.6.0
  * @author Kwaite
  */
@@ -51,16 +40,8 @@ public class ReconciliationNocturneService {
   private final HealthCheckSallesTM healthCheckSallesTM;
 
   /**
-   * @param enrichissementSalles enrichissement Wikidata/OSM des salles (phase 2)
-   * @param enrichissementArtistes enrichissement Wikidata/Deezer des artistes (phase 2)
-   * @param coherenceWikidataSalle revalidation ville/wikidata_id des salles déjà enrichies
-   * @param reconciliateurSalles réconciliation des noms de salles intra-lot/inter-jobs
-   * @param fusionSallesClePortee fusion nocturne des salles détectées comme doublons
-   * @param coherenceMultiSalle détection de contamination/doublon multi-salles
-   * @param suggestionMotsGenerics suggestion de mots-types de salle génériques non couverts
-   * @param controleIntegrite contrôles d'intégrité généralistes du référentiel
-   * @param healthCheckArtistesTM health-check et redécouverte des identifiants TM artiste suspects
-   * @param healthCheckSallesTM health-check et redécouverte des identifiants TM salle suspects
+   * Assemble les 10 collaborateurs autonomes du job nocturne (santé,
+   * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
       final EnrichissementSallesService enrichissementSalles,
@@ -86,14 +67,9 @@ public class ReconciliationNocturneService {
   }
 
   /**
-   * Exécute les deux phases du job nocturne.
-   *
-   * <p>L'enrichissement artistes (Wikidata/Deezer) est traité avant l'enrichissement salles
-   * (Overpass/Wikidata) : l'instance publique Overpass est une infrastructure partagée
-   * régulièrement surchargée (timeouts fréquents en 2026), chaque lot en échec consommant tout son
-   * timeout client avant d'abandonner. Ce risque de ralentissement ne doit pas retarder
-   * l'enrichissement artistes, indépendant d'Overpass.
-   *
+   * Exécute les deux phases du job nocturne — artistes avant salles
+   * (Overpass, infrastructure partagée, timeouts fréquents, ne doit
+   * pas retarder un enrichissement indépendant).
    * @return bilan agrégé de l'exécution
    */
   public ResultatReconciliation executer() {

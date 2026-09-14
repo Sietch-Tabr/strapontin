@@ -21,17 +21,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Détecte, sur {@code salles.nom_norm}, des tokens spécifiques (hors {@link
- * CorrespondanceSalle#MOTS_GENERIQUES_SALLE} déjà connus) dont la fréquence brute suggère qu'il
- * s'agit en réalité d'un mot-type de salle générique national (ex. "kiosque", "auditorium") non
- * encore couvert par cette liste — sans jamais l'y ajouter automatiquement (l'ajout reste une
- * décision humaine, un faux positif dégraderait le dédoublonnage pour toutes les salles).
- *
- * <p>Un mot déjà suggéré n'est jamais re-signalé (liste persistée dans {@code app_config}, même
- * mécanisme que {@code SuiviChroniciteService}) — pas d'entité unique naturelle à rattacher à ce
- * signalement (contrairement aux signalements de {@code signalements_matching}), d'où l'utilisation
- * de {@code logs_admin} plutôt que la nouvelle table dédiée.
- *
+ * Détecte des tokens de {@code salles.nom_norm} suggérant un mot-type
+ * générique national manquant (détail : CLAUDE.md, Modèle événement
+ * canonique).
  * @since 2.9.0
  * @author Kwaite
  */

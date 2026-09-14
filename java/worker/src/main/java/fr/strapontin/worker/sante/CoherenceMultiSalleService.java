@@ -20,13 +20,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Deux contrôles nocturnes *a posteriori* sur le référentiel des salles, complémentaires à {@link
- * CoherenceWikidataSalleService} et à {@link
- * fr.strapontin.worker.persister.FusionSallesClePorteeService} : ni l'un ni l'autre ne couvre la
- * contamination déjà consommée (résidu de fusion antérieur à un correctif) ou le doublon sans
- * wikidata_id ni concert partagé. Journalisation seule, jamais de fusion/scission automatique —
- * laissée à l'admin ({@code ReferentielSallesService}).
- *
+ * Deux contrôles nocturnes a posteriori sur le référentiel des salles,
+ * complémentaires à {@link CoherenceWikidataSalleService} et {@link
+ * fr.strapontin.worker.persister.FusionSallesClePorteeService} —
+ * journalisation seule (détail : CLAUDE.md, Hiérarchie des salles).
  * @since 2.8.8
  * @author Kwaite
  */
@@ -59,13 +56,9 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Compare, pour chaque salle portant au moins une source Eventim/Digitick synthétique ({@code
-   * internal:<nom>}), le nom extrait de cette source à {@code salles.nom_norm} via {@link
-   * #estContaminationReelle} — une mésentente signe un {@code salle_id} hébergeant probablement
-   * plusieurs lieux réels distincts (résidu d'une fusion antérieure à un correctif de
-   * dédoublonnage), à l'exclusion des identifiants source qui ne sont que le nom de la salle
-   * complété d'une ville ou d'un sigle.
-   *
+   * Compare, pour chaque salle avec source Eventim/Digitick synthétique,
+   * le nom extrait à {@code salles.nom_norm} (détail : CLAUDE.md,
+   * Hiérarchie des salles).
    * @return nombre de salles nouvellement signalées
    */
   public int detecterContamination() {
@@ -176,11 +169,9 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Un identifiant source synthétique n'est pas une contamination réelle quand il n'est que le nom
-   * de la salle complété d'une ville ({@link #nomContenuDansLAutre}, ex. "6mic" / "6mic aix en
-   * provence") ou un sigle formé de ses initiales ({@link #estSigleDe}, ex. "ed n" / "espace
-   * dollfus noack") — {@link CorrespondanceSalle#estDoublonSalle} seul rejette mécaniquement ces
-   * deux cas dès qu'un côté est bien plus long ou bien plus court que l'autre.
+   * Un identifiant source synthétique n'est pas une contamination réelle
+   * quand il n'est que le nom complété d'une ville ou un sigle de ses
+   * initiales (détail : CLAUDE.md, Hiérarchie des salles).
    */
   private static boolean estContaminationReelle(
       final String nomExtrait, final String nomNormSalle) {
@@ -220,14 +211,9 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Balayage pairwise de toutes les salles par containment de tokens de {@code nom_norm} et
-   * département compatible, sans exiger de {@code wikidata_id} ni de concert partagé — {@link
-   * CorrespondanceSalle#estDoublonSalle} est trop strict pour ce cas précis (son propre critère de
-   * containment exige un ratio de longueur minimal de 0.5), une source abrégeant fortement un nom
-   * déjà long ne le satisfait pas. Exclut les paires déjà reliées par {@code salle_parent_id}
-   * (complexe/sous-salle) — leur nom qualifié ("X - Y") satisfait presque toujours ce containment
-   * par construction, sans rapport avec un résidu de fusion antérieur.
-   *
+   * Balayage pairwise par containment de {@code nom_norm} et département
+   * compatible, sans exiger de {@code wikidata_id} ni de concert partagé
+   * (détail : CLAUDE.md, Hiérarchie des salles).
    * @return nombre de paires nouvellement signalées
    */
   public int detecterDoublons() {

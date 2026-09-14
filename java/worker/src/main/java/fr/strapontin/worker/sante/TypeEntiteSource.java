@@ -5,14 +5,8 @@
 package fr.strapontin.worker.sante;
 
 /**
- * Table et colonne de rattachement associées à un type d'entité suivi par ce package ({@code
- * salle_sources}/{@code salle_id} ou {@code artiste_sources}/{@code artiste_id}).
- *
- * <p>Remplace un couple de paramètres {@code String table, String colonneId} passés en clair aux
- * méthodes qui construisent une requête SQL par concaténation — un enum exclut structurellement
- * tout appel avec une valeur non constante, contrairement à un {@code String} dont rien ne garantit
- * qu'il reste toujours l'un des deux littéraux attendus.
- *
+ * Table et colonne de rattachement d'un type d'entité suivi
+ * (détail : CLAUDE.md, section Flyway).
  * @since 2.8.7
  * @author Kwaite
  */

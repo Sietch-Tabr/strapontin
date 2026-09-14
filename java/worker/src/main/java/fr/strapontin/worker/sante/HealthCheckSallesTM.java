@@ -17,11 +17,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Health-check et redécouverte active des identifiants Ticketmaster suspects pour les salles, et
- * signalement des slugs Digitick suspects — extrait de {@link ReconciliationNocturneService} pour
- * rester sous le seuil de nombre de paramètres de constructeur (8), sur le même modèle que {@link
- * HealthCheckArtistesTM} (variante artiste).
- *
+ * Health-check et redécouverte active des identifiants TM suspects
+ * pour les salles, et signalement des slugs Digitick suspects —
+ * extrait de {@link ReconciliationNocturneService} (voir {@link
+ * HealthCheckArtistesTM}, variante artiste).
  * @since 2.9.1
  * @author Kwaite
  */

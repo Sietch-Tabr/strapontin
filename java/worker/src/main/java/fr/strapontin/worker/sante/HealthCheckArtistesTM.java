@@ -20,15 +20,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Health-check et redécouverte active des identifiants Ticketmaster suspects, et vérification de
- * cohérence nom/artiste — extrait de {@link ReconciliationNocturneService} pour rester sous le
- * seuil de couplage entre objets (20).
- *
- * <p>Bean Spring (pas seulement assemblé manuellement) pour que {@link
- * ReconciliationNocturneService} le reçoive comme une seule dépendance plutôt que de reconstruire
- * jdbc/tm/logsAdminWorker à chaque fois — voir le seuil de nombre de paramètres de constructeur
- * (8).
- *
+ * Health-check et redécouverte active des identifiants Ticketmaster
+ * suspects, et vérification de cohérence nom/artiste — extrait de
+ * {@link ReconciliationNocturneService}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -59,19 +53,10 @@ public final class HealthCheckArtistesTM {
   }
 
   /**
-   * Vérifie que le nom retourné par TM pour chaque attractionId lié correspond toujours à l'artiste
-   * suivi — contrôle distinct du health-check de vivacité ({@link #verifierVivacite}), qui ne
-   * détecte qu'un identifiant mort (HTTP 404), jamais un identifiant vivant mais rattaché à la
-   * mauvaise entité (tribute, homonyme). S'applique à <strong>tous</strong> les artistes liés TM,
-   * pas seulement les {@code suspect_depuis} : un tribute/homonyme a des événements à venir, il ne
-   * déclenche donc jamais le compteur passif {@code nb_zero_consecutifs}.
-   *
-   * <p>La comparaison passe par {@link CorrespondanceArtiste#estDoublonArtiste} (même algorithme
-   * flou que la réconciliation) plutôt qu'une égalité stricte post-normalisation — un écart
-   * purement cosmétique (espace, article) n'est jamais signalé. Un écart réel (nom de scène) n'est
-   * resignalé que si le nom TM diffère de {@code nom_tm_ignore}, la dernière valeur explicitement
-   * acceptée par un admin.
-   *
+   * Vérifie que le nom retourné par TM pour chaque attractionId lié
+   * correspond toujours à l'artiste suivi (détail : CLAUDE.md,
+   * Santé/référentiel admin) — distinct du health-check de vivacité
+   * ({@link #verifierVivacite}, HTTP 404 seulement).
    * @return nombre d'incohérences détectées
    */
   /* package-private : appelé par ReconciliationNocturneService (même
@@ -115,12 +100,10 @@ public final class HealthCheckArtistesTM {
   }
 
   /**
-   * Pré-accepte automatiquement un nom TM incohérent qui correspond en réalité à un alias Wikidata
-   * déjà connu de l'artiste (nom de scène alternatif, ex. « -M- » pour Matthieu Chédid) — même
-   * effet que {@code ReferentielArtistesService.ignorerIntervention}, sans attendre une première
-   * validation manuelle admin puisque Wikidata fait déjà autorité sur cet alias.
-   *
-   * @return {@code true} si le nom a été pré-accepté (aucun signalement à faire)
+   * Pré-accepte automatiquement un nom TM incohérent correspondant à
+   * un alias Wikidata déjà connu (détail : CLAUDE.md, Santé/
+   * référentiel admin).
+   * @return {@code true} si le nom a été pré-accepté
    */
   private boolean preAccepterSiAliasWikidataConnu(
       final UUID artisteId, final String nomAttraction) {
@@ -162,14 +145,11 @@ public final class HealthCheckArtistesTM {
   }
 
   /**
-   * Marque l'artiste comme nécessitant une intervention et journalise l'incohérence.
-   *
-   * <p>Le WARN n'est journalisé qu'à la première détection ({@code dejaSignale} faux) — un état
-   * déjà connu et stable (le flag reste posé tant qu'aucun fetch positif cohérent ou résolution
-   * manuelle ne l'efface) ne doit pas générer indéfiniment le même WARN à chaque cycle nocturne.
-   * {@code nom_tm_incoherent} est en revanche toujours rafraîchi, y compris quand le flag était
-   * déjà posé — {@code ignorerIntervention} (module web) doit pouvoir mémoriser le nom TM *courant*
-   * comme accepté, pas une valeur obsolète d'une nuit précédente.
+   * Marque l'artiste comme nécessitant une intervention et journalise —
+   * WARN seulement à la première détection ({@code dejaSignale} faux),
+   * mais {@code nom_tm_incoherent} toujours rafraîchi (pour que {@code
+   * ignorerIntervention} mémorise le nom TM courant, pas une valeur
+   * obsolète).
    */
   private void signalerNomIncoherent(
       final UUID artisteId,

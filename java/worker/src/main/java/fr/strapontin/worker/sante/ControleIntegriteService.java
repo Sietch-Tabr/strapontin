@@ -15,15 +15,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Contrôles d'intégrité généralistes du référentiel, indépendants de tout mécanisme de
- * dédoublonnage ou d'enrichissement spécifique — journalisation seule via {@link
- * SignalementMatchingService}, jamais de correction automatique.
- *
- * <p>Quatre invariants : cycles {@code salle_parent_id}, cohérence {@code salles.dept} vs le
- * département majoritaire des événements rattachés, événements orphelins anciens (avant la purge à
- * 30 jours de {@code WorkerPurgeService}), et {@code artiste_sources}/{@code salle_sources}
- * référençant une entité sans aucun événement associé.
- *
+ * Contrôles d'intégrité généralistes du référentiel, journalisation
+ * seule, jamais de correction automatique (détail : CLAUDE.md,
+ * Modèle événement canonique).
  * @since 2.9.0
  * @author Kwaite
  */

@@ -15,20 +15,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Suivi de santé des identifiants externes (phase 1).
- *
- * <p>Chaque fetch (salle ou artiste) enregistre son résultat : 0 résultat incrémente le compteur
- * d'échecs consécutifs, un résultat positif le remet à zéro. Au 3e échec consécutif (~6h à la
- * cadence 11 fetch/jour), l'identifiant devient "suspect" et sera traité par {@link
- * ReconciliationNocturneService} au prochain cycle nocturne.
- *
- * <p>Ce compteur passif reste volontairement générique aux deux tables, mais génère trop de faux
- * positifs pour être exposé tel quel côté statut admin artistes (65% de faux positifs observés) :
- * {@code artiste_sources.necessite_intervention_le}, posée uniquement par {@link
- * ReconciliationNocturneService} en cas d'échec confirmé de la vérification active, fait désormais
- * foi pour le statut affiché. Un fetch de nouveau positif sur un artiste TM efface cette colonne —
- * la résolution est donc naturelle, sans attendre le prochain cycle nocturne.
- *
+ * Suivi passif de santé des identifiants externes (phase 1) — compteur
+ * générique salle/artiste, suspect au 3e échec consécutif (détail :
+ * CLAUDE.md, Santé/référentiel admin).
  * @since 2.6.0
  * @author Kwaite
  */
@@ -64,10 +53,9 @@ public class SuiviSanteSourcesService {
   }
 
   /**
-   * Enregistre le résultat d'un fetch pour une salle identifiée par son identifiant préfixé (ex.
-   * {@code "ticketmaster:rZFSnyZdFvA"}, {@code "tm:rZFSnyZdFvA"}, {@code "digitick:slug"}).
-   *
-   * @param identifiantPrefixe identifiant préfixé {@code source:identifiant_externe}
+   * Enregistre le résultat d'un fetch salle (identifiant préfixé, ex.
+   * {@code "tm:rZFSnyZdFvA"}, {@code "digitick:slug"}).
+   * @param identifiantPrefixe identifiant préfixé {@code source:id_externe}
    * @param nbResultats nombre de concerts retournés par ce fetch
    */
   public void enregistrerResultatSalle(final String identifiantPrefixe, final int nbResultats) {
@@ -81,12 +69,9 @@ public class SuiviSanteSourcesService {
   }
 
   /**
-   * Enregistre le résultat d'un fetch TM par lot d'artistes : pour chaque attractionId du lot,
-   * détermine s'il a produit au moins un concert en cherchant sa présence dans {@link
-   * ConcertBrut#artisteSourceId()} des résultats retournés (TM ne renvoie pas de compte par-artiste
-   * dans un fetch groupé).
-   *
-   * @param attractionIds identifiants TM (bruts, sans préfixe) du lot envoyé à TM
+   * Enregistre le résultat d'un fetch TM par lot d'artistes (détail :
+   * CLAUDE.md, Santé/référentiel admin).
+   * @param attractionIds identifiants TM (bruts, sans préfixe) du lot
    * @param concertsLot concerts retournés par ce lot
    */
   public void enregistrerResultatArtistesLot(
@@ -143,15 +128,11 @@ public class SuiviSanteSourcesService {
   }
 
   /**
-   * N'autorise l'effacement de {@code necessite_intervention_le} que si le nom TM revérifié
-   * correspond toujours à l'artiste suivi — un fetch positif seul (au moins un concert renvoyé pour
-   * cet {@code identifiant_externe}) ne suffit pas à confirmer l'identité : un tribute/homonyme mal
-   * rattaché peut se remettre à programmer des concerts sans que le mauvais rapprochement soit
-   * corrigé. N'appelle l'API TM (coût/quota) que si le flag est réellement posé — sinon rien à
-   * revérifier, comportement inchangé.
-   *
+   * N'autorise l'effacement de necessite_intervention_le que si le
+   * nom TM revérifié reste cohérent (détail : CLAUDE.md,
+   * Santé/référentiel admin).
    * @param source source de l'{@code artiste_sources} concerné
-   * @param identifiant identifiant externe (TM : attractionId brut, sans préfixe)
+   * @param identifiant identifiant externe (TM : attractionId brut)
    * @return {@code true} si l'effacement peut avoir lieu
    */
   private boolean peutEffacerIntervention(final String source, final String identifiant) {
