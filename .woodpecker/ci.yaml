@@ -41,9 +41,13 @@ steps:
       - event: push
         branch: main
 
+  # Sérialisé après build-front (pas en parallèle) : les deux steps exécutent npm ci
+  # dans le même workspace partagé de la pipeline (front/node_modules) — en parallèle,
+  # deux npm ci concurrents sur le même répertoire produisent un ENOTEMPTY sur rmdir
+  # (constaté en prod CI, v2.9.1).
   - name: lint-front
     image: node:26-alpine
-    depends_on: [test-front]
+    depends_on: [build-front]
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
