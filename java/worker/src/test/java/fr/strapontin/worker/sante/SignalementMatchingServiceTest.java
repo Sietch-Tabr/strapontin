@@ -17,10 +17,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires pour {@link SignalementMatchingService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SignalementMatchingService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SignalementMatchingServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -34,7 +36,7 @@ class SignalementMatchingServiceTest {
 
   @Test
   void signaler_nominal_insereEnBase() {
-    UUID entiteId = UUID.randomUUID();
+    final UUID entiteId = UUID.randomUUID();
 
     service.signaler(
         "collision_wikidata_artiste", "artiste", entiteId, "haute", Map.of("wikidataId", "Q1"));
@@ -50,7 +52,7 @@ class SignalementMatchingServiceTest {
 
   @Test
   void signaler_detailsNull_neLevePasException() {
-    UUID entiteId = UUID.randomUUID();
+    final UUID entiteId = UUID.randomUUID();
 
     service.signaler("wikidata_ambiguite", "artiste", entiteId, "basse", null);
 

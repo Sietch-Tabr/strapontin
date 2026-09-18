@@ -19,10 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-/// Tests unitaires pour {@link ClientController} (plafonnement du nombre de clés meta).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ClientController} (plafonnement du nombre de clés meta).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class ClientControllerTest {
 
   private LogAdminService logAdminService;
@@ -38,14 +40,14 @@ class ClientControllerTest {
 
   @Test
   void signalerErreur_messageBlanc_retourne400() {
-    var reponse = controller.signalerErreur(Map.of("message", "  "), request);
+    final var reponse = controller.signalerErreur(Map.of("message", "  "), request);
 
     assertEquals(400, reponse.getStatusCode().value());
   }
 
   @Test
   void signalerErreur_messageValide_retourne201EtLogue() {
-    var reponse = controller.signalerErreur(Map.of("message", "erreur JS"), request);
+    final var reponse = controller.signalerErreur(Map.of("message", "erreur JS"), request);
 
     assertEquals(201, reponse.getStatusCode().value());
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), anyMap());
@@ -54,7 +56,7 @@ class ClientControllerTest {
   @Test
   @SuppressWarnings("unchecked")
   void signalerErreur_plusDeVingtClesMeta_neConserveQueLePlafond() {
-    Map<String, Object> corps = new HashMap<>();
+    final Map<String, Object> corps = new HashMap<>();
     corps.put("message", "erreur JS");
     for (int i = 0; i < 50; i++) {
       corps.put("cle" + i, "valeur" + i);
@@ -62,7 +64,7 @@ class ClientControllerTest {
 
     controller.signalerErreur(corps, request);
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), captor.capture());
     assertTrue(captor.getValue().size() <= 20);
   }
@@ -72,13 +74,13 @@ class ClientControllerTest {
   @Test
   @SuppressWarnings("unchecked")
   void signalerErreur_cleMetaTropLongue_estTronquee() {
-    Map<String, Object> corps = new HashMap<>();
+    final Map<String, Object> corps = new HashMap<>();
     corps.put("message", "erreur JS");
     corps.put("cleArbitraire", "x".repeat(10_000));
 
     controller.signalerErreur(corps, request);
 
-    ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), captor.capture());
     assertEquals(500, ((String) captor.getValue().get("cleArbitraire")).length());
   }

@@ -13,14 +13,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link SessionController}.
-///
-/// <p>Depuis, le COUNT SQL est délégué à {@link ParametresService} (extrait vers
-/// {@code UtilisateurRepository}) — ce contrôleur redevient HTTP pur, conforme au pattern
-/// Controller → Service → Repository.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SessionController}.
+ *
+ * <p>Depuis, le COUNT SQL est délégué à {@link ParametresService} (extrait vers
+ * {@code UtilisateurRepository}) — ce contrôleur redevient HTTP pur, conforme au pattern
+ * Controller → Service → Repository.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class SessionControllerTest {
 
   private ParametresService parametresService;
@@ -34,7 +36,7 @@ class SessionControllerTest {
 
   @Test
   void session_authNull_retourneDtoAnonyme() {
-    SessionController.SessionDto dto = controller.session(null);
+    final SessionController.SessionDto dto = controller.session(null);
 
     assertEquals("user", dto.role());
     assertEquals(0, dto.nbNouveau());
@@ -42,10 +44,10 @@ class SessionControllerTest {
 
   @Test
   void session_nonAuthentifie_retourneDtoAnonyme() {
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(false);
 
-    SessionController.SessionDto dto = controller.session(auth);
+    final SessionController.SessionDto dto = controller.session(auth);
 
     assertEquals("user", dto.role());
     assertEquals(0, dto.nbNouveau());
@@ -53,11 +55,11 @@ class SessionControllerTest {
 
   @Test
   void session_principalPasUtilisateurDetails_retourneDtoAnonyme() {
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn("anonymousUser");
 
-    SessionController.SessionDto dto = controller.session(auth);
+    final SessionController.SessionDto dto = controller.session(auth);
 
     assertEquals("user", dto.role());
     assertEquals(0, dto.nbNouveau());
@@ -65,14 +67,14 @@ class SessionControllerTest {
 
   @Test
   void session_utilisateurAuthentifie_retourneRoleEtNbNouveauCalcule() {
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "admin", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(ud);
     when(parametresService.compterNouveauxMatchesArtistes("user-1")).thenReturn(5);
 
-    SessionController.SessionDto dto = controller.session(auth);
+    final SessionController.SessionDto dto = controller.session(auth);
 
     assertEquals("admin", dto.role());
     assertEquals(5, dto.nbNouveau());

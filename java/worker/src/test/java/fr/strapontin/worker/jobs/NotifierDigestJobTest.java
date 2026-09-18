@@ -15,8 +15,9 @@ class NotifierDigestJobTest {
 
   @Test
   void executeInternal_delegueANotificationDigestServiceAvecCycleQuotidien() {
-    NotificationDigestService notificationDigestService = mock(NotificationDigestService.class);
-    NotifierDigestJob job = new NotifierDigestJob();
+    final NotificationDigestService notificationDigestService =
+        mock(NotificationDigestService.class);
+    final NotifierDigestJob job = new NotifierDigestJob();
     job.setNotificationDigestService(notificationDigestService);
 
     job.executeInternal(mock(JobExecutionContext.class));

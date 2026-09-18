@@ -20,23 +20,33 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/// Configuration générale de l'application web.
+/**
+ * Configuration générale de l'application web.
+ */
 @Configuration
 public class WebConfiguration implements WebMvcConfigurer {
 
   private final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor;
 
-  /// @param appareilEnregistrementInterceptor intercepteur d'enregistrement d'appareil
-  public WebConfiguration(AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
+  /**
+   * @param appareilEnregistrementInterceptor intercepteur d'enregistrement
+   *     d'appareil
+   */
+  public WebConfiguration(
+      final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
     this.appareilEnregistrementInterceptor = appareilEnregistrementInterceptor;
   }
 
   @Override
-  public void addInterceptors(InterceptorRegistry registry) {
+  public void addInterceptors(final InterceptorRegistry registry) {
     registry.addInterceptor(appareilEnregistrementInterceptor).addPathPatterns("/api/**");
   }
 
-  /// ObjectMapper partagé : dates ISO-8601, module java.time.
+  /**
+   * ObjectMapper partagé : dates ISO-8601, module java.time.
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper()
@@ -45,24 +55,34 @@ public class WebConfiguration implements WebMvcConfigurer {
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
   }
 
-  /// RestClient partagé pour les appels HTTP vers des API externes (ex. Ticketmaster).
-  ///
-  /// <p>Timeout connexion : 5 s — timeout lecture : 10 s.
+  /**
+   * RestClient partagé pour les appels HTTP vers des API externes (ex.
+   * Ticketmaster).
+   *
+   * <p>Timeout connexion : 5 s — timeout lecture : 10 s.
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
   RestClient restClient() {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(Duration.ofSeconds(5));
     factory.setReadTimeout(Duration.ofSeconds(10));
     return RestClient.builder().requestFactory(factory).build();
   }
 
-  /// Cadenceur des appels Ticketmaster partagé avec le worker (fetch programmé) — un verrou en
-  /// mémoire ne coordonnerait pas deux processus indépendants, voir {@link CadenceurAppelsPartage}.
-  ///
-  /// @param jdbc accès à la base partagée entre web et worker
-  /// @return cadenceur adossé à Postgres
+  /**
+   * Cadenceur des appels Ticketmaster partagé avec le worker (fetch programmé)
+   * — un verrou en mémoire ne coordonnerait pas deux processus indépendants,
+   * voir {@link CadenceurAppelsPartage} .
+   *
+   * @param jdbc accès à la base partagée entre web et worker
+   * @return cadenceur adossé à Postgres
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
   @Bean
-  CadenceurAppels cadenceurTicketmaster(NamedParameterJdbcTemplate jdbc) {
+  CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
   }

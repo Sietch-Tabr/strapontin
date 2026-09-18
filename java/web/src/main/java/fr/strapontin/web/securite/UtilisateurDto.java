@@ -4,11 +4,14 @@
  */
 package fr.strapontin.web.securite;
 
-/// Représentation publique d'un utilisateur authentifié.
-///
-/// @param totpRequis {@code true} si un challenge TOTP est en attente pour cette session
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Représentation publique d'un utilisateur authentifié.
+ *
+ * @param totpRequis {@code true} si un challenge TOTP est en attente pour cette
+ *     session
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record UtilisateurDto(
     String id,
     String identifiant,

@@ -7,52 +7,64 @@ package fr.strapontin.core;
 import java.util.Map;
 import java.util.Optional;
 
-/// Bilan agrégé d'appels (HTTP ou envois) et d'échecs pour une source ou un canal de notification
-/// depuis le dernier prélèvement, avec logique d'escalade partagée vers `logs_admin` — remplace les
-/// records de bilan précédemment dupliqués entre `TicketmasterSource` et `EventimSource`.
-///
-/// @param appels nombre total d'appels tentés depuis le dernier prélèvement
-/// @param erreursHttp nombre d'appels en échec depuis le dernier prélèvement
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Bilan agrégé d'appels et d'échecs depuis le dernier
+ * prélèvement (détail : CLAUDE.md, Services notables).
+ * @param appels nombre total d'appels tentés
+ * @param erreursHttp nombre d'appels en échec
+ * @since 2.7.0
+ * @author Kwaite
+ */
 public record BilanFetch(int appels, int erreursHttp) {
 
-  /// Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100% déclenche une escalade en
-  /// niveau {@code error} plutôt qu'un simple {@code warn} — évite une fausse alerte sur un cycle
-  /// mono-appel victime d'un aléa réseau isolé.
+  /**
+   * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100%
+   * déclenche une escalade en niveau {@code error} plutôt qu'un simple
+   * {@code warn} — évite une fausse alerte sur un cycle mono-appel victime d'un
+   * aléa réseau isolé.
+   */
   public static final int SEUIL_APPELS_MIN_ALERTE_DEFAUT = 3;
 
-  /// Entrée à insérer dans `logs_admin` pour ce bilan.
-  ///
-  /// @param niveau {@code "warn"} ou {@code "error"}
-  /// @param message message lisible
-  /// @param meta métadonnées structurées
+  /**
+   * Entrée à insérer dans {@code logs_admin} pour ce bilan.
+   *
+   * @param niveau {@code "warn"} ou {@code "error"}
+   * @param message message lisible
+   * @param meta métadonnées structurées
+   */
   public record EntreeLog(String niveau, String message, Map<String, Object> meta) {}
 
-  /// Indique si ce bilan représente une panne totale : 100% d'échec sur au moins {@code
-  /// seuilAppelsMin} appels.
-  ///
-  /// @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade
-  /// @return {@code true} si panne totale
-  public boolean panneTotale(int seuilAppelsMin) {
+  /**
+   * Indique si ce bilan représente une panne totale : 100% d'échec sur au moins
+   * {@code seuilAppelsMin} appels.
+   *
+   * @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade
+   * @return {@code true} si panne totale
+   */
+  public boolean panneTotale(final int seuilAppelsMin) {
     return appels >= seuilAppelsMin && erreursHttp == appels;
   }
 
-  /// Évalue ce bilan et retourne l'entrée à journaliser dans `logs_admin`, si quelque chose est à
-  /// signaler (panne totale ou échec partiel). Vide si aucun appel n'a été tenté ou si tous ont
-  /// réussi.
-  ///
-  /// @param typeJob type de job ou de cycle courant (ex. {@code "fetch:region"})
-  /// @param nomSource nom affiché de la source ou du canal (ex. {@code "Digitick"})
-  /// @param seuilAppelsMin nombre minimal d'appels pour déclencher l'escalade en {@code error}
-  /// @return entrée à journaliser, vide si rien à signaler
-  public Optional<EntreeLog> evaluer(String typeJob, String nomSource, int seuilAppelsMin) {
-    if (appels == 0) return Optional.empty();
-    boolean panneTotale = panneTotale(seuilAppelsMin);
-    if (!panneTotale && erreursHttp == 0) return Optional.empty();
+  /**
+   * Évalue ce bilan, entrée à journaliser si signalable (détail :
+   * CLAUDE.md, Services notables).
+   * @param typeJob type de job ou de cycle courant
+   * @param nomSource nom affiché de la source ou du canal
+   * @param seuilAppelsMin appels min. pour escalader en error
+   * @return entrée à journaliser, vide si rien à signaler
+   */
+  public Optional<EntreeLog> evaluer(
+      final String typeJob, final String nomSource, final int seuilAppelsMin) {
+    if (appels == 0) {
+      return Optional.empty();
+    }
+    final boolean panneTotale = panneTotale(seuilAppelsMin);
+    if (!panneTotale && erreursHttp == 0) {
+      return Optional.empty();
+    }
 
-    String niveau = panneTotale ? "error" : "warn";
-    String message =
+    final String niveau = panneTotale ? "error" : "warn";
+    final String message =
         typeJob
             + " — "
             + nomSource
@@ -63,7 +75,7 @@ public record BilanFetch(int appels, int erreursHttp) {
             + "/"
             + appels
             + " appels HTTP)";
-    Map<String, Object> meta = Map.of("appels", appels, "erreursHttp", erreursHttp);
+    final Map<String, Object> meta = Map.of("appels", appels, "erreursHttp", erreursHttp);
     return Optional.of(new EntreeLog(niveau, message, meta));
   }
 }

@@ -21,10 +21,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-/// Tests unitaires pour {@link AppareilEnregistrementInterceptor}.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AppareilEnregistrementInterceptor}.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 class AppareilEnregistrementInterceptorTest {
 
   private AppareilsService appareilsService;
@@ -83,9 +85,10 @@ class AppareilEnregistrementInterceptorTest {
     when(session.getId()).thenReturn("sess-1");
     when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
 
-    UtilisateurDetails details =
+    final UtilisateurDetails details =
         new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false);
-    Authentication auth = UsernamePasswordAuthenticationToken.authenticated(details, null, null);
+    final Authentication auth =
+        UsernamePasswordAuthenticationToken.authenticated(details, null, null);
     SecurityContextHolder.getContext().setAuthentication(auth);
 
     assertTrue(interceptor.preHandle(request, response, new Object()));

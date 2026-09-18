@@ -12,18 +12,12 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : fetch périodique de toutes les salles ayant des sources configurées.
-///
-/// <p>Alimente le même pipeline que [FetchSalleJob] mais boucle sur toutes les salles de {@code
-/// salle_sources} plutôt que d'attendre un déclenchement manuel. Exécuté au même rythme adaptatif
-/// que {@code fetch:region}.
-///
-/// <p>Un retry ciblé ({@code RetryLotsService}) transmet via la {@code JobDataMap} du trigger la
-/// liste (virgule-séparée) des {@code salles.id} en échec du cycle précédent, au format {@link
-/// #CLE_IDS_RETRY} — sinon le cycle complet s'exécute normalement.
-///
-/// @since 2.4.0
-/// @author Kwaite
+/**
+ * Job Quartz : fetch périodique de toutes les salles avec
+ * sources configurées (détail : CLAUDE.md, Jobs background).
+ * @since 2.4.0
+ * @author Kwaite
+ */
 @DisallowConcurrentExecution
 public class FetchSallesAllJob extends QuartzJobBean {
 
@@ -31,19 +25,27 @@ public class FetchSallesAllJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
+  /** Constructeur par défaut, instancié par Spring. */
+  public FetchSallesAllJob() {
+    super();
+  }
+
+  /**
+   * @param workerFetchService service de fetch injecté par Spring
+   */
   @Autowired
-  public void setWorkerFetchService(WorkerFetchService workerFetchService) {
+  public void setWorkerFetchService(final WorkerFetchService workerFetchService) {
     this.workerFetchService = workerFetchService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
-    String idsRetry = context.getMergedJobDataMap().getString(CLE_IDS_RETRY);
+  protected void executeInternal(final JobExecutionContext context) {
+    final String idsRetry = context.getMergedJobDataMap().getString(CLE_IDS_RETRY);
     if (idsRetry == null || idsRetry.isBlank()) {
       workerFetchService.executerFetchSallesAll();
       return;
     }
-    List<String> ids = Arrays.asList(idsRetry.split(","));
+    final List<String> ids = Arrays.asList(idsRetry.split(","));
     workerFetchService.executerFetchSallesAll(ids);
   }
 }

@@ -22,10 +22,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/// Tests unitaires de {@link GestionQuotaResend} (suite de l'incident).
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link GestionQuotaResend} (suite de l'incident).
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 class GestionQuotaResendTest {
 
   private JdbcTemplate jdbc;
@@ -45,8 +47,8 @@ class GestionQuotaResendTest {
     gestionQuotaResend = new GestionQuotaResend(jdbc, new ObjectMapper());
   }
 
-  private void enBase(CompteurEnvoisResend compteur) throws Exception {
-    String json = new ObjectMapper().writeValueAsString(compteur);
+  private void enBase(final CompteurEnvoisResend compteur) throws Exception {
+    final String json = new ObjectMapper().writeValueAsString(compteur);
     when(jdbc.queryForObject(anyString(), eq(String.class), eq("RESEND_QUOTA_JSON")))
         .thenReturn(json);
   }
@@ -58,7 +60,7 @@ class GestionQuotaResendTest {
     when(jdbc.queryForObject(anyString(), eq(String.class), eq("RESEND_QUOTA_JSON")))
         .thenThrow(new EmptyResultDataAccessException(1));
 
-    boolean autorise = gestionQuotaResend.reserverEnvoi();
+    final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertTrue(autorise);
     verify(jdbc).update(anyString(), eq("RESEND_QUOTA_JSON"), anyString(), anyString());
@@ -68,7 +70,7 @@ class GestionQuotaResendTest {
   void reserverEnvoi_sousLaLimite_autoriseEtIncremente() throws Exception {
     enBase(new CompteurEnvoisResend(jourCourant(), 5, moisCourant(), 50, false, false));
 
-    boolean autorise = gestionQuotaResend.reserverEnvoi();
+    final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertTrue(autorise);
   }
@@ -79,7 +81,7 @@ class GestionQuotaResendTest {
         new CompteurEnvoisResend(
             jourCourant(), GestionQuotaResend.LIMITE_JOUR, moisCourant(), 50, false, false));
 
-    boolean autorise = gestionQuotaResend.reserverEnvoi();
+    final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertFalse(autorise);
   }
@@ -90,7 +92,7 @@ class GestionQuotaResendTest {
         new CompteurEnvoisResend(
             jourCourant(), 5, moisCourant(), GestionQuotaResend.LIMITE_MOIS, false, false));
 
-    boolean autorise = gestionQuotaResend.reserverEnvoi();
+    final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertFalse(autorise);
   }
@@ -99,7 +101,7 @@ class GestionQuotaResendTest {
   void reserverEnvoi_jourChange_reinitialiseLeCompteurJourSansToucherAuMois() throws Exception {
     enBase(new CompteurEnvoisResend("2020-01-01", 99, moisCourant(), 500, true, false));
 
-    boolean autorise = gestionQuotaResend.reserverEnvoi();
+    final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertTrue(autorise, "un ancien jour épuisé ne doit pas bloquer le jour courant");
   }
@@ -108,7 +110,7 @@ class GestionQuotaResendTest {
   void reserverEnvoi_moisChange_reinitialiseLeCompteurMoisSansToucherAuJour() throws Exception {
     enBase(new CompteurEnvoisResend(jourCourant(), 5, "2020-01", 2999, false, true));
 
-    boolean autorise = gestionQuotaResend.reserverEnvoi();
+    final boolean autorise = gestionQuotaResend.reserverEnvoi();
 
     assertTrue(autorise);
   }
@@ -117,7 +119,7 @@ class GestionQuotaResendTest {
 
   @Test
   void seuilFranchiNonSignale_sousLeSeuil_retourneFalse() {
-    CompteurEnvoisResend compteur =
+    final CompteurEnvoisResend compteur =
         new CompteurEnvoisResend(jourCourant(), 10, moisCourant(), 100, false, false);
 
     assertFalse(gestionQuotaResend.seuilFranchiNonSignale(compteur));
@@ -125,7 +127,7 @@ class GestionQuotaResendTest {
 
   @Test
   void seuilFranchiNonSignale_seuilJourFranchiNonSignale_retourneTrue() {
-    CompteurEnvoisResend compteur =
+    final CompteurEnvoisResend compteur =
         new CompteurEnvoisResend(jourCourant(), 85, moisCourant(), 100, false, false);
 
     assertTrue(gestionQuotaResend.seuilFranchiNonSignale(compteur));
@@ -133,7 +135,7 @@ class GestionQuotaResendTest {
 
   @Test
   void seuilFranchiNonSignale_seuilJourFranchiDejaSignale_retourneFalse() {
-    CompteurEnvoisResend compteur =
+    final CompteurEnvoisResend compteur =
         new CompteurEnvoisResend(jourCourant(), 85, moisCourant(), 100, true, false);
 
     assertFalse(gestionQuotaResend.seuilFranchiNonSignale(compteur));
@@ -141,7 +143,7 @@ class GestionQuotaResendTest {
 
   @Test
   void seuilFranchiNonSignale_seuilMoisFranchiNonSignale_retourneTrue() {
-    CompteurEnvoisResend compteur =
+    final CompteurEnvoisResend compteur =
         new CompteurEnvoisResend(jourCourant(), 10, moisCourant(), 2500, false, false);
 
     assertTrue(gestionQuotaResend.seuilFranchiNonSignale(compteur));
@@ -149,15 +151,15 @@ class GestionQuotaResendTest {
 
   @Test
   void marquerAlerteEnvoyee_seuilJourFranchi_persisteAlerteJourEnvoyee() throws Exception {
-    CompteurEnvoisResend compteur =
+    final CompteurEnvoisResend compteur =
         new CompteurEnvoisResend(jourCourant(), 85, moisCourant(), 100, false, false);
 
     gestionQuotaResend.marquerAlerteEnvoyee(compteur);
 
-    org.mockito.ArgumentCaptor<String> jsonCaptor =
+    final org.mockito.ArgumentCaptor<String> jsonCaptor =
         org.mockito.ArgumentCaptor.forClass(String.class);
     verify(jdbc).update(anyString(), eq("RESEND_QUOTA_JSON"), jsonCaptor.capture(), anyString());
-    CompteurEnvoisResend persiste =
+    final CompteurEnvoisResend persiste =
         new ObjectMapper().readValue(jsonCaptor.getValue(), CompteurEnvoisResend.class);
     assertTrue(persiste.alerteJourEnvoyee());
     assertFalse(persiste.alerteMoisEnvoyee());
@@ -168,7 +170,7 @@ class GestionQuotaResendTest {
     when(jdbc.queryForObject(anyString(), eq(String.class), eq("RESEND_QUOTA_JSON")))
         .thenReturn("{pas-du-json-valide");
 
-    CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
+    final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
 
     assertEquals(0, compteur.envoyesJour());
     assertEquals(0, compteur.envoyesMois());

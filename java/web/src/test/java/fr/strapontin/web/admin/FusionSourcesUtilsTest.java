@@ -10,15 +10,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link FusionSourcesUtils}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link FusionSourcesUtils}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class FusionSourcesUtilsTest {
 
   @Test
   void laSourceEstPlusSaine_statutsIdentiquesEgaliteSante_gardeLaSource() {
-    Map<String, Object> conflit =
+    final Map<String, Object> conflit =
         Map.of(
             "sante_source", 2, "sante_cible", 2, "suspect_source", false, "suspect_cible", false);
 
@@ -27,7 +29,7 @@ class FusionSourcesUtilsTest {
 
   @Test
   void laSourceEstPlusSaine_sourceSuspecteCibleNonSuspecte_gardeLaCible() {
-    Map<String, Object> conflit =
+    final Map<String, Object> conflit =
         Map.of("sante_source", 0, "sante_cible", 3, "suspect_source", true, "suspect_cible", false);
 
     assertFalse(FusionSourcesUtils.laSourceEstPlusSaine(conflit));
@@ -35,7 +37,7 @@ class FusionSourcesUtilsTest {
 
   @Test
   void laSourceEstPlusSaine_statutsIdentiquesSourceMoinsEchecs_gardeLaSource() {
-    Map<String, Object> conflit =
+    final Map<String, Object> conflit =
         Map.of(
             "sante_source", 1, "sante_cible", 3, "suspect_source", false, "suspect_cible", false);
 

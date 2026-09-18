@@ -15,12 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de {@link CadenceurAppelsPartage} — vérifie la coordination via une vraie
-/// base Postgres, y compris entre deux instances distinctes simulant deux processus indépendants
-/// (web et worker) partageant la même clé.
-///
-/// @since 2.8.1
-/// @author Kwaite
+/**
+ * Tests d'intégration de {@link CadenceurAppelsPartage} — vérifie la coordination via une vraie
+ * base Postgres, y compris entre deux instances distinctes simulant deux processus indépendants
+ * (web et worker) partageant la même clé.
+ *
+ * @since 2.8.1
+ * @author Kwaite
+ */
 class CadenceurAppelsPartageIntegrationTest extends AbstractWorkerIntegrationTest {
 
   private static final String CLE_TEST = "cadenceur-test";
@@ -44,12 +46,12 @@ class CadenceurAppelsPartageIntegrationTest extends AbstractWorkerIntegrationTes
 
   @Test
   void attendre_deuxAppelsSuccessifs_respecteLeDelaiMinimalEntreLesDeux() {
-    CadenceurAppels cadenceur = new CadenceurAppelsPartage(jdbc, CLE_TEST, 200);
+    final CadenceurAppels cadenceur = new CadenceurAppelsPartage(jdbc, CLE_TEST, 200);
 
     cadenceur.attendre();
-    long debut = System.currentTimeMillis();
+    final long debut = System.currentTimeMillis();
     cadenceur.attendre();
-    long ecoule = System.currentTimeMillis() - debut;
+    final long ecoule = System.currentTimeMillis() - debut;
 
     assertTrue(ecoule >= 180, "écart observé=" + ecoule + "ms, attendu ~200ms");
   }
@@ -59,13 +61,13 @@ class CadenceurAppelsPartageIntegrationTest extends AbstractWorkerIntegrationTes
   // ne pouvant pas se coordonner en mémoire) que ce cadenceur existe pour résoudre.
   @Test
   void attendre_deuxInstancesDistinctesMemeCle_respectentLeDelaiMinimalEntreLesDeux() {
-    CadenceurAppels cadenceurA = new CadenceurAppelsPartage(jdbc, CLE_TEST, 200);
-    CadenceurAppels cadenceurB = new CadenceurAppelsPartage(jdbc, CLE_TEST, 200);
+    final CadenceurAppels cadenceurA = new CadenceurAppelsPartage(jdbc, CLE_TEST, 200);
+    final CadenceurAppels cadenceurB = new CadenceurAppelsPartage(jdbc, CLE_TEST, 200);
 
     cadenceurA.attendre();
-    long debut = System.currentTimeMillis();
+    final long debut = System.currentTimeMillis();
     cadenceurB.attendre();
-    long ecoule = System.currentTimeMillis() - debut;
+    final long ecoule = System.currentTimeMillis() - debut;
 
     assertTrue(ecoule >= 180, "écart observé=" + ecoule + "ms, attendu ~200ms");
   }
@@ -76,13 +78,13 @@ class CadenceurAppelsPartageIntegrationTest extends AbstractWorkerIntegrationTes
   @Test
   void attendre_appelsEspacesNaturellement_neBloquePasAuDelaDuNecessaire()
       throws InterruptedException {
-    CadenceurAppels cadenceur = new CadenceurAppelsPartage(jdbc, CLE_TEST, 50);
+    final CadenceurAppels cadenceur = new CadenceurAppelsPartage(jdbc, CLE_TEST, 50);
 
     cadenceur.attendre();
     Thread.sleep(300);
-    long debut = System.currentTimeMillis();
+    final long debut = System.currentTimeMillis();
     cadenceur.attendre();
-    long ecoule = System.currentTimeMillis() - debut;
+    final long ecoule = System.currentTimeMillis() - debut;
 
     assertTrue(
         ecoule < 150,

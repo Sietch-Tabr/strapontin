@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteNotifications}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteNotifications}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class RequeteNotificationsValidationTest {
 
   private static final Validator VALIDATOR =
@@ -24,7 +26,7 @@ class RequeteNotificationsValidationTest {
 
   @Test
   void frequenceNotifications_valeurFournie_estValide() {
-    Set<ConstraintViolation<RequeteNotifications>> violations =
+    final Set<ConstraintViolation<RequeteNotifications>> violations =
         VALIDATOR.validate(new RequeteNotifications("quotidien", true, true, false, false));
     assertTrue(violations.isEmpty());
   }
@@ -33,14 +35,14 @@ class RequeteNotificationsValidationTest {
   // sur un Set.of(...) immuable (UserConfigService) au lieu d'un 400 propre.
   @Test
   void frequenceNotifications_null_estRejete() {
-    Set<ConstraintViolation<RequeteNotifications>> violations =
+    final Set<ConstraintViolation<RequeteNotifications>> violations =
         VALIDATOR.validate(new RequeteNotifications(null, true, true, false, false));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void frequenceNotifications_vide_estRejete() {
-    Set<ConstraintViolation<RequeteNotifications>> violations =
+    final Set<ConstraintViolation<RequeteNotifications>> violations =
         VALIDATOR.validate(new RequeteNotifications("", true, true, false, false));
     assertFalse(violations.isEmpty());
   }

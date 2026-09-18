@@ -22,64 +22,72 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/// Endpoint d'import/export des préférences utilisateur en JSON.
-///
-/// <p>HTTP pur — délègue toute la logique à {@link PreferencesService}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Endpoint d'import/export des préférences utilisateur en JSON.
+ *
+ * <p>HTTP pur — délègue toute la logique à {@link PreferencesService}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/preferences")
 public class PreferencesController {
 
-  private static final Logger log = LoggerFactory.getLogger(PreferencesController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PreferencesController.class);
+  private static final int VERSION_EXPORT_SUPPORTEE = 1;
 
   private final PreferencesService preferencesService;
 
-  /// @param preferencesService service d'import/export des préférences
-  public PreferencesController(PreferencesService preferencesService) {
+  /**
+   * @param preferencesService service d'import/export des préférences
+   */
+  public PreferencesController(final PreferencesService preferencesService) {
     this.preferencesService = preferencesService;
   }
 
-  /// Importe les préférences depuis un fichier JSON exporté par Strapontin.
-  ///
-  /// @param fichier le fichier JSON (multipart)
-  /// @param mode {@code fusionner} ou {@code ecraser}
-  /// @param importerConfig remplacer la config utilisateur si vrai
-  /// @param auth contexte d'authentification
-  /// @return 200 avec stats si importé, 400 si format invalide, 422 si version inconnue
+  /**
+   * Importe les préférences depuis un fichier JSON exporté.
+   * @param fichier le fichier JSON (multipart)
+   * @param mode {@code fusionner} ou {@code ecraser}
+   * @param importerConfig remplacer la config utilisateur si vrai
+   * @param auth contexte d'authentification
+   * @return 200 avec stats, 400 si invalide, 422 si version inconnue
+   */
   @PostMapping(value = "/importer", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<Map<String, Object>> importer(
-      @RequestParam MultipartFile fichier,
-      @RequestParam(defaultValue = "fusionner") String mode,
-      @RequestParam(defaultValue = "false") boolean importerConfig,
-      Authentication auth) {
+      @RequestParam final MultipartFile fichier,
+      @RequestParam(defaultValue = "fusionner") final String mode,
+      @RequestParam(defaultValue = "false") final boolean importerConfig,
+      final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }
 
-    String contentType = fichier.getContentType();
-    if (contentType == null || !contentType.equals(MediaType.APPLICATION_JSON_VALUE)) {
+    final String contentType = fichier.getContentType();
+    if (contentType == null || !MediaType.APPLICATION_JSON_VALUE.equals(contentType)) {
       return erreur(400, "Le fichier doit être au format JSON.");
     }
 
-    ExportComplet export;
+    final ExportComplet export;
     try {
       export = preferencesService.deserialiserExport(fichier.getBytes());
     } catch (Exception e) {
-      log.warn("Échec de désérialisation d'un export de préférences", e);
+      LOG.warn("Échec de désérialisation d'un export de préférences", e);
       return erreur(400, "Le fichier doit être au format JSON.");
     }
 
-    if (export == null) return erreur(400, "Fichier invalide ou format non reconnu.");
-    if (export.version() != 1) {
+    if (export == null) {
+      return erreur(400, "Fichier invalide ou format non reconnu.");
+    }
+    if (export.version() != VERSION_EXPORT_SUPPORTEE) {
       return erreur(422, "Version de fichier non supportée : " + export.version() + ".");
     }
 
-    PreferencesService.ResultatImportComplet res =
+    final PreferencesService.ResultatImportComplet res =
         preferencesService.importer(ud.id(), export, "ecraser".equals(mode), importerConfig);
 
-    Map<String, Object> corps = new HashMap<>();
+    final Map<String, Object> corps = new HashMap<>();
     corps.put("importe", true);
     corps.put("artistes", res.artistes());
     corps.put("salles", res.salles());
@@ -87,16 +95,19 @@ public class PreferencesController {
     return ResponseEntity.ok(corps);
   }
 
-  /// Exporte les préférences de l'utilisateur courant (artistes, salles, config) en JSON.
-  ///
-  /// @param auth contexte d'authentification
-  /// @return JSON téléchargeable avec les préférences
+  /**
+   * Exporte les préférences de l'utilisateur courant (artistes, salles, config)
+   * en JSON.
+   *
+   * @param auth contexte d'authentification
+   * @return JSON téléchargeable avec les préférences
+   */
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<ExportComplet> exporter(Authentication auth) {
+  public ResponseEntity<ExportComplet> exporter(final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
       throw new IllegalStateException("Principal inattendu");
     }
-    ExportComplet export = preferencesService.exporter(ud.id());
+    final ExportComplet export = preferencesService.exporter(ud.id());
     return ResponseEntity.ok()
         .header(
             HttpHeaders.CONTENT_DISPOSITION,

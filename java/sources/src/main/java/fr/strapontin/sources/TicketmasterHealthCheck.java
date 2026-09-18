@@ -15,36 +15,45 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/// Vérification de vivacité et redécouverte active des identifiants Ticketmaster (salles et
-/// artistes) — extrait de {@link TicketmasterSource} pour séparer ce concern du fetch principal.
+/**
+ * Vérification de vivacité et redécouverte active des identifiants Ticketmaster
+ * (salles et artistes) — extrait de {@link TicketmasterSource} pour séparer ce
+ * concern du fetch principal.
+ */
 final class TicketmasterHealthCheck {
 
-  private static final Logger log = LoggerFactory.getLogger(TicketmasterHealthCheck.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TicketmasterHealthCheck.class);
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
   private static final String CLE_EMBEDDED = "_embedded";
+  private static final String PARAM_APIKEY = "apikey";
 
   private final String apiKey;
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
 
-  TicketmasterHealthCheck(String apiKey, RestClient restClient, CadenceurAppels cadenceur) {
+  /* package-private : instancié uniquement par TicketmasterSource (même
+   * package). */
+  TicketmasterHealthCheck(
+      final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
     this.apiKey = apiKey;
     this.restClient = restClient;
     this.cadenceur = cadenceur;
   }
 
-  StatutIdTM verifierVenue(String venueId) {
+  /* package-private : appelé par TicketmasterSource (même package). */
+  StatutIdTM verifierVenue(final String venueId) {
     return verifierRessource("/venues/" + venueId + ".json");
   }
 
-  StatutIdTM verifierAttraction(String attractionId) {
+  /* package-private : appelé par TicketmasterSource (même package). */
+  StatutIdTM verifierAttraction(final String attractionId) {
     return verifierRessource("/attractions/" + attractionId + ".json");
   }
 
-  private StatutIdTM verifierRessource(String chemin) {
-    String uri =
+  private StatutIdTM verifierRessource(final String chemin) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + chemin)
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
@@ -54,7 +63,7 @@ final class TicketmasterHealthCheck {
     } catch (HttpClientErrorException.NotFound e) {
       return StatutIdTM.MORT;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "verifierRessource TM échoué chemin={} : {}",
           chemin,
           TicketmasterSource.redigerApiKey(e.getMessage()));
@@ -63,18 +72,19 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
-  String recupererNomAttraction(String attractionId) {
-    String uri =
+  /* package-private : appelé par TicketmasterSource (même package). */
+  String recupererNomAttraction(final String attractionId) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "recupererNomAttraction TM échoué attractionId={} : {}",
           attractionId,
           TicketmasterSource.redigerApiKey(e.getMessage()));
@@ -83,29 +93,37 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
-  List<CandidatVenueTM> rechercherVenuesParNom(String nom) {
-    String uri =
+  /* package-private : appelé par TicketmasterSource (même package). */
+  List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
             .queryParam("keyword", nom)
             .queryParam("countryCode", "FR")
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return List.of();
-      var embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
-      var venues = embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
-      if (venues == null) return List.of();
-      List<CandidatVenueTM> resultat = new ArrayList<>();
-      for (var v : venues) {
-        Object id = v.get("id");
-        if (id != null) resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      if (data == null) {
+        return List.of();
+      }
+      final Map<String, Object> embedded = (Map<String, Object>) data.get(CLE_EMBEDDED);
+      final List<Map<String, Object>> venues =
+          embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+      if (venues == null) {
+        return List.of();
+      }
+      final List<CandidatVenueTM> resultat = new ArrayList<>();
+      for (final Map<String, Object> v : venues) {
+        final Object id = v.get("id");
+        if (id != null) {
+          resultat.add(new CandidatVenueTM((String) id, (String) v.get("name")));
+        }
       }
       return resultat;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "rechercherVenuesParNom TM échoué nom='{}' : {}",
           nom,
           TicketmasterSource.redigerApiKey(e.getMessage()));
@@ -114,22 +132,25 @@ final class TicketmasterHealthCheck {
   }
 
   @SuppressWarnings("unchecked")
-  int compterEventsVenue(String venueId) {
-    String uri =
+  /* package-private : appelé par TicketmasterSource (même package). */
+  int compterEventsVenue(final String venueId) {
+    final String uri =
         UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
             .queryParam("venueId", venueId)
             .queryParam("size", 1)
-            .queryParam("apikey", apiKey)
+            .queryParam(PARAM_APIKEY, apiKey)
             .build()
             .toUriString();
     cadenceur.attendre();
     try {
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return 0;
-      var page = (Map<String, Object>) data.get("page");
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      if (data == null) {
+        return 0;
+      }
+      final Map<String, Object> page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
-      log.warn(
+      LOG.warn(
           "compterEventsVenue TM échoué venueId={} : {}",
           venueId,
           TicketmasterSource.redigerApiKey(e.getMessage()));

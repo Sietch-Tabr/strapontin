@@ -23,10 +23,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link ResendWebhooksAdminService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ResendWebhooksAdminService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ResendWebhooksAdminServiceTest {
 
   private static final String ENDPOINT = "https://exemple.fr/api/webhooks/resend";
@@ -51,14 +53,14 @@ class ResendWebhooksAdminServiceTest {
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.of("https://exemple.fr"));
   }
 
-  private ListWebhooksResponseSuccess listeWebhooks(String webhookId, String endpoint)
+  private ListWebhooksResponseSuccess listeWebhooks(final String webhookId, final String endpoint)
       throws Exception {
-    String json =
+    final String json =
         """
-        {"object":"list","has_more":false,"data":[
-          {"id":"%s","created_at":"2026-09-01T00:00:00Z","status":"enabled","endpoint":"%s","events":["email.bounced"]}
-        ]}
-        """
+            {"object":"list","has_more":false,"data":[
+              {"id":"%s","created_at":"2026-09-01T00:00:00Z","status":"enabled","endpoint":"%s","events":["email.bounced"]}
+            ]}
+            """
             .formatted(webhookId, endpoint);
     return MAPPER.readValue(json, ListWebhooksResponseSuccess.class);
   }
@@ -90,16 +92,16 @@ class ResendWebhooksAdminServiceTest {
   void listerEvenements_webhookTrouve_retourneLesEvenements() throws Exception {
     stubConfigComplete();
     when(webhooks.list()).thenReturn(listeWebhooks("wh_1", ENDPOINT));
-    String jsonEvenements =
+    final String jsonEvenements =
         """
-        {"object":"list","has_more":false,"data":[
-          {"id":"evt_1","type":"email.bounced","created_at":"2026-09-01T00:00:00Z","status":"failed"}
-        ]}
-        """;
+            {"object":"list","has_more":false,"data":[
+              {"id":"evt_1","type":"email.bounced","created_at":"2026-09-01T00:00:00Z","status":"failed"}
+            ]}
+            """;
     when(webhooks.listEvents("wh_1"))
         .thenReturn(MAPPER.readValue(jsonEvenements, ListWebhookEventsResponseSuccess.class));
 
-    var evenements = service.listerEvenements();
+    final var evenements = service.listerEvenements();
 
     assertEquals(1, evenements.size());
     assertEquals("evt_1", evenements.get(0).id());
@@ -137,7 +139,7 @@ class ResendWebhooksAdminServiceTest {
     stubConfigComplete();
     when(webhooks.list()).thenReturn(listeWebhooks("wh_1", ENDPOINT));
 
-    boolean rejoue = service.rejouerEvenement("evt_1");
+    final boolean rejoue = service.rejouerEvenement("evt_1");
 
     assertTrue(rejoue);
     verify(webhooks).replayEvent("wh_1", "evt_1");

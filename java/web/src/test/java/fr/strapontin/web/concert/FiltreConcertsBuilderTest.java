@@ -9,32 +9,35 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link FiltreConcertsBuilder}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link FiltreConcertsBuilder}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerMois_moisValide_ajouteLaClauseEtLesParametres() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerMois(where, params, "2026-07");
 
     assertTrue(where.toString().contains("moisDebut"));
-    assertEquals(java.time.LocalDate.of(2026, 7, 1), params.get("moisDebut"));
-    assertEquals(java.time.LocalDate.of(2026, 8, 1), params.get("moisFin"));
+    assertEquals(LocalDate.of(2026, 7, 1), params.get("moisDebut"));
+    assertEquals(LocalDate.of(2026, 8, 1), params.get("moisFin"));
   }
 
   @Test
   void appliquerMois_formatNonConforme_sansEffet() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerMois(where, params, "pas-une-date");
 
@@ -47,8 +50,8 @@ class FiltreConcertsBuilderTest {
   // avant correctif, provoquant un 500 au lieu du contrat documenté "sans effet si invalide".
   @Test
   void appliquerMois_moisCalendaireInvalide13_sansEffetNiException() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     assertDoesNotThrow(() -> FiltreConcertsBuilder.appliquerMois(where, params, "2026-13"));
 
@@ -58,8 +61,8 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerMois_moisCalendaireInvalide00_sansEffetNiException() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     assertDoesNotThrow(() -> FiltreConcertsBuilder.appliquerMois(where, params, "2026-00"));
 
@@ -69,8 +72,8 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerMois_moisVide_sansEffet() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerMois(where, params, "");
 
@@ -119,8 +122,8 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerGenre_genreVide_sansEffet() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerGenre(where, params, "");
 
@@ -130,8 +133,8 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerGenre_genreNonVide_ajouteLaClauseIlike() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerGenre(where, params, "Pop");
 
@@ -141,8 +144,8 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerClassification_classificationVide_sansEffet() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerClassification(where, params, "");
 
@@ -152,8 +155,8 @@ class FiltreConcertsBuilderTest {
 
   @Test
   void appliquerClassification_classificationNonVide_ajouteLaClauseEgalite() {
-    StringBuilder where = new StringBuilder();
-    Map<String, Object> params = new HashMap<>();
+    final StringBuilder where = new StringBuilder();
+    final Map<String, Object> params = new HashMap<>();
 
     FiltreConcertsBuilder.appliquerClassification(where, params, "concert");
 

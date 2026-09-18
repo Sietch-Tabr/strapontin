@@ -15,10 +15,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link AlerteQuotaResendService}.
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link AlerteQuotaResendService}.
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 class AlerteQuotaResendServiceTest {
 
   private GestionQuotaResend gestionQuotaResend;

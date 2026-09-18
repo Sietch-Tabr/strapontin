@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  Ruleset volontairement restreint aux règles de fond (complexité, taille, documentation
+  publique) — le formatage (indentation, espacement, longueur de ligne stricte) est déjà géré par
+  google-java-format à l'écriture, pas dupliqué ici.
+-->
+<module name="Checker">
+  <module name="TreeWalker">
+    <!-- Suppressions ciblées par emplacement exact (constructeurs compacts de record, voir le
+         fichier référencé) — jamais une exclusion de règle globale. -->
+    <module name="SuppressionXpathFilter">
+      <property name="file" value="${config_loc}/checkstyle-suppressions-xpath.xml"/>
+    </module>
+
+    <!-- Complexité et taille (java.md : < 10/méthode, < 50/classe, méthodes ≤ 50 lignes) -->
+    <module name="CyclomaticComplexity">
+      <property name="max" value="10"/>
+    </module>
+    <module name="MethodLength">
+      <property name="max" value="50"/>
+      <property name="countEmpty" value="false"/>
+    </module>
+    <!-- Seuil séparé pour les méthodes métier (7, java.md) et les constructeurs (15) — l'injection
+         de dépendances par constructeur Spring n'est pas un signe de mauvaise conception au même
+         titre qu'une longue liste de paramètres de méthode métier, dans une architecture en couches
+         où un orchestrateur accumule légitimement ses collaborateurs. -->
+    <module name="ParameterNumber">
+      <property name="max" value="7"/>
+      <property name="tokens" value="METHOD_DEF"/>
+    </module>
+    <module name="ParameterNumber">
+      <property name="max" value="15"/>
+      <property name="tokens" value="CTOR_DEF"/>
+    </module>
+
+    <!-- Javadoc obligatoire sur le public/protégé (java.md), syntaxe /** */ classique uniquement —
+         Checkstyle ne reconnaît pas /// (JEP 467) comme du Javadoc valide, donc un membre
+         documenté seulement en /// est à juste titre signalé comme non documenté. -->
+    <module name="MissingJavadocMethod">
+      <property name="scope" value="protected"/>
+    </module>
+    <module name="MissingJavadocType">
+      <property name="scope" value="protected"/>
+    </module>
+
+    <!-- Signale explicitement /// (déprécié au profit de /** */, java.md) plutôt que de laisser
+         MissingJavadocMethod/Type seuls suggérer une absence totale de documentation. -->
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="^\s*///"/>
+      <property name="message" value="Javadoc /// déprécié — utiliser /** */ classique (java.md)"/>
+    </module>
+
+    <!-- APIs interdites (java.md) -->
+    <module name="Regexp">
+      <property name="format" value="System\.exit\(|Runtime\.getRuntime\(\)\.exec\(|Thread\.stop\(|\.finalize\("/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="API interdite (java.md) : System.exit/Runtime.exec/Thread.stop/finalize"/>
+    </module>
+    <module name="RegexpSinglelineJava">
+      <property name="format" value="System\.(out|err)\."/>
+      <property name="message" value="Utiliser SLF4J, jamais System.out/err"/>
+    </module>
+  </module>
+
+  <!-- Classes (java.md : ≤ 500 lignes) -->
+  <module name="FileLength">
+    <property name="max" value="500"/>
+  </module>
+</module>

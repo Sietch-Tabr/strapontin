@@ -24,11 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link NotificationPushService} — focus sur le ciblage d'abonnement de
-/// {@code envoyerNotificationTest}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link NotificationPushService} — focus sur le ciblage d'abonnement de
+ * {@code envoyerNotificationTest}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class NotificationPushServiceTest {
 
   private ConfigService configService;
@@ -48,7 +50,7 @@ class NotificationPushServiceTest {
   void envoyerNotificationTest_vapidNonConfigure_retourneFalseSansRequete() {
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
 
-    boolean resultat = service.envoyerNotificationTest("u1", null);
+    final boolean resultat = service.envoyerNotificationTest("u1", null);
 
     assertFalse(resultat);
     verify(jdbc, never()).queryForList(anyString(), anyMap());
@@ -60,12 +62,12 @@ class NotificationPushServiceTest {
   void envoyerNotificationTest_avecEndpoint_requeteFiltreParEndpoint() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    boolean resultat =
+    final boolean resultat =
         service.envoyerNotificationTest("u1", "https://exemple.test/endpoint-precis");
 
     assertFalse(resultat);
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc).queryForList(sqlCaptor.capture(), paramsCaptor.capture());
     assertFalse(sqlCaptor.getValue().contains("ORDER BY id DESC"));
     assertTrue(sqlCaptor.getValue().contains("endpoint = :endpoint"));
@@ -77,10 +79,10 @@ class NotificationPushServiceTest {
   void envoyerNotificationTest_sansEndpoint_requeteReplieSurLePlusRecent() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    boolean resultat = service.envoyerNotificationTest("u1", null);
+    final boolean resultat = service.envoyerNotificationTest("u1", null);
 
     assertFalse(resultat);
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     verify(jdbc).queryForList(sqlCaptor.capture(), anyMap());
     assertTrue(sqlCaptor.getValue().contains("ORDER BY id DESC"));
     assertTrue(sqlCaptor.getValue().contains("LIMIT 1"));

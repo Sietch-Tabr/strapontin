@@ -20,52 +20,60 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.admin.LogAdminService;
-import fr.strapontin.web.config.ConfigService;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour les méthodes Digitick de {@link SalleService}.
-///
-/// @since 2.4.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour les méthodes Digitick de {@link SalleService}.
+ *
+ * @since 2.4.0
+ * @author Kwaite
+ */
 class SalleServiceTest {
 
   private SalleRepository salleRepository;
   private LogAdminService logAdminService;
+  private SalleRechercheNominatimService salleRechercheNominatimService;
+  private SalleRechercheTicketmasterService salleRechercheTicketmasterService;
   private SalleService salleService;
 
   @BeforeEach
   void setUp() {
     salleRepository = mock(SalleRepository.class);
     logAdminService = mock(LogAdminService.class);
+    salleRechercheNominatimService = mock(SalleRechercheNominatimService.class);
+    salleRechercheTicketmasterService = mock(SalleRechercheTicketmasterService.class);
     salleService =
         new SalleService(
             salleRepository,
-            mock(ConfigService.class),
-            new ObjectMapper(),
             mock(RestClient.class),
-            mock(fr.strapontin.sources.CadenceurAppels.class),
-            logAdminService);
+            logAdminService,
+            salleRechercheNominatimService,
+            salleRechercheTicketmasterService);
     salleService.setSelf(salleService);
   }
 
   @Test
   void creerSalleDigitick_nomEtSlugValides_retourneUuid() {
-    UUID attendu = UUID.randomUUID();
+    final UUID attendu = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(attendu);
 
-    UUID resultat =
-        salleService.creerSalleDigitick("L'Empreinte", "lempreinte", "Savigny-le-Temple", "77176");
+    final UUID resultat =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick(
+                "L'Empreinte", "lempreinte", "Savigny-le-Temple", "77176"));
 
     assertEquals(attendu, resultat);
     verify(salleRepository)
@@ -75,10 +83,12 @@ class SalleServiceTest {
 
   @Test
   void creerSalleDigitick_sansVilleNiCp_retourneUuid() {
-    UUID attendu = UUID.randomUUID();
+    final UUID attendu = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(attendu);
 
-    UUID resultat = salleService.creerSalleDigitick("L'Olympia", "olympia", null, null);
+    final UUID resultat =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("L'Olympia", "olympia", null, null));
 
     assertNotNull(resultat);
     verify(salleRepository).upsertSalleAvecLoc("lolympia", "L'Olympia", null, null);
@@ -86,11 +96,15 @@ class SalleServiceTest {
 
   @Test
   void creerSalleDigitick_salleExistante_reutiliseMemeUuid() {
-    UUID existant = UUID.randomUUID();
+    final UUID existant = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(existant);
 
-    UUID r1 = salleService.creerSalleDigitick("L'Empreinte", "lempreinte", null, null);
-    UUID r2 = salleService.creerSalleDigitick("L'Empreinte", "lempreinte", null, null);
+    final UUID r1 =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("L'Empreinte", "lempreinte", null, null));
+    final UUID r2 =
+        salleService.creerSalleDigitick(
+            new SalleService.DonneesSalleDigitick("L'Empreinte", "lempreinte", null, null));
 
     assertEquals(r1, r2);
   }
@@ -99,15 +113,17 @@ class SalleServiceTest {
   // trompeur sans source Digitick fonctionnelle) — erreur 409 explicite à la place.
   @Test
   void creerSalleDigitick_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
-    UUID nouvelleSalle = UUID.randomUUID();
+    final UUID nouvelleSalle = UUID.randomUUID();
     when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(nouvelleSalle);
     when(salleRepository.trouverConflitDigitickSlug(eq("lempreinte"), eq(nouvelleSalle)))
-        .thenReturn(java.util.Optional.of("Autre Salle"));
+        .thenReturn(Optional.of("Autre Salle"));
 
-    ErreurMetier erreur =
+    final ErreurMetier erreur =
         assertThrows(
             ErreurMetier.class,
-            () -> salleService.creerSalleDigitick("Doublon", "lempreinte", null, null));
+            () ->
+                salleService.creerSalleDigitick(
+                    new SalleService.DonneesSalleDigitick("Doublon", "lempreinte", null, null)));
 
     assertEquals(409, erreur.getStatus());
     verify(salleRepository, never()).enregistrerSalleSource(any(), any(), any());
@@ -115,7 +131,7 @@ class SalleServiceTest {
 
   @Test
   void ajouter_nomValideSansCandidat_creeNouvelleSalle() {
-    UUID nouvelUuid = UUID.randomUUID();
+    final UUID nouvelUuid = UUID.randomUUID();
     when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
     when(salleRepository.upsertSalle("olympia", "Olympia")).thenReturn(nouvelUuid);
     when(salleRepository.existePourUtilisateur("u1", nouvelUuid)).thenReturn(false);
@@ -132,8 +148,8 @@ class SalleServiceTest {
   // ReconciliateurSalles côté worker et WikidataSalleSource côté enrichissement.
   @Test
   void ajouter_variantFlouDejaPresente_reutiliseSalleExistanteSansUpsert() {
-    UUID salleExistante = UUID.randomUUID();
-    Map<String, Object> candidat = new HashMap<>();
+    final UUID salleExistante = UUID.randomUUID();
+    final Map<String, Object> candidat = new HashMap<>();
     candidat.put("id", salleExistante);
     candidat.put("salle_cle", "zenithparis");
     candidat.put("nom", "Zénith Paris");
@@ -149,7 +165,7 @@ class SalleServiceTest {
 
   @Test
   void ajouter_salleDejaSuivie_leveRessourceDejaExistante() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
     when(salleRepository.upsertSalle(any(), any())).thenReturn(uuid);
     when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(true);
@@ -159,7 +175,7 @@ class SalleServiceTest {
 
   @Test
   void ajouter_capAtteint_leveErreurMetier() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
     when(salleRepository.upsertSalle(any(), any())).thenReturn(uuid);
     when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
@@ -172,13 +188,14 @@ class SalleServiceTest {
   // wikidataId (salles.wikidata_id) sans attendre le job nocturne.
   @Test
   void ajouter_osmIdEtWikidataIdFournis_persisteLesDeux() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
     when(salleRepository.upsertSalle("rockstore", "Rockstore")).thenReturn(uuid);
     when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
     when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
 
-    salleService.ajouter("u1", "Rockstore", null, "way/12345", "Q3438008");
+    salleService.ajouter(
+        new SalleService.DonneesAjoutSalle("u1", "Rockstore", null, "way/12345", "Q3438008"));
 
     verify(salleRepository).enregistrerSalleSource(uuid, "osm", "way/12345");
     verify(salleRepository).mettreAJourWikidataId(uuid, "Q3438008");
@@ -189,17 +206,19 @@ class SalleServiceTest {
   // ne doit jamais faire échouer l'ajout à la liste de suivi.
   @Test
   void ajouter_wikidataIdDejaAttribueAUneAutreSalle_neFaitPasEchouerLajout() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.chercherCandidatsParCle(any())).thenReturn(List.of());
     when(salleRepository.upsertSalle("rockstore", "Rockstore")).thenReturn(uuid);
     when(salleRepository.existePourUtilisateur("u1", uuid)).thenReturn(false);
     when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
-    org.mockito.Mockito.doThrow(new org.springframework.dao.DuplicateKeyException("conflit"))
+    org.mockito.Mockito.doThrow(new DuplicateKeyException("conflit"))
         .when(salleRepository)
         .mettreAJourWikidataId(uuid, "Q3438008");
 
     org.junit.jupiter.api.Assertions.assertDoesNotThrow(
-        () -> salleService.ajouter("u1", "Rockstore", null, null, "Q3438008"));
+        () ->
+            salleService.ajouter(
+                new SalleService.DonneesAjoutSalle("u1", "Rockstore", null, null, "Q3438008")));
 
     verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
   }
@@ -208,16 +227,17 @@ class SalleServiceTest {
   // fusionner en une seule suggestion combinant osmId et tmVenueId, pas créer un doublon.
   @Test
   void fusionnerOuAjouter_candidatCorrespondantExistant_fusionneLesIdentifiants() {
-    List<ResultatSalle> liste =
-        new java.util.ArrayList<>(
+    final List<ResultatSalle> liste =
+        new ArrayList<>(
             List.of(
                 new ResultatSalle("Rockstore", "Montpellier", null, null, "osm", "way/1", "Q1")));
-    ResultatSalle candidatTm = new ResultatSalle("Rockstore", null, "tm123", null, "ticketmaster");
+    final ResultatSalle candidatTm =
+        new ResultatSalle("Rockstore", null, "tm123", null, "ticketmaster");
 
-    SalleService.fusionnerOuAjouter(liste, candidatTm);
+    SalleSuggestions.fusionnerOuAjouter(liste, candidatTm);
 
     assertEquals(1, liste.size());
-    ResultatSalle fusionne = liste.get(0);
+    final ResultatSalle fusionne = liste.get(0);
     assertEquals("tm123", fusionne.tmVenueId());
     assertEquals("way/1", fusionne.osmId());
     assertEquals("Q1", fusionne.wikidataId());
@@ -226,11 +246,11 @@ class SalleServiceTest {
 
   @Test
   void fusionnerOuAjouter_candidatSansCorrespondance_ajouteNouvelleEntree() {
-    List<ResultatSalle> liste = new java.util.ArrayList<>();
-    ResultatSalle candidat =
+    final List<ResultatSalle> liste = new ArrayList<>();
+    final ResultatSalle candidat =
         new ResultatSalle("Bataclan", "Paris", null, null, "osm", "way/2", "Q2");
 
-    SalleService.fusionnerOuAjouter(liste, candidat);
+    SalleSuggestions.fusionnerOuAjouter(liste, candidat);
 
     assertEquals(1, liste.size());
     assertEquals("Bataclan", liste.get(0).salle());
@@ -240,84 +260,22 @@ class SalleServiceTest {
   // une salle de concert ne doit plus être rejetée (cas réel : Plenitude Arena, Nanterre,
   // class=leisure/type=stadium avec extratags.amenity=music_venue).
   @Test
-  void parseNominatimResultats_venueAvecExtratagsAmenity_estAcceptee() {
-    String json =
-        """
-        [{
-          "class": "leisure", "type": "stadium",
-          "display_name": "Plenitude Arena, 99, Boulevard Aimé Césaire, Nanterre, France",
-          "osm_type": "relation", "osm_id": 14479234,
-          "address": {"town": "Nanterre"},
-          "extratags": {"amenity": "music_venue", "wikidata": "Q2860806"}
-        }]
-        """;
-
-    List<ResultatSalle> resultats = salleService.parseNominatimResultats(json);
-
-    assertEquals(1, resultats.size());
-    assertEquals("Plenitude Arena", resultats.get(0).salle());
-    assertEquals("Q2860806", resultats.get(0).wikidataId());
-  }
-
-  // class=amenity ne suffit plus à lui seul — un type amenity non pertinent (ex. borne de
-  // recharge électrique) doit être rejeté même si class=amenity (cas réel : recherche "plenitude"
-  // renvoyant une borne de recharge à Bourgoin-Jallieu avant ce correctif).
-  @Test
-  void parseNominatimResultats_amenityNonPertinent_estRejetee() {
-    String json =
-        """
-        [{
-          "class": "amenity", "type": "charging_station",
-          "display_name": "Plenitude, Avenue Aristide Briand, Bourgoin-Jallieu, France",
-          "osm_type": "node", "osm_id": 12853857393,
-          "address": {"town": "Bourgoin-Jallieu"},
-          "extratags": {"operator": "Plenitude On The Road"}
-        }]
-        """;
-
-    List<ResultatSalle> resultats = salleService.parseNominatimResultats(json);
-
-    assertEquals(0, resultats.size());
-  }
-
-  // garde-fou de non-régression pour l'E2E salles_rechercheNominatim_afficheBadgeOsm —
-  // un type déjà présent dans TYPES_SALLE_NOMINATIM (arts_centre) reste accepté.
-  @Test
-  void parseNominatimResultats_typeDejaDansAllowlist_estAcceptee() {
-    String json =
-        """
-        [{
-          "class": "amenity", "type": "arts_centre",
-          "display_name": "Rockstore, Montpellier, France",
-          "osm_type": "way", "osm_id": 12345,
-          "address": {"city": "Montpellier"},
-          "extratags": {}
-        }]
-        """;
-
-    List<ResultatSalle> resultats = salleService.parseNominatimResultats(json);
-
-    assertEquals(1, resultats.size());
-    assertEquals("Rockstore", resultats.get(0).salle());
-  }
-
-  @Test
   void mettreAJourSalle_appelleRepository() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     salleService.mettreAJourSalle(uuid, "Nouveau nom", "Paris", "75001");
     verify(salleRepository).mettreAJourSalle(uuid, "Nouveau nom", "Paris", "75001");
   }
 
   @Test
   void mettreAJourSalle_champsNuls_passesAuRepository() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     salleService.mettreAJourSalle(uuid, null, null, null);
     verify(salleRepository).mettreAJourSalle(uuid, null, null, null);
   }
 
   @Test
   void supprimer_delegueAuRepository_sansException() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(salleRepository.supprimerPourUtilisateur("u1", salleId)).thenReturn(1);
 
     assertDoesNotThrow(() -> salleService.supprimer("u1", salleId));
@@ -329,7 +287,7 @@ class SalleServiceTest {
   // utilisateur) ne doit produire aucune entrée d'audit trompeuse "salle supprimée".
   @Test
   void supprimer_salleNonSuivie_neLogguePas() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(salleRepository.supprimerPourUtilisateur("u1", salleId)).thenReturn(0);
 
     salleService.supprimer("u1", salleId);
@@ -339,7 +297,7 @@ class SalleServiceTest {
 
   @Test
   void supprimer_salleReellementSupprimee_logguePourAudit() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(salleRepository.supprimerPourUtilisateur("u1", salleId)).thenReturn(1);
 
     salleService.supprimer("u1", salleId);
@@ -349,35 +307,35 @@ class SalleServiceTest {
 
   @Test
   void supprimerSalleDigitick_sansContrainte_retourneTrue() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.supprimerSalleDigitick(uuid)).thenReturn(true);
     assertTrue(salleService.supprimerSalleDigitick(uuid));
   }
 
   @Test
   void supprimerSalleDigitick_avecContrainte_retourneFalse() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.supprimerSalleDigitick(uuid)).thenReturn(false);
     assertFalse(salleService.supprimerSalleDigitick(uuid));
   }
 
   @Test
   void lireIdentifiantsSources_retourneCSV() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.lireIdentifiantsSources(uuid)).thenReturn("digitick:lempreinte");
     assertEquals("digitick:lempreinte", salleService.lireIdentifiantsSources(uuid));
   }
 
   @Test
   void lireIdentifiantsSources_sansSource_retourneNull() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.lireIdentifiantsSources(uuid)).thenReturn(null);
     assertNull(salleService.lireIdentifiantsSources(uuid));
   }
 
   @Test
   void declencherWorkerParSources_aucuneSource_nAppellePasWorker() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(salleRepository.lireIdentifiantsSources(uuid)).thenReturn(null);
     salleService.declencherWorkerParSources(uuid);
     verify(salleRepository).lireIdentifiantsSources(uuid);
@@ -387,17 +345,18 @@ class SalleServiceTest {
   // suivie — même correctif que ArtisteService.contientCorrespondancePartielle.
   @Test
   void contientCorrespondancePartielle_rechercheSubstringDuneSalleSuivie_retourneTrue() {
-    assertTrue(SalleService.contientCorrespondancePartielle("zenith", Set.of("zenithparis")));
+    assertTrue(SalleSuggestions.contientCorrespondancePartielle("zenith", Set.of("zenithparis")));
   }
 
   @Test
   void contientCorrespondancePartielle_correspondanceExacte_retourneTrue() {
-    assertTrue(SalleService.contientCorrespondancePartielle("zenithparis", Set.of("zenithparis")));
+    assertTrue(
+        SalleSuggestions.contientCorrespondancePartielle("zenithparis", Set.of("zenithparis")));
   }
 
   @Test
   void contientCorrespondancePartielle_aucuneCorrespondance_retourneFalse() {
-    assertFalse(SalleService.contientCorrespondancePartielle("olympia", Set.of("zenithparis")));
+    assertFalse(SalleSuggestions.contientCorrespondancePartielle("olympia", Set.of("zenithparis")));
   }
 
   // déplacés depuis l'ancien SalleControllerTest, qui ne testait en réalité pas
@@ -436,20 +395,15 @@ class SalleServiceTest {
   void lister_baseInsuffisante_appelleNominatimEtTM() {
     when(salleRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
     when(salleRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+    when(salleRechercheNominatimService.rechercher("Bataclan"))
+        .thenReturn(List.of(new ResultatSalle("Le Bataclan", "Paris", null, null, "osm")));
+    when(salleRechercheTicketmasterService.rechercher("Bataclan")).thenReturn(List.of());
 
-    SalleService espion = org.mockito.Mockito.spy(salleService);
-    espion.setSelf(espion);
-    org.mockito.Mockito.doReturn(
-            List.of(new ResultatSalle("Le Bataclan", "Paris", null, null, "osm")))
-        .when(espion)
-        .rechercherSallesNominatim("Bataclan");
-    org.mockito.Mockito.doReturn(List.of()).when(espion).rechercherSallesTM("Bataclan");
-
-    var reponse = espion.lister("user1", "Bataclan");
+    final var reponse = salleService.lister("user1", "Bataclan");
 
     assertEquals(1, reponse.resultats().size());
-    verify(espion).rechercherSallesNominatim("Bataclan");
-    verify(espion).rechercherSallesTM("Bataclan");
+    verify(salleRechercheNominatimService).rechercher("Bataclan");
+    verify(salleRechercheTicketmasterService).rechercher("Bataclan");
   }
 
   // Avant le passage en parallèle, Ticketmaster n'était interrogé que si Nominatim seul ne
@@ -460,58 +414,15 @@ class SalleServiceTest {
   void lister_nominatimSeulAtteintLeSeuil_appelleQuandMemeTMEnParallele() {
     when(salleRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
     when(salleRepository.rechercherEnBase(anyString())).thenReturn(List.of());
-
-    SalleService espion = org.mockito.Mockito.spy(salleService);
-    espion.setSelf(espion);
-    org.mockito.Mockito.doReturn(
+    when(salleRechercheNominatimService.rechercher("terme"))
+        .thenReturn(
             List.of(
                 new ResultatSalle("A", "Paris", null, null, "osm"),
-                new ResultatSalle("B", "Paris", null, null, "osm")))
-        .when(espion)
-        .rechercherSallesNominatim("terme");
-    org.mockito.Mockito.doReturn(List.of()).when(espion).rechercherSallesTM("terme");
+                new ResultatSalle("B", "Paris", null, null, "osm")));
+    when(salleRechercheTicketmasterService.rechercher("terme")).thenReturn(List.of());
 
-    espion.lister("user1", "terme");
+    salleService.lister("user1", "terme");
 
-    verify(espion).rechercherSallesTM("terme");
-  }
-
-  // Ticketmaster est aussi appelé directement par le worker (processus indépendant) : sans passer
-  // par le cadenceur partagé avant l'appel HTTP, les deux processus ne peuvent pas coordonner leur
-  // rythme d'appel et le rate-limit TM (Spike Arrest) reste exposé.
-  @Test
-  void rechercherSallesTM_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
-    ConfigService configService = mock(ConfigService.class);
-    when(configService.lireConfig("TICKETMASTER_API_KEY"))
-        .thenReturn(java.util.Optional.of("fake-key"));
-    fr.strapontin.sources.CadenceurAppels cadenceur =
-        mock(fr.strapontin.sources.CadenceurAppels.class);
-
-    RestClient.Builder builder = RestClient.builder();
-    org.springframework.test.web.client.MockRestServiceServer serveur =
-        org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
-    serveur
-        .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
-                org.hamcrest.Matchers.containsString("app.ticketmaster.com")))
-        .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
-                "{\"_embedded\":{\"venues\":[]}}",
-                org.springframework.http.MediaType.APPLICATION_JSON));
-
-    SalleService service =
-        new SalleService(
-            salleRepository,
-            configService,
-            new ObjectMapper(),
-            restClient,
-            cadenceur,
-            mock(LogAdminService.class));
-
-    service.rechercherSallesTM("Bataclan");
-
-    verify(cadenceur).attendre();
-    serveur.verify();
+    verify(salleRechercheTicketmasterService).rechercher("terme");
   }
 }

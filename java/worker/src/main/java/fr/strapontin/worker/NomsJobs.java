@@ -7,12 +7,17 @@ package fr.strapontin.worker;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/// Correspondance entre la clé Quartz d'un job (nom du bean déclencheur) et son nom lisible
-/// (`type_job`, utilisé dans `logs_admin`/`fetch_jobs`) — table unique partagée par {@link
-/// LogAdminJobListener} et {@link TriggerController}, jusque-là dupliquée et désynchronisée entre
-/// les deux.
+/**
+ * Correspondance entre la clé Quartz d'un job (nom du bean déclencheur) et son
+ * nom lisible ({@code type_job}, utilisé dans {@code logs_admin} /{@code
+ * fetch_jobs}) — table unique partagée par {@link LogAdminJobListener} et
+ * {@link TriggerController} , jusque-là dupliquée et désynchronisée entre les
+ * deux.
+ */
 final class NomsJobs {
 
+  /* package-private : réutilisé par LogAdminJobListener/TriggerController (même
+   * package). */
   static final Map<String, String> PAR_CLE_QUARTZ =
       Map.ofEntries(
           Map.entry("fetchArtistesBatch", "fetch:artistes:batch"),
@@ -28,6 +33,8 @@ final class NomsJobs {
           Map.entry("reconciliationNocturne", "reconciliation:nocturne"),
           Map.entry("suiviCyclesJobs", "suivi:cycles-jobs"));
 
+  /* package-private : réutilisé par LogAdminJobListener/TriggerController (même
+   * package). */
   static final Map<String, String> CLE_QUARTZ_PAR_TYPE_JOB =
       PAR_CLE_QUARTZ.entrySet().stream()
           .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));

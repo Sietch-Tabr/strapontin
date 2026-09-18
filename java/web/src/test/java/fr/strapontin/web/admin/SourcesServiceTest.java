@@ -5,7 +5,6 @@
 package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,8 +19,10 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.web.salle.SalleService;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,58 +30,66 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link SourcesService}.
-///
-/// @since 2.3.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SourcesService}.
+ *
+ * @since 2.3.0
+ * @author Kwaite
+ */
 class SourcesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
+  private SourcesSallesListingService sourcesSallesListingService;
   private SourcesService sourcesService;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
+    sourcesSallesListingService = mock(SourcesSallesListingService.class);
     sourcesService =
         new SourcesService(
-            jdbc, new ObjectMapper(), mock(RestClient.class), mock(SalleService.class));
+            jdbc,
+            new ObjectMapper(),
+            mock(RestClient.class),
+            mock(SalleService.class),
+            sourcesSallesListingService);
   }
 
   @Test
   @SuppressWarnings("unchecked")
   void lireSources_sansQuota_retourneSourcesAvecEtatOk() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
 
-    Map<String, Object> resultat = sourcesService.lireSources();
+    final Map<String, Object> resultat = sourcesService.lireSources();
 
     assertNotNull(resultat.get("sources"));
-    List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
+    final List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
     assertEquals(5, sources.size());
 
-    StatutSource tm = sources.get(0);
+    final StatutSource tm = sources.get(0);
     assertEquals("ticketmaster", tm.id());
     assertEquals("ok", tm.etatQuota());
     assertNull(tm.quotaTM());
     assertEquals(0, tm.nbSallesConfigurees());
     assertEquals(0, tm.nbArtistesConfigures());
 
-    StatutSource eventim = sources.get(1);
+    final StatutSource eventim = sources.get(1);
     assertEquals("eventim", eventim.id());
     assertEquals(0, eventim.nbSallesConfigurees());
     assertEquals(0, eventim.nbArtistesConfigures());
 
-    StatutSource deezer = sources.get(2);
+    final StatutSource deezer = sources.get(2);
     assertEquals("deezer", deezer.id());
     assertNull(deezer.nbSallesConfigurees());
     assertEquals(0, deezer.nbArtistesConfigures());
 
-    StatutSource digitick = sources.get(3);
+    final StatutSource digitick = sources.get(3);
     assertEquals("digitick", digitick.id());
     assertEquals(0, digitick.nbSallesConfigurees());
 
-    StatutSource wikidata = sources.get(4);
+    final StatutSource wikidata = sources.get(4);
     assertEquals("wikidata", wikidata.id());
     assertEquals(0, wikidata.nbSallesConfigurees());
     assertEquals(0, wikidata.nbArtistesConfigures());
@@ -92,16 +101,16 @@ class SourcesServiceTest {
   @SuppressWarnings("unchecked")
   void lireSources_comptesParSource_interrogeTicketmasterEtEventim() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
-    ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
+    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     when(jdbc.queryForObject(anyString(), paramsCaptor.capture(), eq(Integer.class))).thenReturn(0);
 
     sourcesService.lireSources();
 
-    List<Object> sourcesInterrogees =
+    final List<Object> sourcesInterrogees =
         paramsCaptor.getAllValues().stream()
             .map(m -> m.get("source"))
-            .filter(java.util.Objects::nonNull)
+            .filter(Objects::nonNull)
             .toList();
     assertTrue(sourcesInterrogees.contains("ticketmaster"));
     assertTrue(sourcesInterrogees.contains("eventim"));
@@ -111,16 +120,16 @@ class SourcesServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void lireSources_avecQuotaCritique_retourneEtatCritique() throws Exception {
-    QuotaTM quota = new QuotaTM(90, 1000, 0L, "2026-06-19T10:00:00Z");
-    String quotaJson = new ObjectMapper().writeValueAsString(quota);
+    final QuotaTM quota = new QuotaTM(90, 1000, 0L, "2026-06-19T10:00:00Z");
+    final String quotaJson = new ObjectMapper().writeValueAsString(quota);
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of(quotaJson));
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
 
-    Map<String, Object> resultat = sourcesService.lireSources();
-    List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
+    final Map<String, Object> resultat = sourcesService.lireSources();
+    final List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
 
-    StatutSource tm = sources.get(0);
+    final StatutSource tm = sources.get(0);
     assertNotNull(tm.quotaTM());
     assertEquals(90, tm.quotaTM().dispo());
     assertEquals("critique", tm.etatQuota());
@@ -128,7 +137,7 @@ class SourcesServiceTest {
 
   @Test
   void mettreAJourDigitickSlug_slugValide_upsert() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
@@ -144,11 +153,11 @@ class SourcesServiceTest {
   // erreur 409 explicite plutôt qu'un ON CONFLICT DO UPDATE muet.
   @Test
   void mettreAJourDigitickSlug_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(List.of(Map.of("nom", "Autre Salle")));
 
-    fr.strapontin.web.ErreurMetier erreur =
+    final fr.strapontin.web.ErreurMetier erreur =
         org.junit.jupiter.api.Assertions.assertThrows(
             fr.strapontin.web.ErreurMetier.class,
             () -> sourcesService.mettreAJourDigitickSlug(uuid, "lempreinte"));
@@ -162,7 +171,7 @@ class SourcesServiceTest {
 
   @Test
   void mettreAJourDigitickSlug_slugVide_supprime() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     sourcesService.mettreAJourDigitickSlug(uuid, "");
@@ -173,7 +182,7 @@ class SourcesServiceTest {
 
   @Test
   void mettreAJourDigitickSlug_slugNull_supprime() {
-    UUID uuid = UUID.randomUUID();
+    final UUID uuid = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
     sourcesService.mettreAJourDigitickSlug(uuid, null);
@@ -182,28 +191,16 @@ class SourcesServiceTest {
         .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
   }
 
+  // le détail de la construction SQL (HAVING, colonne id) est testé directement dans
+  // SourcesSallesListingServiceTest — ici, seule la délégation compte.
   @Test
-  void listerSalles_vueSansDigitick_excluTMEtEventim() {
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    when(jdbc.query(
-            sqlCaptor.capture(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
+  void listerSalles_nominal_delegueAuServiceDeListage() {
+    final ReponseSallesSources attendue = new ReponseSallesSources(List.of(), 0, 1, 0L);
+    when(sourcesSallesListingService.lister(false, 0, "olympia")).thenReturn(attendue);
 
-    sourcesService.listerSalles(false, 0, null);
+    final ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, "olympia");
 
-    String sqlSalles =
-        sqlCaptor.getAllValues().stream()
-            .filter(sql -> sql.contains("HAVING"))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("Aucune requête avec HAVING trouvée"));
-    assertTrue(
-        sqlSalles.contains("'ticketmaster'"),
-        "La requête doit filtrer les salles sans source ticketmaster");
-    assertTrue(
-        sqlSalles.contains("'eventim'"), "La requête doit filtrer les salles sans source eventim");
+    assertEquals(attendue, reponse);
   }
 
   @Test
@@ -213,33 +210,16 @@ class SourcesServiceTest {
   }
 
   @Test
-  void listerSalles_lesDeuxVues_utilisentColonneId_pasSalleUuid() {
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    when(jdbc.query(
-            sqlCaptor.capture(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of());
-
-    sourcesService.listerSalles(false, 0, null);
-    sourcesService.listerSalles(true, 0, null);
-
-    sqlCaptor
-        .getAllValues()
-        .forEach(
-            sql ->
-                assertFalse(
-                    sql.contains("salle_uuid"),
-                    "Requête SQL référence encore salle_uuid (colonne supprimée en V24) : " + sql));
-  }
-
-  @Test
   void testerDigitickSlug_erreurReseau_retourneNegatif() {
-    RestClient restClientEchoue = mock(RestClient.class);
+    final RestClient restClientEchoue = mock(RestClient.class);
     when(restClientEchoue.get()).thenThrow(new RuntimeException("timeout"));
-    SourcesService service =
-        new SourcesService(jdbc, new ObjectMapper(), restClientEchoue, mock(SalleService.class));
+    final SourcesService service =
+        new SourcesService(
+            jdbc,
+            new ObjectMapper(),
+            restClientEchoue,
+            mock(SalleService.class),
+            sourcesSallesListingService);
 
     assertTrue(service.testerDigitickSlug("lempreinte") < 0);
   }
@@ -248,30 +228,13 @@ class SourcesServiceTest {
   @SuppressWarnings("unchecked")
   void lireSources_comptageDigitick_reporteNbSallesConfigurees() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(java.sql.Timestamp.class))).thenReturn(null);
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
 
-    Map<String, Object> resultat = sourcesService.lireSources();
+    final Map<String, Object> resultat = sourcesService.lireSources();
 
-    List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
-    StatutSource digitick = sources.get(3);
+    final List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
+    final StatutSource digitick = sources.get(3);
     assertEquals(2, digitick.nbSallesConfigurees());
-  }
-
-  @Test
-  void listerSalles_nominal_retourneLesSalles() {
-    UUID uuid = UUID.randomUUID();
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers
-                .<org.springframework.jdbc.core.RowMapper<SalleSourceAdmin>>any()))
-        .thenReturn(List.of(new SalleSourceAdmin(uuid, "L'Olympia", null, null, null)));
-
-    ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, null);
-
-    assertEquals(1, reponse.salles().size());
-    assertEquals("L'Olympia", reponse.salles().get(0).nom());
-    assertNull(reponse.salles().get(0).digitickSlug());
   }
 }

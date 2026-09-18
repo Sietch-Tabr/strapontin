@@ -11,26 +11,28 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link JobsAdminService} (extrait de {@code AdminService}).
-///
-/// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link JobsAdminService} (extrait de {@code AdminService}).
+ *
+ * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class JobsAdminServiceTest {
 
   @Test
   void completerAvecJobsJamaisExecutes_jobPlanifieSansHistorique_ajouteEntreeSynthetique() {
-    List<StatJob> statsConnus =
+    final List<StatJob> statsConnus =
         List.of(new StatJob("purger:concerts", Instant.EPOCH, 10, 1, 2, null, null));
-    Map<String, Instant> prochainesExec =
+    final Map<String, Instant> prochainesExec =
         Map.of(
             "purger:concerts", Instant.EPOCH,
             "reconciliation:nocturne", Instant.MAX);
 
-    List<StatJob> resultat =
+    final List<StatJob> resultat =
         JobsAdminService.completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
 
     assertEquals(2, resultat.size());
-    StatJob jamaisExecute =
+    final StatJob jamaisExecute =
         resultat.stream()
             .filter(s -> s.typeJob().equals("reconciliation:nocturne"))
             .findFirst()
@@ -41,11 +43,11 @@ class JobsAdminServiceTest {
 
   @Test
   void completerAvecJobsJamaisExecutes_tousLesJobsConnus_neDupliquePas() {
-    List<StatJob> statsConnus =
+    final List<StatJob> statsConnus =
         List.of(new StatJob("purger:concerts", Instant.EPOCH, 10, 1, 2, null, null));
-    Map<String, Instant> prochainesExec = Map.of("purger:concerts", Instant.EPOCH);
+    final Map<String, Instant> prochainesExec = Map.of("purger:concerts", Instant.EPOCH);
 
-    List<StatJob> resultat =
+    final List<StatJob> resultat =
         JobsAdminService.completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
 
     assertEquals(1, resultat.size());

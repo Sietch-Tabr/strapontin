@@ -28,12 +28,12 @@ class DeezerArtisteSourceTest {
   // la découverte par nom ne doit donc pas dépendre uniquement de Wikidata.
   @Test
   void enrichirLot_deezerIdAbsent_decouvreParNom() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Yelle", "yelle", "Q193338", null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Yelle", "yelle", "Q193338", null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist?q=Yelle")))
@@ -44,11 +44,11 @@ class DeezerArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat =
+    final Map<UUID, EnrichissementArtiste> resultat =
         new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(1, resultat.size());
-    EnrichissementArtiste enrichissement = resultat.get(id);
+    final EnrichissementArtiste enrichissement = resultat.get(id);
     assertEquals("Yelle", enrichissement.nomAffiche());
     assertEquals("2306", enrichissement.deezerId());
     assertEquals("Q193338", enrichissement.wikidataId());
@@ -57,12 +57,12 @@ class DeezerArtisteSourceTest {
 
   @Test
   void enrichirLot_decouverteNomDifferent_ignoreCandidat() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Jain", "jain", null, null);
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Jain", "jain", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist?q=Jain")))
@@ -73,7 +73,7 @@ class DeezerArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat =
+    final Map<UUID, EnrichissementArtiste> resultat =
         new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
@@ -82,12 +82,12 @@ class DeezerArtisteSourceTest {
 
   @Test
   void enrichirLot_decouverteAucunResultat_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste =
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste =
         new ArtisteAEnrichir(id, "Artiste Inconnu", "artiste inconnu", null, null);
 
     serveur
@@ -99,7 +99,7 @@ class DeezerArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat =
+    final Map<UUID, EnrichissementArtiste> resultat =
         new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
@@ -108,12 +108,13 @@ class DeezerArtisteSourceTest {
 
   @Test
   void enrichirLot_reponseValide_retourneNomConfirme() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", "27");
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Daft Punk", "daft punk", "Q167023", "27");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/artist/27")))
@@ -124,11 +125,11 @@ class DeezerArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat =
+    final Map<UUID, EnrichissementArtiste> resultat =
         new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
 
     assertEquals(1, resultat.size());
-    EnrichissementArtiste enrichissement = resultat.get(id);
+    final EnrichissementArtiste enrichissement = resultat.get(id);
     assertEquals("Daft Punk", enrichissement.nomAffiche());
     assertEquals("27", enrichissement.deezerId());
     assertEquals("Q167023", enrichissement.wikidataId());
@@ -137,12 +138,13 @@ class DeezerArtisteSourceTest {
 
   @Test
   void enrichirLot_deezerId404_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Artiste", "artiste", null, "999999999");
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(id, "Artiste", "artiste", null, "999999999");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/artist/999999999")))
@@ -153,7 +155,7 @@ class DeezerArtisteSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Map<UUID, EnrichissementArtiste> resultat =
+    final Map<UUID, EnrichissementArtiste> resultat =
         new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());
@@ -162,18 +164,18 @@ class DeezerArtisteSourceTest {
 
   @Test
   void enrichirLot_erreurReseau_retourneVideSansException() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    UUID id = UUID.randomUUID();
-    ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Artiste", "artiste", null, "27");
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Artiste", "artiste", null, "27");
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/artist/27")))
         .andRespond(withServerError());
 
-    Map<UUID, EnrichissementArtiste> resultat =
+    final Map<UUID, EnrichissementArtiste> resultat =
         new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
 
     assertTrue(resultat.isEmpty());

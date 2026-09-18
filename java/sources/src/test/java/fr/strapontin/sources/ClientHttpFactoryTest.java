@@ -10,15 +10,17 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
-/// Tests unitaires pour {@link ClientHttpFactory}.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ClientHttpFactory}.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class ClientHttpFactoryTest {
 
   @Test
   void creerRequestFactory_avecDurees_retourneFabriqueNonNulle() {
-    SimpleClientHttpRequestFactory factory =
+    final SimpleClientHttpRequestFactory factory =
         ClientHttpFactory.creerRequestFactory(Duration.ofSeconds(10), Duration.ofSeconds(30));
 
     assertNotNull(factory);

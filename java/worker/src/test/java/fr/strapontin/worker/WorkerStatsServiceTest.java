@@ -25,14 +25,19 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerStatsService} (extrait de {@code WorkerService}).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerStatsService} (extrait de {@code WorkerService}).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class WorkerStatsServiceTest {
 
   private TicketmasterSource tm;
@@ -60,7 +65,7 @@ class WorkerStatsServiceTest {
     service = creerService(List.of(tm, eventim));
   }
 
-  private WorkerStatsService creerService(List<SourceConcerts> sources) {
+  private WorkerStatsService creerService(final List<SourceConcerts> sources) {
     return new WorkerStatsService(
         sources,
         tm,
@@ -83,7 +88,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "error".equals(params.get("niveau"))
                         && params.get("message").toString().contains("Eventim")));
@@ -98,7 +103,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("Eventim")));
@@ -114,7 +119,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("Eventim")));
@@ -129,7 +134,7 @@ class WorkerStatsServiceTest {
     verify(jdbc, never())
         .update(
             anyString(),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     params.get("message") != null
                         && params.get("message").toString().contains("Eventim")));
@@ -139,10 +144,10 @@ class WorkerStatsServiceTest {
   // générique sur `sources` (instanceof SourceAvecBilanFetch), sans méthode dédiée.
   @Test
   void enregistrerStatJob_digitickPanneTotale_insereLogsAdminNiveauError() {
-    DigitickSource digitick = mock(DigitickSource.class);
+    final DigitickSource digitick = mock(DigitickSource.class);
     when(digitick.nom()).thenReturn("digitick");
     when(digitick.preleverBilan()).thenReturn(new BilanFetch(4, 4));
-    WorkerStatsService serviceAvecDigitick = creerService(List.of(tm, eventim, digitick));
+    final WorkerStatsService serviceAvecDigitick = creerService(List.of(tm, eventim, digitick));
 
     serviceAvecDigitick.enregistrerStatJob(
         "fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
@@ -150,7 +155,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "error".equals(params.get("niveau"))
                         && params.get("message").toString().contains("Digitick")));
@@ -167,7 +172,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "error".equals(params.get("niveau"))
                         && params.get("message").toString().contains("Deezer")));
@@ -184,7 +189,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("7 concert(s) TM")));
@@ -199,7 +204,7 @@ class WorkerStatsServiceTest {
     verify(jdbc, never())
         .update(
             anyString(),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     params.get("message") != null
                         && params.get("message").toString().contains("concert(s) TM")));
@@ -215,7 +220,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params
@@ -232,7 +237,7 @@ class WorkerStatsServiceTest {
     verify(jdbc, never())
         .update(
             anyString(),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     params.get("message") != null
                         && params.get("message").toString().contains("résultat vide")));
@@ -257,14 +262,14 @@ class WorkerStatsServiceTest {
   void enregistrerStatJob_nominal_enregistreLaDureeDansLeTimerMicrometer() {
     service.enregistrerStatJob("fetch:region", 42, new ResultatPersistance(1, 0), null);
 
-    var timer =
+    final var timer =
         meterRegistry
             .find("strapontin.worker.job.duration")
             .tag("type_job", "fetch:region")
             .timer();
 
     assertEquals(1, timer.count());
-    assertEquals(42.0, timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS), 0.001);
+    assertEquals(42.0, timer.totalTime(TimeUnit.MILLISECONDS), 0.001);
   }
 
   // compteur d'erreurs par source, incrémenté à chaque bilan de panne comportant au
@@ -275,7 +280,7 @@ class WorkerStatsServiceTest {
 
     service.enregistrerStatJob("fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
 
-    var compteur =
+    final var compteur =
         meterRegistry.find("strapontin.worker.source.erreurs").tag("source", "eventim").counter();
 
     assertEquals(2.0, compteur.count(), 0.001);
@@ -293,7 +298,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "warn".equals(params.get("niveau"))
                         && params.get("message").toString().contains("Furies")));
@@ -306,7 +311,7 @@ class WorkerStatsServiceTest {
     verify(jdbc, never())
         .update(
             anyString(),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     params.get("message") != null
                         && params.get("message").toString().contains("containment")));
@@ -316,19 +321,17 @@ class WorkerStatsServiceTest {
   // entre deux appels à enregistrerStatJob — simulé ici par un stockage en mémoire derrière le
   // jdbc mocké, fidèle au comportement réel (INSERT ... ON CONFLICT DO UPDATE).
   private void simulerPersistanceAppConfig() {
-    java.util.concurrent.atomic.AtomicReference<String> valeur =
-        new java.util.concurrent.atomic.AtomicReference<>();
+    final AtomicReference<String> valeur = new AtomicReference<>();
     when(jdbc.queryForObject(
             anyString(),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any(),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
             org.mockito.ArgumentMatchers.eq(String.class)))
         .thenAnswer(_ -> valeur.get());
     when(jdbc.update(
-            contains("INSERT INTO app_config"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, ?>>any()))
+            contains("INSERT INTO app_config"), org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
-              java.util.Map<String, ?> params = invocation.getArgument(1);
+              final Map<String, ?> params = invocation.getArgument(1);
               valeur.set((String) params.get("json"));
               return 1;
             });
@@ -346,7 +349,7 @@ class WorkerStatsServiceTest {
     verify(jdbc)
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     params
                         .get("message")
@@ -371,7 +374,7 @@ class WorkerStatsServiceTest {
     verify(jdbc, never())
         .update(
             contains("INSERT INTO logs_admin"),
-            org.mockito.ArgumentMatchers.<java.util.Map<String, Object>>argThat(
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params -> params.get("message").toString().contains("chronique")));
   }
 

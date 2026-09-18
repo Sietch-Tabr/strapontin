@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteDepartements}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteDepartements}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class RequeteDepartementsValidationTest {
 
   private static final Validator VALIDATOR =
@@ -24,21 +26,21 @@ class RequeteDepartementsValidationTest {
 
   @Test
   void departements_null_estValide() {
-    Set<ConstraintViolation<RequeteDepartements>> violations =
+    final Set<ConstraintViolation<RequeteDepartements>> violations =
         VALIDATOR.validate(new RequeteDepartements(null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void departements_limiteExacte_estValide() {
-    Set<ConstraintViolation<RequeteDepartements>> violations =
+    final Set<ConstraintViolation<RequeteDepartements>> violations =
         VALIDATOR.validate(new RequeteDepartements("7".repeat(1000)));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void departements_tropLong_estRejete() {
-    Set<ConstraintViolation<RequeteDepartements>> violations =
+    final Set<ConstraintViolation<RequeteDepartements>> violations =
         VALIDATOR.validate(new RequeteDepartements("7".repeat(1001)));
     assertFalse(violations.isEmpty());
   }

@@ -18,11 +18,11 @@ class FetchRegionJobTest {
 
   @Test
   void executeInternal_sansRetry_delegueAuCycleComplet() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchRegionJob job = new FetchRegionJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchRegionJob job = new FetchRegionJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(new JobDataMap());
 
     job.executeInternal(context);
@@ -32,13 +32,13 @@ class FetchRegionJobTest {
 
   @Test
   void executeInternal_avecIdsRetry_delegueAuCycleCible() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchRegionJob job = new FetchRegionJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchRegionJob job = new FetchRegionJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobDataMap donnees = new JobDataMap();
+    final JobDataMap donnees = new JobDataMap();
     donnees.put(FetchRegionJob.CLE_IDS_RETRY, "75,92");
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(donnees);
 
     job.executeInternal(context);

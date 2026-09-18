@@ -10,9 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link UtilitairesChaine} — échappement JSON manuel (notifications push) et
-/// critère de containment ratio partagé par {@link CorrespondanceSalle}/{@link
-/// CorrespondanceArtiste}.
+/**
+ * Tests unitaires de {@link UtilitairesChaine} — échappement JSON manuel (notifications push) et
+ * critère de containment ratio partagé par {@link CorrespondanceSalle}/{@link
+ * CorrespondanceArtiste}.
+ */
 class UtilitairesChaineTest {
 
   // --- echapperJson ---
@@ -74,5 +76,22 @@ class UtilitairesChaineTest {
   @Test
   void estContainmentRatio_ordreDesParametresIndifferent_retourneMemeResultat() {
     assertTrue(UtilitairesChaine.estContainmentRatio("alizee", "aliz", 4, 0.65));
+  }
+
+  // --- estEgaliteSansEspaces ---
+
+  @Test
+  void estEgaliteSansEspaces_espaceSupplementaire_retourneTrue() {
+    assertTrue(UtilitairesChaine.estEgaliteSansEspaces("youssou n dour", "youssou ndour"));
+  }
+
+  @Test
+  void estEgaliteSansEspaces_chainesIdentiques_retourneTrue() {
+    assertTrue(UtilitairesChaine.estEgaliteSansEspaces("radiohead", "radiohead"));
+  }
+
+  @Test
+  void estEgaliteSansEspaces_differenceAutreQueEspace_retourneFalse() {
+    assertFalse(UtilitairesChaine.estEgaliteSansEspaces("youssou n dour", "youssou ndourr"));
   }
 }

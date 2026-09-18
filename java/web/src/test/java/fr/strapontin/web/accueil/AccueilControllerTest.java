@@ -21,10 +21,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link AccueilController}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link AccueilController}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class AccueilControllerTest {
 
@@ -36,7 +38,7 @@ class AccueilControllerTest {
   @BeforeEach
   void setUp() {
     controller = new AccueilController(accueilService);
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
@@ -44,7 +46,7 @@ class AccueilControllerTest {
 
   @Test
   void marquerVus_delegueAuServiceEtRetourne204() {
-    ResponseEntity<Void> rep = controller.marquerVus(auth);
+    final ResponseEntity<Void> rep = controller.marquerVus(auth);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(accueilService).marquerVus("user-1");
@@ -52,10 +54,10 @@ class AccueilControllerTest {
 
   @Test
   void accueil_masquesEtIndisponiblesEtNouveau_transmisAuService() {
-    ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0);
+    final ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0);
     when(accueilService.accueil("user-1", true, "1", true)).thenReturn(attendu);
 
-    ResponseEntity<ReponseAccueil> rep = controller.accueil(true, "1", true, auth);
+    final ResponseEntity<ReponseAccueil> rep = controller.accueil(true, "1", true, auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertSame(attendu, rep.getBody());
@@ -63,7 +65,7 @@ class AccueilControllerTest {
 
   @Test
   void accueil_valeursParDefaut_transmisesAuService() {
-    ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0);
+    final ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0);
     when(accueilService.accueil("user-1", false, null, false)).thenReturn(attendu);
 
     controller.accueil(false, null, false, auth);

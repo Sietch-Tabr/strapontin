@@ -5,48 +5,39 @@
 package fr.strapontin.web.email;
 
 import fr.strapontin.core.UtilitairesChaine;
-import fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.List;
-import java.util.Locale;
-import java.util.stream.Collectors;
 
-/// Génération des corps HTML de tous les emails transactionnels Strapontin.
-///
-/// <p>Chaque méthode publique retourne un document HTML complet, prêt à être transmis à l'API
-/// Resend. Le contenu variable est systématiquement passé par {@link #e(Object)} pour prévenir
-/// toute injection HTML.
-///
-/// <p>Structure commune factorisée : <ul>
-///   <li>{@link #envelopper} — cadre centré blanc + footer "Gérer mes préférences"
-///   <li>{@link #enveloppErreur} — idem avec titre en rouge
-///   <li>{@link #bouton} — CTA noir réutilisé dans la majorité des emails
-///   <li>{@link #e} — échappement HTML des valeurs variables </ul>
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Génération des corps HTML de tous les emails transactionnels
+ * Strapontin — helpers factorisés : {@link #envelopper},
+ * {@link #enveloppErreur}, {@link #bouton}, {@link #e}.
+ * @since 2.2.0
+ * @author Kwaite
+ */
 final class EmailTemplates {
+
+  private static final String C_NOIR = "#111";
+  /* package-private : couleur réutilisée par EmailTemplatesAlertes (idem). */
+  static final String C_TEXTE = "#555";
+  private static final String C_MUTE = "#aaa";
+  /* package-private : couleur réutilisée par EmailTemplatesAlertes (idem). */
+  static final String C_ERREUR = "#c00";
+  private static final String C_BORDURE = "#e5e5e5";
 
   private EmailTemplates() {}
 
-  private static final String C_NOIR = "#111";
-  private static final String C_TEXTE = "#555";
-  private static final String C_MUTE = "#aaa";
-  private static final String C_ERREUR = "#c00";
-  private static final String C_BORDURE = "#e5e5e5";
-
   // ---- Emails transactionnels ----
 
-  /// Invitation d'un nouvel utilisateur.
-  ///
-  /// @param lienReset le lien de création de compte (valable 7 jours)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email d'invitation
-  static String invitation(String lienReset, String baseUrl) {
-    String corps =
+  /**
+   * Invitation d'un nouvel utilisateur.
+   *
+   * @param lienReset le lien de création de compte (valable 7 jours)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email d'invitation
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String invitation(final String lienReset, final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
@@ -61,13 +52,16 @@ final class EmailTemplates {
     return envelopper("Bienvenue sur Strapontin", corps, baseUrl);
   }
 
-  /// Réinitialisation du mot de passe.
-  ///
-  /// @param lienReset le lien de réinitialisation (valable 1 heure)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de réinitialisation
-  static String resetMotDePasse(String lienReset, String baseUrl) {
-    String corps =
+  /**
+   * Réinitialisation du mot de passe.
+   *
+   * @param lienReset le lien de réinitialisation (valable 1 heure)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de réinitialisation
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String resetMotDePasse(final String lienReset, final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur
@@ -82,12 +76,16 @@ final class EmailTemplates {
     return envelopper("Réinitialisation du mot de passe", corps, baseUrl);
   }
 
-  /// Notification de réinitialisation de la double authentification par un administrateur.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de notification
-  static String reinitialisation2fa(String baseUrl) {
-    String corps =
+  /**
+   * Notification de réinitialisation de la double authentification par un
+   * administrateur.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de notification
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String reinitialisation2fa(final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           La double authentification (2FA) de votre compte a été réinitialisée par un
@@ -105,13 +103,16 @@ final class EmailTemplates {
     return envelopper("Votre double authentification a été réinitialisée", corps, baseUrl);
   }
 
-  /// Confirmation de changement d'adresse email.
-  ///
-  /// @param lien le lien de confirmation (valable 24 heures)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de confirmation
-  static String confirmationEmail(String lien, String baseUrl) {
-    String corps =
+  /**
+   * Confirmation de changement d'adresse email.
+   *
+   * @param lien le lien de confirmation (valable 24 heures)
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de confirmation
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String confirmationEmail(final String lien, final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Cliquez sur le bouton ci-dessous pour valider votre nouvelle adresse.
@@ -127,16 +128,21 @@ final class EmailTemplates {
     return envelopper("Confirmez votre nouvelle adresse email", corps, baseUrl);
   }
 
-  /// Signalement utilisateur transmis à l'adresse de contact.
-  ///
-  /// @param typeLabel le libellé du type ("Bug", "Amélioration", "Question")
-  /// @param expediteurEmail l'adresse email de l'expéditeur
-  /// @param message le corps du signalement
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de signalement
+  /**
+   * Signalement utilisateur transmis à l'adresse de contact.
+   * @param typeLabel libellé du type ("Bug", "Amélioration"...)
+   * @param expediteurEmail adresse email de l'expéditeur
+   * @param message corps du signalement
+   * @param baseUrl URL publique de base
+   * @return le HTML de l'email
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String signalement(
-      String typeLabel, String expediteurEmail, String message, String baseUrl) {
-    String corps =
+      final String typeLabel,
+      final String expediteurEmail,
+      final String message,
+      final String baseUrl) {
+    final String corps =
         """
         <table style="border-collapse: collapse; width: 100%%; margin-bottom: 24px">
           <tr>
@@ -150,24 +156,29 @@ final class EmailTemplates {
     return envelopper("Signalement — " + typeLabel, corps, baseUrl);
   }
 
-  /// Digest de nouveaux concerts.
-  ///
-  /// @param sujet le sujet de l'email (aussi utilisé comme titre H2)
-  /// @param lignes la liste des concerts à afficher
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML du digest
-  static String digestConcerts(String sujet, List<LigneConcert> lignes, String baseUrl) {
-    StringBuilder lignesHtml = new StringBuilder();
+  /**
+   * Digest de nouveaux concerts.
+   *
+   * @param sujet le sujet de l'email (aussi utilisé comme titre H2)
+   * @param lignes la liste des concerts à afficher
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML du digest
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String digestConcerts(
+      final String sujet, final List<LigneConcert> lignes, final String baseUrl) {
+    final StringBuilder lignesHtml = new StringBuilder();
     String artistePrecedent = null;
-    for (LigneConcert c : lignes) {
-      String urlBillets =
+    for (final LigneConcert c : lignes) {
+      final String urlBillets =
           c.url() != null
-              ? (" — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
-                  .formatted(e(c.url()), C_NOIR))
+              ? " — <a href=\"%s\" style=\"color: %s; font-size: 13px\">Billets →</a>"
+                  .formatted(e(c.url()), C_NOIR)
               : "";
-      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste — sans elle, un
-      // digest couvrant plusieurs artistes se lit comme une liste continue.
-      String stylecel =
+      // Rupture visuelle plus marquée qu'entre deux concerts d'un même artiste
+      // — sans elle, un digest couvrant plusieurs artistes se lit comme une
+      // liste continue.
+      final String stylecel =
           artistePrecedent != null && !artistePrecedent.equals(c.artiste())
               ? "padding: 16px 0 10px; border-top: 2px solid #ddd; vertical-align: top"
               : "padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top";
@@ -185,7 +196,7 @@ final class EmailTemplates {
                   stylecel, C_NOIR, e(c.artiste()), e(c.dateFormatee()), urlBillets, e(c.lieu())));
       artistePrecedent = c.artiste();
     }
-    String corps =
+    final String corps =
         """
         <p style="color: %s; font-size: 14px; margin: 0 0 24px">Voici les nouveaux concerts ajoutés :</p>
         <table style="border-collapse: collapse; width: 100%%">%s</table>
@@ -195,223 +206,15 @@ final class EmailTemplates {
     return envelopper(sujet, corps, baseUrl);
   }
 
-  /// Alerte d'échec du backup nocturne.
-  ///
-  /// @param horodatage l'horodatage YYYYMMDD_HHMMSS, ou chaîne vide si inconnu
-  /// @param raison la commande ayant échoué, ou chaîne vide
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte backup
-  static String alerteBackup(String horodatage, String raison, String baseUrl) {
-    String horodatageHtml =
-        (horodatage != null && !horodatage.isBlank())
-            ? "Démarré le : " + e(horodatage)
-            : "Horodatage indisponible.";
-    String raisonHtml =
-        (raison != null && !raison.isBlank())
-            ? ("""
-            <p style="color: #333; font-size: 13px; font-family: monospace; background: #f5f5f5; \
-            border-left: 3px solid %s; padding: 8px 12px; margin: 0 0 16px; word-break: break-all">%s</p>
-            """
-                .formatted(C_ERREUR, e(raison)))
-            : "";
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 8px">%s</p>
-        %s
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Le backup local nocturne (dump PostgreSQL + .env + logs) n'a pas pu être
-          complété. Vérifiez l'espace disque et les logs systemd sur le serveur.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
-            .formatted(
-                C_TEXTE,
-                horodatageHtml,
-                raisonHtml,
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Échec du backup nocturne", corps, baseUrl);
-  }
-
-  /// Alerte de contrôle d'intégrité (AIDE) — modification détectée hors déploiement légitime sur un
-  /// LXC prod/dev.
-  ///
-  /// @param detail sortie résumée d'{@code aide --check} (fichiers modifiés/ajoutés/supprimés)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte
-  static String alerteIntegrite(String detail, String baseUrl) {
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px; font-family: monospace;\
-        white-space: pre-wrap; background: #f5f5f5; border-left: 3px solid %s; padding: 8px 12px">\
-        %s</p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Une modification de fichier a été détectée hors d'un déploiement légitime
-          (JARs, .env, scripts/, units systemd). Vérifiez l'origine sur le serveur.
-        </p>
-        """
-            .formatted(C_ERREUR, C_ERREUR, e(detail), C_TEXTE);
-    return enveloppErreur("Alerte contrôle d'intégrité", corps, baseUrl);
-  }
-
-  /// Alerte de bounce email (rejet définitif par le serveur destinataire).
-  ///
-  /// @param emailBouncee l'adresse email ayant produit le bounce
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte bounce
-  static String alerteBounce(String emailBouncee, String baseUrl) {
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px">
-          Un email envoyé par Strapontin a été rejeté définitivement par le serveur destinataire.
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Adresse concernée : <strong>%s</strong>
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Vérifiez l'adresse email de cet utilisateur depuis la page d'administration.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
-            .formatted(
-                C_TEXTE,
-                C_TEXTE,
-                e(emailBouncee),
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Bounce email", corps, baseUrl);
-  }
-
-  /// Alerte de plainte spam (destinataire ayant signalé un email Strapontin comme indésirable).
-  ///
-  /// @param emailPlaignant l'adresse email à l'origine de la plainte
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte plainte spam
-  static String alertePlainteSpam(String emailPlaignant, String baseUrl) {
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px">
-          Un destinataire a signalé un email envoyé par Strapontin comme indésirable (spam).
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Adresse concernée : <strong>%s</strong>
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Une plainte spam menace la réputation d'envoi du domaine. Vérifiez l'adresse email de
-          cet utilisateur depuis la page d'administration.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
-            .formatted(
-                C_TEXTE,
-                C_TEXTE,
-                e(emailPlaignant),
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Plainte spam email", corps, baseUrl);
-  }
-
-  /// Alerte de worker inactif (aucun job depuis plus de 3 heures).
-  ///
-  /// @param detail description de la dernière activité (jamais null)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte worker
-  static String alerteWorker(String detail, String baseUrl) {
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 16px">%s</p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Les fetches Ticketmaster et les notifications n'ont pas été traités depuis plus de 3 heures.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
-            .formatted(
-                C_TEXTE,
-                e(detail),
-                C_TEXTE,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Worker inactif", corps, baseUrl);
-  }
-
-  /// Alerte de seuil (80%) sur le quota d'envoi Resend jour et/ou mois (suite de l'incident).
-  ///
-  /// @param envoyesJour nombre d'envois comptabilisés pour le jour courant
-  /// @param limiteJour limite journalière Resend (tier gratuit : 100)
-  /// @param envoyesMois nombre d'envois comptabilisés pour le mois courant
-  /// @param limiteMois limite mensuelle Resend (tier gratuit : 3000)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'alerte quota Resend
-  static String alerteQuotaResend(
-      int envoyesJour, int limiteJour, int envoyesMois, int limiteMois, String baseUrl) {
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 8px">
-          Le quota d'envoi Resend approche de sa limite.
-        </p>
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">
-          Jour : %d / %d envois. Mois : %d / %d envois. Au-delà, les emails
-          transactionnels et notifications sont bloqués avant tout appel réseau.
-        </p>
-        <p style="margin-top: 24px">%s</p>
-        """
-            .formatted(
-                C_TEXTE,
-                C_TEXTE,
-                envoyesJour,
-                limiteJour,
-                envoyesMois,
-                limiteMois,
-                bouton(baseUrl + "/admin", "Aller à l'administration →"));
-    return enveloppErreur("Quota Resend proche de la limite", corps, baseUrl);
-  }
-
-  /// Digest d'alerte pour les nouvelles entrées {@code logs_admin} de niveau erreur.
-  ///
-  /// @param erreurs liste des entrées d'erreur à afficher (non vide)
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML du digest d'erreurs
-  static String alerteLogsAdmin(List<EntreeLogAdmin> erreurs, String baseUrl) {
-    String lignesHtml =
-        erreurs.stream()
-            .map(
-                entree -> {
-                  String dateFormatee =
-                      DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
-                          .withLocale(Locale.FRANCE)
-                          .withZone(ZoneId.of("Europe/Paris"))
-                          .format(Instant.ofEpochMilli(entree.ts()));
-                  return """
-                  <tr>
-                    <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; vertical-align: top">
-                      <div style="font-weight: 600; color: %s; font-size: 14px">%s — %s</div>
-                      <div style="color: #666; font-size: 13px; margin-top: 2px">%s</div>
-                    </td>
-                  </tr>
-                  """
-                      .formatted(
-                          C_ERREUR, e(dateFormatee), e(entree.source()), e(entree.message()));
-                })
-            .collect(Collectors.joining());
-    String corps =
-        """
-        <p style="color: %s; font-size: 14px; margin: 0 0 24px">%d nouvelle(s) entrée(s) d'erreur dans les logs admin :</p>
-        <table style="border-collapse: collapse; width: 100%%">%s</table>
-        <p style="margin-top: 24px">%s</p>
-        """
-            .formatted(
-                C_TEXTE,
-                erreurs.size(),
-                lignesHtml,
-                bouton(baseUrl + "/admin", "Voir les logs admin →"));
-    return enveloppErreur("Nouvelles erreurs — logs admin", corps, baseUrl);
-  }
-
-  /// Notification de suppression de compte par un administrateur.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de notification
-  static String suppressionCompte(String baseUrl) {
-    String corps =
+  /**
+   * Notification de suppression de compte par un administrateur.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de notification
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String suppressionCompte(final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Votre compte Strapontin a été supprimé par un administrateur.
@@ -425,23 +228,20 @@ final class EmailTemplates {
     return envelopper("Votre compte Strapontin a été supprimé", corps, baseUrl);
   }
 
-  /// Signalement d'une salle manquante transmis à l'administrateur.
-  ///
-  /// @param nom le nom de la salle signalée
-  /// @param ville la ville/code postal (peut être vide)
-  /// @param urlSite l'URL du site ou de la billetterie (peut être vide)
-  /// @param commentaire le commentaire libre (peut être vide)
-  /// @param emailUtilisateur l'adresse email de l'utilisateur
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de signalement admin
+  /**
+   * Signalement d'une salle manquante transmis à l'admin,
+   * paramètres auto-descriptifs.
+   * @return le HTML de l'email
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
   static String signalementSalleManquante(
-      String nom,
-      String ville,
-      String urlSite,
-      String commentaire,
-      String emailUtilisateur,
-      String baseUrl) {
-    String blocCommentaire =
+      final String nom,
+      final String ville,
+      final String urlSite,
+      final String commentaire,
+      final String emailUtilisateur,
+      final String baseUrl) {
+    final String blocCommentaire =
         (commentaire != null && !commentaire.isBlank())
             ? """
             <p style="color: %s; font-size: 14px; white-space: pre-wrap;\
@@ -449,7 +249,7 @@ final class EmailTemplates {
             """
                 .formatted(C_TEXTE, C_BORDURE, e(commentaire))
             : "";
-    String corps =
+    final String corps =
         """
         <table style="border-collapse: collapse; width: 100%%; margin-bottom: 8px">
           <tr>
@@ -484,13 +284,16 @@ final class EmailTemplates {
     return envelopper("Salle manquante signalée", corps, baseUrl);
   }
 
-  /// Confirmation de signalement de salle manquante envoyée à l'utilisateur.
-  ///
-  /// @param nom le nom de la salle signalée
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de confirmation
-  static String confirmationSignalementSalle(String nom, String baseUrl) {
-    String corps =
+  /**
+   * Confirmation de signalement de salle manquante envoyée à l'utilisateur.
+   *
+   * @param nom le nom de la salle signalée
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de confirmation
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String confirmationSignalementSalle(final String nom, final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 16px">
           Votre signalement pour <strong>%s</strong> a été transmis à l'administrateur.
@@ -503,12 +306,15 @@ final class EmailTemplates {
     return envelopper("Votre signalement a été transmis", corps, baseUrl);
   }
 
-  /// Notification de promotion au rôle administrateur.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de promotion
-  static String promotionAdmin(String baseUrl) {
-    String corps =
+  /**
+   * Notification de promotion au rôle administrateur.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de promotion
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String promotionAdmin(final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Votre compte Strapontin a été promu au rôle administrateur.
@@ -520,13 +326,17 @@ final class EmailTemplates {
     return envelopper("Vous êtes maintenant administrateur Strapontin", corps, baseUrl);
   }
 
-  /// Préavis de révocation du rôle administrateur (délai de 7 jours).
-  ///
-  /// @param dateEffective la date effective de révocation formatée (ex. "22 juin 2026")
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de préavis
-  static String preavisRevocationAdmin(String dateEffective, String baseUrl) {
-    String corps =
+  /**
+   * Préavis de révocation du rôle administrateur (délai de 7 jours).
+   *
+   * @param dateEffective la date effective de révocation formatée (ex. "22 juin
+   *     2026")
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de préavis
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String preavisRevocationAdmin(final String dateEffective, final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Votre accès administrateur Strapontin sera supprimé le <strong>%s</strong>.
@@ -540,12 +350,15 @@ final class EmailTemplates {
     return enveloppErreur("Préavis de révocation admin", corps, baseUrl);
   }
 
-  /// Email de test de configuration Resend.
-  ///
-  /// @param baseUrl l'URL publique de base de l'application
-  /// @return le HTML de l'email de test
-  static String emailTest(String baseUrl) {
-    String corps =
+  /**
+   * Email de test de configuration Resend.
+   *
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email de test
+   */
+  /* package-private : appelé par EmailService(Admin) (même package). */
+  static String emailTest(final String baseUrl) {
+    final String corps =
         """
         <p style="color: %s; margin: 0 0 16px">
           Si vous recevez cet email, la configuration Resend est correcte.
@@ -560,16 +373,17 @@ final class EmailTemplates {
 
   // ---- Helpers privés ----
 
-  private static String envelopper(String titre, String corps, String baseUrl) {
+  private static String envelopper(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 
-  private static String enveloppErreur(String titre, String corps, String baseUrl) {
+  /* package-private : appelé par EmailTemplates/EmailTemplatesAlertes. */
+  static String enveloppErreur(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_ERREUR, titre, corps, baseUrl);
   }
 
   private static String enveloppAvecCouleur(
-      String couleur, String titre, String corps, String baseUrl) {
+      final String couleur, final String titre, final String corps, final String baseUrl) {
     return """
     <!doctype html>
     <html lang="fr">
@@ -591,18 +405,27 @@ final class EmailTemplates {
         .formatted(C_BORDURE, couleur, e(titre), corps, C_MUTE, e(baseUrl), C_MUTE);
   }
 
-  private static String bouton(String href, String texte) {
+  /* package-private : appelé par EmailTemplates/EmailTemplatesAlertes. */
+  static String bouton(final String href, final String texte) {
     return """
     <a href="%s" style="display: inline-block; background: %s; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500">%s</a>
     """
         .formatted(e(href), C_NOIR, e(texte));
   }
 
-  /// Échappe les caractères HTML spéciaux d'une valeur variable.
-  ///
-  /// @param valeur la valeur à échapper (null retourne une chaîne vide)
-  /// @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud HTML
-  static String e(Object valeur) {
+  /**
+   * Échappe les caractères HTML spéciaux d'une valeur variable.
+   *
+   * @param valeur la valeur à échapper (null retourne une chaîne vide)
+   * @return la valeur échappée, sûre pour insertion dans un attribut ou un nœud
+   *     HTML
+   */
+  // Nom volontairement court : appelé des dizaines de fois dans des lignes de
+  // formatage HTML déjà denses (voir les gabarits ci-dessus) — un nom plus long
+  // nuirait à leur lisibilité.
+  @SuppressWarnings("PMD.ShortMethodName")
+  /* package-private : appelé par EmailTemplates/EmailTemplatesAlertes. */
+  static String e(final Object valeur) {
     return UtilitairesChaine.echapperHtml(valeur);
   }
 }

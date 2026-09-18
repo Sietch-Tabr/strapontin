@@ -20,12 +20,14 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link AlerteLogsAdminService}.
-///
-/// <p>Couvre le curseur persisté : n'avance qu'après envoi réussi, pas de re-notification.
-///
-/// @since 2.6.1
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AlerteLogsAdminService}.
+ *
+ * <p>Couvre le curseur persisté : n'avance qu'après envoi réussi, pas de re-notification.
+ *
+ * @since 2.6.1
+ * @author Kwaite
+ */
 class AlerteLogsAdminServiceTest {
 
   private static final String CLE_CURSEUR = "ALERTE_LOGS_ADMIN_CURSEUR";
@@ -56,7 +58,7 @@ class AlerteLogsAdminServiceTest {
 
   @Test
   void verifier_erreursPresentesEtEmailConfigure_envoieEtAvanceLeCurseurAuDernierTs() {
-    List<EntreeLogAdmin> erreurs =
+    final List<EntreeLogAdmin> erreurs =
         List.of(
             new EntreeLogAdmin(100L, "error", "worker", "échec job 1", null),
             new EntreeLogAdmin(200L, "error", "worker", "échec job 2", null));
@@ -73,7 +75,7 @@ class AlerteLogsAdminServiceTest {
 
   @Test
   void verifier_aucunDestinataireAlerte_neAvancePasLeCurseur() {
-    List<EntreeLogAdmin> erreurs =
+    final List<EntreeLogAdmin> erreurs =
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);
@@ -87,7 +89,7 @@ class AlerteLogsAdminServiceTest {
 
   @Test
   void verifier_echecEnvoiEmail_neAvancePasLeCurseur() {
-    List<EntreeLogAdmin> erreurs =
+    final List<EntreeLogAdmin> erreurs =
         List.of(new EntreeLogAdmin(100L, "error", "worker", "échec", null));
     when(configService.lireConfig(CLE_CURSEUR)).thenReturn(Optional.empty());
     when(logAdminService.lireErreursDepuis(0L)).thenReturn(erreurs);

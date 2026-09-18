@@ -22,16 +22,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [EnrichissementSallesService] avec PostgreSQL réel (Testcontainers) —
-/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, qui ne peut être vérifiée
-/// qu'avec une vraie base (l'expression SQL {@code EXTRACT(ISODOW FROM CURRENT_DATE)} n'est jamais
-/// évaluée avec un {@code NamedParameterJdbcTemplate} mocké).
-///
-/// @since 2.7.3
-/// @author Kwaite
+/**
+ * Tests d'intégration de [EnrichissementSallesService] avec PostgreSQL réel (Testcontainers) —
+ * couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, qui ne peut être vérifiée
+ * qu'avec une vraie base (l'expression SQL {@code EXTRACT(ISODOW FROM CURRENT_DATE)} n'est jamais
+ * évaluée avec un {@code NamedParameterJdbcTemplate} mocké).
+ *
+ * @since 2.7.3
+ * @author Kwaite
+ */
 class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private OverpassSalleSource overpassSalleSource;
@@ -53,7 +56,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     when(wikidataSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
   }
 
-  private UUID insererSalle(String nom, String jourBatchExpression) {
+  private UUID insererSalle(final String nom, final String jourBatchExpression) {
     return jdbc.queryForObject(
         "INSERT INTO salles (salle_cle, nom, nom_norm, jour_batch)"
             + " VALUES (:cle, :nom, :norm, "
@@ -66,13 +69,14 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_salleDuJourBatchCourant_estCandidate() {
-    UUID salleAujourdhui = insererSalle("Salle Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    final UUID salleAujourdhui =
+        insererSalle("Salle Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
 
     service.enrichir();
 
-    ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
     verify(overpassSalleSource).enrichirLot(captor.capture());
-    List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
+    final List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
     assertTrue(idsTraites.contains(salleAujourdhui));
     assertEquals(1, idsTraites.size());
   }
@@ -94,14 +98,13 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_salleSansDeptAvecConcertRattache_heriteDuDeptDuConcert() {
-    UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
-    UUID evenementId =
+    final UUID salleId = insererSalle("Salle Sans Dept", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, dept, salle_id)"
                 + " VALUES ('artiste', CURRENT_DATE + 30, 'salle sans dept', '87',"
                 + " CAST(:salleId AS uuid)) RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
-                .addValue("salleId", salleId.toString()),
+            new MapSqlParameterSource().addValue("salleId", salleId.toString()),
             UUID.class);
     jdbc.update(
         "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut)"
@@ -111,9 +114,9 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
 
     service.enrichir();
 
-    ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
     verify(overpassSalleSource).enrichirLot(captor.capture());
-    SalleAEnrichir candidat = captor.getValue().getFirst();
+    final SalleAEnrichir candidat = captor.getValue().getFirst();
     assertEquals("87", candidat.dept());
   }
 }

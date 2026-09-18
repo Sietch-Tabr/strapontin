@@ -23,23 +23,12 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre de rate limiting sur les endpoints d'authentification publics.
-///
-/// <p>Limites par endpoint :
-/// <ul>
-///   <li>{@code /api/auth/login} : 15 tentatives / 15 minutes par IP
-///   <li>{@code /api/auth/forgot-password} : 15 tentatives / 15 minutes par IP
-///   <li>{@code /api/auth/reset-password} : 30 tentatives / heure par IP
-/// </ul>
-///
-/// <p><b>Persistance :</b> les buckets sont stockés en mémoire Caffeine et perdus au redémarrage
-/// de l'application. Les tentatives bloquées (HTTP 429) sont loguées dans {@code logs_admin}
-/// (source {@code auth}, niveau {@code warn}) pour permettre leur surveillance. Le risque résiduel
-/// est acceptable pour un système invite-only ; migration vers un stockage persistant
-/// (PostgreSQL) à envisager si l'exposition publique évolue.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Filtre de rate limiting sur les endpoints d'authentification
+ * publics (détail : CLAUDE.md, Authentification).
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class RateLimitingLoginFilter extends OncePerRequestFilter {
 
@@ -61,25 +50,30 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
           .maximumSize(10_000)
           .build();
 
-  public RateLimitingLoginFilter(LogAdminService logAdminService) {
+  /**
+   * @param logAdminService journalisation des tentatives bloquées
+   */
+  public RateLimitingLoginFilter(final LogAdminService logAdminService) {
+    super();
     this.logAdminService = logAdminService;
   }
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)
       throws ServletException, IOException {
-    String chemin = request.getServletPath();
+    final String chemin = request.getServletPath();
     if (!HttpMethod.POST.matches(request.getMethod())
         || (!URLS_LOGIN.contains(chemin) && !URL_RESET_PASSWORD.equals(chemin))) {
       chain.doFilter(request, response);
       return;
     }
 
-    String ip = request.getRemoteAddr();
-    String cleBucket = ip + ":" + chemin;
-    boolean estReset = URL_RESET_PASSWORD.equals(chemin);
-    Bucket bucket = buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
+    final String ip = request.getRemoteAddr();
+    final String cleBucket = ip + ":" + chemin;
+    final boolean estReset = URL_RESET_PASSWORD.equals(chemin);
+    final Bucket bucket =
+        buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
 
     if (bucket.tryConsume(1)) {
       chain.doFilter(request, response);
@@ -99,7 +93,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   }
 
   private Bucket creerBucketLogin() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_TENTATIVES_LOGIN)
             .refillIntervally(MAX_TENTATIVES_LOGIN, FENETRE_LOGIN)
@@ -108,7 +102,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
   }
 
   private Bucket creerBucketReset() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_TENTATIVES_RESET)
             .refillIntervally(MAX_TENTATIVES_RESET, FENETRE_RESET)

@@ -20,12 +20,15 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ControleIntegriteService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ControleIntegriteService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ControleIntegriteServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -37,16 +40,13 @@ class ControleIntegriteServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     signalementMatchingService = mock(SignalementMatchingService.class);
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
-    when(jdbc.query(
-            anyString(),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<UUID>>any()))
+    when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(List.of());
     service = new ControleIntegriteService(jdbc, signalementMatchingService);
   }
 
-  private static Map<String, Object> ligneSalle(UUID id, UUID parentId) {
-    Map<String, Object> ligne = new HashMap<>();
+  private static Map<String, Object> ligneSalle(final UUID id, final UUID parentId) {
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", id);
     ligne.put("salle_parent_id", parentId);
     return ligne;
@@ -54,13 +54,13 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_cycleSalleParent_signaleLesSallesDuCycle() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
-    UUID c = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
+    final UUID c = UUID.randomUUID();
     when(jdbc.queryForList(contains("salle_parent_id"), anyMap()))
         .thenReturn(List.of(ligneSalle(a, b), ligneSalle(b, c), ligneSalle(c, a)));
 
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(3, total);
     verify(signalementMatchingService)
@@ -73,12 +73,12 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_hierarchieSansCycle_neSignaleRien() {
-    UUID complexe = UUID.randomUUID();
-    UUID sousSalle = UUID.randomUUID();
+    final UUID complexe = UUID.randomUUID();
+    final UUID sousSalle = UUID.randomUUID();
     when(jdbc.queryForList(contains("salle_parent_id"), anyMap()))
         .thenReturn(List.of(ligneSalle(complexe, null), ligneSalle(sousSalle, complexe)));
 
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(0, total);
     verify(signalementMatchingService, never())
@@ -92,13 +92,13 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_deptSalleDivergentDeLaMajorite_signale() {
-    UUID salleId = UUID.randomUUID();
-    Map<String, Object> ligne = new HashMap<>();
+    final UUID salleId = UUID.randomUUID();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("salle_id", salleId);
     ligne.put("dept_salle", "75");
     when(jdbc.queryForList(contains("dept_majoritaire"), anyMap())).thenReturn(List.of(ligne));
 
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(1, total);
     verify(signalementMatchingService)
@@ -107,14 +107,12 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_evenementOrphelinAncien_signale() {
-    UUID evenementId = UUID.randomUUID();
+    final UUID evenementId = UUID.randomUUID();
     when(jdbc.query(
-            contains("evenements"),
-            anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<UUID>>any()))
+            contains("evenements"), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<UUID>>any()))
         .thenReturn(List.of(evenementId));
 
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(1, total);
     verify(signalementMatchingService)
@@ -128,14 +126,14 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_artisteSourceOrpheline_signale() {
-    UUID artisteId = UUID.randomUUID();
-    Map<String, Object> ligne = new HashMap<>();
+    final UUID artisteId = UUID.randomUUID();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("entite_id", artisteId);
     ligne.put("source", "ticketmaster");
     ligne.put("identifiant_externe", "K8vZ917xxx");
     when(jdbc.queryForList(contains("artiste_sources"), anyMap())).thenReturn(List.of(ligne));
 
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(1, total);
     verify(signalementMatchingService)
@@ -144,14 +142,14 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_salleSourceOrpheline_signale() {
-    UUID salleId = UUID.randomUUID();
-    Map<String, Object> ligne = new HashMap<>();
+    final UUID salleId = UUID.randomUUID();
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("entite_id", salleId);
     ligne.put("source", "digitick");
     ligne.put("identifiant_externe", "slug-abandonne");
     when(jdbc.queryForList(contains("salle_sources"), anyMap())).thenReturn(List.of(ligne));
 
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(1, total);
     verify(signalementMatchingService)
@@ -160,7 +158,7 @@ class ControleIntegriteServiceTest {
 
   @Test
   void verifier_aucuneAnomalie_neSignaleRienEtRetourneZero() {
-    int total = service.verifier();
+    final int total = service.verifier();
 
     assertEquals(0, total);
   }

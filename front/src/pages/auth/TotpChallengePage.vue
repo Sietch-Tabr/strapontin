@@ -5,9 +5,16 @@
       Saisissez le code de votre application d'authentification.
     </p>
 
-    <div v-if="erreur" role="alert" aria-live="assertive" class="alerte alerte-erreur">{{ erreur }}</div>
+    <div
+      v-if="erreur"
+      role="alert"
+      aria-live="assertive"
+      class="alerte alerte-erreur"
+    >
+      {{ erreur }}
+    </div>
 
-    <form @submit.prevent="soumettre" autocomplete="off">
+    <form autocomplete="off" @submit.prevent="soumettre">
       <div class="form-groupe">
         <label for="code">Code à 6 chiffres</label>
         <input
@@ -21,7 +28,11 @@
           required
         />
       </div>
-      <button type="submit" class="bouton bouton-primaire bouton-pleine-largeur" :disabled="chargement">
+      <button
+        type="submit"
+        class="bouton bouton-primaire bouton-pleine-largeur"
+        :disabled="chargement"
+      >
         Vérifier
       </button>
     </form>
@@ -33,62 +44,62 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'TotpChallengePage' })
+defineOptions({ name: "TotpChallengePage" });
 
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import AuthLayout from '../../components/auth/AuthLayout.vue'
-import { useSession } from '../../composables/useSession.js'
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import AuthLayout from "../../components/auth/AuthLayout.vue";
+import { useSession } from "../../composables/useSession.js";
 
-const router = useRouter()
-const { chargerSession } = useSession()
+const router = useRouter();
+const { chargerSession } = useSession();
 
-const code = ref('')
-const chargement = ref(false)
-const erreur = ref('')
-const champCode = ref(null)
+const code = ref("");
+const chargement = ref(false);
+const erreur = ref("");
+const champCode = ref(null);
 
 onMounted(() => {
-  champCode.value?.focus()
-})
+  champCode.value?.focus();
+});
 
 async function soumettre() {
-  erreur.value = ''
-  chargement.value = true
+  erreur.value = "";
+  chargement.value = true;
   try {
-    const rep = await fetch('/api/auth/totp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: code.value.replace(/\D/g, '') }),
-    })
+    const rep = await fetch("/api/auth/totp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code.value.replace(/\D/g, "") }),
+    });
     if (rep.ok) {
       // Recharge la session pour que le garde de route reconnaisse l'utilisateur authentifié,
       // sinon le push('/') est intercepté et renvoie vers /login.
-      await chargerSession()
-      router.push('/')
-      return
+      await chargerSession();
+      router.push("/");
+      return;
     }
     if (rep.status === 401) {
-      router.push('/login?totp=trop_tentatives')
-      return
+      router.push("/login?totp=trop_tentatives");
+      return;
     }
     if (rep.status === 409) {
-      router.push('/')
-      return
+      router.push("/");
+      return;
     }
-    const data = await rep.json()
-    erreur.value = data.erreur ?? 'Code incorrect.'
-    code.value = ''
-    champCode.value?.focus()
+    const data = await rep.json();
+    erreur.value = data.erreur ?? "Code incorrect.";
+    code.value = "";
+    champCode.value?.focus();
   } catch (_) {
-    erreur.value = 'Impossible de vérifier le code. Vérifiez votre connexion.'
+    erreur.value = "Impossible de vérifier le code. Vérifiez votre connexion.";
   } finally {
-    chargement.value = false
+    chargement.value = false;
   }
 }
 
 async function seDeconnecter() {
-  await fetch('/api/auth/logout', { method: 'POST' })
-  router.push('/login?deconnecte=true')
+  await fetch("/api/auth/logout", { method: "POST" });
+  router.push("/login?deconnecte=true");
 }
 </script>

@@ -16,10 +16,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link ResendWebhooksAdminController}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ResendWebhooksAdminController}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ResendWebhooksAdminControllerTest {
 
   private ResendWebhooksAdminService service;
@@ -33,12 +35,12 @@ class ResendWebhooksAdminControllerTest {
 
   @Test
   void listerEvenements_delegueAuService() {
-    var evenement =
+    final var evenement =
         new ResendWebhooksAdminService.EvenementWebhook(
             "evt_1", "email.bounced", "failed", "2026-09-01T00:00:00Z");
     when(service.listerEvenements()).thenReturn(List.of(evenement));
 
-    ResponseEntity<List<ResendWebhooksAdminService.EvenementWebhook>> reponse =
+    final ResponseEntity<List<ResendWebhooksAdminService.EvenementWebhook>> reponse =
         controller.listerEvenements();
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -49,7 +51,7 @@ class ResendWebhooksAdminControllerTest {
   void rejouerEvenement_succes_retourne200() {
     when(service.rejouerEvenement("evt_1")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.rejouerEvenement("evt_1");
+    final ResponseEntity<Map<String, Object>> reponse = controller.rejouerEvenement("evt_1");
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service).rejouerEvenement("evt_1");
@@ -59,7 +61,7 @@ class ResendWebhooksAdminControllerTest {
   void rejouerEvenement_echec_retourne502() {
     when(service.rejouerEvenement("evt_1")).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.rejouerEvenement("evt_1");
+    final ResponseEntity<Map<String, Object>> reponse = controller.rejouerEvenement("evt_1");
 
     assertEquals(502, reponse.getStatusCode().value());
   }

@@ -29,12 +29,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour la gestion des salles suivies (portage de {@code salles/+page.server.ts}).
-///
-/// <p>HTTP pur — délègue toute la logique métier et l'accès aux données à {@link SalleService}.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Contrôleur REST pour la gestion des salles suivies — HTTP pur, délègue
+ * toute la logique métier et l'accès aux données à {@link SalleService}.
+ *
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/salles")
 public class SalleController {
@@ -50,105 +51,116 @@ public class SalleController {
           .maximumSize(10_000)
           .build();
 
-  /// @param salleService service de gestion des salles
-  /// @param emailService service d'envoi d'emails
-  public SalleController(SalleService salleService, EmailService emailService) {
+  /**
+   * @param salleService service de gestion des salles
+   * @param emailService service d'envoi d'emails
+   */
+  public SalleController(final SalleService salleService, final EmailService emailService) {
     this.salleService = salleService;
     this.emailService = emailService;
   }
 
-  /// Liste les salles suivies, avec suggestions de recherche si {@code q} est fourni.
-  ///
-  /// @param q terme de recherche (optionnel, min 2 caractères)
-  /// @param auth contexte d'authentification
-  /// @return la liste des salles et les suggestions
+  /**
+   * Liste les salles suivies, avec suggestions de recherche si {@code q} est
+   * fourni.
+   *
+   * @param recherche terme de recherche (optionnel, min 2 caractères)
+   * @param auth contexte d'authentification
+   * @return la liste des salles et les suggestions
+   */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(
-      @RequestParam(required = false, defaultValue = "") String q, Authentication auth) {
-    String userId = utilisateur(auth).id();
-    return ResponseEntity.ok(salleService.lister(userId, q));
+      @RequestParam(name = "q", required = false, defaultValue = "") final String recherche,
+      final Authentication auth) {
+    final String userId = utilisateur(auth).id();
+    return ResponseEntity.ok(salleService.lister(userId, recherche));
   }
 
-  /// Ajoute une salle à la liste de suivi.
-  ///
-  /// @param requete corps JSON avec le nom et l'ID TM optionnel
-  /// @param auth contexte d'authentification
-  /// @return 201 si créée — 409 si doublon, 400 si invalide/cap (via {@link
-  ///   GlobalExceptionHandler})
+  /**
+   * Ajoute une salle à la liste de suivi.
+   *
+   * @param requete corps JSON avec le nom et l'ID TM optionnel
+   * @param auth contexte d'authentification
+   * @return 201 si créée — 409 si doublon, 400 si invalide/cap (via
+   *     {@link GlobalExceptionHandler} )
+   */
   @PostMapping
   public ResponseEntity<Map<String, Object>> ajouterSalle(
-      @Valid @RequestBody RequeteAjouter requete, Authentication auth) {
-    String userId = utilisateur(auth).id();
-    String nom = requete.nom() == null ? "" : requete.nom().strip();
+      @Valid @RequestBody final RequeteAjouter requete, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
+    final String nom = requete.nom() == null ? "" : requete.nom().strip();
     if (nom.isEmpty() || nom.length() > 200) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Identifiant de salle invalide."));
     }
-    String tmVenueId =
-        requete.tmVenueId() == null || requete.tmVenueId().isBlank()
-            ? null
-            : requete.tmVenueId().strip();
-    String osmId =
-        requete.osmId() == null || requete.osmId().isBlank() ? null : requete.osmId().strip();
-    String wikidataId =
-        requete.wikidataId() == null || requete.wikidataId().isBlank()
-            ? null
-            : requete.wikidataId().strip();
+    final String tmVenueId = videVersNull(requete.tmVenueId());
+    final String osmId = videVersNull(requete.osmId());
+    final String wikidataId = videVersNull(requete.wikidataId());
 
-    salleService.ajouter(userId, nom, tmVenueId, osmId, wikidataId);
+    salleService.ajouter(
+        new SalleService.DonneesAjoutSalle(userId, nom, tmVenueId, osmId, wikidataId));
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
-  /// Supprime une salle de la liste de suivi.
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param auth contexte d'authentification
-  /// @return 204 si supprimée
+  private static String videVersNull(final String valeur) {
+    return valeur == null || valeur.isBlank() ? null : valeur.strip();
+  }
+
+  /**
+   * Supprime une salle de la liste de suivi.
+   *
+   * @param salleId UUID stable de la salle
+   * @param auth contexte d'authentification
+   * @return 204 si supprimée
+   */
   @DeleteMapping("/{salleId}")
-  public ResponseEntity<Void> supprimerSalle(@PathVariable UUID salleId, Authentication auth) {
-    String userId = utilisateur(auth).id();
+  public ResponseEntity<Void> supprimerSalle(
+      @PathVariable final UUID salleId, final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     salleService.supprimer(userId, salleId);
     return ResponseEntity.noContent().build();
   }
 
-  /// Enregistre le signalement d'une salle absente du référentiel.
-  ///
-  /// <p>Envoie un email à l'administrateur et un email de confirmation à l'utilisateur. Rate-limité
-  /// à 3 signalements par heure par IP.
-  ///
-  /// @param requete corps JSON avec nom, ville, urlSite, commentaire
-  /// @param auth contexte d'authentification
-  /// @param request la requête HTTP (pour rate limiting par IP)
-  /// @return 204 si transmis, 400 si validation échoue, 429 si rate limit atteint
+  /**
+   * Signale une salle absente (email admin + confirmation), rate-limité.
+   * @param requete corps JSON avec nom, ville, urlSite, commentaire
+   * @param auth contexte d'authentification
+   * @param request la requête HTTP (pour rate limiting par IP)
+   * @return 204 si transmis, 400 si invalide, 429 si rate limit atteint
+   */
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
-      @Valid @RequestBody RequeteSignalementSalle requete,
-      Authentication auth,
-      HttpServletRequest request) {
-    UtilisateurDetails utilisateur = utilisateur(auth);
+      @Valid @RequestBody final RequeteSignalementSalle requete,
+      final Authentication auth,
+      final HttpServletRequest request) {
+    final UtilisateurDetails utilisateur = utilisateur(auth);
 
-    // @Valid rejette une requête invalide avant l'exécution de cette méthode — le rate-limiting
-    // ci-dessous n'est donc jamais consommé par une requête invalide.
-    String nom = requete.nom().strip();
-    String ville = requete.ville() == null ? "" : requete.ville().strip();
-    String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
-    String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
+    // @Valid rejette une requête invalide avant l'exécution de cette méthode —
+    // le rate-limiting ci-dessous n'est donc jamais consommé par une requête
+    // invalide.
+    final String nom = requete.nom().strip();
+    final String ville = requete.ville() == null ? "" : requete.ville().strip();
+    final String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
+    final String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
 
-    String ip = request.getRemoteAddr();
-    Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
+    final String ip = request.getRemoteAddr();
+    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
     if (!bucket.tryConsume(1)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
     emailService.envoyerSignalementSalleManquante(
-        nom, ville, urlSite, commentaire, utilisateur.email());
+        new EmailService.SignalementSalleManquante(
+            nom, ville, urlSite, commentaire, utilisateur.email()));
     return ResponseEntity.noContent().build();
   }
 
-  /// Réinitialise tous les buckets de signalement (actif uniquement sur le profil {@code dev}).
-  ///
-  /// <p>Appelé par le global-setup E2E avant chaque suite de tests pour repartir d'un quota plein.
-  ///
-  /// @return 204
+  /**
+   * Réinitialise tous les buckets de signalement (profil {@code dev}
+   * uniquement) — appelé par le global-setup E2E avant chaque suite pour
+   * repartir d'un quota plein.
+   *
+   * @return 204
+   */
   @Profile("dev")
   @DeleteMapping("/rate-limits/signalement")
   public ResponseEntity<Void> reinitialiserBucketsSignalement() {
@@ -157,7 +169,7 @@ public class SalleController {
   }
 
   private Bucket creerBucketSignalement() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
             .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))
@@ -165,7 +177,7 @@ public class SalleController {
     return Bucket.builder().addLimit(limite).build();
   }
 
-  private static UtilisateurDetails utilisateur(Authentication auth) {
+  private static UtilisateurDetails utilisateur(final Authentication auth) {
     return (UtilisateurDetails) auth.getPrincipal();
   }
 }

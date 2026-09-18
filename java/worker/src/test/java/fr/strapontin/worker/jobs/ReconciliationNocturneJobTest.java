@@ -15,8 +15,8 @@ class ReconciliationNocturneJobTest {
 
   @Test
   void executeInternal_delegueAWorkerService() {
-    WorkerService workerService = mock(WorkerService.class);
-    ReconciliationNocturneJob job = new ReconciliationNocturneJob();
+    final WorkerService workerService = mock(WorkerService.class);
+    final ReconciliationNocturneJob job = new ReconciliationNocturneJob();
     job.setWorkerService(workerService);
 
     job.executeInternal(mock(JobExecutionContext.class));

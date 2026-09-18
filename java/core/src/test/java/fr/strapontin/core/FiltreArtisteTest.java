@@ -23,13 +23,13 @@ class FiltreArtisteTest {
         "Hommage à Johnny Hallyday",
         "Pink Floyd Cover of The Wall",
       })
-  void estTribute_nomTributeOuHommage_retourneTrue(String nom) {
+  void estTribute_nomTributeOuHommage_retourneTrue(final String nom) {
     assertTrue(FiltreArtiste.estTribute(nom));
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"Nina Simone", "Queen", "Pink Floyd", "Piaf", "Coverdale"})
-  void estTribute_nomArtisteOriginal_retourneFalse(String nom) {
+  void estTribute_nomArtisteOriginal_retourneFalse(final String nom) {
     assertFalse(FiltreArtiste.estTribute(nom));
   }
 

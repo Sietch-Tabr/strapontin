@@ -14,73 +14,80 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Retente la résolution des concerts orphelins (`salle_id IS NULL`) déjà persistés — extrait de
-/// {@link ReconciliateurSalles} (v2.8.7, dette de taille pure, aucun changement fonctionnel).
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Retente la résolution des concerts orphelins ({@code salle_id IS NULL}) déjà
+ * persistés — extrait de {@link ReconciliateurSalles} (v2.8.7, dette de taille
+ * pure, aucun changement fonctionnel).
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 @Service
 class ReconciliateurSallesOrphelines {
 
-  private static final Logger log = LoggerFactory.getLogger(ReconciliateurSallesOrphelines.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurSallesOrphelines.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  ReconciliateurSallesOrphelines(NamedParameterJdbcTemplate jdbc) {
+  /* package-private : instancié uniquement par Spring (même package). */
+  ReconciliateurSallesOrphelines(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
-  /// Couvre le résidu structurel laissé par {@code upsertSalleSource} ({@link
-  /// ResolveurSalleParConcert}) : un concert sans {@code salleSourceId} (TM omet parfois {@code
-  /// venue.id}) et sans salle suffisamment proche par nom au moment de son insertion reste orphelin
-  /// indéfiniment, sans jamais être retenté — la salle correspondante peut pourtant apparaître plus
-  /// tard via une autre source (un autre événement TM avec {@code venue.id} renseigné, Eventim,
-  /// Digitick). Appelé une fois par nuit (voir {@code ReconciliationNocturneService}) plutôt qu'à
-  /// chaque cycle de fetch : le volume concerné reste faible (quelques dizaines de concerts) et une
-  /// résolution par nom n'a pas de raison de réussir plusieurs fois par jour si elle a échoué la
-  /// veille.
-  ///
-  /// @return nombre de concerts orphelins résolus
+  /**
+   * Couvre le résidu structurel laissé par {@code upsertSalleSource}
+   * (détail : CLAUDE.md, Hiérarchie des salles).
+   * @return nombre de concerts orphelins résolus
+   */
+  /* package-private : appelé par le cycle nocturne du même package. */
   int retenterSallesOrphelines() {
-    List<Map<String, Object>> orphelins =
+    final List<Map<String, Object>> orphelins =
         jdbc.queryForList(
             "SELECT id, salle, dept FROM concerts"
                 + " WHERE salle_id IS NULL AND date >= CURRENT_DATE",
             Map.of());
-    if (orphelins.isEmpty()) return 0;
+    if (orphelins.isEmpty()) {
+      return 0;
+    }
 
-    // candidats chargés une seule fois (pas une requête SQL par orphelin) — le volume de salles
-    // reste compatible avec un score en mémoire, contrairement au N+1 SQL que remplace cette
-    // méthode.
-    List<CandidatSalleMatching> candidats = chargerCandidatsMatching();
+    // candidats chargés une seule fois (pas une requête SQL par orphelin) — le
+    // volume de salles reste compatible avec un score en mémoire, contrairement
+    // au N+1 SQL que remplace cette méthode.
+    final List<CandidatSalleMatching> candidats = chargerCandidatsMatching();
 
     int resolus = 0;
-    for (Map<String, Object> orphelin : orphelins) {
-      String salle = (String) orphelin.get("salle");
-      String dept = (String) orphelin.get("dept");
-      UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
-      if (salleId == null) continue;
+    for (final Map<String, Object> orphelin : orphelins) {
+      final String salle = (String) orphelin.get("salle");
+      final String dept = (String) orphelin.get("dept");
+      final UUID salleId = meilleurCandidatEnMemoire(salle, dept, candidats);
+      if (salleId == null) {
+        continue;
+      }
       jdbc.update(
           "UPDATE evenements SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
           Map.of("salleId", salleId.toString(), "id", orphelin.get("id")));
       resolus++;
     }
     if (resolus > 0) {
-      log.info(
+      LOG.info(
           "réconciliation salles orphelines candidats={} résolus={}", orphelins.size(), resolus);
     }
     return resolus;
   }
 
-  /// Salle candidate pour {@link #meilleurCandidatEnMemoire} — {@code deptEffectif} incluant déjà
-  /// le repli sur le département d'un concert déjà rattaché ({@code salles.dept} n'étant écrit qu'à
-  /// la création).
+  /**
+   * Salle candidate pour {@link #meilleurCandidatEnMemoire} —
+   * {@code deptEffectif} incluant déjà le repli sur le département d'un concert
+   * déjà rattaché ({@code salles.dept} n'étant écrit qu'à la création).
+   */
   private record CandidatSalleMatching(UUID id, String nomNorm, String deptEffectif) {}
 
-  /// Charge en une seule requête l'ensemble des salles utilisables comme candidats de rapprochement
-  /// par nom.
-  ///
-  /// @return candidats de toutes les salles connues
+  /**
+   * Charge en une seule requête l'ensemble des salles utilisables comme
+   * candidats de rapprochement par nom.
+   *
+   * @return candidats de toutes les salles connues
+   */
   private List<CandidatSalleMatching> chargerCandidatsMatching() {
     return jdbc.query(
         "SELECT s.id AS id, s.nom_norm AS nom_norm,"
@@ -96,28 +103,29 @@ class ReconciliateurSallesOrphelines {
                 rs.getString("dept_effectif")));
   }
 
-  /// Équivalent en mémoire de {@code chercherSalleParTokens} ({@link ResolveurSalleParConcert}),
-  /// appliqué à des candidats déjà chargés — mêmes critères d'acceptation ({@link
-  /// CorrespondanceSalle#estDoublonSalle}, filtre dept, meilleur score Jaccard), sans requête SQL
-  /// par appel.
-  ///
-  /// @param nom nom brut de la salle à rapprocher
-  /// @param dept département connu du concert (nullable — désactive le filtre si absent)
-  /// @param candidats toutes les salles connues, préchargées
-  /// @return UUID de la meilleure salle candidate, ou {@code null} si aucune ne correspond
+  /**
+   * Équivalent en mémoire de {@code chercherSalleParTokens} (détail :
+   * CLAUDE.md, Hiérarchie des salles).
+   * @param nom nom brut de la salle à rapprocher
+   * @param dept département connu (nullable — désactive le filtre)
+   * @param candidats toutes les salles connues, préchargées
+   * @return UUID de la meilleure salle candidate, ou {@code null}
+   */
   private UUID meilleurCandidatEnMemoire(
-      String nom, String dept, List<CandidatSalleMatching> candidats) {
-    String nomNorm = Normalisation.normaliserTexte(nom);
+      final String nom, final String dept, final List<CandidatSalleMatching> candidats) {
+    final String nomNorm = Normalisation.normaliserTexte(nom);
     UUID meilleurUuid = null;
     double meilleurScore = -1;
-    for (CandidatSalleMatching candidat : candidats) {
+    for (final CandidatSalleMatching candidat : candidats) {
       if (dept != null
           && candidat.deptEffectif() != null
           && !candidat.deptEffectif().equals(dept)) {
         continue;
       }
-      if (!CorrespondanceSalle.estDoublonSalle(nomNorm, candidat.nomNorm())) continue;
-      double score = CorrespondanceSalle.jaccardTokens(nomNorm, candidat.nomNorm());
+      if (!CorrespondanceSalle.estDoublonSalle(nomNorm, candidat.nomNorm())) {
+        continue;
+      }
+      final double score = CorrespondanceSalle.jaccardTokens(nomNorm, candidat.nomNorm());
       if (score > meilleurScore) {
         meilleurScore = score;
         meilleurUuid = candidat.id();

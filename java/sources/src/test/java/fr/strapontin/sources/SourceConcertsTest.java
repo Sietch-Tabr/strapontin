@@ -12,18 +12,20 @@ import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour les interfaces {@link SourceConcerts} et {@link SourceAvecFetchLot}.
-///
-/// Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource},
-/// {@link EventimSource} et {@link DigitickSource}.
-///
-/// @since 2.3.1
-/// @author Kwaite
+/**
+ * Tests unitaires pour les interfaces {@link SourceConcerts} et {@link SourceAvecFetchLot}.
+ *
+ * Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource},
+ * {@link EventimSource} et {@link DigitickSource}.
+ *
+ * @since 2.3.1
+ * @author Kwaite
+ */
 class SourceConcertsTest {
 
   @Test
   void methodesParDefaut_retournentListeVide() {
-    SourceConcerts source =
+    final SourceConcerts source =
         new SourceConcerts() {
           @Override
           public String nom() {
@@ -42,7 +44,7 @@ class SourceConcertsTest {
   // surcharge pas explicitement le repli identité — seule EventimSource en a besoin.
   @Test
   void fetchArtisteAvecIdentite_parDefaut_delegueAFetchArtisteSansIdentite() {
-    SourceConcerts source =
+    final SourceConcerts source =
         new SourceConcerts() {
           @Override
           public String nom() {
@@ -50,7 +52,7 @@ class SourceConcertsTest {
           }
 
           @Override
-          public List<ConcertBrut> fetchArtiste(String nom) {
+          public List<ConcertBrut> fetchArtiste(final String nom) {
             return List.of(
                 new ConcertBrut(
                     nom,
@@ -71,7 +73,7 @@ class SourceConcertsTest {
           }
         };
 
-    List<ConcertBrut> resultat = source.fetchArtiste("artiste", "deezer-1", "Q1");
+    final List<ConcertBrut> resultat = source.fetchArtiste("artiste", "deezer-1", "Q1");
 
     assertEquals(1, resultat.size());
     assertEquals("artiste", resultat.get(0).artiste());
@@ -79,7 +81,7 @@ class SourceConcertsTest {
 
   @Test
   void ticketmasterSource_nomEtPrefixe_corrects() {
-    TicketmasterSource tm = new TicketmasterSource("fake-key");
+    final TicketmasterSource tm = new TicketmasterSource("fake-key");
 
     assertEquals("ticketmaster", tm.nom());
     assertTrue(tm.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
@@ -90,14 +92,14 @@ class SourceConcertsTest {
 
   @Test
   void ticketmasterSource_implemente_sourceAvecFetchLot() {
-    TicketmasterSource tm = new TicketmasterSource("fake-key");
+    final TicketmasterSource tm = new TicketmasterSource("fake-key");
     assertTrue(tm instanceof SourceAvecFetchLot);
     assertTrue(tm instanceof SourceConcerts);
   }
 
   @Test
   void eventimSource_nomEtPrefixe_corrects() {
-    EventimSource eventim = new EventimSource();
+    final EventimSource eventim = new EventimSource();
 
     assertEquals("eventim", eventim.nom());
     assertFalse(eventim.accepteIdentifiantSalle("tm:venue-123"));
@@ -106,14 +108,14 @@ class SourceConcertsTest {
 
   @Test
   void eventimSource_implemente_sourceConcerts() {
-    EventimSource eventim = new EventimSource();
+    final EventimSource eventim = new EventimSource();
     assertTrue(eventim instanceof SourceConcerts);
     assertFalse(eventim instanceof SourceAvecFetchLot);
   }
 
   @Test
   void digitickSource_nomEtPrefixe_corrects() {
-    DigitickSource digitick = new DigitickSource();
+    final DigitickSource digitick = new DigitickSource();
 
     assertEquals("digitick", digitick.nom());
     assertTrue(digitick.accepteIdentifiantSalle("digitick:lempreinte"));
@@ -124,15 +126,15 @@ class SourceConcertsTest {
 
   @Test
   void digitickSource_implemente_sourceConcerts() {
-    DigitickSource digitick = new DigitickSource();
+    final DigitickSource digitick = new DigitickSource();
     assertTrue(digitick instanceof SourceConcerts);
     assertFalse(digitick instanceof SourceAvecFetchLot);
   }
 
   @Test
   void sourceAvecFetchLot_fetchArtistesLot_vide_retourneListeVide() {
-    TicketmasterSource tm = new TicketmasterSource("fake-key");
-    List<ConcertBrut> resultat = tm.fetchArtistesLot(List.of());
+    final TicketmasterSource tm = new TicketmasterSource("fake-key");
+    final List<ConcertBrut> resultat = tm.fetchArtistesLot(List.of());
     assertTrue(resultat.isEmpty());
   }
 }

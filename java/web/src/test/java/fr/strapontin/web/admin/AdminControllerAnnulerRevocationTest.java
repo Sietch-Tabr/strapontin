@@ -19,54 +19,52 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#annulerRevocationAdmin} — seul
-/// endpoint de gestion utilisateur à ne pas vérifier {@code userId.equals(adminId)} avant.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires ciblés pour {@link AdminController#annulerRevocationAdmin} — seul endpoint de
+ * gestion utilisateur à ne pas vérifier {@code userId.equals(adminId)} avant.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class AdminControllerAnnulerRevocationTest {
 
-  private AdminService adminService;
+  private AdminRevocationService adminRevocationService;
   private AdminController controller;
 
   @BeforeEach
   void setUp() {
-    adminService = mock(AdminService.class);
+    adminRevocationService = mock(AdminRevocationService.class);
     controller =
         new AdminController(
-            adminService,
-            mock(ConfigAdminService.class),
-            mock(JobsAdminService.class),
-            mock(BanniereService.class),
-            mock(WorkerProxyService.class),
+            mock(AdminService.class),
+            adminRevocationService,
             mock(EmailService.class),
-            mock(VapidService.class),
             mock(ConfigService.class));
   }
 
-  private static Authentication authPour(String userId) {
-    UtilisateurDetails ud =
+  private static Authentication authPour(final String userId) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", "admin", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
 
   @Test
   void annulerRevocationAdmin_autoAnnulation_retourne400SansAppelerLeService() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.annulerRevocationAdmin("admin-1", authPour("admin-1"));
 
     assertEquals(400, reponse.getStatusCode().value());
-    verify(adminService, never()).annulerRevocationAdmin("admin-1", "admin-1");
+    verify(adminRevocationService, never()).annulerRevocationAdmin("admin-1", "admin-1");
   }
 
   @Test
   void annulerRevocationAdmin_autreAdmin_delegueAuService() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.annulerRevocationAdmin("admin-2", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(adminService).annulerRevocationAdmin("admin-2", "admin-1");
+    verify(adminRevocationService).annulerRevocationAdmin("admin-2", "admin-1");
   }
 }

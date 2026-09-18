@@ -12,13 +12,17 @@ export async function verifierOnboarding() {
     if (!rep.ok) return;
     const data = await corpsJsonOuVide(rep);
     ouvert.value = !!data.nonVu;
-  } catch (_) {}
+  } catch (_) {
+    // échec ignoré : la modale reste simplement fermée
+  }
 }
 
 async function marquerVu() {
   try {
     await fetch("/api/user/config/onboarding-vu", { method: "POST" });
-  } catch (_) {}
+  } catch (_) {
+    // échec ignoré : best-effort, la modale réapparaîtra simplement au prochain montage
+  }
 }
 
 export function useOnboarding() {

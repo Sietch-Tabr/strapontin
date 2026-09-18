@@ -13,41 +13,52 @@
           :class="{ actif: filtreNouveau }"
           :aria-current="filtreNouveau ? 'true' : undefined"
           @click.prevent="basculerFiltre('nouveau')"
-        >Nouveau</a>
+          >Nouveau</a
+        >
         <a
           href="#"
           :class="{ actif: filtreIndisponibles }"
           :aria-current="filtreIndisponibles ? 'true' : undefined"
           @click.prevent="basculerFiltre('indisponibles')"
-        >Indisponibles</a>
+          >Indisponibles</a
+        >
         <a
           href="#"
           :class="{ actif: filtreMasques }"
           :aria-current="filtreMasques ? 'true' : undefined"
           @click.prevent="basculerFiltre('masques')"
-        >Masqués</a>
+          >Masqués</a
+        >
       </div>
 
       <div v-if="donnees.artistesGroupes.length === 0" class="etat-vide">
         <template v-if="donnees.nbArtistes === 0 && donnees.nbSalles === 0">
           <p class="etat-vide-titre">Bienvenue sur Strapontin !</p>
           <p class="etat-vide-texte">
-            Ajoutez des artistes ou des salles pour découvrir vos prochains concerts.
+            Ajoutez des artistes ou des salles pour découvrir vos prochains
+            concerts.
           </p>
           <div class="etat-vide-actions">
-            <RouterLink to="/artistes" class="bouton bouton-primaire">Ajouter des artistes</RouterLink>
-            <RouterLink to="/salles" class="bouton bouton-secondaire">Ajouter des salles</RouterLink>
+            <RouterLink to="/artistes" class="bouton bouton-primaire"
+              >Ajouter des artistes</RouterLink
+            >
+            <RouterLink to="/salles" class="bouton bouton-secondaire"
+              >Ajouter des salles</RouterLink
+            >
           </div>
         </template>
         <template v-else>
           <template v-if="!filtreIndisponibles">
             <p class="etat-vide-titre">Aucun concert avec ces filtres.</p>
-            <p class="etat-vide-texte">Essayez d'inclure les concerts indisponibles ci-dessus.</p>
+            <p class="etat-vide-texte">
+              Essayez d'inclure les concerts indisponibles ci-dessus.
+            </p>
           </template>
           <template v-else>
             <p class="etat-vide-titre">Aucun concert pour l'instant.</p>
             <p class="etat-vide-texte">
-              Vos artistes et salles sont suivis — les concerts apparaîtront au prochain rafraîchissement.
+              Vos artistes et salles sont suivis — les concerts apparaîtront au
+              prochain rafraîchissement.
             </p>
           </template>
         </template>
@@ -56,8 +67,8 @@
       <div v-else class="concert-groupes">
         <div
           v-for="groupe in donnees.artistesGroupes"
-          :key="groupe.artisteNorm"
           :id="'artiste-' + groupe.artisteNorm"
+          :key="groupe.artisteNorm"
           class="concert-groupe"
         >
           <div class="groupe-entete">
@@ -65,21 +76,27 @@
             <span v-if="groupe.estTournee" class="badge badge-tournee">
               Tournée · {{ groupe.concerts.length }} dates
             </span>
-            <span v-if="groupe.estNew" class="badge badge-nouveau">Nouveau</span>
+            <span v-if="groupe.estNew" class="badge badge-nouveau"
+              >Nouveau</span
+            >
             <button
               v-if="!filtreMasques"
               type="button"
               class="bouton-texte"
               :aria-label="'Masquer tous les concerts de ' + groupe.artiste"
               @click="masquerGroupe(groupe)"
-            >Masquer</button>
+            >
+              Masquer
+            </button>
             <button
               v-else
               type="button"
               class="bouton-texte"
               :aria-label="'Réafficher tous les concerts de ' + groupe.artiste"
               @click="demasquerGroupe(groupe)"
-            >Réafficher</button>
+            >
+              Réafficher
+            </button>
           </div>
 
           <div class="groupe-dates">
@@ -89,16 +106,46 @@
               class="concert-ligne"
             >
               <div class="concert-info">
-                <p :class="groupe.estTournee ? 'concert-date-principale' : 'concert-date-secondaire'">
-                  <time :datetime="concert.date">{{ formaterAvecHeure(concert.date, concert.heure) }}</time>
-                  <span v-if="concert.estNew" class="badge badge-nouveau">Nouveau</span>
-                  <span v-if="concert.statut === 'cancelled'" class="badge badge-annule">Annulé</span>
-                  <span v-if="concert.statut === 'rescheduled' || concert.statut === 'postponed'" class="badge badge-reporte">Reporté</span>
-                  <span v-if="concert.statut === 'offsale'" class="badge badge-complet">Complet</span>
-                  <span v-if="concert.statut === 'presale'" class="badge badge-prevente">Prévente</span>
+                <p
+                  :class="
+                    groupe.estTournee
+                      ? 'concert-date-principale'
+                      : 'concert-date-secondaire'
+                  "
+                >
+                  <time :datetime="concert.date">{{
+                    formaterAvecHeure(concert.date, concert.heure)
+                  }}</time>
+                  <span v-if="concert.estNew" class="badge badge-nouveau"
+                    >Nouveau</span
+                  >
+                  <span
+                    v-if="concert.statut === 'cancelled'"
+                    class="badge badge-annule"
+                    >Annulé</span
+                  >
+                  <span
+                    v-if="
+                      concert.statut === 'rescheduled' ||
+                      concert.statut === 'postponed'
+                    "
+                    class="badge badge-reporte"
+                    >Reporté</span
+                  >
+                  <span
+                    v-if="concert.statut === 'offsale'"
+                    class="badge badge-complet"
+                    >Complet</span
+                  >
+                  <span
+                    v-if="concert.statut === 'presale'"
+                    class="badge badge-prevente"
+                    >Prévente</span
+                  >
                 </p>
                 <p class="concert-lieu">
-                  {{ concert.salle }}{{ concert.ville ? ' · ' + concert.ville : '' }}
+                  {{ concert.salle
+                  }}{{ concert.ville ? " · " + concert.ville : "" }}
                 </p>
               </div>
               <div class="concert-actions">
@@ -108,21 +155,26 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   class="bouton bouton-tres-petit bouton-secondaire"
-                >Billets</a>
+                  >Billets</a
+                >
                 <button
                   v-if="filtreMasques"
                   type="button"
                   class="bouton-texte bouton-petit"
                   aria-label="Réafficher ce concert"
                   @click="demasquerConcert(concert, groupe)"
-                >Réafficher</button>
+                >
+                  Réafficher
+                </button>
                 <button
                   v-else
                   type="button"
                   class="bouton-texte bouton-petit"
                   aria-label="Masquer ce concert"
                   @click="masquerConcert(concert, groupe)"
-                >Masquer</button>
+                >
+                  Masquer
+                </button>
               </div>
             </div>
           </div>
@@ -133,106 +185,122 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'AccueilPage' })
+defineOptions({ name: "AccueilPage" });
 
-import { ref, shallowRef, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import EtatChargement from '../components/EtatChargement.vue'
-import { useRoute, useRouter } from 'vue-router'
-import { formaterAvecHeure } from '../composables/useDates.js'
-import { useToasts } from '../composables/useToasts.js'
-import { useSession } from '../composables/useSession.js'
+import {
+  ref,
+  shallowRef,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  nextTick,
+} from "vue";
+import EtatChargement from "../components/EtatChargement.vue";
+import { useRoute, useRouter } from "vue-router";
+import { formaterAvecHeure } from "../composables/useDates.js";
+import { useToasts } from "../composables/useToasts.js";
+import { useSession } from "../composables/useSession.js";
 
-const route = useRoute()
-const router = useRouter()
-const { afficherToast } = useToasts()
-const { chargerSession } = useSession()
+const route = useRoute();
+const router = useRouter();
+const { afficherToast } = useToasts();
+const { chargerSession } = useSession();
 
-const donnees = shallowRef(null)
-const chargement = ref(false)
+const donnees = shallowRef(null);
+const chargement = ref(false);
 
-const filtreNouveau = computed(() => route.query.nouveau === 'true')
-const filtreIndisponibles = computed(() => route.query.indisponibles === '1')
-const filtreMasques = computed(() => route.query.masques === 'true')
+const filtreNouveau = computed(() => route.query.nouveau === "true");
+const filtreIndisponibles = computed(() => route.query.indisponibles === "1");
+const filtreMasques = computed(() => route.query.masques === "true");
 
-const controleurComposant = new AbortController()
+const controleurComposant = new AbortController();
 
 // Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
 // annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
 // leurs résultats dans le désordre.
-let controleurActuel = null
+let controleurActuel = null;
 
 async function charger() {
-  controleurActuel?.abort()
-  const controleur = new AbortController()
-  controleurActuel = controleur
-  chargement.value = true
+  controleurActuel?.abort();
+  const controleur = new AbortController();
+  controleurActuel = controleur;
+  chargement.value = true;
   try {
-    const params = new URLSearchParams()
-    if (filtreNouveau.value) params.set('nouveau', 'true')
-    if (filtreIndisponibles.value) params.set('indisponibles', '1')
-    if (filtreMasques.value) params.set('masques', 'true')
-    const rep = await fetch('/api/accueil?' + params, { signal: controleur.signal })
+    const params = new URLSearchParams();
+    if (filtreNouveau.value) params.set("nouveau", "true");
+    if (filtreIndisponibles.value) params.set("indisponibles", "1");
+    if (filtreMasques.value) params.set("masques", "true");
+    const rep = await fetch("/api/accueil?" + params, {
+      signal: controleur.signal,
+    });
     // au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
     // la session ne soit confirmée côté serveur (401 transitoire, pas une vraie panne) — pas de
     // toast dans ce cas, comme le fait déjà App.vue pour ses propres appels de montage.
-    if (rep.status === 401) return
-    if (!rep.ok) throw new Error()
-    donnees.value = await rep.json()
+    if (rep.status === 401) return;
+    if (!rep.ok) throw new Error();
+    donnees.value = await rep.json();
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de charger les concerts.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de charger les concerts.", "erreur");
   } finally {
-    if (controleurActuel === controleur) chargement.value = false
+    if (controleurActuel === controleur) chargement.value = false;
   }
 }
 
 function basculerFiltre(filtre) {
-  const q = { ...route.query }
-  if (filtre === 'nouveau') {
-    q.nouveau === 'true' ? delete q.nouveau : (q.nouveau = 'true')
-  } else if (filtre === 'indisponibles') {
-    q.indisponibles === '1' ? delete q.indisponibles : (q.indisponibles = '1')
-  } else if (filtre === 'masques') {
-    q.masques === 'true' ? delete q.masques : (q.masques = 'true')
+  const q = { ...route.query };
+  if (filtre === "nouveau") {
+    q.nouveau === "true" ? delete q.nouveau : (q.nouveau = "true");
+  } else if (filtre === "indisponibles") {
+    q.indisponibles === "1" ? delete q.indisponibles : (q.indisponibles = "1");
+  } else if (filtre === "masques") {
+    q.masques === "true" ? delete q.masques : (q.masques = "true");
   }
-  router.push({ query: q })
+  router.push({ query: q });
 }
 
 async function masquerConcert(concert, groupe) {
   try {
     const rep = await fetch(`/api/spectacles/matches/${concert.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ masquer: true }),
       signal: controleurComposant.signal,
-    })
-    if (!rep.ok) throw new Error()
-    groupe.concerts.splice(groupe.concerts.indexOf(concert), 1)
+    });
+    if (!rep.ok) throw new Error();
+    groupe.concerts.splice(groupe.concerts.indexOf(concert), 1);
     if (groupe.concerts.length === 0) {
-      donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
+      donnees.value.artistesGroupes.splice(
+        donnees.value.artistesGroupes.indexOf(groupe),
+        1,
+      );
     }
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de masquer ce concert.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de masquer ce concert.", "erreur");
   }
 }
 
 async function demasquerConcert(concert, groupe) {
   try {
     const rep = await fetch(`/api/spectacles/matches/${concert.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ masquer: false }),
       signal: controleurComposant.signal,
-    })
-    if (!rep.ok) throw new Error()
-    groupe.concerts.splice(groupe.concerts.indexOf(concert), 1)
+    });
+    if (!rep.ok) throw new Error();
+    groupe.concerts.splice(groupe.concerts.indexOf(concert), 1);
     if (groupe.concerts.length === 0) {
-      donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
+      donnees.value.artistesGroupes.splice(
+        donnees.value.artistesGroupes.indexOf(groupe),
+        1,
+      );
     }
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de réafficher ce concert.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de réafficher ce concert.", "erreur");
   }
 }
 
@@ -241,159 +309,189 @@ async function demasquerConcert(concert, groupe) {
 // même artiste réel selon la source de fetch. artisteNorm reste utilisé pour les clés Vue/ancres.
 async function masquerGroupe(groupe) {
   try {
-    const rep = await fetch('/api/spectacles/masquer-artiste', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const rep = await fetch("/api/spectacles/masquer-artiste", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ artisteId: groupe.artisteId }),
       signal: controleurComposant.signal,
-    })
-    if (!rep.ok) throw new Error()
-    donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
+    });
+    if (!rep.ok) throw new Error();
+    donnees.value.artistesGroupes.splice(
+      donnees.value.artistesGroupes.indexOf(groupe),
+      1,
+    );
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de masquer cet artiste.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de masquer cet artiste.", "erreur");
   }
 }
 
 async function demasquerGroupe(groupe) {
   try {
-    const rep = await fetch('/api/spectacles/demasquer-artiste', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const rep = await fetch("/api/spectacles/demasquer-artiste", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ artisteId: groupe.artisteId }),
       signal: controleurComposant.signal,
-    })
-    if (!rep.ok) throw new Error()
-    donnees.value.artistesGroupes.splice(donnees.value.artistesGroupes.indexOf(groupe), 1)
+    });
+    if (!rep.ok) throw new Error();
+    donnees.value.artistesGroupes.splice(
+      donnees.value.artistesGroupes.indexOf(groupe),
+      1,
+    );
   } catch (e) {
-    if (e.name === 'AbortError') return
-    afficherToast('Impossible de réafficher cet artiste.', 'erreur')
+    if (e.name === "AbortError") return;
+    afficherToast("Impossible de réafficher cet artiste.", "erreur");
   }
 }
 
 async function scrollVersAncre() {
-  const ancre = route.query.ancre
-  if (!ancre) return
-  await nextTick()
-  document.getElementById(String(ancre))?.scrollIntoView({ behavior: 'smooth' })
+  const ancre = route.query.ancre;
+  if (!ancre) return;
+  await nextTick();
+  document
+    .getElementById(String(ancre))
+    ?.scrollIntoView({ behavior: "smooth" });
   // retire l'ancre de l'URL une fois le scroll effectué — sinon basculerFiltre la
   // conserve par spread et chaque changement de filtre suivant re-déclenche le scroll forcé.
-  const q = { ...route.query }
-  delete q.ancre
-  router.replace({ query: q })
+  const q = { ...route.query };
+  delete q.ancre;
+  router.replace({ query: q });
 }
 
-watch(() => route.query, async () => {
-  await charger()
-  await scrollVersAncre()
-}, { deep: true })
+watch(
+  () => route.query,
+  async () => {
+    await charger();
+    await scrollVersAncre();
+  },
+  { deep: true },
+);
 
 onMounted(async () => {
   // Best-effort, jamais bloquant : une panne réseau sur cet appel ne doit pas empêcher le
   // chargement de la page (chargerSession/charger/scrollVersAncre ci-dessous) — un badge
   // "nouveau" resté affiché un cycle de plus n'est pas grave, une page blanche l'est.
   try {
-    await fetch('/api/accueil/marquer-vus', { method: 'POST', signal: controleurComposant.signal })
+    await fetch("/api/accueil/marquer-vus", {
+      method: "POST",
+      signal: controleurComposant.signal,
+    });
   } catch (_) {
     // ignoré volontairement
   }
-  chargerSession()
-  await charger()
-  await scrollVersAncre()
-})
+  chargerSession();
+  await charger();
+  await scrollVersAncre();
+});
 
 onUnmounted(() => {
-  controleurComposant.abort()
-  controleurActuel?.abort()
-})
+  controleurComposant.abort();
+  controleurActuel?.abort();
+});
 </script>
 
 <style scoped>
-  .concert-groupes {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 42rem;
-  }
-  .concert-groupe {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+.concert-groupes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 42rem;
+}
+
+.concert-groupe {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.groupe-entete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-muted);
+  flex-wrap: wrap;
+}
+
+.groupe-artiste {
+  font-weight: 600;
+}
+
+.concert-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.concert-ligne:hover {
+  background: var(--bg-muted);
+}
+
+.concert-ligne:last-child {
+  border-bottom: none;
+}
+
+.concert-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.concert-date-principale {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.concert-date-secondaire {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.concert-lieu {
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  margin-top: 0.25rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: ellipsis;
+}
+
+@media (width >= 1025px) {
+  .concert-lieu {
+    white-space: nowrap;
     overflow: hidden;
   }
-  .groupe-entete {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-muted);
-    flex-wrap: wrap;
-  }
-  .groupe-artiste {
-    font-weight: 600;
-  }
-  .concert-ligne {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
-  }
-  .concert-ligne:hover {
-    background: var(--bg-muted);
-  }
-  .concert-ligne:last-child {
-    border-bottom: none;
-  }
-  .concert-info {
-    min-width: 0;
-    flex: 1;
-  }
-  .concert-date-principale {
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-  .concert-date-secondaire {
-    font-size: 0.875rem;
-    color: var(--fg-muted);
-  }
-  .concert-lieu {
-    font-size: 0.75rem;
-    color: var(--fg-muted);
-    margin-top: 0.25rem;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: ellipsis;
-  }
-  @media (min-width: 1025px) {
-    .concert-lieu {
-      white-space: nowrap;
-      overflow: hidden;
-    }
-  }
-  .concert-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.25rem;
-    margin-left: 0.75rem;
-    flex-shrink: 0;
-  }
-  .badge-tournee {
-    background: #f0f9ff;
-    color: #0369a1;
-  }
-  .sombre .badge-tournee {
-    background: #0c2d4a;
-    color: #7dd3fc;
-  }
-  .etat-vide-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-  }
+}
+
+.concert-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  margin-left: 0.75rem;
+  flex-shrink: 0;
+}
+
+.badge-tournee {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.sombre .badge-tournee {
+  background: #0c2d4a;
+  color: #7dd3fc;
+}
+
+.etat-vide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
 </style>

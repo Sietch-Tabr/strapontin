@@ -18,11 +18,11 @@ class FetchSallesAllJobTest {
 
   @Test
   void executeInternal_sansRetry_delegueAuCycleComplet() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchSallesAllJob job = new FetchSallesAllJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchSallesAllJob job = new FetchSallesAllJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(new JobDataMap());
 
     job.executeInternal(context);
@@ -32,13 +32,13 @@ class FetchSallesAllJobTest {
 
   @Test
   void executeInternal_avecIdsRetry_delegueAuCycleCible() {
-    WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
-    FetchSallesAllJob job = new FetchSallesAllJob();
+    final WorkerFetchService workerFetchService = mock(WorkerFetchService.class);
+    final FetchSallesAllJob job = new FetchSallesAllJob();
     job.setWorkerFetchService(workerFetchService);
 
-    JobDataMap donnees = new JobDataMap();
+    final JobDataMap donnees = new JobDataMap();
     donnees.put(FetchSallesAllJob.CLE_IDS_RETRY, "salle-1,salle-2");
-    JobExecutionContext context = mock(JobExecutionContext.class);
+    final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(donnees);
 
     job.executeInternal(context);

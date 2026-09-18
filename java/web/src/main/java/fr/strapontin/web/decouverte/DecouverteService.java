@@ -8,6 +8,7 @@ import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,51 +25,54 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-/// Service de découverte de concerts par département.
-///
-/// <p>Les requêtes indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via {@link
-/// CompletableFuture} sur les threads virtuels Spring.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Service de découverte de concerts par département — les requêtes
+ * indépendantes (COUNT, filtres disponibles, sync) sont parallélisées via
+ * {@link CompletableFuture} sur les threads virtuels Spring.
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Service
 public class DecouverteService {
 
-  private static final Logger log = LoggerFactory.getLogger(DecouverteService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DecouverteService.class);
   private static final String CLE_DEPTS = "depts";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final RestClient restClient;
 
-  /// @param jdbc accès JDBC
-  /// @param restClient client HTTP partagé (module web), pour déclencher le worker
-  public DecouverteService(NamedParameterJdbcTemplate jdbc, RestClient restClient) {
+  /**
+   * @param jdbc accès JDBC
+   * @param restClient client HTTP partagé (module web), pour déclencher le
+   *     worker
+   */
+  public DecouverteService(final NamedParameterJdbcTemplate jdbc, final RestClient restClient) {
     this.jdbc = jdbc;
     this.restClient = restClient;
   }
 
-  /// Retourne les concerts filtrés par département et critères.
-  ///
-  /// <p>COUNT(*), filtres disponibles et données de synchronisation sont calculés en parallèle avec
-  /// la requête principale pour réduire les round-trips séquentiels.
-  ///
-  /// @param userId identifiant de l'utilisateur (pour lire ses départements par défaut)
-  /// @param filtre critères de filtrage ; {@code depts} null = utiliser ceux de l'utilisateur
-  /// @return réponse paginée avec filtres disponibles
-  public ReponseDecouverte decouvrir(String userId, FiltreConcerts filtre) {
-    LocalDate aujourd8 = LocalDate.now();
-    int pageNum = Math.max(0, filtre.page());
+  /**
+   * Retourne les concerts filtrés par département et critères (COUNT,
+   * filtres disponibles et sync calculés en parallèle de la requête
+   * principale).
+   * @param userId identifiant de l'utilisateur (départements par défaut)
+   * @param filtre critères ; {@code depts} null = ceux de l'utilisateur
+   * @return réponse paginée avec filtres disponibles
+   */
+  public ReponseDecouverte decouvrir(final String userId, final FiltreConcerts filtre) {
+    final LocalDate aujourd8 = LocalDate.now();
+    final int pageNum = Math.max(0, filtre.page());
 
-    List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
-    List<String> deptsActifs =
+    final List<String> deptsUtilisateur = lireDeptsUtilisateur(userId);
+    final List<String> deptsActifs =
         (filtre.depts() == null || filtre.depts().isEmpty()) ? deptsUtilisateur : filtre.depts();
 
-    Map<String, Object> params = new HashMap<>();
+    final Map<String, Object> params = new HashMap<>();
     params.put("limit", CONCERTS_PAR_PAGE);
     params.put("offset", pageNum * CONCERTS_PAR_PAGE);
-    String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.q(), 100);
-    String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
-    StringBuilder where =
+    final String rechercheNorm = FiltreConcertsBuilder.tronquer(filtre.recherche(), 100);
+    final String genreStr = FiltreConcertsBuilder.tronquer(filtre.genre(), 50);
+    final StringBuilder where =
         construireFiltresWhere(
             deptsActifs,
             rechercheNorm,
@@ -77,96 +81,117 @@ public class DecouverteService {
             filtre.classification(),
             aujourd8,
             params);
+    final String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
 
-    String orderBy = FiltreConcertsBuilder.clauseTri(filtre.tri());
+    final RequetesParalleles futures =
+        lancerRequetesParalleles(where, params, deptsActifs, aujourd8);
+    final List<ConcertDecouverte> concerts = chargerConcerts(where, orderBy, params);
 
-    Map<String, Object> baseParams = new HashMap<>();
-    baseParams.put("aujourd8", aujourd8);
-    StringBuilder whereBase = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
-    if (!deptsActifs.isEmpty()) {
-      whereBase.append(" AND c.dept = ANY(:depts)");
-      baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
-    }
-
-    Map<String, Object> countParams = new HashMap<>(params);
-    countParams.remove("limit");
-    countParams.remove("offset");
-
-    // Requêtes indépendantes lancées en parallèle pendant l'exécution de la requête principale
-    var futureTotal = CompletableFuture.supplyAsync(() -> compterTotal(where, countParams));
-    var futureFiltres =
-        CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams));
-    var futureSyncTs = CompletableFuture.supplyAsync(this::lireDerniereSync);
-    var futureSyncParDept = CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs));
-
-    List<ConcertDecouverte> concerts =
-        jdbc.query(
-            """
-            SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
-                   c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
-            FROM concerts c
-            LEFT JOIN artistes a ON a.id = c.artiste_id
-            WHERE %s
-            ORDER BY %s
-            LIMIT :limit OFFSET :offset
-            """
-                .formatted(where, orderBy),
-            params,
-            (rs, _) ->
-                new ConcertDecouverte(
-                    rs.getString("id"),
-                    rs.getString("artiste"),
-                    rs.getString("date"),
-                    rs.getString("heure"),
-                    rs.getString("salle"),
-                    rs.getString("ville"),
-                    rs.getString("dept"),
-                    rs.getString("url"),
-                    rs.getString("classification"),
-                    rs.getString("genre"),
-                    rs.getString("statut"),
-                    rs.getTimestamp("first_seen") != null
-                        ? rs.getTimestamp("first_seen").toInstant()
-                        : null));
-
-    int total = futureTotal.join();
-    FiltresDisponibles filtres = futureFiltres.join();
-    java.sql.Timestamp syncTs = futureSyncTs.join();
-    List<SyncDept> syncParDept = futureSyncParDept.join();
+    final int total = futures.total().join();
+    final FiltresDisponibles filtresDisponibles = futures.filtres().join();
+    final Instant syncTs = futures.syncTs().join();
+    final List<SyncDept> syncParDept = futures.syncParDept().join();
 
     return new ReponseDecouverte(
         concerts,
         pageNum,
         Math.max(1, (int) Math.ceil((double) total / CONCERTS_PAR_PAGE)),
         total,
-        filtres.genres(),
-        filtres.classifications(),
-        filtres.mois(),
+        filtresDisponibles.genres(),
+        filtresDisponibles.classifications(),
+        filtresDisponibles.mois(),
         deptsUtilisateur,
-        syncTs != null ? syncTs.toInstant() : null,
+        syncTs,
         syncParDept);
   }
 
-  /// Déclenche un fetch régional via le worker.
-  ///
-  /// @return 200 si déclenché, 503 si le worker est inaccessible
+  private record RequetesParalleles(
+      CompletableFuture<Integer> total,
+      CompletableFuture<FiltresDisponibles> filtres,
+      CompletableFuture<Instant> syncTs,
+      CompletableFuture<List<SyncDept>> syncParDept) {}
+
+  // Requêtes indépendantes lancées en parallèle pendant l'exécution de la
+  // requête principale
+  private RequetesParalleles lancerRequetesParalleles(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final List<String> deptsActifs,
+      final LocalDate aujourd8) {
+    final Map<String, Object> countParams = new HashMap<>(params);
+    countParams.remove("limit");
+    countParams.remove("offset");
+
+    final Map<String, Object> baseParams = new HashMap<>();
+    baseParams.put("aujourd8", aujourd8);
+    final StringBuilder whereBase =
+        new StringBuilder(100).append("c.date >= :aujourd8 AND c.disponible = true");
+    if (!deptsActifs.isEmpty()) {
+      whereBase.append(" AND c.dept = ANY(:depts)");
+      baseParams.put(CLE_DEPTS, deptsActifs.toArray(String[]::new));
+    }
+
+    return new RequetesParalleles(
+        CompletableFuture.supplyAsync(() -> compterTotal(where, countParams)),
+        CompletableFuture.supplyAsync(() -> chargerFiltresDisponibles(whereBase, baseParams)),
+        CompletableFuture.supplyAsync(this::lireDerniereSync),
+        CompletableFuture.supplyAsync(() -> lireSyncParDept(deptsActifs)));
+  }
+
+  private List<ConcertDecouverte> chargerConcerts(
+      final StringBuilder where, final String orderBy, final Map<String, Object> params) {
+    return jdbc.query(
+        """
+        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+               c.salle, c.ville, c.dept, c.url, c.classification, c.genre, c.statut, c.first_seen
+        FROM concerts c
+        LEFT JOIN artistes a ON a.id = c.artiste_id
+        WHERE %s
+        ORDER BY %s
+        LIMIT :limit OFFSET :offset
+        """
+            .formatted(where, orderBy),
+        params,
+        (rs, _) ->
+            new ConcertDecouverte(
+                rs.getString("id"),
+                rs.getString("artiste"),
+                rs.getString("date"),
+                rs.getString("heure"),
+                rs.getString("salle"),
+                rs.getString("ville"),
+                rs.getString("dept"),
+                rs.getString("url"),
+                rs.getString("classification"),
+                rs.getString("genre"),
+                rs.getString("statut"),
+                rs.getTimestamp("first_seen") != null
+                    ? rs.getTimestamp("first_seen").toInstant()
+                    : null));
+  }
+
+  /**
+   * Déclenche un fetch régional via le worker.
+   *
+   * @return 200 si déclenché, 503 si le worker est inaccessible
+   */
   public ResponseEntity<Map<String, Object>> fetcher() {
     try {
       restClient.post().uri("http://localhost:8081/trigger/tout").retrieve().toBodilessEntity();
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (RestClientResponseException e) {
-      Map<String, Object> erreur = new HashMap<>();
+      final Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Worker inaccessible (statut " + e.getStatusCode().value() + ").");
       return ResponseEntity.status(503).body(erreur);
     } catch (Exception e) {
-      log.warn("Erreur appel worker trigger (découverte)", e);
-      Map<String, Object> erreur = new HashMap<>();
+      LOG.warn("Erreur appel worker trigger (découverte)", e);
+      final Map<String, Object> erreur = new HashMap<>();
       erreur.put("erreur", "Worker inaccessible.");
       return ResponseEntity.status(503).body(erreur);
     }
   }
 
-  private int compterTotal(StringBuilder where, Map<String, Object> params) {
+  private int compterTotal(final StringBuilder where, final Map<String, Object> params) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM concerts c WHERE " + where, new HashMap<>(params), Integer.class),
@@ -174,8 +199,8 @@ public class DecouverteService {
   }
 
   private FiltresDisponibles chargerFiltresDisponibles(
-      StringBuilder whereBase, Map<String, Object> baseParams) {
-    String sql =
+      final StringBuilder whereBase, final Map<String, Object> baseParams) {
+    final String sql =
         """
         WITH base AS (
           SELECT c.genre, to_char(c.date, 'YYYY-MM') AS mois, c.classification
@@ -194,9 +219,9 @@ public class DecouverteService {
         """
             .formatted(whereBase);
 
-    List<String> genres = new ArrayList<>();
-    List<String> mois = new ArrayList<>();
-    List<String> classifications = new ArrayList<>();
+    final List<String> genres = new ArrayList<>();
+    final List<String> mois = new ArrayList<>();
+    final List<String> classifications = new ArrayList<>();
     jdbc.query(
         sql,
         new HashMap<>(baseParams),
@@ -205,40 +230,48 @@ public class DecouverteService {
             case "genre" -> genres.add(rs.getString("valeur"));
             case "mois" -> mois.add(rs.getString("valeur"));
             case "classification" -> classifications.add(rs.getString("valeur"));
+            default -> LOG.warn("type de filtre inconnu ignoré : {}", rs.getString("type"));
           }
         });
     return new FiltresDisponibles(genres, mois, classifications);
   }
 
-  private java.sql.Timestamp lireDerniereSync() {
+  private Instant lireDerniereSync() {
     return jdbc.queryForObject(
         "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE type_job = 'fetch:region'"
             + " AND derniere_exec IS NOT NULL",
         Map.of(),
-        java.sql.Timestamp.class);
+        Instant.class);
   }
 
-  private List<SyncDept> lireSyncParDept(List<String> deptsActifs) {
-    if (deptsActifs.isEmpty()) return List.of();
+  private List<SyncDept> lireSyncParDept(final List<String> deptsActifs) {
+    if (deptsActifs.isEmpty()) {
+      return List.of();
+    }
     return jdbc.query(
         "SELECT dept, MAX(updated_at) AS derniere_sync FROM concerts"
             + " WHERE dept = ANY(:depts) GROUP BY dept",
         Map.of(CLE_DEPTS, deptsActifs.toArray(String[]::new)),
         (rs, _) -> {
-          java.sql.Timestamp ts = rs.getTimestamp("derniere_sync");
-          return new SyncDept(rs.getString("dept"), ts != null ? ts.toInstant() : null);
+          final Object derniereSyncBrute = rs.getObject("derniere_sync");
+          return new SyncDept(
+              rs.getString("dept"),
+              derniereSyncBrute != null
+                  ? ((java.sql.Timestamp) derniereSyncBrute).toInstant()
+                  : null);
         });
   }
 
   private StringBuilder construireFiltresWhere(
-      List<String> deptsActifs,
-      String rechercheNorm,
-      String mois,
-      String genreStr,
-      String classification,
-      LocalDate aujourd8,
-      Map<String, Object> params) {
-    StringBuilder where = new StringBuilder("c.date >= :aujourd8 AND c.disponible = true");
+      final List<String> deptsActifs,
+      final String rechercheNorm,
+      final String mois,
+      final String genreStr,
+      final String classification,
+      final LocalDate aujourd8,
+      final Map<String, Object> params) {
+    final StringBuilder where =
+        new StringBuilder(150).append("c.date >= :aujourd8 AND c.disponible = true");
     params.put("aujourd8", aujourd8);
     if (!deptsActifs.isEmpty()) {
       where.append(" AND c.dept = ANY(:depts)");
@@ -254,8 +287,8 @@ public class DecouverteService {
     return where;
   }
 
-  private List<String> lireDeptsUtilisateur(String userId) {
-    List<String[]> lignes =
+  private List<String> lireDeptsUtilisateur(final String userId) {
+    final List<String[]> lignes =
         jdbc.query(
             "SELECT departements FROM user_config WHERE user_id = :userId",
             Map.of("userId", userId),

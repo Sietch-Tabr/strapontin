@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteIdentifiantTm}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteIdentifiantTm}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class RequeteIdentifiantTmValidationTest {
 
   private static final Validator VALIDATOR =
@@ -24,21 +26,21 @@ class RequeteIdentifiantTmValidationTest {
 
   @Test
   void identifiantExterne_present_estValide() {
-    Set<ConstraintViolation<RequeteIdentifiantTm>> violations =
+    final Set<ConstraintViolation<RequeteIdentifiantTm>> violations =
         VALIDATOR.validate(new RequeteIdentifiantTm("K8vZ917G1B7"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void identifiantExterne_null_estRejete() {
-    Set<ConstraintViolation<RequeteIdentifiantTm>> violations =
+    final Set<ConstraintViolation<RequeteIdentifiantTm>> violations =
         VALIDATOR.validate(new RequeteIdentifiantTm(null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void identifiantExterne_vide_estRejete() {
-    Set<ConstraintViolation<RequeteIdentifiantTm>> violations =
+    final Set<ConstraintViolation<RequeteIdentifiantTm>> violations =
         VALIDATOR.validate(new RequeteIdentifiantTm("  "));
     assertFalse(violations.isEmpty());
   }

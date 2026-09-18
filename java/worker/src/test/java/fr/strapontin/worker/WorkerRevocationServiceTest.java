@@ -20,14 +20,17 @@ import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerRevocationService} (extrait de {@code WorkerService}).
-///
-/// @since 2.2.6 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerRevocationService} (extrait de {@code WorkerService}).
+ *
+ * @since 2.2.6 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class WorkerRevocationServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -36,10 +39,10 @@ class WorkerRevocationServiceTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
-    LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
-    WorkerStatsService workerStatsService =
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
+    final LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
+    final WorkerStatsService workerStatsService =
         new WorkerStatsService(
             List.<SourceConcerts>of(),
             tm,
@@ -96,7 +99,7 @@ class WorkerRevocationServiceTest {
     verify(jdbc)
         .update(
             contains("DELETE FROM SPRING_SESSION"),
-            eq(java.util.Map.of("usernames", List.of("ex-admin1", "ex-admin2"))));
+            eq(Map.of("usernames", List.of("ex-admin1", "ex-admin2"))));
   }
 
   @Test

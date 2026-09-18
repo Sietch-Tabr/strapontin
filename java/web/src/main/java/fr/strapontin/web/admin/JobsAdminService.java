@@ -19,135 +19,151 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Statistiques des jobs Quartz et quota Ticketmaster pour l'onglet admin.
-///
-/// <p>Extrait d'{@code AdminService} — `AdminService` reste dédié à la seule gestion des
-/// comptes utilisateurs.
-///
-/// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Statistiques des jobs Quartz et quota Ticketmaster pour l'onglet
+ * admin — extrait d'{@code AdminService} (resté dédié aux comptes).
+ * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 @Service
 public class JobsAdminService {
 
-  private static final Logger log = LoggerFactory.getLogger(JobsAdminService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(JobsAdminService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final WorkerProxyService workerProxyService;
 
-  /// @param jdbc               accès JDBC
-  /// @param objectMapper       désérialiseur JSON (quota TM)
-  /// @param workerProxyService proxy HTTP vers le worker (jobs en cours, prochaines exécutions)
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper désérialiseur JSON (quota TM)
+   * @param workerProxyService proxy HTTP vers le worker (jobs en cours,
+   *     prochaines exécutions)
+   */
   public JobsAdminService(
-      NamedParameterJdbcTemplate jdbc,
-      ObjectMapper objectMapper,
-      WorkerProxyService workerProxyService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final WorkerProxyService workerProxyService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.workerProxyService = workerProxyService;
   }
 
-  /// Retourne les statistiques des jobs Quartz et le quota TM.
-  ///
-  /// @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess, jobsEnCours
+  /**
+   * Retourne les statistiques des jobs Quartz et le quota TM.
+   *
+   * @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess,
+   *     jobsEnCours
+   */
   public Map<String, Object> lireJobs() {
-    List<StatJob> statsJobs =
-        jdbc.query(
-            """
-            SELECT type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur
-            FROM fetch_jobs
-            ORDER BY type_job
-            """,
-            Map.of(),
-            (rs, _) ->
-                new StatJob(
-                    rs.getString("type_job"),
-                    rs.getTimestamp("derniere_exec") != null
-                        ? rs.getTimestamp("derniere_exec").toInstant()
-                        : null,
-                    rs.getObject("duree_ms", Integer.class),
-                    rs.getObject("nb_inseres", Integer.class),
-                    rs.getObject("nb_mis_a_jour", Integer.class),
-                    rs.getString("erreur"),
-                    null));
+    final List<StatJob> statsJobs = chargerStatsJobsBrutes();
+    final QuotaTM quotaTM = lireQuotaTM();
+    final Instant workerLastSuccess = lireDernierSucces();
 
-    QuotaTM quotaTM = null;
-    List<String> quotaJson =
-        jdbc.queryForList(
-            "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
-            Map.of(),
-            String.class);
-    if (!quotaJson.isEmpty()) {
-      try {
-        quotaTM = objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
-      } catch (Exception _) {
-        log.warn("Quota TM malformé — ignoré");
-      }
-    }
+    final List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();
+    final Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
 
-    Instant workerLastSuccess = null;
-    try {
-      java.sql.Timestamp ts =
-          jdbc.queryForObject(
-              "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
-              Map.of(),
-              java.sql.Timestamp.class);
-      workerLastSuccess = ts != null ? ts.toInstant() : null;
-    } catch (Exception _) {
-      log.debug("Impossible de lire le dernier job réussi");
-    }
+    final List<StatJob> statsConnus = enrichirAvecProchainesExec(statsJobs, prochainesExec);
+    final List<StatJob> statsComplets =
+        completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
 
-    List<String> jobsEnCours = workerProxyService.obtenirJobsEnCours();
-    Map<String, Instant> prochainesExec = workerProxyService.obtenirProchainesExec();
-
-    QuotaTM quotaFinal = quotaTM;
-    List<StatJob> statsConnus =
-        statsJobs.stream()
-            .map(
-                j ->
-                    new StatJob(
-                        j.typeJob(),
-                        j.derniereExec(),
-                        j.dureeMs(),
-                        j.nbInseres(),
-                        j.nbMisAJour(),
-                        j.erreur(),
-                        prochainesExec.get(j.typeJob())))
-            .toList();
-
-    List<StatJob> statsComplets = completerAvecJobsJamaisExecutes(statsConnus, prochainesExec);
-
-    String etatQuota = "ok";
-    if (quotaFinal != null && quotaFinal.total() > 0) {
-      int pct = quotaFinal.dispo() * 100 / quotaFinal.total();
-      etatQuota = pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
-    }
-
-    Map<String, Object> reponse = new HashMap<>();
+    final Map<String, Object> reponse = new HashMap<>();
     reponse.put("statsJobs", statsComplets);
-    reponse.put("quotaTM", quotaFinal);
-    reponse.put("etatQuota", etatQuota);
+    reponse.put("quotaTM", quotaTM);
+    reponse.put("etatQuota", calculerEtatQuota(quotaTM));
     reponse.put("workerLastSuccess", workerLastSuccess);
     reponse.put("jobsEnCours", jobsEnCours);
     return reponse;
   }
 
-  /// Complète les statistiques de jobs avec une entrée synthétique pour tout job Quartz planifié
-  /// ({@code prochainesExec}) mais n'ayant jamais écrit de ligne dans {@code fetch_jobs}.
-  ///
-  /// <p>Sans cette complétion, un job de maintenance tout juste ajouté (ex. {@code
-  /// reconciliation:nocturne}, cron 3h) reste invisible et non déclenchable manuellement depuis
-  /// l'admin tant que son premier passage cron automatique n'a pas eu lieu.
-  ///
-  /// @param statsConnus    statistiques déjà présentes en base, triées ou non
-  /// @param prochainesExec prochaines exécutions planifiées par {@code typeJob} (source de vérité
-  ///                       du worker sur les jobs existants)
-  /// @return statistiques triées par {@code typeJob}, complétées des jobs jamais exécutés
+  private List<StatJob> chargerStatsJobsBrutes() {
+    return jdbc.query(
+        """
+        SELECT type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur
+        FROM fetch_jobs
+        ORDER BY type_job
+        """,
+        Map.of(),
+        (rs, _) ->
+            new StatJob(
+                rs.getString("type_job"),
+                rs.getTimestamp("derniere_exec") != null
+                    ? rs.getTimestamp("derniere_exec").toInstant()
+                    : null,
+                rs.getObject("duree_ms", Integer.class),
+                rs.getObject("nb_inseres", Integer.class),
+                rs.getObject("nb_mis_a_jour", Integer.class),
+                rs.getString("erreur"),
+                null));
+  }
+
+  private QuotaTM lireQuotaTM() {
+    final List<String> quotaJson =
+        jdbc.queryForList(
+            "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
+            Map.of(),
+            String.class);
+    if (quotaJson.isEmpty()) {
+      return null;
+    }
+    try {
+      return objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
+    } catch (Exception _) {
+      LOG.warn("Quota TM malformé — ignoré");
+      return null;
+    }
+  }
+
+  private Instant lireDernierSucces() {
+    try {
+      return jdbc.queryForObject(
+          "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE (erreur IS NULL OR erreur = '')",
+          Map.of(),
+          Instant.class);
+    } catch (Exception _) {
+      LOG.debug("Impossible de lire le dernier job réussi");
+      return null;
+    }
+  }
+
+  private static List<StatJob> enrichirAvecProchainesExec(
+      final List<StatJob> statsJobs, final Map<String, Instant> prochainesExec) {
+    return statsJobs.stream()
+        .map(
+            j ->
+                new StatJob(
+                    j.typeJob(),
+                    j.derniereExec(),
+                    j.dureeMs(),
+                    j.nbInseres(),
+                    j.nbMisAJour(),
+                    j.erreur(),
+                    prochainesExec.get(j.typeJob())))
+        .toList();
+  }
+
+  private static String calculerEtatQuota(final QuotaTM quotaFinal) {
+    if (quotaFinal == null || quotaFinal.total() <= 0) {
+      return "ok";
+    }
+    final int pct = quotaFinal.dispo() * 100 / quotaFinal.total();
+    return pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
+  }
+
+  /**
+   * Complète les stats avec une entrée synthétique pour tout job planifié
+   * ({@code prochainesExec}) sans ligne dans {@code fetch_jobs} — sinon
+   * invisible/non déclenchable avant son premier passage cron.
+   * @param statsConnus statistiques déjà présentes en base, triées ou non
+   * @param prochainesExec prochaines exécutions par typeJob (source worker)
+   * @return statistiques triées, complétées des jobs jamais exécutés
+   */
+  /* package-private : visibilité élargie pour les tests du même package. */
   static List<StatJob> completerAvecJobsJamaisExecutes(
-      List<StatJob> statsConnus, Map<String, Instant> prochainesExec) {
-    Set<String> typesConnus =
+      final List<StatJob> statsConnus, final Map<String, Instant> prochainesExec) {
+    final Set<String> typesConnus =
         statsConnus.stream().map(StatJob::typeJob).collect(Collectors.toSet());
-    List<StatJob> statsJamaisExecutes =
+    final List<StatJob> statsJamaisExecutes =
         prochainesExec.keySet().stream()
             .filter(typeJob -> !typesConnus.contains(typeJob))
             .map(
@@ -155,7 +171,7 @@ public class JobsAdminService {
                     new StatJob(typeJob, null, null, null, null, null, prochainesExec.get(typeJob)))
             .toList();
 
-    List<StatJob> statsComplets = new ArrayList<>(statsConnus);
+    final List<StatJob> statsComplets = new ArrayList<>(statsConnus);
     statsComplets.addAll(statsJamaisExecutes);
     statsComplets.sort(Comparator.comparing(StatJob::typeJob));
     return statsComplets;

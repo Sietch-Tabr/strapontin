@@ -6,53 +6,55 @@ package fr.strapontin.core;
 
 import java.util.Objects;
 
-/// Détermine si deux noms d'artiste normalisés désignent le même artiste.
-///
-/// Extrait de `worker/persister/ReconciliateurArtistes` (v2.5.7) vers `core` pour être réutilisable
-/// par le module `web` (ajout d'artiste, v2.6.0) sans dépendance `web` → `worker`.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Détermine si deux noms d'artiste normalisés désignent le
+ * même artiste (détail : CLAUDE.md, Dédoublonnage inter-sources).
+ * @since 2.6.0
+ * @author Kwaite
+ */
 public final class CorrespondanceArtiste {
 
-  // Seuil artiste : Jaro ≥ 0.95 + containment ratio court/long ≥ 0.65.
-  // Jaro évite les faux positifs par préfixe commun ("julien dore"/"julien morel" Jaro=0.914 →
-  // false) tout en couvrant les variantes sans espace ("krash karma"/"krashkarma" Jaro=0.97 →
-  // true). Les troncatures TM ("aliz"/"alizee", "fawn"/"fawnn") passent par containment.
+  // Seuil artiste : Jaro ≥ 0.95 + containment ratio court/long ≥ 0.65. Jaro
+  // évite les faux positifs par préfixe commun ("julien dore"/"julien morel"
+  // Jaro=0.914 → false) tout en couvrant les variantes sans espace ("krash
+  // karma"/"krashkarma" Jaro=0.97 → true). Les troncatures TM ("aliz"/"alizee",
+  // "fawn"/"fawnn") passent par containment.
   private static final double SEUIL_JARO_ARTISTE = 0.95;
   private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
   private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
 
   private CorrespondanceArtiste() {}
 
-  /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
-  ///
-  /// Jaro ≥ 0.95 (meilleur que Levenshtein pour les noms propres courts) complété par un
-  /// containment avec ratio court/long ≥ 0.65 pour les troncatures TM ("aliz"/"alizee",
-  /// "fawn"/"fawnn") et les variations longues ("star academy"/"star academy 1"), puis par un
-  /// préfixe de mot complet pour un ajout plus substantiel (co-tête d'affiche, suffixe de tournée)
-  /// qui fait chuter le ratio de containment sous le seuil.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les artistes sont considérés identiques
-  public static boolean estDoublonArtiste(String a, String b) {
-    Objects.requireNonNull(a, "a");
-    Objects.requireNonNull(b, "b");
-    if (a.equals(b)) return true;
-    if (Normalisation.jaro(a, b) >= SEUIL_JARO_ARTISTE) return true;
-    if (UtilitairesChaine.estContainmentRatio(
-        a, b, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
+  /**
+   * Vérifie si deux noms d'artiste normalisés désignent le
+   * même artiste (détail : CLAUDE.md, Dédoublonnage inter-sources).
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
+   * @return {@code true} si les artistes sont considérés identiques
+   */
+  public static boolean estDoublonArtiste(final String nomA, final String nomB) {
+    Objects.requireNonNull(nomA, "nomA");
+    Objects.requireNonNull(nomB, "nomB");
+    if (nomA.equals(nomB)) {
       return true;
     }
-    return estPrefixeDeMotComplet(a, b);
+    if (DistanceTexte.jaro(nomA, nomB) >= SEUIL_JARO_ARTISTE) {
+      return true;
+    }
+    if (UtilitairesChaine.estContainmentRatio(
+        nomA, nomB, LONGUEUR_MIN_CONTAINMENT_ARTISTE, RATIO_MIN_CONTAINMENT_ARTISTE)) {
+      return true;
+    }
+    return UtilitairesChaine.estEgaliteSansEspaces(nomA, nomB)
+        || estPrefixeDeMotComplet(nomA, nomB);
   }
 
-  // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul, préfixe trivial
-  // d'un artiste sans rapport) et se couper sur un mot complet, sans exigence de ratio.
-  private static boolean estPrefixeDeMotComplet(String a, String b) {
-    String court = a.length() <= b.length() ? a : b;
-    String plusLong = a.length() <= b.length() ? b : a;
+  // Le nom court doit comporter au moins deux mots ("jay z", pas "mike" seul,
+  // préfixe trivial d'un artiste sans rapport) et se couper sur un mot complet,
+  // sans exigence de ratio.
+  private static boolean estPrefixeDeMotComplet(final String nomA, final String nomB) {
+    final String court = nomA.length() <= nomB.length() ? nomA : nomB;
+    final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;
     return court.contains(" ") && plusLong.startsWith(court + " ");
   }
 }

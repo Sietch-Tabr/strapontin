@@ -6,9 +6,11 @@ package fr.strapontin.web.admin;
 
 import jakarta.validation.constraints.Email;
 
-/// Corps JSON de la requête PATCH /api/admin/utilisateurs/{userId}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Corps JSON de la requête PATCH /api/admin/utilisateurs/{userId}.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record RequeteModifierUtilisateur(
     String nom, @Email(message = "Format d'email invalide.") String email, String role) {}

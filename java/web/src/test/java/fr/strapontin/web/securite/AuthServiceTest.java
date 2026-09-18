@@ -16,6 +16,8 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,10 +28,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 
-/// Tests unitaires pour {@link AuthService}.
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AuthService}.
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 class AuthServiceTest {
 
   private VerificationRepository verificationRepository;
@@ -43,7 +47,7 @@ class AuthServiceTest {
     verificationRepository = mock(VerificationRepository.class);
     sessionRepository = mock(FindByIndexNameSessionRepository.class);
     emailService = mock(EmailService.class);
-    PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
+    final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     when(passwordEncoder.encode(any())).thenReturn("$hash$");
     authService =
         new AuthService(verificationRepository, emailService, passwordEncoder, sessionRepository);
@@ -77,7 +81,7 @@ class AuthServiceTest {
         .thenReturn(Optional.of("reset:alice@exemple.fr"));
     when(verificationRepository.lireUsernameParEmail("alice@exemple.fr"))
         .thenReturn(Optional.of("alice"));
-    Session session = mock(Session.class);
+    final Session session = mock(Session.class);
     when(sessionRepository.findByPrincipalName("alice"))
         .thenReturn(Map.of("session-id-1", session));
 
@@ -121,7 +125,7 @@ class AuthServiceTest {
     when(verificationRepository.identifiantDejaUtiliseParEmail("bob", "alice@exemple.fr"))
         .thenReturn(false);
 
-    String identifiant = authService.activerCompteInvite("token", "bob", "motDePasse12");
+    final String identifiant = authService.activerCompteInvite("token", "bob", "motDePasse12");
 
     assertThat(identifiant).isEqualTo("bob");
     verify(verificationRepository).majUsernameEtActiverParEmail("alice@exemple.fr", "bob");
@@ -145,11 +149,11 @@ class AuthServiceTest {
     authService.motDePasseOublie("alice@exemple.fr", "https://strapontin.fr");
 
     verify(verificationRepository).supprimerParIdentifiant("reset:alice@exemple.fr");
-    ArgumentCaptor<java.time.Instant> expiration = ArgumentCaptor.forClass(java.time.Instant.class);
+    final ArgumentCaptor<Instant> expiration = ArgumentCaptor.forClass(Instant.class);
     verify(verificationRepository)
         .inserer(any(), eq("reset:alice@exemple.fr"), any(), expiration.capture());
-    long minutesAvantExpiration =
-        java.time.Duration.between(java.time.Instant.now(), expiration.getValue()).toMinutes();
+    final long minutesAvantExpiration =
+        Duration.between(Instant.now(), expiration.getValue()).toMinutes();
     assertThat(minutesAvantExpiration).isBetween(58L, 60L);
     verify(emailService).envoyerResetMotDePasse(eq("alice@exemple.fr"), any());
   }

@@ -16,19 +16,22 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link ConcertsAdminService} avec PostgreSQL réel (Testcontainers).
-///
-/// <p>{@code ConcertsAdminServiceTest} (mocks) fait transiter le `RowMapper` par un {@code
-/// jdbc.query} entièrement mocké — il ne l'exerce jamais contre un vrai {@code ResultSet}, ce qui a
-/// laissé passer une conversion `timestamptz` → `Instant` non supportée par le driver PostgreSQL
-/// (`rs.getObject(col, Instant.class)`), invisible tant qu'aucune ligne réelle n'avait {@code
-/// suppression_suggeree_le} renseigné.
-///
-/// @since 2.8.4
-/// @author Kwaite
+/**
+ * Test d'intégration de {@link ConcertsAdminService} avec PostgreSQL réel (Testcontainers).
+ *
+ * <p>{@code ConcertsAdminServiceTest} (mocks) fait transiter le {@code RowMapper} par un {@code
+ * jdbc.query} entièrement mocké — il ne l'exerce jamais contre un vrai {@code ResultSet}, ce qui a
+ * laissé passer une conversion {@code timestamptz} → {@code Instant} non supportée par le driver PostgreSQL
+ * ({@code rs.getObject(col, Instant.class)}), invisible tant qu'aucune ligne réelle n'avait {@code
+ * suppression_suggeree_le} renseigné.
+ *
+ * @since 2.8.4
+ * @author Kwaite
+ */
 class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;
@@ -37,7 +40,7 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeAll
   static void migrerBase() {
-    DriverManagerDataSource dataSource = new DriverManagerDataSource();
+    final DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
@@ -54,13 +57,13 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
     service = new ConcertsAdminService(jdbc, new LogAdminService(jdbc, new ObjectMapper()));
   }
 
-  private void creerConcertFlague(String artiste) {
-    UUID evenementId =
+  private void creerConcertFlague(final String artiste) {
+    final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, salle_norm, absences_consecutives,"
                 + " suppression_suggeree_le)"
                 + " VALUES (:artisteNorm, :date, 'salle test', 50, now()) RETURNING id",
-            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+            new MapSqlParameterSource()
                 .addValue("artisteNorm", artiste.toLowerCase())
                 .addValue("date", LocalDate.now()),
             UUID.class);
@@ -75,7 +78,7 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void lister_concertFlague_mappeSuppressionSuggereeLeSansErreur() {
     creerConcertFlague("Vincent Dedienne");
 
-    ReponseConcertsAConfirmer reponse = service.lister(0);
+    final ReponseConcertsAConfirmer reponse = service.lister(0);
 
     assertEquals(1, reponse.concerts().size());
     assertEquals("Vincent Dedienne", reponse.concerts().get(0).artiste());

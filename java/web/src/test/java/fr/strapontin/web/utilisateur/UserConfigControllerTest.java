@@ -16,11 +16,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link UserConfigController} (limite de taille sur le champ départements
-/// brut, avant découpage).
-///
-/// @since 2.6.5
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link UserConfigController} (limite de taille sur le champ départements
+ * brut, avant découpage).
+ *
+ * @since 2.6.5
+ * @author Kwaite
+ */
 class UserConfigControllerTest {
 
   private UserConfigService userConfigService;
@@ -32,10 +34,10 @@ class UserConfigControllerTest {
     controller = new UserConfigController(userConfigService);
   }
 
-  private static Authentication authPour(String userId) {
-    UtilisateurDetails ud =
+  private static Authentication authPour(final String userId) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
@@ -45,7 +47,7 @@ class UserConfigControllerTest {
 
   @Test
   void majDepartements_champLimiteExacte_appelleLeService() {
-    String brut = "7".repeat(1000);
+    final String brut = "7".repeat(1000);
     when(userConfigService.majDepartements(any(), any()))
         .thenReturn(new UserConfigService.ResultatMajDepartements(List.of()));
 
@@ -56,7 +58,8 @@ class UserConfigControllerTest {
 
   @Test
   void majNotifications_delegueAuServiceAvecUserId() {
-    RequeteNotifications requete = new RequeteNotifications("quotidien", true, false, false, false);
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", true, false, false, false);
 
     controller.majNotifications(requete, authPour("u1"));
 
@@ -72,7 +75,7 @@ class UserConfigControllerTest {
 
   @Test
   void majTheme_delegueAuServiceEtRetourneLaValeur() {
-    var rep = controller.majTheme(new RequeteTheme("sombre"), authPour("u1"));
+    final var rep = controller.majTheme(new RequeteTheme("sombre"), authPour("u1"));
 
     verify(userConfigService).majTheme("u1", "sombre");
     assertThat(rep.getBody().get("theme")).isEqualTo("sombre");
@@ -80,11 +83,11 @@ class UserConfigControllerTest {
 
   @Test
   void lireConfig_delegueAuServiceAvecUserId() {
-    ConfigUtilisateur config =
+    final ConfigUtilisateur config =
         new ConfigUtilisateur(List.of(), true, "jamais", false, false, false, false, "auto", false);
     when(userConfigService.lireConfig("u1")).thenReturn(config);
 
-    var rep = controller.lireConfig(authPour("u1"));
+    final var rep = controller.lireConfig(authPour("u1"));
 
     assertThat(rep.getBody()).isSameAs(config);
   }
@@ -93,7 +96,7 @@ class UserConfigControllerTest {
   void onboarding_delegueAuServiceAvecUserId() {
     when(userConfigService.onboardingNonVu("u1")).thenReturn(true);
 
-    var rep = controller.onboarding(authPour("u1"));
+    final var rep = controller.onboarding(authPour("u1"));
 
     assertThat(rep.getBody().get("nonVu")).isEqualTo(true);
   }

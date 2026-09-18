@@ -24,16 +24,18 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link SetupService} — isolation SERIALIZABLE et retry.
-///
-/// <p>Sans isolation SERIALIZABLE, deux appels concurrents à {@code POST /api/setup} pouvaient
-/// tous deux passer la garde {@link SetupService#estDejaConfiguree} avant qu'aucun ne committe,
-/// créant deux comptes admin. Le retry gère le conflit de sérialisation levé par PostgreSQL dans
-/// ce cas, pour que le perdant de la course échoue proprement sur {@link RessourceDejaExistante}
-/// plutôt que de remonter une exception technique.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SetupService} — isolation SERIALIZABLE et retry.
+ *
+ * <p>Sans isolation SERIALIZABLE, deux appels concurrents à {@code POST /api/setup} pouvaient
+ * tous deux passer la garde {@link SetupService#estDejaConfiguree} avant qu'aucun ne committe,
+ * créant deux comptes admin. Le retry gère le conflit de sérialisation levé par PostgreSQL dans
+ * ce cas, pour que le perdant de la course échoue proprement sur {@link RessourceDejaExistante}
+ * plutôt que de remonter une exception technique.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class SetupServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -87,7 +89,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_identifiantTropCourt_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup("ab", "admin@exemple.fr", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
@@ -96,7 +98,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_identifiantFormatInvalide_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup("admin!", "admin@exemple.fr", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
@@ -105,7 +107,8 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_emailInvalide_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete = new RequeteSetup("admin", "pas-un-email", "motdepasse12345", null, null);
+    final RequeteSetup requete =
+        new RequeteSetup("admin", "pas-un-email", "motdepasse12345", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
   }
@@ -113,7 +116,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_motDePasseTropCourt_leveErreurMetier() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete = new RequeteSetup("admin", "admin@exemple.fr", "court", null, null);
+    final RequeteSetup requete = new RequeteSetup("admin", "admin@exemple.fr", "court", null, null);
 
     assertThrows(ErreurMetier.class, () -> setupService.initialiserTransactionnel(requete));
   }
@@ -142,7 +145,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_contactEmailAbsent_repliSurEmailAdmin() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup(
             "admin", "admin@exemple.fr", "motdepasse12345", "https://strapontin.fr", "");
 
@@ -154,7 +157,7 @@ class SetupServiceTest {
   @Test
   void initialiserTransactionnel_baseUrlAbsente_neSauvegardeRienPourPublicBaseUrl() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    RequeteSetup requete =
+    final RequeteSetup requete =
         new RequeteSetup("admin", "admin@exemple.fr", "motdepasse12345", null, null);
 
     setupService.initialiserTransactionnel(requete);

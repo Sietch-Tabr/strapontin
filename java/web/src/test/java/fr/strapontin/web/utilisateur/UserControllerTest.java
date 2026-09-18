@@ -23,13 +23,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
 
-/// Tests unitaires de {@link UserController}.
-///
-/// <p>Couvre principalement la garde "dernier admin" sur la suppression de compte, et la
-/// révocation multi-sessions au changement de mot de passe.
-///
-/// @since 2.2.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link UserController}.
+ *
+ * <p>Couvre principalement la garde "dernier admin" sur la suppression de compte, et la
+ * révocation multi-sessions au changement de mot de passe.
+ *
+ * @since 2.2.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
@@ -45,10 +47,10 @@ class UserControllerTest {
     controller = new UserController(utilisateurRepository, passwordEncoder, sessionRepository);
   }
 
-  private Authentication authPour(String userId, String role) {
-    UtilisateurDetails ud =
+  private Authentication authPour(final String userId, final String role) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", role, false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
@@ -57,7 +59,8 @@ class UserControllerTest {
   void supprimerCompte_adminSeulSurInstance_retourne409() {
     when(utilisateurRepository.compterAdmins()).thenReturn(1);
 
-    ResponseEntity<?> rep = controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
+    final ResponseEntity<?> rep =
+        controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
 
     assertEquals(HttpStatus.CONFLICT, rep.getStatusCode());
     assertNotNull(rep.getBody());
@@ -69,7 +72,8 @@ class UserControllerTest {
   void supprimerCompte_adminAvecAutreAdmin_retourne204() {
     when(utilisateurRepository.compterAdmins()).thenReturn(2);
 
-    ResponseEntity<?> rep = controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
+    final ResponseEntity<?> rep =
+        controller.supprimerCompte(authPour("admin-1", "admin"), httpRequest);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(utilisateurRepository).supprimer("admin-1");
@@ -77,7 +81,8 @@ class UserControllerTest {
 
   @Test
   void supprimerCompte_utilisateurSimple_retourne204() {
-    ResponseEntity<?> rep = controller.supprimerCompte(authPour("user-1", "user"), httpRequest);
+    final ResponseEntity<?> rep =
+        controller.supprimerCompte(authPour("user-1", "user"), httpRequest);
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(utilisateurRepository).supprimer("user-1");
@@ -91,13 +96,13 @@ class UserControllerTest {
   void changerMotDePasse_motDePasseActuelCorrect_revoqueToutesLesSessions() {
     when(passwordEncoder.matches("actuel12345678", "")).thenReturn(true);
     when(passwordEncoder.encode("nouveau123456789")).thenReturn("hash-nouveau");
-    Session sessionA = mock(Session.class);
-    Session sessionB = mock(Session.class);
+    final Session sessionA = mock(Session.class);
+    final Session sessionB = mock(Session.class);
     when(sessionRepository.findByPrincipalName("login"))
         .thenReturn(Map.of("id-a", sessionA, "id-b", sessionB));
 
-    RequeteMotDePasse requete = new RequeteMotDePasse("actuel12345678", "nouveau123456789");
-    ResponseEntity<Map<String, Object>> rep =
+    final RequeteMotDePasse requete = new RequeteMotDePasse("actuel12345678", "nouveau123456789");
+    final ResponseEntity<Map<String, Object>> rep =
         controller.changerMotDePasse(requete, authPour("user-1", "user"));
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
@@ -111,9 +116,9 @@ class UserControllerTest {
   // RequeteIdentifiant.
   @Test
   void majIdentifiant_avecPointEtTiret_neRejettePasEtDelegueAuRepository() {
-    RequeteIdentifiant requete = new RequeteIdentifiant("jean.dupont-2");
+    final RequeteIdentifiant requete = new RequeteIdentifiant("jean.dupont-2");
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.majIdentifiant(requete, authPour("user-1", "user"));
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
@@ -124,7 +129,7 @@ class UserControllerTest {
   void majIdentifiant_dejaUtilise_retourne400() {
     when(utilisateurRepository.identifiantDejaUtilise("bob", "user-1")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.majIdentifiant(new RequeteIdentifiant("bob"), authPour("user-1", "user"));
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -135,8 +140,8 @@ class UserControllerTest {
   void changerMotDePasse_motDePasseActuelIncorrect_neRevoqueAucuneSession() {
     when(passwordEncoder.matches("faux", "")).thenReturn(false);
 
-    RequeteMotDePasse requete = new RequeteMotDePasse("faux", "nouveau123456789");
-    ResponseEntity<Map<String, Object>> rep =
+    final RequeteMotDePasse requete = new RequeteMotDePasse("faux", "nouveau123456789");
+    final ResponseEntity<Map<String, Object>> rep =
         controller.changerMotDePasse(requete, authPour("user-1", "user"));
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -146,9 +151,9 @@ class UserControllerTest {
 
   @Test
   void changerMotDePasse_champsNull_retourne400() {
-    RequeteMotDePasse requete = new RequeteMotDePasse(null, null);
+    final RequeteMotDePasse requete = new RequeteMotDePasse(null, null);
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.changerMotDePasse(requete, authPour("user-1", "user"));
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -157,9 +162,9 @@ class UserControllerTest {
 
   @Test
   void changerMotDePasse_nouveauTropCourt_retourne400() {
-    RequeteMotDePasse requete = new RequeteMotDePasse("actuel12345678", "court");
+    final RequeteMotDePasse requete = new RequeteMotDePasse("actuel12345678", "court");
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.changerMotDePasse(requete, authPour("user-1", "user"));
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -171,7 +176,7 @@ class UserControllerTest {
     when(utilisateurRepository.lireEmails("user-1"))
         .thenReturn(Optional.of(new UtilisateurRepository.EmailsUtilisateur("test@test.fr", null)));
 
-    ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
+    final ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertEquals("test@test.fr", rep.getBody().email());
@@ -182,7 +187,7 @@ class UserControllerTest {
   void lireProfil_utilisateurAbsent_retourne404() {
     when(utilisateurRepository.lireEmails("user-1")).thenReturn(Optional.empty());
 
-    ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
+    final ResponseEntity<ProfilUtilisateur> rep = controller.lireProfil(authPour("user-1", "user"));
 
     assertEquals(HttpStatus.NOT_FOUND, rep.getStatusCode());
   }

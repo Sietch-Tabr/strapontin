@@ -13,33 +13,39 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-/// Chargement des utilisateurs depuis la base de données pour Spring Security.
-///
-/// <p>Charge l'utilisateur depuis la table {@code users} jointe à {@code accounts}
-/// (provider {@code credential}). Le login est insensible à la casse
-/// (correspondance sur {@code lower(username)}).
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Chargement des utilisateurs depuis la base pour Spring
+ * Security — login insensible à la casse (lower(username)).
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class UtilisateurDetailsService implements UserDetailsService {
 
-  private static final Logger log = LoggerFactory.getLogger(UtilisateurDetailsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UtilisateurDetailsService.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  public UtilisateurDetailsService(NamedParameterJdbcTemplate jdbc) {
+  /**
+   * @param jdbc accès JDBC
+   */
+  public UtilisateurDetailsService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
-  /// Charge un utilisateur par son identifiant (insensible à la casse).
-  ///
-  /// @param identifiant le nom d'utilisateur
-  /// @return les détails Spring Security de l'utilisateur
-  /// @throws UsernameNotFoundException si aucun compte n'est trouvé
+  /**
+   * Charge un utilisateur par son identifiant (insensible à la casse).
+   *
+   * @param identifiant le nom d'utilisateur
+   * @return les détails Spring Security de l'utilisateur
+   * @throws UsernameNotFoundException si aucun compte n'est trouvé
+   */
+  // throws imposé par le contrat de l'interface UserDetailsService, pas
+  // modifiable.
   @Override
-  public UserDetails loadUserByUsername(String identifiant) throws UsernameNotFoundException {
-    String sql =
+  @SuppressWarnings("PMD.AvoidUncheckedExceptionsInSignatures")
+  public UserDetails loadUserByUsername(final String identifiant) throws UsernameNotFoundException {
+    final String sql =
         """
         SELECT u.id, u.username, u.email, u.role,
                u.two_factor_enabled, u.must_change_credentials,
@@ -54,7 +60,7 @@ public class UtilisateurDetailsService implements UserDetailsService {
         Map.of("identifiant", identifiant),
         rs -> {
           if (!rs.next()) {
-            log.debug("Identifiant non trouvé : {}", identifiant);
+            LOG.debug("Identifiant non trouvé : {}", identifiant);
             throw new UsernameNotFoundException("Identifiant ou mot de passe incorrect");
           }
           return new UtilisateurDetails(

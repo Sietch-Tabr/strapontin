@@ -32,10 +32,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires de [NotificationDigestService] avec mocks Mockito.
-///
-/// @since 2.0.1
-/// @author Kwaite
+/**
+ * Tests unitaires de [NotificationDigestService] avec mocks Mockito.
+ *
+ * @since 2.0.1
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class NotificationDigestServiceTest {
 
@@ -114,7 +116,7 @@ class NotificationDigestServiceTest {
 
   @Test
   void construirePayloadPush_unConcert_contientArtisteEtSalle() throws Exception {
-    var concert =
+    final var concert =
         new NotificationDigestService.ConcertNotif(
             "Stromae",
             "2026-09-15",
@@ -126,7 +128,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
+    final String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(payload.contains("Stromae"), "Le payload push doit contenir l'artiste");
     assertTrue(payload.contains("Olympia"), "Le payload push doit contenir la salle");
@@ -138,7 +140,7 @@ class NotificationDigestServiceTest {
 
   @Test
   void construirePayloadPush_plusieursConcerts_contientNombre() throws Exception {
-    var c1 =
+    final var c1 =
         new NotificationDigestService.ConcertNotif(
             "Stromae",
             "2026-09-15",
@@ -149,7 +151,7 @@ class NotificationDigestServiceTest {
             "stromae",
             "ARTISTE",
             null);
-    var c2 =
+    final var c2 =
         new NotificationDigestService.ConcertNotif(
             "Aya Nakamura",
             "2026-10-01",
@@ -161,7 +163,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.exemple.fr");
+    final String payload = invoquerPayloadPush(List.of(c1, c2), "https://strapontin.exemple.fr");
 
     assertTrue(
         payload.contains("2 nouveaux concerts"), "Le titre doit indiquer le nombre de concerts");
@@ -170,7 +172,7 @@ class NotificationDigestServiceTest {
   @Test
   void construirePayloadPush_plusieursConcertsAvecPrevente_mentionnePreventeSurLaLigneConcernee()
       throws Exception {
-    var enPrevente =
+    final var enPrevente =
         new NotificationDigestService.ConcertNotif(
             "Stromae",
             "2026-09-15",
@@ -181,7 +183,7 @@ class NotificationDigestServiceTest {
             "stromae",
             "ARTISTE",
             "presale");
-    var enVente =
+    final var enVente =
         new NotificationDigestService.ConcertNotif(
             "Aya Nakamura",
             "2026-10-01",
@@ -193,7 +195,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             "onsale");
 
-    String payload =
+    final String payload =
         invoquerPayloadPush(List.of(enPrevente, enVente), "https://strapontin.exemple.fr");
 
     assertTrue(
@@ -206,7 +208,7 @@ class NotificationDigestServiceTest {
 
   @Test
   void construirePayloadPush_changementArtiste_insereLigneVideDeSeparation() throws Exception {
-    var c1 =
+    final var c1 =
         new NotificationDigestService.ConcertNotif(
             "Stromae",
             "2026-09-15",
@@ -217,7 +219,7 @@ class NotificationDigestServiceTest {
             "stromae",
             "ARTISTE",
             null);
-    var c2 =
+    final var c2 =
         new NotificationDigestService.ConcertNotif(
             "Stromae",
             "2026-09-20",
@@ -228,7 +230,7 @@ class NotificationDigestServiceTest {
             "stromae",
             "ARTISTE",
             null);
-    var c3 =
+    final var c3 =
         new NotificationDigestService.ConcertNotif(
             "Aya Nakamura",
             "2026-10-01",
@@ -240,15 +242,16 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String payload = invoquerPayloadPush(List.of(c1, c2, c3), "https://strapontin.exemple.fr");
-    String corps = payload.split("\"body\":\"")[1].split("\",\"icon\"")[0];
+    final String payload =
+        invoquerPayloadPush(List.of(c1, c2, c3), "https://strapontin.exemple.fr");
+    final String corps = payload.split("\"body\":\"")[1].split("\",\"icon\"")[0];
 
     assertEquals(1, corps.split("\\\\n\\\\n", -1).length - 1, "Une seule rupture entre artistes");
   }
 
   @Test
   void construirePayloadPush_concertDeSalle_urlPointeVersSpectacles() throws Exception {
-    var concert =
+    final var concert =
         new NotificationDigestService.ConcertNotif(
             "Divers",
             "2026-11-10",
@@ -260,7 +263,7 @@ class NotificationDigestServiceTest {
             "SALLE",
             null);
 
-    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
+    final String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(
         payload.contains("/spectacles?source=salles"),
@@ -273,7 +276,7 @@ class NotificationDigestServiceTest {
   // deux cas), seule url doit désormais être un chemin relatif.
   @Test
   void construirePayloadPush_urlEstRelativeMemeAvecBaseUrlConfiguree() throws Exception {
-    var concert =
+    final var concert =
         new NotificationDigestService.ConcertNotif(
             "Stromae",
             "2026-09-15",
@@ -285,7 +288,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
+    final String payload = invoquerPayloadPush(List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(payload.contains("\"url\":\"/?ancre=artiste-stromae\""), payload);
     assertFalse(
@@ -298,7 +301,7 @@ class NotificationDigestServiceTest {
 
   @Test
   void construireCorpsEmail_formatHtml_contientArtiste() throws Exception {
-    var concert =
+    final var concert =
         new NotificationDigestService.ConcertNotif(
             "Indochine",
             "2026-08-20",
@@ -310,7 +313,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String html =
+    final String html =
         invoquerCorpsEmail("1 nouveau concert", List.of(concert), "https://strapontin.exemple.fr");
 
     assertTrue(html.contains("<!DOCTYPE html>"), "L'email doit être du HTML valide");
@@ -321,7 +324,7 @@ class NotificationDigestServiceTest {
 
   @Test
   void construireCorpsEmail_changementArtiste_ajouteRuptureVisuelle() throws Exception {
-    var c1 =
+    final var c1 =
         new NotificationDigestService.ConcertNotif(
             "Daft Punk",
             "2026-09-15",
@@ -332,7 +335,7 @@ class NotificationDigestServiceTest {
             "daft punk",
             "ARTISTE",
             null);
-    var c2 =
+    final var c2 =
         new NotificationDigestService.ConcertNotif(
             "Téléphone",
             "2026-10-01",
@@ -344,7 +347,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String html =
+    final String html =
         invoquerCorpsEmail("2 nouveaux concerts", List.of(c1, c2), "https://strapontin.exemple.fr");
 
     assertEquals(
@@ -355,7 +358,7 @@ class NotificationDigestServiceTest {
 
   @Test
   void construireCorpsEmail_memeArtiste_neContientAucuneRuptureVisuelle() throws Exception {
-    var c1 =
+    final var c1 =
         new NotificationDigestService.ConcertNotif(
             "Daft Punk",
             "2026-09-15",
@@ -366,7 +369,7 @@ class NotificationDigestServiceTest {
             "daft punk",
             "ARTISTE",
             null);
-    var c2 =
+    final var c2 =
         new NotificationDigestService.ConcertNotif(
             "Daft Punk",
             "2026-10-01",
@@ -378,7 +381,7 @@ class NotificationDigestServiceTest {
             "ARTISTE",
             null);
 
-    String html =
+    final String html =
         invoquerCorpsEmail("2 nouveaux concerts", List.of(c1, c2), "https://strapontin.exemple.fr");
 
     assertFalse(html.contains("border-top:2px solid #ddd"));
@@ -389,18 +392,18 @@ class NotificationDigestServiceTest {
   @Test
   void interpreterStatutPush_statut2xx_retourneSucces() {
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.SUCCES,
-        NotificationDigestService.interpreterStatutPush(201));
+        NotificationPushDigestService.ResultatEnvoiPush.SUCCES,
+        NotificationPushDigestService.interpreterStatutPush(201));
   }
 
   @Test
   void interpreterStatutPush_statut404Ou410_retourneAbonnementMort() {
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
-        NotificationDigestService.interpreterStatutPush(404));
+        NotificationPushDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
+        NotificationPushDigestService.interpreterStatutPush(404));
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
-        NotificationDigestService.interpreterStatutPush(410));
+        NotificationPushDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
+        NotificationPushDigestService.interpreterStatutPush(410));
   }
 
   // Avant, tout statut différent de 404/410 était compté comme un succès — un 400 (payload
@@ -408,14 +411,14 @@ class NotificationDigestServiceTest {
   @Test
   void interpreterStatutPush_statutErreurNi404Ni410_retourneEchec() {
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationDigestService.interpreterStatutPush(400));
+        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationPushDigestService.interpreterStatutPush(400));
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationDigestService.interpreterStatutPush(429));
+        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationPushDigestService.interpreterStatutPush(429));
     assertEquals(
-        NotificationDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationDigestService.interpreterStatutPush(500));
+        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
+        NotificationPushDigestService.interpreterStatutPush(500));
   }
 
   // --- : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---
@@ -448,11 +451,11 @@ class NotificationDigestServiceTest {
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
     when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
 
-    Resend resendMock = mock(Resend.class);
-    Emails emailsMock = mock(Emails.class);
+    final Resend resendMock = mock(Resend.class);
+    final Emails emailsMock = mock(Emails.class);
     when(resendMock.emails()).thenReturn(emailsMock);
 
-    NotificationDigestService serviceAvecFabriques =
+    final NotificationDigestService serviceAvecFabriques =
         new NotificationDigestService(
             configService,
             jdbc,
@@ -491,7 +494,7 @@ class NotificationDigestServiceTest {
   void executerDigest_pushEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
     when(jdbc.queryForList(contains("FROM user_matches"), anyMap()))
         .thenReturn(List.of(ligneTest("u2")));
-    Map<String, Object> abonnement = new HashMap<>();
+    final Map<String, Object> abonnement = new HashMap<>();
     abonnement.put("id", 1);
     abonnement.put("endpoint", "https://push.exemple.test/abonnement-xyz");
     // Vraie clé publique EC P-256 (point non compressé, base64url) — le constructeur
@@ -511,14 +514,14 @@ class NotificationDigestServiceTest {
         .thenReturn(Optional.of("contact@strapontin.fr"));
     when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
 
-    PushService pushServiceMock = mock(PushService.class);
-    HttpResponse reponseMock = mock(HttpResponse.class);
-    StatusLine statusLineMock = mock(StatusLine.class);
+    final PushService pushServiceMock = mock(PushService.class);
+    final HttpResponse reponseMock = mock(HttpResponse.class);
+    final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(201);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
     when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
 
-    NotificationDigestService serviceAvecFabriques =
+    final NotificationDigestService serviceAvecFabriques =
         new NotificationDigestService(
             configService,
             jdbc,
@@ -536,8 +539,8 @@ class NotificationDigestServiceTest {
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
-  private static Map<String, Object> ligneTest(String userId) {
-    Map<String, Object> ligne = new HashMap<>();
+  private static Map<String, Object> ligneTest(final String userId) {
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("user_id", userId);
     ligne.put("email", userId + "@test.fr");
     ligne.put("concert_id", UUID.randomUUID().toString());
@@ -556,19 +559,22 @@ class NotificationDigestServiceTest {
   }
 
   private static String invoquerPayloadPush(
-      List<NotificationDigestService.ConcertNotif> concerts, String baseUrl) throws Exception {
-    Method m =
-        NotificationDigestService.class.getDeclaredMethod(
+      final List<NotificationDigestService.ConcertNotif> concerts, final String baseUrl)
+      throws Exception {
+    final Method m =
+        NotificationPushDigestService.class.getDeclaredMethod(
             "construirePayloadPush", List.class, String.class);
     m.setAccessible(true);
     return (String) m.invoke(null, concerts, baseUrl);
   }
 
   private static String invoquerCorpsEmail(
-      String sujet, List<NotificationDigestService.ConcertNotif> concerts, String baseUrl)
+      final String sujet,
+      final List<NotificationDigestService.ConcertNotif> concerts,
+      final String baseUrl)
       throws Exception {
-    Method m =
-        NotificationDigestService.class.getDeclaredMethod(
+    final Method m =
+        EmailDigestTemplate.class.getDeclaredMethod(
             "construireCorpsEmail", String.class, List.class, String.class);
     m.setAccessible(true);
     return (String) m.invoke(null, sujet, concerts, baseUrl);

@@ -14,32 +14,35 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre de garde TOTP : bloque les appels API tant que le challenge 2FA n'est pas validé.
-///
-/// <p>Si la session contient {@code TOTP_EN_ATTENTE=true} :
-/// <ul>
-///   <li>Routes {@code /api/**} (sauf {@code /api/auth/totp} et {@code /api/auth/logout}) →
-///       401 JSON {@code {"erreur":"TOTP requis"}}</li>
-///   <li>Routes non-API → laissées passer ; le SPA Vue gère la redirection côté client</li>
-/// </ul>
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Filtre de garde TOTP : bloque les appels API tant que le
+ * challenge 2FA n'est pas validé (détail : CLAUDE.md,
+ * Authentification).
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class TotpGuardFilter extends OncePerRequestFilter {
 
   private static final Set<String> API_TOTP_AUTORISES =
       Set.of("/api/auth/totp", "/api/auth/logout");
 
+  /** Constructeur par défaut, instancié par Spring. */
+  public TotpGuardFilter() {
+    super();
+  }
+
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final FilterChain filterChain)
       throws ServletException, IOException {
 
-    HttpSession session = request.getSession(false);
+    final HttpSession session = request.getSession(false);
     if (session != null
         && Boolean.TRUE.equals(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE))) {
-      String chemin = request.getServletPath();
+      final String chemin = request.getServletPath();
       if (chemin.startsWith("/api/") && !API_TOTP_AUTORISES.contains(chemin)) {
         response.setStatus(401);
         response.setContentType("application/json;charset=UTF-8");

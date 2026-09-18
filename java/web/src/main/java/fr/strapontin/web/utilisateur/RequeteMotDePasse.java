@@ -7,10 +7,12 @@ package fr.strapontin.web.utilisateur;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/// Corps JSON de la requête POST /api/user/password.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Corps JSON de la requête POST /api/user/password.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record RequeteMotDePasse(
     @NotBlank(message = "Tous les champs sont obligatoires.") String motDePasseActuel,
     @NotBlank(message = "Tous les champs sont obligatoires.")

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
 import java.util.Map;
@@ -24,20 +25,23 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-/// Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers).
-///
-/// <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du
-/// pool HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie
-/// avec une vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation
-/// avant toute écriture, et que la rétrogradation seule s'applique normalement.
-///
-/// <p>Pas de {@code @SpringBootTest} : {@link AdminService} est construit manuellement (comme
-/// le permet son injection {@code self} par setter, prévue pour les tests hors contexte Spring),
-/// DataSource/Flyway montés à la main pour éviter la complexité d'un contexte web complet
-/// (sécurité, sessions JDBC, etc.) non nécessaire pour ce test ciblé.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Test d'intégration de {@link AdminService} avec PostgreSQL réel (Testcontainers).
+ *
+ * <p>Les tests mockés de {@code AdminServiceTest} ne peuvent pas reproduire l'épuisement du pool
+ * HikariCP documenté en v2.6.4 (jdbc mocké, aucune vraie transaction) : ce test vérifie avec une
+ * vraie connexion que le garde-fou rejette la combinaison nom/email + rétrogradation avant toute
+ * écriture, et que la rétrogradation seule s'applique normalement.
+ *
+ * <p>Pas de {@code @SpringBootTest} : {@link AdminService} et {@link AdminRevocationService} sont
+ * construits manuellement (cette dernière avec une vraie connexion, comme le permet son injection
+ * {@code self} par setter, prévue pour les tests hors contexte Spring, pour que la révocation
+ * différée écrive réellement en base), DataSource/Flyway montés à la main pour éviter la complexité
+ * d'un contexte web complet (sécurité, sessions JDBC, etc.) non nécessaire pour ce test ciblé.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   private static NamedParameterJdbcTemplate jdbc;
@@ -46,7 +50,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @BeforeAll
   static void migrerBase() {
-    DriverManagerDataSource dataSource = new DriverManagerDataSource();
+    final DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
     dataSource.setUrl(postgres.getJdbcUrl());
     dataSource.setUsername(postgres.getUsername());
@@ -59,17 +63,25 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   @BeforeEach
   void setUp() {
     jdbc.update("DELETE FROM users", Map.of());
-    AdminService s =
+    final AdminRevocationService revocationService =
+        new AdminRevocationService(
+            jdbc, mock(EmailServiceAdmin.class), mock(LogAdminService.class));
+    revocationService.setSelf(revocationService);
+    final AdminModificationUtilisateurService modificationService =
+        new AdminModificationUtilisateurService(
+            jdbc, mock(LogAdminService.class), revocationService, mock(EmailServiceAdmin.class));
+    service =
         new AdminService(
             jdbc,
             mock(EmailService.class),
+            mock(EmailServiceAdmin.class),
+            mock(AdminUtilisateursListingService.class),
+            modificationService,
             mock(LogAdminService.class),
             mock(VerificationRepository.class));
-    s.setSelf(s);
-    service = s;
   }
 
-  private void insererAdmin(String id) {
+  private void insererAdmin(final String id) {
     jdbc.update(
         """
         INSERT INTO users (id, email, role, display_username)
@@ -86,18 +98,18 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void modifierUtilisateur_nomEtRetrogradationCombines_rejetteSansEcrireEnBase() {
     insererAdmin("admin1");
     insererAdmin("admin2");
-    RequeteModifierUtilisateur requete =
+    final RequeteModifierUtilisateur requete =
         new RequeteModifierUtilisateur("Nouveau Nom", null, "user");
 
     assertThrows(
         ErreurMetier.class, () -> service.modifierUtilisateur("admin2", requete, "admin1"));
 
-    String nomEnBase =
+    final String nomEnBase =
         jdbc.queryForObject(
             "SELECT display_username FROM users WHERE id = :id",
             Map.of("id", "admin2"),
             String.class);
-    String roleEnBase =
+    final String roleEnBase =
         jdbc.queryForObject(
             "SELECT role::text FROM users WHERE id = :id", Map.of("id", "admin2"), String.class);
     assertNotEquals("Nouveau Nom", nomEnBase);
@@ -108,17 +120,17 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   void modifierUtilisateur_seulementRetrogradation_appliqueLaRevocationDifferee() {
     insererAdmin("admin3");
     insererAdmin("admin4");
-    RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
+    final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
 
     assertDoesNotThrow(() -> service.modifierUtilisateur("admin4", requete, "admin3"));
 
-    Timestamp revocationLe =
+    final Timestamp revocationLe =
         jdbc.queryForObject(
             "SELECT revocation_admin_le FROM users WHERE id = :id",
             Map.of("id", "admin4"),
             Timestamp.class);
     assertNotNull(revocationLe, "la révocation différée doit être planifiée");
-    String roleEnBase =
+    final String roleEnBase =
         jdbc.queryForObject(
             "SELECT role::text FROM users WHERE id = :id", Map.of("id", "admin4"), String.class);
     assertEquals("admin", roleEnBase, "le rôle ne change qu'à l'échéance (RevoquerAdminsJob)");

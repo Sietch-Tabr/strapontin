@@ -6,10 +6,12 @@ package fr.strapontin.web.spectacle;
 
 import java.util.List;
 
-/// Réponse paginée de l'endpoint GET /api/spectacles.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Réponse paginée de l'endpoint GET /api/spectacles.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record ReponseSpectacles(
     List<SpectacleDto> concerts,
     int page,

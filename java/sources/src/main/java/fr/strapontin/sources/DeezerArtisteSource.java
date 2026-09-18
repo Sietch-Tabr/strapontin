@@ -17,25 +17,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-/// Client Deezer pour l'enrichissement des artistes (étape 3).
-///
-/// Deux modes, indépendants l'un de l'autre :
-/// - `deezerId` connu (renseigné au préalable par {@link WikidataArtisteSource} via P2722) →
-///   confirmation directe du nom canonique par `GET /artist/{id}`.
-/// - `deezerId` absent → recherche par nom (`GET /search/artist?q=`). Le P2722 Wikidata est
-///   fréquemment absent en pratique (constaté en production sur Yelle, Mademoiselle K, Ycare —
-///   Deezer référence pourtant bien ces artistes) : ne pas dépendre uniquement de Wikidata pour
-///   peupler {@code deezer_id} reviendrait à ignorer une source de données déjà exploitée ailleurs
-///   dans le projet. Seule une correspondance exacte de nom normalisé est retenue (pas de seuil de
-///   similarité comme dans {@link ResolveurNomCanonique}) : cette découverte assigne un identifiant
-///   persistant, un enjeu plus élevé qu'une simple confirmation cosmétique de nom affiché — même
-///   prudence que {@code TicketmasterSource.rechercherAttractionId} (anti- JAIN/ANUV JAIN).
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Client Deezer pour l'enrichissement des artistes (étape 3) — détail
+ * (deux modes, seuil de correspondance exacte) : CLAUDE.md,
+ * Enrichissement Wikidata/OSM.
+ * @since 2.6.0
+ * @author Kwaite
+ */
 public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceAvecBilanFetch {
 
-  private static final Logger log = LoggerFactory.getLogger(DeezerArtisteSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DeezerArtisteSource.class);
 
   private static final String DEEZER_BASE = "https://api.deezer.com";
 
@@ -43,17 +34,23 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
 
-  /// Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier prélèvement.
-  ///
-  /// @return le bilan depuis le dernier prélèvement
+  /**
+   * Retourne le bilan agrégé des appels HTTP Deezer depuis le dernier
+   * prélèvement.
+   *
+   * @return le bilan depuis le dernier prélèvement
+   */
   @Override
   public fr.strapontin.core.BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
   }
 
-  /// Crée une instance avec un RestClient par défaut (timeout connexion 10s, lecture 30s) — sans
-  /// borne, un hoquet réseau ou une réponse lente de l'API Deezer ferait pendre indéfiniment un
-  /// thread worker (même classe d'incident que celle déjà corrigée pour TM/Eventim, #887).
+  /**
+   * Crée une instance avec un RestClient par défaut (timeout connexion 10s,
+   * lecture 30s) — sans borne, un hoquet réseau ou une réponse lente de l'API
+   * Deezer ferait pendre indéfiniment un thread worker (même classe d'incident
+   * que celle déjà corrigée pour TM/Eventim, #887).
+   */
   public DeezerArtisteSource() {
     this(
         RestClient.builder()
@@ -63,10 +60,12 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
             .build());
   }
 
-  /// Crée une instance avec un RestClient personnalisé (injection de test).
-  ///
-  /// @param restClient client HTTP à utiliser
-  public DeezerArtisteSource(RestClient restClient) {
+  /**
+   * Crée une instance avec un RestClient personnalisé (injection de test).
+   *
+   * @param restClient client HTTP à utiliser
+   */
+  public DeezerArtisteSource(final RestClient restClient) {
     this.restClient = restClient;
   }
 
@@ -76,34 +75,48 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   }
 
   @Override
-  public Map<UUID, EnrichissementArtiste> enrichirLot(List<ArtisteAEnrichir> artistes) {
-    Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
-    for (ArtisteAEnrichir artiste : artistes) {
-      Optional<EnrichissementArtiste> enrichissement =
+  public Map<UUID, EnrichissementArtiste> enrichirLot(final List<ArtisteAEnrichir> artistes) {
+    final Map<UUID, EnrichissementArtiste> resultats = new HashMap<>();
+    for (final ArtisteAEnrichir artiste : artistes) {
+      final Optional<EnrichissementArtiste> enrichissement =
           artiste.deezerId() != null ? confirmerNom(artiste) : decouvrirParNom(artiste);
       enrichissement.ifPresent(e -> resultats.put(artiste.id(), e));
     }
     return resultats;
   }
 
-  @SuppressWarnings("unchecked")
-  private Optional<EnrichissementArtiste> decouvrirParNom(ArtisteAEnrichir artiste) {
+  // return en dernière position de boucle nécessaire : arrête la recherche au
+  // premier candidat valide plutôt que de poursuivre l'itération sans effet
+  // utile. Le record retourné porte les champs du candidat courant — pas
+  // d'instance hissable hors boucle.
+  @SuppressWarnings({
+    "unchecked",
+    "PMD.AvoidBranchingStatementAsLastInLoop",
+    "PMD.AvoidInstantiatingObjectsInLoops"
+  })
+  private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
-      Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
-      if (data == null) return Optional.empty();
-      var dataList = (List<Map<String, Object>>) data.get("data");
-      if (dataList == null) return Optional.empty();
+      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      if (data == null) {
+        return Optional.empty();
+      }
+      final List<Map<String, Object>> dataList = (List<Map<String, Object>>) data.get("data");
+      if (dataList == null) {
+        return Optional.empty();
+      }
 
-      for (var candidat : dataList) {
-        String nomCandidat = (String) candidat.get("name");
+      for (final Map<String, Object> candidat : dataList) {
+        final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null
             || !Normalisation.normaliserTexte(nomCandidat).equals(artiste.nomNorm())) {
           continue;
         }
-        Object idCandidat = candidat.get("id");
-        if (idCandidat == null) continue;
+        final Object idCandidat = candidat.get("id");
+        if (idCandidat == null) {
+          continue;
+        }
         return Optional.of(
             new EnrichissementArtiste(
                 artiste.wikidataId(), nomCandidat, String.valueOf(idCandidat), null, null));
@@ -111,20 +124,20 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       return Optional.empty();
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Deezer découverte erreur nom={} : {}", artiste.nom(), e.getMessage());
+      LOG.warn("Deezer découverte erreur nom={} : {}", artiste.nom(), e.getMessage());
       return Optional.empty();
     }
   }
 
-  private static String encode(String s) {
-    return URLEncoder.encode(s, StandardCharsets.UTF_8);
+  private static String encode(final String texte) {
+    return URLEncoder.encode(texte, StandardCharsets.UTF_8);
   }
 
   @SuppressWarnings("unchecked")
-  private Optional<EnrichissementArtiste> confirmerNom(ArtisteAEnrichir artiste) {
+  private Optional<EnrichissementArtiste> confirmerNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      Map<String, Object> data =
+      final Map<String, Object> data =
           restClient
               .get()
               .uri(DEEZER_BASE + "/artist/" + artiste.deezerId())
@@ -133,13 +146,13 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       if (data == null || data.get("name") == null || data.containsKey("error")) {
         return Optional.empty();
       }
-      String nomCanonique = (String) data.get("name");
+      final String nomCanonique = (String) data.get("name");
       return Optional.of(
           new EnrichissementArtiste(
               artiste.wikidataId(), nomCanonique, artiste.deezerId(), null, null));
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      log.warn("Deezer erreur artistId={} : {}", artiste.deezerId(), e.getMessage());
+      LOG.warn("Deezer erreur artistId={} : {}", artiste.deezerId(), e.getMessage());
       return Optional.empty();
     }
   }

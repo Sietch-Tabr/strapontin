@@ -23,14 +23,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link DecouverteController#decouvrir}.
-///
-/// <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}.
-/// Les tests du filtre mois et du comportement global de {@code decouvrir} au niveau service
-/// vivent dans {@link DecouverteServiceTest}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link DecouverteController#decouvrir}.
+ *
+ * <p>Les tests de {@code fetcher()} vivent dans {@link DecouverteControllerFetcherTest}. Les tests
+ * du filtre mois et du comportement global de {@code decouvrir} au niveau service vivent dans
+ * {@link DecouverteServiceTest}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class DecouverteControllerTest {
 
@@ -42,7 +44,7 @@ class DecouverteControllerTest {
   @BeforeEach
   void setUp() {
     controller = new DecouverteController(decouverteService);
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
@@ -50,14 +52,26 @@ class DecouverteControllerTest {
 
   @Test
   void decouvrir_construitLeFiltreEtDelegueAuServiceAvecUserId() {
-    ReponseDecouverte attendu =
+    final ReponseDecouverte attendu =
         new ReponseDecouverte(
             List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
     when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(attendu);
 
-    ResponseEntity<ReponseDecouverte> rep =
+    final ResponseEntity<ReponseDecouverte> rep =
         controller.decouvrir(
-            List.of("75", "92"), "zenith", "2026-05", "Pop", "concert", "nouveaute", 1, auth);
+            new FiltreConcerts(
+                "zenith",
+                "2026-05",
+                "Pop",
+                "concert",
+                "nouveaute",
+                1,
+                false,
+                false,
+                null,
+                null,
+                List.of("75", "92")),
+            auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertSame(attendu, rep.getBody());
@@ -65,18 +79,31 @@ class DecouverteControllerTest {
 
   @Test
   void decouvrir_transmetLesCriteresDansLeFiltre() {
-    ReponseDecouverte vide =
+    final ReponseDecouverte vide =
         new ReponseDecouverte(
             List.of(), 0, 1, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
     when(decouverteService.decouvrir(eq("user-1"), any(FiltreConcerts.class))).thenReturn(vide);
 
-    controller.decouvrir(List.of("75"), "q", "2026-05", "Pop", "concert", "nouveaute", 2, auth);
+    controller.decouvrir(
+        new FiltreConcerts(
+            "q",
+            "2026-05",
+            "Pop",
+            "concert",
+            "nouveaute",
+            2,
+            false,
+            false,
+            null,
+            null,
+            List.of("75")),
+        auth);
 
-    org.mockito.ArgumentCaptor<FiltreConcerts> captor =
+    final org.mockito.ArgumentCaptor<FiltreConcerts> captor =
         org.mockito.ArgumentCaptor.forClass(FiltreConcerts.class);
     org.mockito.Mockito.verify(decouverteService).decouvrir(eq("user-1"), captor.capture());
-    FiltreConcerts filtre = captor.getValue();
-    assertEquals("q", filtre.q());
+    final FiltreConcerts filtre = captor.getValue();
+    assertEquals("q", filtre.recherche());
     assertEquals("2026-05", filtre.mois());
     assertEquals("Pop", filtre.genre());
     assertEquals("concert", filtre.classification());

@@ -61,7 +61,9 @@ export async function chargerBanniere() {
     }
     visible.value = true;
     lancerMinuterie(data);
-  } catch (_) {}
+  } catch (_) {
+    // échec ignoré : best-effort, la bannière ne s'affiche simplement pas
+  }
 }
 
 export function useBanniere() {

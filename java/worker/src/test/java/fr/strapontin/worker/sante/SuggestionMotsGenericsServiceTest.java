@@ -23,10 +23,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link SuggestionMotsGenericsService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SuggestionMotsGenericsService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SuggestionMotsGenericsServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -46,14 +48,14 @@ class SuggestionMotsGenericsServiceTest {
             contains("INSERT INTO app_config"), org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
-              Map<String, ?> params = invocation.getArgument(1);
+              final Map<String, ?> params = invocation.getArgument(1);
               valeurAppConfig.set((String) params.get("json"));
               return 1;
             });
     service = new SuggestionMotsGenericsService(jdbc, logsAdminWorker, new ObjectMapper());
   }
 
-  private void stubNoms(List<String> noms) {
+  private void stubNoms(final List<String> noms) {
     when(jdbc.queryForList(
             contains("FROM salles"),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
@@ -61,8 +63,8 @@ class SuggestionMotsGenericsServiceTest {
         .thenReturn(noms);
   }
 
-  private static List<String> nomsAvecTokenRepete(String token, int occurrences) {
-    List<String> noms = new ArrayList<>();
+  private static List<String> nomsAvecTokenRepete(final String token, final int occurrences) {
+    final List<String> noms = new ArrayList<>();
     for (int i = 0; i < occurrences; i++) {
       noms.add(token + " ville" + i);
     }
@@ -75,7 +77,7 @@ class SuggestionMotsGenericsServiceTest {
         nomsAvecTokenRepete(
             "kiosque", SuggestionMotsGenericsService.SEUIL_OCCURRENCES_MOT_GENERIQUE));
 
-    int nouveaux = service.suggerer();
+    final int nouveaux = service.suggerer();
 
     assertEquals(1, nouveaux);
     verify(logsAdminWorker)
@@ -92,7 +94,7 @@ class SuggestionMotsGenericsServiceTest {
         nomsAvecTokenRepete(
             "guichet", SuggestionMotsGenericsService.SEUIL_OCCURRENCES_MOT_GENERIQUE - 1));
 
-    int nouveaux = service.suggerer();
+    final int nouveaux = service.suggerer();
 
     assertEquals(0, nouveaux);
     verify(logsAdminWorker, never())
@@ -106,7 +108,7 @@ class SuggestionMotsGenericsServiceTest {
         nomsAvecTokenRepete(
             "theatre", SuggestionMotsGenericsService.SEUIL_OCCURRENCES_MOT_GENERIQUE));
 
-    int nouveaux = service.suggerer();
+    final int nouveaux = service.suggerer();
 
     assertEquals(0, nouveaux);
     verify(logsAdminWorker, never())
@@ -121,7 +123,7 @@ class SuggestionMotsGenericsServiceTest {
         nomsAvecTokenRepete(
             "kiosque", SuggestionMotsGenericsService.SEUIL_OCCURRENCES_MOT_GENERIQUE));
 
-    int nouveaux = service.suggerer();
+    final int nouveaux = service.suggerer();
 
     assertEquals(0, nouveaux);
     verify(logsAdminWorker, never())

@@ -1,0 +1,123 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.worker.persister;
+
+import java.sql.Date;
+import java.sql.Time;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Service;
+
+/**
+ * Résout les concerts Eventim dont l'URL existe déjà en base
+ * sous un {@code artiste_norm} différent (détail : CLAUDE.md,
+ * resoudreParUrl).
+ * @since 2.9.1
+ * @author Kwaite
+ */
+@Service
+class ResolveurArtisteParUrl {
+
+  private static final Logger LOG = LoggerFactory.getLogger(ResolveurArtisteParUrl.class);
+
+  private final NamedParameterJdbcTemplate jdbc;
+
+  /**
+   * @param jdbc template JDBC injecté par Spring
+   */
+  /* package-private : instancié uniquement par PersisteurConcertsDb (même
+   * package). */
+  ResolveurArtisteParUrl(final NamedParameterJdbcTemplate jdbc) {
+    this.jdbc = jdbc;
+  }
+
+  private record CleUrl(String source, String url, LocalDate date, LocalTime heure) {}
+
+  /**
+   * @param concerts concerts après résolution des identités sources
+   * @return liste avec les {@code artiste_norm} et {@code artiste_id} unifiés
+   *     par URL, pour Eventim uniquement
+   */
+  /* package-private : appelé par PersisteurConcertsDb (même package). */
+  List<ValeurConcert> resoudreParUrl(final List<ValeurConcert> concerts) {
+    final List<ValeurConcert> avecUrl =
+        concerts.stream().filter(c -> c.url() != null && "eventim".equals(c.source())).toList();
+    if (avecUrl.isEmpty()) {
+      return concerts;
+    }
+
+    final List<String> urls = avecUrl.stream().map(ValeurConcert::url).distinct().toList();
+    final List<Map<String, Object>> lignesExistantes = chargerObservationsParUrl(urls);
+    if (lignesExistantes.isEmpty()) {
+      return concerts;
+    }
+
+    final Map<CleUrl, Map<String, Object>> index = construireIndexUrlsExistantes(lignesExistantes);
+    return concerts.stream().map(c -> reconcilierArtisteParUrl(c, index)).toList();
+  }
+
+  private List<Map<String, Object>> chargerObservationsParUrl(final List<String> urls) {
+    return jdbc.queryForList(
+        """
+        SELECT e.artiste_norm AS artiste_norm, e.artiste_id AS artiste_id, e.date AS date,
+               e.heure AS heure, o.source AS source, o.url AS url
+        FROM observations o JOIN evenements e ON e.id = o.evenement_id
+        WHERE o.url IN (:urls) AND o.source = 'eventim'
+        """,
+        Map.of("urls", urls));
+  }
+
+  // CleUrl porte les champs de la ligne courante — pas d'instance hissable hors
+  // boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  private Map<CleUrl, Map<String, Object>> construireIndexUrlsExistantes(
+      final List<Map<String, Object>> lignesExistantes) {
+    final Map<CleUrl, Map<String, Object>> index = new HashMap<>();
+    for (final Map<String, Object> l : lignesExistantes) {
+      final Object dateBrute = l.get("date");
+      final Object heureBrute = l.get("heure");
+      final CleUrl cle =
+          new CleUrl(
+              (String) l.get("source"),
+              (String) l.get("url"),
+              dateBrute != null ? ((Date) dateBrute).toLocalDate() : null,
+              heureBrute != null ? ((Time) heureBrute).toLocalTime() : null);
+      index.putIfAbsent(cle, l);
+    }
+    return index;
+  }
+
+  private ValeurConcert reconcilierArtisteParUrl(
+      final ValeurConcert concert, final Map<CleUrl, Map<String, Object>> index) {
+    if (concert.url() == null) {
+      return concert;
+    }
+    final CleUrl cle = new CleUrl(concert.source(), concert.url(), concert.date(), concert.heure());
+    final Map<String, Object> existant = index.get(cle);
+    if (existant == null) {
+      return concert;
+    }
+    final String artisteNormExistant = (String) existant.get("artiste_norm");
+    final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
+    if (artisteNormExistant == null || artisteNormExistant.equals(concert.artisteNorm())) {
+      return concert;
+    }
+    LOG.debug(
+        "url doublon résolu entrant={} existant={} url={}",
+        concert.artisteNorm(),
+        artisteNormExistant,
+        concert.url());
+    final UUID artisteIdFinal =
+        concert.artisteId() != null ? concert.artisteId() : artisteIdExistant;
+    return concert.avecArtisteNormEtId(artisteNormExistant, artisteIdFinal);
+  }
+}

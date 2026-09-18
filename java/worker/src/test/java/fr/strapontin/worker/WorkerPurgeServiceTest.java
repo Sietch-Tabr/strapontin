@@ -28,10 +28,12 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerPurgeService} (extrait de {@code WorkerService}).
-///
-/// @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerPurgeService} (extrait de {@code WorkerService}).
+ *
+ * @since 2.0.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class WorkerPurgeServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -40,10 +42,10 @@ class WorkerPurgeServiceTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
-    LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
-    WorkerStatsService workerStatsService =
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
+    final LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
+    final WorkerStatsService workerStatsService =
         new WorkerStatsService(
             List.<SourceConcerts>of(),
             tm,
@@ -136,7 +138,7 @@ class WorkerPurgeServiceTest {
 
   @Test
   void executerPurgerSalles_supprimeSallesOrphelinesEtEnregistreStat() {
-    List<UUID> candidats = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    final List<UUID> candidats = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
     when(jdbc.query(
             contains("SELECT id FROM salles"),
             anyMap(),
@@ -153,9 +155,9 @@ class WorkerPurgeServiceTest {
 
   @Test
   void executerPurgerSalles_conflitSurUneSalle_continueLesAutresEtCompteCorrectement() {
-    UUID bloquee = UUID.randomUUID();
-    UUID libre1 = UUID.randomUUID();
-    UUID libre2 = UUID.randomUUID();
+    final UUID bloquee = UUID.randomUUID();
+    final UUID libre1 = UUID.randomUUID();
+    final UUID libre2 = UUID.randomUUID();
     when(jdbc.query(
             contains("SELECT id FROM salles"),
             anyMap(),

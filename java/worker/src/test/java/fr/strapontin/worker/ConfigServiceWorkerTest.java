@@ -19,14 +19,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link ConfigServiceWorker}.
-///
-/// <p>Le module n'avait aucun test dédié avant (extraction de {@code ConfigCipher}) — le
-/// chiffrement/déchiffrement lui-même est testé dans {@code core.ConfigCipherTest}, ce fichier
-/// couvre le comportement propre au service worker : lecture seule, résilience au mauvais secret.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ConfigServiceWorker}.
+ *
+ * <p>Le module n'avait aucun test dédié avant (extraction de {@code ConfigCipher}) — le
+ * chiffrement/déchiffrement lui-même est testé dans {@code core.ConfigCipherTest}, ce fichier
+ * couvre le comportement propre au service worker : lecture seule, résilience au mauvais secret.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class ConfigServiceWorkerTest {
 
@@ -47,8 +49,8 @@ class ConfigServiceWorkerTest {
 
   @Test
   void lireConfig_valeurChiffreeParLeMemeSecret_retourneValeurEnClair() {
-    ConfigCipher cipher = new ConfigCipher(SECRET);
-    String chiffre = cipher.chiffrer("valeur-en-clair");
+    final ConfigCipher cipher = new ConfigCipher(SECRET);
+    final String chiffre = cipher.chiffrer("valeur-en-clair");
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of(chiffre));
 
@@ -59,8 +61,8 @@ class ConfigServiceWorkerTest {
   void lireConfig_valeurChiffreeParUnAutreSecret_neLancePasEtRetourneVide() {
     // Même garde-fou que web.ConfigService : un APP_CONFIG_SECRET différent ne doit jamais faire
     // planter le worker, seulement logger l'échec et traiter la clé comme absente.
-    ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
-    String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
+    final ConfigCipher autreCipher = new ConfigCipher("autre-secret-32-caracteres-ok!!");
+    final String chiffreAvecAutreSecret = autreCipher.chiffrer("peu importe");
     when(jdbc.query(anyString(), anyMap(), ArgumentMatchers.<RowMapper<String>>any()))
         .thenReturn(List.of(chiffreAvecAutreSecret));
 

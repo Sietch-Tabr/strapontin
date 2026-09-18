@@ -22,15 +22,17 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link EmailAlerteService} (extrait d'{@code EmailService}).
-///
-/// <p>Couvre le garde-fou anti-boucle sur les notifications bounce/plainte spam. Les
-/// méthodes d'envoi réel (dépendant du SDK Resend, non injectable) ne sont testées que sur leurs
-/// branches de retour anticipé — le SDK n'effectue aucun appel réseau tant que
-/// {@code emails().send()} n'est pas invoqué.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link EmailAlerteService} (extrait d'{@code EmailService}).
+ *
+ * <p>Couvre le garde-fou anti-boucle sur les notifications bounce/plainte spam. Les
+ * méthodes d'envoi réel (dépendant du SDK Resend, non injectable) ne sont testées que sur leurs
+ * branches de retour anticipé — le SDK n'effectue aucun appel réseau tant que
+ * {@code emails().send()} n'est pas invoqué.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class EmailAlerteServiceTest {
 
   private ConfigService configService;
@@ -144,7 +146,8 @@ class EmailAlerteServiceTest {
   void envoyerAlerteQuotaResend_resendApiKeyAbsent_retourneFalse() {
     when(emailSender.obtenirContexte()).thenReturn(Optional.empty());
 
-    boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+    final boolean resultat =
+        service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
 
     assertFalse(resultat);
   }
@@ -156,7 +159,8 @@ class EmailAlerteServiceTest {
             Optional.of(
                 new EmailSender.ContexteEmail(null, "noreply@exemple.fr", "https://exemple.fr")));
 
-    boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+    final boolean resultat =
+        service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
 
     assertTrue(resultat);
     verify(emailSender)
@@ -179,7 +183,8 @@ class EmailAlerteServiceTest {
         .when(emailSender)
         .envoyer(any(), anyString(), anyString(), anyString(), anyString(), anyString());
 
-    boolean resultat = service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
+    final boolean resultat =
+        service.envoyerAlerteQuotaResend("admin@exemple.fr", COMPTEUR_SEUIL_JOUR);
 
     assertFalse(resultat);
   }

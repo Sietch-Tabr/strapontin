@@ -17,14 +17,16 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link ReconciliateurSalles} — façade de délégation pure vers {@link
-/// ReconciliationNomsSalles}, {@link ResolveurSalleParConcert} et {@link
-/// ReconciliateurSallesOrphelines} (v2.8.7). Le comportement propre à chaque responsabilité est
-/// testé dans {@code ReconciliationNomsSallesTest}, {@code ResolveurSalleParConcertTest} et {@code
-/// ReconciliateurSallesOrphelinesTest}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ReconciliateurSalles} — façade de délégation pure vers {@link
+ * ReconciliationNomsSalles}, {@link ResolveurSalleParConcert} et {@link
+ * ReconciliateurSallesOrphelines} (v2.8.7). Le comportement propre à chaque responsabilité est
+ * testé dans {@code ReconciliationNomsSallesTest}, {@code ResolveurSalleParConcertTest} et {@code
+ * ReconciliateurSallesOrphelinesTest}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class ReconciliateurSallesTest {
 
   private ReconciliationNomsSalles reconciliationNoms;
@@ -66,10 +68,10 @@ class ReconciliateurSallesTest {
 
   @Test
   void reconcilierSalles_delegueAReconciliationNomsSalles() {
-    List<ValeurConcert> lot = List.of(concert());
+    final List<ValeurConcert> lot = List.of(concert());
     when(reconciliationNoms.reconcilierSalles(lot)).thenReturn(lot);
 
-    List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(lot);
+    final List<ValeurConcert> resultat = reconciliateur.reconcilierSalles(lot);
 
     assertEquals(lot, resultat);
     verify(reconciliationNoms).reconcilierSalles(lot);
@@ -77,8 +79,8 @@ class ReconciliateurSallesTest {
 
   @Test
   void absorberRenommagesSalles_delegueAReconciliationNomsSalles() {
-    List<ValeurConcert> concerts = List.of(concert());
-    Map<String, UUID> caches = Map.of("tm:1", UUID.randomUUID());
+    final List<ValeurConcert> concerts = List.of(concert());
+    final Map<String, UUID> caches = Map.of("tm:1", UUID.randomUUID());
 
     reconciliateur.absorberRenommagesSalles(concerts, caches);
 
@@ -87,52 +89,52 @@ class ReconciliateurSallesTest {
 
   @Test
   void upsertSalleSource_delegueAuResolveur() {
-    ValeurConcert c = concert();
-    UUID salleId = UUID.randomUUID();
+    final ValeurConcert c = concert();
+    final UUID salleId = UUID.randomUUID();
     when(resolveurSalle.upsertSalleSource(c)).thenReturn(salleId);
 
-    UUID resultat = reconciliateur.upsertSalleSource(c);
+    final UUID resultat = reconciliateur.upsertSalleSource(c);
 
     assertEquals(salleId, resultat);
   }
 
   @Test
   void chercherSalleParTokens_delegueAuResolveur() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(resolveurSalle.chercherSalleParTokens("Salle", "75")).thenReturn(salleId);
 
-    UUID resultat = reconciliateur.chercherSalleParTokens("Salle", "75");
+    final UUID resultat = reconciliateur.chercherSalleParTokens("Salle", "75");
 
     assertEquals(salleId, resultat);
   }
 
   @Test
   void chercherSalleParCleForte_delegueAuResolveur() {
-    ValeurConcert c = concert();
-    UUID salleId = UUID.randomUUID();
+    final ValeurConcert c = concert();
+    final UUID salleId = UUID.randomUUID();
     when(resolveurSalle.chercherSalleParCleForte(c)).thenReturn(salleId);
 
-    UUID resultat = reconciliateur.chercherSalleParCleForte(c);
+    final UUID resultat = reconciliateur.chercherSalleParCleForte(c);
 
     assertEquals(salleId, resultat);
   }
 
   @Test
   void raccrocherSallesParNomNorm_delegueAuResolveur() {
-    List<ValeurConcert> concerts = List.of(concert());
+    final List<ValeurConcert> concerts = List.of(concert());
     when(resolveurSalle.raccrocherSallesParNomNorm(concerts)).thenReturn(concerts);
 
-    List<ValeurConcert> resultat = reconciliateur.raccrocherSallesParNomNorm(concerts);
+    final List<ValeurConcert> resultat = reconciliateur.raccrocherSallesParNomNorm(concerts);
 
     assertEquals(concerts, resultat);
   }
 
   @Test
   void deptsConnus_delegueAuResolveur() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(resolveurSalle.deptsConnus(Set.of(salleId))).thenReturn(Map.of(salleId, "75"));
 
-    Map<UUID, String> resultat = reconciliateur.deptsConnus(Set.of(salleId));
+    final Map<UUID, String> resultat = reconciliateur.deptsConnus(Set.of(salleId));
 
     assertEquals(Map.of(salleId, "75"), resultat);
   }
@@ -141,7 +143,7 @@ class ReconciliateurSallesTest {
   void retenterSallesOrphelines_delegueAuReconciliateurOrphelines() {
     when(reconciliateurOrphelines.retenterSallesOrphelines()).thenReturn(3);
 
-    int resultat = reconciliateur.retenterSallesOrphelines();
+    final int resultat = reconciliateur.retenterSallesOrphelines();
 
     assertEquals(3, resultat);
   }

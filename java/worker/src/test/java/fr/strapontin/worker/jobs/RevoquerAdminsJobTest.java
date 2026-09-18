@@ -15,8 +15,8 @@ class RevoquerAdminsJobTest {
 
   @Test
   void executeInternal_delegueAWorkerRevocationService() {
-    WorkerRevocationService workerRevocationService = mock(WorkerRevocationService.class);
-    RevoquerAdminsJob job = new RevoquerAdminsJob();
+    final WorkerRevocationService workerRevocationService = mock(WorkerRevocationService.class);
+    final RevoquerAdminsJob job = new RevoquerAdminsJob();
     job.setWorkerRevocationService(workerRevocationService);
 
     job.executeInternal(mock(JobExecutionContext.class));

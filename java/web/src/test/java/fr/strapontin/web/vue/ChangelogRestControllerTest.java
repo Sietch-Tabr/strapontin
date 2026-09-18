@@ -18,11 +18,13 @@ import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires pour {@link ChangelogRestController} — badge "nouveautés" piloté par {@code
-/// changelog_version_vue} comparé à la version courante lue via {@link BuildProperties}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ChangelogRestController} — badge "nouveautés" piloté par {@code
+ * changelog_version_vue} comparé à la version courante lue via {@link BuildProperties}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class ChangelogRestControllerTest {
 
   private ChangelogService changelogService;
@@ -31,15 +33,15 @@ class ChangelogRestControllerTest {
   @BeforeEach
   void setUp() {
     changelogService = mock(ChangelogService.class);
-    Properties props = new Properties();
+    final Properties props = new Properties();
     props.put("version", "2.6.4");
     controller = new ChangelogRestController(changelogService, new BuildProperties(props));
   }
 
-  private static Authentication authPour(String userId) {
-    UtilisateurDetails ud =
+  private static Authentication authPour(final String userId) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", "user", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
@@ -48,7 +50,7 @@ class ChangelogRestControllerTest {
   void nouveaute_versionVueDifferente_retourneNonVuVrai() {
     when(changelogService.estNonVu("u1", "2.6.4")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.nouveaute(authPour("u1"));
+    final ResponseEntity<Map<String, Object>> reponse = controller.nouveaute(authPour("u1"));
 
     assertEquals(true, reponse.getBody().get("nonVu"));
   }
@@ -57,7 +59,7 @@ class ChangelogRestControllerTest {
   void nouveaute_versionVueIdentique_retourneNonVuFaux() {
     when(changelogService.estNonVu("u1", "2.6.4")).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.nouveaute(authPour("u1"));
+    final ResponseEntity<Map<String, Object>> reponse = controller.nouveaute(authPour("u1"));
 
     assertEquals(false, reponse.getBody().get("nonVu"));
   }

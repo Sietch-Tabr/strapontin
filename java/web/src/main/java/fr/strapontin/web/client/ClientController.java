@@ -15,14 +15,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Endpoint de remontée des erreurs JavaScript côté client.
-///
-/// <p>Permet aux navigateurs des utilisateurs authentifiés de signaler les erreurs JS non catchées
-/// et les rejections de promesses. Les entrées sont stockées dans {@code logs_admin} avec la source
-/// {@code client-js}.
-///
-/// @since 2.1.2
-/// @author Kwaite
+/**
+ * Endpoint de remontée des erreurs JavaScript côté client — permet aux
+ * navigateurs des utilisateurs authentifiés de signaler erreurs JS et
+ * rejections de promesses non catchées, stockées dans {@code logs_admin}
+ * (source {@code client-js}).
+ * @since 2.1.2
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/client")
 public class ClientController {
@@ -34,55 +34,68 @@ public class ClientController {
 
   private final LogAdminService logAdminService;
 
-  public ClientController(LogAdminService logAdminService) {
+  /**
+   * @param logAdminService journalisation des erreurs signalées
+   */
+  public ClientController(final LogAdminService logAdminService) {
     this.logAdminService = logAdminService;
   }
 
-  /// Signale une erreur JavaScript depuis le navigateur.
-  ///
-  /// @param corps corps JSON de l'erreur
-  /// @param request requête HTTP (pour récupérer le User-Agent)
-  /// @return 201 Created avec {@code {"succes": true}}
+  /**
+   * Signale une erreur JavaScript depuis le navigateur.
+   *
+   * @param corps corps JSON de l'erreur
+   * @param request requête HTTP (pour récupérer le User-Agent)
+   * @return 201 Created avec {@code {"succes": true}}
+   */
   @PostMapping("/erreur")
   public ResponseEntity<Map<String, Object>> signalerErreur(
-      @RequestBody Map<String, Object> corps, HttpServletRequest request) {
-    String message =
+      @RequestBody final Map<String, Object> corps, final HttpServletRequest request) {
+    final String message =
         tronquer(String.valueOf(corps.getOrDefault("message", "")), LONGUEUR_MAX_MESSAGE);
-    String type = String.valueOf(corps.getOrDefault("type", "js-error"));
-    if (!TYPES_VALIDES.contains(type)) {
-      type = "js-error";
-    }
-    String url = tronquer(String.valueOf(corps.getOrDefault("url", "")), LONGUEUR_MAX_URL);
-    String userAgent = tronquer(request.getHeader("User-Agent"), LONGUEUR_MAX_URL);
+    final String type = normaliserType(corps.getOrDefault("type", "js-error"));
+    final String url = tronquer(String.valueOf(corps.getOrDefault("url", "")), LONGUEUR_MAX_URL);
+    final String userAgent = tronquer(request.getHeader("User-Agent"), LONGUEUR_MAX_URL);
 
     if (message.isBlank()) {
       return ResponseEntity.badRequest().body(Map.of("erreur", "Message requis."));
     }
 
-    Map<String, Object> meta = new HashMap<>();
+    final Map<String, Object> meta = new HashMap<>();
     meta.put("url", url != null ? url : "");
     meta.put("userAgent", userAgent != null ? userAgent : "");
-    for (var entree : corps.entrySet()) {
-      if (meta.size() >= MAX_CLES_META) {
-        break;
-      }
-      String cle = entree.getKey();
-      if (!"message".equals(cle)
-          && !"type".equals(cle)
-          && !"url".equals(cle)
-          && !"userAgent".equals(cle)) {
-        Object valeur = entree.getValue();
-        meta.put(cle, valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
-      }
-    }
+    ajouterMetaSupplementaire(meta, corps);
 
     logAdminService.logAdmin("error", "client-js", "[" + type + "] " + message, meta);
 
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }
 
-  private String tronquer(String valeur, int max) {
-    if (valeur == null) return null;
+  private static String normaliserType(final Object typeBrut) {
+    final String type = String.valueOf(typeBrut);
+    return TYPES_VALIDES.contains(type) ? type : "js-error";
+  }
+
+  private void ajouterMetaSupplementaire(
+      final Map<String, Object> meta, final Map<String, Object> corps) {
+    final Set<String> clesConnues = Set.of("message", "type", "url", "userAgent");
+    for (final Map.Entry<String, Object> entree : corps.entrySet()) {
+      if (meta.size() >= MAX_CLES_META) {
+        break;
+      }
+      if (!clesConnues.contains(entree.getKey())) {
+        final Object valeur = entree.getValue();
+        meta.put(
+            entree.getKey(),
+            valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
+      }
+    }
+  }
+
+  private String tronquer(final String valeur, final int max) {
+    if (valeur == null) {
+      return null;
+    }
     return valeur.length() > max ? valeur.substring(0, max) : valeur;
   }
 }

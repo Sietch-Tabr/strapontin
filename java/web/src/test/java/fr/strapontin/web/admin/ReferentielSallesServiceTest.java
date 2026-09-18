@@ -16,6 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.web.admin.ReferentielSallesService.FiltresRechercheSalles;
 import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
@@ -25,10 +26,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ReferentielSallesService}.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ReferentielSallesService}.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class ReferentielSallesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -48,8 +51,8 @@ class ReferentielSallesServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              RowMapper<SalleReferentiel> mapper = invocation.getArgument(2);
-              ResultSet rs = mock(ResultSet.class);
+              final RowMapper<SalleReferentiel> mapper = invocation.getArgument(2);
+              final ResultSet rs = mock(ResultSet.class);
               when(rs.getObject("id", UUID.class)).thenReturn(UUID.randomUUID());
               when(rs.getString("nom")).thenReturn("Zenith");
               when(rs.getString("nom_affiche")).thenReturn("Zénith de Paris");
@@ -63,7 +66,8 @@ class ReferentielSallesServiceTest {
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    ReponseReferentielSalles reponse = service.lister(0, null, null, null, null, false);
+    final ReponseReferentielSalles reponse =
+        service.lister(new FiltresRechercheSalles(0, null, null, null, null, false));
 
     assertEquals(1, reponse.salles().size());
     assertEquals(3L, reponse.totalSalles());
@@ -77,7 +81,7 @@ class ReferentielSallesServiceTest {
   void lister_nominal_requeteUtiliseLesNouvellesValeursDeStatut() {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
-    service.lister(0, null, null, null, null, false);
+    service.lister(new FiltresRechercheSalles(0, null, null, null, null, false));
 
     verify(jdbc)
         .query(
@@ -97,7 +101,7 @@ class ReferentielSallesServiceTest {
   void lister_wikidataManquantVrai_filtreSurWikidataIdNull() {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
 
-    service.lister(0, null, null, null, null, true);
+    service.lister(new FiltresRechercheSalles(0, null, null, null, null, true));
 
     verify(jdbc).query(contains("wikidata_id IS NULL"), anyMap(), any(RowMapper.class));
   }
@@ -110,7 +114,8 @@ class ReferentielSallesServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(3L);
 
-    ReponseReferentielSalles reponse = service.lister(5, null, null, null, null, false);
+    final ReponseReferentielSalles reponse =
+        service.lister(new FiltresRechercheSalles(5, null, null, null, null, false));
 
     assertEquals(3L, reponse.totalSalles());
     assertTrue(reponse.salles().isEmpty());
@@ -120,7 +125,7 @@ class ReferentielSallesServiceTest {
   void modifierNomAffiche_valeurBlanche_metNullEnBase() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean maj = service.modifierNomAffiche(UUID.randomUUID(), "  ");
+    final boolean maj = service.modifierNomAffiche(UUID.randomUUID(), "  ");
 
     assertTrue(maj);
     verify(jdbc)
@@ -135,10 +140,10 @@ class ReferentielSallesServiceTest {
   // s'auto-corriger via COALESCE, il faut explicitement effacer pour redevenir candidat.
   @Test
   void reinitialiserEnrichissement_salleExistante_effaceLesTroisChamps() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean maj = service.reinitialiserEnrichissement(id);
+    final boolean maj = service.reinitialiserEnrichissement(id);
 
     assertTrue(maj);
     verify(jdbc)
@@ -168,7 +173,7 @@ class ReferentielSallesServiceTest {
 
   @Test
   void fusionner_uuidIdentiques_retourneFalseSansAppelBase() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
 
     assertFalse(service.fusionner(id, id));
     verify(jdbc, never()).queryForObject(anyString(), anyMap(), eq(Long.class));
@@ -185,10 +190,10 @@ class ReferentielSallesServiceTest {
   @Test
   void fusionner_nominal_dedoublonneReassigneEtSupprimeLaSource() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    UUID cible = UUID.randomUUID();
-    UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
 
-    boolean fusionnee = service.fusionner(cible, source);
+    final boolean fusionnee = service.fusionner(cible, source);
 
     assertTrue(fusionnee);
     verify(jdbc, times(1)).update(contains("DELETE FROM observations o1"), anyMap());
@@ -212,9 +217,9 @@ class ReferentielSallesServiceTest {
   @SuppressWarnings("unchecked")
   void fusionner_sousSalleDescendanteDeLaCible_detacheSansCreerDeCycle() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    UUID cible = UUID.randomUUID();
-    UUID source = UUID.randomUUID();
-    UUID intermediaire = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
+    final UUID intermediaire = UUID.randomUUID();
 
     when(jdbc.query(
             contains("SELECT id FROM salles WHERE salle_parent_id"),
@@ -225,7 +230,7 @@ class ReferentielSallesServiceTest {
     when(jdbc.query(contains("SELECT salle_parent_id FROM salles"), anyMap(), any(RowMapper.class)))
         .thenReturn(List.of(intermediaire));
 
-    boolean fusionnee = service.fusionner(cible, source);
+    final boolean fusionnee = service.fusionner(cible, source);
 
     assertTrue(fusionnee);
     verify(jdbc)
@@ -242,10 +247,10 @@ class ReferentielSallesServiceTest {
   @Test
   void fusionner_conflitSourceCommune_supprimeLaLigneSuspecte() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    UUID cible = UUID.randomUUID();
-    UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
 
-    Map<String, Object> conflit =
+    final Map<String, Object> conflit =
         Map.of(
             "source",
             "ticketmaster",
@@ -264,7 +269,7 @@ class ReferentielSallesServiceTest {
     when(jdbc.queryForList(contains("FROM salle_sources src"), anyMap()))
         .thenReturn(List.of(conflit));
 
-    boolean fusionnee = service.fusionner(cible, source);
+    final boolean fusionnee = service.fusionner(cible, source);
 
     assertTrue(fusionnee);
     verify(jdbc)

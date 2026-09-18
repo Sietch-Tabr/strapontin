@@ -12,16 +12,19 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link DeriveVolumeFetchService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link DeriveVolumeFetchService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class DeriveVolumeFetchServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -35,11 +38,11 @@ class DeriveVolumeFetchServiceTest {
     service = new DeriveVolumeFetchService(jdbc, logsAdminWorker);
   }
 
-  private void stubHistorique(List<Integer> volumes) {
+  private void stubHistorique(final List<Integer> volumes) {
     when(jdbc.query(
             contains("fetch_jobs_historique"),
             anyMap(),
-            org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<Integer>>any()))
+            org.mockito.ArgumentMatchers.<RowMapper<Integer>>any()))
         .thenReturn(volumes);
   }
 
@@ -47,7 +50,7 @@ class DeriveVolumeFetchServiceTest {
   void verifier_historiqueInsuffisant_neSignalePas() {
     stubHistorique(List.of(100, 100, 100, 100));
 
-    service.verifier("fetch:region", 5, new Timestamp(System.currentTimeMillis()));
+    service.verifier("fetch:region", 5, Instant.now());
 
     verify(logsAdminWorker, never())
         .inserer(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyMap());
@@ -57,7 +60,7 @@ class DeriveVolumeFetchServiceTest {
   void verifier_volumeCourantProcheDeLaMoyenne_neSignalePas() {
     stubHistorique(List.of(100, 100, 100, 100, 100));
 
-    service.verifier("fetch:region", 90, new Timestamp(System.currentTimeMillis()));
+    service.verifier("fetch:region", 90, Instant.now());
 
     verify(logsAdminWorker, never())
         .inserer(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyMap());
@@ -67,7 +70,7 @@ class DeriveVolumeFetchServiceTest {
   void verifier_volumeCourantSignificativementInferieur_signaleUnWarn() {
     stubHistorique(List.of(100, 100, 100, 100, 100));
 
-    service.verifier("fetch:region", 50, new Timestamp(System.currentTimeMillis()));
+    service.verifier("fetch:region", 50, Instant.now());
 
     verify(logsAdminWorker)
         .inserer(
@@ -81,7 +84,7 @@ class DeriveVolumeFetchServiceTest {
   void verifier_moyenneTropFaible_neSignalePasMemeAvecChuteRelativeImportante() {
     stubHistorique(List.of(2, 2, 2, 2, 2));
 
-    service.verifier("fetch:region", 0, new Timestamp(System.currentTimeMillis()));
+    service.verifier("fetch:region", 0, Instant.now());
 
     verify(logsAdminWorker, never())
         .inserer(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.anyMap());

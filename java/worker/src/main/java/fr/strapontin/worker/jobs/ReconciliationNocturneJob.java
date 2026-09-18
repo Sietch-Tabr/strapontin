@@ -10,26 +10,33 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : réconciliation nocturne des sources salles/artistes, tous les jours à 3h.
-///
-/// Health-check et redécouverte des identifiants TM suspects, puis enrichissement
-/// Wikidata/OSM/Deezer. Durée variable selon les appels externes rate-limités —
-/// {@code @DisallowConcurrentExecution} empêche tout chevauchement avec un déclenchement manuel.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Job Quartz : réconciliation nocturne des sources salles/
+ * artistes, cron quotidien 3h (détail : CLAUDE.md, Jobs
+ * background).
+ * @since 2.6.0
+ * @author Kwaite
+ */
 @DisallowConcurrentExecution
 public class ReconciliationNocturneJob extends QuartzJobBean {
 
   private WorkerService workerService;
 
+  /** Constructeur par défaut, instancié par Spring. */
+  public ReconciliationNocturneJob() {
+    super();
+  }
+
+  /**
+   * @param workerService service d'orchestration injecté par Spring
+   */
   @Autowired
-  public void setWorkerService(WorkerService workerService) {
+  public void setWorkerService(final WorkerService workerService) {
     this.workerService = workerService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
+  protected void executeInternal(final JobExecutionContext context) {
     workerService.executerReconciliationNocturne();
   }
 }

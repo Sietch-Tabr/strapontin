@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteEmailChange}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteEmailChange}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class RequeteEmailChangeValidationTest {
 
   private static final Validator VALIDATOR =
@@ -24,29 +26,29 @@ class RequeteEmailChangeValidationTest {
 
   @Test
   void email_formatValide_estValide() {
-    Set<ConstraintViolation<RequeteEmailChange>> violations =
+    final Set<ConstraintViolation<RequeteEmailChange>> violations =
         VALIDATOR.validate(new RequeteEmailChange("bob@test.fr"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void email_null_estRejete() {
-    Set<ConstraintViolation<RequeteEmailChange>> violations =
+    final Set<ConstraintViolation<RequeteEmailChange>> violations =
         VALIDATOR.validate(new RequeteEmailChange(null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void email_formatInvalide_estRejete() {
-    Set<ConstraintViolation<RequeteEmailChange>> violations =
+    final Set<ConstraintViolation<RequeteEmailChange>> violations =
         VALIDATOR.validate(new RequeteEmailChange("pas-un-email"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void email_tropLong_estRejete() {
-    String local = "a".repeat(250);
-    Set<ConstraintViolation<RequeteEmailChange>> violations =
+    final String local = "a".repeat(250);
+    final Set<ConstraintViolation<RequeteEmailChange>> violations =
         VALIDATOR.validate(new RequeteEmailChange(local + "@test.fr"));
     assertFalse(violations.isEmpty());
   }

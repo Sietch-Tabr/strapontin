@@ -14,15 +14,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.PessimisticLockingFailureException;
 
-/// Tests unitaires de {@link RetrySerialisable}.
+/**
+ * Tests unitaires de {@link RetrySerialisable}.
+ */
 class RetrySerialisableTest {
 
   private static final Logger log = LoggerFactory.getLogger(RetrySerialisableTest.class);
 
   @Test
   void executer_succesDuPremierCoup_retourneLeResultatSansRetry() {
-    AtomicInteger appels = new AtomicInteger();
-    int resultat =
+    final AtomicInteger appels = new AtomicInteger();
+    final int resultat =
         RetrySerialisable.executer(
             3,
             log,
@@ -37,15 +39,17 @@ class RetrySerialisableTest {
 
   @Test
   void executer_conflitPuisSucces_retenteEtRetourneLeResultat() {
-    AtomicInteger appels = new AtomicInteger();
-    int resultat =
+    final AtomicInteger appels = new AtomicInteger();
+    final int resultat =
         RetrySerialisable.executer(
             3,
             log,
             "test",
             () -> {
-              int n = appels.incrementAndGet();
-              if (n < 2) throw new PessimisticLockingFailureException("conflit");
+              final int n = appels.incrementAndGet();
+              if (n < 2) {
+                throw new PessimisticLockingFailureException("conflit");
+              }
               return 42;
             });
     assertEquals(42, resultat);
@@ -54,7 +58,7 @@ class RetrySerialisableTest {
 
   @Test
   void executer_conflitPersistant_relanceApresMaxTentatives() {
-    AtomicInteger appels = new AtomicInteger();
+    final AtomicInteger appels = new AtomicInteger();
     assertThrows(
         PessimisticLockingFailureException.class,
         () ->
@@ -71,7 +75,7 @@ class RetrySerialisableTest {
 
   @Test
   void executer_variantesRunnable_executeLOperation() {
-    AtomicInteger appels = new AtomicInteger();
+    final AtomicInteger appels = new AtomicInteger();
     RetrySerialisable.executer(3, log, "test", appels::incrementAndGet);
     assertTrue(appels.get() >= 1);
   }

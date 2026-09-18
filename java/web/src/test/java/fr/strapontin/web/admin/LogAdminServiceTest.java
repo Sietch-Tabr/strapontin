@@ -20,10 +20,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link LogAdminService}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link LogAdminService}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class LogAdminServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;

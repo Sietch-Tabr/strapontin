@@ -24,10 +24,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link GestionQuotaResendWorker} (suite de l'incident).
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link GestionQuotaResendWorker} (suite de l'incident).
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 class GestionQuotaResendWorkerTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -51,8 +53,8 @@ class GestionQuotaResendWorkerTest {
     gestionQuotaResendWorker.setSelf(gestionQuotaResendWorker);
   }
 
-  private void enBase(CompteurEnvoisResend compteur) throws Exception {
-    String json = new ObjectMapper().writeValueAsString(compteur);
+  private void enBase(final CompteurEnvoisResend compteur) throws Exception {
+    final String json = new ObjectMapper().writeValueAsString(compteur);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(String.class))).thenReturn(json);
   }
 
@@ -76,7 +78,7 @@ class GestionQuotaResendWorkerTest {
   void reserverEnvoi_limiteJourAtteinte_bloqueEtInsereLogAdminError() throws Exception {
     enBase(new CompteurEnvoisResend(jourCourant(), 100, moisCourant(), 50, false, false));
 
-    boolean autorise = gestionQuotaResendWorker.reserverEnvoi();
+    final boolean autorise = gestionQuotaResendWorker.reserverEnvoi();
 
     assertFalse(autorise);
     verify(logsAdminWorker).inserer(eq("error"), eq("worker"), anyString(), anyMap());
@@ -86,7 +88,7 @@ class GestionQuotaResendWorkerTest {
   void reserverEnvoi_limiteMoisAtteinte_bloqueEtInsereLogAdminError() throws Exception {
     enBase(new CompteurEnvoisResend(jourCourant(), 5, moisCourant(), 3000, false, false));
 
-    boolean autorise = gestionQuotaResendWorker.reserverEnvoi();
+    final boolean autorise = gestionQuotaResendWorker.reserverEnvoi();
 
     assertFalse(autorise);
     verify(logsAdminWorker).inserer(eq("error"), eq("worker"), anyString(), anyMap());

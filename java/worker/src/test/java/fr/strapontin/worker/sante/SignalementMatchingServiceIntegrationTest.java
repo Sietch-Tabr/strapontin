@@ -15,11 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de {@link SignalementMatchingService} avec PostgreSQL réel (Testcontainers)
-/// — vérifie le débounce par index unique partiel, non exerçable avec un jdbc mocké.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests d'intégration de {@link SignalementMatchingService} avec PostgreSQL réel (Testcontainers)
+ * — vérifie le débounce par index unique partiel, non exerçable avec un jdbc mocké.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   // TICKETMASTER_API_KEY n'est pas seedée en base de test — sans ce mock, la construction du
@@ -32,12 +34,12 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
 
   @Test
   void signaler_memeTypeEtEntiteDeuxFois_neCreeQuUneLigneActive() {
-    UUID entiteId = UUID.randomUUID();
+    final UUID entiteId = UUID.randomUUID();
 
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
 
-    Long nb =
+    final Long nb =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM signalements_matching WHERE entite_id = CAST(:id AS uuid)",
             Map.of("id", entiteId.toString()),
@@ -47,7 +49,7 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
 
   @Test
   void signaler_signalementResolu_permetUnNouveauSignalement() {
-    UUID entiteId = UUID.randomUUID();
+    final UUID entiteId = UUID.randomUUID();
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
     jdbc.update(
         "UPDATE signalements_matching SET resolu_le = now() WHERE entite_id = CAST(:id AS uuid)",
@@ -55,7 +57,7 @@ class SignalementMatchingServiceIntegrationTest extends AbstractWorkerIntegratio
 
     service.signaler("collision_wikidata_artiste", "artiste", entiteId, "haute", null);
 
-    Long nb =
+    final Long nb =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM signalements_matching WHERE entite_id = CAST(:id AS uuid)",
             Map.of("id", entiteId.toString()),

@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link LoginRequest}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link LoginRequest}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class LoginRequestValidationTest {
 
   private static final Validator VALIDATOR =
@@ -24,21 +26,21 @@ class LoginRequestValidationTest {
 
   @Test
   void identifiantEtMotDePasse_presents_estValide() {
-    Set<ConstraintViolation<LoginRequest>> violations =
+    final Set<ConstraintViolation<LoginRequest>> violations =
         VALIDATOR.validate(new LoginRequest("alice", "motdepasse12345"));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void identifiant_null_estRejete() {
-    Set<ConstraintViolation<LoginRequest>> violations =
+    final Set<ConstraintViolation<LoginRequest>> violations =
         VALIDATOR.validate(new LoginRequest(null, "motdepasse12345"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void motDePasse_vide_estRejete() {
-    Set<ConstraintViolation<LoginRequest>> violations =
+    final Set<ConstraintViolation<LoginRequest>> violations =
         VALIDATOR.validate(new LoginRequest("alice", " "));
     assertFalse(violations.isEmpty());
   }

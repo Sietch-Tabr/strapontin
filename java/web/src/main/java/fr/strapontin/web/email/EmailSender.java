@@ -16,46 +16,47 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/// Infrastructure d'envoi Resend partagée par {@link EmailService} (emails transactionnels) et
-/// {@link EmailAlerteService} (alertes système) — extrait lors de leur scission pour
-/// éviter de dupliquer le contexte Resend (client, expéditeur, URL de base) et la résolution du
-/// destinataire d'alerte entre les deux classes.
-///
-/// <p>Choke-point unique des envois Resend côté web : {@link #envoyer} vérifie le quota
-/// jour/mois ({@link GestionQuotaResend}) avant tout appel réseau — bloque silencieusement (log
-/// {@code warn}, pas d'exception) comme le fait déjà l'absence de {@code RESEND_API_KEY} en amont
-/// dans {@link #obtenirContexte()}.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Infrastructure d'envoi Resend partagée par {@link EmailService}
+ * et {@link EmailAlerteService} (détail : CLAUDE.md, section
+ * Resend).
+ * @since 2.7.0
+ * @author Kwaite
+ */
 @Component
 class EmailSender {
 
-  private static final Logger log = LoggerFactory.getLogger(EmailSender.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EmailSender.class);
 
   private final ConfigService configService;
   private final JdbcTemplate jdbcTemplate;
   private final GestionQuotaResend gestionQuotaResend;
 
+  /* package-private : instancié uniquement par
+   * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   EmailSender(
-      ConfigService configService,
-      JdbcTemplate jdbcTemplate,
-      GestionQuotaResend gestionQuotaResend) {
+      final ConfigService configService,
+      final JdbcTemplate jdbcTemplate,
+      final GestionQuotaResend gestionQuotaResend) {
     this.configService = configService;
     this.jdbcTemplate = jdbcTemplate;
     this.gestionQuotaResend = gestionQuotaResend;
   }
 
+  /* package-private : type de retour interne, utilisé par
+   * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   record ContexteEmail(Resend client, String expediteur, String baseUrl) {}
 
+  /* package-private : appelé par
+   * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   Optional<ContexteEmail> obtenirContexte() {
-    Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
       return Optional.empty();
     }
-    String expediteur =
+    final String expediteur =
         configService.lireConfig("CONTACT_EMAIL").or(this::obtenirEmailPremierAdmin).orElse("");
-    String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     return Optional.of(new ContexteEmail(new Resend(cle.get()), expediteur, baseUrl));
   }
 
@@ -70,32 +71,33 @@ class EmailSender {
     }
   }
 
-  /// Retourne l'adresse destinataire des alertes système (bounce, plainte spam, worker inactif,
-  /// digest logs_admin) — distincte de l'expéditeur.
-  ///
-  /// <p>Priorité à `ADMIN_ALERT_EMAIL` si configurée, sinon repli sur le premier admin. Ne se
-  /// replie volontairement jamais sur `CONTACT_EMAIL`/l'expéditeur : c'est cette confusion qui a
-  /// provoqué la boucle de bounces du 15/07/2026 (une adresse `noreply` sans boîte de réception
-  /// réutilisée comme destinataire).
-  ///
-  /// @return l'adresse à notifier, vide si ni `ADMIN_ALERT_EMAIL` ni aucun admin n'existe
+  /**
+   * Retourne l'adresse destinataire des alertes système,
+   * distincte de l'expéditeur (détail : CLAUDE.md, section
+   * Resend).
+   * @return l'adresse à notifier, vide si aucune résolution
+   */
+  /* package-private : appelé par
+   * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   Optional<String> obtenirDestinataireAlerte() {
     return configService.lireConfig("ADMIN_ALERT_EMAIL").or(this::obtenirEmailPremierAdmin);
   }
 
+  /* package-private : appelé par
+   * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
   void envoyer(
-      ContexteEmail ctx,
-      String destinataire,
-      String replyTo,
-      String sujet,
-      String corps,
-      String texte) {
+      final ContexteEmail ctx,
+      final String destinataire,
+      final String replyTo,
+      final String sujet,
+      final String corps,
+      final String texte) {
     if (!gestionQuotaResend.reserverEnvoi()) {
-      log.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
+      LOG.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
       return;
     }
     try {
-      CreateEmailOptions options =
+      final CreateEmailOptions options =
           CreateEmailOptions.builder()
               .from(ctx.expediteur())
               .replyTo(replyTo)

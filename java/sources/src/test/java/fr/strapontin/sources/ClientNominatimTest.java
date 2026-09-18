@@ -13,37 +13,42 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
+import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link ClientNominatim}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ClientNominatim}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class ClientNominatimTest {
 
-  private static ClientNominatim source(RestClient restClient, CadenceurAppels cadenceur) {
+  private static ClientNominatim source(
+      final RestClient restClient, final CadenceurAppels cadenceur) {
     return new ClientNominatim(restClient, cadenceur);
   }
 
   @Test
   void geocoder_resultatValide_extraitLesCoordonnees() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
-    CadenceurAppels cadenceur = mock(CadenceurAppels.class);
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
 
     serveur
         .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+            MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("nominatim.openstreetmap.org")))
         .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
+            MockRestResponseCreators.withSuccess(
                 """
                 [{"lat":"48.8566","lon":"2.3522","display_name":"Paris"}]
                 """,
                 MediaType.APPLICATION_JSON));
 
-    Optional<ClientNominatim.Coordonnees> resultat =
+    final Optional<ClientNominatim.Coordonnees> resultat =
         source(restClient, cadenceur).geocoder("Salle Test");
 
     assertTrue(resultat.isPresent());
@@ -55,20 +60,18 @@ class ClientNominatimTest {
 
   @Test
   void geocoder_aucunResultat_retourneVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
-    CadenceurAppels cadenceur = mock(CadenceurAppels.class);
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
 
     serveur
         .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+            MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("nominatim.openstreetmap.org")))
-        .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess(
-                "[]", MediaType.APPLICATION_JSON));
+        .andRespond(MockRestResponseCreators.withSuccess("[]", MediaType.APPLICATION_JSON));
 
-    Optional<ClientNominatim.Coordonnees> resultat =
+    final Optional<ClientNominatim.Coordonnees> resultat =
         source(restClient, cadenceur).geocoder("Introuvable");
 
     assertTrue(resultat.isEmpty());
@@ -76,20 +79,18 @@ class ClientNominatimTest {
 
   @Test
   void geocoder_erreurHttp_retourneVideSansPropager() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
-    CadenceurAppels cadenceur = mock(CadenceurAppels.class);
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
 
     serveur
         .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+            MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("nominatim.openstreetmap.org")))
-        .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators
-                .withServerError());
+        .andRespond(MockRestResponseCreators.withServerError());
 
-    Optional<ClientNominatim.Coordonnees> resultat =
+    final Optional<ClientNominatim.Coordonnees> resultat =
         source(restClient, cadenceur).geocoder("Erreur");
 
     assertTrue(resultat.isEmpty());

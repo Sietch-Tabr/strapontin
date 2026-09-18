@@ -23,12 +23,14 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link AccueilService}.
-///
-/// <p>Couvre la restriction aux matchs artiste de {@link AccueilService#marquerVus}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link AccueilService}.
+ *
+ * <p>Couvre la restriction aux matchs artiste de {@link AccueilService#marquerVus}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class AccueilServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -47,12 +49,12 @@ class AccueilServiceTest {
   // match. Le SQL doit désormais restreindre aux concerts dont l'artiste est suivi.
   @Test
   void marquerVus_construitUneRequeteRestreinteAuxMatchsArtiste() {
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.marquerVus("user-1");
 
     verify(jdbc).update(sqlCaptor.capture(), anyMap());
-    String sql = sqlCaptor.getValue();
+    final String sql = sqlCaptor.getValue();
     assertTrue(sql.contains("user_artistes"), "la requête doit filtrer via user_artistes");
     assertTrue(sql.contains("vu_le IS NULL"), "seuls les matchs non vus doivent être mis à jour");
   }
@@ -66,12 +68,12 @@ class AccueilServiceTest {
   void accueil_calculEstNouveau_utiliseVuLeIsNullPasFirstSeen() {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, null, false);
 
     verify(jdbc).query(sqlCaptor.capture(), anyMap(), any(RowMapper.class));
-    String sql = sqlCaptor.getValue();
+    final String sql = sqlCaptor.getValue();
     assertTrue(
         sql.contains("um.vu_le IS NULL AS est_nouveau"),
         "est_nouveau doit être calculé via um.vu_le IS NULL");
@@ -84,7 +86,7 @@ class AccueilServiceTest {
   @SuppressWarnings("unchecked")
   void accueil_masquesVrai_filtreSurMasqueLeNotNull() {
     stubRequetesVides();
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", true, null, false);
 
@@ -96,7 +98,7 @@ class AccueilServiceTest {
   @SuppressWarnings("unchecked")
   void accueil_masquesFaux_filtreSurMasqueLeNull() {
     stubRequetesVides();
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, null, false);
 
@@ -108,7 +110,7 @@ class AccueilServiceTest {
   @SuppressWarnings("unchecked")
   void accueil_indisponiblesExplicite1_nAjoutePasLaRestrictionDeStatut() {
     stubRequetesVides();
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, "1", false);
 
@@ -120,7 +122,7 @@ class AccueilServiceTest {
   @SuppressWarnings("unchecked")
   void accueil_indisponiblesExplicite0_ajouteLaRestrictionDeStatut() {
     stubRequetesVides();
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, "0", false);
 
@@ -133,7 +135,7 @@ class AccueilServiceTest {
   void accueil_indisponiblesNullEtPreferenceDisponiblesSeuls_ajouteLaRestriction() {
     stubRequetesVides();
     when(userConfigService.lireFiltreDisponibles("user-1")).thenReturn(true);
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, null, false);
 
@@ -146,7 +148,7 @@ class AccueilServiceTest {
   void accueil_indisponiblesNullEtPreferenceTousLesConcerts_nAjoutePasLaRestriction() {
     stubRequetesVides();
     when(userConfigService.lireFiltreDisponibles("user-1")).thenReturn(false);
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, null, false);
 
@@ -158,7 +160,7 @@ class AccueilServiceTest {
   @SuppressWarnings("unchecked")
   void accueil_nouveauVrai_filtreSurFirstSeenRecent() {
     stubRequetesVides();
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
 
     service.accueil("user-1", false, null, true);
 
@@ -170,7 +172,7 @@ class AccueilServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void accueil_regroupementParArtiste_estTourneeVraiSiAuMoinsDeuxDates() {
-    ConcertAccueil c1 =
+    final ConcertAccueil c1 =
         new ConcertAccueil(
             "c1",
             "Radiohead",
@@ -183,7 +185,7 @@ class AccueilServiceTest {
             "url1",
             "onsale",
             false);
-    ConcertAccueil c2 =
+    final ConcertAccueil c2 =
         new ConcertAccueil(
             "c2",
             "Radiohead",
@@ -196,7 +198,7 @@ class AccueilServiceTest {
             "url2",
             "onsale",
             true);
-    ConcertAccueil c3 =
+    final ConcertAccueil c3 =
         new ConcertAccueil(
             "c3",
             "Muse",
@@ -212,9 +214,9 @@ class AccueilServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of(c1, c2, c3));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
 
-    ReponseAccueil rep = service.accueil("user-1", false, null, false);
+    final ReponseAccueil rep = service.accueil("user-1", false, null, false);
 
-    GroupeArtiste radiohead =
+    final GroupeArtiste radiohead =
         rep.artistesGroupes().stream()
             .filter(g -> g.artiste().equals("Radiohead"))
             .findFirst()
@@ -223,7 +225,7 @@ class AccueilServiceTest {
     assertTrue(
         radiohead.estNew(), "au moins un concert nouveau du groupe doit rendre le groupe nouveau");
 
-    GroupeArtiste muse =
+    final GroupeArtiste muse =
         rep.artistesGroupes().stream()
             .filter(g -> g.artiste().equals("Muse"))
             .findFirst()
@@ -243,7 +245,7 @@ class AccueilServiceTest {
             org.mockito.ArgumentMatchers.contains("user_salles"), anyMap(), eq(Integer.class)))
         .thenReturn(3);
 
-    ReponseAccueil rep = service.accueil("user-1", false, null, false);
+    final ReponseAccueil rep = service.accueil("user-1", false, null, false);
 
     assertThat(rep.nbArtistes()).isEqualTo(12);
     assertThat(rep.nbSalles()).isEqualTo(3);

@@ -21,26 +21,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-/// Retry ciblé pour les 3 jobs multi-lots (`fetch:artistes:batch`/`fetch:region`/
-/// `fetch:salles:all`) : sur échec partiel d'un cycle, planifie un déclenchement Quartz ponctuel
-/// (+15 min) portant uniquement les identifiants en échec, plutôt que d'attendre le prochain cycle
-/// complet ou de marteler indéfiniment un échec déterministe.
-///
-/// Le trigger de retry cible la {@link JobKey} déjà enregistrée du job cron normal (`storeDurably`,
-/// voir {@code Planificateur}) plutôt que de créer un nouveau {@code JobDetail} — sans cela, un
-/// retry planifié sous une identité distincte contournerait `@DisallowConcurrentExecution` et
-/// pourrait s'exécuter en parallèle du prochain cycle cron normal.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Retry ciblé pour les 3 jobs multi-lots — détail (trigger, JobKey,
+ * abandon après 2 retries) : CLAUDE.md, Observabilité des jobs.
+ * @since 2.9.0
+ * @author Kwaite
+ */
 @Service
 public class RetryLotsService {
 
-  private static final Logger log = LoggerFactory.getLogger(RetryLotsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RetryLotsService.class);
 
   private static final long DELAI_RETRY_MINUTES = 15;
-
-  private record ConfigRetry(JobKey jobKey, String cleJobData) {}
 
   private static final Map<String, ConfigRetry> CONFIGS_PAR_TYPE_JOB =
       Map.of(
@@ -56,33 +48,43 @@ public class RetryLotsService {
   private final SuiviChroniciteService suiviChronicite;
   private final LogsAdminWorker logsAdminWorker;
 
+  private record ConfigRetry(JobKey jobKey, String cleJobData) {}
+
+  /**
+   * @param scheduler planificateur Quartz portant le job cron normal à
+   *     re-déclencher
+   * @param suiviChronicite comptage des cycles consécutifs en échec, pour
+   *     l'abandon après 2 retries
+   * @param logsAdminWorker journalisation des retries planifiés
+   */
   public RetryLotsService(
-      Scheduler scheduler,
-      SuiviChroniciteService suiviChronicite,
-      LogsAdminWorker logsAdminWorker) {
+      final Scheduler scheduler,
+      final SuiviChroniciteService suiviChronicite,
+      final LogsAdminWorker logsAdminWorker) {
     this.scheduler = scheduler;
     this.suiviChronicite = suiviChronicite;
     this.logsAdminWorker = logsAdminWorker;
   }
 
-  /// Décide, pour un job multi-lots, s'il faut planifier un retry ciblé, abandonner (chronique) ou
-  /// simplement remettre à zéro le compteur de tentatives (cycle propre).
-  ///
-  /// @param typeJob type de job (ex. {@code "fetch:region"}) — ignoré si non concerné par le retry
-  ///   ciblé (jobs hors des 3 jobs multi-lots)
-  /// @param identifiantsEnEchec identifiants des entités des lots en échec de ce cycle, vide si le
-  ///   cycle est propre
-  public void gererResultat(String typeJob, List<String> identifiantsEnEchec) {
-    ConfigRetry config = CONFIGS_PAR_TYPE_JOB.get(typeJob);
-    if (config == null) return;
+  /**
+   * Décide, pour un job multi-lots, s'il faut planifier un retry ciblé,
+   * abandonner (chronique) ou remettre à zéro (cycle propre).
+   * @param typeJob type de job, ignoré si hors des 3 jobs multi-lots
+   * @param identifiantsEnEchec identifiants en échec, vide si cycle propre
+   */
+  public void gererResultat(final String typeJob, final List<String> identifiantsEnEchec) {
+    final ConfigRetry config = CONFIGS_PAR_TYPE_JOB.get(typeJob);
+    if (config == null) {
+      return;
+    }
 
-    String cleChronicite = "retry:" + typeJob;
+    final String cleChronicite = "retry:" + typeJob;
     if (identifiantsEnEchec.isEmpty()) {
       suiviChronicite.enregistrerCycle(cleChronicite, false);
       return;
     }
 
-    int streak = suiviChronicite.enregistrerCycle(cleChronicite, true);
+    final int streak = suiviChronicite.enregistrerCycle(cleChronicite, true);
     if (streak >= SuiviChroniciteService.SEUIL_CYCLES_CHRONIQUE) {
       logsAdminWorker.inserer(
           "warn",
@@ -95,9 +97,10 @@ public class RetryLotsService {
     programmerRetry(typeJob, config, identifiantsEnEchec);
   }
 
-  private void programmerRetry(String typeJob, ConfigRetry config, List<String> identifiants) {
+  private void programmerRetry(
+      final String typeJob, final ConfigRetry config, final List<String> identifiants) {
     try {
-      Trigger trigger =
+      final Trigger trigger =
           TriggerBuilder.newTrigger()
               .forJob(config.jobKey())
               .withIdentity("retry-" + typeJob + "-" + System.currentTimeMillis(), "retry")
@@ -105,13 +108,13 @@ public class RetryLotsService {
               .startAt(Date.from(Instant.now().plus(DELAI_RETRY_MINUTES, ChronoUnit.MINUTES)))
               .build();
       scheduler.scheduleJob(trigger);
-      log.info(
+      LOG.info(
           "retry:lots programmé typeJob={} identifiants={} dans={}min",
           typeJob,
           identifiants.size(),
           DELAI_RETRY_MINUTES);
     } catch (SchedulerException e) {
-      log.warn("retry:lots échec de planification typeJob={}", typeJob, e);
+      LOG.warn("retry:lots échec de planification typeJob={}", typeJob, e);
     }
   }
 }

@@ -26,10 +26,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link PushController}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link PushController}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class PushControllerTest {
 
@@ -46,17 +48,17 @@ class PushControllerTest {
   }
 
   private void stubPrincipal() {
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     when(auth.getPrincipal()).thenReturn(ud);
   }
 
   @Test
   void obtenirCleVapid_delegueAuService() {
-    ReponseVapid attendu = new ReponseVapid(true, "clepublique");
+    final ReponseVapid attendu = new ReponseVapid(true, "clepublique");
     when(pushService.obtenirCleVapid()).thenReturn(attendu);
 
-    ResponseEntity<ReponseVapid> rep = controller.obtenirCleVapid();
+    final ResponseEntity<ReponseVapid> rep = controller.obtenirCleVapid();
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertEquals(attendu, rep.getBody());
@@ -65,10 +67,10 @@ class PushControllerTest {
   @Test
   void abonner_requeteValide_retourne201EtDelegueAuService() {
     stubPrincipal();
-    RequeteAbonnement requete =
+    final RequeteAbonnement requete =
         new RequeteAbonnement("https://push.exemple/abc", new ClesAbonnement("p256dh", "auth"));
 
-    ResponseEntity<Map<String, Object>> rep = controller.abonner(requete, auth);
+    final ResponseEntity<Map<String, Object>> rep = controller.abonner(requete, auth);
 
     assertEquals(HttpStatus.CREATED, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("ok"));
@@ -78,13 +80,13 @@ class PushControllerTest {
   @Test
   void abonner_capAtteint_propageErreurMetier429() {
     stubPrincipal();
-    RequeteAbonnement requete =
+    final RequeteAbonnement requete =
         new RequeteAbonnement("https://push.exemple/abc", new ClesAbonnement("p256dh", "auth"));
     doThrow(new ErreurMetier("Cap d'abonnements atteint.", 429))
         .when(pushService)
         .abonner(anyString(), any());
 
-    ErreurMetier e =
+    final ErreurMetier e =
         org.junit.jupiter.api.Assertions.assertThrows(
             ErreurMetier.class, () -> controller.abonner(requete, auth));
     assertEquals(429, e.getStatus());
@@ -95,7 +97,7 @@ class PushControllerTest {
     stubPrincipal();
     when(notificationPushService.envoyerNotificationTest("user-1", null)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> rep = controller.tester(null, auth);
+    final ResponseEntity<Map<String, Object>> rep = controller.tester(null, auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("ok"));
@@ -117,7 +119,7 @@ class PushControllerTest {
     stubPrincipal();
     when(notificationPushService.envoyerNotificationTest(eq("user-1"), isNull())).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> rep = controller.tester(null, auth);
+    final ResponseEntity<Map<String, Object>> rep = controller.tester(null, auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
   }
@@ -128,7 +130,7 @@ class PushControllerTest {
   @Test
   void desabonner_endpointValide_delegueAuServiceEtRetourne200() {
     stubPrincipal();
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.desabonner(new RequeteDesabonnement("https://push.exemple/abc"), auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());

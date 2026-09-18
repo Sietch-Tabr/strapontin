@@ -27,12 +27,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link WorkerService} — depuis, ne porte plus que le recalcul de matches et
-/// la réconciliation nocturne (fetch, purge et révocation admin sont désormais dans leurs propres
-/// services, testés séparément).
-///
-/// @since 2.2.3
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link WorkerService} — depuis, ne porte plus que le recalcul de matches et
+ * la réconciliation nocturne (fetch, purge et révocation admin sont désormais dans leurs propres
+ * services, testés séparément).
+ *
+ * @since 2.2.3
+ * @author Kwaite
+ */
 class WorkerServiceTest {
 
   private RecalculerMatchesService recalculerMatchesService;
@@ -47,10 +49,10 @@ class WorkerServiceTest {
     notificationDigestService = mock(NotificationDigestService.class);
     reconciliationNocturneService = mock(ReconciliationNocturneService.class);
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
-    LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
-    WorkerStatsService workerStatsService =
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
+    final LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
+    final WorkerStatsService workerStatsService =
         new WorkerStatsService(
             List.<SourceConcerts>of(),
             tm,

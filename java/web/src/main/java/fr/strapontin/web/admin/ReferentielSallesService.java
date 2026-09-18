@@ -14,73 +14,135 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Gestion du référentiel salles pour l'onglet admin : liste paginée, édition du nom affiché,
-/// fusion de doublons.
-///
-/// L'algorithme de fusion porte en service runtime le gabarit déjà utilisé pour les fusions ad hoc
-/// passées ({@code V27__fusionner_doublons_salles_eventim_tm.sql}, {@code
-/// V28__fusionner_doublon_artiste_krashkarma.sql}) : réassignation des concerts avec dédoublonnage
-/// préalable des conflits, puis des abonnements utilisateurs, puis des sources externes, avant
-/// suppression de la salle source.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Gestion du référentiel salles pour l'onglet admin : liste paginée,
+ * édition du nom affiché, fusion de doublons — porte en service runtime
+ * le gabarit des fusions ad hoc passées (réassignation concerts, puis
+ * abonnements, puis sources externes, avant suppression de la source).
+ * @since 2.6.0
+ * @author Kwaite
+ */
 @Service
 public class ReferentielSallesService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
+  private static final String CLE_CIBLE = "cible";
+  private static final String CLE_SOURCE = "source";
+
+  private static final String CTE_SALLES_AGREGEES =
+      """
+      WITH salles_agr AS (
+        SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom AS nom_parent,
+               COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
+               COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
+               CASE
+                 WHEN MIN(ss.suspect_depuis) IS NULL THEN 'a_jour'
+                 WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
+                 ELSE 'a_verifier'
+               END AS statut
+        FROM salles s
+        LEFT JOIN salles p ON p.id = s.salle_parent_id
+        LEFT JOIN concerts c ON c.salle_id = s.id
+        LEFT JOIN salle_sources ss ON ss.salle_id = s.id
+        GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom
+      )
+      """;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logAdminService journalisation des fusions effectuées
+   */
   public ReferentielSallesService(
-      NamedParameterJdbcTemplate jdbc, LogAdminService logAdminService) {
+      final NamedParameterJdbcTemplate jdbc, final LogAdminService logAdminService) {
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
   }
 
-  /// Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
-  ///
-  /// @param page numéro de page (0-indexé)
-  /// @param nom filtre nom partiel (insensible à la casse), peut être null
-  /// @param ville filtre ville partielle, peut être null
-  /// @param dept filtre département exact, peut être null
-  /// @param statut filtre {@code "a_jour"}/{@code "a_verifier"}/{@code "invalide"}, peut être null
-  /// @param wikidataManquant si {@code true}, ne retourne que les salles sans {@code wikidata_id} —
-  ///   facilite le repérage des candidats à corriger manuellement sans parcourir toute la
-  ///   pagination (une salle avec beaucoup de concerts liés peut être loin dans le tri par défaut
-  ///   si elle a déjà un {@code wikidata_id})
-  /// @return page de résultats
-  public ReponseReferentielSalles lister(
-      int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {
-    int pageNum = Math.max(0, page);
-    StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-    Map<String, Object> params = new HashMap<>();
-    if (nom != null && !nom.isBlank()) {
-      where.append(" AND nom ILIKE :nom ");
-      params.put("nom", "%" + nom.strip() + "%");
-    }
-    if (ville != null && !ville.isBlank()) {
-      where.append(" AND ville ILIKE :ville ");
-      params.put("ville", "%" + ville.strip() + "%");
-    }
-    if (dept != null && !dept.isBlank()) {
-      where.append(" AND dept = :dept ");
-      params.put("dept", dept.strip());
-    }
-    if (statut != null && !statut.isBlank()) {
-      where.append(" AND statut = :statut ");
-      params.put("statut", statut.strip());
-    }
-    if (wikidataManquant) {
-      where.append(" AND wikidata_id IS NULL ");
-    }
+  /**
+   * @param page numéro de page (0-indexé)
+   * @param nom filtre nom partiel, peut être null
+   * @param ville filtre ville partielle, peut être null
+   * @param dept filtre département exact, peut être null
+   * @param statut filtre a_jour/a_verifier/invalide, peut être null
+   * @param wikidataManquant filtre les salles sans wikidata_id
+   */
+  public record FiltresRechercheSalles(
+      int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {}
 
-    Map<String, Object> paramsPage = new HashMap<>(params);
+  /**
+   * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
+   *
+   * @param filtresRecherche filtres de recherche (voir
+   *     {@link FiltresRechercheSalles} )
+   * @return page de résultats
+   */
+  public ReponseReferentielSalles lister(final FiltresRechercheSalles filtresRecherche) {
+    final int pageNum = Math.max(0, filtresRecherche.page());
+    final FiltresSalles filtres = construireFiltresSalles(filtresRecherche);
+
+    final Map<String, Object> paramsPage = new HashMap<>(filtres.params());
     paramsPage.put("taille", TAILLE_PAGE_DEFAUT);
     paramsPage.put("offset", pageNum * TAILLE_PAGE_DEFAUT);
-    long[] total = {0};
-    List<SalleReferentiel> salles =
+    final PageSalles resultatPage = chargerPageSalles(filtres.where(), paramsPage);
+
+    long total = resultatPage.total();
+    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par
+    // aucune ligne, un second aller-retour reste alors nécessaire pour
+    // connaître le total réel.
+    if (resultatPage.salles().isEmpty() && pageNum > 0) {
+      total = compterSallesFiltrees(filtres.where(), filtres.params());
+    }
+
+    final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
+    return new ReponseReferentielSalles(resultatPage.salles(), pageNum, totalPages, total);
+  }
+
+  private record FiltresSalles(StringBuilder where, Map<String, Object> params) {}
+
+  private FiltresSalles construireFiltresSalles(final FiltresRechercheSalles filtresRecherche) {
+    final StringBuilder where = new StringBuilder(60).append(" WHERE 1=1 ");
+    final Map<String, Object> params = new HashMap<>();
+    ajouterFiltreLike(where, params, "nom", filtresRecherche.nom());
+    ajouterFiltreLike(where, params, "ville", filtresRecherche.ville());
+    ajouterFiltreExact(where, params, "dept", filtresRecherche.dept());
+    ajouterFiltreExact(where, params, "statut", filtresRecherche.statut());
+    if (filtresRecherche.wikidataManquant()) {
+      where.append(" AND wikidata_id IS NULL ");
+    }
+    return new FiltresSalles(where, params);
+  }
+
+  private static void ajouterFiltreLike(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final String cle,
+      final String valeur) {
+    if (valeur != null && !valeur.isBlank()) {
+      where.append(" AND ").append(cle).append(" ILIKE :").append(cle).append(' ');
+      params.put(cle, "%" + valeur.strip() + "%");
+    }
+  }
+
+  private static void ajouterFiltreExact(
+      final StringBuilder where,
+      final Map<String, Object> params,
+      final String cle,
+      final String valeur) {
+    if (valeur != null && !valeur.isBlank()) {
+      where.append(" AND ").append(cle).append(" = :").append(cle).append(' ');
+      params.put(cle, valeur.strip());
+    }
+  }
+
+  private record PageSalles(List<SalleReferentiel> salles, long total) {}
+
+  private PageSalles chargerPageSalles(
+      final StringBuilder where, final Map<String, Object> paramsPage) {
+    final long[] total = {0};
+    final List<SalleReferentiel> salles =
         jdbc.query(
             CTE_SALLES_AGREGEES
                 + "SELECT id, nom, nom_affiche, ville, dept, wikidata_id, nb_concerts, sources,"
@@ -102,53 +164,33 @@ public class ReferentielSallesService {
                   rs.getString("wikidata_id"),
                   rs.getString("nom_parent"));
             });
-
-    // page vide (offset au-delà du total) : total_filtre n'est renvoyé par aucune ligne, un
-    // second aller-retour reste alors nécessaire pour connaître le total réel.
-    if (salles.isEmpty() && pageNum > 0) {
-      Long totalVide =
-          jdbc.queryForObject(
-              CTE_SALLES_AGREGEES + "SELECT COUNT(*) FROM salles_agr" + where, params, Long.class);
-      total[0] = totalVide != null ? totalVide : 0;
-    }
-
-    int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_DEFAUT));
-    return new ReponseReferentielSalles(salles, pageNum, totalPages, total[0]);
+    return new PageSalles(salles, total[0]);
   }
 
-  private static List<String> lireSources(String sourcesConcat) {
-    if (sourcesConcat == null || sourcesConcat.isBlank()) return List.of();
+  private long compterSallesFiltrees(final StringBuilder where, final Map<String, Object> params) {
+    final Long totalVide =
+        jdbc.queryForObject(
+            CTE_SALLES_AGREGEES + "SELECT COUNT(*) FROM salles_agr" + where, params, Long.class);
+    return totalVide != null ? totalVide : 0;
+  }
+
+  private static List<String> lireSources(final String sourcesConcat) {
+    if (sourcesConcat == null || sourcesConcat.isBlank()) {
+      return List.of();
+    }
     return Arrays.stream(sourcesConcat.split(",")).toList();
   }
 
-  private static final String CTE_SALLES_AGREGEES =
-      """
-      WITH salles_agr AS (
-        SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom AS nom_parent,
-               COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
-               COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
-               CASE
-                 WHEN MIN(ss.suspect_depuis) IS NULL THEN 'a_jour'
-                 WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
-                 ELSE 'a_verifier'
-               END AS statut
-        FROM salles s
-        LEFT JOIN salles p ON p.id = s.salle_parent_id
-        LEFT JOIN concerts c ON c.salle_id = s.id
-        LEFT JOIN salle_sources ss ON ss.salle_id = s.id
-        GROUP BY s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom
-      )
-      """;
-
-  /// Efface l'enrichissement automatique d'une salle ({@code wikidata_id}, {@code nom_affiche},
-  /// {@code ville}) pour la remettre candidate à une nouvelle découverte au prochain cycle nocturne
-  /// — nécessaire pour corriger une mauvaise correspondance automatique (ex. homonyme
-  /// international, l'enrichissement ne pouvant jamais s'auto-corriger via {@code COALESCE}).
-  ///
-  /// @param salleId UUID de la salle
-  /// @return {@code true} si la salle existe et a été réinitialisée
-  public boolean reinitialiserEnrichissement(UUID salleId) {
-    int nb =
+  /**
+   * Efface l'enrichissement auto d'une salle ({@code wikidata_id}/{@code
+   * nom_affiche}/{@code ville}) pour la remettre candidate à une nouvelle
+   * découverte (corrige un homonyme international, jamais auto-corrigé
+   * via {@code COALESCE}).
+   * @param salleId UUID de la salle
+   * @return {@code true} si la salle existe et a été réinitialisée
+   */
+  public boolean reinitialiserEnrichissement(final UUID salleId) {
+    final int nb =
         jdbc.update(
             """
             UPDATE salles SET wikidata_id = NULL, nom_affiche = NULL, ville = NULL
@@ -165,44 +207,68 @@ public class ReferentielSallesService {
     return nb > 0;
   }
 
-  /// Modifie le nom affiché d'une salle (override manuel prioritaire sur l'enrichissement auto).
-  ///
-  /// @param salleId UUID de la salle
-  /// @param nomAffiche nouveau nom affiché, ou null pour revenir à l'enrichissement automatique
-  /// @return {@code true} si la salle existe et a été mise à jour
-  public boolean modifierNomAffiche(UUID salleId, String nomAffiche) {
-    String valeur = nomAffiche == null || nomAffiche.isBlank() ? null : nomAffiche.strip();
-    Map<String, Object> params = new HashMap<>();
+  /**
+   * Modifie le nom affiché d'une salle (override manuel prioritaire sur
+   * l'enrichissement auto).
+   * @param salleId UUID de la salle
+   * @param nomAffiche nouveau nom affiché, ou null pour revenir à
+   *     l'enrichissement automatique
+   * @return {@code true} si la salle existe et a été mise à jour
+   */
+  public boolean modifierNomAffiche(final UUID salleId, final String nomAffiche) {
+    final String valeur = nomAffiche == null || nomAffiche.isBlank() ? null : nomAffiche.strip();
+    final Map<String, Object> params = new HashMap<>();
     params.put("nomAffiche", valeur);
     params.put("id", salleId.toString());
-    int nb =
+    final int nb =
         jdbc.update(
             "UPDATE salles SET nom_affiche = :nomAffiche WHERE id = CAST(:id AS uuid)", params);
     return nb > 0;
   }
 
-  /// Fusionne deux salles : la salle source est absorbée par la salle cible (concerts, abonnements,
-  /// sources externes réassignés), puis supprimée.
-  ///
-  /// @param cibleId UUID de la salle à conserver
-  /// @param sourceId UUID de la salle à absorber
-  /// @return {@code true} si la fusion a été effectuée, {@code false} si un UUID est inconnu
+  /**
+   * Fusionne deux salles : la salle source est absorbée par la salle
+   * cible (concerts, abonnements, sources externes), puis supprimée.
+   * @param cibleId UUID de la salle à conserver
+   * @param sourceId UUID de la salle à absorber
+   * @return {@code true} si fusionnée, {@code false} si UUID inconnu
+   */
   @Transactional
-  public boolean fusionner(UUID cibleId, UUID sourceId) {
-    if (cibleId.equals(sourceId)) return false;
-    Long nbExistantes =
+  public boolean fusionner(final UUID cibleId, final UUID sourceId) {
+    if (cibleId.equals(sourceId)) {
+      return false;
+    }
+    final Long nbExistantes =
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM salles WHERE id IN (CAST(:cible AS uuid), CAST(:source AS uuid))",
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()),
+            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()),
             Long.class);
-    if (nbExistantes == null || nbExistantes < 2) return false;
+    if (nbExistantes == null || nbExistantes < 2) {
+      return false;
+    }
 
-    Map<String, Object> ids = Map.of("cible", cibleId.toString(), "source", sourceId.toString());
+    final Map<String, Object> ids =
+        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
-    // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible) : leurs
-    // observations sont reportées sur l'événement cible plutôt que perdues (#1192) — celles qui
-    // entreraient en conflit sur (evenement_id, source, url) sont supprimées, déjà représentées
-    // côté cible. L'événement source, vidé de ses observations, est ensuite supprimé.
+    fusionnerEvenements(ids);
+    fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
+    fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
+
+    // 7. Suppression de la salle source
+    jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
+
+    logAdminService.logAdmin(
+        "info", "admin", "fusion salle cible=" + cibleId + " source=" + sourceId);
+    return true;
+  }
+
+  // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible)
+  // : leurs observations sont reportées sur l'événement cible plutôt que
+  // perdues (#1192) — celles qui entreraient en conflit sur (evenement_id,
+  // source, url) sont supprimées, déjà représentées côté cible. L'événement
+  // source, vidé de ses observations, est ensuite supprimé. 2. Réassigner les
+  // événements restants (ceux sans doublon côté cible).
+  private void fusionnerEvenements(final Map<String, Object> ids) {
     jdbc.update(
         """
         DELETE FROM observations o1
@@ -231,14 +297,19 @@ public class ReferentielSallesService {
           AND NOT EXISTS (SELECT 1 FROM observations WHERE observations.evenement_id = evenements.id)
         """,
         ids);
-
-    // 2. Réassigner les événements restants (ceux sans doublon côté cible)
     jdbc.update(
         "UPDATE evenements SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
         ids);
+  }
 
-    // 3. Abonnements en double supprimés, le reste réassigné
+  // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
+  // réassignées (PK indépendante de salle_id, pas de conflit de PK possible) —
+  // dédoublonnage préalable des conflits par type de source (sans lui, deux
+  // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment
+  // sur la salle fusionnée).
+  private void fusionnerAbonnementsEtSources(
+      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
         """
         DELETE FROM user_salles
@@ -254,17 +325,21 @@ public class ReferentielSallesService {
             + " AS uuid)",
         ids);
 
-    // 4. Sources externes réassignées (PK indépendante de salle_id, pas de conflit de PK
-    // possible) — dédoublonnage préalable des conflits par type de source (sans lui, deux
-    // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment sur la salle
-    // fusionnée).
     dedupliquerSallesSourcesAvantFusion(cibleId, sourceId);
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
         ids);
+  }
 
-    // 5. Métadonnées récupérées si la cible ne les a pas déjà
+  // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
+  // la source réassignées à la cible — sinon la suppression de la source
+  // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible
+  // était elle-même une sous-salle de la source, elle hérite du parent de la
+  // source plutôt que de rester rattachée à une salle sur le point d'être
+  // supprimée.
+  private void fusionnerMetadonneesEtSousSalles(
+      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
     jdbc.update(
         """
         UPDATE salles SET
@@ -274,39 +349,31 @@ public class ReferentielSallesService {
         """,
         ids);
 
-    // 6. Sous-salles de la source réassignées à la cible — sinon la suppression de la source
-    // orpheline leurs salle_parent_id (violation de contrainte FK). Si la cible était elle-même
-    // une sous-salle de la source, elle hérite du parent de la source plutôt que de rester
-    // rattachée à une salle sur le point d'être supprimée.
     jdbc.update(
         "UPDATE salles SET salle_parent_id ="
             + " (SELECT salle_parent_id FROM salles WHERE id = CAST(:source AS uuid))"
             + " WHERE id = CAST(:cible AS uuid) AND salle_parent_id = CAST(:source AS uuid)",
         ids);
     reassignerSousSallesSansCycle(cibleId, sourceId);
-
-    // 7. Suppression de la salle source
-    jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
-
-    logAdminService.logAdmin(
-        "info", "admin", "fusion salle cible=" + cibleId + " source=" + sourceId);
-    return true;
   }
 
-  /// Réassigne à la cible chaque sous-salle de la source (hors cible elle-même, déjà traitée), sauf
-  /// celle dont la cible est déjà un descendant — la réassigner créerait un cycle {@code enfant →
-  /// cible → ... → enfant} (#1201). Une telle sous-salle est détachée (parent à {@code NULL})
-  /// plutôt que laissée pointer vers la source sur le point d'être supprimée, et signalée pour
-  /// revue manuelle.
-  private void reassignerSousSallesSansCycle(UUID cibleId, UUID sourceId) {
-    List<UUID> enfants =
+  /**
+   * Réassigne à la cible chaque sous-salle de la source (hors cible elle-même,
+   * déjà traitée), sauf celle dont la cible est déjà un descendant — la
+   * réassigner créerait un cycle {@code enfant → cible → ... → enfant} (#1201).
+   * Une telle sous-salle est détachée (parent à {@code NULL} ) plutôt que
+   * laissée pointer vers la source sur le point d'être supprimée, et signalée
+   * pour revue manuelle.
+   */
+  private void reassignerSousSallesSansCycle(final UUID cibleId, final UUID sourceId) {
+    final List<UUID> enfants =
         jdbc.query(
             "SELECT id FROM salles WHERE salle_parent_id = CAST(:source AS uuid) AND id !="
                 + " CAST(:cible AS uuid)",
-            Map.of("source", sourceId.toString(), "cible", cibleId.toString()),
+            Map.of(CLE_SOURCE, sourceId.toString(), CLE_CIBLE, cibleId.toString()),
             (rs, _) -> rs.getObject("id", UUID.class));
 
-    for (UUID enfant : enfants) {
+    for (final UUID enfant : enfants) {
       if (SalleHierarchie.creeraitCycle(cibleId, enfant, this::lireSalleParentId)) {
         jdbc.update(
             "UPDATE salles SET salle_parent_id = NULL WHERE id = CAST(:id AS uuid)",
@@ -322,16 +389,16 @@ public class ReferentielSallesService {
         jdbc.update(
             "UPDATE salles SET salle_parent_id = CAST(:cible AS uuid) WHERE id = CAST(:id AS"
                 + " uuid)",
-            Map.of("cible", cibleId.toString(), "id", enfant.toString()));
+            Map.of(CLE_CIBLE, cibleId.toString(), "id", enfant.toString()));
       }
     }
   }
 
-  // findFirst() sur un flux contenant un unique élément null lève une NullPointerException
-  // (Optional.of appelé en interne) — un accès direct à la liste évite ce piège pour une salle
-  // racine sans parent.
-  private UUID lireSalleParentId(UUID salleId) {
-    List<UUID> resultat =
+  // findFirst() sur un flux contenant un unique élément null lève une
+  // NullPointerException (Optional.of appelé en interne) — un accès direct à la
+  // liste évite ce piège pour une salle racine sans parent.
+  private UUID lireSalleParentId(final UUID salleId) {
+    final List<UUID> resultat =
         jdbc.query(
             "SELECT salle_parent_id FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()),
@@ -339,17 +406,19 @@ public class ReferentielSallesService {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
-  /// Supprime, avant réassignation, les doublons de {@code salle_sources} qu'une fusion créerait
-  /// sinon silencieusement : la PK {@code (source, identifiant_externe)} est indépendante de {@code
-  /// salle_id}, donc deux lignes portant le même {@code source} (ex. deux identifiants {@code
-  /// ticketmaster} différents) peuvent coexister indéfiniment sur la salle fusionnée sans jamais
-  /// entrer en conflit de PK. Garde la ligne la plus saine (non suspecte prioritaire, puis {@code
-  /// nb_zero_consecutifs} le plus bas) et supprime l'autre.
-  ///
-  /// @param cibleId UUID de la salle à conserver
-  /// @param sourceId UUID de la salle à absorber
-  private void dedupliquerSallesSourcesAvantFusion(UUID cibleId, UUID sourceId) {
-    List<Map<String, Object>> conflits =
+  /**
+   * Supprime, avant réassignation, les doublons de {@code salle_sources}
+   * qu'une fusion créerait sinon (PK {@code (source, identifiant_externe)}
+   * indépendante de {@code salle_id}) — garde la ligne la plus saine (non
+   * suspecte, puis {@code nb_zero_consecutifs} le plus bas).
+   * @param cibleId UUID de la salle à conserver
+   * @param sourceId UUID de la salle à absorber
+   */
+  // paramsSuppression porte des valeurs propres au conflit courant — pas
+  // hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
+    final List<Map<String, Object>> conflits =
         jdbc.queryForList(
             """
             SELECT src.source AS source,
@@ -363,12 +432,12 @@ public class ReferentielSallesService {
             JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
             WHERE src.salle_id = CAST(:source AS uuid)
             """,
-            Map.of("cible", cibleId.toString(), "source", sourceId.toString()));
+            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()));
 
-    for (Map<String, Object> conflit : conflits) {
-      boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
-      Map<String, Object> paramsSuppression = new HashMap<>();
-      paramsSuppression.put("source", conflit.get("source"));
+    for (final Map<String, Object> conflit : conflits) {
+      final boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
+      final Map<String, Object> paramsSuppression = new HashMap<>();
+      paramsSuppression.put(CLE_SOURCE, conflit.get(CLE_SOURCE));
       paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
       paramsSuppression.put(
           "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));

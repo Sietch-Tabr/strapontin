@@ -5,35 +5,32 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Détecte, par type de job planifié, une absence prolongée et inexpliquée d'exécution — un cycle
-/// silencieusement perdu (reboot brutal de l'hôte, OOM, crash) plutôt qu'un ralentissement normal
-/// de cadence.
-///
-/// Délégué par le job Quartz {@code SuiviCyclesJobsJob}, cadencé toutes les heures.
-///
-/// <p>Complète {@code WatchdogWorkerService} (module web) : celui-ci n'alerte que sur l'inactivité
-/// globale du worker, tous types de job confondus — un type de job resté silencieusement bloqué
-/// alors que les autres continuent de s'exécuter normalement ne déclenche jamais cette alerte
-/// globale.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Détecte, par type de job planifié, une absence prolongée et
+ * inexpliquée d'exécution (détail : CLAUDE.md, table Jobs background,
+ * SuiviCyclesJobsJob).
+ * @since 2.8.3
+ * @author Kwaite
+ */
 @Service
 public class WorkerSuiviCyclesService {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerSuiviCyclesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(WorkerSuiviCyclesService.class);
 
-  // Fraîcheur maximale attendue par type de job, dérivée du cadencement réel de Planificateur
-  // (marge x2 sur l'écart maximal normal entre deux déclenchements consécutifs) — à réaligner si
-  // les cron expressions de Planificateur changent.
+  // Fraîcheur maximale attendue par type de job, dérivée du cadencement réel de
+  // Planificateur (marge x2 sur l'écart maximal normal entre deux
+  // déclenchements consécutifs) — à réaligner si les cron expressions de
+  // Planificateur changent.
   private static final Map<String, Duration> FRAICHEUR_ATTENDUE =
       Map.ofEntries(
           Map.entry("fetch:artistes:batch", Duration.ofHours(8)),
@@ -53,41 +50,55 @@ public class WorkerSuiviCyclesService {
   private final LogsAdminWorker logsAdminWorker;
   private final WorkerStatsService workerStatsService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation des cycles perdus détectés
+   * @param workerStatsService lecture de la dernière exécution par type de job
+   */
   public WorkerSuiviCyclesService(
-      NamedParameterJdbcTemplate jdbc,
-      LogsAdminWorker logsAdminWorker,
-      WorkerStatsService workerStatsService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final WorkerStatsService workerStatsService) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.workerStatsService = workerStatsService;
   }
 
-  /// Compare, pour chaque type de job connu, la dernière exécution enregistrée à la fraîcheur
-  /// attendue et journalise un warn pour chaque type resté silencieux au-delà.
+  /**
+   * Compare, pour chaque type de job connu, la dernière exécution enregistrée à
+   * la fraîcheur attendue et journalise un warn pour chaque type resté
+   * silencieux au-delà.
+   */
   public void executerSuiviCycles() {
-    log.info("suivi:cycles-jobs démarré");
+    LOG.info("suivi:cycles-jobs démarré");
     workerStatsService.executerAvecStats(
-        log,
+        LOG,
         "suivi:cycles-jobs",
         () -> {
-          int enRetard = verifier();
-          log.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
+          final int enRetard = verifier();
+          LOG.info("suivi:cycles-jobs terminé enRetard={}", enRetard);
           return new ResultatPersistance(0, enRetard);
         });
   }
 
-  /// @return nombre de types de job détectés en retard
+  /**
+   * @return nombre de types de job détectés en retard
+   */
+  /* package-private : visibilité élargie pour WorkerSuiviCyclesServiceTest
+   * (même package). */
   int verifier() {
-    Map<String, Instant> dernieresExecs = lireDernieresExecs();
+    final Map<String, Instant> dernieresExecs = lireDernieresExecs();
     int enRetard = 0;
-    for (var entree : FRAICHEUR_ATTENDUE.entrySet()) {
-      String typeJob = entree.getKey();
-      Duration fraicheurMax = entree.getValue();
-      Instant derniereExec = dernieresExecs.get(typeJob);
-      // Jamais exécuté depuis le démarrage (déploiement récent) — hors périmètre, aucune
-      // référence pour juger d'un retard.
-      if (derniereExec == null) continue;
-      Duration ecart = Duration.between(derniereExec, Instant.now());
+    for (final Map.Entry<String, Duration> entree : FRAICHEUR_ATTENDUE.entrySet()) {
+      final String typeJob = entree.getKey();
+      final Duration fraicheurMax = entree.getValue();
+      final Instant derniereExec = dernieresExecs.get(typeJob);
+      // Jamais exécuté depuis le démarrage (déploiement récent) — hors
+      // périmètre, aucune référence pour juger d'un retard.
+      if (derniereExec == null) {
+        continue;
+      }
+      final Duration ecart = Duration.between(derniereExec, Instant.now());
       if (ecart.compareTo(fraicheurMax) > 0) {
         enRetard++;
         signalerRetard(typeJob, derniereExec, ecart, fraicheurMax);
@@ -100,13 +111,16 @@ public class WorkerSuiviCyclesService {
     return jdbc.queryForList("SELECT type_job, derniere_exec FROM fetch_jobs", Map.of()).stream()
         .filter(ligne -> ligne.get("derniere_exec") != null)
         .collect(
-            java.util.stream.Collectors.toMap(
+            Collectors.toMap(
                 ligne -> (String) ligne.get("type_job"),
-                ligne -> ((java.sql.Timestamp) ligne.get("derniere_exec")).toInstant()));
+                ligne -> ((Timestamp) ligne.get("derniere_exec")).toInstant()));
   }
 
   private void signalerRetard(
-      String typeJob, Instant derniereExec, Duration ecart, Duration fraicheurMax) {
+      final String typeJob,
+      final Instant derniereExec,
+      final Duration ecart,
+      final Duration fraicheurMax) {
     logsAdminWorker.inserer(
         "warn",
         "worker",

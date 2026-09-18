@@ -15,10 +15,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link SignalementsAdminController}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SignalementsAdminController}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class SignalementsAdminControllerTest {
 
   private SignalementsAdminService service;
@@ -34,7 +36,7 @@ class SignalementsAdminControllerTest {
   void lister_delegueAuService() {
     when(service.lister(0)).thenReturn(new ReponseSignalements(List.of(), 0, 1, 0));
 
-    ResponseEntity<ReponseSignalements> reponse = controller.lister(0);
+    final ResponseEntity<ReponseSignalements> reponse = controller.lister(0);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service).lister(0);
@@ -44,7 +46,7 @@ class SignalementsAdminControllerTest {
   void resoudre_signalementInconnuOuDejaResolu_retourne404() {
     when(service.resoudre(1L)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.resoudre(1L);
+    final ResponseEntity<Map<String, Object>> reponse = controller.resoudre(1L);
 
     assertEquals(404, reponse.getStatusCode().value());
   }
@@ -53,7 +55,7 @@ class SignalementsAdminControllerTest {
   void resoudre_nominal_retourne200() {
     when(service.resoudre(1L)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse = controller.resoudre(1L);
+    final ResponseEntity<Map<String, Object>> reponse = controller.resoudre(1L);
 
     assertEquals(200, reponse.getStatusCode().value());
   }

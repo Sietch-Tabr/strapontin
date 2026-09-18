@@ -25,10 +25,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link TotpEnrollmentController}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link TotpEnrollmentController}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class TotpEnrollmentControllerTest {
 
@@ -49,7 +51,7 @@ class TotpEnrollmentControllerTest {
   }
 
   private void stubPrincipal() {
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     when(auth.getPrincipal()).thenReturn(ud);
   }
@@ -61,7 +63,7 @@ class TotpEnrollmentControllerTest {
     when(totpService.genererUriOtpAuth("SECRETEXISTANT", "kwaite")).thenReturn("otpauth://uri");
     when(totpService.genererQrCodeSvg("otpauth://uri")).thenReturn("<svg/>");
 
-    ResponseEntity<Map<String, Object>> rep = controller.setup(session, auth);
+    final ResponseEntity<Map<String, Object>> rep = controller.setup(session, auth);
 
     assertEquals("SECRETEXISTANT", rep.getBody().get("totpSecret"));
     verify(totpService, never()).genererSecret();
@@ -76,7 +78,7 @@ class TotpEnrollmentControllerTest {
     when(totpService.genererUriOtpAuth("NOUVEAUSECRET", "kwaite")).thenReturn("otpauth://uri");
     when(totpService.genererQrCodeSvg("otpauth://uri")).thenReturn("<svg/>");
 
-    ResponseEntity<Map<String, Object>> rep = controller.setup(session, auth);
+    final ResponseEntity<Map<String, Object>> rep = controller.setup(session, auth);
 
     assertEquals("NOUVEAUSECRET", rep.getBody().get("totpSecret"));
     verify(session).setAttribute(SESSION_TOTP_SETUP, "NOUVEAUSECRET");
@@ -86,7 +88,7 @@ class TotpEnrollmentControllerTest {
   void confirmer_sessionExpiree_retourne400() {
     when(session.getAttribute(SESSION_TOTP_SETUP)).thenReturn(null);
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.confirmer(new TotpChallengeRequest("123456"), session, auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -98,7 +100,7 @@ class TotpEnrollmentControllerTest {
     when(session.getAttribute(SESSION_TOTP_SETUP)).thenReturn("SECRET");
     when(totpService.verifierCode("SECRET", "000000")).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.confirmer(new TotpChallengeRequest("000000"), session, auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -111,7 +113,7 @@ class TotpEnrollmentControllerTest {
     when(session.getAttribute(SESSION_TOTP_SETUP)).thenReturn("SECRET");
     when(totpService.verifierCode("SECRET", "123456")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> rep =
+    final ResponseEntity<Map<String, Object>> rep =
         controller.confirmer(new TotpChallengeRequest("123456"), session, auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
@@ -127,7 +129,8 @@ class TotpEnrollmentControllerTest {
     when(userController.lireSecretTotp("user-1")).thenReturn(null);
     when(totpService.verifierCode(null, "123456")).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> rep = controller.desactiver(new TotpChallengeRequest("123456"), auth);
+    final ResponseEntity<Map<String, Object>> rep =
+        controller.desactiver(new TotpChallengeRequest("123456"), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(userController, never()).desactiverTotp(anyString());
@@ -139,7 +142,8 @@ class TotpEnrollmentControllerTest {
     when(userController.lireSecretTotp("user-1")).thenReturn("SECRET");
     when(totpService.verifierCode("SECRET", "123456")).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> rep = controller.desactiver(new TotpChallengeRequest("123456"), auth);
+    final ResponseEntity<Map<String, Object>> rep =
+        controller.desactiver(new TotpChallengeRequest("123456"), auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     verify(userController).desactiverTotp("user-1");

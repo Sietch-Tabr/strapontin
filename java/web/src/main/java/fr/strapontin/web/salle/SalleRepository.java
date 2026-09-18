@@ -18,32 +18,39 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/// Accès aux données pour les salles suivies ({@code salles}, {@code user_salles}).
-///
-/// <p>SQL pur — aucune logique métier. Toutes les décisions (cap, unicité, normalisation)
-/// appartiennent à {@link SalleService}.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Accès aux données pour les salles suivies ({@code salles}, {@code
+ * user_salles}) — SQL pur, aucune logique métier (cap/unicité/
+ * normalisation dans {@link SalleService}).
+ * @since 2.1.0
+ * @author Kwaite
+ */
 @Repository
 class SalleRepository {
 
   private static final String CLE_USER_ID = "userId";
+  private static final String CLE_NOM = "nom";
+  private static final String CLE_SALLE_ID = "salleId";
+  private static final String CLE_UUID = "uuid";
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  SalleRepository(NamedParameterJdbcTemplate jdbc) {
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  SalleRepository(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
-  /// Retourne les salles suivies par l'utilisateur, triées par nom.
-  ///
-  /// <p>Le champ {@code aDigitick} est {@code true} si la salle possède un slug Digitick configuré
-  /// dans {@code salle_sources}.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return liste des salles suivies
-  List<SalleUtilisateur> listerPourUtilisateur(String userId) {
+  /**
+   * Retourne les salles suivies par l'utilisateur, triées par nom —
+   * {@code aDigitick} vrai si un slug Digitick est configuré dans {@code
+   * salle_sources}.
+   * @param userId identifiant de l'utilisateur
+   * @return liste des salles suivies
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  List<SalleUtilisateur> listerPourUtilisateur(final String userId) {
     return jdbc.query(
         """
         SELECT us.salle_id AS id, s.nom, us.created_at,
@@ -60,23 +67,22 @@ class SalleRepository {
         (rs, _) ->
             new SalleUtilisateur(
                 rs.getObject("id", UUID.class),
-                rs.getString("nom"),
+                rs.getString(CLE_NOM),
                 rs.getTimestamp("created_at").toInstant(),
                 rs.getBoolean("a_digitick")));
   }
 
-  /// Recherche des salles dans les concerts existants, le référentiel Digitick et les salles
-  /// connues avec concerts.
-  ///
-  /// <p>Union de trois sources : <ol>
-  ///   <li>Concerts en base sans UUID — {@code salle_norm} nettoyé LIKE :pattern
-  ///   <li>Salles configurées Digitick — {@code salles.nom_norm} nettoyé LIKE :pattern
-  ///   <li>Salles connues avec concerts ({@code salle_id IS NOT NULL}) — évite un appel TM inutile
-  ///       et permet à {@code estMemeSalle} de filtrer les doublons de venueId </ol>
-  ///
-  /// @param pattern valeur LIKE sur la clé normalisée (ex. {@code "%lempreinte%"})
-  /// @return lignes {@code salle}/{@code ville}/{@code digitick_slug} distinctes (max 10)
-  List<Map<String, Object>> rechercherEnBase(String pattern) {
+  /**
+   * Recherche des salles dans les concerts existants, le référentiel
+   * Digitick et les salles connues avec concerts — union de trois sources
+   * (concert sans UUID, salle Digitick, salle connue avec concert), pour
+   * filtrer les doublons de venueId côté appelant ({@code estMemeSalle}).
+   * @param pattern valeur LIKE sur la clé normalisée
+   * @return lignes salle/ville/digitick_slug distinctes (max 10)
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  List<Map<String, Object>> rechercherEnBase(final String pattern) {
     return jdbc.queryForList(
         """
         SELECT salle, ville, digitick_slug FROM (
@@ -101,27 +107,35 @@ class SalleRepository {
         Map.of("pattern", pattern));
   }
 
-  /// Vérifie si une salle est déjà suivie par l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
-  /// @return {@code true} si déjà présente
-  boolean existePourUtilisateur(String userId, UUID salleId) {
+  /**
+   * Vérifie si une salle est déjà suivie par l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   * @return {@code true} si déjà présente
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  boolean existePourUtilisateur(final String userId, final UUID salleId) {
     return !jdbc.queryForList(
             """
             SELECT 1 FROM user_salles
             WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)
             """,
-            Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()),
+            Map.of(CLE_USER_ID, userId, CLE_SALLE_ID, salleId.toString()),
             Integer.class)
         .isEmpty();
   }
 
-  /// Compte les salles suivies par l'utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @return nombre de salles suivies
-  int compterPourUtilisateur(String userId) {
+  /**
+   * Compte les salles suivies par l'utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return nombre de salles suivies
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  int compterPourUtilisateur(final String userId) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
@@ -130,25 +144,32 @@ class SalleRepository {
         0);
   }
 
-  /// Recherche les salles du référentiel dont la {@code salle_cle} partage au moins un des tokens
-  /// fournis — pré-filtre SQL avant application de la correspondance floue ({@code
-  /// CorrespondanceSalle.estDoublonSalle} sur {@code nom}, non exprimable en SQL).
-  ///
-  /// @param tokens clés normalisées ({@code SalleService.normaliserSalleCle}) des mots du nom
-  ///   recherché, filtrées aux tokens d'au moins 3 caractères
-  /// @return jusqu'à 50 candidats {@code (id, salle_cle, nom)}, vide si {@code tokens} est vide
-  List<Map<String, Object>> chercherCandidatsParCle(Set<String> tokens) {
-    if (tokens.isEmpty()) return List.of();
+  /**
+   * Recherche les salles du référentiel dont la {@code salle_cle} partage
+   * au moins un des tokens fournis — pré-filtre SQL avant la correspondance
+   * floue ({@code CorrespondanceSalle.estDoublonSalle}, non exprimable en
+   * SQL).
+   * @param tokens clés normalisées, filtrées aux tokens ≥ 3 caractères
+   * @return jusqu'à 50 candidats (id, salle_cle, nom), vide si tokens vide
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  List<Map<String, Object>> chercherCandidatsParCle(final Set<String> tokens) {
+    if (tokens.isEmpty()) {
+      return List.of();
+    }
 
-    List<String> tokensList = new ArrayList<>(tokens);
-    StringBuilder whereTokens = new StringBuilder("(");
+    final List<String> tokensList = new ArrayList<>(tokens);
+    final StringBuilder whereTokens = new StringBuilder(50).append('(');
     for (int i = 0; i < tokensList.size(); i++) {
-      if (i > 0) whereTokens.append(" OR ");
+      if (i > 0) {
+        whereTokens.append(" OR ");
+      }
       whereTokens.append("salle_cle LIKE :t").append(i);
     }
-    whereTokens.append(")");
+    whereTokens.append(')');
 
-    MapSqlParameterSource params = new MapSqlParameterSource();
+    final MapSqlParameterSource params = new MapSqlParameterSource();
     for (int i = 0; i < tokensList.size(); i++) {
       params.addValue("t" + i, "%" + tokensList.get(i) + "%");
     }
@@ -157,15 +178,20 @@ class SalleRepository {
         "SELECT id, salle_cle, nom FROM salles WHERE " + whereTokens + " LIMIT 50", params);
   }
 
-  /// Insère ou met à jour une salle dans le référentiel et retourne son UUID stable.
-  ///
-  /// @param salleCle clé naturelle normalisée (ex. {@code "olympia"})
-  /// @param nom nom affiché
-  /// @return UUID stable de la salle (existant ou nouvellement créé)
-  UUID upsertSalle(String salleCle, String nom) {
-    Map<String, Object> params = new HashMap<>();
+  /**
+   * Insère ou met à jour une salle dans le référentiel et retourne son UUID
+   * stable.
+   *
+   * @param salleCle clé naturelle normalisée (ex. {@code "olympia"} )
+   * @param nom nom affiché
+   * @return UUID stable de la salle (existant ou nouvellement créé)
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  UUID upsertSalle(final String salleCle, final String nom) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
-    params.put("nom", nom);
+    params.put(CLE_NOM, nom);
     params.put("nomNorm", Normalisation.normaliserTexte(nom));
     return jdbc.queryForObject(
         """
@@ -178,19 +204,21 @@ class SalleRepository {
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  /// Insère ou met à jour une salle avec ville et code postal (usage admin Digitick).
-  ///
-  /// <p>En cas de conflit sur {@code salle_cle}, met à jour le nom, la ville et le CP si fournis.
-  ///
-  /// @param salleCle clé naturelle normalisée
-  /// @param nom nom affiché
-  /// @param ville ville (null si inconnue)
-  /// @param dept numéro de département (null si inconnu)
-  /// @return UUID stable de la salle
-  UUID upsertSalleAvecLoc(String salleCle, String nom, String ville, String dept) {
-    Map<String, Object> params = new HashMap<>();
+  /**
+   * Insère/MAJ une salle (admin Digitick), conflit MAJ nom/ville/CP.
+   * @param salleCle clé naturelle normalisée
+   * @param nom nom affiché
+   * @param ville ville (null si inconnue)
+   * @param dept numéro de département (null si inconnu)
+   * @return UUID stable de la salle
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  UUID upsertSalleAvecLoc(
+      final String salleCle, final String nom, final String ville, final String dept) {
+    final Map<String, Object> params = new HashMap<>();
     params.put("salleCle", salleCle);
-    params.put("nom", nom);
+    params.put(CLE_NOM, nom);
     params.put("nomNorm", Normalisation.normaliserTexte(nom));
     params.put("ville", ville);
     params.put("dept", dept);
@@ -208,20 +236,21 @@ class SalleRepository {
         (rs, _) -> rs.getObject("id", UUID.class));
   }
 
-  /// Met à jour le nom, la ville et le CP d'une salle existante.
-  ///
-  /// <p>Recalcule {@code nom_norm} depuis le nouveau nom — sans cela, un renommage via cette
-  /// méthode laisse {@code nom_norm} désynchronisé de {@code nom}, cassant le matching
-  /// Wikidata/Overpass pour cette salle.
-  ///
-  /// @param salleId UUID de la salle
-  /// @param nom nouveau nom (null = inchangé)
-  /// @param ville nouvelle ville (null = inchangée)
-  /// @param dept nouveau numéro de département (null = inchangé)
-  void mettreAJourSalle(UUID salleId, String nom, String ville, String dept) {
-    MapSqlParameterSource params = new MapSqlParameterSource();
-    params.addValue("uuid", salleId.toString());
-    params.addValue("nom", nom);
+  /**
+   * Met à jour nom/ville/CP — recalcule {@code nom_norm} (sinon
+   * désynchronisé, cassant le matching Wikidata/Overpass).
+   * @param salleId UUID de la salle
+   * @param nom nouveau nom (null = inchangé)
+   * @param ville nouvelle ville (null = inchangée)
+   * @param dept nouveau département (null = inchangé)
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  void mettreAJourSalle(
+      final UUID salleId, final String nom, final String ville, final String dept) {
+    final MapSqlParameterSource params = new MapSqlParameterSource();
+    params.addValue(CLE_UUID, salleId.toString());
+    params.addValue(CLE_NOM, nom);
     params.addValue("nomNorm", nom != null ? Normalisation.normaliserTexte(nom) : null);
     params.addValue("ville", ville);
     params.addValue("dept", dept);
@@ -237,18 +266,18 @@ class SalleRepository {
         params);
   }
 
-  /// Retourne les identifiants préfixés de toutes les sources d'une salle, séparés par une virgule.
-  ///
-  /// <p>Ex. : {@code "digitick:lempreinte"} ou {@code "tm:rZFSnyZdFvA,digitick:lempreinte"}. Le
-  /// préfixe Ticketmaster est abrégé ({@code "tm"}, pas {@code "ticketmaster"}, la valeur canonique
-  /// de {@code salle_sources.source}) — {@link TicketmasterSource#accepteIdentifiantSalle}
-  /// n'accepte que ce préfixe court, sans quoi le fetch déclenché à l'ajout d'une salle TM ne fait
-  /// jamais rien (mismatch silencieux, aucune exception).
-  ///
-  /// @param salleId UUID de la salle
-  /// @return CSV d'identifiants ou {@code null} si aucune source connue
-  String lireIdentifiantsSources(UUID salleId) {
-    List<Map<String, Object>> lignes =
+  /**
+   * Identifiants préfixés CSV de toutes les sources d'une salle (ex. {@code
+   * "tm:rZFSnyZdFvA,digitick:lempreinte"}) — préfixe TM abrégé ({@code
+   * "tm"}, pas {@code "ticketmaster"}), seul accepté par {@link
+   * TicketmasterSource#accepteIdentifiantSalle} (sinon fetch TM muet).
+   * @param salleId UUID de la salle
+   * @return CSV d'identifiants ou null si aucune source connue
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  String lireIdentifiantsSources(final UUID salleId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
             SELECT source, identifiant_externe
@@ -256,24 +285,32 @@ class SalleRepository {
             WHERE salle_id = CAST(:uuid AS uuid)
             ORDER BY source
             """,
-            Map.of("uuid", salleId.toString()));
-    if (lignes.isEmpty()) return null;
-    List<String> ids = new ArrayList<>();
-    for (Map<String, Object> l : lignes) {
-      String source = (String) l.get("source");
-      String prefixe =
+            Map.of(CLE_UUID, salleId.toString()));
+    if (lignes.isEmpty()) {
+      return null;
+    }
+    final List<String> ids = new ArrayList<>();
+    for (final Map<String, Object> l : lignes) {
+      final String source = (String) l.get("source");
+      final String prefixe =
           "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
       ids.add(prefixe + ":" + l.get("identifiant_externe"));
     }
     return String.join(",", ids);
   }
 
-  /// Supprime une salle uniquement si aucun utilisateur ne la suit et si elle n'a pas de concerts.
-  ///
-  /// @param salleId UUID de la salle
-  /// @return {@code true} si supprimée, {@code false} si des contraintes empêchent la suppression
-  boolean supprimerSalleDigitick(UUID salleId) {
-    int nb =
+  /**
+   * Supprime une salle uniquement si aucun utilisateur ne la suit et si elle
+   * n'a pas de concerts.
+   *
+   * @param salleId UUID de la salle
+   * @return {@code true} si supprimée, {@code false} si des contraintes
+   *     empêchent la suppression
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  boolean supprimerSalleDigitick(final UUID salleId) {
+    final int nb =
         jdbc.update(
             """
             DELETE FROM salles
@@ -283,35 +320,41 @@ class SalleRepository {
               AND NOT EXISTS (
                   SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
             """,
-            Map.of("uuid", salleId.toString()));
+            Map.of(CLE_UUID, salleId.toString()));
     return nb > 0;
   }
 
-  /// Met à jour {@code wikidata_id} d'une salle si absent — ne touche jamais une valeur déjà
-  /// résolue par le job nocturne ({@code COALESCE}). Peut lever {@link
-  /// org.springframework.dao.DuplicateKeyException} ({@code idx_salles_wikidata_id}) — à la charge
-  /// de l'appelant (même piège qu'{@code EnrichissementSallesService}, jalon 2.6.0).
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param wikidataId Q-ID Wikidata
-  void mettreAJourWikidataId(UUID salleId, String wikidataId) {
+  /**
+   * Met à jour {@code wikidata_id} si absent ({@code COALESCE}, jamais
+   * une valeur déjà résolue) — peut lever {@link
+   * org.springframework.dao.DuplicateKeyException}, à la charge de
+   * l'appelant.
+   * @param salleId UUID stable de la salle
+   * @param wikidataId Q-ID Wikidata
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  void mettreAJourWikidataId(final UUID salleId, final String wikidataId) {
     jdbc.update(
         """
         UPDATE salles SET wikidata_id = COALESCE(wikidata_id, :wikidataId)
         WHERE id = CAST(:uuid AS uuid)
         """,
-        Map.of("uuid", salleId.toString(), "wikidataId", wikidataId));
+        Map.of(CLE_UUID, salleId.toString(), "wikidataId", wikidataId));
   }
 
-  /// Recherche une salle différente de {@code exclureSalleId} déjà associée à un slug Digitick
-  /// permet de détecter un conflit avant l'attribution plutôt que d'échouer silencieusement sur
-  /// {@code ON CONFLICT DO NOTHING}.
-  ///
-  /// @param slug slug Digitick à vérifier
-  /// @param exclureSalleId salle en cours d'attribution, exclue de la recherche
-  /// @return le nom affiché de la salle en conflit, si elle existe
-  Optional<String> trouverConflitDigitickSlug(String slug, UUID exclureSalleId) {
-    List<Map<String, Object>> lignes =
+  /**
+   * Recherche une salle différente de {@code exclureSalleId} déjà associée
+   * à un slug Digitick — détecte un conflit avant l'attribution plutôt que
+   * d'échouer silencieusement sur {@code ON CONFLICT DO NOTHING}.
+   * @param slug slug Digitick à vérifier
+   * @param exclureSalleId salle en cours d'attribution, exclue
+   * @return le nom affiché de la salle en conflit, si elle existe
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  Optional<String> trouverConflitDigitickSlug(final String slug, final UUID exclureSalleId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
             SELECT COALESCE(s.nom_affiche, s.nom) AS nom
@@ -320,16 +363,21 @@ class SalleRepository {
             WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
               AND ss.salle_id != CAST(:uuid AS uuid)
             """,
-            Map.of("slug", slug, "uuid", exclureSalleId.toString()));
-    return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get("nom"));
+            Map.of("slug", slug, CLE_UUID, exclureSalleId.toString()));
+    return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get(CLE_NOM));
   }
 
-  /// Enregistre une correspondance source externe → salle interne.
-  ///
-  /// @param salleId UUID stable de la salle
-  /// @param source nom de la source (ex. {@code "ticketmaster"})
-  /// @param identifiantExterne identifiant dans la source externe
-  void enregistrerSalleSource(UUID salleId, String source, String identifiantExterne) {
+  /**
+   * Enregistre une correspondance source externe → salle interne.
+   *
+   * @param salleId UUID stable de la salle
+   * @param source nom de la source (ex. {@code "ticketmaster"})
+   * @param identifiantExterne identifiant dans la source externe
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  void enregistrerSalleSource(
+      final UUID salleId, final String source, final String identifiantExterne) {
     jdbc.update(
         """
         INSERT INTO salle_sources (salle_id, source, identifiant_externe)
@@ -337,35 +385,47 @@ class SalleRepository {
         ON CONFLICT DO NOTHING
         """,
         Map.of(
-            "salleId", salleId.toString(),
-            "source", source,
-            "identifiantExterne", identifiantExterne));
+            CLE_SALLE_ID,
+            salleId.toString(),
+            "source",
+            source,
+            "identifiantExterne",
+            identifiantExterne));
   }
 
-  /// Lie une salle à un utilisateur.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
-  void ajouterPourUtilisateur(String userId, UUID salleId) {
+  /**
+   * Lie une salle à un utilisateur.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  void ajouterPourUtilisateur(final String userId, final UUID salleId) {
     jdbc.update(
         """
         INSERT INTO user_salles (user_id, salle_id)
         VALUES (:userId, CAST(:salleId AS uuid))
         """,
-        Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
+        Map.of(CLE_USER_ID, userId, CLE_SALLE_ID, salleId.toString()));
   }
 
-  /// Supprime la relation utilisateur–salle.
-  ///
-  /// @param userId identifiant de l'utilisateur
-  /// @param salleId UUID stable de la salle
-  /// @return le nombre de lignes réellement supprimées (0 si la salle n'était pas suivie)
-  int supprimerPourUtilisateur(String userId, UUID salleId) {
+  /**
+   * Supprime la relation utilisateur–salle.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @param salleId UUID stable de la salle
+   * @return le nombre de lignes réellement supprimées (0 si la salle n'était
+   *     pas suivie)
+   */
+  /* package-private : accès SQL réservé à SalleService (même package), pattern
+   * service/repository. */
+  int supprimerPourUtilisateur(final String userId, final UUID salleId) {
     return jdbc.update(
         """
         DELETE FROM user_salles
         WHERE user_id = :userId AND salle_id = CAST(:salleId AS uuid)
         """,
-        Map.of(CLE_USER_ID, userId, "salleId", salleId.toString()));
+        Map.of(CLE_USER_ID, userId, CLE_SALLE_ID, salleId.toString()));
   }
 }

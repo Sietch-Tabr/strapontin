@@ -28,10 +28,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link WorkerSuiviCyclesService}.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link WorkerSuiviCyclesService}.
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 class WorkerSuiviCyclesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -40,10 +42,10 @@ class WorkerSuiviCyclesServiceTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    TicketmasterSource tm = mock(TicketmasterSource.class);
-    ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
-    LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
-    WorkerStatsService workerStatsService =
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final ResolveurNomCanonique resolveur = mock(ResolveurNomCanonique.class);
+    final LogsAdminWorker logsAdminWorker = new LogsAdminWorker(jdbc, new ObjectMapper());
+    final WorkerStatsService workerStatsService =
         new WorkerStatsService(
             List.<SourceConcerts>of(),
             tm,
@@ -56,8 +58,8 @@ class WorkerSuiviCyclesServiceTest {
     service = new WorkerSuiviCyclesService(jdbc, logsAdminWorker, workerStatsService);
   }
 
-  private static Map<String, Object> ligne(String typeJob, Instant derniereExec) {
-    Map<String, Object> m = new HashMap<>();
+  private static Map<String, Object> ligne(final String typeJob, final Instant derniereExec) {
+    final Map<String, Object> m = new HashMap<>();
     m.put("type_job", typeJob);
     m.put("derniere_exec", derniereExec != null ? Timestamp.from(derniereExec) : null);
     return m;
@@ -65,7 +67,7 @@ class WorkerSuiviCyclesServiceTest {
 
   @Test
   void verifier_toutesLesFraicheursRespectees_retourneZeroEtNAlerteJamais() {
-    Instant maintenant = Instant.now();
+    final Instant maintenant = Instant.now();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
@@ -82,12 +84,12 @@ class WorkerSuiviCyclesServiceTest {
   // trahit un cycle silencieusement perdu, quelle qu'en soit la cause.
   @Test
   void verifier_jobBienAuDelaDeSaFraicheurAttendue_signaleEtRetourneUn() {
-    Instant maintenant = Instant.now();
+    final Instant maintenant = Instant.now();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(List.of(ligne("fetch:artistes:batch", maintenant.minus(20, ChronoUnit.HOURS))));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    int enRetard = service.verifier();
+    final int enRetard = service.verifier();
 
     assertEquals(1, enRetard);
     verify(jdbc)

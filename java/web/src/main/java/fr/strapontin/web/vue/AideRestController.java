@@ -27,10 +27,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/// Contrôleur REST pour la page d'aide (configuration + signalements).
-///
-/// @since 2.2.0
-/// @author Kwaite
+/**
+ * Contrôleur REST pour la page d'aide (configuration + signalements).
+ *
+ * @since 2.2.0
+ * @author Kwaite
+ */
 @RestController
 @RequestMapping("/api/aide")
 public class AideRestController {
@@ -46,48 +48,54 @@ public class AideRestController {
           .maximumSize(10_000)
           .build();
 
-  /// @param emailService service d'envoi d'emails
-  /// @param configService service de configuration applicative
-  public AideRestController(EmailService emailService, ConfigService configService) {
+  /**
+   * @param emailService service d'envoi d'emails
+   * @param configService service de configuration applicative
+   */
+  public AideRestController(final EmailService emailService, final ConfigService configService) {
     this.emailService = emailService;
     this.configService = configService;
   }
 
-  /// Retourne la configuration nécessaire à la page d'aide.
-  ///
-  /// @return resendDisponible, contactEmail et signalLien
+  /**
+   * Retourne la configuration nécessaire à la page d'aide.
+   *
+   * @return resendDisponible, contactEmail et signalLien
+   */
   @GetMapping("/config")
   public ResponseEntity<Map<String, Object>> config() {
-    Map<String, Object> corps = new HashMap<>();
+    final Map<String, Object> corps = new HashMap<>();
     corps.put("resendDisponible", emailService.estDisponible());
     corps.put("contactEmail", configService.lireConfig("CONTACT_EMAIL").orElse(""));
     corps.put("signalLien", configService.lireConfig("SIGNAL_LIEN").orElse(""));
     return ResponseEntity.ok(corps);
   }
 
-  /// Envoie un signalement à l'adresse de contact.
-  ///
-  /// @param requete corps JSON avec type et message
-  /// @param auth contexte d'authentification
-  /// @param request la requête HTTP (pour rate limiting par IP)
-  /// @return 204 si envoyé, 400 si validation échoue, 429 si rate limit atteint
+  /**
+   * Envoie un signalement à l'adresse de contact.
+   *
+   * @param requete corps JSON avec type et message
+   * @param auth contexte d'authentification
+   * @param request la requête HTTP (pour rate limiting par IP)
+   * @return 204 si envoyé, 400 si validation échoue, 429 si rate limit atteint
+   */
   @PostMapping("/signalement")
   public ResponseEntity<Map<String, Object>> signaler(
-      @Valid @RequestBody RequeteSignalement requete,
-      Authentication auth,
-      HttpServletRequest request) {
+      @Valid @RequestBody final RequeteSignalement requete,
+      final Authentication auth,
+      final HttpServletRequest request) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails utilisateur)) {
       return erreur(401, "Non authentifié.");
     }
 
-    String ip = request.getRemoteAddr();
-    Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
+    final String ip = request.getRemoteAddr();
+    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
     if (!bucket.tryConsume(1)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
-    String msg = requete.message().strip();
-    String typeValide =
+    final String msg = requete.message().strip();
+    final String typeValide =
         Set.of("bug", "suggestion", "question").contains(requete.type())
             ? requete.type()
             : "question";
@@ -96,7 +104,7 @@ public class AideRestController {
   }
 
   private Bucket creerBucketSignalement() {
-    Bandwidth limite =
+    final Bandwidth limite =
         Bandwidth.builder()
             .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
             .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))

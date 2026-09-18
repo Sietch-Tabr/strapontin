@@ -14,7 +14,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -25,30 +27,18 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/// Orchestrateur de persistance des concerts dédoublonnés.
-///
-/// <p>Délègue les responsabilités spécialisées à trois services : <ul>
-///   <li>{@link ReconciliateurSalles} — réconciliation des noms de salle
-///   <li>{@link ReconciliateurArtistes} — réconciliation des noms d'artiste
-///   <li>{@link PersisteurConcertsDb} — opérations SQL (résolution d'événement, upsert, UUID) </ul>
-///
-/// <p>Traitement par lots de 500. Pour chaque lot : <ol>
-///   <li>Résolution des UUIDs par identifiants sources ({@code salle_sources}, {@code
-///       artiste_sources})
-///   <li>Première réconciliation des noms de salle (intra-lot puis contre la base)
-///   <li>Réconciliation des noms d'artiste (intra-lot puis contre la base)
-///   <li>Deuxième réconciliation des noms de salle (couvre les variantes simultanées)
-///   <li>Déduplication sur la clé de conflit finale
-///   <li>Rattachement des salles par {@code nom_norm} exact
-///   <li>Résolution de l'événement canonique (existant ou nouveau) puis upsert de l'observation de
-///       la source (#1192, plus de suppression a posteriori) </ol>
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Orchestrateur de persistance des concerts dédoublonnés par lots de 500
+ * (délègue à {@link ReconciliateurSalles}/{@link ReconciliateurArtistes}/
+ * {@link PersisteurConcertsDb}) — pipeline détaillé : CLAUDE.md,
+ * Dédoublonnage inter-sources.
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class PersisterConcerts {
 
-  private static final Logger log = LoggerFactory.getLogger(PersisterConcerts.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PersisterConcerts.class);
 
   private static final int TAILLE_LOT = 500;
 
@@ -58,86 +48,95 @@ public class PersisterConcerts {
   private final LogsAdminWorker logsAdminWorker;
   private PersisterConcerts self;
 
-  /// @param db service de persistance SQL
-  /// @param reconciliateurSalles service de réconciliation des salles
-  /// @param reconciliateurArtistes service de réconciliation des artistes
-  /// @param logsAdminWorker journalisation admin
+  /**
+   * @param db service de persistance SQL
+   * @param reconciliateurSalles service de réconciliation des salles
+   * @param reconciliateurArtistes service de réconciliation des artistes
+   * @param logsAdminWorker journalisation admin
+   */
   public PersisterConcerts(
-      PersisteurConcertsDb db,
-      ReconciliateurSalles reconciliateurSalles,
-      ReconciliateurArtistes reconciliateurArtistes,
-      LogsAdminWorker logsAdminWorker) {
+      final PersisteurConcertsDb db,
+      final ReconciliateurSalles reconciliateurSalles,
+      final ReconciliateurArtistes reconciliateurArtistes,
+      final LogsAdminWorker logsAdminWorker) {
     this.db = db;
     this.reconciliateurSalles = reconciliateurSalles;
     this.reconciliateurArtistes = reconciliateurArtistes;
     this.logsAdminWorker = logsAdminWorker;
   }
 
-  /// Injection par setter (plutôt que constructeur) de la référence proxifiée de ce bean, pour
-  /// éviter le problème d'auto-référence à la construction — l'appel à {@link
-  /// #persisterLotTransactionnel} passe ainsi par le proxy AOP Spring et commit sa propre
-  /// transaction par sous-lot, plutôt qu'une transaction unique englobant toute la boucle. En
-  /// dehors d'un contexte Spring (tests unitaires n'exerçant pas ce chemin), {@code self} reste
-  /// {@code null} sans effet — seul {@link #persisterConcerts} avec une liste non vide l'exerce.
-  ///
-  /// @param self référence proxifiée de ce bean ({@code @Lazy})
+  /**
+   * Injection par setter (pas par constructeur, évite l'auto-référence à la
+   * construction) — {@link #persisterLotTransactionnel} passe par le proxy
+   * AOP Spring, commit par sous-lot plutôt qu'une transaction unique.
+   * @param self référence proxifiée de ce bean ({@code @Lazy})
+   */
   @Autowired
-  public void setSelf(@Lazy PersisterConcerts self) {
+  public void setSelf(@Lazy final PersisterConcerts self) {
     this.self = self;
   }
 
-  /// Vérifie si deux noms de salle normalisés désignent la même salle.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les salles sont considérées identiques
-  /// @see ReconciliateurSalles#estDoublonSalle
-  public static boolean estDoublonSalle(String a, String b) {
-    return ReconciliateurSalles.estDoublonSalle(a, b);
+  /**
+   * Vérifie si deux noms de salle normalisés désignent la même salle.
+   *
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
+   * @return {@code true} si les salles sont considérées identiques
+   * @see ReconciliateurSalles#estDoublonSalle
+   */
+  public static boolean estDoublonSalle(final String nomA, final String nomB) {
+    return ReconciliateurSalles.estDoublonSalle(nomA, nomB);
   }
 
-  /// Vérifie si deux noms d'artiste normalisés désignent le même artiste.
-  ///
-  /// @param a premier nom normalisé
-  /// @param b deuxième nom normalisé
-  /// @return {@code true} si les artistes sont considérés identiques
-  /// @see ReconciliateurArtistes#estDoublonArtiste
-  public static boolean estDoublonArtiste(String a, String b) {
-    return ReconciliateurArtistes.estDoublonArtiste(a, b);
+  /**
+   * Vérifie si deux noms d'artiste normalisés désignent le même artiste.
+   *
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
+   * @return {@code true} si les artistes sont considérés identiques
+   * @see ReconciliateurArtistes#estDoublonArtiste
+   */
+  public static boolean estDoublonArtiste(final String nomA, final String nomB) {
+    return ReconciliateurArtistes.estDoublonArtiste(nomA, nomB);
   }
 
-  /// Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
-  ///
-  /// @param a première chaîne normalisée
-  /// @param b deuxième chaîne normalisée
-  /// @return coefficient de Jaccard entre 0.0 et 1.0
-  /// @see ReconciliateurSalles#jaccardTokens
-  public static double jaccardTokens(String a, String b) {
-    return ReconciliateurSalles.jaccardTokens(a, b);
+  /**
+   * Calcule le coefficient de Jaccard sur les tokens des deux chaînes.
+   *
+   * @param nomA première chaîne normalisée
+   * @param nomB deuxième chaîne normalisée
+   * @return coefficient de Jaccard entre 0.0 et 1.0
+   * @see ReconciliateurSalles#jaccardTokens
+   */
+  public static double jaccardTokens(final String nomA, final String nomB) {
+    return ReconciliateurSalles.jaccardTokens(nomA, nomB);
   }
 
-  private static int scoreArtisteSalle(String artiste, String salle) {
-    int artisteDiacr =
+  // equalsIgnoreCase ne convient pas ici : le test porte sur chaque nom
+  // lui-même (déjà entièrement majuscule ou non), pas sur une comparaison
+  // insensible à la casse entre deux chaînes distinctes.
+  private static int scoreArtisteSalle(final String artiste, final String salle) {
+    final int artisteDiacr =
         Normalizer.normalize(artiste, Normalizer.Form.NFD).length() - artiste.length();
-    int salleDiacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
-    int artisteCasseMixte = !artiste.equals(artiste.toUpperCase()) ? 5 : 0;
-    int salleCasseMixte = !salle.equals(salle.toUpperCase()) ? 1 : 0;
+    final int salleDiacr =
+        Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
+    final int artisteCasseMixte = artiste.equals(artiste.toUpperCase(Locale.ROOT)) ? 0 : 5;
+    final int salleCasseMixte = salle.equals(salle.toUpperCase(Locale.ROOT)) ? 0 : 1;
     return artisteDiacr * 10 + artisteCasseMixte + salleDiacr + salleCasseMixte;
   }
 
-  /// Dédoublonne par clé de conflit {@code (artiste_norm, date, heure, salle_norm)}.
-  ///
-  /// <p>Deux concerts du même artiste dans la même salle le même jour avec des heures différentes
-  /// (matinée + soirée) sont considérés distincts. Deux concerts sans heure (null) sont considérés
-  /// identiques et fusionnés. En cas de doublon, conserve la version avec le meilleur score
-  /// (diacritiques et casse mixte préférés).
-  ///
-  /// @param liste concerts bruts à dédoublonner
-  /// @return liste sans doublons
-  public static List<ConcertBrut> deduplicerParCleConflit(List<ConcertBrut> liste) {
-    Map<String, ConcertBrut> parCle = new LinkedHashMap<>();
-    for (ConcertBrut c : liste) {
-      String cle =
+  /**
+   * Dédoublonne par clé de conflit {@code (artiste_norm, date, heure,
+   * salle_norm)} — deux concerts avec heures différentes le même jour sont
+   * distincts, sans heure sont fusionnés ; garde la version au meilleur
+   * score (diacritiques/casse mixte préférés).
+   * @param liste concerts bruts à dédoublonner
+   * @return liste sans doublons
+   */
+  public static List<ConcertBrut> deduplicerParCleConflit(final List<ConcertBrut> liste) {
+    final Map<String, ConcertBrut> parCle = new LinkedHashMap<>();
+    for (final ConcertBrut c : liste) {
+      final String cle =
           Normalisation.normaliserTexte(c.artiste())
               + "|"
               + c.date()
@@ -145,7 +144,7 @@ public class PersisterConcerts {
               + (c.heure() != null ? c.heure() : "")
               + "|"
               + Normalisation.normaliserTexte(c.salle());
-      ConcertBrut existant = parCle.get(cle);
+      final ConcertBrut existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(c.artiste(), c.salle())
               > scoreArtisteSalle(existant.artiste(), existant.salle())) {
@@ -155,23 +154,19 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure, salleId)}.
-  ///
-  /// <p>La contrainte {@code uq_concerts_artiste_date_heure_salle} porte sur {@code salle_id}
-  /// (NULLS NOT DISTINCT) depuis la migration V37/V14. Deux concerts TM/Eventim nommant la même
-  /// salle différemment ont le même {@code salle_id} après résolution — ils conflicteraient au sein
-  /// d'un même INSERT ON CONFLICT DO UPDATE. Ce dedup les élimine en amont.
-  ///
-  /// <p>Doit être appelé APRÈS {@link ReconciliateurSalles#raccrocherSallesParNomNorm} afin que
-  /// tous les {@code salle_id} soient résolus.
-  ///
-  /// @param lot valeurs de concerts après réconciliation complète des salles
-  /// @return lot sans doublons
-  public static List<ValeurConcert> deduplicerLotReconcilie(List<ValeurConcert> lot) {
-    Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
-    for (ValeurConcert v : lot) {
-      String salleId = v.salleId() != null ? v.salleId().toString() : v.salleNorm();
-      String cle =
+  /**
+   * Dédoublonne un lot réconcilié par {@code (artisteNorm, date, heure,
+   * salleId)} — la contrainte {@code uq_evenements} porte sur {@code
+   * salle_id} ; deux noms résolus au même identifiant conflicteraient
+   * sinon. Après {@link ReconciliateurSalles#raccrocherSallesParNomNorm}.
+   * @param lot valeurs après réconciliation complète des salles
+   * @return lot sans doublons
+   */
+  public static List<ValeurConcert> deduplicerLotReconcilie(final List<ValeurConcert> lot) {
+    final Map<String, ValeurConcert> parCle = new LinkedHashMap<>();
+    for (final ValeurConcert v : lot) {
+      final String salleId = v.salleId() != null ? v.salleId().toString() : v.salleNorm();
+      final String cle =
           v.artisteNorm()
               + "|"
               + v.date()
@@ -179,7 +174,7 @@ public class PersisterConcerts {
               + (v.heure() != null ? v.heure() : "")
               + "|"
               + salleId;
-      ValeurConcert existant = parCle.get(cle);
+      final ValeurConcert existant = parCle.get(cle);
       if (existant == null
           || scoreArtisteSalle(v.artiste(), v.salle())
               > scoreArtisteSalle(existant.artiste(), existant.salle())) {
@@ -189,139 +184,170 @@ public class PersisterConcerts {
     return new ArrayList<>(parCle.values());
   }
 
-  /// Résout les UUIDs internes depuis les identifiants sources préfixés.
-  ///
-  /// <p>Pour chaque concert portant un {@code salleSourceId} ou {@code artisteSourceId}, consulte
-  /// {@code salle_sources} et {@code artiste_sources} pour trouver l'UUID stable. En cas de
-  /// renommage de salle, met à jour {@code salles.nom}.
-  ///
-  /// <p>Pour les salles TM dont le {@code salleSourceId} est absent de {@code salle_sources},
-  /// effectue un upsert dans {@code salles} et {@code salle_sources}.
-  ///
-  /// <p>Pour les concerts sans {@code salleSourceId} du tout (TM omet parfois {@code venue.id} pour
-  /// un événement donné, sans identifiant source exploitable), tente un repli par correspondance
-  /// floue ({@link ReconciliateurSalles#chercherSalleParTokens}) plutôt que de laisser {@code
-  /// salle_id} indéfiniment {@code null} — sans identifiant source fiable, aucune salle n'est créée
-  /// si le repli échoue (pas de salle fantôme).
-  ///
-  /// <p>Pour les concerts sans {@code artiste_id} après résolution par source (y compris les
-  /// concerts Digitick sans {@code artisteSourceId}), effectue un lookup batch par {@code nom_norm}
-  /// dans la table {@code artistes}.
-  ///
-  /// @param concerts valeurs normalisées avant upsert
-  /// @return liste enrichie avec les UUIDs résolus
-  private List<ValeurConcert> resoudreIdentitesSources(List<ValeurConcert> concerts) {
-    Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
-    Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
+  /**
+   * Résout les UUIDs internes depuis les identifiants sources préfixés
+   * (upsert des salles TM absentes de {@code salle_sources}, repli flou
+   * ou lookup {@code nom_norm} si aucun identifiant source n'est résolu) —
+   * détail : CLAUDE.md, Dédoublonnage inter-sources.
+   * @param concerts valeurs normalisées avant upsert
+   * @return liste enrichie avec les UUIDs résolus
+   */
+  private List<ValeurConcert> resoudreIdentitesSources(final List<ValeurConcert> concerts) {
+    final Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
+    final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
     reconciliateurSalles.absorberRenommagesSalles(concerts, cachesSalles);
+    upsertSallesSourcesManquantes(concerts, cachesSalles);
 
-    for (ValeurConcert c : concerts) {
-      if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
-        UUID uuid = reconciliateurSalles.upsertSalleSource(c);
-        if (uuid != null) cachesSalles.put(c.salleSourceId(), uuid);
-      }
-    }
+    final Map<UUID, String> deptsConnus = resoudreDeptsConnusSallesMappees(concerts, cachesSalles);
+    final Map<String, UUID> cachesSallesParNom =
+        resoudreSallesParNomFallback(concerts, cachesSalles, deptsConnus);
 
-    // Un mapping salle_sources réutilisé contourne les garde-fous géographiques appliqués à la
-    // création d'un nouveau mapping — à valider avant de lui faire confiance.
-    Set<UUID> sallesMappees =
-        concerts.stream()
-            .filter(c -> c.salleSourceId() != null)
-            .map(c -> cachesSalles.get(c.salleSourceId()))
-            .filter(java.util.Objects::nonNull)
-            .collect(Collectors.toSet());
-    Map<UUID, String> deptsConnus = reconciliateurSalles.deptsConnus(sallesMappees);
-
-    Map<String, UUID> cachesSallesParNom = new HashMap<>();
-    for (ValeurConcert c : concerts) {
-      UUID salleMappee = c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-      if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
-        logsAdminWorker.inserer(
-            "warn",
-            "persistance",
-            "mapping salle_sources ignoré — incohérence géographique salleId="
-                + salleMappee
-                + " deptConnu="
-                + deptsConnus.get(salleMappee)
-                + " deptEntrant="
-                + c.dept()
-                + " artiste="
-                + c.artisteNorm(),
-            Map.of("salleId", salleMappee.toString(), "artiste", c.artisteNorm()));
-      }
-      boolean besoinFallback =
-          c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
-      if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
-        UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
-        if (salleId == null) salleId = reconciliateurSalles.chercherSalleParCleForte(c);
-        cachesSallesParNom.put(c.salleNorm(), salleId);
-      }
-    }
-
-    List<ValeurConcert> resolus =
-        concerts.stream()
-            .map(
-                c -> {
-                  UUID salleMappee =
-                      c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-                  UUID salleId =
-                      c.salleSourceId() != null
-                              && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
-                          ? salleMappee
-                          : cachesSallesParNom.get(c.salleNorm());
-                  UUID artisteId =
-                      c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
-                  if (salleId == null && artisteId == null) return c;
-                  return c.avecUuids(
-                      salleId != null ? salleId : c.salleId(),
-                      artisteId != null ? artisteId : c.artisteId());
-                })
-            .toList();
+    final List<ValeurConcert> resolus =
+        appliquerResolutionUuids(
+            concerts, cachesSalles, cachesArtistes, cachesSallesParNom, deptsConnus);
 
     return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
   }
 
-  /// Indique si un mapping {@code salle_sources} réutilisé contredit le département déjà connu de
-  /// la salle qu'il désigne.
-  ///
-  /// @param salleMappee salle résolue via le mapping source, ou {@code null} si non résolue
-  /// @param deptEntrant département du concert entrant, ou {@code null} si inconnu
-  /// @param deptsConnus départements connus par salle (voir {@link
-  ///   ReconciliateurSalles#deptsConnus})
-  /// @return {@code true} si le mapping doit être écarté au profit d'une résolution par nom
+  private void upsertSallesSourcesManquantes(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    for (final ValeurConcert c : concerts) {
+      if (c.salleSourceId() != null && cachesSalles.get(c.salleSourceId()) == null) {
+        final UUID uuid = reconciliateurSalles.upsertSalleSource(c);
+        if (uuid != null) {
+          cachesSalles.put(c.salleSourceId(), uuid);
+        }
+      }
+    }
+  }
+
+  private Map<UUID, String> resoudreDeptsConnusSallesMappees(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    final Set<UUID> sallesMappees =
+        concerts.stream()
+            .filter(c -> c.salleSourceId() != null)
+            .map(c -> cachesSalles.get(c.salleSourceId()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    return reconciliateurSalles.deptsConnus(sallesMappees);
+  }
+
+  // Un mapping salle_sources réutilisé contourne les garde-fous géographiques
+  // appliqués à la création d'un nouveau mapping — à valider avant de lui faire
+  // confiance.
+  private Map<String, UUID> resoudreSallesParNomFallback(
+      final List<ValeurConcert> concerts,
+      final Map<String, UUID> cachesSalles,
+      final Map<UUID, String> deptsConnus) {
+    final Map<String, UUID> cachesSallesParNom = new HashMap<>();
+    for (final ValeurConcert c : concerts) {
+      final UUID salleMappee =
+          c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+      if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
+        journaliserMappingIncoherent(salleMappee, c, deptsConnus);
+      }
+      final boolean besoinFallback =
+          c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
+      if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
+        UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
+        if (salleId == null) {
+          salleId = reconciliateurSalles.chercherSalleParCleForte(c);
+        }
+        cachesSallesParNom.put(c.salleNorm(), salleId);
+      }
+    }
+    return cachesSallesParNom;
+  }
+
+  private void journaliserMappingIncoherent(
+      final UUID salleMappee, final ValeurConcert concert, final Map<UUID, String> deptsConnus) {
+    logsAdminWorker.inserer(
+        "warn",
+        "persistance",
+        "mapping salle_sources ignoré — incohérence géographique salleId="
+            + salleMappee
+            + " deptConnu="
+            + deptsConnus.get(salleMappee)
+            + " deptEntrant="
+            + concert.dept()
+            + " artiste="
+            + concert.artisteNorm(),
+        Map.of("salleId", salleMappee.toString(), "artiste", concert.artisteNorm()));
+  }
+
+  private List<ValeurConcert> appliquerResolutionUuids(
+      final List<ValeurConcert> concerts,
+      final Map<String, UUID> cachesSalles,
+      final Map<String, UUID> cachesArtistes,
+      final Map<String, UUID> cachesSallesParNom,
+      final Map<UUID, String> deptsConnus) {
+    return concerts.stream()
+        .map(
+            c -> {
+              final UUID salleMappee =
+                  c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
+              final UUID salleId =
+                  c.salleSourceId() != null
+                          && !mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)
+                      ? salleMappee
+                      : cachesSallesParNom.get(c.salleNorm());
+              final UUID artisteId =
+                  c.artisteSourceId() != null ? cachesArtistes.get(c.artisteSourceId()) : null;
+              if (salleId == null && artisteId == null) {
+                return c;
+              }
+              return c.avecUuids(
+                  salleId != null ? salleId : c.salleId(),
+                  artisteId != null ? artisteId : c.artisteId());
+            })
+        .toList();
+  }
+
+  /**
+   * Indique si un mapping {@code salle_sources} réutilisé contredit le
+   * département déjà connu de la salle qu'il désigne.
+   * @param salleMappee salle résolue via le mapping, ou null si non résolue
+   * @param deptEntrant département du concert entrant, ou null si inconnu
+   * @param deptsConnus départements connus par salle (cf. deptsConnus)
+   * @return {@code true} si le mapping doit être écarté
+   */
   private static boolean mappingSalleIncoherent(
-      UUID salleMappee, String deptEntrant, Map<UUID, String> deptsConnus) {
-    if (salleMappee == null || deptEntrant == null) return false;
-    String deptConnu = deptsConnus.get(salleMappee);
+      final UUID salleMappee, final String deptEntrant, final Map<UUID, String> deptsConnus) {
+    if (salleMappee == null || deptEntrant == null) {
+      return false;
+    }
+    final String deptConnu = deptsConnus.get(salleMappee);
     return deptConnu != null && !deptConnu.equals(deptEntrant);
   }
 
-  /// Résultat de la persistance d'un lot de concerts.
-  ///
-  /// @param nbInseres nombre de concerts insérés
-  /// @param nbMisAJour nombre de concerts mis à jour
+  /**
+   * Résultat de la persistance d'un lot de concerts.
+   *
+   * @param nbInseres nombre de concerts insérés
+   * @param nbMisAJour nombre de concerts mis à jour
+   */
   public record ResultatPersistance(int nbInseres, int nbMisAJour) {}
 
-  /// Persiste les concerts dédoublonnés en base via upsert par lots de {@value #TAILLE_LOT}.
-  ///
-  /// <p>Chaque sous-lot est persisté dans sa propre transaction ({@link
-  /// #persisterLotTransactionnel}) plutôt que dans une transaction unique englobant toute la boucle
-  /// — une interruption (exception sur un sous-lot) ne perd ainsi que le sous-lot en cours, pas les
-  /// sous-lots déjà committés, conformément au motif de résilience "persistance par lot" déjà
-  /// appliqué ailleurs dans le worker (enrichissement, fetch).
-  ///
-  /// @param liste concerts à persister
-  /// @return résultat avec nombre d'insertions et de mises à jour
-  public ResultatPersistance persisterConcerts(List<ConcertBrut> liste) {
-    if (liste.isEmpty()) return new ResultatPersistance(0, 0);
+  /**
+   * Persiste les concerts dédoublonnés via upsert par lots de {@value
+   * #TAILLE_LOT}, chaque sous-lot dans sa propre transaction ({@link
+   * #persisterLotTransactionnel}) — une interruption ne perd que le
+   * sous-lot en cours, pas ceux déjà committés.
+   * @param liste concerts à persister
+   * @return résultat avec nombre d'insertions et de mises à jour
+   */
+  public ResultatPersistance persisterConcerts(final List<ConcertBrut> liste) {
+    if (liste.isEmpty()) {
+      return new ResultatPersistance(0, 0);
+    }
 
-    List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
-    List<ConcertBrut> listeFiltree =
+    final List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
+    final List<ConcertBrut> listeFiltree =
         apresDedup.stream()
             .filter(
                 c -> {
                   if (Normalisation.normaliserTexte(c.artiste()).isBlank()) {
-                    log.warn(
+                    LOG.warn(
                         "concert rejeté — artiste_norm vide artiste={} date={} salle={}",
                         c.artiste(),
                         c.date(),
@@ -336,14 +362,14 @@ public class PersisterConcerts {
     int totalUpdates = 0;
 
     for (int debut = 0; debut < listeFiltree.size(); debut += TAILLE_LOT) {
-      List<ConcertBrut> lot =
+      final List<ConcertBrut> lot =
           listeFiltree.subList(debut, Math.min(debut + TAILLE_LOT, listeFiltree.size()));
-      ResultatPersistance resultatLot = self.persisterLotTransactionnel(lot);
+      final ResultatPersistance resultatLot = self.persisterLotTransactionnel(lot);
       totalInserts += resultatLot.nbInseres();
       totalUpdates += resultatLot.nbMisAJour();
     }
 
-    log.info(
+    LOG.info(
         "concerts persistés total={} inserts={} updates={}",
         totalInserts + totalUpdates,
         totalInserts,
@@ -351,13 +377,18 @@ public class PersisterConcerts {
     return new ResultatPersistance(totalInserts, totalUpdates);
   }
 
-  /// Partie transactionnelle et isolée d'un sous-lot de {@link #persisterConcerts}.
-  ///
-  /// @param lot sous-lot de concerts bruts (au plus {@value #TAILLE_LOT})
-  /// @return résultat du sous-lot
+  /**
+   * Partie transactionnelle et isolée d'un sous-lot de
+   * {@link #persisterConcerts} .
+   *
+   * @param lot sous-lot de concerts bruts (au plus {@value #TAILLE_LOT} )
+   * @return résultat du sous-lot
+   */
   @Transactional
-  ResultatPersistance persisterLotTransactionnel(List<ConcertBrut> lot) {
-    List<ValeurConcert> valeursBrutes =
+  /* package-private : requis pour l'auto-invocation via le proxy self
+   * (transaction dédiée par lot). */
+  ResultatPersistance persisterLotTransactionnel(final List<ConcertBrut> lot) {
+    final List<ValeurConcert> valeursBrutes =
         lot.stream()
             .map(
                 c ->
@@ -389,7 +420,8 @@ public class PersisterConcerts {
     db.alignerHeureReportTM(valeurs);
     valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
     valeurs = reconciliateurArtistes.reconcilierArtistes(valeurs);
-    // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm varient simultanément.
+    // Deuxième passe salle : couvre le cas où artiste_norm et salle_norm
+    // varient simultanément.
     valeurs = reconciliateurSalles.reconcilierSalles(valeurs);
     valeurs = reconciliateurSalles.raccrocherSallesParNomNorm(valeurs);
     valeurs = deduplicerLotReconcilie(valeurs);

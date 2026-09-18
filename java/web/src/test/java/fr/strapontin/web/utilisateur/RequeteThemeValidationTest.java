@@ -13,10 +13,12 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteTheme}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteTheme}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class RequeteThemeValidationTest {
 
   private static final Validator VALIDATOR =
@@ -24,7 +26,7 @@ class RequeteThemeValidationTest {
 
   @Test
   void valeur_fournie_estValide() {
-    Set<ConstraintViolation<RequeteTheme>> violations =
+    final Set<ConstraintViolation<RequeteTheme>> violations =
         VALIDATOR.validate(new RequeteTheme("sombre"));
     assertTrue(violations.isEmpty());
   }
@@ -33,13 +35,15 @@ class RequeteThemeValidationTest {
   // sur un Set.of(...) immuable (UserConfigService) au lieu d'un 400 propre.
   @Test
   void valeur_null_estRejete() {
-    Set<ConstraintViolation<RequeteTheme>> violations = VALIDATOR.validate(new RequeteTheme(null));
+    final Set<ConstraintViolation<RequeteTheme>> violations =
+        VALIDATOR.validate(new RequeteTheme(null));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void valeur_vide_estRejete() {
-    Set<ConstraintViolation<RequeteTheme>> violations = VALIDATOR.validate(new RequeteTheme(""));
+    final Set<ConstraintViolation<RequeteTheme>> violations =
+        VALIDATOR.validate(new RequeteTheme(""));
     assertFalse(violations.isEmpty());
   }
 }

@@ -13,14 +13,16 @@ import jakarta.validation.Validator;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
-///
-/// <p>Le {@code wikidataId} est concaténé dans une requête SPARQL exécutée par le job
-/// d'enrichissement nocturne ({@code WikidataSalleSource}) — sans contrainte de format, une valeur
-/// arbitraire pouvait casser la requête exécutée contre {@code query.wikidata.org}.
-///
-/// @since 2.6.3
-/// @author Kwaite
+/**
+ * Tests unitaires de validation Bean Validation de {@link RequeteAjouter}.
+ *
+ * <p>Le {@code wikidataId} est concaténé dans une requête SPARQL exécutée par le job
+ * d'enrichissement nocturne ({@code WikidataSalleSource}) — sans contrainte de format, une valeur
+ * arbitraire pouvait casser la requête exécutée contre {@code query.wikidata.org}.
+ *
+ * @since 2.6.3
+ * @author Kwaite
+ */
 class RequeteAjouterValidationTest {
 
   private static final Validator VALIDATOR =
@@ -28,14 +30,14 @@ class RequeteAjouterValidationTest {
 
   @Test
   void wikidataId_null_estValide() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("Zénith Paris", "tm:venue-1", null, null));
     assertTrue(violations.isEmpty());
   }
 
   @Test
   void wikidataId_formatQIdValide_estValide() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("Zénith Paris", null, null, "Q3438008"));
     assertTrue(violations.isEmpty());
   }
@@ -44,7 +46,7 @@ class RequeteAjouterValidationTest {
   // (WikidataSalleSource.java:154-168) — doit être rejetée avant persistance.
   @Test
   void wikidataId_formatInvalide_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(
             new RequeteAjouter("Zénith Paris", null, null, "Q1 . } SELECT ?x WHERE"));
     assertFalse(violations.isEmpty());
@@ -52,30 +54,30 @@ class RequeteAjouterValidationTest {
 
   @Test
   void nom_vide_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("", "tm:venue-1"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void nom_null_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter(null, "tm:venue-1", null, null));
     assertFalse(violations.isEmpty());
   }
 
-  // un nom de plusieurs Mo atteint Normalisation.levenshtein() (tableau int[m][n]) via
+  // un nom de plusieurs Mo atteint DistanceTexte.levenshtein() (tableau int[m][n]) via
   // CorrespondanceSalle.estDoublonSalle — risque de OutOfMemoryError sans cette borne.
   @Test
   void nom_troplong_estRejete() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("A".repeat(201), "tm:venue-1"));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void nom_tailleLimite_estValide() {
-    Set<ConstraintViolation<RequeteAjouter>> violations =
+    final Set<ConstraintViolation<RequeteAjouter>> violations =
         VALIDATOR.validate(new RequeteAjouter("A".repeat(200), "tm:venue-1"));
     assertTrue(violations.isEmpty());
   }

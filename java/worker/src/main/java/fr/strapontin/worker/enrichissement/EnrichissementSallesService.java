@@ -23,34 +23,36 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Orchestrateur d'enrichissement des salles (étapes 1-2).
-///
-/// Boucle sur les {@link SourceEnrichissementSalle} injectées (une nouvelle source = un bean
-/// Spring, sans modification de ce service). L'ordre de déclaration des beans dans {@code
-/// EnrichissementConfiguration} importe : {@code OverpassSalleSource} doit être déclaré avant
-/// {@code WikidataSalleSource} — le Q-ID découvert par Overpass est propagé aux sources suivantes
-/// dans la même passe pour que Wikidata puisse enrichir sur cette base. Pour les salles qu'Overpass
-/// n'a pas trouvées (nom absent d'OSM, instance publique surchargée), {@code WikidataSalleSource}
-/// tente ensuite sa propre recherche par nom — Overpass n'est donc plus un passage obligé.
-///
-/// Persistance par lot de {@link #TAILLE_LOT_PERSISTANCE} (et non en un seul bloc final) : avec
-/// Overpass en incident de surcharge, un cycle complet peut prendre plusieurs dizaines de minutes
-/// (chaque lot épuise son timeout avant d'abandonner) — persister uniquement à la toute fin
-/// perdrait tout le travail déjà résolu en cas d'interruption (redéploiement, crash, arrêt du job)
-/// avant la fin du cycle.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Orchestrateur d'enrichissement des salles (étapes 1-2), boucle sur les
+ * {@link SourceEnrichissementSalle} injectées — ordre de déclaration des
+ * beans et persistance par lot : CLAUDE.md, Enrichissement Wikidata/OSM.
+ * @since 2.6.0
+ * @author Kwaite
+ */
 @Service
 public class EnrichissementSallesService {
 
-  private static final Logger log = LoggerFactory.getLogger(EnrichissementSallesService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EnrichissementSallesService.class);
 
-  static final int TAILLE_LOT_PERSISTANCE = 25;
-  // Délai entre deux lots de persistance, en plus du délai intra-source (500ms/appel côté
-  // OverpassSalleSource et WikidataSalleSource) — laisse Overpass et Wikidata respirer entre deux
-  // lots plutôt que d'enchaîner immédiatement, sur des instances publiques déjà sous tension.
+  private static final int TAILLE_LOT_PERSISTANCE = 25;
+  // Délai entre deux lots de persistance, en plus du délai intra-source
+  // (500ms/appel côté OverpassSalleSource et WikidataSalleSource) — laisse
+  // Overpass et Wikidata respirer entre deux lots plutôt que d'enchaîner
+  // immédiatement, sur des instances publiques déjà sous tension.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
+  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de
+  // réussite déclenche une alerte — évite un faux positif sur un tout petit lot
+  // où un faible nombre de succès est plausible même en fonctionnement normal
+  // (aucune des quelques salles du jour n'existe sur Wikidata/OSM).
+  private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
+  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une
+  // dégradation chronique mais non totale (constaté en production : 90-100%
+  // d'échec chaque nuit durant 11 nuits, jamais 100% pile) reste alors
+  // indéfiniment sous le seuil. Un taux de réussite est requis, pas seulement
+  // une absence totale de résultat.
+  private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
+  private static final String CLE_WIKIDATA_ID = "wikidataId";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
@@ -59,13 +61,21 @@ public class EnrichissementSallesService {
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final SignalementMatchingService signalementMatchingService;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param sources sources d'enrichissement, dans leur ordre de déclaration
+   * @param logsAdminWorker journalisation du bilan de cycle
+   * @param suiviChronicite comptage des cycles consécutifs en échec par source
+   * @param fusionSallesClePortee fusion nocturne des salles détectées comme doublons
+   * @param signalementMatchingService journalisation des ambiguïtés de découverte
+   */
   public EnrichissementSallesService(
-      NamedParameterJdbcTemplate jdbc,
-      List<SourceEnrichissementSalle> sources,
-      LogsAdminWorker logsAdminWorker,
-      SuiviChroniciteService suiviChronicite,
-      FusionSallesClePorteeService fusionSallesClePortee,
-      SignalementMatchingService signalementMatchingService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final List<SourceEnrichissementSalle> sources,
+      final LogsAdminWorker logsAdminWorker,
+      final SuiviChroniciteService suiviChronicite,
+      final FusionSallesClePorteeService fusionSallesClePortee,
+      final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.sources = sources;
     this.logsAdminWorker = logsAdminWorker;
@@ -74,59 +84,50 @@ public class EnrichissementSallesService {
     this.signalementMatchingService = signalementMatchingService;
   }
 
-  /// Enrichit les salles sans {@code wikidata_id} dont {@code jour_batch} correspond au jour ISO
-  /// courant (rotation hebdomadaire, — remplace l'ancien plafond fixe de 500/nuit, qui laissait une
-  /// entité en échec systématique éternellement prioritaire, cf.), priorisées par nombre de
-  /// concerts liés à l'intérieur de ce sous-ensemble. N'écrase jamais un {@code nom_affiche} déjà
-  /// présent (override manuel admin).
-  ///
-  /// @return nombre de salles effectivement mises à jour
+  /**
+   * Enrichit les salles sans {@code wikidata_id} du {@code jour_batch}
+   * courant (rotation hebdomadaire), priorisées par nombre de concerts
+   * liés — n'écrase jamais un {@code nom_affiche} déjà présent.
+   * @return nombre de salles effectivement mises à jour
+   */
   public int enrichir() {
-    List<SalleAEnrichir> candidats = selectionnerCandidats();
+    final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
-      log.info("enrichissement:salles — aucun candidat");
+      LOG.info("enrichissement:salles — aucun candidat");
       return 0;
     }
 
     int nbEnrichis = 0;
     for (int i = 0; i < candidats.size(); i += TAILLE_LOT_PERSISTANCE) {
-      if (i > 0) EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
-      List<SalleAEnrichir> lot =
+      if (i > 0) {
+        EnrichissementUtils.attendreEntreLots(DELAI_ENTRE_LOTS_MS);
+      }
+      final List<SalleAEnrichir> lot =
           candidats.subList(i, Math.min(i + TAILLE_LOT_PERSISTANCE, candidats.size()));
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
-    log.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
+    LOG.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
     alerterSiCycleImproductif(candidats.size(), nbEnrichis);
     remonterBilans();
     return nbEnrichis;
   }
 
-  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de réussite déclenche une
-  // alerte — évite un faux positif sur un tout petit lot où un faible nombre de succès est
-  // plausible même en fonctionnement normal (aucune des quelques salles du jour n'existe sur
-  // Wikidata/OSM).
-  private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
-  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une dégradation
-  // chronique mais non totale (constaté en production : 90-100% d'échec chaque nuit durant 11
-  // nuits, jamais 100% pile) reste alors indéfiniment sous le seuil. Un taux de réussite est
-  // requis, pas seulement une absence totale de résultat.
-  private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
-
-  /// Alerte si un cycle avec un nombre significatif de candidats a un taux de réussite chronique
-  /// trop bas — un bilan d'appels/erreurs à 0 échec (voir {@link #remonterBilans}) ne détecte pas
-  /// ce cas : une source répondant `200 OK` avec un contenu systématiquement vide (aucune
-  /// correspondance, jamais une erreur HTTP) ne remonte jamais rien via ce mécanisme, alors qu'elle
-  /// peut être structurellement inopérante. Un seuil strict à 0 salle enrichie (avant 2.7.9) ne
-  /// détectait qu'une panne totale, jamais une dégradation chronique mais non totale (constaté en
-  /// production : 90-100% d'échec chaque nuit durant 11 nuits, jamais 100% pile, restant ainsi
-  /// indéfiniment sous le radar).
-  ///
-  /// @param nbCandidats nombre de salles traitées dans ce cycle
-  /// @param nbEnrichis nombre de salles effectivement enrichies
-  private void alerterSiCycleImproductif(int nbCandidats, int nbEnrichis) {
-    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) return;
-    double tauxReussite = (double) nbEnrichis / nbCandidats;
-    if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) return;
+  /**
+   * Alerte sur un taux de réussite chronique trop bas (voir {@link
+   * #SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF}/{@link
+   * #SEUIL_TAUX_REUSSITE_MIN_CYCLE}) — {@link #remonterBilans} ne détecte
+   * pas une source répondant 200 OK avec un contenu vide.
+   * @param nbCandidats nombre de salles traitées dans ce cycle
+   * @param nbEnrichis nombre de salles effectivement enrichies
+   */
+  private void alerterSiCycleImproductif(final int nbCandidats, final int nbEnrichis) {
+    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) {
+      return;
+    }
+    final double tauxReussite = (double) nbEnrichis / nbCandidats;
+    if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) {
+      return;
+    }
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",
@@ -138,17 +139,24 @@ public class EnrichissementSallesService {
         Map.of("candidats", nbCandidats, "enrichis", nbEnrichis));
   }
 
-  /// Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque source implémentant
-  /// {@link SourceAvecBilanFetch} pour le cycle qui vient de se terminer — même mécanisme générique
-  /// que {@code WorkerStatsService.remonterBilan}, absent jusqu'ici sur les sources
-  /// d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré la moindre entrée
-  /// {@code logs_admin}.
+  /**
+   * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque
+   * source implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de
+   * se terminer — même mécanisme générique que
+   * {@code WorkerStatsService.remonterBilan} , absent jusqu'ici sur les sources
+   * d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré
+   * la moindre entrée {@code logs_admin}.
+   */
   private void remonterBilans() {
-    for (SourceEnrichissementSalle source : sources) {
-      if (!(source instanceof SourceAvecBilanFetch avecBilan)) continue;
-      BilanFetch bilan = avecBilan.preleverBilan();
-      if (bilan.appels() == 0) continue;
-      int streak =
+    for (final SourceEnrichissementSalle source : sources) {
+      if (!(source instanceof SourceAvecBilanFetch avecBilan)) {
+        continue;
+      }
+      final BilanFetch bilan = avecBilan.preleverBilan();
+      if (bilan.appels() == 0) {
+        continue;
+      }
+      final int streak =
           suiviChronicite.enregistrerCycle(
               "reconciliation:nocturne|" + EnrichissementUtils.capitaliser(source.nom()),
               bilan.erreursHttp() > 0);
@@ -167,30 +175,34 @@ public class EnrichissementSallesService {
     }
   }
 
-  private int enrichirEtPersisterLot(List<SalleAEnrichir> lot) {
-    Map<UUID, EnrichissementSalle> accumule = new HashMap<>();
+  private int enrichirEtPersisterLot(final List<SalleAEnrichir> lot) {
+    final Map<UUID, EnrichissementSalle> accumule = new HashMap<>();
     List<SalleAEnrichir> courant = lot;
-    for (SourceEnrichissementSalle source : sources) {
-      Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(courant);
-      for (var entree : resultat.entrySet()) {
+    for (final SourceEnrichissementSalle source : sources) {
+      final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(courant);
+      for (final Map.Entry<UUID, EnrichissementSalle> entree : resultat.entrySet()) {
         accumule.merge(entree.getKey(), entree.getValue(), EnrichissementSallesService::fusionner);
       }
       courant = appliquerWikidataIdConnu(courant, accumule);
     }
 
     int nbEnrichis = 0;
-    for (SalleAEnrichir salle : lot) {
-      EnrichissementSalle enrichissement = accumule.get(salle.id());
-      if (enrichissement == null) continue;
-      if (mettreAJourSalle(salle.id(), salle.nom(), enrichissement)) nbEnrichis++;
+    for (final SalleAEnrichir salle : lot) {
+      final EnrichissementSalle enrichissement = accumule.get(salle.id());
+      if (enrichissement == null) {
+        continue;
+      }
+      if (mettreAJourSalle(salle.id(), salle.nom(), enrichissement)) {
+        nbEnrichis++;
+      }
     }
     return nbEnrichis;
   }
 
-  // Repli sur le département d'un concert déjà rattaché quand salles.dept est vide — même pattern
-  // que ResolveurSalleParConcert (module worker.persister), sans quoi une salle sans ville ni dept
-  // renseignés n'a aucun signal de localisation pour écarter un homonyme Wikidata d'une autre
-  // ville (#1188).
+  // Repli sur le département d'un concert déjà rattaché quand salles.dept est
+  // vide — même pattern que ResolveurSalleParConcert (module worker.persister),
+  // sans quoi une salle sans ville ni dept renseignés n'a aucun signal de
+  // localisation pour écarter un homonyme Wikidata d'une autre ville (#1188).
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
@@ -216,40 +228,48 @@ public class EnrichissementSallesService {
   }
 
   private static List<SalleAEnrichir> appliquerWikidataIdConnu(
-      List<SalleAEnrichir> candidats, Map<UUID, EnrichissementSalle> accumule) {
+      final List<SalleAEnrichir> candidats, final Map<UUID, EnrichissementSalle> accumule) {
     return candidats.stream()
         .map(
             s -> {
-              EnrichissementSalle e = accumule.get(s.id());
-              String qid = e != null && e.wikidataId() != null ? e.wikidataId() : s.wikidataId();
+              final EnrichissementSalle enrichissement = accumule.get(s.id());
+              final String qid =
+                  enrichissement != null && enrichissement.wikidataId() != null
+                      ? enrichissement.wikidataId()
+                      : s.wikidataId();
               return new SalleAEnrichir(s.id(), s.nom(), s.nomNorm(), s.ville(), s.dept(), qid);
             })
         .toList();
   }
 
-  private static EnrichissementSalle fusionner(EnrichissementSalle a, EnrichissementSalle b) {
+  private static EnrichissementSalle fusionner(
+      final EnrichissementSalle existant, final EnrichissementSalle nouveau) {
     return new EnrichissementSalle(
-        b.wikidataId() != null ? b.wikidataId() : a.wikidataId(),
-        b.nomAffiche() != null ? b.nomAffiche() : a.nomAffiche(),
-        b.ville() != null ? b.ville() : a.ville(),
-        b.website() != null ? b.website() : a.website(),
-        b.capacite() != null ? b.capacite() : a.capacite(),
-        b.latitude() != null ? b.latitude() : a.latitude(),
-        b.longitude() != null ? b.longitude() : a.longitude());
+        nouveau.wikidataId() != null ? nouveau.wikidataId() : existant.wikidataId(),
+        nouveau.nomAffiche() != null ? nouveau.nomAffiche() : existant.nomAffiche(),
+        nouveau.ville() != null ? nouveau.ville() : existant.ville(),
+        nouveau.website() != null ? nouveau.website() : existant.website(),
+        nouveau.capacite() != null ? nouveau.capacite() : existant.capacite(),
+        nouveau.latitude() != null ? nouveau.latitude() : existant.latitude(),
+        nouveau.longitude() != null ? nouveau.longitude() : existant.longitude());
   }
 
-  /// @return {@code true} si la mise à jour a été appliquée (directement, ou via une fusion
-  ///   automatique en cas de collision {@code wikidata_id} avec une autre salle déjà établie),
-  ///   {@code false} si le conflit n'a pu être résolu automatiquement — auquel cas il est signalé
-  ///   ({@link SignalementMatchingService}) pour revue manuelle plutôt que de faire échouer tout le
-  ///   cycle de réconciliation.
-  private boolean mettreAJourSalle(UUID salleId, String nom, EnrichissementSalle e) {
-    Map<String, Object> params = new HashMap<>();
-    params.put("wikidataId", e.wikidataId());
-    params.put("nomAffiche", e.nomAffiche());
-    params.put("ville", e.ville());
-    params.put("latitude", e.latitude());
-    params.put("longitude", e.longitude());
+  /**
+   * @return {@code true} si la mise à jour a été appliquée (directement, ou via
+   *     une fusion automatique en cas de collision {@code wikidata_id} avec
+   *     une autre salle déjà établie), {@code false} si le conflit n'a pu être
+   *     résolu automatiquement — auquel cas il est signalé ({@link
+   *     SignalementMatchingService}) pour revue manuelle plutôt que de faire
+   *     échouer tout le cycle de réconciliation.
+   */
+  private boolean mettreAJourSalle(
+      final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
+    final Map<String, Object> params = new HashMap<>();
+    params.put(CLE_WIKIDATA_ID, enrichissement.wikidataId());
+    params.put("nomAffiche", enrichissement.nomAffiche());
+    params.put("ville", enrichissement.ville());
+    params.put("latitude", enrichissement.latitude());
+    params.put("longitude", enrichissement.longitude());
     params.put("id", salleId.toString());
     try {
       jdbc.update(
@@ -265,24 +285,23 @@ public class EnrichissementSallesService {
           params);
       return true;
     } catch (DuplicateKeyException ex) {
-      return gererCollisionWikidataId(salleId, nom, e);
+      return gererCollisionWikidataId(salleId, nom, enrichissement);
     }
   }
 
-  /// Une collision {@code wikidata_id} est un signal plus fort qu'une simple coïncidence de concert
-  /// (Wikidata affirme explicitement l'identité) — traité comme {@link
-  /// FusionSallesClePorteeService}, avec le même garde-fou GPS, mais fusion automatique uniquement
-  /// si les deux salles ont des coordonnées connues et proches (#1189) : à la différence d'une
-  /// fusion par clé forte, aucun autre signal positif (nom, dept) ne cross-valide cette collision,
-  /// l'absence de preuve géographique doit donc empêcher la fusion plutôt que l'autoriser par
-  /// défaut.
-  private boolean gererCollisionWikidataId(UUID salleId, String nom, EnrichissementSalle e) {
-    Map<String, Object> porteuse = trouverPorteuseWikidataId(e.wikidataId());
+  /**
+   * Collision {@code wikidata_id} : signal plus fort qu'une coïncidence de
+   * concert — fusion automatique seulement si coordonnées connues et
+   * proches, sinon signalement seul (CLAUDE.md, signalements_matching).
+   */
+  private boolean gererCollisionWikidataId(
+      final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
+    final Map<String, Object> porteuse = trouverPorteuseWikidataId(enrichissement.wikidataId());
     if (porteuse != null && tenterFusionParCoordonnees(salleId, porteuse)) {
-      log.info(
+      LOG.info(
           "collision wikidata_id résolue par fusion automatique salle={} wikidataId={} cible={}",
           nom,
-          e.wikidataId(),
+          enrichissement.wikidataId(),
           porteuse.get("id"));
       return true;
     }
@@ -293,37 +312,44 @@ public class EnrichissementSallesService {
         "wikidataId déjà attribué à une autre salle — conflit ignoré salle="
             + nom
             + " wikidataId="
-            + e.wikidataId(),
-        Map.of("salleId", salleId.toString(), "wikidataId", e.wikidataId()));
+            + enrichissement.wikidataId(),
+        Map.of("salleId", salleId.toString(), CLE_WIKIDATA_ID, enrichissement.wikidataId()));
     if (porteuse != null) {
       signalementMatchingService.signaler(
           "collision_wikidata_salle",
           "salle",
           salleId,
           "basse",
-          Map.of("wikidataId", e.wikidataId(), "salleExistante", porteuse.get("id").toString()));
+          Map.of(
+              CLE_WIKIDATA_ID,
+              enrichissement.wikidataId(),
+              "salleExistante",
+              porteuse.get("id").toString()));
     }
     return false;
   }
 
-  private Map<String, Object> trouverPorteuseWikidataId(String wikidataId) {
-    List<Map<String, Object>> lignes =
+  private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT id, latitude, longitude FROM salles WHERE wikidata_id = :wikidataId",
-            Map.of("wikidataId", wikidataId));
+            Map.of(CLE_WIKIDATA_ID, wikidataId));
     return lignes.isEmpty() ? null : lignes.get(0);
   }
 
-  private boolean tenterFusionParCoordonnees(UUID salleId, Map<String, Object> porteuse) {
-    List<Map<String, Object>> lignes =
+  private boolean tenterFusionParCoordonnees(
+      final UUID salleId, final Map<String, Object> porteuse) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()));
-    if (lignes.isEmpty()) return false;
-    Double latSalle = (Double) lignes.get(0).get("latitude");
-    Double lonSalle = (Double) lignes.get(0).get("longitude");
-    Double latPorteuse = (Double) porteuse.get("latitude");
-    Double lonPorteuse = (Double) porteuse.get("longitude");
+    if (lignes.isEmpty()) {
+      return false;
+    }
+    final Double latSalle = (Double) lignes.get(0).get("latitude");
+    final Double lonSalle = (Double) lignes.get(0).get("longitude");
+    final Double latPorteuse = (Double) porteuse.get("latitude");
+    final Double lonPorteuse = (Double) porteuse.get("longitude");
     if (!FusionSallesClePorteeService.coordonneesConnuesEtProches(
         latSalle, lonSalle, latPorteuse, lonPorteuse)) {
       return false;

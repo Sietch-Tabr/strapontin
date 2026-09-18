@@ -17,24 +17,20 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Gestion du quota journalier Ticketmaster stocké dans `app_config`.
-///
-/// Seuils de protection :
-///
-/// - `SEUIL_QUOTA_CRON = 500` : les jobs cron sont suspendus en dessous.
-/// - `SEUIL_QUOTA_ABORT = 50` : tous les jobs TM sont annulés en dessous.
-/// - `SEUIL_QUOTA_WARN = 200` : un avertissement est émis en dessous.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Gestion du quota journalier Ticketmaster ({@code app_config})
+ * (détail : CLAUDE.md, Jobs background).
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Service
 public class GestionQuotaTM {
 
-  private static final Logger log = LoggerFactory.getLogger(GestionQuotaTM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaTM.class);
 
-  static final int SEUIL_QUOTA_CRON = 500;
-  static final int SEUIL_QUOTA_ABORT = 50;
-  static final int SEUIL_QUOTA_WARN = 200;
+  private static final int SEUIL_QUOTA_CRON = 500;
+  private static final int SEUIL_QUOTA_ABORT = 50;
+  private static final int SEUIL_QUOTA_WARN = 200;
 
   private static final String CLE_QUOTA = "TM_QUOTA_JSON";
   private static final String CLE_DISPO = "dispo";
@@ -43,48 +39,55 @@ public class GestionQuotaTM {
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
-  public GestionQuotaTM(NamedParameterJdbcTemplate jdbc, ObjectMapper objectMapper) {
+  /**
+   * @param jdbc accès JDBC
+   * @param objectMapper sérialisation du quota en JSON
+   */
+  public GestionQuotaTM(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
   }
 
-  /// Lit le quota courant depuis {@code app_config}.
-  ///
-  /// <p>Si le timestamp {@code Rate-Limit-Reset} (en ms) est dépassé, retourne un quota
-  /// synthétique {@code dispo = total} et persiste la mise à jour pour débloquer les jobs cron.
-  /// Le premier vrai appel TM réécrira la valeur réelle depuis les headers.
-  ///
-  /// @return quota lu, ou vide si absent ou malformé
+  /**
+   * Lit le quota courant depuis {@code app_config} (détail :
+   * CLAUDE.md, Jobs background).
+   * @return quota lu, ou vide si absent ou malformé
+   */
   public Optional<QuotaTM> lireQuota() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_QUOTA),
               String.class);
-      if (json == null) return Optional.empty();
-      QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
+      if (json == null) {
+        return Optional.empty();
+      }
+      final QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
       if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
-        QuotaTM renouvele = new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
+        final QuotaTM renouvele =
+            new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
         ecrireQuota(renouvele);
-        log.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
+        LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
         return Optional.of(renouvele);
       }
       return Optional.of(quota);
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     } catch (JsonProcessingException e) {
-      log.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
+      LOG.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
   }
 
-  /// Persiste le quota en base dans {@code app_config}.
-  ///
-  /// @param quota quota à sauvegarder
-  public void ecrireQuota(QuotaTM quota) {
+  /**
+   * Persiste le quota en base dans {@code app_config}.
+   *
+   * @param quota quota à sauvegarder
+   */
+  public void ecrireQuota(final QuotaTM quota) {
     try {
-      String json = objectMapper.writeValueAsString(quota);
+      final String json = objectMapper.writeValueAsString(quota);
       jdbc.update(
           """
           INSERT INTO app_config (cle, valeur_chiffree)
@@ -93,21 +96,26 @@ public class GestionQuotaTM {
           """,
           Map.of("cle", CLE_QUOTA, "json", json));
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser le quota TM", e);
+      LOG.error("impossible de sérialiser le quota TM", e);
     }
   }
 
-  /// Vérifie le quota avant un job TM. Retourne `false` si le job doit être annulé.
-  ///
-  /// @param nomJob nom du job pour les logs
-  /// @return `true` si le job peut continuer
-  public boolean verifier(String nomJob) {
-    Optional<QuotaTM> quotaOpt = lireQuota();
-    if (quotaOpt.isEmpty()) return true;
+  /**
+   * Vérifie le quota avant un job TM. Retourne {@code false} si le job doit
+   * être annulé.
+   *
+   * @param nomJob nom du job pour les logs
+   * @return {@code true} si le job peut continuer
+   */
+  public boolean verifier(final String nomJob) {
+    final Optional<QuotaTM> quotaOpt = lireQuota();
+    if (quotaOpt.isEmpty()) {
+      return true;
+    }
 
-    QuotaTM quota = quotaOpt.get();
+    final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_ABORT) {
-      log.error(
+      LOG.error(
           "quota TM épuisé — job annulé dispo={} total={} job={}",
           quota.dispo(),
           quota.total(),
@@ -119,7 +127,7 @@ public class GestionQuotaTM {
       return false;
     }
     if (quota.dispo() < SEUIL_QUOTA_WARN) {
-      log.warn("quota TM faible dispo={} total={} job={}", quota.dispo(), quota.total(), nomJob);
+      LOG.warn("quota TM faible dispo={} total={} job={}", quota.dispo(), quota.total(), nomJob);
       logAdmin(
           "warn",
           "Quota TM faible",
@@ -128,15 +136,19 @@ public class GestionQuotaTM {
     return true;
   }
 
-  /// Vérifie si les jobs cron sont autorisés (quota ≥ 500).
-  ///
-  /// @return `true` si le cron peut s'exécuter
+  /**
+   * Vérifie si les jobs cron sont autorisés (quota ≥ 500).
+   *
+   * @return {@code true} si le cron peut s'exécuter
+   */
   public boolean cronAutorise() {
-    Optional<QuotaTM> quotaOpt = lireQuota();
-    if (quotaOpt.isEmpty()) return true;
-    QuotaTM quota = quotaOpt.get();
+    final Optional<QuotaTM> quotaOpt = lireQuota();
+    if (quotaOpt.isEmpty()) {
+      return true;
+    }
+    final QuotaTM quota = quotaOpt.get();
     if (quota.dispo() < SEUIL_QUOTA_CRON) {
-      log.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
+      LOG.warn("cron TM suspendu — quota insuffisant dispo={}", quota.dispo());
       logAdmin(
           "warn",
           "Cron TM suspendu — quota insuffisant",
@@ -146,10 +158,10 @@ public class GestionQuotaTM {
     return true;
   }
 
-  private void logAdmin(String niveau, String message, Map<String, Object> meta) {
+  private void logAdmin(final String niveau, final String message, final Map<String, Object> meta) {
     try {
-      String metaJson = objectMapper.writeValueAsString(meta);
-      Map<String, Object> params = new HashMap<>();
+      final String metaJson = objectMapper.writeValueAsString(meta);
+      final Map<String, Object> params = new HashMap<>();
       params.put("ts", Instant.now().toEpochMilli());
       params.put("niveau", niveau);
       params.put("source", "worker");
@@ -162,9 +174,9 @@ public class GestionQuotaTM {
           """,
           params);
     } catch (JsonProcessingException e) {
-      log.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
+      LOG.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
     } catch (Exception _) {
-      log.warn("Impossible d'insérer log quota admin");
+      LOG.warn("Impossible d'insérer log quota admin");
     }
   }
 }

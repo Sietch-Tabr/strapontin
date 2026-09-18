@@ -26,12 +26,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/// Tests d'intégration de [EnrichissementArtistesService] avec PostgreSQL réel (Testcontainers) —
-/// couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, symétrique à {@link
-/// EnrichissementSallesServiceIntegrationTest}.
-///
-/// @since 2.7.3
-/// @author Kwaite
+/**
+ * Tests d'intégration de [EnrichissementArtistesService] avec PostgreSQL réel (Testcontainers) —
+ * couvre spécifiquement la rotation hebdomadaire par {@code jour_batch}, symétrique à {@link
+ * EnrichissementSallesServiceIntegrationTest}.
+ *
+ * @since 2.7.3
+ * @author Kwaite
+ */
 class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @MockitoBean private WikidataArtisteSource wikidataArtisteSource;
@@ -53,7 +55,7 @@ class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegra
     when(deezerArtisteSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
   }
 
-  private UUID insererArtiste(String nom, String jourBatchExpression) {
+  private UUID insererArtiste(final String nom, final String jourBatchExpression) {
     return jdbc.queryForObject(
         "INSERT INTO artistes (nom, nom_norm, jour_batch) VALUES (:nom, :norm, "
             + jourBatchExpression
@@ -65,14 +67,14 @@ class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegra
   @Test
   @SuppressWarnings("unchecked")
   void enrichir_artisteDuJourBatchCourant_estCandidat() {
-    UUID artisteAujourdhui =
+    final UUID artisteAujourdhui =
         insererArtiste("Artiste Aujourdhui", "EXTRACT(ISODOW FROM CURRENT_DATE)");
 
     service.enrichir();
 
-    ArgumentCaptor<List<ArtisteAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
+    final ArgumentCaptor<List<ArtisteAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
     verify(wikidataArtisteSource).enrichirLot(captor.capture());
-    List<UUID> idsTraites = captor.getValue().stream().map(ArtisteAEnrichir::id).toList();
+    final List<UUID> idsTraites = captor.getValue().stream().map(ArtisteAEnrichir::id).toList();
     assertTrue(idsTraites.contains(artisteAujourdhui));
     assertEquals(1, idsTraites.size());
   }

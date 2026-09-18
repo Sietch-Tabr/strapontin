@@ -14,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.resend.Resend;
+import com.resend.core.exception.ResendException;
 import com.resend.services.emails.Emails;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Optional;
@@ -22,13 +23,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/// Tests unitaires pour {@link EmailSender} (extrait d'{@code EmailService}).
-///
-/// <p>Couvre {@link EmailSender#obtenirDestinataireAlerte} (ne se replie jamais sur
-/// l'expéditeur/CONTACT_EMAIL).
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link EmailSender} (extrait d'{@code EmailService}).
+ *
+ * <p>Couvre {@link EmailSender#obtenirDestinataireAlerte} (ne se replie jamais sur
+ * l'expéditeur/CONTACT_EMAIL).
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class EmailSenderTest {
 
   private ConfigService configService;
@@ -50,7 +53,7 @@ class EmailSenderTest {
     when(configService.lireConfig("ADMIN_ALERT_EMAIL"))
         .thenReturn(Optional.of("alerte@exemple.fr"));
 
-    Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
+    final Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
 
     assertEquals(Optional.of("alerte@exemple.fr"), resultat);
     verify(jdbcTemplate, never()).queryForObject(anyString(), eq(String.class));
@@ -62,7 +65,7 @@ class EmailSenderTest {
     when(jdbcTemplate.queryForObject(anyString(), eq(String.class)))
         .thenReturn("premier-admin@exemple.fr");
 
-    Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
+    final Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
 
     assertEquals(Optional.of("premier-admin@exemple.fr"), resultat);
   }
@@ -73,7 +76,7 @@ class EmailSenderTest {
     when(jdbcTemplate.queryForObject(anyString(), eq(String.class)))
         .thenThrow(new EmptyResultDataAccessException(1));
 
-    Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
+    final Optional<String> resultat = emailSender.obtenirDestinataireAlerte();
 
     assertTrue(resultat.isEmpty());
   }
@@ -90,8 +93,8 @@ class EmailSenderTest {
   @Test
   void envoyer_quotaResendAtteint_neContactePasResend() {
     when(gestionQuotaResend.reserverEnvoi()).thenReturn(false);
-    Resend client = mock(Resend.class);
-    EmailSender.ContexteEmail ctx =
+    final Resend client = mock(Resend.class);
+    final EmailSender.ContexteEmail ctx =
         new EmailSender.ContexteEmail(client, "contact@exemple.fr", "https://exemple.fr");
 
     emailSender.envoyer(
@@ -101,13 +104,12 @@ class EmailSenderTest {
   }
 
   @Test
-  void envoyer_quotaResendDisponible_contacteResend()
-      throws com.resend.core.exception.ResendException {
+  void envoyer_quotaResendDisponible_contacteResend() throws ResendException {
     when(gestionQuotaResend.reserverEnvoi()).thenReturn(true);
-    Resend client = mock(Resend.class);
-    Emails emails = mock(Emails.class);
+    final Resend client = mock(Resend.class);
+    final Emails emails = mock(Emails.class);
     when(client.emails()).thenReturn(emails);
-    EmailSender.ContexteEmail ctx =
+    final EmailSender.ContexteEmail ctx =
         new EmailSender.ContexteEmail(client, "contact@exemple.fr", "https://exemple.fr");
 
     emailSender.envoyer(

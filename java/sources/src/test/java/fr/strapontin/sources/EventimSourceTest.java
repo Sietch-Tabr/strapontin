@@ -26,8 +26,8 @@ class EventimSourceTest {
     return produitEventimRaw(Map.of());
   }
 
-  private static Map<String, Object> produitEventimRaw(Map<String, Object> surcharge) {
-    Map<String, Object> base = new HashMap<>();
+  private static Map<String, Object> produitEventimRaw(final Map<String, Object> surcharge) {
+    final Map<String, Object> base = new HashMap<>();
     base.put("name", "Julien Clerc");
     base.put(
         "typeAttributes",
@@ -70,9 +70,10 @@ class EventimSourceTest {
   }
 
   @Test
-  void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_conserveParisEtJournalise() {
-    // ticket — Stade de France, dept=93, aucune commune extractible du nom de salle
-    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
+  void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_retourneNullEtJournalise() {
+    // Stade de France, dept=93, aucune commune extractible du nom de salle — une valeur qu'on
+    // vient soi-même de qualifier d'incohérente ne doit jamais écraser une valeur déjà en base.
+    assertNull(EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
   }
 
   @Test
@@ -85,28 +86,28 @@ class EventimSourceTest {
 
   @Test
   void parseDateEventim_dateEtHeureValides_parseDateEtHeure() {
-    String[] r = EventimSource.parseDateEventim("2025-09-15T20:30:00");
+    final String[] r = EventimSource.parseDateEventim("2025-09-15T20:30:00");
     assertEquals("2025-09-15", r[0]);
     assertEquals("20:30", r[1]);
   }
 
   @Test
   void parseDateEventim_heure0000_retourneHeureNull() {
-    String[] r = EventimSource.parseDateEventim("2025-09-15T00:00:00");
+    final String[] r = EventimSource.parseDateEventim("2025-09-15T00:00:00");
     assertEquals("2025-09-15", r[0]);
     assertNull(r[1]);
   }
 
   @Test
   void parseDateEventim_sansSeparateurT_retourneHeureNull() {
-    String[] r = EventimSource.parseDateEventim("2025-09-15");
+    final String[] r = EventimSource.parseDateEventim("2025-09-15");
     assertEquals("2025-09-15", r[0]);
     assertNull(r[1]);
   }
 
   @Test
   void parseDateEventim_extraitHHMMSeulement() {
-    String[] r = EventimSource.parseDateEventim("2025-09-15T21:45:30");
+    final String[] r = EventimSource.parseDateEventim("2025-09-15T21:45:30");
     assertEquals("21:45", r[1]);
   }
 
@@ -143,7 +144,7 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_produitComplet_parseTousLesChamps() {
-    ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
+    final ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
     assertEquals("2025-09-15", resultat.date());
@@ -160,38 +161,38 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_dateAbsente_retourneNull() {
-    Map<String, Object> produit =
+    final Map<String, Object> produit =
         produitEventimRaw(Map.of("typeAttributes", Map.of("liveEntertainment", Map.of())));
     assertNull(EventimSource.mapProduit(produit, null));
   }
 
   @Test
   void mapProduit_nomAbsent_retourneNull() {
-    Map<String, Object> produit = new HashMap<>(produitEventimRaw());
+    final Map<String, Object> produit = new HashMap<>(produitEventimRaw());
     produit.remove("name");
     assertNull(EventimSource.mapProduit(produit, null));
   }
 
   @Test
   void mapProduit_urlDepuisDomainEtPath_reconstruitUrl() {
-    Map<String, Object> produit =
+    final Map<String, Object> produit =
         produitEventimRaw(
             Map.of(
                 "url",
                 Map.of("domain", "https://www.eventim.fr", "path", "/event/julien-clerc-1234")));
-    Map<String, Object> base = new HashMap<>(produit);
+    final Map<String, Object> base = new HashMap<>(produit);
     base.remove("link");
-    ConcertBrut resultat = EventimSource.mapProduit(base, null);
+    final ConcertBrut resultat = EventimSource.mapProduit(base, null);
     assertNotNull(resultat);
     assertEquals("https://www.eventim.fr/event/julien-clerc-1234", resultat.url());
   }
 
   @Test
   void mapProduit_sansUrlNiLien_retourneUrlNull() {
-    Map<String, Object> produit = new HashMap<>(produitEventimRaw());
+    final Map<String, Object> produit = new HashMap<>(produitEventimRaw());
     produit.remove("link");
     produit.remove("url");
-    ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
     assertNotNull(resultat);
     assertNull(resultat.url());
   }
@@ -199,7 +200,7 @@ class EventimSourceTest {
   @Test
   void mapProduit_salleSeineMusicaleVillePariseIncoherente_corrigeVilleEnBoulogne() {
     // ticket
-    Map<String, Object> produit =
+    final Map<String, Object> produit =
         produitEventimRaw(
             Map.of(
                 "typeAttributes",
@@ -213,7 +214,7 @@ class EventimSourceTest {
                             "name", "La Seine Musicale - Boulogne Billancourt",
                             "city", "Paris",
                             "postalCode", "92100")))));
-    ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
     assertNotNull(resultat);
     assertEquals("Boulogne Billancourt", resultat.ville());
     assertEquals("92", resultat.dept());
@@ -221,12 +222,12 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_locationAbsente_salleInconnueEtDeptNull() {
-    Map<String, Object> produit =
+    final Map<String, Object> produit =
         produitEventimRaw(
             Map.of(
                 "typeAttributes",
                 Map.of("liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
-    ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
     assertNotNull(resultat);
     assertEquals("Salle inconnue", resultat.salle());
     assertNull(resultat.dept());
@@ -235,7 +236,7 @@ class EventimSourceTest {
   // timeout HTTP explicite (connexion 10s/lecture 30s) via ClientHttpFactory
   @Test
   void constructeurParDefaut_neLancePasException_etExposeLeNomEventim() {
-    EventimSource source = new EventimSource();
+    final EventimSource source = new EventimSource();
 
     assertEquals("eventim", source.nom());
   }
@@ -245,9 +246,9 @@ class EventimSourceTest {
   // JSON (SimpleClientHttpRequestFactory ne décompresse pas la réponse gzip lui-même).
   @Test
   void builderAvecHeadersParDefaut_headersReels_userAgentHonneteEtAucunAcceptEncoding() {
-    RestClient.Builder builder = EventimSource.builderAvecHeadersParDefaut();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = EventimSource.builderAvecHeadersParDefaut();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -272,9 +273,9 @@ class EventimSourceTest {
   void fetchArtiste_nomSansCorrespondanceExacte_retourneListeVide() {
     // ticket — rechercherAttractionId ne doit pas prendre attractions.get(0) si pas d'exact
     // match normalisé (ex: Shy'm → API retourne "Shy", normalisé différent)
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -285,8 +286,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Shy'm");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Shy'm");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -295,9 +296,9 @@ class EventimSourceTest {
   @Test
   void fetchArtiste_termeContenuDansNomPlusVerbeux_retourneResultatsParContainment() {
     // ticket — "-M-" contenu dans "-M- Matthieu Chedid" → accepté par containment
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -317,15 +318,15 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("-M-");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("-M-");
 
     // Liste vide car products vide, mais l'ID a bien été utilisé (verify passe)
     assertTrue(resultats.isEmpty());
     serveur.verify();
 
     // le containment accepté doit être exposé pour remontée dans logs_admin
-    List<String> containments = source.preleverContainmentsAcceptes();
+    final List<String> containments = source.preleverContainmentsAcceptes();
     assertEquals(1, containments.size());
     assertTrue(containments.get(0).contains("-M-"));
     assertTrue(containments.get(0).contains("-M- Matthieu Chedid"));
@@ -338,9 +339,9 @@ class EventimSourceTest {
   // containment doit être désactivé — seule une correspondance exacte est acceptée.
   @Test
   void fetchArtiste_identiteConfirmeeParDeezerId_rejetteLeContainment() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -351,8 +352,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Furies", "656219", null);
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Furies", "656219", null);
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -362,9 +363,9 @@ class EventimSourceTest {
   // Symétrique côté wikidataId : même comportement attendu qu'avec un deezerId connu.
   @Test
   void fetchArtiste_identiteConfirmeeParWikidataId_rejetteLeContainment() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -375,21 +376,56 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Furies", null, "Q3106253");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Furies", null, "Q3106253");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
+  // "Youssou N'Dour" ("n dour" normalisé) / "Youssou NDour" ("ndour") : ni égalité stricte ni
+  // containment ne matchaient. L'égalité sans espaces doit accepter ce cas, identité confirmée.
+  @Test
+  void fetchArtiste_apostropheOmiseParSourceIdentiteConfirmee_egaliteSansEspacesAcceptee() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-ndour","name":"Youssou NDour"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-ndour")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Youssou N'Dour", "656219", null);
+
+    // Liste vide car products vide, mais l'attractionId a bien été utilisé (verify passe) —
+    // preuve que la correspondance a été acceptée malgré l'absence d'égalité stricte.
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
   // Identité non confirmée (ni deezerId ni wikidataId) : comportement historique inchangé, le
   // containment reste autorisé — non-régression du cas "-M-" ci-dessus via la nouvelle signature.
   @Test
   void fetchArtiste_identiteNonConfirmee_autoriseLeContainment() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -409,8 +445,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("-M-", null, null);
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("-M-", null, null);
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -420,9 +456,9 @@ class EventimSourceTest {
   @Test
   void fetchArtiste_termeUnCaractereBrut_pasDeContainment() {
     // ticket — terme d'un seul caractère brut (ex. "M") ne déclenche pas le containment
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -433,8 +469,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("X");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("X");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -443,9 +479,9 @@ class EventimSourceTest {
 
   @Test
   void fetchArtiste_artisteNonTrouveEventim_retourneListeVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -456,8 +492,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -465,9 +501,9 @@ class EventimSourceTest {
 
   @Test
   void fetchArtiste_correspondanceExactePreferee_utiliseExactId() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -490,7 +526,7 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
 
     serveur.verify();
@@ -503,12 +539,12 @@ class EventimSourceTest {
 
   @Test
   void fetchRegion_listeDeptVide_retourneListeVide() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchRegion(List.of(), List.of("music"));
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchRegion(List.of(), List.of("music"));
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -516,9 +552,9 @@ class EventimSourceTest {
 
   @Test
   void fetchRegion_utiliseCategoriesEventimIndependammentDesClassifsPassees() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(
@@ -534,7 +570,7 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     // Qu'on passe null, "music" ou les classifs TM, Eventim doit toujours utiliser ses propres
     // catégories
     source.fetchRegion(List.of("75"), null);
@@ -544,9 +580,9 @@ class EventimSourceTest {
 
   @Test
   void fetchRegion_unDept_retourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
@@ -564,8 +600,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), List.of("music"));
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), List.of("music"));
 
     assertEquals(1, resultats.size());
     assertEquals("75", resultats.get(0).dept());
@@ -574,9 +610,9 @@ class EventimSourceTest {
 
   @Test
   void fetchArtiste_reponseValide_retourneConcerts() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -603,8 +639,8 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
 
     assertEquals(1, resultats.size());
     assertEquals("Julien Clerc", resultats.get(0).artiste());
@@ -616,9 +652,9 @@ class EventimSourceTest {
   // liste vide sans lever d'exception — voir ResultatPageEventim#succes.
   @Test
   void fetchArtiste_erreurHttpSurFetchProduits_retourneListeVideSansLeverDException() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -633,8 +669,8 @@ class EventimSourceTest {
         .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
         .andRespond(withServerError());
 
-    EventimSource source = new EventimSource(restClient);
-    List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
 
     assertTrue(resultats.isEmpty());
     serveur.verify();
@@ -643,9 +679,9 @@ class EventimSourceTest {
   @Test
   void fetchRegion_requete_inclutParamInStock() {
     // le fetch région doit inclure in_stock=true pour exclure les sold out
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(
@@ -660,7 +696,7 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     source.fetchRegion(List.of("75"), List.of("music"));
 
     serveur.verify();
@@ -668,18 +704,18 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_inStockFalse_retourneStatutNull() {
-    Map<String, Object> produit = produitEventimRaw(Map.of("inStock", false));
+    final Map<String, Object> produit = produitEventimRaw(Map.of("inStock", false));
 
-    ConcertBrut concert = EventimSource.mapProduit(produit, null);
+    final ConcertBrut concert = EventimSource.mapProduit(produit, null);
 
     assertNull(concert.statut());
   }
 
   @Test
   void mapProduit_inStockTrue_retourneStatutNull() {
-    Map<String, Object> produit = produitEventimRaw(Map.of("inStock", true));
+    final Map<String, Object> produit = produitEventimRaw(Map.of("inStock", true));
 
-    ConcertBrut concert = EventimSource.mapProduit(produit, null);
+    final ConcertBrut concert = EventimSource.mapProduit(produit, null);
 
     assertNull(concert.statut());
   }
@@ -688,7 +724,7 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_salleConnue_salleSourceIdGenere() {
-    ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
+    final ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
 
     assertNotNull(resultat.salleSourceId());
     assertTrue(
@@ -700,13 +736,13 @@ class EventimSourceTest {
 
   @Test
   void mapProduit_locationAbsente_salleSourceIdNull() {
-    Map<String, Object> produit =
+    final Map<String, Object> produit =
         produitEventimRaw(
             Map.of(
                 "typeAttributes",
                 Map.of("liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
 
-    ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
 
     assertNull(
         resultat.salleSourceId(), "salleSourceId doit être null quand la salle est inconnue");
@@ -716,9 +752,9 @@ class EventimSourceTest {
 
   @Test
   void preleverBilan_appelReussi_compteUnAppelSansErreur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -729,37 +765,37 @@ class EventimSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Artiste Inconnu");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(0, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_erreurHttpSurAttractions_compteUneErreur() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
         .andRespond(withServerError());
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
   }
 
   @Test
   void preleverBilan_erreurHttpSurProducts_compteAppelEtErreurSepares() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
@@ -773,29 +809,29 @@ class EventimSourceTest {
         .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
         .andRespond(withServerError());
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
 
-    BilanFetch bilan = source.preleverBilan();
+    final BilanFetch bilan = source.preleverBilan();
     assertEquals(2, bilan.appels(), "un appel /attractions + un appel /products");
     assertEquals(1, bilan.erreursHttp(), "seul l'appel /products a échoué");
   }
 
   @Test
   void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
-    RestClient.Builder builder = RestClient.builder();
-    MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
         .andRespond(withServerError());
 
-    EventimSource source = new EventimSource(restClient);
+    final EventimSource source = new EventimSource(restClient);
     source.fetchArtiste("Julien Clerc");
     source.preleverBilan();
 
-    BilanFetch second = source.preleverBilan();
+    final BilanFetch second = source.preleverBilan();
     assertEquals(0, second.appels());
     assertEquals(0, second.erreursHttp());
   }

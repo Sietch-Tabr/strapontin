@@ -18,12 +18,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de l'endpoint POST /api/salles/signaler de {@link SalleController}.
-///
-/// <p>Couvre le rate limiting (3/h par IP), la validation des champs, et la délégation email.
-///
-/// @since 2.2.5
-/// @author Kwaite
+/**
+ * Tests unitaires de l'endpoint POST /api/salles/signaler de {@link SalleController}.
+ *
+ * <p>Couvre le rate limiting (3/h par IP), la validation des champs, et la délégation email.
+ *
+ * @since 2.2.5
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class SalleSignalementControllerTest {
 
@@ -36,28 +38,30 @@ class SalleSignalementControllerTest {
   @BeforeEach
   void setUp() {
     controller = new SalleController(salleService, emailService);
-    UtilisateurDetails utilisateur =
+    final UtilisateurDetails utilisateur =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     when(auth.getPrincipal()).thenReturn(utilisateur);
   }
 
   @Test
   void signalerManquante_nomValide_retourne204() {
-    var rep =
+    final var rep =
         controller.signalerManquante(
             new RequeteSignalementSalle("La Cigale", "Paris 75018", "", ""),
             auth,
             requete("10.1.0.1"));
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(emailService)
-        .envoyerSignalementSalleManquante("La Cigale", "Paris 75018", "", "", "k@test.fr");
+        .envoyerSignalementSalleManquante(
+            new EmailService.SignalementSalleManquante(
+                "La Cigale", "Paris 75018", "", "", "k@test.fr"));
   }
 
   @Test
   void signalerManquante_troisSignalementsSuccessifs_sontAcceptes() {
-    var request = requete("10.1.0.2");
+    final var request = requete("10.1.0.2");
     for (int i = 0; i < 3; i++) {
-      var rep =
+      final var rep =
           controller.signalerManquante(
               new RequeteSignalementSalle("Salle " + i, "", "", ""), auth, request);
       assertEquals(
@@ -67,11 +71,11 @@ class SalleSignalementControllerTest {
 
   @Test
   void signalerManquante_quatriemeSignalement_retourneRateLimit() {
-    var request = requete("10.1.0.3");
+    final var request = requete("10.1.0.3");
     for (int i = 0; i < 3; i++) {
       controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, request);
     }
-    var rep =
+    final var rep =
         controller.signalerManquante(
             new RequeteSignalementSalle("Salle", "", "", ""), auth, request);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
@@ -79,12 +83,12 @@ class SalleSignalementControllerTest {
 
   @Test
   void signalerManquante_ipsDifferentes_bucketsIndependants() {
-    var ip1 = requete("10.1.0.4");
-    var ip2 = requete("10.1.0.5");
+    final var ip1 = requete("10.1.0.4");
+    final var ip2 = requete("10.1.0.5");
     for (int i = 0; i < 3; i++) {
       controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, ip1);
     }
-    var rep =
+    final var rep =
         controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, ip2);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
@@ -96,15 +100,17 @@ class SalleSignalementControllerTest {
 
   @Test
   void signalerManquante_champsFacultatifsBlancs_passeEtStrip() {
-    var rep =
+    final var rep =
         controller.signalerManquante(
             new RequeteSignalementSalle("Salle", "  ", "  ", "  "), auth, requete("10.1.0.10"));
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
-    verify(emailService).envoyerSignalementSalleManquante("Salle", "", "", "", "k@test.fr");
+    verify(emailService)
+        .envoyerSignalementSalleManquante(
+            new EmailService.SignalementSalleManquante("Salle", "", "", "", "k@test.fr"));
   }
 
-  private static MockHttpServletRequest requete(String ip) {
-    var request = new MockHttpServletRequest();
+  private static MockHttpServletRequest requete(final String ip) {
+    final var request = new MockHttpServletRequest();
     request.setRemoteAddr(ip);
     return request;
   }

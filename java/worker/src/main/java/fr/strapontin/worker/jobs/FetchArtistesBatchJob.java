@@ -12,14 +12,12 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
-/// Job Quartz : fetch global de tous les artistes suivis toutes les 2 heures.
-///
-/// <p>Un retry ciblé ({@code RetryLotsService}) transmet via la {@code JobDataMap} du trigger la
-/// liste (virgule-séparée) des {@code artistes.id} en échec du cycle précédent, au format {@link
-/// #CLE_IDS_RETRY} — sinon le cycle complet s'exécute normalement.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Job Quartz : fetch global de tous les artistes suivis, cron
+ * adaptatif (détail : CLAUDE.md, Jobs background).
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @DisallowConcurrentExecution
 public class FetchArtistesBatchJob extends QuartzJobBean {
 
@@ -27,19 +25,27 @@ public class FetchArtistesBatchJob extends QuartzJobBean {
 
   private WorkerFetchService workerFetchService;
 
+  /** Constructeur par défaut, instancié par Spring. */
+  public FetchArtistesBatchJob() {
+    super();
+  }
+
+  /**
+   * @param workerFetchService service de fetch injecté par Spring
+   */
   @Autowired
-  public void setWorkerFetchService(WorkerFetchService workerFetchService) {
+  public void setWorkerFetchService(final WorkerFetchService workerFetchService) {
     this.workerFetchService = workerFetchService;
   }
 
   @Override
-  protected void executeInternal(JobExecutionContext context) {
-    String idsRetry = context.getMergedJobDataMap().getString(CLE_IDS_RETRY);
+  protected void executeInternal(final JobExecutionContext context) {
+    final String idsRetry = context.getMergedJobDataMap().getString(CLE_IDS_RETRY);
     if (idsRetry == null || idsRetry.isBlank()) {
       workerFetchService.executerFetchArtistesBatch();
       return;
     }
-    List<String> ids = Arrays.asList(idsRetry.split(","));
+    final List<String> ids = Arrays.asList(idsRetry.split(","));
     workerFetchService.executerFetchArtistesBatch(ids);
   }
 }

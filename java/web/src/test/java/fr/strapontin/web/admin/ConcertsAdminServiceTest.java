@@ -26,10 +26,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link ConcertsAdminService}.
-///
-/// @since 2.8.3
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ConcertsAdminService}.
+ *
+ * @since 2.8.3
+ * @author Kwaite
+ */
 class ConcertsAdminServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -49,8 +51,8 @@ class ConcertsAdminServiceTest {
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              RowMapper<ConcertSuppressionSuggeree> mapper = invocation.getArgument(2);
-              ResultSet rs = mock(ResultSet.class);
+              final RowMapper<ConcertSuppressionSuggeree> mapper = invocation.getArgument(2);
+              final ResultSet rs = mock(ResultSet.class);
               when(rs.getObject("id", UUID.class)).thenReturn(UUID.randomUUID());
               when(rs.getString("artiste")).thenReturn("Vincent Dedienne");
               when(rs.getString("salle")).thenReturn("Le Forum - Salle Gounod");
@@ -63,7 +65,7 @@ class ConcertsAdminServiceTest {
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    ReponseConcertsAConfirmer reponse = service.lister(0);
+    final ReponseConcertsAConfirmer reponse = service.lister(0);
 
     assertEquals(1, reponse.concerts().size());
     assertEquals("Vincent Dedienne", reponse.concerts().get(0).artiste());
@@ -79,7 +81,7 @@ class ConcertsAdminServiceTest {
     when(jdbc.queryForObject(anyString(), anyMap(), org.mockito.ArgumentMatchers.eq(Long.class)))
         .thenReturn(2L);
 
-    ReponseConcertsAConfirmer reponse = service.lister(3);
+    final ReponseConcertsAConfirmer reponse = service.lister(3);
 
     assertEquals(2L, reponse.total());
     assertTrue(reponse.concerts().isEmpty());
@@ -87,10 +89,10 @@ class ConcertsAdminServiceTest {
 
   @Test
   void confirmerSuppression_concertFlague_supprimeEtLogue() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean resultat = service.confirmerSuppression(id);
+    final boolean resultat = service.confirmerSuppression(id);
 
     assertTrue(resultat);
     verify(logAdminService)
@@ -101,7 +103,7 @@ class ConcertsAdminServiceTest {
   void confirmerSuppression_concertInconnuOuNonFlague_neSupprimeRienEtNeLoguePas() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
-    boolean resultat = service.confirmerSuppression(UUID.randomUUID());
+    final boolean resultat = service.confirmerSuppression(UUID.randomUUID());
 
     assertFalse(resultat);
     verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());
@@ -109,10 +111,10 @@ class ConcertsAdminServiceTest {
 
   @Test
   void annulerSuppression_concertFlague_restaureEtLogue() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    boolean resultat = service.annulerSuppression(id);
+    final boolean resultat = service.annulerSuppression(id);
 
     assertTrue(resultat);
     verify(logAdminService)
@@ -123,7 +125,7 @@ class ConcertsAdminServiceTest {
   void annulerSuppression_concertInconnuOuNonFlague_neRestaureRienEtNeLoguePas() {
     when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
-    boolean resultat = service.annulerSuppression(UUID.randomUUID());
+    final boolean resultat = service.annulerSuppression(UUID.randomUUID());
 
     assertFalse(resultat);
     verify(logAdminService, never()).logAdmin(anyString(), anyString(), anyString(), anyMap());

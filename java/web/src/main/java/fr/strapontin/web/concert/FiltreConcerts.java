@@ -5,43 +5,52 @@
 package fr.strapontin.web.concert;
 
 import java.util.List;
+import org.springframework.web.bind.annotation.BindParam;
 
-/// Critères de filtrage communs aux listings de concerts.
-///
-/// <p>Utilisé par {@code SpectacleService} (concerts suivis) et {@code DecouverteService}
-/// (découverte par département). Les champs non pertinents pour un service sont ignorés.
-///
-/// @param q              terme de recherche artiste/salle (optionnel, vide = pas de filtre)
-/// @param mois           filtre mois YYYY-MM (optionnel)
-/// @param genre          filtre genre (optionnel)
-/// @param classification filtre classification (optionnel)
-/// @param tri            {@code "date"} ou {@code "nouveaute"}
-/// @param page           numéro de page (0-indexé)
-/// @param quinzaine      {@code true} pour limiter aux 15 prochains jours (spectacles uniquement)
-/// @param masques        {@code true} pour afficher les concerts masqués (spectacles uniquement)
-/// @param sources        sources actives ({@code "artistes"}, {@code "salles"})
-///                       (spectacles uniquement)
-/// @param indisponibles  {@code "1"} pour inclure les concerts non disponibles
-///                       (spectacles uniquement)
-/// @param depts          liste de départements (découverte uniquement ; null = depts utilisateur)
-/// @since 2.5.4
-/// @author Kwaite
+/**
+ * Critères de filtrage communs aux listings de concerts ({@code
+ * SpectacleService}/{@code DecouverteService}) — lié en {@code
+ * @ModelAttribute}, {@code @BindParam} relie aux noms HTTP singuliers
+ * ({@code source}/{@code dept}), le constructeur compact restitue les défauts.
+ * @since 2.5.4
+ * @author Kwaite
+ */
 public record FiltreConcerts(
-    String q,
+    @BindParam("q") String recherche,
     String mois,
     String genre,
     String classification,
     String tri,
-    int page,
-    boolean quinzaine,
-    boolean masques,
-    List<String> sources,
+    Integer page,
+    Boolean quinzaine,
+    Boolean masques,
+    @BindParam("source") List<String> sources,
     String indisponibles,
-    List<String> depts) {
+    @BindParam("dept") List<String> depts) {
 
-  /// Crée un filtre minimal avec les valeurs par défaut.
-  ///
-  /// @return filtre sans aucun critère actif
+  // Restitue les valeurs par défaut qu'un paramètre de requête absent ne
+  // porte pas — page/quinzaine/masques en types boîte (pas int/boolean) :
+  // @ModelAttribute sur un record laisse un paramètre absent à null, la
+  // conversion Spring vers un type primitif échoue alors en amont de ce
+  // constructeur compact (@RequestParam(defaultValue=...) est ignoré sur
+  // les composants d'un record lié via @ModelAttribute, contrairement à un
+  // paramètre de méthode de contrôleur classique).
+  public FiltreConcerts {
+    recherche = recherche != null ? recherche : "";
+    mois = mois != null ? mois : "";
+    genre = genre != null ? genre : "";
+    classification = classification != null ? classification : "";
+    tri = tri != null ? tri : "date";
+    page = page != null ? page : 0;
+    quinzaine = quinzaine != null ? quinzaine : false;
+    masques = masques != null ? masques : false;
+  }
+
+  /**
+   * Crée un filtre minimal avec les valeurs par défaut.
+   *
+   * @return filtre sans aucun critère actif
+   */
   public static FiltreConcerts vide() {
     return new FiltreConcerts("", "", "", "", "date", 0, false, false, null, null, null);
   }

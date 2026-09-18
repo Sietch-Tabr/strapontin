@@ -22,12 +22,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de secours {@code
-/// lienReset} quand Resend n'est pas disponible, symétrique à {@link
-/// AdminController#creerUtilisateur}.
-///
-/// @since 2.6.4
-/// @author Kwaite
+/**
+ * Tests unitaires ciblés pour {@link AdminController#reinitialiserMdp} — filet de secours {@code
+ * lienReset} quand Resend n'est pas disponible, symétrique à {@link
+ * AdminController#creerUtilisateur}.
+ *
+ * @since 2.6.4
+ * @author Kwaite
+ */
 class AdminControllerReinitialiserMdpTest {
 
   private AdminService adminService;
@@ -44,20 +46,13 @@ class AdminControllerReinitialiserMdpTest {
         .thenReturn(Optional.of("https://strapontin.fr"));
     controller =
         new AdminController(
-            adminService,
-            mock(ConfigAdminService.class),
-            mock(JobsAdminService.class),
-            mock(BanniereService.class),
-            mock(WorkerProxyService.class),
-            emailService,
-            mock(VapidService.class),
-            configService);
+            adminService, mock(AdminRevocationService.class), emailService, configService);
   }
 
-  private static Authentication authPour(String userId) {
-    UtilisateurDetails ud =
+  private static Authentication authPour(final String userId) {
+    final UtilisateurDetails ud =
         new UtilisateurDetails(userId, "login", "test@test.fr", "", "admin", false, false);
-    Authentication auth = mock(Authentication.class);
+    final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;
   }
@@ -69,7 +64,7 @@ class AdminControllerReinitialiserMdpTest {
         .thenReturn(
             Optional.of(new ResultatReset("user@exemple.fr", "https://strapontin.fr/reset")));
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserMdp("user-2", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -83,7 +78,7 @@ class AdminControllerReinitialiserMdpTest {
         .thenReturn(
             Optional.of(new ResultatReset("user@exemple.fr", "https://strapontin.fr/reset")));
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserMdp("user-2", authPour("admin-1"));
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -94,7 +89,7 @@ class AdminControllerReinitialiserMdpTest {
   void reinitialiserMdp_publicBaseUrlAbsente_retourne503SansAppelerLeService() {
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.empty());
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserMdp("user-2", authPour("admin-1"));
 
     assertEquals(503, reponse.getStatusCode().value());

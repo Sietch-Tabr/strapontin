@@ -11,15 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link GenerateurSecrets}.
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link GenerateurSecrets}.
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class GenerateurSecretsTest {
 
   @Test
   void genererHex_nbOctets_retourneChaineDeLongueurDoublee() {
-    String hex = GenerateurSecrets.genererHex(16);
+    final String hex = GenerateurSecrets.genererHex(16);
 
     assertEquals(32, hex.length());
     assertTrue(hex.matches("[0-9a-f]+"));
@@ -27,15 +29,15 @@ class GenerateurSecretsTest {
 
   @Test
   void genererHex_deuxAppels_retourneValeursDistinctes() {
-    String premier = GenerateurSecrets.genererHex(16);
-    String second = GenerateurSecrets.genererHex(16);
+    final String premier = GenerateurSecrets.genererHex(16);
+    final String second = GenerateurSecrets.genererHex(16);
 
     assertFalse(premier.equals(second));
   }
 
   @Test
   void genererToken_nbOctets_retourneBase64UrlSansPadding() {
-    String token = GenerateurSecrets.genererToken(32);
+    final String token = GenerateurSecrets.genererToken(32);
 
     assertFalse(token.contains("="), "le token ne doit pas contenir de padding Base64");
     assertFalse(token.contains("+"), "l'alphabet Base64 URL ne doit pas contenir de +");
@@ -45,8 +47,8 @@ class GenerateurSecretsTest {
 
   @Test
   void genererToken_deuxAppels_retourneValeursDistinctes() {
-    String premier = GenerateurSecrets.genererToken(32);
-    String second = GenerateurSecrets.genererToken(32);
+    final String premier = GenerateurSecrets.genererToken(32);
+    final String second = GenerateurSecrets.genererToken(32);
 
     assertFalse(premier.equals(second));
   }

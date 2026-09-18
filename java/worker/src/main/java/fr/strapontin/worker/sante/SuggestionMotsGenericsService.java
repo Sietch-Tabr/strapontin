@@ -20,64 +20,77 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-/// Détecte, sur `salles.nom_norm`, des tokens spécifiques (hors {@link
-/// CorrespondanceSalle#MOTS_GENERIQUES_SALLE} déjà connus) dont la fréquence brute suggère qu'il
-/// s'agit en réalité d'un mot-type de salle générique national (ex. "kiosque", "auditorium") non
-/// encore couvert par cette liste — sans jamais l'y ajouter automatiquement (l'ajout reste une
-/// décision humaine, un faux positif dégraderait le dédoublonnage pour toutes les salles).
-///
-/// Un mot déjà suggéré n'est jamais re-signalé (liste persistée dans {@code app_config}, même
-/// mécanisme que {@code SuiviChroniciteService}) — pas d'entité unique naturelle à rattacher à ce
-/// signalement (contrairement aux signalements de {@code signalements_matching}), d'où
-/// l'utilisation de {@code logs_admin} plutôt que la nouvelle table dédiée.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Détecte des tokens de {@code salles.nom_norm} suggérant un mot-type
+ * générique national manquant (détail : CLAUDE.md, Modèle événement
+ * canonique).
+ * @since 2.9.0
+ * @author Kwaite
+ */
 @Service
 public class SuggestionMotsGenericsService {
 
-  private static final Logger log = LoggerFactory.getLogger(SuggestionMotsGenericsService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SuggestionMotsGenericsService.class);
 
   private static final String CLE_CONFIG = "MOTS_GENERIQUES_SUGGERES_JSON";
 
-  /// Seuil en occurrences brutes (pas en pourcentage du référentiel, dont le volume total varie
-  /// trop peu jalon après jalon pour qu'un pourcentage soit discriminant) au-delà duquel un token
-  /// spécifique est suspecté d'être en réalité un mot-type générique national.
+  /**
+   * Seuil en occurrences brutes (pas en pourcentage du référentiel, dont le
+   * volume total varie trop peu jalon après jalon pour qu'un pourcentage soit
+   * discriminant) au-delà duquel un token spécifique est suspecté d'être en
+   * réalité un mot-type générique national.
+   */
   public static final int SEUIL_OCCURRENCES_MOT_GENERIQUE = 15;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final ObjectMapper objectMapper;
 
+  /**
+   * @param jdbc accès JDBC
+   * @param logsAdminWorker journalisation des mots suggérés
+   * @param objectMapper sérialisation de la liste des mots déjà suggérés
+   */
   public SuggestionMotsGenericsService(
-      NamedParameterJdbcTemplate jdbc, LogsAdminWorker logsAdminWorker, ObjectMapper objectMapper) {
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.objectMapper = objectMapper;
   }
 
-  /// Calcule la fréquence de chaque token spécifique parmi toutes les salles et signale ceux dont
-  /// l'occurrence dépasse {@value #SEUIL_OCCURRENCES_MOT_GENERIQUE}, hors mots déjà suggérés.
-  ///
-  /// @return nombre de mots nouvellement suggérés
+  /**
+   * Calcule la fréquence de chaque token spécifique parmi toutes les salles et
+   * signale ceux dont l'occurrence dépasse
+   * {@value #SEUIL_OCCURRENCES_MOT_GENERIQUE} , hors mots déjà suggérés.
+   *
+   * @return nombre de mots nouvellement suggérés
+   */
+  // Le HashSet copie les tokens du nom courant (mutable pour removeAll) — pas
+  // hissable hors boucle.
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   public int suggerer() {
-    List<String> noms = jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
+    final List<String> noms =
+        jdbc.queryForList("SELECT nom_norm FROM salles", Map.of(), String.class);
 
-    Map<String, Integer> frequences = new HashMap<>();
-    for (String nom : noms) {
-      Set<String> tokens = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nom));
+    final Map<String, Integer> frequences = new HashMap<>();
+    for (final String nom : noms) {
+      final Set<String> tokens = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nom));
       tokens.removeAll(CorrespondanceSalle.MOTS_GENERIQUES_SALLE);
-      for (String token : tokens) {
+      for (final String token : tokens) {
         frequences.merge(token, 1, Integer::sum);
       }
     }
 
-    Set<String> dejaSuggeres = lireDejaSuggeres();
+    final Set<String> dejaSuggeres = lireDejaSuggeres();
     int nouveaux = 0;
-    for (var entree : frequences.entrySet()) {
-      String mot = entree.getKey();
-      int occurrences = entree.getValue();
-      if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) continue;
+    for (final Map.Entry<String, Integer> entree : frequences.entrySet()) {
+      final String mot = entree.getKey();
+      final int occurrences = entree.getValue();
+      if (occurrences < SEUIL_OCCURRENCES_MOT_GENERIQUE || dejaSuggeres.contains(mot)) {
+        continue;
+      }
 
       dejaSuggeres.add(mot);
       nouveaux++;
@@ -87,34 +100,38 @@ public class SuggestionMotsGenericsService {
           "mot potentiellement générique suggéré mot=" + mot + " occurrences=" + occurrences,
           Map.of("mot", mot, "occurrences", occurrences));
     }
-    if (nouveaux > 0) ecrireDejaSuggeres(dejaSuggeres);
+    if (nouveaux > 0) {
+      ecrireDejaSuggeres(dejaSuggeres);
+    }
 
-    log.info("coherence:mots-generiques candidats={} suggeres={}", frequences.size(), nouveaux);
+    LOG.info("coherence:mots-generiques candidats={} suggeres={}", frequences.size(), nouveaux);
     return nouveaux;
   }
 
   private Set<String> lireDejaSuggeres() {
     try {
-      String json =
+      final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
               Map.of("cle", CLE_CONFIG),
               String.class);
-      if (json == null) return new HashSet<>();
-      return objectMapper.readValue(json, new TypeReference<HashSet<String>>() {});
+      if (json == null) {
+        return new HashSet<>();
+      }
+      return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashSet<>();
     } catch (JsonProcessingException e) {
-      log.warn(
+      LOG.warn(
           "liste des mots génériques suggérés malformée en base — réinitialisée : {}",
           e.getMessage());
       return new HashSet<>();
     }
   }
 
-  private void ecrireDejaSuggeres(Set<String> mots) {
+  private void ecrireDejaSuggeres(final Set<String> mots) {
     try {
-      String json = objectMapper.writeValueAsString(mots);
+      final String json = objectMapper.writeValueAsString(mots);
       jdbc.update(
           """
           INSERT INTO app_config (cle, valeur_chiffree)
@@ -123,7 +140,7 @@ public class SuggestionMotsGenericsService {
           """,
           Map.of("cle", CLE_CONFIG, "json", json));
     } catch (JsonProcessingException e) {
-      log.error("impossible de sérialiser les mots génériques suggérés", e);
+      LOG.error("impossible de sérialiser les mots génériques suggérés", e);
     }
   }
 }

@@ -20,12 +20,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires de {@link UtilisateurRepository}.
-///
-/// <p>{@code compterNouveauxMatchesArtistes} extrait de {@code securite.SessionController} .
-///
-/// @since 2.7.0
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link UtilisateurRepository}.
+ *
+ * <p>{@code compterNouveauxMatchesArtistes} extrait de {@code securite.SessionController} .
+ *
+ * @since 2.7.0
+ * @author Kwaite
+ */
 class UtilisateurRepositoryTest {
 
   private static final String SECRET_CONFIG = "secret-de-test-utilisateur-repository";
@@ -54,7 +56,7 @@ class UtilisateurRepositoryTest {
   @Test
   void activerTotp_secretFourni_stockeValeurChiffreeDifferenteDuSecret() {
     @SuppressWarnings("unchecked")
-    ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
 
     repository.activerTotp("user-1", "JBSWY3DPEHPK3PXP");
 
@@ -65,10 +67,10 @@ class UtilisateurRepositoryTest {
   @Test
   void lireSecretTotp_valeurChiffree_retourneSecretDechiffre() {
     @SuppressWarnings("unchecked")
-    ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
+    final ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
     repository.activerTotp("user-1", "JBSWY3DPEHPK3PXP");
     verify(jdbc).update(anyString(), params.capture());
-    String chiffre = (String) params.getValue().get("secret");
+    final String chiffre = (String) params.getValue().get("secret");
 
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of(chiffre));
 

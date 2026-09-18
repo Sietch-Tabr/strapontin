@@ -23,10 +23,12 @@ import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.Trigger;
 
-/// Tests unitaires pour {@link RetryLotsService}.
-///
-/// @since 2.9.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link RetryLotsService}.
+ *
+ * @since 2.9.0
+ * @author Kwaite
+ */
 class RetryLotsServiceTest {
 
   private Scheduler scheduler;
@@ -65,14 +67,14 @@ class RetryLotsServiceTest {
 
     service.gererResultat("fetch:artistes:batch", List.of("artiste-1", "artiste-2"));
 
-    ArgumentCaptor<Trigger> captor = ArgumentCaptor.forClass(Trigger.class);
+    final ArgumentCaptor<Trigger> captor = ArgumentCaptor.forClass(Trigger.class);
     verify(scheduler).scheduleJob(captor.capture());
-    Trigger trigger = captor.getValue();
+    final Trigger trigger = captor.getValue();
     assertEquals(JobKey.jobKey("fetchArtistesBatch"), trigger.getJobKey());
     assertEquals(
         "artiste-1,artiste-2",
         trigger.getJobDataMap().getString(FetchArtistesBatchJob.CLE_IDS_RETRY));
-    long delaiMs = trigger.getStartTime().getTime() - System.currentTimeMillis();
+    final long delaiMs = trigger.getStartTime().getTime() - System.currentTimeMillis();
     assertTrue(delaiMs > 13 * 60 * 1000 && delaiMs < 16 * 60 * 1000);
     verify(logsAdminWorker, never())
         .inserer(anyString(), anyString(), anyString(), org.mockito.ArgumentMatchers.any());

@@ -6,10 +6,12 @@ package fr.strapontin.web.utilisateur;
 
 import java.util.List;
 
-/// Configuration utilisateur dans un export JSON de préférences.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Configuration utilisateur dans un export JSON de préférences.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record ConfigExport(
     List<String> departements,
     boolean filtreDisponibles,

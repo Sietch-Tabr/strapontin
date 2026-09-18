@@ -6,10 +6,12 @@ package fr.strapontin.web.admin;
 
 import java.time.Instant;
 
-/// Statistiques d'un job Quartz (réponse GET /api/admin/jobs).
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Statistiques d'un job Quartz (réponse GET /api/admin/jobs).
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record StatJob(
     String typeJob,
     Instant derniereExec,

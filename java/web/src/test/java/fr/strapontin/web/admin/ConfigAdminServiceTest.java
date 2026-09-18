@@ -15,14 +15,20 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
+import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestClient;
 
-/// Tests unitaires pour {@link ConfigAdminService} (extrait de {@code AdminService}).
-///
-/// @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ConfigAdminService} (extrait de {@code AdminService}).
+ *
+ * @since 2.1.0 (extrait dans sa forme actuelle en 2.7.0)
+ * @author Kwaite
+ */
 class ConfigAdminServiceTest {
 
   private ConfigService configService;
@@ -89,14 +95,14 @@ class ConfigAdminServiceTest {
 
   @Test
   void sauvegarderConfig_formatVapidPublicValide_sauvegarde() {
-    String clePublique = "A".repeat(87);
+    final String clePublique = "A".repeat(87);
     service.sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique, "admin-1");
     verify(configService).sauvegarderConfig("VAPID_PUBLIC_KEY", clePublique);
   }
 
   @Test
   void sauvegarderConfig_formatVapidPrivateValide_sauvegarde() {
-    String clePrivee = "A".repeat(43);
+    final String clePrivee = "A".repeat(43);
     service.sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee, "admin-1");
     verify(configService).sauvegarderConfig("VAPID_PRIVATE_KEY", clePrivee);
   }
@@ -106,26 +112,23 @@ class ConfigAdminServiceTest {
   // rythme d'appel et le rate-limit TM (Spike Arrest) reste exposé.
   @Test
   void testerApiTm_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
-    when(configService.lireConfig("TICKETMASTER_API_KEY"))
-        .thenReturn(java.util.Optional.of("fake-key"));
-    fr.strapontin.sources.CadenceurAppels cadenceur =
+    when(configService.lireConfig("TICKETMASTER_API_KEY")).thenReturn(Optional.of("fake-key"));
+    final fr.strapontin.sources.CadenceurAppels cadenceur =
         mock(fr.strapontin.sources.CadenceurAppels.class);
 
-    RestClient.Builder builder = RestClient.builder();
-    org.springframework.test.web.client.MockRestServiceServer serveur =
-        org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
-    RestClient restClient = builder.build();
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
     serveur
         .expect(
-            org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo(
+            MockRestRequestMatchers.requestTo(
                 org.hamcrest.Matchers.containsString("app.ticketmaster.com")))
-        .andRespond(
-            org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess());
+        .andRespond(MockRestResponseCreators.withSuccess());
 
-    ConfigAdminService serviceCadence =
+    final ConfigAdminService serviceCadence =
         new ConfigAdminService(configService, logAdminService, restClient, cadenceur);
 
-    boolean resultat = serviceCadence.testerApiTm();
+    final boolean resultat = serviceCadence.testerApiTm();
 
     assertTrue(resultat);
     verify(cadenceur).attendre();

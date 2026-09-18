@@ -17,16 +17,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre bloquant les accès directs par adresse IP.
-///
-/// Rejette les requêtes dont le header `Host` est une adresse IP
-/// (IPv4 avec port optionnel, ou IPv6 entre crochets).
-///
-/// En profil `dev`, la vérification est ignorée pour faciliter le
-/// développement local et les tests E2E depuis une IP privée.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Filtre bloquant les accès directs par adresse IP (header
+ * {@code Host} en IPv4/IPv6) — ignoré en profil {@code dev}.
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
 
@@ -34,31 +30,36 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
       Pattern.compile("^(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?$");
   private static final Pattern PATTERN_IPV6 = Pattern.compile("^\\[?[0-9a-fA-F:]+]?(?::\\d+)?$");
 
-  // /setup et ressources statiques exemptés pour permettre la configuration initiale par IP
+  // /setup et ressources statiques exemptés pour permettre la configuration
+  // initiale par IP
   private static final Set<String> CHEMINS_EXEMPTS =
       Set.of("/setup", "/api/setup", "/sw.js", "/offline.html");
   private static final String[] PREFIXES_STATIQUES = {"/assets/", "/icons/", "/images/"};
 
   private final boolean actif;
 
-  public BloquerAccesDirectIpFilter(Environment env) {
+  /**
+   * @param env environnement Spring, pour détecter le profil {@code dev}
+   */
+  public BloquerAccesDirectIpFilter(final Environment env) {
+    super();
     this.actif = Arrays.stream(env.getActiveProfiles()).noneMatch("dev"::equals);
   }
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)
       throws ServletException, IOException {
     if (!actif) {
       chain.doFilter(request, response);
       return;
     }
-    String chemin = request.getServletPath();
+    final String chemin = request.getServletPath();
     if (CHEMINS_EXEMPTS.contains(chemin) || estStatique(chemin)) {
       chain.doFilter(request, response);
       return;
     }
-    String host = request.getHeader("Host");
+    final String host = request.getHeader("Host");
     if (host != null
         && (PATTERN_IPV4.matcher(host).matches() || PATTERN_IPV6.matcher(host).matches())) {
       response.setStatus(HttpStatus.FORBIDDEN.value());
@@ -69,9 +70,11 @@ public class BloquerAccesDirectIpFilter extends OncePerRequestFilter {
     chain.doFilter(request, response);
   }
 
-  private boolean estStatique(String chemin) {
-    for (String prefixe : PREFIXES_STATIQUES) {
-      if (chemin.startsWith(prefixe)) return true;
+  private boolean estStatique(final String chemin) {
+    for (final String prefixe : PREFIXES_STATIQUES) {
+      if (chemin.startsWith(prefixe)) {
+        return true;
+      }
     }
     return false;
   }

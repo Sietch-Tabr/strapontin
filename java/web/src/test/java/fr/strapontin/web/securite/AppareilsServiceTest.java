@@ -22,10 +22,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link AppareilsService}.
-///
-/// @since 2.7.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link AppareilsService}.
+ *
+ * @since 2.7.8
+ * @author Kwaite
+ */
 class AppareilsServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -60,12 +62,12 @@ class AppareilsServiceTest {
   @Test
   @SuppressWarnings("unchecked")
   void listerAppareils_marqueLaSessionCouranteEtNExposePasLeSessionId() {
-    UUID appareilId = UUID.randomUUID();
+    final UUID appareilId = UUID.randomUUID();
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
-              RowMapper<AppareilsService.AppareilDto> mapper = invocation.getArgument(2);
-              ResultSet rs = mock(ResultSet.class);
+              final RowMapper<AppareilsService.AppareilDto> mapper = invocation.getArgument(2);
+              final ResultSet rs = mock(ResultSet.class);
               when(rs.getObject("appareil_id", UUID.class)).thenReturn(appareilId);
               when(rs.getString("session_id")).thenReturn("sess-courante");
               when(rs.getString("user_agent")).thenReturn("Mozilla/5.0");
@@ -74,7 +76,8 @@ class AppareilsServiceTest {
               return List.of(mapper.mapRow(rs, 0));
             });
 
-    List<AppareilsService.AppareilDto> resultat = service.listerAppareils("u1", "sess-courante");
+    final List<AppareilsService.AppareilDto> resultat =
+        service.listerAppareils("u1", "sess-courante");
 
     assertEquals(1, resultat.size());
     assertEquals(appareilId.toString(), resultat.get(0).appareilId());

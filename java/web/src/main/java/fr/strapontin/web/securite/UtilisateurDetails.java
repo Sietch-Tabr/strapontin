@@ -7,25 +7,17 @@ package fr.strapontin.web.securite;
 import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-/// Représentation Spring Security d'un utilisateur Strapontin.
-///
-/// <p>{@link #isCredentialsNonExpired()} retourne toujours {@code true} : le forçage du changement
-/// de mot de passe pour un compte invité (`doitChangerCredentials`) n'est pas géré par ce mécanisme
-/// Spring Security mais explicitement par {@code AuthController}.
-///
-/// @param id l'identifiant unique de l'utilisateur
-/// @param identifiant le nom d'utilisateur (login, insensible à la casse)
-/// @param email l'adresse email
-/// @param motDePasse le hash du mot de passe (bcrypt ou format Better-Auth)
-/// @param role le rôle ({@code user} ou {@code admin})
-/// @param twoFactorActif si la 2FA TOTP est activée
-/// @param doitChangerCredentials si l'utilisateur doit changer ses credentials
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Représentation Spring Security d'un utilisateur Strapontin
+ * (détail : CLAUDE.md, Authentification), champs auto-descriptifs.
+ * @since 2.0.0
+ * @author Kwaite
+ */
 public record UtilisateurDetails(
     String id,
     String identifiant,
@@ -40,7 +32,7 @@ public record UtilisateurDetails(
 
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
-    return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+    return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase(Locale.ROOT)));
   }
 
   @Override

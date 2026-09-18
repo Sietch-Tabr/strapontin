@@ -8,60 +8,60 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 
-/// Fragments SQL communs aux requêtes de listing de concerts.
-///
-/// <p>Mutualise la construction des clauses {@code WHERE}/{@code ORDER BY} partagées entre
-/// {@code DecouverteService} (catalogue global) et {@code SpectacleService} (matches utilisateur) :
-/// filtres mois/genre/classification, tri et bornes de pagination. Les filtres propres à chaque
-/// source (départements, masquage, sources suivies) restent dans leur service respectif.
-///
-/// <p>Chaque méthode {@code appliquer*} ajoute sa condition au {@link StringBuilder} et ses
-/// paramètres nommés à la {@link Map} fournie, sans rien faire si le filtre est absent.
-///
-/// @since 2.2.3
-/// @author Kwaite
+/**
+ * Fragments SQL communs aux requêtes de listing de concerts — mutualise
+ * {@code WHERE}/{@code ORDER BY} entre {@code DecouverteService} et {@code
+ * SpectacleService}. Chaque méthode {@code appliquer*} ajoute sa condition
+ * et ses paramètres, sans effet si le filtre est absent.
+ * @since 2.2.3
+ * @author Kwaite
+ */
 public final class FiltreConcertsBuilder {
 
-  /// Nombre de concerts par page pour les listings paginés.
+  /** Nombre de concerts par page pour les listings paginés. */
   public static final int CONCERTS_PAR_PAGE = 100;
 
   private FiltreConcertsBuilder() {
     // Classe utilitaire — pas d'instanciation
   }
 
-  /// Retourne la clause {@code ORDER BY} selon le critère de tri demandé.
-  ///
-  /// @param tri {@code "nouveaute"} (par date de première détection) ou {@code "date"} (défaut)
-  /// @return la clause ORDER BY (sans le mot-clé)
-  public static String clauseTri(String tri) {
+  /**
+   * Retourne la clause {@code ORDER BY} selon le critère de tri demandé.
+   *
+   * @param tri {@code "nouveaute"} (par date de première détection) ou
+   *     {@code "date"} (défaut)
+   * @return la clause ORDER BY (sans le mot-clé)
+   */
+  public static String clauseTri(final String tri) {
     return "nouveaute".equals(tri) ? "c.first_seen DESC, c.date ASC" : "c.date ASC, c.artiste ASC";
   }
 
-  /// Tronque une saisie utilisateur après suppression des espaces de bordure.
-  ///
-  /// @param valeur       la saisie brute
-  /// @param maxLongueur  longueur maximale conservée
-  /// @return la saisie nettoyée et tronquée
-  public static String tronquer(String valeur, int maxLongueur) {
-    String nettoyee = valeur.strip();
+  /**
+   * Tronque une saisie utilisateur après suppression des espaces de bordure.
+   *
+   * @param valeur la saisie brute
+   * @param maxLongueur longueur maximale conservée
+   * @return la saisie nettoyée et tronquée
+   */
+  public static String tronquer(final String valeur, final int maxLongueur) {
+    final String nettoyee = valeur.strip();
     return nettoyee.substring(0, Math.min(nettoyee.length(), maxLongueur));
   }
 
-  /// Ajoute le filtre mois ({@code YYYY-MM}) ; sans effet si le format est invalide.
-  ///
-  /// <p>La regex ne valide que la forme (4 chiffres, tiret, 2 chiffres), pas la validité
-  /// calendaire — un mois comme {@code 2026-13} la passe puis faisait échouer
-  /// {@link LocalDate#parse} avec une exception non interceptée (500 générique au lieu du
-  /// contrat documenté "sans effet si invalide").
-  ///
-  /// @param where  clause WHERE en construction
-  /// @param params paramètres nommés
-  /// @param mois   mois au format {@code YYYY-MM}
-  public static void appliquerMois(StringBuilder where, Map<String, Object> params, String mois) {
+  /**
+   * Ajoute le filtre mois ({@code YYYY-MM}), sans effet si invalide — la
+   * regex ne valide que la forme, pas la validité calendaire ({@code
+   * 2026-13}), d'où le {@code try/catch} sur {@link LocalDate#parse}.
+   * @param where clause WHERE en construction
+   * @param params paramètres nommés
+   * @param mois mois au format {@code YYYY-MM}
+   */
+  public static void appliquerMois(
+      final StringBuilder where, final Map<String, Object> params, final String mois) {
     if (mois.isBlank() || !mois.matches("\\d{4}-\\d{2}")) {
       return;
     }
-    LocalDate debutMois;
+    final LocalDate debutMois;
     try {
       debutMois = LocalDate.parse(mois + "-01");
     } catch (DateTimeParseException e) {
@@ -72,26 +72,31 @@ public final class FiltreConcertsBuilder {
     params.put("moisFin", debutMois.plusMonths(1));
   }
 
-  /// Ajoute le filtre genre ({@code ILIKE}) ; sans effet si le genre est vide.
-  ///
-  /// @param where    clause WHERE en construction
-  /// @param params   paramètres nommés
-  /// @param genreStr genre déjà tronqué via {@link #tronquer(String, int)}
+  /**
+   * Ajoute le filtre genre ({@code ILIKE}) ; sans effet si le genre est vide.
+   *
+   * @param where clause WHERE en construction
+   * @param params paramètres nommés
+   * @param genreStr genre déjà tronqué via {@link #tronquer(String, int)}
+   */
   public static void appliquerGenre(
-      StringBuilder where, Map<String, Object> params, String genreStr) {
+      final StringBuilder where, final Map<String, Object> params, final String genreStr) {
     if (!genreStr.isEmpty()) {
       where.append(" AND c.genre ILIKE :genre");
       params.put("genre", genreStr);
     }
   }
 
-  /// Ajoute le filtre classification (égalité) ; sans effet si la classification est vide.
-  ///
-  /// @param where          clause WHERE en construction
-  /// @param params         paramètres nommés
-  /// @param classification classification exacte
+  /**
+   * Ajoute le filtre classification (égalité) ; sans effet si la classification
+   * est vide.
+   *
+   * @param where clause WHERE en construction
+   * @param params paramètres nommés
+   * @param classification classification exacte
+   */
   public static void appliquerClassification(
-      StringBuilder where, Map<String, Object> params, String classification) {
+      final StringBuilder where, final Map<String, Object> params, final String classification) {
     if (!classification.isBlank()) {
       where.append(" AND c.classification = :classification");
       params.put("classification", classification);

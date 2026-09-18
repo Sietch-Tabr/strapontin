@@ -10,32 +10,36 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// Filtre posant un identifiant de corrélation dans le {@link MDC} Logback.
-///
-/// <p>Si la requête entrante contient un header {@code X-Correlation-ID}, il est réutilisé.
-/// Sinon, un UUID aléatoire est généré. L'identifiant est retourné dans la réponse
-/// via le même header, et retiré du MDC après traitement.
-///
-/// @since 2.0.0
-/// @author Kwaite
+/**
+ * Filtre posant un identifiant de corrélation dans le {@link
+ * MDC} Logback (header {@code X-Correlation-ID} réutilisé ou
+ * généré).
+ * @since 2.0.0
+ * @author Kwaite
+ */
 @Component
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
   private static final String CLE_MDC = "correlationId";
   private static final String HEADER = "X-Correlation-ID";
-  private static final java.util.regex.Pattern CORRELATION_ID_PATTERN =
-      java.util.regex.Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
+  private static final Pattern CORRELATION_ID_PATTERN = Pattern.compile("[a-zA-Z0-9\\-]{1,64}");
+
+  /** Constructeur par défaut, instancié par Spring. */
+  public CorrelationIdFilter() {
+    super();
+  }
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+      final HttpServletRequest request, final HttpServletResponse response, final FilterChain chain)
       throws ServletException, IOException {
-    String entrant = request.getHeader(HEADER);
-    String id =
+    final String entrant = request.getHeader(HEADER);
+    final String id =
         (entrant != null && CORRELATION_ID_PATTERN.matcher(entrant).matches())
             ? entrant
             : UUID.randomUUID().toString();

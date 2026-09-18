@@ -19,10 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/// Tests unitaires pour {@link SuiviChroniciteService}.
-///
-/// @since 2.8.2
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link SuiviChroniciteService}.
+ *
+ * @since 2.8.2
+ * @author Kwaite
+ */
 class SuiviChroniciteServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -42,7 +44,7 @@ class SuiviChroniciteServiceTest {
             contains("INSERT INTO app_config"), org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
-              Map<String, ?> params = invocation.getArgument(1);
+              final Map<String, ?> params = invocation.getArgument(1);
               valeurAppConfig.set((String) params.get("json"));
               return 1;
             });
@@ -51,7 +53,7 @@ class SuiviChroniciteServiceTest {
 
   @Test
   void enregistrerCycle_premierCycleEnEchec_retourneUn() {
-    int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
+    final int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
 
     assertEquals(1, streak);
   }
@@ -60,7 +62,7 @@ class SuiviChroniciteServiceTest {
   void enregistrerCycle_cyclesConsecutifsEnEchec_incrementeLeStreak() {
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
-    int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
+    final int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
 
     assertEquals(3, streak);
   }
@@ -69,14 +71,14 @@ class SuiviChroniciteServiceTest {
   void enregistrerCycle_cycleReussiApresDesEchecs_reinitialiseAZero() {
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
-    int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", false);
+    final int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", false);
 
     assertEquals(0, streak);
   }
 
   @Test
   void enregistrerCycle_cyclePropreSansHistorique_neContactePasLaBaseEnEcriture() {
-    int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", false);
+    final int streak = service.enregistrerCycle("fetch:salles:all|Ticketmaster", false);
 
     assertEquals(0, streak);
     verify(jdbc, never())
@@ -88,21 +90,21 @@ class SuiviChroniciteServiceTest {
   void enregistrerCycle_clesDistinctes_streaksIndependants() {
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
-    int streakOverpass = service.enregistrerCycle("reconciliation:nocturne|Overpass", true);
+    final int streakOverpass = service.enregistrerCycle("reconciliation:nocturne|Overpass", true);
 
     assertEquals(1, streakOverpass);
   }
 
   @Test
   void enrichirSiChronique_sousLeSeuil_neModifiePasLeMessage() {
-    String message = service.enrichirSiChronique("échec partiel", 2);
+    final String message = service.enrichirSiChronique("échec partiel", 2);
 
     assertEquals("échec partiel", message);
   }
 
   @Test
   void enrichirSiChronique_auSeuil_ajouteLaMentionDeChronicite() {
-    String message = service.enrichirSiChronique("échec partiel", 3);
+    final String message = service.enrichirSiChronique("échec partiel", 3);
 
     assertEquals("échec partiel — chronique depuis 3 cycles consécutifs", message);
   }

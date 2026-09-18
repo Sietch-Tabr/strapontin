@@ -25,7 +25,7 @@
 
     <properties>
         <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>2.9.0</revision>
+        <revision>2.9.1</revision>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+. -->
@@ -33,7 +33,7 @@
         <caffeine.version>3.2.4</caffeine.version>
         <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
-        <bouncycastle.version>1.85.2</bouncycastle.version>
+        <bouncycastle.version>1.86</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
         <!-- v4.15.0/v4.16.0 tirent com.squareup.okhttp3:okhttp:5.4.0, dont l'artefact Maven
              publié est volontairement vide côté JVM depuis okhttp 5.0.0 (square/okhttp#8913) :
@@ -42,13 +42,21 @@
              et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
              bien okhttp3.RequestBody). -->
         <!-- À partir de 4.19.0, publication sur Maven Central sans le préfixe "v" -->
-        <resend.version>4.23.0</resend.version>
+        <resend.version>4.24.0</resend.version>
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.1</springdoc.version>
         <bucket4j.version>8.19.0</bucket4j.version>
         <jsoup.version>1.23.2</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
+        <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
+             argLine (flag native access requis par JNA/Testcontainers) que jacoco:prepare-agent
+             écraserait sinon en écrivant dans la même propriété. -->
+        <jacocoArgLine></jacocoArgLine>
+        <checkstyle.version>3.6.0</checkstyle.version>
+        <pmd.version>3.28.0</pmd.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <spotless.version>3.10.2</spotless.version>
     </properties>
 
     <build>
@@ -59,11 +67,117 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <!-- Mockito 5.x : chargement explicite en agent évite le self-attach JDK 25 -->
-                        <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                        <argLine>@{argLine} @{jacocoArgLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>${checkstyle.version}</version>
+                    <configuration>
+                        <configLocation>${maven.multiModuleProjectDirectory}/checkstyle.xml</configLocation>
+                        <!-- config_loc : résout le SuppressionXpathFilter référencé depuis checkstyle.xml
+                             (chemin relatif au fichier de configuration lui-même, non auto-résolu). -->
+                        <propertyExpansion>config_loc=${maven.multiModuleProjectDirectory}</propertyExpansion>
+                        <!-- Bloquant depuis v2.9.1 (existant nettoyé à 0 violation, confirmé par
+                             un run réel sur les 4 modules avant bascule). -->
+                        <failOnViolation>true</failOnViolation>
+                        <violationSeverity>warning</violationSeverity>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>checkstyle-check</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-pmd-plugin</artifactId>
+                    <version>${pmd.version}</version>
+                    <configuration>
+                        <rulesets>
+                            <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>
+                        </rulesets>
+                        <!-- Bloquant depuis v2.9.1 (existant nettoyé à 0 violation, confirmé par
+                             un run réel sur les 4 modules avant bascule). -->
+                        <failOnViolation>true</failOnViolation>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>pmd-check</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>jacoco-prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                            <configuration>
+                                <propertyName>jacocoArgLine</propertyName>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>jacoco-report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <!-- Formatage Google Java Style vérifié via Maven (télécharge google-java-format
+                         depuis Maven Central), indépendant d'un binaire local installé — le hook
+                         d'écriture (google-java-format en CLI) peut être absent sur une autre machine
+                         ou en CI. Pas d'exécution liée pour l'instant : mesure manuelle d'abord
+                         (mvn spotless:check), avant de décider du binding à verify. -->
+                    <groupId>com.diffplug.spotless</groupId>
+                    <artifactId>spotless-maven-plugin</artifactId>
+                    <version>${spotless.version}</version>
+                    <configuration>
+                        <java>
+                            <googleJavaFormat>
+                                <version>1.36.1</version>
+                                <formatJavadoc>false</formatJavadoc>
+                            </googleJavaFormat>
+                        </java>
                     </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <!-- Héritées automatiquement par core/sources/web/worker, sans redéclaration par module. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 
     <dependencyManagement>

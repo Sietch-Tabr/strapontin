@@ -7,10 +7,12 @@ package fr.strapontin.web.decouverte;
 import java.time.Instant;
 import java.util.List;
 
-/// Réponse paginée de l'endpoint GET /api/decouverte.
-///
-/// @since 2.1.0
-/// @author Kwaite
+/**
+ * Réponse paginée de l'endpoint GET /api/decouverte.
+ *
+ * @since 2.1.0
+ * @author Kwaite
+ */
 public record ReponseDecouverte(
     List<ConcertDecouverte> concerts,
     int page,

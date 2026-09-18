@@ -26,10 +26,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link SpectacleController}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link SpectacleController}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 @ExtendWith(MockitoExtension.class)
 class SpectacleControllerTest {
 
@@ -45,7 +47,7 @@ class SpectacleControllerTest {
   }
 
   private void stubPrincipal() {
-    UtilisateurDetails ud =
+    final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
     when(auth.getPrincipal()).thenReturn(ud);
   }
@@ -53,14 +55,16 @@ class SpectacleControllerTest {
   @Test
   void listerSpectacles_delegueAuServiceAvecUserId() {
     stubPrincipal();
-    ReponseSpectacles attendu =
+    final ReponseSpectacles attendu =
         new ReponseSpectacles(List.of(), 0, 1, 0, List.of(), List.of(), List.of(), true, false);
     when(spectacleService.listerSpectacles(eq("user-1"), any(FiltreConcerts.class)))
         .thenReturn(attendu);
 
-    ResponseEntity<ReponseSpectacles> rep =
+    final ResponseEntity<ReponseSpectacles> rep =
         controller.listerSpectacles(
-            "q", "2026-05", "concert", "Pop", false, "date", false, null, null, 0, auth);
+            new FiltreConcerts(
+                "q", "2026-05", "Pop", "concert", "date", 0, false, false, null, null, null),
+            auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     assertSame(attendu, rep.getBody());
@@ -76,7 +80,7 @@ class SpectacleControllerTest {
 
   @Test
   void masquerArtiste_artisteIdManquant_retourne400SansDelegation() {
-    ResponseEntity<?> rep = controller.masquerArtiste(new RequeteMasquerArtiste(null), auth);
+    final ResponseEntity<?> rep = controller.masquerArtiste(new RequeteMasquerArtiste(null), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(spectacleService, never()).masquerArtiste(any(), any());
@@ -84,7 +88,7 @@ class SpectacleControllerTest {
 
   @Test
   void masquerArtiste_artisteIdInvalide_retourne400SansDelegation() {
-    ResponseEntity<?> rep =
+    final ResponseEntity<?> rep =
         controller.masquerArtiste(new RequeteMasquerArtiste("pas-un-uuid"), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
@@ -94,9 +98,9 @@ class SpectacleControllerTest {
   @Test
   void masquerArtiste_artisteIdValide_delegueAuService() {
     stubPrincipal();
-    UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    final UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    ResponseEntity<?> rep =
+    final ResponseEntity<?> rep =
         controller.masquerArtiste(new RequeteMasquerArtiste(artisteId.toString()), auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
@@ -105,7 +109,8 @@ class SpectacleControllerTest {
 
   @Test
   void demasquerArtiste_artisteIdManquant_retourne400SansDelegation() {
-    ResponseEntity<?> rep = controller.demasquerArtiste(new RequeteMasquerArtiste(null), auth);
+    final ResponseEntity<?> rep =
+        controller.demasquerArtiste(new RequeteMasquerArtiste(null), auth);
 
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(spectacleService, never()).demasquerArtiste(any(), any());
@@ -114,9 +119,9 @@ class SpectacleControllerTest {
   @Test
   void demasquerArtiste_artisteIdValide_delegueAuService() {
     stubPrincipal();
-    UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    final UUID artisteId = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
-    ResponseEntity<?> rep =
+    final ResponseEntity<?> rep =
         controller.demasquerArtiste(new RequeteMasquerArtiste(artisteId.toString()), auth);
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());

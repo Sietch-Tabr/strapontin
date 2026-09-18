@@ -19,10 +19,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 
-/// Tests unitaires pour {@link ReferentielSallesController}.
-///
-/// @since 2.6.0
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link ReferentielSallesController}.
+ *
+ * @since 2.6.0
+ * @author Kwaite
+ */
 class ReferentielSallesControllerTest {
 
   private ReferentielSallesService service;
@@ -36,19 +38,24 @@ class ReferentielSallesControllerTest {
 
   @Test
   void lister_delegueAuServiceAvecLesParametres() {
-    when(service.lister(0, "Zenith", null, null, null, false))
+    when(service.lister(
+            new ReferentielSallesService.FiltresRechercheSalles(
+                0, "Zenith", null, null, null, false)))
         .thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
 
-    ResponseEntity<ReponseReferentielSalles> reponse =
+    final ResponseEntity<ReponseReferentielSalles> reponse =
         controller.lister(0, "Zenith", null, null, null, false);
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(service).lister(0, "Zenith", null, null, null, false);
+    verify(service)
+        .lister(
+            new ReferentielSallesService.FiltresRechercheSalles(
+                0, "Zenith", null, null, null, false));
   }
 
   @Test
   void modifierNomAffiche_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.modifierNomAffiche("pas-un-uuid", new RequeteNomAffiche(null));
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -57,10 +64,10 @@ class ReferentielSallesControllerTest {
 
   @Test
   void modifierNomAffiche_salleInconnue_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.modifierNomAffiche(eq(id), any())).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.modifierNomAffiche(id.toString(), new RequeteNomAffiche("Nouveau"));
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -68,10 +75,10 @@ class ReferentielSallesControllerTest {
 
   @Test
   void modifierNomAffiche_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.modifierNomAffiche(eq(id), any())).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.modifierNomAffiche(id.toString(), new RequeteNomAffiche("Nouveau"));
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -79,7 +86,7 @@ class ReferentielSallesControllerTest {
 
   @Test
   void reinitialiserEnrichissement_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserEnrichissement("pas-un-uuid");
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -88,10 +95,10 @@ class ReferentielSallesControllerTest {
 
   @Test
   void reinitialiserEnrichissement_salleInconnue_retourne404() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.reinitialiserEnrichissement(id)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserEnrichissement(id.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -99,10 +106,10 @@ class ReferentielSallesControllerTest {
 
   @Test
   void reinitialiserEnrichissement_nominal_retourne200() {
-    UUID id = UUID.randomUUID();
+    final UUID id = UUID.randomUUID();
     when(service.reinitialiserEnrichissement(id)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.reinitialiserEnrichissement(id.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
@@ -110,7 +117,7 @@ class ReferentielSallesControllerTest {
 
   @Test
   void fusionner_uuidInvalide_retourne400() {
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.fusionner("pas-un-uuid", UUID.randomUUID().toString());
 
     assertEquals(400, reponse.getStatusCode().value());
@@ -118,9 +125,9 @@ class ReferentielSallesControllerTest {
 
   @Test
   void fusionner_uuidIdentiques_retourne400() {
-    String id = UUID.randomUUID().toString();
+    final String id = UUID.randomUUID().toString();
 
-    ResponseEntity<Map<String, Object>> reponse = controller.fusionner(id, id);
+    final ResponseEntity<Map<String, Object>> reponse = controller.fusionner(id, id);
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).fusionner(any(), any());
@@ -128,11 +135,11 @@ class ReferentielSallesControllerTest {
 
   @Test
   void fusionner_salleInconnue_retourne404() {
-    UUID source = UUID.randomUUID();
-    UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
     when(service.fusionner(cible, source)).thenReturn(false);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.fusionner(source.toString(), cible.toString());
 
     assertEquals(404, reponse.getStatusCode().value());
@@ -140,11 +147,11 @@ class ReferentielSallesControllerTest {
 
   @Test
   void fusionner_nominal_retourne200() {
-    UUID source = UUID.randomUUID();
-    UUID cible = UUID.randomUUID();
+    final UUID source = UUID.randomUUID();
+    final UUID cible = UUID.randomUUID();
     when(service.fusionner(cible, source)).thenReturn(true);
 
-    ResponseEntity<Map<String, Object>> reponse =
+    final ResponseEntity<Map<String, Object>> reponse =
         controller.fusionner(source.toString(), cible.toString());
 
     assertEquals(200, reponse.getStatusCode().value());

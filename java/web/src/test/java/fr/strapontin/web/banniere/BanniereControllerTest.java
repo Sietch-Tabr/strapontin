@@ -14,10 +14,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link BanniereController}.
-///
-/// @since 2.6.6
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link BanniereController}.
+ *
+ * @since 2.6.6
+ * @author Kwaite
+ */
 class BanniereControllerTest {
 
   private ConfigService configService;
@@ -42,7 +44,7 @@ class BanniereControllerTest {
     when(configService.lireConfig("BANNER_TYPE")).thenReturn(Optional.of("warning"));
     when(configService.lireConfig("BANNER_ID")).thenReturn(Optional.of("2026-07-05T10:00:00Z"));
 
-    BanniereController.BanniereDto dto = controller.banniereJson();
+    final BanniereController.BanniereDto dto = controller.banniereJson();
 
     assertEquals("Maintenance", dto.message());
     assertEquals("warning", dto.type());
@@ -55,7 +57,7 @@ class BanniereControllerTest {
     when(configService.lireConfig("BANNER_TYPE")).thenReturn(Optional.empty());
     when(configService.lireConfig("BANNER_ID")).thenReturn(Optional.empty());
 
-    BanniereController.BanniereDto dto = controller.banniereJson();
+    final BanniereController.BanniereDto dto = controller.banniereJson();
 
     assertEquals("info", dto.type());
     assertEquals("", dto.id());

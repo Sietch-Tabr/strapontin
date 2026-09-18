@@ -21,10 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.Authentication;
 
-/// Tests unitaires de {@link ParametresRestController}.
-///
-/// @since 2.7.11
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link ParametresRestController}.
+ *
+ * @since 2.7.11
+ * @author Kwaite
+ */
 class ParametresRestControllerTest {
 
   private ParametresService parametresService;
@@ -38,7 +40,7 @@ class ParametresRestControllerTest {
     configService = mock(ConfigService.class);
     controller = new ParametresRestController(parametresService, configService);
 
-    UtilisateurDetails details =
+    final UtilisateurDetails details =
         new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(details);
@@ -46,7 +48,7 @@ class ParametresRestControllerTest {
 
   @Test
   void emailChange_adresseIdentiqueALActuelle_retourne400() {
-    var reponse = controller.emailChange(new RequeteEmailChange("alice@test.fr"), auth);
+    final var reponse = controller.emailChange(new RequeteEmailChange("alice@test.fr"), auth);
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(parametresService, never()).demanderChangementEmail(any(), anyString(), anyString());
@@ -56,7 +58,7 @@ class ParametresRestControllerTest {
   void emailChange_adresseDejaUtilisee_retourne400() {
     when(parametresService.emailDejaUtilise("bob@test.fr", "u1")).thenReturn(true);
 
-    var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
+    final var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(parametresService, never()).demanderChangementEmail(any(), anyString(), anyString());
@@ -67,7 +69,7 @@ class ParametresRestControllerTest {
     when(parametresService.emailDejaUtilise("bob@test.fr", "u1")).thenReturn(false);
     when(parametresService.emailDisponible()).thenReturn(false);
 
-    var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
+    final var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
 
     assertEquals(503, reponse.getStatusCode().value());
   }
@@ -78,7 +80,7 @@ class ParametresRestControllerTest {
     when(parametresService.emailDisponible()).thenReturn(true);
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.empty());
 
-    var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
+    final var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
 
     assertEquals(503, reponse.getStatusCode().value());
     verify(parametresService, never()).demanderChangementEmail(any(), anyString(), anyString());
@@ -91,7 +93,7 @@ class ParametresRestControllerTest {
     when(configService.lireConfig("PUBLIC_BASE_URL"))
         .thenReturn(Optional.of("https://strapontin.kwaite.fr"));
 
-    var reponse = controller.emailChange(new RequeteEmailChange(" Bob@Test.fr "), auth);
+    final var reponse = controller.emailChange(new RequeteEmailChange(" Bob@Test.fr "), auth);
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals(Boolean.TRUE, reponse.getBody().get("succes"));
@@ -104,7 +106,7 @@ class ParametresRestControllerTest {
   void stats_delegueAuServiceAvecIdUtilisateur() {
     when(parametresService.stats("u1")).thenReturn(Map.of("nbArtistes", 3, "nbSalles", 1));
 
-    var reponse = controller.stats(auth);
+    final var reponse = controller.stats(auth);
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals(3, reponse.getBody().get("nbArtistes"));
@@ -117,7 +119,7 @@ class ParametresRestControllerTest {
             new ParametresService.ResultatConfirmation(
                 ParametresService.ResultatConfirmation.Statut.OK, "u1"));
 
-    var reponse = controller.confirmerEmail("token-abc", auth);
+    final var reponse = controller.confirmerEmail("token-abc", auth);
 
     assertEquals(302, reponse.getStatusCode().value());
     assertEquals(
@@ -131,7 +133,7 @@ class ParametresRestControllerTest {
             new ParametresService.ResultatConfirmation(
                 ParametresService.ResultatConfirmation.Statut.LIEN_EXPIRE, "u1"));
 
-    var reponse = controller.confirmerEmail("token-abc", auth);
+    final var reponse = controller.confirmerEmail("token-abc", auth);
 
     assertEquals(302, reponse.getStatusCode().value());
     assertEquals(

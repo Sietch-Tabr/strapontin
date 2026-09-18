@@ -11,13 +11,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires de {@link CorrespondanceSalle#estDoublonSalle} — dédoublonnage de salles.
-///
-/// <p>Noms passés déjà normalisés (via {@link Normalisation#normaliserTexte}), comme les
-/// consommateurs réels de cette classe ({@code ReconciliateurSalles}, {@code WikidataSalleSource}).
-///
-/// @since 2.7.2
-/// @author Kwaite
+/**
+ * Tests unitaires de {@link CorrespondanceSalle#estDoublonSalle} — dédoublonnage de salles.
+ *
+ * <p>Noms passés déjà normalisés (via {@link Normalisation#normaliserTexte}), comme les
+ * consommateurs réels de cette classe ({@code ReconciliateurSalles}, {@code WikidataSalleSource}).
+ *
+ * @since 2.7.2
+ * @author Kwaite
+ */
 class CorrespondanceSalleTest {
 
   // --- Faux positifs pivot confirmés, devant devenir false après l'exclusion des

@@ -17,38 +17,40 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import org.junit.jupiter.api.Test;
 
-/// Tests unitaires pour {@link TotpGuardFilter}.
-///
-/// @since 2.8.7
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link TotpGuardFilter}.
+ *
+ * @since 2.8.7
+ * @author Kwaite
+ */
 class TotpGuardFilterTest {
 
   private final TotpGuardFilter filtre = new TotpGuardFilter();
 
-  private HttpServletRequest requete(String chemin, HttpSession session) {
-    HttpServletRequest req = mock(HttpServletRequest.class);
+  private HttpServletRequest requete(final String chemin, final HttpSession session) {
+    final HttpServletRequest req = mock(HttpServletRequest.class);
     when(req.getServletPath()).thenReturn(chemin);
     when(req.getSession(false)).thenReturn(session);
     return req;
   }
 
   private HttpServletResponse reponse() throws Exception {
-    HttpServletResponse resp = mock(HttpServletResponse.class);
+    final HttpServletResponse resp = mock(HttpServletResponse.class);
     when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
     return resp;
   }
 
-  private HttpSession sessionAvecTotpEnAttente(boolean enAttente) {
-    HttpSession session = mock(HttpSession.class);
+  private HttpSession sessionAvecTotpEnAttente(final boolean enAttente) {
+    final HttpSession session = mock(HttpSession.class);
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(enAttente);
     return session;
   }
 
   @Test
   void doFilterInternal_aucuneSession_passeLaRequete() throws Exception {
-    HttpServletRequest req = requete("/api/concerts", null);
-    HttpServletResponse resp = reponse();
-    FilterChain chain = mock(FilterChain.class);
+    final HttpServletRequest req = requete("/api/concerts", null);
+    final HttpServletResponse resp = reponse();
+    final FilterChain chain = mock(FilterChain.class);
 
     filtre.doFilter(req, resp, chain);
 
@@ -58,9 +60,9 @@ class TotpGuardFilterTest {
 
   @Test
   void doFilterInternal_sessionSansChallengeEnAttente_passeLaRequete() throws Exception {
-    HttpServletRequest req = requete("/api/concerts", sessionAvecTotpEnAttente(false));
-    HttpServletResponse resp = reponse();
-    FilterChain chain = mock(FilterChain.class);
+    final HttpServletRequest req = requete("/api/concerts", sessionAvecTotpEnAttente(false));
+    final HttpServletResponse resp = reponse();
+    final FilterChain chain = mock(FilterChain.class);
 
     filtre.doFilter(req, resp, chain);
 
@@ -70,9 +72,9 @@ class TotpGuardFilterTest {
 
   @Test
   void doFilterInternal_challengeEnAttenteRouteApiNonAutorisee_retourne401() throws Exception {
-    HttpServletRequest req = requete("/api/concerts", sessionAvecTotpEnAttente(true));
-    HttpServletResponse resp = reponse();
-    FilterChain chain = mock(FilterChain.class);
+    final HttpServletRequest req = requete("/api/concerts", sessionAvecTotpEnAttente(true));
+    final HttpServletResponse resp = reponse();
+    final FilterChain chain = mock(FilterChain.class);
 
     filtre.doFilter(req, resp, chain);
 
@@ -82,9 +84,9 @@ class TotpGuardFilterTest {
 
   @Test
   void doFilterInternal_challengeEnAttenteRouteTotp_passeLaRequete() throws Exception {
-    HttpServletRequest req = requete("/api/auth/totp", sessionAvecTotpEnAttente(true));
-    HttpServletResponse resp = reponse();
-    FilterChain chain = mock(FilterChain.class);
+    final HttpServletRequest req = requete("/api/auth/totp", sessionAvecTotpEnAttente(true));
+    final HttpServletResponse resp = reponse();
+    final FilterChain chain = mock(FilterChain.class);
 
     filtre.doFilter(req, resp, chain);
 
@@ -94,9 +96,9 @@ class TotpGuardFilterTest {
 
   @Test
   void doFilterInternal_challengeEnAttenteRouteLogout_passeLaRequete() throws Exception {
-    HttpServletRequest req = requete("/api/auth/logout", sessionAvecTotpEnAttente(true));
-    HttpServletResponse resp = reponse();
-    FilterChain chain = mock(FilterChain.class);
+    final HttpServletRequest req = requete("/api/auth/logout", sessionAvecTotpEnAttente(true));
+    final HttpServletResponse resp = reponse();
+    final FilterChain chain = mock(FilterChain.class);
 
     filtre.doFilter(req, resp, chain);
 
@@ -106,9 +108,9 @@ class TotpGuardFilterTest {
 
   @Test
   void doFilterInternal_challengeEnAttenteRouteNonApi_passeLaRequete() throws Exception {
-    HttpServletRequest req = requete("/spectacles", sessionAvecTotpEnAttente(true));
-    HttpServletResponse resp = reponse();
-    FilterChain chain = mock(FilterChain.class);
+    final HttpServletRequest req = requete("/spectacles", sessionAvecTotpEnAttente(true));
+    final HttpServletResponse resp = reponse();
+    final FilterChain chain = mock(FilterChain.class);
 
     filtre.doFilter(req, resp, chain);
 

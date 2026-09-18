@@ -23,10 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
-/// Tests unitaires pour {@link CoherenceMultiSalleService}.
-///
-/// @since 2.8.8
-/// @author Kwaite
+/**
+ * Tests unitaires pour {@link CoherenceMultiSalleService}.
+ *
+ * @since 2.8.8
+ * @author Kwaite
+ */
 class CoherenceMultiSalleServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
@@ -41,8 +43,8 @@ class CoherenceMultiSalleServiceTest {
   }
 
   private static Map<String, Object> ligneContamination(
-      UUID salleId, String identifiant, String nomNorm, String signalee) {
-    Map<String, Object> ligne = new HashMap<>();
+      final UUID salleId, final String identifiant, final String nomNorm, final String signalee) {
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("salle_id", salleId);
     ligne.put("identifiant", identifiant);
     ligne.put("nom_norm", nomNorm);
@@ -60,12 +62,12 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterContamination_nomInterneDivergent_journaliseEtMemorise() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(ligneContamination(salleId, "internal:les etoiles", "cafe de la danse", null)));
 
-    int resultat = service.detecterContamination();
+    final int resultat = service.detecterContamination();
 
     assertEquals(1, resultat);
     verify(jdbc)
@@ -79,11 +81,11 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterContamination_nomInterneCoherent_neJournalisePas() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(List.of(ligneContamination(salleId, "internal:le zenith", "le zenith", null)));
 
-    int resultat = service.detecterContamination();
+    final int resultat = service.detecterContamination();
 
     assertEquals(0, resultat);
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
@@ -91,27 +93,87 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterContamination_signatureDejaConnue_neReSignalePas() {
-    UUID salleId = UUID.randomUUID();
+    final UUID salleId = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
                 ligneContamination(
                     salleId, "internal:les etoiles", "cafe de la danse", "les etoiles")));
 
-    int resultat = service.detecterContamination();
+    final int resultat = service.detecterContamination();
 
     assertEquals(0, resultat, "déjà signalée avec la même signature — pas de re-signalement");
     verify(jdbc, never()).update(anyString(), anyMap());
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 
+  @Test
+  void detecterContamination_nomComplenteDeVille_neJournalisePas() {
+    // "6mic" / "6mic aix en provence" — l'identifiant synthétique n'est que le nom complété d'une
+    // ville, pas une salle réellement différente.
+    final UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(ligneContamination(salleId, "internal:6mic aix en provence", "6mic", null)));
+
+    final int resultat = service.detecterContamination();
+
+    assertEquals(0, resultat);
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void detecterContamination_sigleInitiales_neJournalisePas() {
+    // "ed n" / "espace dollfus noack" — sigle formé des initiales de chaque mot du nom complet.
+    final UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(ligneContamination(salleId, "internal:ed n", "espace dollfus noack", null)));
+
+    final int resultat = service.detecterContamination();
+
+    assertEquals(0, resultat);
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  void detecterContamination_divergenceReelleMalgreLongueurAsymetrique_journalise() {
+    // "theatre la boussole grande salle" / "theatre marigny grande salle" — divergence réelle,
+    // ni nom+ville ni sigle, ne doit pas être écartée avec les faux positifs.
+    final UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                ligneContamination(
+                    salleId,
+                    "internal:theatre la boussole grande salle",
+                    "theatre marigny grande salle",
+                    null)));
+
+    final int resultat = service.detecterContamination();
+
+    assertEquals(1, resultat);
+    verify(logsAdminWorker)
+        .inserer(org.mockito.ArgumentMatchers.eq("warn"), anyString(), anyString(), anyMap());
+  }
+
   private static Map<String, Object> ligneSalle(
-      UUID id, String nomNorm, String dept, String doublonSignale) {
-    Map<String, Object> ligne = new HashMap<>();
+      final UUID id, final String nomNorm, final String dept, final String doublonSignale) {
+    return ligneSalle(id, nomNorm, dept, doublonSignale, null);
+  }
+
+  private static Map<String, Object> ligneSalle(
+      final UUID id,
+      final String nomNorm,
+      final String dept,
+      final String doublonSignale,
+      final UUID salleParentId) {
+    final Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", id);
     ligne.put("nom_norm", nomNorm);
     ligne.put("dept", dept);
     ligne.put("doublon_signale", doublonSignale);
+    ligne.put("salle_parent_id", salleParentId);
     return ligne;
   }
 
@@ -124,15 +186,15 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterDoublons_memeNomMemeDeptSansWikidataId_journalise() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
                 ligneSalle(a, "le kilowatt", "94", null),
                 ligneSalle(b, "le kilowatt vitry sur seine", "94", null)));
 
-    int resultat = service.detecterDoublons();
+    final int resultat = service.detecterDoublons();
 
     assertEquals(1, resultat);
     verify(jdbc).update(anyString(), any(SqlParameterSource.class));
@@ -142,15 +204,33 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterDoublons_deptsDifferents_neJournalisePas() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
                 ligneSalle(a, "le kilowatt", "94", null),
                 ligneSalle(b, "le kilowatt vitry sur seine", "75", null)));
 
-    int resultat = service.detecterDoublons();
+    final int resultat = service.detecterDoublons();
+
+    assertEquals(0, resultat);
+    verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
+  }
+
+  @Test
+  void detecterDoublons_complexeEtSousSalleDejaRelies_neJournalisePas() {
+    // Satisferait le containment de tokens par construction, mais salle_parent_id les relie déjà
+    // comme complexe/sous-salle légitimes.
+    final UUID complexe = UUID.randomUUID();
+    final UUID sousSalle = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(
+                ligneSalle(complexe, "la seine musicale", "92", null),
+                ligneSalle(sousSalle, "la seine musicale grande seine", "92", null, complexe)));
+
+    final int resultat = service.detecterDoublons();
 
     assertEquals(0, resultat);
     verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
@@ -158,15 +238,15 @@ class CoherenceMultiSalleServiceTest {
 
   @Test
   void detecterDoublons_pairejaSignalee_neReSignalePas() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
                 ligneSalle(a, "le kilowatt", "94", b.toString()),
                 ligneSalle(b, "le kilowatt vitry sur seine", "94", null)));
 
-    int resultat = service.detecterDoublons();
+    final int resultat = service.detecterDoublons();
 
     assertEquals(0, resultat, "paire déjà signalée — pas de re-signalement");
     verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
@@ -176,30 +256,30 @@ class CoherenceMultiSalleServiceTest {
   // "kowa" est une sous-chaîne de "kowalski" sans être le même mot.
   @Test
   void detecterDoublons_sousChaineBruteSansTokenComplet_neJournalisePas() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
                 ligneSalle(a, "kowa", "75", null),
                 ligneSalle(b, "salle kowalski paris", "75", null)));
 
-    int resultat = service.detecterDoublons();
+    final int resultat = service.detecterDoublons();
 
     assertEquals(0, resultat);
   }
 
   @Test
   void detecterDoublons_nomsSansRapport_neJournalisePas() {
-    UUID a = UUID.randomUUID();
-    UUID b = UUID.randomUUID();
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
                 ligneSalle(a, "zenith de paris", "75", null),
                 ligneSalle(b, "olympia", "75", null)));
 
-    int resultat = service.detecterDoublons();
+    final int resultat = service.detecterDoublons();
 
     assertEquals(0, resultat);
   }
