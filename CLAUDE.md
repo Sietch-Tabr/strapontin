@@ -72,7 +72,8 @@ Utiliser le skill `/deploy-dev` (build Maven avec tests + scp JARs vers `/opt/st
 
 CLI : `tea` (pas `gh` — Codeberg est Gitea, incompatible avec `gh`). `tea issue view N` → toujours `-f "index,title,body"` (body absent par défaut). Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`. PR : `Closes #N` **dans le corps** (`--description`), pas seulement le titre — Gitea ferme les issues via le corps, jamais via le titre.
 
-`main` : Woodpecker déploie sur prod à chaque push (**jamais de push manuel sans build valide**). Features : branche `feature/xxx` → PR → merge. Pipeline (`.woodpecker/ci.yaml`) : test (Maven) + test-front (Vitest) → build-front → build → backup → deploy, restreints à `main`. Le repo doit être marqué "trusted" (Settings → repo) pour autoriser les volumes Maven.
+`main` : Woodpecker déploie sur prod à chaque push (**jamais de push manuel sans build valide**). Features : branche `feature/xxx` → PR → merge. Pipeline (`.woodpecker/ci.yaml`) : test (Maven) + test-front (Vitest) → build-front → lint-front → static-analysis → build → backup → deploy, restreints à `main`. Le repo doit être marqué "trusted" (Settings → repo) pour autoriser les volumes Maven.
+⚠️ **Agent CI (LXC 111) limité à 1,5 Go RAM** : les steps `front/` (`build-front`/`lint-front`) et `static-analysis` (Checkstyle+PMD) doivent rester entièrement sérialisés (jamais deux `npm ci` concurrents sur le même workspace partagé de la pipeline — `ENOTEMPTY` sur `node_modules` ; jamais `static-analysis` en parallèle d'un step `front/` — OOM killer, mémoire résiduelle des Testcontainers de `test` pas toujours libérée à temps même après sérialisation, d'où `MAVEN_OPTS: -Xmx768m` sur `static-analysis`) — incident réel v2.9.1, reproduit et corrigé directement sur l'agent.
 
 ## Sauvegarde et restauration
 
