@@ -37,6 +37,8 @@ steps:
   - name: static-analysis
     image: maven:3.9-eclipse-temurin-25
     depends_on: [test, lint-front]
+    environment:
+      MAVEN_OPTS: "-Xmx768m"
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:
