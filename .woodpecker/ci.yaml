@@ -29,10 +29,14 @@ steps:
 
   # Checkstyle/PMD liés à la phase verify (java/pom.xml) — étape distincte du step
   # test pour ne pas surcharger l'agent CI (1,5 Go RAM) en parallèle des
-  # Testcontainers ; compile seul, pas de relance de test complet.
+  # Testcontainers ; compile seul, pas de relance de test complet. Dépend aussi de
+  # lint-front (donc de toute la chaîne front) : exécuté en parallèle de build-front,
+  # ce step Maven (checkstyle+pmd) fait dépasser 1,5 Go cumulés et déclenche l'OOM
+  # killer (constaté en reproduction, v2.9.1) — un seul step lourd à la fois sur cet
+  # agent.
   - name: static-analysis
     image: maven:3.9-eclipse-temurin-25
-    depends_on: [test]
+    depends_on: [test, lint-front]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:

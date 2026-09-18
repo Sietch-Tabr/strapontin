@@ -42,8 +42,8 @@ public record FiltreConcerts(
     classification = classification != null ? classification : "";
     tri = tri != null ? tri : "date";
     page = page != null ? page : 0;
-    quinzaine = quinzaine != null ? quinzaine : false;
-    masques = masques != null ? masques : false;
+    quinzaine = quinzaine != null && quinzaine;
+    masques = masques != null && masques;
   }
 
   /**
