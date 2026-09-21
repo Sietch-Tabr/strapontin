@@ -4,8 +4,8 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.core.GenerateurSecrets;
 import fr.strapontin.web.email.EmailService;
-import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.sql.Timestamp;
 import java.time.Instant;

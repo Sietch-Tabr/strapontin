@@ -4,11 +4,11 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.GenerateurSecrets;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.email.EmailServiceSecurite;
-import fr.strapontin.web.securite.GenerateurSecrets;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

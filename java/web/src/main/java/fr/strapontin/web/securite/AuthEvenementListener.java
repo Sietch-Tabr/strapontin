@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.context.event.EventListener;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.security.core.Authentication;
@@ -32,16 +33,20 @@ public class AuthEvenementListener {
 
   private final LogAdminService logAdminService;
   private final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService;
+  private final NamedParameterJdbcTemplate jdbc;
 
   /**
    * @param logAdminService journalisation des événements d'authentification
    * @param alerteActiviteUtilisateurService alertes d'échecs de connexion répétés
+   * @param jdbc accès JDBC (mise à jour de la dernière connexion)
    */
   public AuthEvenementListener(
       final LogAdminService logAdminService,
-      final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService) {
+      final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService,
+      final NamedParameterJdbcTemplate jdbc) {
     this.logAdminService = logAdminService;
     this.alerteActiviteUtilisateurService = alerteActiviteUtilisateurService;
+    this.jdbc = jdbc;
   }
 
   /**
@@ -58,6 +63,10 @@ public class AuthEvenementListener {
     meta.put("ip", ip != null ? ip : "?");
     if (event.getAuthentication().getPrincipal() instanceof UtilisateurDetails ud) {
       meta.put("userId", ud.id());
+      // reconnexion = annulation automatique de toute purge d'inactivité en cours.
+      jdbc.update(
+          "UPDATE users SET derniere_connexion_le = now(), purge_le = NULL WHERE id = :id",
+          Map.of("id", ud.id()));
     }
     logAdminService.logAdmin("info", "auth", "Connexion réussie : " + identifiant, meta);
   }

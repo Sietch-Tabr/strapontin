@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import fr.strapontin.web.admin.LogAdminService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
@@ -32,13 +33,15 @@ class AuthEvenementListenerTest {
 
   private LogAdminService logAdminService;
   private AlerteActiviteUtilisateurService alerteActiviteUtilisateurService;
+  private NamedParameterJdbcTemplate jdbc;
   private AuthEvenementListener listener;
 
   @BeforeEach
   void setUp() {
     logAdminService = mock(LogAdminService.class);
     alerteActiviteUtilisateurService = mock(AlerteActiviteUtilisateurService.class);
-    listener = new AuthEvenementListener(logAdminService, alerteActiviteUtilisateurService);
+    jdbc = mock(NamedParameterJdbcTemplate.class);
+    listener = new AuthEvenementListener(logAdminService, alerteActiviteUtilisateurService, jdbc);
   }
 
   private AbstractAuthenticationFailureEvent evenementEchec(final String identifiant) {
@@ -59,6 +62,10 @@ class AuthEvenementListenerTest {
     listener.surSuccesAuthentification(event);
 
     verify(logAdminService).logAdmin(eq("info"), eq("auth"), anyString(), anyMap());
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("derniere_connexion_le = now()"),
+            eq(java.util.Map.of("id", "u1")));
   }
 
   @Test

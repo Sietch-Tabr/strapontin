@@ -2,7 +2,7 @@
  * Strapontin — concert finder
  * Copyright (C) 2025-2026 Kwaite
  */
-package fr.strapontin.web.securite;
+package fr.strapontin.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

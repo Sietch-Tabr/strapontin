@@ -7,6 +7,8 @@ package fr.strapontin.worker;
 import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.FetchSallesAllJob;
+import fr.strapontin.worker.jobs.GererComptesInactifsJob;
+import fr.strapontin.worker.jobs.GererInvitesExpiresJob;
 import fr.strapontin.worker.jobs.NotifierDigestJob;
 import fr.strapontin.worker.jobs.PurgerArtistesJob;
 import fr.strapontin.worker.jobs.PurgerConcertsJob;
@@ -182,6 +184,35 @@ public class Planificateur {
   @Bean
   Trigger triggerPurgerLogsAdmin(final JobDetail jobDetailPurgerLogsAdmin) {
     return creerTrigger(jobDetailPurgerLogsAdmin, "triggerPurgerLogsAdmin", "0 15 0 * * ?");
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  JobDetail jobDetailGererComptesInactifs() {
+    return creerJobDetail(GererComptesInactifsJob.class, "gererComptesInactifs");
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  Trigger triggerGererComptesInactifs(final JobDetail jobDetailGererComptesInactifs) {
+    return creerTrigger(
+        jobDetailGererComptesInactifs, "triggerGererComptesInactifs", "0 20 0 * * ?");
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  JobDetail jobDetailGererInvitesExpires() {
+    return creerJobDetail(GererInvitesExpiresJob.class, "gererInvitesExpires");
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  Trigger triggerGererInvitesExpires(final JobDetail jobDetailGererInvitesExpires) {
+    return creerTrigger(jobDetailGererInvitesExpires, "triggerGererInvitesExpires", "0 25 0 * * ?");
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
