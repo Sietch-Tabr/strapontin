@@ -38,7 +38,7 @@ public final class WorkerTriggerUtils {
           try {
             restClient.post().uri(url).retrieve().toBodilessEntity();
           } catch (Exception e) {
-            log.warn(messageEchec, e);
+            log.warn("{} : {}", messageEchec, e.getMessage());
           }
         });
   }

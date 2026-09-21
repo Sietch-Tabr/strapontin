@@ -98,7 +98,7 @@ public class TriggerController {
               .toList();
       return ResponseEntity.ok(Map.of("actifs", actifs));
     } catch (SchedulerException e) {
-      LOG.warn("Erreur lecture jobs actifs", e);
+      LOG.warn("Erreur lecture jobs actifs : {}", e.getMessage());
       return ResponseEntity.ok(Map.of("actifs", List.of()));
     }
   }
@@ -122,7 +122,7 @@ public class TriggerController {
       LOG.info("Déclenchement manuel : fetchArtistesBatch + fetchRegion");
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
-      LOG.warn("Erreur déclenchement manuel", e);
+      LOG.warn("Erreur déclenchement manuel : {}", e.getMessage());
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }
@@ -147,7 +147,7 @@ public class TriggerController {
       LOG.info("Déclenchement artiste : fetchArtistesBatch");
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
-      LOG.warn("Erreur déclenchement artiste", e);
+      LOG.warn("Erreur déclenchement artiste : {}", e.getMessage());
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }
@@ -175,7 +175,7 @@ public class TriggerController {
       LOG.info("Déclenchement manuel : {}", typeJob);
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
-      LOG.warn("Erreur déclenchement {}", typeJob, e);
+      LOG.warn("Erreur déclenchement {} : {}", typeJob, e.getMessage());
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }
@@ -212,7 +212,7 @@ public class TriggerController {
       LOG.info("Déclenchement salle : identifiants={}", identifiants);
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
-      LOG.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
+      LOG.warn("Erreur déclenchement salle identifiants={} : {}", identifiants, e.getMessage());
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }
@@ -239,7 +239,7 @@ public class TriggerController {
       LOG.info("Déclenchement notifier:version : version={}", version);
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
-      LOG.warn("Erreur déclenchement notifier:version version={}", version, e);
+      LOG.warn("Erreur déclenchement notifier:version version={} : {}", version, e.getMessage());
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }

@@ -139,7 +139,7 @@ public class WorkerProxyService {
           NIVEAU_INFO, SOURCE_ADMIN, "Fetch salle déclenché", Map.of("identifiants", identifiants));
       return true;
     } catch (Exception e) {
-      LOG.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
+      LOG.warn("Erreur déclenchement salle identifiants={} : {}", identifiants, e.getMessage());
       return false;
     }
   }
@@ -161,7 +161,7 @@ public class WorkerProxyService {
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
-      LOG.warn("Erreur appel worker trigger", e);
+      LOG.warn("Erreur appel worker trigger : {}", e.getMessage());
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }
@@ -191,7 +191,7 @@ public class WorkerProxyService {
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
-      LOG.warn("Erreur appel worker trigger job typeJob={}", typeJob, e);
+      LOG.warn("Erreur appel worker trigger job typeJob={} : {}", typeJob, e.getMessage());
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }
@@ -220,7 +220,7 @@ public class WorkerProxyService {
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
-      LOG.warn("Erreur appel worker trigger notifier-version version={}", version, e);
+      LOG.warn("Erreur appel worker trigger notifier-version version={} : {}", version, e.getMessage());
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }

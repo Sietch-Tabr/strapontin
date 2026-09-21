@@ -42,6 +42,10 @@ steps:
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:
+      # Ryuk (reaper Testcontainers) supprime les conteneurs du step test ~10s après la
+      # déconnexion de la JVM, pas immédiatement à la fin du process Maven — laisse ce
+      # nettoyage se terminer avant de solliciter à nouveau la mémoire de l'agent.
+      - sleep 15
       - mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check -DskipTests
     when:
       - event: push

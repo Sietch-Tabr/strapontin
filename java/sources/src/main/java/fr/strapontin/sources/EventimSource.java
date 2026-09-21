@@ -242,7 +242,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      LOG.warn("Eventim erreur HTTP", e);
+      LOG.warn("Eventim erreur HTTP : {}", e.getMessage());
       return ResultatPageEventim.ECHEC;
     }
   }
