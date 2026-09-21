@@ -35,6 +35,8 @@ public class ResendWebhookController {
   private static final Logger LOG = LoggerFactory.getLogger(ResendWebhookController.class);
   private static final String EVENEMENT_BOUNCE = "email.bounced";
   private static final String EVENEMENT_PLAINTE_SPAM = "email.complained";
+  private static final String EVENEMENT_SUPPRESSION_AJOUTEE = "suppression.added";
+  private static final String EVENEMENT_SUPPRESSION_RETIREE = "suppression.removed";
 
   private final ConfigService configService;
   private final EmailAlerteService emailAlerteService;
@@ -133,6 +135,9 @@ public class ResendWebhookController {
       } else if (EVENEMENT_PLAINTE_SPAM.equals(type)) {
         traiterIncidentEmail("Plainte spam", "plainte spam email reçue", emailDestinataire, svixId);
         emailAlerteService.envoyerNotificationPlainteSpam(emailDestinataire);
+      } else if (EVENEMENT_SUPPRESSION_AJOUTEE.equals(type)
+          || EVENEMENT_SUPPRESSION_RETIREE.equals(type)) {
+        traiterEvenementSuppression(type, racine.path("data").path("email").asText("<inconnu>"));
       }
     } catch (Exception e) {
       LOG.error("Erreur lors du traitement du webhook Resend", e);
@@ -152,6 +157,21 @@ public class ResendWebhookController {
     LOG.warn("{} email Resend : emailHash={}", libelle, emailHash);
     logAdminService.logAdmin(
         "warn", "web", messageLogAdmin, Map.of("email", emailHash, "svixId", nvl(svixId)));
+  }
+
+  /**
+   * Journalise un changement de la liste de suppression Resend (visibilité
+   * complète via {@code ResendWebhooksAdminService.listerSuppressions} —
+   * simple trace, pas une alerte, contrairement à un bounce/une plainte).
+   */
+  private void traiterEvenementSuppression(final String type, final String email) {
+    final String emailHash = String.valueOf(email.hashCode());
+    final boolean ajoutee = EVENEMENT_SUPPRESSION_AJOUTEE.equals(type);
+    logAdminService.logAdmin(
+        "info",
+        "web",
+        ajoutee ? "ajout liste de suppression Resend" : "retrait liste de suppression Resend",
+        Map.of("email", emailHash));
   }
 
   private static String nvl(final String valeur) {

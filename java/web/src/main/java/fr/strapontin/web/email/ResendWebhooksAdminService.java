@@ -6,9 +6,13 @@ package fr.strapontin.web.email;
 
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
+import com.resend.services.suppressions.model.ListSuppressionsResponseSuccess;
 import com.resend.services.webhooks.dto.WebhookDTO;
+import com.resend.services.webhooks.dto.WebhookEventAttemptDTO;
+import com.resend.services.webhooks.model.ListWebhookEventAttemptsResponseSuccess;
 import com.resend.services.webhooks.model.ListWebhookEventsResponseSuccess;
 import com.resend.services.webhooks.model.ListWebhooksResponseSuccess;
+import com.resend.services.webhooks.model.RotateWebhookSigningSecretResponseSuccess;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +32,7 @@ import org.springframework.stereotype.Service;
 public class ResendWebhooksAdminService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ResendWebhooksAdminService.class);
+  private static final String CLE_RESEND_API_KEY = "RESEND_API_KEY";
 
   private final ConfigService configService;
   private final Function<String, Resend> fabriqueResend;
@@ -70,7 +75,7 @@ public class ResendWebhooksAdminService {
    *     d'erreur API (journalisée, jamais propagée)
    */
   public List<EvenementWebhook> listerEvenements() {
-    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    final Optional<String> cle = configService.lireConfig(CLE_RESEND_API_KEY);
     if (cle.isEmpty()) {
       return List.of();
     }
@@ -108,7 +113,7 @@ public class ResendWebhooksAdminService {
    *     sinon (configuration absente, webhook introuvable, erreur API)
    */
   public boolean rejouerEvenement(final String eventId) {
-    final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
+    final Optional<String> cle = configService.lireConfig(CLE_RESEND_API_KEY);
     if (cle.isEmpty()) {
       return false;
     }
@@ -126,6 +131,126 @@ public class ResendWebhooksAdminService {
     } catch (ResendException e) {
       LOG.warn("Erreur rejeu événement webhook Resend id={} : {}", eventId, e.getMessage());
       return false;
+    }
+  }
+
+  /**
+   * Un événement webhook Resend, tel qu'affiché dans l'admin.
+   * @param id identifiant de la tentative
+   * @param httpStatusCode code HTTP retourné par l'endpoint, ou {@code null}
+   * @param reponse corps de la réponse de l'endpoint, ou {@code null}
+   * @param envoyeeLe horodatage de l'envoi (format ISO Resend)
+   */
+  public record TentativeWebhook(
+      String id, Integer httpStatusCode, String reponse, String envoyeeLe) {}
+
+  /**
+   * Une adresse email sur la liste de suppression Resend.
+   * @param id identifiant de l'entrée
+   * @param email adresse supprimée
+   * @param origine raison de l'ajout (ex. {@code "bounce"}, {@code "manual"})
+   * @param creeLe horodatage de création (format ISO Resend)
+   */
+  public record EntreeSuppression(String id, String email, String origine, String creeLe) {}
+
+  /**
+   * Fait tourner le secret de signature du webhook configuré et persiste
+   * le nouveau secret — sans repasser par le dashboard Resend.
+   *
+   * @return le nouveau secret, ou {@link Optional#empty()} si {@code
+   *     RESEND_API_KEY}/{@code PUBLIC_BASE_URL} absent, webhook introuvable,
+   *     ou erreur API
+   */
+  public Optional<String> rotationSecretWebhook() {
+    final Optional<String> cle = configService.lireConfig(CLE_RESEND_API_KEY);
+    if (cle.isEmpty()) {
+      return Optional.empty();
+    }
+    final Resend client = fabriqueResend.apply(cle.get());
+
+    final String webhookId = resoudreWebhookId(client);
+    if (webhookId == null) {
+      return Optional.empty();
+    }
+
+    try {
+      final RotateWebhookSigningSecretResponseSuccess reponse =
+          client.webhooks().rotateSigningSecret(webhookId);
+      final String nouveauSecret = reponse.getSigningSecret();
+      if (nouveauSecret == null) {
+        return Optional.empty();
+      }
+      configService.sauvegarderConfig("RESEND_WEBHOOK_SECRET", nouveauSecret);
+      LOG.info("Secret de signature webhook Resend renouvelé");
+      return Optional.of(nouveauSecret);
+    } catch (ResendException e) {
+      LOG.warn("Erreur rotation secret webhook Resend : {}", e.getMessage());
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Liste les tentatives de livraison d'un événement webhook.
+   *
+   * @param eventId identifiant de l'événement
+   * @return les tentatives, vide si configuration absente, webhook/événement
+   *     introuvable, ou erreur API
+   */
+  public List<TentativeWebhook> listerTentatives(final String eventId) {
+    final Optional<String> cle = configService.lireConfig(CLE_RESEND_API_KEY);
+    if (cle.isEmpty()) {
+      return List.of();
+    }
+    final Resend client = fabriqueResend.apply(cle.get());
+
+    final String webhookId = resoudreWebhookId(client);
+    if (webhookId == null) {
+      return List.of();
+    }
+
+    try {
+      final ListWebhookEventAttemptsResponseSuccess reponse =
+          client.webhooks().listEventAttempts(webhookId, eventId);
+      return reponse.getData() != null
+          ? reponse.getData().stream().map(this::versTentative).toList()
+          : List.of();
+    } catch (ResendException e) {
+      LOG.warn("Erreur listing tentatives webhook Resend eventId={} : {}", eventId, e.getMessage());
+      return List.of();
+    }
+  }
+
+  private TentativeWebhook versTentative(final WebhookEventAttemptDTO dto) {
+    return new TentativeWebhook(
+        dto.getId(), dto.getHttpStatusCode(), dto.getResponse(), dto.getSentAt());
+  }
+
+  /**
+   * Liste les adresses sur la liste de suppression Resend (bounces/plaintes
+   * bloquant définitivement l'envoi tant qu'elles n'en sont pas retirées).
+   *
+   * @return les entrées, vide si {@code RESEND_API_KEY} absent ou erreur API
+   */
+  public List<EntreeSuppression> listerSuppressions() {
+    final Optional<String> cle = configService.lireConfig(CLE_RESEND_API_KEY);
+    if (cle.isEmpty()) {
+      return List.of();
+    }
+    final Resend client = fabriqueResend.apply(cle.get());
+
+    try {
+      final ListSuppressionsResponseSuccess reponse = client.suppressions().list();
+      return reponse.getData() != null
+          ? reponse.getData().stream()
+              .map(
+                  s ->
+                      new EntreeSuppression(
+                          s.getId(), s.getEmail(), s.getOrigin(), s.getCreatedAt()))
+              .toList()
+          : List.of();
+    } catch (ResendException e) {
+      LOG.warn("Erreur listing suppressions Resend : {}", e.getMessage());
+      return List.of();
     }
   }
 

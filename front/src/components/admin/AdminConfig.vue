@@ -180,6 +180,18 @@
                 Enregistrer
               </button>
             </form>
+            <button
+              type="button"
+              class="bouton bouton-texte"
+              :disabled="rotationEnCours"
+              @click="rotationSecretWebhook"
+            >
+              {{
+                rotationEnCours
+                  ? "Rotation…"
+                  : "Renouveler sans passer par le dashboard Resend"
+              }}
+            </button>
           </div>
         </template>
       </div>
@@ -226,6 +238,50 @@
                   >
                     {{ rejeuEnCours === e.id ? "Rejeu…" : "Rejouer" }}
                   </button>
+                  <button
+                    type="button"
+                    class="bouton bouton-secondaire bouton-petit"
+                    @click="ouvrirTentatives(e.id)"
+                  >
+                    Tentatives
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Liste de suppression Resend -->
+      <div v-if="configParCle['RESEND_API_KEY']?.presente" class="param-bloc">
+        <h3 class="param-libelle">Liste de suppression Resend</h3>
+        <p class="param-aide">
+          Adresses email bloquées définitivement par Resend (bounces, plaintes)
+          — un envoi vers l'une d'elles échoue sans jamais être retenté tant
+          qu'elle n'en est pas retirée.
+        </p>
+        <p
+          v-if="!chargementSuppressions && !suppressions.length"
+          class="etat-vide-texte"
+        >
+          Aucune adresse sur la liste de suppression.
+        </p>
+        <EtatChargement v-if="chargementSuppressions" />
+        <div v-else-if="suppressions.length" class="table-conteneur">
+          <table id="table-suppressions-resend">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Origine</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in suppressions" :key="s.id">
+                <td data-label="Email">{{ s.email }}</td>
+                <td data-label="Origine">{{ s.origine ?? "—" }}</td>
+                <td data-label="Date">
+                  {{ s.creeLe ? formaterInstant(s.creeLe) : "—" }}
                 </td>
               </tr>
             </tbody>
@@ -323,6 +379,30 @@
       </button>
     </div>
   </dialog>
+
+  <dialog id="dialog-tentatives" ref="dialogTentativesRef">
+    <p class="dialog-titre">Tentatives de livraison</p>
+    <EtatChargement v-if="chargementTentatives" />
+    <p v-else-if="!tentatives.length" class="etat-vide-texte">
+      Aucune tentative trouvée.
+    </p>
+    <ul v-else class="tentatives-liste">
+      <li v-for="t in tentatives" :key="t.id">
+        <strong>{{ t.httpStatusCode ?? "—" }}</strong>
+        — {{ t.envoyeeLe ? formaterInstant(t.envoyeeLe) : "—" }}
+        <div v-if="t.reponse" class="tentatives-reponse">{{ t.reponse }}</div>
+      </li>
+    </ul>
+    <div class="dialog-pied">
+      <button
+        type="button"
+        class="bouton bouton-secondaire"
+        @click="dialogTentativesRef.close()"
+      >
+        Fermer
+      </button>
+    </div>
+  </dialog>
 </template>
 
 <script setup>
@@ -340,6 +420,8 @@ const {
   ouvrir: ouvrirDialogVapidModal,
   fermer: fermerDialogVapidModal,
 } = useDialog();
+const { dialogRef: dialogTentativesRef, ouvrir: ouvrirDialogTentativesModal } =
+  useDialog();
 
 const DESCRIPTIONS_CONFIG = {
   CONTACT_EMAIL:
@@ -362,6 +444,11 @@ const testEmailEnCours = ref(false);
 const chargementWebhooks = ref(false);
 const evenementsWebhook = shallowRef([]);
 const rejeuEnCours = ref(null);
+const rotationEnCours = ref(false);
+const chargementTentatives = ref(false);
+const tentatives = shallowRef([]);
+const chargementSuppressions = ref(false);
+const suppressions = shallowRef([]);
 
 const configParCle = computed(() => {
   const map = {};
@@ -393,7 +480,10 @@ async function charger() {
       const info = await repInfo.json();
       appConfigSecretPresente.value = info.appConfigSecretPresente ?? false;
     }
-    if (configParCle.value["RESEND_API_KEY"]?.presente) chargerWebhooks();
+    if (configParCle.value["RESEND_API_KEY"]?.presente) {
+      chargerWebhooks();
+      chargerSuppressions();
+    }
   } catch (_) {
     afficherToast("Erreur lors du chargement de la configuration.", "erreur");
   } finally {
@@ -440,6 +530,65 @@ async function rejouerEvenementWebhook(id) {
     afficherToast("Erreur réseau lors du rejeu.", "erreur");
   } finally {
     rejeuEnCours.value = null;
+  }
+}
+
+async function rotationSecretWebhook() {
+  rotationEnCours.value = true;
+  try {
+    const rep = await fetch("/api/admin/webhooks/resend/rotation-secret", {
+      method: "POST",
+    });
+    if (rep.ok) {
+      afficherToast("Secret de signature renouvelé.", "succes");
+      await charger();
+    } else {
+      const corps = await rep.json();
+      afficherToast(corps.erreur || "Rotation impossible.", "erreur");
+    }
+  } catch (_) {
+    afficherToast("Erreur réseau lors de la rotation.", "erreur");
+  } finally {
+    rotationEnCours.value = false;
+  }
+}
+
+async function ouvrirTentatives(eventId) {
+  tentatives.value = [];
+  chargementTentatives.value = true;
+  ouvrirDialogTentativesModal();
+  try {
+    const rep = await fetch(
+      `/api/admin/webhooks/resend/evenements/${eventId}/tentatives`,
+    );
+    if (rep.ok) {
+      tentatives.value = await rep.json();
+    } else {
+      afficherToast("Erreur lors du chargement des tentatives.", "erreur");
+    }
+  } catch (_) {
+    afficherToast("Erreur réseau lors du chargement des tentatives.", "erreur");
+  } finally {
+    chargementTentatives.value = false;
+  }
+}
+
+async function chargerSuppressions() {
+  chargementSuppressions.value = true;
+  try {
+    const rep = await fetch("/api/admin/webhooks/resend/suppressions");
+    if (rep.ok) {
+      suppressions.value = await rep.json();
+    } else {
+      afficherToast("Erreur lors du chargement des suppressions.", "erreur");
+    }
+  } catch (_) {
+    afficherToast(
+      "Erreur réseau lors du chargement des suppressions.",
+      "erreur",
+    );
+  } finally {
+    chargementSuppressions.value = false;
   }
 }
 
@@ -537,6 +686,22 @@ onMounted(charger);
 </script>
 
 <style scoped>
+.tentatives-liste {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.tentatives-reponse {
+  color: var(--fg-muted);
+  font-family: monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .config-groupe-item {
   border-top: 1px solid var(--border);
   margin-top: 0.75rem;
