@@ -6,6 +6,8 @@ package fr.strapontin.worker;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,7 @@ public class LogsAdminWorker {
           VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
           """,
           Map.of(
-              "ts", System.currentTimeMillis(),
+              "ts", Timestamp.from(Instant.now()),
               "niveau", niveau,
               "source", source,
               "message", message,

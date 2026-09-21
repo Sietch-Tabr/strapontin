@@ -226,7 +226,7 @@ public class WorkerPurgeService {
    * entrées purgé à chaque insertion.
    */
   public void executerPurgerLogsAdmin() {
-    final long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
+    final Instant seuilLogs = Instant.now().minusSeconds(30L * 24 * 60 * 60);
     final Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     final Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     LOG.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
@@ -235,7 +235,9 @@ public class WorkerPurgeService {
         "purger:logs-admin",
         () -> {
           final int supprimesLogs =
-              jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of(CLE_SEUIL, seuilLogs));
+              jdbc.update(
+                  "DELETE FROM logs_admin WHERE ts < :seuil",
+                  Map.of(CLE_SEUIL, Timestamp.from(seuilLogs)));
           final int supprimesHistorique =
               jdbc.update(
                   "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
