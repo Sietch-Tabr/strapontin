@@ -68,10 +68,6 @@ public class ResendWebhookController {
    * @param svixSignature header svix-signature
    * @param corpsRaw corps brut, sensible à la moindre modification
    */
-  // Paramètres individuels imposés par le contrat @RequestHeader (liaison
-  // HTTP), pas par choix de conception — hors de la convention DTO du projet,
-  // réservée aux endpoints @RequestBody.
-  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @PostMapping(value = "/api/webhooks/resend", consumes = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Void> recevoirEvenement(
       @RequestHeader(value = "svix-id", required = false) final String svixId,

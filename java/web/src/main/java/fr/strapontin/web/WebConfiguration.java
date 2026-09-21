@@ -11,10 +11,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -61,12 +62,16 @@ public class WebConfiguration implements WebMvcConfigurer {
    *
    * <p>Timeout connexion : 5 s — timeout lecture : 10 s.
    */
+  // HttpClient jamais fermé : bean Spring singleton, pool de connexions
+  // réutilisé pour toute la durée de vie de l'application.
+  @SuppressWarnings("PMD.CloseResource")
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
   RestClient restClient() {
-    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-    factory.setConnectTimeout(Duration.ofSeconds(5));
+    final HttpClient httpClient =
+        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    final JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
     factory.setReadTimeout(Duration.ofSeconds(10));
     return RestClient.builder().requestFactory(factory).build();
   }

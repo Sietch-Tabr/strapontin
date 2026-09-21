@@ -329,6 +329,10 @@ public class EnrichissementSallesService {
     return false;
   }
 
+  // Retour null idiomatique (une entité unique trouvée ou non, pas une collection
+  // de plusieurs éléments) — Map.of() introduirait une ambiguïté avec une salle
+  // réellement vide de coordonnées.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(

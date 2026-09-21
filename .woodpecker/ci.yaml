@@ -7,7 +7,7 @@ when:
 
 steps:
   - name: test
-    image: maven:3.9-eclipse-temurin-25
+    image: maven:3.9-eclipse-temurin-26
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
       - /var/run/docker.sock:/var/run/docker.sock
@@ -35,7 +35,7 @@ steps:
   # killer (constaté en reproduction, v2.9.1) — un seul step lourd à la fois sur cet
   # agent.
   - name: static-analysis
-    image: maven:3.9-eclipse-temurin-25
+    image: maven:3.9-eclipse-temurin-26
     depends_on: [test, lint-front]
     environment:
       MAVEN_OPTS: "-Xmx768m"
@@ -75,7 +75,7 @@ steps:
         branch: main
 
   - name: build
-    image: maven:3.9-eclipse-temurin-25
+    image: maven:3.9-eclipse-temurin-26
     depends_on: [test, build-front, static-analysis, lint-front]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2

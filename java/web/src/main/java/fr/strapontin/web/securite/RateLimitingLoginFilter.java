@@ -14,6 +14,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
@@ -85,7 +86,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
           Map.of("ip", ip));
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-      response.setCharacterEncoding("UTF-8");
+      response.setCharacterEncoding(StandardCharsets.UTF_8.name());
       response
           .getWriter()
           .write("{\"erreur\":\"Trop de tentatives. Réessayez dans quelques minutes.\"}");

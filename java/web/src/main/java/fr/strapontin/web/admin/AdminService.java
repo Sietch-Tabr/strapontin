@@ -54,6 +54,9 @@ public class AdminService {
    * et les deux services délégués pour le listing/la modification
    * d'utilisateurs (paramètres homonymes des champs).
    */
+  // 8 collaborateurs Spring distincts à responsabilité unique — pas de sous-ensemble
+  // regroupable sans mélanger des responsabilités indépendantes.
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public AdminService(
       final NamedParameterJdbcTemplate jdbc,
       final EmailService emailService,

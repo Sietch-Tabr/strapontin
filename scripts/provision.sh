@@ -48,7 +48,7 @@ CORES="2"
 APP_DIR="/opt/strapontin"
 APP_USER="strapontin"
 DB_NAME="strapontin"
-JAVA_VERSION="25"
+JAVA_VERSION="26"
 PG_VERSION="18"
 NAS_MOUNT_PATH="/mnt/synology/backup/Strapontin"
 

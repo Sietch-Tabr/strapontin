@@ -26,7 +26,7 @@
     <properties>
         <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
         <revision>3.0.0</revision>
-        <java.version>25</java.version>
+        <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+. -->
         <flyway.version>13.4.0</flyway.version>
@@ -55,6 +55,8 @@
         <jacocoArgLine></jacocoArgLine>
         <checkstyle.version>3.6.0</checkstyle.version>
         <pmd.version>3.28.0</pmd.version>
+        <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
+        <pmdCore.version>7.27.0</pmdCore.version>
         <jacoco.version>0.8.15</jacoco.version>
         <spotless.version>3.10.2</spotless.version>
     </properties>
@@ -98,6 +100,23 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-pmd-plugin</artifactId>
                     <version>${pmd.version}</version>
+                    <!-- pmd-core/pmd-java surchargés : maven-pmd-plugin 3.28.0 (dernière version,
+                         cf. check-deps) embarque encore PMD 7.17.0, qui ne sait pas analyser du
+                         bytecode Java 26 ("Unsupported class file major version 70") et
+                         misclassifie certains types du JDK (java.util.Map) s'il tourne lui-même
+                         sous un JVM hôte Java 26 — PMD ne supporte Java 26 que depuis 7.21.0. -->
+                    <dependencies>
+                        <dependency>
+                            <groupId>net.sourceforge.pmd</groupId>
+                            <artifactId>pmd-core</artifactId>
+                            <version>${pmdCore.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>net.sourceforge.pmd</groupId>
+                            <artifactId>pmd-java</artifactId>
+                            <version>${pmdCore.version}</version>
+                        </dependency>
+                    </dependencies>
                     <configuration>
                         <rulesets>
                             <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>

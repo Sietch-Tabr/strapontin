@@ -119,7 +119,9 @@ class SalleRechercheTicketmasterService {
       throws JsonProcessingException {
     final Map<String, Object> root = objectMapper.readValue(corps, Map.class);
     final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
-    return embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+    final List<Map<String, Object>> venues =
+        embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+    return venues != null ? venues : List.of();
   }
 
   @SuppressWarnings("unchecked")
