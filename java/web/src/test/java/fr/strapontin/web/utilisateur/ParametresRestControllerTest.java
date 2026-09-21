@@ -41,7 +41,7 @@ class ParametresRestControllerTest {
     controller = new ParametresRestController(parametresService, configService);
 
     final UtilisateurDetails details =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(details);
   }

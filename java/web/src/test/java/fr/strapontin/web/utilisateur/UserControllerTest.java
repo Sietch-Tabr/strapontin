@@ -49,7 +49,7 @@ class UserControllerTest {
 
   private Authentication authPour(final String userId, final String role) {
     final UtilisateurDetails ud =
-        new UtilisateurDetails(userId, "login", "test@test.fr", "", role, false, false);
+        new UtilisateurDetails(userId, "login", "test@test.fr", "", role, false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;

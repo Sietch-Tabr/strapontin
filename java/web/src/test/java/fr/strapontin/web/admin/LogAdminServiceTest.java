@@ -4,10 +4,12 @@
  */
 package fr.strapontin.web.admin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,5 +63,29 @@ class LogAdminServiceTest {
     org.assertj.core.api.Assertions.assertThatCode(
             () -> service.logAdmin("info", "test", "message sans meta"))
         .doesNotThrowAnyException();
+  }
+
+  @Test
+  void compterEchecsConnexionRecents_delegueAuJdbcAvecIdentifiantEtBorne() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(5L);
+
+    final long total = service.compterEchecsConnexionRecents("alice", 1000L);
+
+    assertEquals(5L, total);
+    verify(jdbc)
+        .queryForObject(
+            contains("source = 'auth'"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p ->
+                    "alice".equals(p.get("identifiant"))
+                        && Long.valueOf(1000L).equals(p.get("depuisMs"))),
+            eq(Long.class));
+  }
+
+  @Test
+  void compterEchecsConnexionRecents_resultatNull_retourneZero() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(null);
+
+    assertEquals(0L, service.compterEchecsConnexionRecents("alice", 1000L));
   }
 }

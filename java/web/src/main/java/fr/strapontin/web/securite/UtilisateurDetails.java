@@ -25,7 +25,8 @@ public record UtilisateurDetails(
     String motDePasse,
     String role,
     boolean twoFactorActif,
-    boolean doitChangerCredentials)
+    boolean doitChangerCredentials,
+    boolean verrouille)
     implements UserDetails {
 
   @Serial private static final long serialVersionUID = 1L;
@@ -48,5 +49,10 @@ public record UtilisateurDetails(
   @Override
   public boolean isCredentialsNonExpired() {
     return true;
+  }
+
+  @Override
+  public boolean isAccountNonLocked() {
+    return !verrouille;
   }
 }

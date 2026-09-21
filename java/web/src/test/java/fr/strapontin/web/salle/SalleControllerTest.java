@@ -48,7 +48,7 @@ class SalleControllerTest {
   void setUp() {
     controller = new SalleController(salleService, emailService);
     final UtilisateurDetails ud =
-        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
   }

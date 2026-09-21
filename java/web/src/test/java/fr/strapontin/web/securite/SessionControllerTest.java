@@ -68,7 +68,7 @@ class SessionControllerTest {
   @Test
   void session_utilisateurAuthentifie_retourneRoleEtNbNouveauCalcule() {
     final UtilisateurDetails ud =
-        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "admin", false, false);
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "admin", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(ud);

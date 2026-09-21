@@ -48,7 +48,7 @@ public class UtilisateurDetailsService implements UserDetailsService {
     final String sql =
         """
         SELECT u.id, u.username, u.email, u.role,
-               u.two_factor_enabled, u.must_change_credentials,
+               u.two_factor_enabled, u.must_change_credentials, u.verrouille,
                a.password
         FROM users u
         JOIN accounts a ON a.user_id = u.id AND a.provider_id = 'credential'
@@ -70,7 +70,8 @@ public class UtilisateurDetailsService implements UserDetailsService {
               rs.getString("password"),
               rs.getString("role"),
               rs.getBoolean("two_factor_enabled"),
-              rs.getBoolean("must_change_credentials"));
+              rs.getBoolean("must_change_credentials"),
+              rs.getBoolean("verrouille"));
         });
   }
 }

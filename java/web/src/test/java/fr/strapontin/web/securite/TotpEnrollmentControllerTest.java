@@ -52,7 +52,7 @@ class TotpEnrollmentControllerTest {
 
   private void stubPrincipal() {
     final UtilisateurDetails ud =
-        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     when(auth.getPrincipal()).thenReturn(ud);
   }
 

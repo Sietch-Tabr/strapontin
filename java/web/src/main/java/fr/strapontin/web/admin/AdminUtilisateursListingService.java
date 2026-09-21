@@ -66,7 +66,7 @@ class AdminUtilisateursListingService {
     return jdbc.queryForList(
         """
         SELECT u.id, u.email, u.role::text, u.username, u.display_username,
-               u.must_change_credentials, u.created_at, u.revocation_admin_le,
+               u.must_change_credentials, u.created_at, u.revocation_admin_le, u.verrouille,
                COUNT(DISTINCT us.salle_id) AS nb_salles,
                COUNT(DISTINCT ua.artiste_id) AS nb_artistes,
                COUNT(*) OVER() AS total_filtre
@@ -74,7 +74,7 @@ class AdminUtilisateursListingService {
         LEFT JOIN user_salles us ON us.user_id = u.id
         LEFT JOIN user_artistes ua ON ua.user_id = u.id
         GROUP BY u.id, u.email, u.role, u.username, u.display_username,
-                 u.must_change_credentials, u.created_at, u.revocation_admin_le
+                 u.must_change_credentials, u.created_at, u.revocation_admin_le, u.verrouille
         ORDER BY u.created_at
         LIMIT :taille OFFSET :offset
         """,
@@ -114,7 +114,8 @@ class AdminUtilisateursListingService {
         derniereMs != null ? Instant.ofEpochMilli(derniereMs) : null,
         revocationBrute != null ? ((Timestamp) revocationBrute).toInstant() : null,
         nbSallesNum != null ? nbSallesNum.intValue() : 0,
-        nbArtistesNum != null ? nbArtistesNum.intValue() : 0);
+        nbArtistesNum != null ? nbArtistesNum.intValue() : 0,
+        (Boolean) utilisateurBrut.get("verrouille"));
   }
 
   // page vide (offset au-delà du total, ex. dernier utilisateur supprimé

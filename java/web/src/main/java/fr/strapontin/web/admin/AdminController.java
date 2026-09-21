@@ -38,6 +38,7 @@ public class AdminController {
 
   private static final String CLE_SUCCES = "succes";
   private static final String CLE_ACTION = "action";
+  private static final String MSG_UTILISATEUR_INTROUVABLE = "Utilisateur introuvable.";
 
   private final AdminService adminService;
   private final AdminRevocationService adminRevocationService;
@@ -186,7 +187,7 @@ public class AdminController {
               }
               return ResponseEntity.ok(corps);
             })
-        .orElseGet(() -> erreur(404, "Utilisateur introuvable."));
+        .orElseGet(() -> erreur(404, MSG_UTILISATEUR_INTROUVABLE));
   }
 
   /**
@@ -246,7 +247,7 @@ public class AdminController {
       return ResponseEntity.ok(
           Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "reinitialiserTotp"));
     }
-    return erreur(404, "Utilisateur introuvable.");
+    return erreur(404, MSG_UTILISATEUR_INTROUVABLE);
   }
 
   /**
@@ -264,7 +265,47 @@ public class AdminController {
       return ResponseEntity.ok(
           Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "revoquerSessions"));
     }
-    return erreur(404, "Utilisateur introuvable.");
+    return erreur(404, MSG_UTILISATEUR_INTROUVABLE);
+  }
+
+  /**
+   * Verrouille immédiatement un compte suspecté compromis (bloque la
+   * connexion, révoque les sessions actives).
+   *
+   * @param userId identifiant de l'utilisateur cible
+   * @param auth contexte d'authentification admin
+   * @return 200 si verrouillé, 400 si auto-verrouillage, 404 si introuvable
+   */
+  @PostMapping("/utilisateurs/{userId}/verrouiller")
+  public ResponseEntity<Map<String, Object>> verrouillerCompte(
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
+    if (userId.equals(adminId)) {
+      return erreur(400, "Impossible de verrouiller votre propre compte.");
+    }
+    if (adminService.verrouillerCompte(userId, adminId)) {
+      return ResponseEntity.ok(
+          Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "verrouillerCompte"));
+    }
+    return erreur(404, MSG_UTILISATEUR_INTROUVABLE);
+  }
+
+  /**
+   * Déverrouille un compte précédemment verrouillé.
+   *
+   * @param userId identifiant de l'utilisateur cible
+   * @param auth contexte d'authentification admin
+   * @return 200 si déverrouillé, 404 si introuvable
+   */
+  @DeleteMapping("/utilisateurs/{userId}/verrouiller")
+  public ResponseEntity<Map<String, Object>> deverrouillerCompte(
+      @PathVariable final String userId, final Authentication auth) {
+    final String adminId = utilisateur(auth).id();
+    if (adminService.deverrouillerCompte(userId, adminId)) {
+      return ResponseEntity.ok(
+          Map.<String, Object>of(CLE_SUCCES, true, CLE_ACTION, "deverrouillerCompte"));
+    }
+    return erreur(404, MSG_UTILISATEUR_INTROUVABLE);
   }
 
   private static UtilisateurDetails utilisateur(final Authentication auth) {

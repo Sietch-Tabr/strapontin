@@ -152,4 +152,24 @@ public class LogAdminService {
                 rs.getString("message"),
                 rs.getString("meta")));
   }
+
+  /**
+   * Compte les échecs d'authentification récents d'un identifiant
+   * (source {@code auth}, niveau {@code warn}).
+   * @param identifiant l'identifiant ciblé par les échecs
+   * @param depuisMs horodatage Unix en millisecondes, exclusif
+   * @return le nombre d'échecs consignés depuis {@code depuisMs}
+   */
+  public long compterEchecsConnexionRecents(final String identifiant, final long depuisMs) {
+    final Long total =
+        jdbc.queryForObject(
+            """
+            SELECT COUNT(*) FROM logs_admin
+            WHERE source = 'auth' AND niveau = 'warn'
+              AND meta ->> 'identifiant' = :identifiant AND ts > :depuisMs
+            """,
+            Map.of("identifiant", identifiant, "depuisMs", depuisMs),
+            Long.class);
+    return total != null ? total : 0;
+  }
 }

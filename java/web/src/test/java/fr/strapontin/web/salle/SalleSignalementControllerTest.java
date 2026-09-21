@@ -39,7 +39,7 @@ class SalleSignalementControllerTest {
   void setUp() {
     controller = new SalleController(salleService, emailService);
     final UtilisateurDetails utilisateur =
-        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false);
+        new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     when(auth.getPrincipal()).thenReturn(utilisateur);
   }
 

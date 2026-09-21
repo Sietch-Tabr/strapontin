@@ -5,6 +5,8 @@
 package fr.strapontin.web.securite;
 
 import fr.strapontin.web.admin.LogAdminService;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -24,13 +26,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthEvenementListener {
 
+  // même seuil que le verrouillage TOTP (TotpChallengeService, 5 échecs).
+  private static final int SEUIL_ECHECS_ALERTE = 5;
+  private static final Duration FENETRE_ECHECS_ALERTE = Duration.ofMinutes(15);
+
   private final LogAdminService logAdminService;
+  private final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService;
 
   /**
    * @param logAdminService journalisation des événements d'authentification
+   * @param alerteActiviteUtilisateurService alertes d'échecs de connexion répétés
    */
-  public AuthEvenementListener(final LogAdminService logAdminService) {
+  public AuthEvenementListener(
+      final LogAdminService logAdminService,
+      final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService) {
     this.logAdminService = logAdminService;
+    this.alerteActiviteUtilisateurService = alerteActiviteUtilisateurService;
   }
 
   /**
@@ -72,6 +83,12 @@ public class AuthEvenementListener {
     meta.put("ip", ip != null ? ip : "?");
     meta.put("raison", raison);
     logAdminService.logAdmin("warn", "auth", "Échec connexion : " + identifiant, meta);
+
+    final long depuisMs = Instant.now().minus(FENETRE_ECHECS_ALERTE).toEpochMilli();
+    if (logAdminService.compterEchecsConnexionRecents(identifiant, depuisMs)
+        == SEUIL_ECHECS_ALERTE) {
+      alerteActiviteUtilisateurService.notifierEchecsConnexionRepetes(identifiant);
+    }
   }
 
   private String obtenirIp(final Authentication auth) {

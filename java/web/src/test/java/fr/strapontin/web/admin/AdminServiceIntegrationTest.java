@@ -15,6 +15,7 @@ import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
+import fr.strapontin.web.email.EmailServiceSecurite;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.sql.Timestamp;
 import java.util.Map;
@@ -75,6 +76,7 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
             jdbc,
             mock(EmailService.class),
             mock(EmailServiceAdmin.class),
+            mock(EmailServiceSecurite.class),
             mock(AdminUtilisateursListingService.class),
             modificationService,
             mock(LogAdminService.class),

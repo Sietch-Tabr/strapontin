@@ -36,7 +36,7 @@ class AppareilsControllerTest {
     appareilsService = mock(AppareilsService.class);
     controller = new AppareilsController(appareilsService);
     final UtilisateurDetails ud =
-        new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false);
+        new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
     auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
   }

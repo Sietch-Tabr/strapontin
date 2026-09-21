@@ -98,7 +98,7 @@ class PasswordResetControllerTest {
   void reinitialiserMotDePasse_activationInvitation_peupleWebAuthenticationDetailsSurLeToken() {
     when(authService.activerCompteInvite("token", "alice", "motdepasse12345")).thenReturn("alice");
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);

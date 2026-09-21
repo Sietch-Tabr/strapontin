@@ -43,6 +43,9 @@
                   >révocation
                   {{ joursAvantRevocation(u.revocationAdminLe) }}</span
                 >
+                <span v-if="u.verrouille" class="badge badge-danger"
+                  >verrouillé</span
+                >
               </div>
               <p v-if="u.displayUsername" class="user-carte-nom">
                 {{ u.displayUsername }}
@@ -99,6 +102,22 @@
                 @click="annulerRevocation(u)"
               >
                 Annuler la révocation
+              </button>
+              <button
+                v-if="!u.verrouille"
+                type="button"
+                class="bouton bouton-petit bouton-danger"
+                @click="verrouillerCompte(u)"
+              >
+                Verrouiller
+              </button>
+              <button
+                v-else
+                type="button"
+                class="bouton bouton-petit bouton-secondaire"
+                @click="deverrouillerCompte(u)"
+              >
+                Déverrouiller
               </button>
               <button
                 type="button"
@@ -286,6 +305,32 @@
     </div>
   </dialog>
 
+  <dialog id="dialog-verrouiller-compte" ref="dialogVerrouillerCompteRef">
+    <p class="dialog-titre">Verrouiller ce compte ?</p>
+    <p class="dialog-corps">
+      <strong>{{ userAVerrouiller?.email }}</strong> ne pourra plus se connecter
+      et toutes ses sessions actives seront déconnectées.
+    </p>
+    <div class="dialog-pied">
+      <button
+        id="dialog-verrouiller-compte-confirmer"
+        type="button"
+        class="bouton bouton-danger"
+        @click="confirmerVerrouillerCompte"
+      >
+        Verrouiller
+      </button>
+      <button
+        id="dialog-verrouiller-compte-annuler"
+        type="button"
+        class="bouton bouton-secondaire"
+        @click="fermerDialogVerrouillerCompte"
+      >
+        Annuler
+      </button>
+    </div>
+  </dialog>
+
   <dialog id="dialog-confirmer-role" ref="dialogConfirmerRoleRef">
     <p class="dialog-titre">Confirmer le changement de rôle ?</p>
     <p id="dialog-confirmer-role-texte" class="dialog-corps">
@@ -397,6 +442,11 @@ const {
   ouvrir: ouvrirDialogConfirmerRoleModal,
   fermer: fermerDialogConfirmerRoleModal,
 } = useDialog();
+const {
+  dialogRef: dialogVerrouillerCompteRef,
+  ouvrir: ouvrirDialogVerrouillerCompteModal,
+  fermer: fermerDialogVerrouillerCompteModal,
+} = useDialog();
 
 const utilisateurs = shallowRef([]);
 const page = ref(0);
@@ -412,6 +462,7 @@ const userASupprimer = ref(null);
 const userAReinitMdp = ref(null);
 const userAReinitTotp = ref(null);
 const userARevoquerSessions = ref(null);
+const userAVerrouiller = ref(null);
 const inviteEmail = ref("");
 const lienInvitation = ref("");
 const modifEnAttenteRole = ref(null);
@@ -753,6 +804,59 @@ async function confirmerRevoquerSessions() {
   }
 }
 
+function verrouillerCompte(u) {
+  userAVerrouiller.value = u;
+  ouvrirDialogVerrouillerCompteModal();
+}
+
+function fermerDialogVerrouillerCompte() {
+  fermerDialogVerrouillerCompteModal();
+  userAVerrouiller.value = null;
+}
+
+async function confirmerVerrouillerCompte() {
+  if (!userAVerrouiller.value) return;
+  const userId = userAVerrouiller.value.id;
+  fermerDialogVerrouillerCompte();
+  try {
+    const rep = await fetch(
+      "/api/admin/utilisateurs/" + userId + "/verrouiller",
+      {
+        method: "POST",
+      },
+    );
+    const corps = await rep.json();
+    if (rep.ok) {
+      await rechargerUtilisateurs();
+      afficherToast("Compte verrouillé.", "succes");
+    } else {
+      afficherToast(corps.erreur || "Erreur.", "erreur");
+    }
+  } catch {
+    afficherToast("Erreur réseau.", "erreur");
+  }
+}
+
+async function deverrouillerCompte(u) {
+  try {
+    const rep = await fetch(
+      "/api/admin/utilisateurs/" + u.id + "/verrouiller",
+      {
+        method: "DELETE",
+      },
+    );
+    const corps = await rep.json();
+    if (rep.ok) {
+      await rechargerUtilisateurs();
+      afficherToast("Compte déverrouillé.", "succes");
+    } else {
+      afficherToast(corps.erreur || "Erreur.", "erreur");
+    }
+  } catch {
+    afficherToast("Erreur réseau.", "erreur");
+  }
+}
+
 function ouvrirDialogSupprimer(u) {
   userASupprimer.value = u;
   ouvrirDialogSupprimerModal();
@@ -803,6 +907,11 @@ onMounted(charger);
 .badge-avertissement {
   background: var(--avertissement-bg);
   color: var(--avertissement-text);
+}
+
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 .user-liste {
