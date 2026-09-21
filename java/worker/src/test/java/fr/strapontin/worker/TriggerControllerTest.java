@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
@@ -95,6 +96,35 @@ class TriggerControllerTest {
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
+
+    assertEquals(500, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void notifierVersion_succes_planifieLeJobEtRetourne200() throws Exception {
+    final Scheduler scheduler = mock(Scheduler.class);
+    final TriggerController controller = new TriggerController(scheduler);
+
+    final ResponseEntity<Map<String, String>> reponse = controller.notifierVersion("3.0.0");
+
+    assertEquals(200, reponse.getStatusCode().value());
+    assertEquals("déclenché", reponse.getBody().get("statut"));
+    verify(scheduler, times(1))
+        .scheduleJob(
+            org.mockito.ArgumentMatchers.any(JobDetail.class),
+            org.mockito.ArgumentMatchers.any(org.quartz.Trigger.class));
+  }
+
+  @Test
+  void notifierVersion_erreurQuartz_retourne500() throws Exception {
+    final Scheduler scheduler = mock(Scheduler.class);
+    when(scheduler.scheduleJob(
+            org.mockito.ArgumentMatchers.any(JobDetail.class),
+            org.mockito.ArgumentMatchers.any(org.quartz.Trigger.class)))
+        .thenThrow(new org.quartz.SchedulerException("boom"));
+    final TriggerController controller = new TriggerController(scheduler);
+
+    final ResponseEntity<Map<String, String>> reponse = controller.notifierVersion("3.0.0");
 
     assertEquals(500, reponse.getStatusCode().value());
   }

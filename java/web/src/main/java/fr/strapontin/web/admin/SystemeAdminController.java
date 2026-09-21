@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -47,11 +48,18 @@ public class SystemeAdminController {
   private final WorkerProxyService workerProxyService;
   private final EmailServiceAdmin emailServiceAdmin;
   private final VapidService vapidService;
+  private final BuildProperties buildProperties;
 
   /**
    * Injection Spring : services admin (comptes, config, jobs, bannière,
-   * proxy worker, emails, VAPID) — paramètres homonymes des champs.
+   * proxy worker, emails, VAPID) + métadonnées de build — paramètres
+   * homonymes des champs.
    */
+  // 8 collaborateurs Spring à responsabilité unique, chacun déjà justifié
+  // individuellement (contrôleur admin déjà extrait pour rester sous le
+  // seuil de couplage entre objets) — même traitement que
+  // WorkerStatsService/AdminService.
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public SystemeAdminController(
       final AdminService adminService,
       final ConfigAdminService configAdminService,
@@ -59,7 +67,8 @@ public class SystemeAdminController {
       final BanniereService banniereService,
       final WorkerProxyService workerProxyService,
       final EmailServiceAdmin emailServiceAdmin,
-      final VapidService vapidService) {
+      final VapidService vapidService,
+      final BuildProperties buildProperties) {
     this.adminService = adminService;
     this.configAdminService = configAdminService;
     this.jobsAdminService = jobsAdminService;
@@ -67,6 +76,7 @@ public class SystemeAdminController {
     this.workerProxyService = workerProxyService;
     this.emailServiceAdmin = emailServiceAdmin;
     this.vapidService = vapidService;
+    this.buildProperties = buildProperties;
   }
 
   /**
@@ -232,14 +242,37 @@ public class SystemeAdminController {
   }
 
   /**
+   * Déclenche l'envoi push "nouvelle version" (version courante) à tous
+   * les utilisateurs opt-in — action manuelle, à n'utiliser qu'après avoir
+   * vérifié qu'une entrée existe pour cette version dans
+   * {@code changelogVersions.js} (aucune vérification automatique côté
+   * serveur, ce fichier n'est pas accessible depuis le backend).
+   * @return 200 avec la version notifiée, 502/503 selon l'échec
+   */
+  @PostMapping("/notifier-version")
+  public ResponseEntity<Map<String, Object>> notifierNouvelleVersion() {
+    final String version = buildProperties.getVersion();
+    final ResultatRelance resultat = workerProxyService.notifierNouvelleVersion(version);
+    if (resultat.succes()) {
+      return ResponseEntity.ok(Map.of("statut", "déclenché", "version", version));
+    }
+    return ResponseEntity.status(resultat.statutHttp())
+        .body(Map.of("erreur", resultat.messageErreur()));
+  }
+
+  /**
    * Retourne les informations système non liées à la configuration chiffrée.
    *
-   * @return map avec {@code appConfigSecretPresente}
+   * @return map avec {@code appConfigSecretPresente} et {@code version}
    */
   @GetMapping("/info")
   public ResponseEntity<Map<String, Object>> lireInfo() {
     return ResponseEntity.ok(
-        Map.of("appConfigSecretPresente", System.getenv("APP_CONFIG_SECRET") != null));
+        Map.of(
+            "appConfigSecretPresente",
+            System.getenv("APP_CONFIG_SECRET") != null,
+            "version",
+            buildProperties.getVersion()));
   }
 
   private static UtilisateurDetails utilisateur(final Authentication auth) {

@@ -27,7 +27,7 @@ class RequeteNotificationsValidationTest {
   @Test
   void frequenceNotifications_valeurFournie_estValide() {
     final Set<ConstraintViolation<RequeteNotifications>> violations =
-        VALIDATOR.validate(new RequeteNotifications("quotidien", true, true, false, false));
+        VALIDATOR.validate(new RequeteNotifications("quotidien", true, true, false, false, false));
     assertTrue(violations.isEmpty());
   }
 
@@ -36,14 +36,14 @@ class RequeteNotificationsValidationTest {
   @Test
   void frequenceNotifications_null_estRejete() {
     final Set<ConstraintViolation<RequeteNotifications>> violations =
-        VALIDATOR.validate(new RequeteNotifications(null, true, true, false, false));
+        VALIDATOR.validate(new RequeteNotifications(null, true, true, false, false, false));
     assertFalse(violations.isEmpty());
   }
 
   @Test
   void frequenceNotifications_vide_estRejete() {
     final Set<ConstraintViolation<RequeteNotifications>> violations =
-        VALIDATOR.validate(new RequeteNotifications("", true, true, false, false));
+        VALIDATOR.validate(new RequeteNotifications("", true, true, false, false, false));
     assertFalse(violations.isEmpty());
   }
 }

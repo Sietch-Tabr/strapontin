@@ -59,7 +59,7 @@ class UserConfigControllerTest {
   @Test
   void majNotifications_delegueAuServiceAvecUserId() {
     final RequeteNotifications requete =
-        new RequeteNotifications("quotidien", true, false, false, false);
+        new RequeteNotifications("quotidien", true, false, false, false, false);
 
     controller.majNotifications(requete, authPour("u1"));
 
@@ -84,7 +84,8 @@ class UserConfigControllerTest {
   @Test
   void lireConfig_delegueAuServiceAvecUserId() {
     final ConfigUtilisateur config =
-        new ConfigUtilisateur(List.of(), true, "jamais", false, false, false, false, "auto", false);
+        new ConfigUtilisateur(
+            List.of(), true, "jamais", false, false, false, false, false, "auto", false);
     when(userConfigService.lireConfig("u1")).thenReturn(config);
 
     final var rep = controller.lireConfig(authPour("u1"));

@@ -32,6 +32,8 @@ public class WorkerProxyService {
   private static final String WORKER_BASE_URL = "http://localhost:8081";
   private static final String CLE_MDC_CORRELATION_ID = "correlationId";
   private static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
+  private static final String NIVEAU_INFO = "info";
+  private static final String SOURCE_ADMIN = "admin";
 
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
@@ -134,7 +136,7 @@ public class WorkerProxyService {
           .retrieve()
           .toBodilessEntity();
       logAdminService.logAdmin(
-          "info", "admin", "Fetch salle déclenché", Map.of("identifiants", identifiants));
+          NIVEAU_INFO, SOURCE_ADMIN, "Fetch salle déclenché", Map.of("identifiants", identifiants));
       return true;
     } catch (Exception e) {
       LOG.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
@@ -153,7 +155,7 @@ public class WorkerProxyService {
       ajouterCorrelationId(restClient.post().uri(WORKER_BASE_URL + "/trigger/tout"))
           .retrieve()
           .toBodilessEntity();
-      logAdminService.logAdmin("info", "admin", "Fetches relancés manuellement");
+      logAdminService.logAdmin(NIVEAU_INFO, SOURCE_ADMIN, "Fetches relancés manuellement");
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
       return new ResultatRelance(
@@ -179,7 +181,7 @@ public class WorkerProxyService {
           .retrieve()
           .toBodilessEntity();
       logAdminService.logAdmin(
-          "info", "admin", "Job relancé manuellement", Map.of("typeJob", typeJob));
+          NIVEAU_INFO, SOURCE_ADMIN, "Job relancé manuellement", Map.of("typeJob", typeJob));
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
       if (e.getStatusCode().value() == HttpStatus.BAD_REQUEST.value()) {
@@ -190,6 +192,35 @@ public class WorkerProxyService {
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
       LOG.warn("Erreur appel worker trigger job typeJob={}", typeJob, e);
+      return new ResultatRelance(false, "Worker inaccessible.", 503);
+    }
+  }
+
+  /**
+   * Déclenche l'envoi push "nouvelle version" à tous les utilisateurs
+   * opt-in — action admin manuelle, jamais automatique.
+   * @param version version applicative courante
+   * @return le résultat métier (succès, ou échec avec message et code HTTP)
+   */
+  public ResultatRelance notifierNouvelleVersion(final String version) {
+    try {
+      ajouterCorrelationId(
+              restClient
+                  .post()
+                  .uri(WORKER_BASE_URL + "/trigger/notifier-version?version={version}", version))
+          .retrieve()
+          .toBodilessEntity();
+      logAdminService.logAdmin(
+          NIVEAU_INFO,
+          SOURCE_ADMIN,
+          "Notification nouvelle version déclenchée",
+          Map.of("version", version));
+      return new ResultatRelance(true, null, 200);
+    } catch (RestClientResponseException e) {
+      return new ResultatRelance(
+          false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
+    } catch (Exception e) {
+      LOG.warn("Erreur appel worker trigger notifier-version version={}", version, e);
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }

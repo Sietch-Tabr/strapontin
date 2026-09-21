@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.worker.jobs.FetchSalleJob;
+import fr.strapontin.worker.jobs.NotifierVersionJob;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -212,6 +213,33 @@ public class TriggerController {
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
       LOG.warn("Erreur déclenchement salle identifiants={}", identifiants, e);
+      return ResponseEntity.internalServerError()
+          .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
+    }
+  }
+
+  /**
+   * Planifie un {@code NotifierVersionJob} immédiat (appelé par le web,
+   * action admin manuelle) — jamais de vérification de concurrence, un
+   * second déclenchement accidentel n'a d'autre effet qu'une notification
+   * en double, pas d'incohérence de données.
+   * @param version version applicative à annoncer
+   * @return 200 si planifié, 500 en cas d'erreur Quartz
+   */
+  @PostMapping("/notifier-version")
+  public ResponseEntity<Map<String, String>> notifierVersion(@RequestParam final String version) {
+    try {
+      final JobDetail jobDetail =
+          JobBuilder.newJob(NotifierVersionJob.class)
+              .withIdentity(
+                  "notifierVersion-" + version + "-" + System.currentTimeMillis(), "on-demand")
+              .usingJobData(NotifierVersionJob.CLE_VERSION, version)
+              .build();
+      scheduler.scheduleJob(jobDetail, TriggerBuilder.newTrigger().startNow().build());
+      LOG.info("Déclenchement notifier:version : version={}", version);
+      return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
+    } catch (SchedulerException e) {
+      LOG.warn("Erreur déclenchement notifier:version version={}", version, e);
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }

@@ -75,6 +75,18 @@
                 <input v-model="notifSallesPush" type="checkbox" />
               </label>
             </div>
+            <div class="notif-grille__ligne">
+              <span class="notif-grille__libelle"
+                >Nouvelle version de l'application</span
+              >
+              <span></span>
+              <label class="notif-grille__case">
+                <span class="lecteur-ecran"
+                  >Push — nouvelle version de l'application</span
+                >
+                <input v-model="notifNouvelleVersion" type="checkbox" />
+              </label>
+            </div>
           </fieldset>
 
           <button type="submit" class="bouton bouton-secondaire">
@@ -161,6 +173,7 @@ const notifArtistes = ref(false);
 const notifSalles = ref(false);
 const notifArtistesPush = ref(false);
 const notifSallesPush = ref(false);
+const notifNouvelleVersion = ref(false);
 
 const pushSupporte = ref(false);
 const vapidDisponible = ref(false);
@@ -186,6 +199,7 @@ async function charger() {
       notifSalles.value = config.notifSalles ?? false;
       notifArtistesPush.value = config.notifArtistesPush ?? false;
       notifSallesPush.value = config.notifSallesPush ?? false;
+      notifNouvelleVersion.value = config.notifNouvelleVersion ?? false;
     }
     if (repPush.ok) {
       const vapid = await repPush.json();
@@ -239,6 +253,7 @@ async function sauvegarderNotifications() {
         notifSalles: notifSalles.value,
         notifArtistesPush: notifArtistesPush.value,
         notifSallesPush: notifSallesPush.value,
+        notifNouvelleVersion: notifNouvelleVersion.value,
       }),
       signal: controleur.signal,
     });

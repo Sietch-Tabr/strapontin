@@ -48,6 +48,7 @@ public class UserConfigService {
           Map.entry("notifSalles", "notif_salles"),
           Map.entry("notifArtistesPush", "notif_artistes_push"),
           Map.entry("notifSallesPush", "notif_salles_push"),
+          Map.entry("notifNouvelleVersion", "notif_nouvelle_version"),
           Map.entry(CLE_THEME, CLE_THEME),
           Map.entry("onboardingVu", "onboarding_vu"));
 
@@ -96,7 +97,8 @@ public class UserConfigService {
         jdbc.query(
             """
             SELECT departements, filtre_disponibles, frequence_notifications,
-                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push, theme
+                   notif_artistes, notif_salles, notif_artistes_push, notif_salles_push,
+                   notif_nouvelle_version, theme
             FROM user_config
             WHERE user_id = :userId
             """,
@@ -111,6 +113,7 @@ public class UserConfigService {
                   rs.getBoolean("notif_salles"),
                   rs.getBoolean("notif_artistes_push"),
                   rs.getBoolean("notif_salles_push"),
+                  rs.getBoolean("notif_nouvelle_version"),
                   rs.getString(CLE_THEME),
                   false);
             });
@@ -119,7 +122,7 @@ public class UserConfigService {
 
     if (lignes.isEmpty()) {
       return new ConfigUtilisateur(
-          List.of(), true, "jamais", false, false, false, false, "auto", resendDisponible);
+          List.of(), true, "jamais", false, false, false, false, false, "auto", resendDisponible);
     }
     final ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
@@ -130,6 +133,7 @@ public class UserConfigService {
         base.notifSalles(),
         base.notifArtistesPush(),
         base.notifSallesPush(),
+        base.notifNouvelleVersion(),
         base.theme(),
         resendDisponible);
   }
@@ -183,17 +187,24 @@ public class UserConfigService {
     champs.put("notifSalles", requete.notifSalles());
     champs.put("notifArtistesPush", requete.notifArtistesPush());
     champs.put("notifSallesPush", requete.notifSallesPush());
+    champs.put("notifNouvelleVersion", requete.notifNouvelleVersion());
     upsertConfig(userId, champs);
 
+    journaliserMajNotifications(userId, requete);
+  }
+
+  private void journaliserMajNotifications(
+      final String userId, final RequeteNotifications requete) {
     LOG.info(
         "notifications modifiées userId={} frequence={} artistes={} salles={} artistesPush={}"
-            + " sallesPush={}",
+            + " sallesPush={} nouvelleVersion={}",
         userId,
         requete.frequenceNotifications(),
         requete.notifArtistes(),
         requete.notifSalles(),
         requete.notifArtistesPush(),
-        requete.notifSallesPush());
+        requete.notifSallesPush(),
+        requete.notifNouvelleVersion());
     logAdminService.logAdmin(
         "info",
         "web",
@@ -210,7 +221,9 @@ public class UserConfigService {
             "notifArtistesPush",
             requete.notifArtistesPush(),
             "notifSallesPush",
-            requete.notifSallesPush()));
+            requete.notifSallesPush(),
+            "notifNouvelleVersion",
+            requete.notifNouvelleVersion()));
   }
 
   /**
