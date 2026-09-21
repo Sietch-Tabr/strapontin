@@ -400,9 +400,6 @@ public class FusionSallesClePorteeService {
     return resultat.isEmpty() ? null : resultat.get(0);
   }
 
-  // paramsSuppression porte des valeurs propres au conflit courant — pas
-  // hissable hors boucle.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(

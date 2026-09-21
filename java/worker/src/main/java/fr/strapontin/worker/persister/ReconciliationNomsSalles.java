@@ -83,9 +83,6 @@ class ReconciliationNomsSalles {
    * @param lot valeurs de concerts à réconcilier
    * @return lot avec salleNorm canoniques
    */
-  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
-  // nouvelles.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   /* package-private : appelé par PersisterConcerts (même package). */
   List<ValeurConcert> reconcilierSalles(final List<ValeurConcert> lot) {
     final Map<String, String> remplacementsIntraLot = construireRemplacementsIntraLot(lot);
@@ -142,9 +139,6 @@ class ReconciliationNomsSalles {
     return heure == null ? null : heure.format(DateTimeFormatter.ofPattern("HH:mm"));
   }
 
-  // computeIfAbsent n'instancie une ArrayList que pour les clés réellement
-  // nouvelles.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<String, String> construireRemplacementsIntraLot(final List<ValeurConcert> lot) {
     final Map<String, String> remplacements = new HashMap<>();
     final Map<String, List<String>> parGroupe = new LinkedHashMap<>();

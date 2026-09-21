@@ -103,9 +103,6 @@ public class CoherenceMultiSalleService {
       Map<UUID, String> nomNormParSalle,
       Map<UUID, String> signaleeParSalle) {}
 
-  // computeIfAbsent n'instancie une ArrayList que pour les salles réellement
-  // nouvelles.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private DonneesSourcesInternes regrouperParSalle(final List<Map<String, Object>> lignes) {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
     final Map<UUID, String> nomNormParSalle = new HashMap<>();

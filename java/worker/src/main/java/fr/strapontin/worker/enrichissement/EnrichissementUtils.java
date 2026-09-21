@@ -34,10 +34,6 @@ final class EnrichissementUtils {
    *
    * @param delaiMs délai d'attente en millisecondes
    */
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
-  // disponible — pas un contexte de requête J2EE (appel HTTP sortant en job
-  // Quartz), la justification de la règle ne s'applique pas ici.
-  @SuppressWarnings("PMD.DoNotUseThreads")
   /* package-private : appelé par les sources d'enrichissement du même
    * package. */
   static void attendreEntreLots(final long delaiMs) {

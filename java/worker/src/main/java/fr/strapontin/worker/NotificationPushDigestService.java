@@ -150,9 +150,6 @@ class NotificationPushDigestService {
     }
   }
 
-  // Subscription/Notification portent les clés/le payload propres à
-  // l'abonnement courant — pas hissables hors boucle.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private int envoyerPushAAbonnements(
       final PushService pushService,
       final List<Map<String, Object>> abonnements,

@@ -81,10 +81,6 @@ final class AlignementReportTM {
     }
   }
 
-  // CleUrlDate porte les champs de la ligne courante ; computeIfAbsent
-  // n'instancie une ArrayList que pour les clés réellement nouvelles — rien de
-  // hissable hors boucle.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<CleUrlDate, List<Map<String, Object>>> chargerEvenementsTmParUrlDate(
       final List<String> urls) {
     final List<Map<String, Object>> existants =

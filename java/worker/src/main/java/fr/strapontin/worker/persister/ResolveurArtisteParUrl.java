@@ -76,9 +76,6 @@ class ResolveurArtisteParUrl {
         Map.of("urls", urls));
   }
 
-  // CleUrl porte les champs de la ligne courante — pas d'instance hissable hors
-  // boucle.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private Map<CleUrl, Map<String, Object>> construireIndexUrlsExistantes(
       final List<Map<String, Object>> lignesExistantes) {
     final Map<CleUrl, Map<String, Object>> index = new HashMap<>();

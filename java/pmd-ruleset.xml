@@ -83,16 +83,29 @@
   <rule ref="category/java/errorprone.xml">
     <exclude name="AvoidCatchingGenericException"/>
   </rule>
-  <rule ref="category/java/performance.xml"/>
+  <!-- AvoidInstantiatingObjectsInLoops exclue après mesure : 21 sites, très majoritairement
+       l'idiome computeIfAbsent(cle, _ -> new ArrayList<>()) — PMD ne peut pas voir statiquement
+       que le lambda ne s'exécute qu'au cache-miss, faux positif systématique sur cet idiome. Le
+       reste correspond à des records/clés intrinsèquement dépendants de la donnée de l'itération
+       (pas hissables hors boucle). Aucune occurrence où la règle signale un vrai problème. -->
+  <rule ref="category/java/performance.xml">
+    <exclude name="AvoidInstantiatingObjectsInLoops"/>
+  </rule>
 
   <!-- UseConcurrentHashMap exclue après mesure : 87 sites, tous des variables locales scopées à
        une méthode (une nouvelle Map par appel, jamais un champ partagé) — aucun accès concurrent
        réel possible. Au moins une dizaine insèrent une valeur potentiellement null (colonnes SQL
        nullable, champs de record nullables comme dept/wikidataId/salle_parent_id) —
        ConcurrentHashMap lève une NullPointerException immédiate sur put(clé, null), contrairement
-       à HashMap : la conversion introduirait une régression réelle sans aucun bénéfice. -->
+       à HashMap : la conversion introduirait une régression réelle sans aucun bénéfice.
+       DoNotUseThreads exclue après mesure : 10 sites, systématiquement
+       Thread.startVirtualThread/newVirtualThreadPerTaskExecutor pour du fire-and-forget hors
+       contexte J2EE (jobs Quartz, appels HTTP sortants) — la primitive Java 21+ recommandée par
+       les règles du projet lui-même, jamais le cas (pool de threads non borné en environnement
+       serveur) que la règle vise réellement. -->
   <rule ref="category/java/multithreading.xml">
     <exclude name="UseConcurrentHashMap"/>
+    <exclude name="DoNotUseThreads"/>
   </rule>
   <rule ref="category/java/security.xml"/>
 

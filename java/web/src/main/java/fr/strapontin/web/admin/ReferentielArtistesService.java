@@ -386,9 +386,6 @@ public class ReferentielArtistesService {
    * @param cibleId UUID de l'artiste à conserver
    * @param sourceId UUID de l'artiste à absorber
    */
-  // paramsSuppression porte des valeurs propres au conflit courant — pas
-  // hissable hors boucle.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private void dedupliquerArtisteSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
     final List<Map<String, Object>> conflits =
         jdbc.queryForList(
