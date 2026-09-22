@@ -59,7 +59,7 @@ tar "${TAR_ARGS[@]}"
 rm /tmp/dump_local.sql
 echo "  archive : $ARCHIVE"
 
-find "$BACKUP_DIR" -name "strapontin_*.tar.gz" -mtime +7 -delete
+find "$BACKUP_DIR" -type f -name "strapontin_*" -mtime +7 -delete
 echo "  purge   : OK (rétention 7 jours)"
 
 echo "Sauvegarde locale terminée"

@@ -39,8 +39,9 @@ tar "${TAR_ARGS[@]}"
 rm /tmp/dump.sql
 echo "  archive : $ARCHIVE"
 
-# Purge des sauvegardes > 30 jours
-find "$BACKUP_DIR" -name "strapontin_*.tar.gz" -mtime +30 -delete
+# Purge des sauvegardes > 30 jours — tout fichier strapontin_*, pas seulement
+# le format .tar.gz actuel (couvre les formats d'archive passés/futurs).
+find "$BACKUP_DIR" -type f -name "strapontin_*" -mtime +30 -delete
 echo "  purge   : OK"
 
 echo "Sauvegarde terminée"
