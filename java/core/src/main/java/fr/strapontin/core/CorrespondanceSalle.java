@@ -64,13 +64,16 @@ public final class CorrespondanceSalle {
           "antique",
           "parc",
           "barriere",
-          // "eglise"/"saint" : des dizaines d'édifices religieux français
-          // partagent ces deux tokens sans aucun rapport entre eux (ex. "Eglise
-          // Saint-Ephrem" / "Eglise Saint-Eustache") — leur seule présence
-          // gonflait le Jaccard spécifique bien au-delà du seuil entre deux
-          // salles réellement distinctes.
+          // "eglise"/"saint"/"chapelle" : des dizaines d'édifices religieux
+          // français partagent ces tokens sans aucun rapport entre eux (ex.
+          // "Eglise Saint-Ephrem" / "Eglise Saint-Eustache", ou "La
+          // Sainte-Chapelle" / "Chapelle Saint-Symphorien", deux lieux
+          // parisiens réels et distincts fusionnés à tort via le seul pivot
+          // "chapelle") — leur seule présence gonflait le Jaccard spécifique
+          // bien au-delà du seuil entre deux salles réellement distinctes.
           "eglise",
-          "saint");
+          "saint",
+          "chapelle");
 
   // Longueur minimale d'un token spécifique pour servir de base au containment
   // partiel asymétrique — évite un containment trivial sur un token déjà très

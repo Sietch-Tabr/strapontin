@@ -41,6 +41,7 @@ class ResolveurSalleParConcert {
   private final NamedParameterJdbcTemplate jdbc;
   private final ClientNominatim clientNominatim;
   private final RaccrocheurSallesParNomNorm raccrocheur;
+  private final ResolveurSalleParProximiteGps resolveurGps;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
    * package). */
@@ -49,6 +50,7 @@ class ResolveurSalleParConcert {
     this.jdbc = jdbc;
     this.clientNominatim = clientNominatim;
     this.raccrocheur = new RaccrocheurSallesParNomNorm(jdbc);
+    this.resolveurGps = new ResolveurSalleParProximiteGps(jdbc);
   }
 
   /**
@@ -120,7 +122,7 @@ class ResolveurSalleParConcert {
     if (salleId == null) {
       coordsGeocodees = clientNominatim.geocoder(concert.salle());
       if (coordsGeocodees.isPresent()) {
-        salleId = chercherSalleParProximiteGps(coordsGeocodees.get(), concert.dept());
+        salleId = resolveurGps.chercher(coordsGeocodees.get(), concert.salle(), concert.dept());
       }
     }
 
@@ -150,35 +152,6 @@ class ResolveurSalleParConcert {
         "SELECT id FROM salles WHERE salle_cle = :salleCle",
         Map.of(CLE_SALLE_CLE, salleCle),
         UUID.class);
-  }
-
-  /**
-   * Dernier recours : salle connue proche des coordonnées géocodées (même
-   * seuil que FusionSallesClePorteeService#coordonneesConnuesEtProches),
-   * pour deux sources désignant le même lieu sous des noms sans rapport.
-   * @param coords coordonnées géocodées du nom entrant
-   * @param dept département connu du concert (filtre, désactivé si absent)
-   * @return UUID de la salle la plus proche dans le rayon autorisé, ou null
-   */
-  private UUID chercherSalleParProximiteGps(
-      final ClientNominatim.Coordonnees coords, final String dept) {
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            "SELECT id, latitude, longitude FROM salles"
-                + " WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
-                + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)",
-            new MapSqlParameterSource().addValue(CLE_DEPT, dept, Types.VARCHAR));
-    for (final Map<String, Object> ligne : lignes) {
-      final Double latitude = (Double) ligne.get("latitude");
-      final Double longitude = (Double) ligne.get("longitude");
-      if (FusionSallesClePorteeService.coordonneesConnuesEtProches(
-          coords.latitude(), coords.longitude(), latitude, longitude)) {
-        final UUID salleId = (UUID) ligne.get("id");
-        LOG.info("salle résolue par proximité GPS (géocodage dernier recours) uuid={}", salleId);
-        return salleId;
-      }
-    }
-    return null;
   }
 
   /**

@@ -22,6 +22,7 @@ public record ResultatReconciliation(
     int nomsIncoherentsTM,
     int sallesOrphelinesResolues,
     int sallesFusionneesParCleForte,
+    int evenementsFusionnesArtiste,
     int contaminationsMultiSalleSignalees,
     int doublonsMultiSalleSignales,
     int motsGenericsSuggeres,

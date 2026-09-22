@@ -122,6 +122,23 @@ class CoherenceMultiSalleServiceTest {
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 
+  // Cas réel documenté en production (#1246) : "L'Astrada" (nom_norm "l astrada") / identifiant
+  // Eventim interne "lastrada marciac" — l'apostrophe élidée devient un espace côté nom_norm
+  // ("l astrada", token "l" filtré par longueur) mais est absente côté source synthétique
+  // ("lastrada"), aucun token commun sans ce fix.
+  @Test
+  void detecterContamination_apostropheElidee_neJournalisePas() {
+    final UUID salleId = UUID.randomUUID();
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(
+            List.of(ligneContamination(salleId, "internal:lastrada marciac", "l astrada", null)));
+
+    final int resultat = service.detecterContamination();
+
+    assertEquals(0, resultat);
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
   @Test
   void detecterContamination_sigleInitiales_neJournalisePas() {
     // "ed n" / "espace dollfus noack" — sigle formé des initiales de chaque mot du nom complet.
