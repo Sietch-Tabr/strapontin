@@ -4,10 +4,6 @@
  */
 package fr.strapontin.web;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
@@ -41,19 +37,6 @@ public class WebConfiguration implements WebMvcConfigurer {
   @Override
   public void addInterceptors(final InterceptorRegistry registry) {
     registry.addInterceptor(appareilEnregistrementInterceptor).addPathPatterns("/api/**");
-  }
-
-  /**
-   * ObjectMapper partagé : dates ISO-8601, module java.time.
-   */
-  /* package-private : Bean Spring, jamais appelé directement hors du
-   * conteneur. */
-  @Bean
-  ObjectMapper objectMapper() {
-    return new ObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
   }
 
   /**
