@@ -31,7 +31,7 @@ class WikidataArtisteSourceTest {
   }
 
   @Test
-  void enrichirLot_wikidataIdConnu_requeteBatchEtRetourneP2722EtP6262() {
+  void enrichirLot_wikidataIdConnu_requeteBatchEtRetourneP2722EtP7354() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -62,7 +62,7 @@ class WikidataArtisteSourceTest {
     assertEquals("Q167023", enrichissement.wikidataId());
     assertEquals("Daft Punk", enrichissement.nomAffiche());
     assertEquals("27", enrichissement.deezerId());
-    assertEquals("K8vZ9171Xf0", enrichissement.ticketmasterAttractionId());
+    assertEquals("K8vZ9171Xf0", enrichissement.ticketmasterIdLegacy());
     serveur.verify();
   }
 

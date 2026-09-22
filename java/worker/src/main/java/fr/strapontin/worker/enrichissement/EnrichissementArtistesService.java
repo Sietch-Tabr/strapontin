@@ -134,8 +134,6 @@ public class EnrichissementArtistesService {
   }
 
   private int enrichirEtPersisterLot(final List<ArtisteAEnrichir> lot) {
-    final Map<UUID, String> attractionIdsExistants = lireAttractionIdsExistants(lot);
-
     final Map<UUID, EnrichissementArtiste> accumule = new HashMap<>();
     List<ArtisteAEnrichir> courant = lot;
     for (final SourceEnrichissementArtiste source : sources) {
@@ -156,8 +154,7 @@ public class EnrichissementArtistesService {
       if (!mettreAJourArtiste(artiste.id(), artiste.nom(), enrichissement)) {
         continue;
       }
-      traiterCrossValidationP6262(
-          artiste, enrichissement, attractionIdsExistants.get(artiste.id()));
+      signalerIdentifiantTicketmasterLegacy(artiste, enrichissement);
       nbEnrichis++;
     }
     return nbEnrichis;
@@ -181,23 +178,6 @@ public class EnrichissementArtistesService {
                 rs.getString("nom_norm"),
                 null,
                 rs.getString("deezer_id")));
-  }
-
-  private Map<UUID, String> lireAttractionIdsExistants(final List<ArtisteAEnrichir> candidats) {
-    final List<UUID> ids = candidats.stream().map(ArtisteAEnrichir::id).toList();
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            """
-            SELECT artiste_id, identifiant_externe
-            FROM artiste_sources
-            WHERE source = 'ticketmaster' AND artiste_id IN (:ids)
-            """,
-            Map.of("ids", ids));
-    final Map<UUID, String> resultat = new HashMap<>();
-    for (final Map<String, Object> ligne : lignes) {
-      resultat.put((UUID) ligne.get("artiste_id"), (String) ligne.get("identifiant_externe"));
-    }
-    return resultat;
   }
 
   private static List<ArtisteAEnrichir> appliquerConnus(
@@ -226,9 +206,9 @@ public class EnrichissementArtistesService {
         nouveau.wikidataId() != null ? nouveau.wikidataId() : existant.wikidataId(),
         nouveau.nomAffiche() != null ? nouveau.nomAffiche() : existant.nomAffiche(),
         nouveau.deezerId() != null ? nouveau.deezerId() : existant.deezerId(),
-        nouveau.ticketmasterAttractionId() != null
-            ? nouveau.ticketmasterAttractionId()
-            : existant.ticketmasterAttractionId(),
+        nouveau.ticketmasterIdLegacy() != null
+            ? nouveau.ticketmasterIdLegacy()
+            : existant.ticketmasterIdLegacy(),
         nouveau.aliasWikidata().isEmpty() ? existant.aliasWikidata() : nouveau.aliasWikidata());
   }
 
@@ -281,55 +261,20 @@ public class EnrichissementArtistesService {
   }
 
   /**
-   * P6262 fait autorité pour le lien TM, indépendamment de la découverte par
-   * mot-clé.
+   * P7354 est un identifiant Ticketmaster legacy numérique, sans conversion
+   * fiable connue vers l'attractionId Discovery API réellement stocké
+   * (format {@code K8vZ...}) — la découverte est journalisée pour une
+   * future résolution, jamais persistée ni comparée à l'existant.
    */
-  private void traiterCrossValidationP6262(
-      final ArtisteAEnrichir artiste,
-      final EnrichissementArtiste enrichissement,
-      final String attractionIdExistant) {
-    final String tmIdWikidata = enrichissement.ticketmasterAttractionId();
-    if (tmIdWikidata == null) {
+  private void signalerIdentifiantTicketmasterLegacy(
+      final ArtisteAEnrichir artiste, final EnrichissementArtiste enrichissement) {
+    final String tmIdLegacy = enrichissement.ticketmasterIdLegacy();
+    if (tmIdLegacy == null) {
       return;
     }
-
-    if (attractionIdExistant == null) {
-      final int lignesInserees =
-          jdbc.update(
-              """
-              INSERT INTO artiste_sources (artiste_id, source, identifiant_externe)
-              VALUES (CAST(:artisteId AS uuid), 'ticketmaster', :tmId)
-              ON CONFLICT DO NOTHING
-              """,
-              Map.of("artisteId", artiste.id().toString(), "tmId", tmIdWikidata));
-      if (lignesInserees > 0) {
-        LOG.info("P6262 — lien TM inséré artiste={} attractionId={}", artiste.nom(), tmIdWikidata);
-      } else {
-        // Conflit réel sur la PK (source, identifiant_externe) — cet
-        // identifiant TM est déjà attribué à un autre artiste, contrairement à
-        // la collision wikidata_id, ce cas n'avait jusqu'ici aucune trace (ni
-        // log, ni signalement).
-        signalementMatchingService.signaler(
-            "reattribution_tm_artiste",
-            "artiste",
-            artiste.id(),
-            "basse",
-            Map.of("attractionIdTicketmaster", tmIdWikidata));
-      }
-    } else if (!attractionIdExistant.equals(tmIdWikidata)) {
-      logsAdminWorker.inserer(
-          "warn",
-          "enrichissement-wikidata",
-          "discordance P6262 artiste="
-              + artiste.nom()
-              + " tmActuel="
-              + attractionIdExistant
-              + " tmWikidata="
-              + tmIdWikidata,
-          Map.of(
-              "artisteId", artiste.id().toString(),
-              "attractionIdActuel", attractionIdExistant,
-              "attractionIdWikidata", tmIdWikidata));
-    }
+    LOG.info(
+        "P7354 — identifiant Ticketmaster legacy découvert artiste={} idLegacy={}",
+        artiste.nom(),
+        tmIdLegacy);
   }
 }
