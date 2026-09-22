@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.SalleHierarchie;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
@@ -39,7 +40,6 @@ public class FusionSallesClePorteeService {
   // peut partager un nom quasi identique entre deux halls physiquement
   // distincts de plusieurs centaines de mètres.
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
-  private static final double RAYON_TERRE_METRES = 6_371_000;
   private static final String CLE_CIBLE = "cible";
   private static final int NB_SALLES_PAIRE = 2;
   private static final String CLE_SOURCE = "source";
@@ -142,7 +142,7 @@ public class FusionSallesClePorteeService {
     if (latA == null || lonA == null || latB == null || lonB == null) {
       return false;
     }
-    return distanceHaversineMetres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
+    return DistanceGeo.metres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
   }
 
   /**
@@ -154,27 +154,7 @@ public class FusionSallesClePorteeService {
    */
   public static boolean coordonneesConnuesEtProches(
       final Double latA, final Double lonA, final Double latB, final Double lonB) {
-    if (latA == null || lonA == null || latB == null || lonB == null) {
-      return false;
-    }
-    return distanceHaversineMetres(latA, lonA, latB, lonB) <= DISTANCE_MAX_FUSION_METRES;
-  }
-
-  private static double distanceHaversineMetres(
-      final double lat1, final double lon1, final double lat2, final double lon2) {
-    final double phi1 = Math.toRadians(lat1);
-    final double phi2 = Math.toRadians(lat2);
-    final double deltaPhi = Math.toRadians(lat2 - lat1);
-    final double deltaLambda = Math.toRadians(lon2 - lon1);
-    final double termeHaversine =
-        Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2)
-            + Math.cos(phi1)
-                * Math.cos(phi2)
-                * Math.sin(deltaLambda / 2)
-                * Math.sin(deltaLambda / 2);
-    final double distanceAngulaire =
-        2 * Math.atan2(Math.sqrt(termeHaversine), Math.sqrt(1 - termeHaversine));
-    return RAYON_TERRE_METRES * distanceAngulaire;
+    return DistanceGeo.connuesEtProches(latA, lonA, latB, lonB, DISTANCE_MAX_FUSION_METRES);
   }
 
   /**

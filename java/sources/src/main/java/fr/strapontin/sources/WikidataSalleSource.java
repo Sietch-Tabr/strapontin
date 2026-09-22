@@ -25,13 +25,19 @@ import org.springframework.web.client.RestClient;
  * @since 2.6.0
  * @author Kwaite
  */
-public class WikidataSalleSource implements SourceEnrichissementSalle, SourceAvecBilanFetch {
+public class WikidataSalleSource
+    implements SourceEnrichissementSalle, SourceAvecBilanFetch, SourceAvecAmbiguitesDecouverte {
 
   private static final int TAILLE_LOT_MAX = 50;
 
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementSalle> cache;
   private final WikidataSalleDecouverte decouverte;
+
+  @Override
+  public Set<UUID> preleverAmbiguites() {
+    return decouverte.preleverAmbiguites();
+  }
 
   /**
    * Retourne le bilan agrégé des appels SPARQL Wikidata depuis le dernier

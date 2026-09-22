@@ -126,7 +126,7 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_villeCoherente_neJournaliseRien() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1");
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1", null, null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList()))
         .thenReturn(Map.of(id, new EnrichissementSalle("Q1", "Le Splendid", "Lille", null, null)));
@@ -142,7 +142,7 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765");
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765", null, null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList()))
         .thenReturn(
@@ -166,7 +166,7 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_communeWikidataInconnue_neJournalisePasEtNeCompteRien() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1");
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1", null, null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList()))
         .thenReturn(Map.of(id, new EnrichissementSalle("Q1", "Le Splendid", null, null, null)));
@@ -181,7 +181,7 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_salleSansResultatWikidata_ignoreeSansErreur() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1");
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1", null, null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList())).thenReturn(Map.of());
 
@@ -216,7 +216,7 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, nomSalle, Normalisation.normaliserTexte(nomSalle), villeSalle, "75", "Q1");
+            id, nomSalle, Normalisation.normaliserTexte(nomSalle), villeSalle, "75", "Q1", null, null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList()))
         .thenReturn(
@@ -232,7 +232,7 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_villeReellementDifferente_resteJournaliseeMalgreLeReplaiContainment() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Le Bikini", "le bikini", "Toulouse", "31", "Q3220442");
+        new SalleAEnrichir(id, "Le Bikini", "le bikini", "Toulouse", "31", "Q3220442", null, null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList()))
         .thenReturn(
@@ -262,7 +262,7 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Espace Saint-Exupéry", "espace saint exupery", "Rubelles", "95", "Q120266538");
+            id, "Espace Saint-Exupéry", "espace saint exupery", "Rubelles", "95", "Q120266538", null, null);
     simulerCandidats(List.of(salle));
     simulerVillesConcertsReelles(Map.of(id, List.of("Franconville-la-Garenne")));
     when(wikidata.enrichirLot(anyList()))
@@ -291,7 +291,7 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q46101992");
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q46101992", null, null);
     simulerCandidats(List.of(salle));
     simulerVillesConcertsReelles(Map.of(id, List.of("Bethune", "Carcassonne")));
     when(wikidata.enrichirLot(anyList()))
@@ -320,7 +320,7 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_concertsReelsCoherentsMalgreVilleSalleDivergente_neJournalisePasDIncoherence() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Zenith", "zenith", "Ancienne Ville Erronee", "59", "Q1");
+        new SalleAEnrichir(id, "Zenith", "zenith", "Ancienne Ville Erronee", "59", "Q1", null, null);
     simulerCandidats(List.of(salle));
     simulerVillesConcertsReelles(Map.of(id, List.of("Lille")));
     when(wikidata.enrichirLot(anyList()))
@@ -339,7 +339,7 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765");
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765", null, null);
     simulerCandidats(List.of(salle));
     simulerSignaturesDejaSignalees(Map.of(id, "Nancy|false"));
     when(wikidata.enrichirLot(anyList()))
@@ -362,7 +362,7 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765");
+            id, "Theatre Municipal", "theatre municipal", "Bethune", "62", "Q428765", null, null);
     simulerCandidats(List.of(salle));
     simulerSignaturesDejaSignalees(Map.of(id, "Ancienne Commune|false"));
     when(wikidata.enrichirLot(anyList()))
@@ -389,7 +389,7 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_incoherenceResolueMaisSignatureConnue_reinitialiseLaSignature() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1");
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", "Lille", "59", "Q1", null, null);
     simulerCandidats(List.of(salle));
     simulerSignaturesDejaSignalees(Map.of(id, "Ancienne Commune|false"));
     when(wikidata.enrichirLot(anyList()))
