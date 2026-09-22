@@ -565,6 +565,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         salleEnBase,
         "le mapping salle_sources incohérent (dept 29) ne doit pas être suivi pour un concert"
             + " dept 22");
+    // #1217 : sans salle dept 22 déjà connue pour absorber le repli flou, une nouvelle salle doit
+    // être créée plutôt que de laisser salle_id indéfiniment null.
+    assertNotNull(salleEnBase, "le concert ne doit pas rester bloqué sans salle_id");
 
     final Long nbAvertissements =
         jdbc.queryForObject(
@@ -572,6 +575,65 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 + " AND message LIKE '%incohérence géographique%'",
             Map.of(), Long.class);
     assertEquals(1L, nbAvertissements, "l'incohérence doit être journalisée, pas silencieuse");
+  }
+
+  @Test
+  void persisterConcerts_mappingIncoherentEtSalleCorrecteDejaConnue_laRattache() {
+    // Une salle correcte pour le département entrant existe déjà (cas Chimène Badi réel, #1217) —
+    // le repli par tokens doit la retrouver sans passer par la création.
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('parc expos quimper', 'Parc Des Expos De Penvillers',"
+            + " 'parc des expos de penvillers', '29')",
+        Map.of());
+    final UUID salleQuimperId =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = 'parc expos quimper'",
+            Map.of(),
+            (rs, _) -> rs.getObject("id", UUID.class));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe) VALUES"
+            + " (CAST(:uuid AS uuid), 'ticketmaster', 'rZFSnyZAv1F')",
+        Map.of("uuid", salleQuimperId.toString()));
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept)"
+            + " VALUES ('parc expos brezillet', 'PARC DES EXPOSITIONS Brezillet ST BRIEUC',"
+            + " 'parc des expositions brezillet st brieuc', '22')",
+        Map.of());
+    final UUID salleBrezilletId =
+        jdbc.queryForObject(
+            "SELECT id FROM salles WHERE salle_cle = 'parc expos brezillet'",
+            Map.of(),
+            (rs, _) -> rs.getObject("id", UUID.class));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            new ConcertBrut(
+                "Jerome Commandeur",
+                "2027-03-03",
+                "20:30",
+                "Parc Des Expositions Brezillet",
+                "Saint-Brieuc",
+                "22",
+                "https://www.ticketmaster.fr/jerome-commandeur",
+                "ticketmaster",
+                "music",
+                "Pop",
+                "onsale",
+                null,
+                null,
+                "ticketmaster:rZFSnyZAv1F",
+                null)));
+
+    final UUID salleEnBase =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'jerome commandeur'",
+            Map.of(),
+            (rs, _) -> rs.getObject("salle_id", UUID.class));
+    assertEquals(salleBrezilletId, salleEnBase);
+
+    final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
+    assertEquals(2L, nbSalles, "aucune salle fantôme créée quand le repli par tokens suffit");
   }
 
   @Test

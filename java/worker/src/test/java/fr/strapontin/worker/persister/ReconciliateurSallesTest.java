@@ -81,10 +81,11 @@ class ReconciliateurSallesTest {
   void absorberRenommagesSalles_delegueAReconciliationNomsSalles() {
     final List<ValeurConcert> concerts = List.of(concert());
     final Map<String, UUID> caches = Map.of("tm:1", UUID.randomUUID());
+    final Map<UUID, String> deptsConnus = Map.of();
 
-    reconciliateur.absorberRenommagesSalles(concerts, caches);
+    reconciliateur.absorberRenommagesSalles(concerts, caches, deptsConnus);
 
-    verify(reconciliationNoms).absorberRenommagesSalles(concerts, caches);
+    verify(reconciliationNoms).absorberRenommagesSalles(concerts, caches, deptsConnus);
   }
 
   @Test

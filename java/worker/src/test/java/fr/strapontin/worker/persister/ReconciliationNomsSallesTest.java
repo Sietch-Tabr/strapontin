@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -129,13 +130,53 @@ class ReconciliationNomsSallesTest {
 
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
-    reconciliateur.absorberRenommagesSalles(List.of(entrant), Map.of("tm:venue1", salleId));
+    reconciliateur.absorberRenommagesSalles(
+        List.of(entrant), Map.of("tm:venue1", salleId), Map.of());
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc).update(anyString(), paramsCaptor.capture());
     assertEquals(
         Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
+  }
+
+  // Cas réel documenté en production (#1217) : un venueId TM déjà mappé vers une salle d'un
+  // autre département ne doit pas renommer cette salle avec le nom du concert entrant — le
+  // renommage court-circuiterait sinon le garde-fou géographique appliqué en aval.
+  @Test
+  void absorberRenommagesSalles_mappingIncoherentGeographiquement_neRenommePas() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
+    final UUID salleQuimperId = UUID.randomUUID();
+
+    final ValeurConcert entrant =
+        new ValeurConcert(
+            "Chimene Badi",
+            "chimene badi",
+            LocalDate.of(2027, 12, 18),
+            null,
+            "Parc Des Expositions Brezillet",
+            "parc des expositions brezillet",
+            null,
+            "22",
+            null,
+            "ticketmaster",
+            null,
+            null,
+            null,
+            null,
+            null,
+            "ticketmaster:rZFSnyZAv1F",
+            null,
+            null,
+            null);
+
+    reconciliateur.absorberRenommagesSalles(
+        List.of(entrant),
+        Map.of("ticketmaster:rZFSnyZAv1F", salleQuimperId),
+        Map.of(salleQuimperId, "29"));
+
+    verify(jdbc, never()).update(anyString(), anyMap());
   }
 
   // Deux salles réellement distinctes (départements différents) partageant un pivot commun

@@ -227,14 +227,18 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Absorbe les renommages de salle en mettant à jour {@code salles.nom}.
-   *
+   * Absorbe les renommages de salle ({@code salles.nom}) — un mapping
+   * géographiquement incohérent ne doit jamais renommer à tort la salle
+   * qu'il désigne, avant même son rejet en aval.
    * @param concerts concerts avec {@code salleSourceId} résolus
    * @param cachesSalles map sourceId → UUID
+   * @param deptsConnus départements déjà connus par salle
    */
   /* package-private : appelé par PersisterConcerts (même package). */
   void absorberRenommagesSalles(
-      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+      final List<ValeurConcert> concerts,
+      final Map<String, UUID> cachesSalles,
+      final Map<UUID, String> deptsConnus) {
     final Map<UUID, String> meilleurNom = new HashMap<>();
     final Map<UUID, Integer> meilleurScore = new HashMap<>();
     for (final ValeurConcert c : concerts) {
@@ -242,7 +246,8 @@ class ReconciliationNomsSalles {
         continue;
       }
       final UUID salleId = cachesSalles.get(c.salleSourceId());
-      if (salleId == null) {
+      if (salleId == null
+          || PersisterConcerts.mappingSalleIncoherent(salleId, c.dept(), deptsConnus)) {
         continue;
       }
       final int score = scoreSalle(c.salle());
