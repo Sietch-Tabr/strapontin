@@ -32,6 +32,11 @@ class NotificationPushDigestService {
   private static final String CLE_ENDPOINT = "endpoint";
   private static final int NB_CONCERTS_SINGULIER = 1;
   private static final String SOURCE_SALLE = "SALLE";
+  private static final int STATUT_HTTP_FORBIDDEN = 403;
+  // Même seuil que SuiviChroniciteService — un seul 403 peut être transitoire
+  // (FCM), une répétition sur plusieurs cycles consécutifs signe un abonnement
+  // définitivement invalide (VAPID/subscription).
+  private static final int SEUIL_ECHECS_403_ABONNEMENT_MORT = 3;
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -175,14 +180,19 @@ class NotificationPushDigestService {
           }
           case SUCCES -> {
             nbEnvoyes++;
+            reinitialiserEchecs403(ab);
           }
           case ECHEC -> {
             // tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas
             // un succès implicite — sans cette branche, un push jamais délivré
             // était compté comme réussi.
             compteurPush.enregistrerErreur();
-            LOG.warn(
-                "Push: statut inattendu {} pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
+            if (status == STATUT_HTTP_FORBIDDEN) {
+              traiterEchec403(userId, ab);
+            } else {
+              LOG.warn(
+                  "Push: statut inattendu {} pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
+            }
           }
         }
       } catch (Exception e) {
@@ -191,6 +201,41 @@ class NotificationPushDigestService {
       }
     }
     return nbEnvoyes;
+  }
+
+  private void reinitialiserEchecs403(final Map<String, Object> ab) {
+    jdbc.update(
+        "UPDATE push_abonnements SET echecs_403_consecutifs = 0 WHERE id = :id",
+        Map.of("id", ab.get("id")));
+  }
+
+  /**
+   * Un 403 isolé peut être transitoire (FCM) — seule une répétition sur
+   * {@value #SEUIL_ECHECS_403_ABONNEMENT_MORT} cycles consécutifs révoque
+   * l'abonnement, journalisée (jamais silencieuse, contrairement à 404/410).
+   */
+  private void traiterEchec403(final String userId, final Map<String, Object> ab) {
+    final Integer echecs =
+        jdbc.queryForObject(
+            "UPDATE push_abonnements SET echecs_403_consecutifs = echecs_403_consecutifs + 1"
+                + " WHERE id = :id RETURNING echecs_403_consecutifs",
+            Map.of("id", ab.get("id")),
+            Integer.class);
+    if (echecs != null && echecs >= SEUIL_ECHECS_403_ABONNEMENT_MORT) {
+      jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
+      LOG.info(
+          "Abonnement push révoqué — 403 persistant sur {} cycles : {} — {}",
+          echecs,
+          userId,
+          ab.get(CLE_ENDPOINT));
+      logsAdminWorker.inserer(
+          "warn",
+          "notifier-digest",
+          "abonnement push révoqué automatiquement — 403 persistant userId=" + userId,
+          Map.of("userId", userId, "echecs403Consecutifs", echecs));
+    } else {
+      LOG.warn("Push: 403 ({}e consécutif) pour {} — {}", echecs, userId, ab.get(CLE_ENDPOINT));
+    }
   }
 
   // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service
