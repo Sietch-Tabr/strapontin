@@ -13,6 +13,7 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -325,7 +326,7 @@ public class WorkerStatsService {
   private void remonterResultatVide(final String typeJob, final Instant execLe) {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
-      params.put("ts", execLe.toEpochMilli());
+      params.put("ts", Timestamp.from(execLe));
       params.put("niveau", "warn");
       params.put("source", SOURCE_WORKER);
       params.put("message", typeJob + " — 0 concert inséré ou mis à jour (résultat vide)");
