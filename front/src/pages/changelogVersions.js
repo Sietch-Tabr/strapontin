@@ -4,6 +4,37 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.0.0 — 23 septembre 2026",
+    categories: [
+      {
+        categorie: "Sécurité",
+        items: [
+          "Un compte peut désormais être verrouillé par un administrateur en cas de besoin (ex. compromission suspectée) — l'utilisateur concerné ne peut plus se connecter tant que le verrou n'est pas levé.",
+          "Une alerte email est envoyée en cas de connexion depuis un nouvel appareil, ou de tentatives de connexion répétées échouées sur un compte.",
+        ],
+      },
+      {
+        categorie: "Compte",
+        items: [
+          "Un compte inactif depuis longtemps reçoit désormais un email de relance avant toute suppression pour inactivité, avec un délai de grâce.",
+        ],
+      },
+      {
+        categorie: "Paramètres",
+        items: [
+          "Une nouvelle option dans Paramètres → Notifications permet d'être notifié par push lors de la sortie d'une nouvelle version de l'application.",
+        ],
+      },
+      {
+        categorie: "Concerts",
+        items: [
+          "Plusieurs cas rares de concerts affichés en double (rapprochement automatique entre sources) ont été corrigés.",
+          "Un concert pouvait, dans de rares cas, ne jamais afficher sa salle — il est désormais rattaché automatiquement dès que possible.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 2.9.1 — 15 septembre 2026",
     categories: [
       {
