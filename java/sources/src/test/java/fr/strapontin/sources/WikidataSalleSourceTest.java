@@ -44,7 +44,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -97,6 +98,8 @@ class WikidataSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
             null,
             null,
+            null,
+            null,
             null);
 
     serveur
@@ -145,6 +148,8 @@ class WikidataSalleSourceTest {
             id,
             nomComplet,
             fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
             null,
             null,
             null);
@@ -198,6 +203,8 @@ class WikidataSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
             null,
             null,
+            null,
+            null,
             null);
 
     serveur
@@ -239,7 +246,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null);
+        new SalleAEnrichir(id, "Espace Nova", "espace nova", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -272,6 +279,8 @@ class WikidataSalleSourceTest {
             id,
             nomComplet,
             fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
+            null,
+            null,
             null,
             null,
             null);
@@ -324,7 +333,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Orléans Arena", "orleans arena", null, null, null);
+        new SalleAEnrichir(id, "Orléans Arena", "orleans arena", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -353,7 +362,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Summum", "summum", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Summum", "summum", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -389,7 +399,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "L'Olympia", "l olympia", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "L'Olympia", "l olympia", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -426,7 +437,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Accor Arena", "accor arena", null, null, null);
+        new SalleAEnrichir(id, "Accor Arena", "accor arena", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -465,7 +476,14 @@ class WikidataSalleSourceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Zenith Paris - la Villette", "zenith paris la villette", null, null, null);
+            id,
+            "Zenith Paris - la Villette",
+            "zenith paris la villette",
+            null,
+            null,
+            null,
+            null,
+            null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -502,7 +520,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Dôme de Paris", "dome de paris", null, null, null);
+        new SalleAEnrichir(id, "Dôme de Paris", "dome de paris", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -547,6 +565,8 @@ class WikidataSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte(nomComplet),
             "Chinon",
             "37",
+            null,
+            null,
             null);
 
     serveur
@@ -600,7 +620,8 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Palais des Congres", "palais des congres", null, "04", null);
+        new SalleAEnrichir(
+            id, "Palais des Congres", "palais des congres", null, "04", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -643,7 +664,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null);
+        new SalleAEnrichir(id, "Accor Arena", "accor arena", null, "75", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -678,7 +699,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null);
+        new SalleAEnrichir(id, "Le Splendid", "le splendid", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -712,7 +733,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Saline Royale", "saline royale", null, null, null);
+        new SalleAEnrichir(id, "Saline Royale", "saline royale", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -747,7 +768,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Salle Paul Fort", "salle paul fort", null, null, null);
+        new SalleAEnrichir(id, "Salle Paul Fort", "salle paul fort", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -781,7 +802,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Accor Arena", "accor arena", "Paris", "75", null);
+        new SalleAEnrichir(id, "Accor Arena", "accor arena", "Paris", "75", null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -812,7 +833,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Le Zenith", "le zenith", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Le Zenith", "le zenith", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -842,7 +864,7 @@ class WikidataSalleSourceTest {
 
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Salle Inconnue", "salle inconnue", null, null, null);
+        new SalleAEnrichir(id, "Salle Inconnue", "salle inconnue", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -867,7 +889,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -901,7 +924,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -933,7 +957,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -965,7 +990,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "L'Aeronef", "l aeronef", null, null, null, null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -1003,7 +1029,8 @@ class WikidataSalleSourceTest {
     cache.put("Q3550188", attendu);
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
     final WikidataSalleSource src = source(restClient, cache);
     final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
@@ -1019,7 +1046,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
@@ -1051,7 +1079,8 @@ class WikidataSalleSourceTest {
     final RestClient restClient = builder.build();
 
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188");
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
     for (int i = 0; i < 3; i++) {
       serveur
@@ -1075,7 +1104,8 @@ class WikidataSalleSourceTest {
     final List<SalleAEnrichir> salles = new ArrayList<>();
     for (int i = 0; i < 60; i++) {
       salles.add(
-          new SalleAEnrichir(UUID.randomUUID(), "Salle" + i, "salle" + i, null, null, "Q" + i));
+          new SalleAEnrichir(
+              UUID.randomUUID(), "Salle" + i, "salle" + i, null, null, "Q" + i, null, null));
     }
 
     serveur
@@ -1146,6 +1176,79 @@ class WikidataSalleSourceTest {
     final Set<String> resultat = src.typesInvalides(List.of("Q537720"));
 
     assertEquals(Set.of(), resultat);
+    serveur.verify();
+  }
+
+  // Cas réel documenté en production (#1218) : "Alhambra" (nom/ville/dept compatibles) matchait
+  // à tort l'ancien théâtre disparu du 11e (Q4724424) au lieu de la salle de concert active du
+  // 10e — ni la ville ni le département (identiques des deux côtés, Paris/75) ne peuvent détecter
+  // cette incohérence, seules les coordonnées GPS déjà connues de la salle le révèlent.
+  @Test
+  void enrichirLot_decouverteCoordonneesDivergentes_rejetteEtSignaleAmbiguite() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Alhambra", "alhambra", "Paris", "75", null, 48.8716, 2.3616);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q4724424"},
+                   "itemLabel":{"type":"literal","value":"Alhambra"},
+                   "communeLabel":{"type":"literal","value":"Paris"},
+                   "coord":{"type":"literal","value":"Point(2.377 48.867)"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertTrue(resultat.isEmpty());
+    assertEquals(Set.of(id), src.preleverAmbiguites());
+    assertEquals(Set.of(), src.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
+    serveur.verify();
+  }
+
+  // Contre-épreuve : un candidat dont les coordonnées sont proches (quelques dizaines de mètres)
+  // de celles déjà connues doit toujours être accepté normalement.
+  @Test
+  void enrichirLot_decouverteCoordonneesProches_accepteLeCandidat() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Alhambra", "alhambra", "Paris", "75", null, 48.8716, 2.3616);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q3406734"},
+                   "itemLabel":{"type":"literal","value":"Alhambra"},
+                   "communeLabel":{"type":"literal","value":"Paris"},
+                   "coord":{"type":"literal","value":"Point(2.3618 48.8718)"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+    final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
+
+    assertEquals("Q3406734", resultat.get(id).wikidataId());
+    assertEquals(Set.of(), src.preleverAmbiguites());
     serveur.verify();
   }
 }

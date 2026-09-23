@@ -30,10 +30,6 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
     this.delaiMinMs = delaiMinMs;
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
-  // disponible — pas un contexte de requête J2EE (job Quartz/appel HTTP
-  // sortant), la justification de la règle ne s'applique pas ici.
-  @SuppressWarnings("PMD.DoNotUseThreads")
   @Override
   public void attendre() {
     verrou.lock();

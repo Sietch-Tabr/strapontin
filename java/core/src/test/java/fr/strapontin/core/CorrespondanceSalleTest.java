@@ -277,6 +277,22 @@ class CorrespondanceSalleTest {
             "eglise saint paul saint louis", "eglise saint louis en l ile"));
   }
 
+  // --- "chapelle" générique : deux lieux parisiens distincts (prod, #1239) ---
+
+  @Test
+  void estDoublonSalle_sainteChapelleEtChapelleSaintSymphorienSansRapport_retourneFalse() {
+    assertFalse(CorrespondanceSalle.estDoublonSalle("sainte chapelle", "chapelle st symphorien"));
+  }
+
+  @Test
+  void estDoublonSalle_laSainteChapelleParis01EtSainteChapelle_containmentRestePositif() {
+    // le vrai match légitime (nom Eventim complet contenant le nom TM court) ne doit jamais être
+    // cassé par le retrait de "chapelle" des tokens spécifiques — passe par containment de
+    // caractères, testé avant tout calcul de tokens.
+    assertTrue(
+        CorrespondanceSalle.estDoublonSalle("la sainte chapelle paris 01", "sainte chapelle"));
+  }
+
   // --- qualificatifsDivergents : complexe multi-salles (La Seine Musicale) ---
 
   @Test

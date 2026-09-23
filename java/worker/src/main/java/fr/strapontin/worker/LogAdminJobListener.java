@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,7 +81,7 @@ public class LogAdminJobListener implements JobListener {
     try {
       final String metaJson = meta != null ? jackson.writeValueAsString(meta) : null;
       final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Instant.now().toEpochMilli());
+      params.put("ts", Timestamp.from(Instant.now()));
       params.put("niveau", niveau);
       params.put("source", "worker");
       params.put("message", message);

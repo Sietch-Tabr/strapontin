@@ -180,6 +180,18 @@
                 Enregistrer
               </button>
             </form>
+            <button
+              type="button"
+              class="bouton bouton-texte"
+              :disabled="rotationEnCours"
+              @click="rotationSecretWebhook"
+            >
+              {{
+                rotationEnCours
+                  ? "Rotation…"
+                  : "Renouveler sans passer par le dashboard Resend"
+              }}
+            </button>
           </div>
         </template>
       </div>
@@ -226,6 +238,50 @@
                   >
                     {{ rejeuEnCours === e.id ? "Rejeu…" : "Rejouer" }}
                   </button>
+                  <button
+                    type="button"
+                    class="bouton bouton-secondaire bouton-petit"
+                    @click="ouvrirTentatives(e.id)"
+                  >
+                    Tentatives
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Liste de suppression Resend -->
+      <div v-if="configParCle['RESEND_API_KEY']?.presente" class="param-bloc">
+        <h3 class="param-libelle">Liste de suppression Resend</h3>
+        <p class="param-aide">
+          Adresses email bloquées définitivement par Resend (bounces, plaintes)
+          — un envoi vers l'une d'elles échoue sans jamais être retenté tant
+          qu'elle n'en est pas retirée.
+        </p>
+        <p
+          v-if="!chargementSuppressions && !suppressions.length"
+          class="etat-vide-texte"
+        >
+          Aucune adresse sur la liste de suppression.
+        </p>
+        <EtatChargement v-if="chargementSuppressions" />
+        <div v-else-if="suppressions.length" class="table-conteneur">
+          <table id="table-suppressions-resend">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Origine</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in suppressions" :key="s.id">
+                <td data-label="Email">{{ s.email }}</td>
+                <td data-label="Origine">{{ s.origine ?? "—" }}</td>
+                <td data-label="Date">
+                  {{ s.creeLe ? formaterInstant(s.creeLe) : "—" }}
                 </td>
               </tr>
             </tbody>
@@ -276,6 +332,26 @@
         </div>
       </div>
 
+      <!-- Notification nouvelle version -->
+      <div class="param-bloc">
+        <h3 class="param-libelle">Notification nouvelle version</h3>
+        <p class="param-aide">
+          Envoie une notification push aux utilisateurs ayant activé « Nouvelle
+          version de l'application » dans leurs préférences (version courante :
+          {{ versionApplication || "—" }}). Vérifiez d'abord qu'une entrée
+          existe pour cette version dans le changelog utilisateur — aucune
+          vérification automatique n'est faite côté serveur.
+        </p>
+        <button
+          type="button"
+          class="bouton bouton-secondaire"
+          :disabled="notifierVersionEnCours"
+          @click="ouvrirDialogNotifierVersion"
+        >
+          Notifier la nouvelle version
+        </button>
+      </div>
+
       <!-- APP_CONFIG_SECRET -->
       <div class="param-bloc">
         <h3 class="param-libelle">APP_CONFIG_SECRET</h3>
@@ -297,6 +373,34 @@
       </div>
     </template>
   </section>
+
+  <dialog id="dialog-notifier-version" ref="dialogNotifierVersionRef">
+    <p class="dialog-titre">Notifier la nouvelle version ?</p>
+    <p class="dialog-corps">
+      Une notification push sera envoyée à tous les utilisateurs ayant activé «
+      Nouvelle version de l'application » — vérifiez au préalable qu'une entrée
+      existe bien pour la version {{ versionApplication || "—" }}
+      dans le changelog utilisateur.
+    </p>
+    <div class="dialog-pied">
+      <button
+        id="dialog-notifier-version-confirmer"
+        type="button"
+        class="bouton bouton-secondaire"
+        @click="confirmerNotifierVersion"
+      >
+        Notifier
+      </button>
+      <button
+        id="dialog-notifier-version-annuler"
+        type="button"
+        class="bouton bouton-secondaire"
+        @click="fermerDialogNotifierVersion"
+      >
+        Annuler
+      </button>
+    </div>
+  </dialog>
 
   <dialog id="dialog-vapid" ref="dialogVapidRef">
     <p class="dialog-titre">Régénérer les clés VAPID ?</p>
@@ -323,6 +427,30 @@
       </button>
     </div>
   </dialog>
+
+  <dialog id="dialog-tentatives" ref="dialogTentativesRef">
+    <p class="dialog-titre">Tentatives de livraison</p>
+    <EtatChargement v-if="chargementTentatives" />
+    <p v-else-if="!tentatives.length" class="etat-vide-texte">
+      Aucune tentative trouvée.
+    </p>
+    <ul v-else class="tentatives-liste">
+      <li v-for="t in tentatives" :key="t.id">
+        <strong>{{ t.httpStatusCode ?? "—" }}</strong>
+        — {{ t.envoyeeLe ? formaterInstant(t.envoyeeLe) : "—" }}
+        <div v-if="t.reponse" class="tentatives-reponse">{{ t.reponse }}</div>
+      </li>
+    </ul>
+    <div class="dialog-pied">
+      <button
+        type="button"
+        class="bouton bouton-secondaire"
+        @click="dialogTentativesRef.close()"
+      >
+        Fermer
+      </button>
+    </div>
+  </dialog>
 </template>
 
 <script setup>
@@ -340,6 +468,13 @@ const {
   ouvrir: ouvrirDialogVapidModal,
   fermer: fermerDialogVapidModal,
 } = useDialog();
+const { dialogRef: dialogTentativesRef, ouvrir: ouvrirDialogTentativesModal } =
+  useDialog();
+const {
+  dialogRef: dialogNotifierVersionRef,
+  ouvrir: ouvrirDialogNotifierVersionModal,
+  fermer: fermerDialogNotifierVersionModal,
+} = useDialog();
 
 const DESCRIPTIONS_CONFIG = {
   CONTACT_EMAIL:
@@ -355,6 +490,8 @@ const DESCRIPTIONS_CONFIG = {
 const chargement = ref(true);
 const configs = shallowRef([]);
 const appConfigSecretPresente = ref(false);
+const versionApplication = ref("");
+const notifierVersionEnCours = ref(false);
 const etatTm = ref(null);
 const testTmEnCours = ref(false);
 const etatEmail = ref(null);
@@ -362,6 +499,11 @@ const testEmailEnCours = ref(false);
 const chargementWebhooks = ref(false);
 const evenementsWebhook = shallowRef([]);
 const rejeuEnCours = ref(null);
+const rotationEnCours = ref(false);
+const chargementTentatives = ref(false);
+const tentatives = shallowRef([]);
+const chargementSuppressions = ref(false);
+const suppressions = shallowRef([]);
 
 const configParCle = computed(() => {
   const map = {};
@@ -392,8 +534,12 @@ async function charger() {
     if (repInfo.ok) {
       const info = await repInfo.json();
       appConfigSecretPresente.value = info.appConfigSecretPresente ?? false;
+      versionApplication.value = info.version ?? "";
     }
-    if (configParCle.value["RESEND_API_KEY"]?.presente) chargerWebhooks();
+    if (configParCle.value["RESEND_API_KEY"]?.presente) {
+      chargerWebhooks();
+      chargerSuppressions();
+    }
   } catch (_) {
     afficherToast("Erreur lors du chargement de la configuration.", "erreur");
   } finally {
@@ -440,6 +586,65 @@ async function rejouerEvenementWebhook(id) {
     afficherToast("Erreur réseau lors du rejeu.", "erreur");
   } finally {
     rejeuEnCours.value = null;
+  }
+}
+
+async function rotationSecretWebhook() {
+  rotationEnCours.value = true;
+  try {
+    const rep = await fetch("/api/admin/webhooks/resend/rotation-secret", {
+      method: "POST",
+    });
+    if (rep.ok) {
+      afficherToast("Secret de signature renouvelé.", "succes");
+      await charger();
+    } else {
+      const corps = await rep.json();
+      afficherToast(corps.erreur || "Rotation impossible.", "erreur");
+    }
+  } catch (_) {
+    afficherToast("Erreur réseau lors de la rotation.", "erreur");
+  } finally {
+    rotationEnCours.value = false;
+  }
+}
+
+async function ouvrirTentatives(eventId) {
+  tentatives.value = [];
+  chargementTentatives.value = true;
+  ouvrirDialogTentativesModal();
+  try {
+    const rep = await fetch(
+      `/api/admin/webhooks/resend/evenements/${eventId}/tentatives`,
+    );
+    if (rep.ok) {
+      tentatives.value = await rep.json();
+    } else {
+      afficherToast("Erreur lors du chargement des tentatives.", "erreur");
+    }
+  } catch (_) {
+    afficherToast("Erreur réseau lors du chargement des tentatives.", "erreur");
+  } finally {
+    chargementTentatives.value = false;
+  }
+}
+
+async function chargerSuppressions() {
+  chargementSuppressions.value = true;
+  try {
+    const rep = await fetch("/api/admin/webhooks/resend/suppressions");
+    if (rep.ok) {
+      suppressions.value = await rep.json();
+    } else {
+      afficherToast("Erreur lors du chargement des suppressions.", "erreur");
+    }
+  } catch (_) {
+    afficherToast(
+      "Erreur réseau lors du chargement des suppressions.",
+      "erreur",
+    );
+  } finally {
+    chargementSuppressions.value = false;
   }
 }
 
@@ -533,10 +738,58 @@ async function confirmerVapid() {
   }
 }
 
+function ouvrirDialogNotifierVersion() {
+  ouvrirDialogNotifierVersionModal();
+}
+
+function fermerDialogNotifierVersion() {
+  fermerDialogNotifierVersionModal();
+}
+
+async function confirmerNotifierVersion() {
+  fermerDialogNotifierVersion();
+  notifierVersionEnCours.value = true;
+  try {
+    const rep = await fetch("/api/admin/notifier-version", { method: "POST" });
+    const corps = await rep.json();
+    if (rep.ok) {
+      afficherToast(
+        `Notification envoyée pour la version ${corps.version}.`,
+        "succes",
+      );
+    } else {
+      afficherToast(
+        corps.erreur || "Erreur lors de la notification.",
+        "erreur",
+      );
+    }
+  } catch {
+    afficherToast("Erreur réseau lors de la notification.", "erreur");
+  } finally {
+    notifierVersionEnCours.value = false;
+  }
+}
+
 onMounted(charger);
 </script>
 
 <style scoped>
+.tentatives-liste {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.tentatives-reponse {
+  color: var(--fg-muted);
+  font-family: monospace;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .config-groupe-item {
   border-top: 1px solid var(--border);
   margin-top: 0.75rem;

@@ -7,9 +7,11 @@ package fr.strapontin.sources;
 import com.github.benmanes.caffeine.cache.Cache;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -65,8 +67,19 @@ final class WikidataSalleDecouverte {
           "Q1002697",
           "Q11032");
 
+  // Rempli par decouvrir() sur divergence GPS, vidé par preleverAmbiguites() —
+  // même patron que WikidataArtisteSource.ambiguites.
+  private final Set<UUID> ambiguites = new HashSet<>();
+
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementSalle> cache;
+
+  /* package-private : appelé par WikidataSalleSource (même package). */
+  Set<UUID> preleverAmbiguites() {
+    final Set<UUID> resultat = new HashSet<>(ambiguites);
+    ambiguites.clear();
+    return resultat;
+  }
 
   /* package-private : instancié uniquement par WikidataSalleSource (même package). */
   /**
@@ -196,6 +209,8 @@ final class WikidataSalleDecouverte {
     final double[] coord =
         ClientSparqlWikidata.parserCoordonnees(
             ClientSparqlWikidata.valeurBinding(binding, "coord"));
+    final Double coordLat = coord != null ? coord[1] : null;
+    final Double coordLon = coord != null ? coord[0] : null;
     final boolean localisationConnue =
         (communeLabel != null && !communeLabel.isBlank())
             || (codePostal != null && !codePostal.isBlank());
@@ -209,16 +224,19 @@ final class WikidataSalleDecouverte {
       return Optional.empty();
     }
 
+    if (ValidationCoordonneesSalle.incompatibles(salle, coordLat, coordLon)) {
+      LOG.warn(
+          "Wikidata découverte salle — rejet coordonnées divergentes nom={} salleId={}",
+          nomRecherche,
+          salle.id());
+      ambiguites.add(salle.id());
+      return Optional.empty();
+    }
+
     final String qid = itemUri.substring(itemUri.lastIndexOf('/') + 1);
     final EnrichissementSalle enrichissement =
         new EnrichissementSalle(
-            qid,
-            labelCorrespondant,
-            communeLabel,
-            null,
-            null,
-            coord != null ? coord[1] : null,
-            coord != null ? coord[0] : null);
+            qid, labelCorrespondant, communeLabel, null, null, coordLat, coordLon);
     cache.put(qid, enrichissement);
     return Optional.of(enrichissement);
   }

@@ -49,7 +49,7 @@ class AdminControllerCreerUtilisateurTest {
 
   private static Authentication authPour(final String userId) {
     final UtilisateurDetails ud =
-        new UtilisateurDetails(userId, "login", "test@test.fr", "", "admin", false, false);
+        new UtilisateurDetails(userId, "login", "test@test.fr", "", "admin", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(ud);
     return auth;

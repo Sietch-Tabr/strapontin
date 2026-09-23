@@ -19,7 +19,8 @@ final class EmailTemplates {
   private static final String C_NOIR = "#111";
   /* package-private : couleur réutilisée par EmailTemplatesAlertes (idem). */
   static final String C_TEXTE = "#555";
-  private static final String C_MUTE = "#aaa";
+  /* package-private : couleur réutilisée par EmailTemplatesSecurite (idem). */
+  static final String C_MUTE = "#aaa";
   /* package-private : couleur réutilisée par EmailTemplatesAlertes (idem). */
   static final String C_ERREUR = "#c00";
   private static final String C_BORDURE = "#e5e5e5";
@@ -373,7 +374,8 @@ final class EmailTemplates {
 
   // ---- Helpers privés ----
 
-  private static String envelopper(final String titre, final String corps, final String baseUrl) {
+  /* package-private : appelé par EmailTemplates/EmailTemplatesSecurite. */
+  static String envelopper(final String titre, final String corps, final String baseUrl) {
     return enveloppAvecCouleur(C_NOIR, titre, corps, baseUrl);
   }
 

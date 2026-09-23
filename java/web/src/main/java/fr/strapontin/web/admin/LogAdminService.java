@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -82,7 +83,7 @@ public class LogAdminService {
       pgMeta.setValue(meta != null ? jackson.writeValueAsString(meta) : null);
 
       final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Instant.now().toEpochMilli());
+      params.put("ts", Timestamp.from(Instant.now()));
       params.put("niveau", niveau);
       params.put("source", source);
       params.put("message", message);
@@ -119,7 +120,7 @@ public class LogAdminService {
         Map.of("limite", limite),
         (rs, _) ->
             new EntreeLogAdmin(
-                rs.getLong("ts"),
+                rs.getTimestamp("ts").toInstant().toEpochMilli(),
                 rs.getString("niveau"),
                 rs.getString("source"),
                 rs.getString("message"),
@@ -143,13 +144,41 @@ public class LogAdminService {
         ORDER BY ts
         LIMIT :limite
         """,
-        Map.of("tsDepuis", tsDepuis, "limite", LIMITE_ERREURS_DEPUIS),
+        Map.of(
+            "tsDepuis",
+            Timestamp.from(Instant.ofEpochMilli(tsDepuis)),
+            "limite",
+            LIMITE_ERREURS_DEPUIS),
         (rs, _) ->
             new EntreeLogAdmin(
-                rs.getLong("ts"),
+                rs.getTimestamp("ts").toInstant().toEpochMilli(),
                 rs.getString("niveau"),
                 rs.getString("source"),
                 rs.getString("message"),
                 rs.getString("meta")));
+  }
+
+  /**
+   * Compte les échecs d'authentification récents d'un identifiant
+   * (source {@code auth}, niveau {@code warn}).
+   * @param identifiant l'identifiant ciblé par les échecs
+   * @param depuisMs horodatage Unix en millisecondes, exclusif
+   * @return le nombre d'échecs consignés depuis {@code depuisMs}
+   */
+  public long compterEchecsConnexionRecents(final String identifiant, final long depuisMs) {
+    final Long total =
+        jdbc.queryForObject(
+            """
+            SELECT COUNT(*) FROM logs_admin
+            WHERE source = 'auth' AND niveau = 'warn'
+              AND meta ->> 'identifiant' = :identifiant AND ts > :depuisMs
+            """,
+            Map.of(
+                "identifiant",
+                identifiant,
+                "depuisMs",
+                Timestamp.from(Instant.ofEpochMilli(depuisMs))),
+            Long.class);
+    return total != null ? total : 0;
   }
 }

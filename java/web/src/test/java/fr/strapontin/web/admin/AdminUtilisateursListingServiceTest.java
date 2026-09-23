@@ -52,6 +52,7 @@ class AdminUtilisateursListingServiceTest {
     ligne.put("must_change_credentials", false);
     ligne.put("created_at", Timestamp.from(Instant.now()));
     ligne.put("revocation_admin_le", null);
+    ligne.put("verrouille", false);
     ligne.put("nb_salles", 2);
     ligne.put("nb_artistes", 0);
     ligne.put("total_filtre", 3L);

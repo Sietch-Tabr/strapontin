@@ -6,6 +6,7 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
+import fr.strapontin.worker.persister.FusionEvenementsArtisteService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
 import org.springframework.stereotype.Service;
@@ -18,12 +19,12 @@ import org.springframework.stereotype.Service;
  * @since 2.6.0
  * @author Kwaite
  */
-// 10 collaborateurs indépendants : chacun est une vérification/un
+// 11 collaborateurs indépendants : chacun est une vérification/un
 // enrichissement autonome du job nocturne, sans regroupement thématique naturel
 // (contrairement à FetchRapportage côté fetch) — un tel regroupement serait un
 // simple contournement du seuil, pas une amélioration de conception.
 // HealthCheckArtistesTM/HealthCheckSallesTM (déjà des beans Spring, voir leur
-// propre Javadoc) ont réduit le compte de 11 à 10.
+// propre Javadoc) ont réduit le compte de 12 à 11.
 @SuppressWarnings("PMD.ExcessiveParameterList")
 @Service
 public class ReconciliationNocturneService {
@@ -33,6 +34,7 @@ public class ReconciliationNocturneService {
   private final CoherenceWikidataSalleService coherenceWikidataSalle;
   private final ReconciliateurSalles reconciliateurSalles;
   private final FusionSallesClePorteeService fusionSallesClePortee;
+  private final FusionEvenementsArtisteService fusionEvenementsArtiste;
   private final CoherenceMultiSalleService coherenceMultiSalle;
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
   private final ControleIntegriteService controleIntegrite;
@@ -40,7 +42,7 @@ public class ReconciliationNocturneService {
   private final HealthCheckSallesTM healthCheckSallesTM;
 
   /**
-   * Assemble les 10 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 11 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -49,6 +51,7 @@ public class ReconciliationNocturneService {
       final CoherenceWikidataSalleService coherenceWikidataSalle,
       final ReconciliateurSalles reconciliateurSalles,
       final FusionSallesClePorteeService fusionSallesClePortee,
+      final FusionEvenementsArtisteService fusionEvenementsArtiste,
       final CoherenceMultiSalleService coherenceMultiSalle,
       final SuggestionMotsGenericsService suggestionMotsGenerics,
       final ControleIntegriteService controleIntegrite,
@@ -59,6 +62,7 @@ public class ReconciliationNocturneService {
     this.coherenceWikidataSalle = coherenceWikidataSalle;
     this.reconciliateurSalles = reconciliateurSalles;
     this.fusionSallesClePortee = fusionSallesClePortee;
+    this.fusionEvenementsArtiste = fusionEvenementsArtiste;
     this.coherenceMultiSalle = coherenceMultiSalle;
     this.suggestionMotsGenerics = suggestionMotsGenerics;
     this.controleIntegrite = controleIntegrite;
@@ -84,6 +88,7 @@ public class ReconciliationNocturneService {
     final int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
     final int sallesFusionnees = fusionSallesClePortee.fusionner();
+    final int evenementsFusionnes = fusionEvenementsArtiste.fusionner();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
@@ -100,6 +105,7 @@ public class ReconciliationNocturneService {
         nomsIncoherentsTM,
         sallesOrphelinesResolues,
         sallesFusionnees,
+        evenementsFusionnes,
         contaminationsSignalees,
         doublonsSignales,
         motsGenericsSuggeres,

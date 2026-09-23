@@ -130,6 +130,31 @@ class WorkerProxyServiceTest {
   }
 
   @Test
+  void notifierNouvelleVersion_succes_retourneResultatPositif() {
+    final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+    final WorkerProxyService service =
+        new WorkerProxyService(restClient, new ObjectMapper(), mock(LogAdminService.class));
+
+    final ResultatRelance resultat = service.notifierNouvelleVersion("3.0.0");
+
+    assertTrue(resultat.succes());
+    assertEquals(200, resultat.statutHttp());
+  }
+
+  @Test
+  void notifierNouvelleVersion_workerInaccessible_retourneEchecAvecStatut503() {
+    final RestClient restClientEnPanne = mock(RestClient.class);
+    when(restClientEnPanne.post()).thenThrow(new RuntimeException("connexion refusée"));
+    final WorkerProxyService service =
+        new WorkerProxyService(restClientEnPanne, new ObjectMapper(), mock(LogAdminService.class));
+
+    final ResultatRelance resultat = service.notifierNouvelleVersion("3.0.0");
+
+    assertFalse(resultat.succes());
+    assertEquals(503, resultat.statutHttp());
+  }
+
+  @Test
   void relancerFetches_succes_retourneResultatPositif() {
     final RestClient restClient = mock(RestClient.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
     final LogAdminService logAdminService = mock(LogAdminService.class);

@@ -20,4 +20,5 @@ public record RequeteNotifications(
     boolean notifArtistes,
     boolean notifSalles,
     boolean notifArtistesPush,
-    boolean notifSallesPush) {}
+    boolean notifSallesPush,
+    boolean notifNouvelleVersion) {}

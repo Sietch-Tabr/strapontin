@@ -7,6 +7,7 @@ package fr.strapontin.worker.quota;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,7 +163,7 @@ public class GestionQuotaTM {
     try {
       final String metaJson = objectMapper.writeValueAsString(meta);
       final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Instant.now().toEpochMilli());
+      params.put("ts", Timestamp.from(Instant.now()));
       params.put("niveau", niveau);
       params.put("source", "worker");
       params.put("message", message);

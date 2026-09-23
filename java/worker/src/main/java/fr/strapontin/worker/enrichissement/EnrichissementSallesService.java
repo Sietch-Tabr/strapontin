@@ -7,6 +7,7 @@ package fr.strapontin.worker.enrichissement;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
+import fr.strapontin.sources.SourceAvecAmbiguitesDecouverte;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
 import fr.strapontin.worker.LogsAdminWorker;
@@ -53,6 +54,8 @@ public class EnrichissementSallesService {
   // une absence totale de résultat.
   private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
   private static final String CLE_WIKIDATA_ID = "wikidataId";
+  private static final String CLE_LATITUDE = "latitude";
+  private static final String CLE_LONGITUDE = "longitude";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
@@ -173,6 +176,25 @@ public class EnrichissementSallesService {
                       suiviChronicite.enrichirSiChronique(entree.message(), streak),
                       entree.meta()));
     }
+    remonterAmbiguites();
+  }
+
+  /**
+   * Signale chaque salle dont un candidat Wikidata a été rejeté sur
+   * divergence GPS depuis le dernier cycle — un nom/ville/dept compatibles
+   * mais un bâtiment différent (ex. Alhambra Paris, deux arrondissements)
+   * mérite une revue manuelle plutôt qu'une non-découverte silencieuse.
+   */
+  private void remonterAmbiguites() {
+    for (final SourceEnrichissementSalle source : sources) {
+      if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) {
+        continue;
+      }
+      for (final UUID salleId : avecAmbiguites.preleverAmbiguites()) {
+        signalementMatchingService.signaler(
+            "wikidata_coordonnees_divergentes", "salle", salleId, "basse", null);
+      }
+    }
   }
 
   private int enrichirEtPersisterLot(final List<SalleAEnrichir> lot) {
@@ -206,14 +228,14 @@ public class EnrichissementSallesService {
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
-        SELECT s.id, s.nom, s.nom_norm, s.ville,
+        SELECT s.id, s.nom, s.nom_norm, s.ville, s.latitude, s.longitude,
                COALESCE(s.dept, (SELECT c2.dept FROM concerts c2
                                  WHERE c2.salle_id = s.id AND c2.dept IS NOT NULL
                                  LIMIT 1)) AS dept_effectif
         FROM salles s
         LEFT JOIN concerts c ON c.salle_id = s.id AND c.date >= CURRENT_DATE
         WHERE s.wikidata_id IS NULL AND s.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
-        GROUP BY s.id, s.nom, s.nom_norm, s.ville, s.dept
+        GROUP BY s.id, s.nom, s.nom_norm, s.ville, s.dept, s.latitude, s.longitude
         ORDER BY COUNT(c.id) DESC
         """,
         Map.of(),
@@ -224,7 +246,9 @@ public class EnrichissementSallesService {
                 rs.getString("nom_norm"),
                 rs.getString("ville"),
                 rs.getString("dept_effectif"),
-                null));
+                null,
+                (Double) rs.getObject(CLE_LATITUDE),
+                (Double) rs.getObject(CLE_LONGITUDE)));
   }
 
   private static List<SalleAEnrichir> appliquerWikidataIdConnu(
@@ -237,7 +261,15 @@ public class EnrichissementSallesService {
                   enrichissement != null && enrichissement.wikidataId() != null
                       ? enrichissement.wikidataId()
                       : s.wikidataId();
-              return new SalleAEnrichir(s.id(), s.nom(), s.nomNorm(), s.ville(), s.dept(), qid);
+              return new SalleAEnrichir(
+                  s.id(),
+                  s.nom(),
+                  s.nomNorm(),
+                  s.ville(),
+                  s.dept(),
+                  qid,
+                  s.latitude(),
+                  s.longitude());
             })
         .toList();
   }
@@ -268,8 +300,8 @@ public class EnrichissementSallesService {
     params.put(CLE_WIKIDATA_ID, enrichissement.wikidataId());
     params.put("nomAffiche", enrichissement.nomAffiche());
     params.put("ville", enrichissement.ville());
-    params.put("latitude", enrichissement.latitude());
-    params.put("longitude", enrichissement.longitude());
+    params.put(CLE_LATITUDE, enrichissement.latitude());
+    params.put(CLE_LONGITUDE, enrichissement.longitude());
     params.put("id", salleId.toString());
     try {
       jdbc.update(
@@ -329,6 +361,10 @@ public class EnrichissementSallesService {
     return false;
   }
 
+  // Retour null idiomatique (une entité unique trouvée ou non, pas une collection
+  // de plusieurs éléments) — Map.of() introduirait une ambiguïté avec une salle
+  // réellement vide de coordonnées.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -346,10 +382,10 @@ public class EnrichissementSallesService {
     if (lignes.isEmpty()) {
       return false;
     }
-    final Double latSalle = (Double) lignes.get(0).get("latitude");
-    final Double lonSalle = (Double) lignes.get(0).get("longitude");
-    final Double latPorteuse = (Double) porteuse.get("latitude");
-    final Double lonPorteuse = (Double) porteuse.get("longitude");
+    final Double latSalle = (Double) lignes.get(0).get(CLE_LATITUDE);
+    final Double lonSalle = (Double) lignes.get(0).get(CLE_LONGITUDE);
+    final Double latPorteuse = (Double) porteuse.get(CLE_LATITUDE);
+    final Double lonPorteuse = (Double) porteuse.get(CLE_LONGITUDE);
     if (!FusionSallesClePorteeService.coordonneesConnuesEtProches(
         latSalle, lonSalle, latPorteuse, lonPorteuse)) {
       return false;

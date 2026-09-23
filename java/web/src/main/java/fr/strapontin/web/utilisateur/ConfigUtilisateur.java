@@ -20,5 +20,6 @@ public record ConfigUtilisateur(
     boolean notifSalles,
     boolean notifArtistesPush,
     boolean notifSallesPush,
+    boolean notifNouvelleVersion,
     String theme,
     boolean resendDisponible) {}

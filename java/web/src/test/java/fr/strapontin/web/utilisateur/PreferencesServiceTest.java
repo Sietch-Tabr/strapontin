@@ -47,14 +47,15 @@ class PreferencesServiceTest {
     logAdminService = mock(LogAdminService.class);
     artisteService = mock(ArtisteService.class);
     salleService = mock(SalleService.class);
+    // stubé pour lever une exception nommée et réaliste (worker injoignable) plutôt que de
+    // laisser post() non stubé retourner null — une NPE accidentelle dans le fire-and-forget de
+    // WorkerTriggerUtils.declencherWorkerAsync serait sinon indistinguable d'un vrai bug au
+    // premier coup d'œil dans les logs de test.
+    final RestClient restClient = mock(RestClient.class);
+    when(restClient.post()).thenThrow(new RuntimeException("worker injoignable"));
     service =
         new PreferencesService(
-            jdbc,
-            new ObjectMapper(),
-            mock(RestClient.class),
-            logAdminService,
-            artisteService,
-            salleService);
+            jdbc, new ObjectMapper(), restClient, logAdminService, artisteService, salleService);
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
   }
 

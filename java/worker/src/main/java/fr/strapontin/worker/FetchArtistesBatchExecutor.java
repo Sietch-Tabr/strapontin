@@ -14,6 +14,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,7 @@ class FetchArtistesBatchExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchArtistesBatchExecutor.class);
   private static final int TAILLE_LOT_TM = 20;
   private static final int NB_IDS_DISTINCTS_NON_AMBIGU = 1;
+  private static final String CLE_ARTISTE_ID_STR = "artiste_id_str";
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
@@ -119,16 +121,47 @@ class FetchArtistesBatchExecutor {
       final List<Map<String, Object>> lot =
           rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
       try {
-        resultat = WorkerFetchCommun.accumuler(resultat, traiterLot(lot, sourcesSimples));
+        final ResultatLot resultatLot = traiterLot(lot, sourcesSimples);
+        resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
+        if (resultatLot.echecReseauTransitoire()) {
+          LOG.warn(
+              "fetch:artistes:batch lot {}-{} dégradé par une panne réseau transitoire",
+              i,
+              i + lot.size());
+          echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : panne réseau transitoire");
+          lot.forEach(row -> idsEnEchec.add((String) row.get(CLE_ARTISTE_ID_STR)));
+        }
       } catch (Exception e) {
         LOG.error(
             "fetch:artistes:batch lot {}-{} échoué : {}", i, i + lot.size(), e.getMessage(), e);
         echecsLots.add("lot " + i + "-" + (i + lot.size()) + " : " + e.getMessage());
-        lot.forEach(row -> idsEnEchec.add((String) row.get("artiste_id_str")));
+        lot.forEach(row -> idsEnEchec.add((String) row.get(CLE_ARTISTE_ID_STR)));
       }
     }
     commun.remonterEchecsLots("fetch:artistes:batch", echecsLots, totalLots, idsEnEchec);
     return resultat;
+  }
+
+  /**
+   * Bilan d'un lot, avec le signal d'échec réseau transitoire éventuellement
+   * absorbé lors du fetch (DNS, I/O, timeout) — distinct d'une exception non
+   * rattrapée, qui échoue déjà tout le lot via le {@code catch} appelant.
+   */
+  private record ResultatLot(ResultatPersistance persistance, boolean echecReseauTransitoire) {}
+
+  // Une vraie panne réseau (DNS, I/O, timeout — IOException et sous-classes, y
+  // compris en cause imbriquée) compte comme un échec de lot pour
+  // remonterEchecsLots/RetryLotsService ; un échec applicatif (erreur métier,
+  // JSON invalide) n'est pas transitoire au même sens, pas de retry auto.
+  private static boolean estEchecReseauTransitoire(final Throwable erreur) {
+    Throwable cause = erreur;
+    while (cause != null) {
+      if (cause instanceof java.io.IOException) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   /**
@@ -139,9 +172,10 @@ class FetchArtistesBatchExecutor {
    *     individuel par artiste)
    * @return bilan de persistance du lot
    */
-  private ResultatPersistance traiterLot(
+  private ResultatLot traiterLot(
       final List<Map<String, Object>> lot, final List<SourceConcerts> sourcesSimples) {
-    final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot);
+    final AtomicBoolean echecReseau = new AtomicBoolean(false);
+    final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot, echecReseau);
 
     final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
     for (final SourceConcerts source : sourcesSimples) {
@@ -153,6 +187,9 @@ class FetchArtistesBatchExecutor {
           concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
         } catch (Exception e) {
           LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
+          if (estEchecReseauTransitoire(e)) {
+            echecReseau.set(true);
+          }
         }
         commun.attendreRateLimit();
       }
@@ -171,9 +208,9 @@ class FetchArtistesBatchExecutor {
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     final List<String> artisteIds =
-        lot.stream().map(row -> (String) row.get("artiste_id_str")).toList();
+        lot.stream().map(row -> (String) row.get(CLE_ARTISTE_ID_STR)).toList();
     commun.mettreAJourAbsences("artiste_id", artisteIds, debutLot);
-    return resultat;
+    return new ResultatLot(resultat, echecReseau.get());
   }
 
   /**
@@ -186,11 +223,12 @@ class FetchArtistesBatchExecutor {
    */
   private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}
 
-  private List<ConcertBrut> fetchTMParArtistes(final List<Map<String, Object>> rows) {
+  private List<ConcertBrut> fetchTMParArtistes(
+      final List<Map<String, Object>> rows, final AtomicBoolean echecReseau) {
     final ResolutionAttractionIds resolution = resoudreAttractionIds(rows);
     final List<ConcertBrut> resultats =
-        new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds()));
-    resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId()));
+        new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds(), echecReseau));
+    resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId(), echecReseau));
     return resultats;
   }
 
@@ -206,7 +244,7 @@ class FetchArtistesBatchExecutor {
 
     for (final Map<String, Object> row : rows) {
       final String nom = (String) row.get("artiste_affiche");
-      final String artisteIdStr = (String) row.get("artiste_id_str");
+      final String artisteIdStr = (String) row.get(CLE_ARTISTE_ID_STR);
       String attractionId = (String) row.get("attraction_id");
       if (attractionIdAmbigu(row, nom, artisteIdStr)) {
         continue;
@@ -268,7 +306,8 @@ class FetchArtistesBatchExecutor {
     return attractionId;
   }
 
-  private List<ConcertBrut> fetchParLotsAttractionIds(final List<String> attractionIds) {
+  private List<ConcertBrut> fetchParLotsAttractionIds(
+      final List<String> attractionIds, final AtomicBoolean echecReseau) {
     final List<ConcertBrut> resultats = new ArrayList<>();
     for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
       final List<String> lot =
@@ -279,18 +318,25 @@ class FetchArtistesBatchExecutor {
         rapportage.suiviSanteSourcesService().enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
         LOG.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
+        if (estEchecReseauTransitoire(e)) {
+          echecReseau.set(true);
+        }
       }
     }
     return resultats;
   }
 
-  private List<ConcertBrut> fetchParNomsSansAttractionId(final List<String> nomsSansTmId) {
+  private List<ConcertBrut> fetchParNomsSansAttractionId(
+      final List<String> nomsSansTmId, final AtomicBoolean echecReseau) {
     final List<ConcertBrut> resultats = new ArrayList<>();
     for (final String nom : nomsSansTmId) {
       try {
         resultats.addAll(commun.obtenirTm().fetchArtiste(nom));
       } catch (Exception e) {
         LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
+        if (estEchecReseauTransitoire(e)) {
+          echecReseau.set(true);
+        }
       }
       commun.attendreRateLimit();
     }

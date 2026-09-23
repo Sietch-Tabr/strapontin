@@ -12,6 +12,7 @@ import fr.strapontin.web.email.EmailServiceAdmin;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
 
 /**
@@ -37,7 +38,8 @@ class AdminControllerBanniereTest {
             banniereService,
             mock(WorkerProxyService.class),
             mock(EmailServiceAdmin.class),
-            mock(VapidService.class));
+            mock(VapidService.class),
+            mock(BuildProperties.class));
   }
 
   @Test

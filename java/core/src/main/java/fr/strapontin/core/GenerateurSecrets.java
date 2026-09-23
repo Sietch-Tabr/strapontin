@@ -2,7 +2,7 @@
  * Strapontin — concert finder
  * Copyright (C) 2025-2026 Kwaite
  */
-package fr.strapontin.web.securite;
+package fr.strapontin.core;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,7 +13,7 @@ import java.util.Base64;
 /**
  * Génération de secrets et de hachages pour l'invitation et
  * la réinitialisation de comptes ({@link SecureRandom} partagé,
- * thread-safe).
+ * thread-safe) — partagé web/worker (relances de comptes).
  * @since 2.2.3
  * @author Kwaite
  */

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.core.GenerateurSecrets;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import java.security.SecureRandom;

@@ -27,6 +27,8 @@ final class NomsJobs {
           Map.entry("purgerSalles", "purger:salles"),
           Map.entry("purgerArtistes", "purger:artistes"),
           Map.entry("purgerLogsAdmin", "purger:logs-admin"),
+          Map.entry("gererComptesInactifs", "gerer:comptes-inactifs"),
+          Map.entry("gererInvitesExpires", "gerer:invites-expires"),
           Map.entry("revoquerAdmins", "revoquer:admins"),
           Map.entry("recalculerMatches", "recalculer:matches"),
           Map.entry("notifierDigest", "notifier:digest"),

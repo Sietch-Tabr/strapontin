@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,10 +29,14 @@ class ReconciliateurSallesOrphelines {
   private static final Logger LOG = LoggerFactory.getLogger(ReconciliateurSallesOrphelines.class);
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final FusionEvenementsArtisteService fusionEvenementsArtisteService;
 
   /* package-private : instancié uniquement par Spring (même package). */
-  ReconciliateurSallesOrphelines(final NamedParameterJdbcTemplate jdbc) {
+  ReconciliateurSallesOrphelines(
+      final NamedParameterJdbcTemplate jdbc,
+      final FusionEvenementsArtisteService fusionEvenementsArtisteService) {
     this.jdbc = jdbc;
+    this.fusionEvenementsArtisteService = fusionEvenementsArtisteService;
   }
 
   /**
@@ -43,7 +48,7 @@ class ReconciliateurSallesOrphelines {
   int retenterSallesOrphelines() {
     final List<Map<String, Object>> orphelins =
         jdbc.queryForList(
-            "SELECT id, salle, dept FROM concerts"
+            "SELECT id, salle, dept, artiste_norm, date, heure FROM concerts"
                 + " WHERE salle_id IS NULL AND date >= CURRENT_DATE",
             Map.of());
     if (orphelins.isEmpty()) {
@@ -63,9 +68,18 @@ class ReconciliateurSallesOrphelines {
       if (salleId == null) {
         continue;
       }
-      jdbc.update(
-          "UPDATE evenements SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
-          Map.of("salleId", salleId.toString(), "id", orphelin.get("id")));
+      final UUID orphelinId = (UUID) orphelin.get("id");
+      final UUID doublonExistant = chercherDoublonExistant(orphelinId, salleId, orphelin);
+      if (doublonExistant != null) {
+        // la salle candidate ferait doublon avec un événement déjà établi
+        // (même artiste_norm/date/heure) — fusionner plutôt que de laisser
+        // l'UPDATE violer la contrainte unique uq_evenements.
+        fusionEvenementsArtisteService.fusionnerUnePaire(doublonExistant, orphelinId);
+      } else {
+        jdbc.update(
+            "UPDATE evenements SET salle_id = CAST(:salleId AS uuid) WHERE id = :id",
+            Map.of("salleId", salleId.toString(), "id", orphelinId));
+      }
       resolus++;
     }
     if (resolus > 0) {
@@ -73,6 +87,37 @@ class ReconciliateurSallesOrphelines {
           "réconciliation salles orphelines candidats={} résolus={}", orphelins.size(), resolus);
     }
     return resolus;
+  }
+
+  /**
+   * Détecte un conflit avec {@code uq_evenements} avant l'UPDATE
+   * (incident réel v3.0.0 : {@code DuplicateKeyException}).
+   * @param orphelinId événement orphelin en cours de résolution
+   * @param salleId salle candidate retenue pour cet orphelin
+   * @param orphelin ligne brute de l'orphelin (artiste_norm/date/heure)
+   * @return identifiant de l'événement doublon, ou {@code null} si aucun
+   */
+  private UUID chercherDoublonExistant(
+      final UUID orphelinId, final UUID salleId, final Map<String, Object> orphelin) {
+    // HashMap (pas Map.of) : heure est nullable, Map.of rejette toute
+    // valeur null dès sa construction.
+    final Map<String, Object> params = new HashMap<>();
+    params.put("salleId", salleId.toString());
+    params.put("date", orphelin.get("date"));
+    params.put("heure", orphelin.get("heure"));
+    params.put("artisteNorm", orphelin.get("artiste_norm"));
+    params.put("orphelinId", orphelinId.toString());
+    final List<UUID> doublons =
+        jdbc.query(
+            """
+            SELECT id FROM evenements
+            WHERE salle_id = CAST(:salleId AS uuid) AND date = :date
+              AND heure IS NOT DISTINCT FROM :heure AND artiste_norm = :artisteNorm
+              AND id <> CAST(:orphelinId AS uuid)
+            """,
+            params,
+            (rs, _) -> rs.getObject("id", UUID.class));
+    return doublons.isEmpty() ? null : doublons.get(0);
   }
 
   /**

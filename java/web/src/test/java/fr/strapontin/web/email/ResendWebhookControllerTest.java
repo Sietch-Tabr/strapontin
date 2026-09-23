@@ -88,8 +88,8 @@ class ResendWebhookControllerTest {
   void traiterEvenement_bounce_journaliseEmailHacheEtNotifieAdmin() {
     final String corps =
         """
-            {"type":"email.bounced","data":{"to":["victime@exemple.fr"]}}
-            """;
+        {"type":"email.bounced","data":{"to":["victime@exemple.fr"]}}
+        """;
 
     controller.traiterEvenement(corps, "svix-id-bounce-1");
 
@@ -107,8 +107,8 @@ class ResendWebhookControllerTest {
   void traiterEvenement_complained_journaliseEtNotifieAdminCommeUnBounce() {
     final String corps =
         """
-            {"type":"email.complained","data":{"to":["plaignant@exemple.fr"]}}
-            """;
+        {"type":"email.complained","data":{"to":["plaignant@exemple.fr"]}}
+        """;
 
     controller.traiterEvenement(corps, "svix-id-complained-1");
 
@@ -119,5 +119,41 @@ class ResendWebhookControllerTest {
     assertEquals("svix-id-complained-1", details.getValue().get("svixId"));
     verify(emailAlerteService).envoyerNotificationPlainteSpam("plaignant@exemple.fr");
     verify(emailAlerteService, never()).envoyerNotificationBounce(anyString());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void traiterEvenement_suppressionAjoutee_journaliseEnInfoSansAlerteAdmin() {
+    final String corps =
+        """
+        {"type":"suppression.added","data":{"email":"bloque@exemple.fr"}}
+        """;
+
+    controller.traiterEvenement(corps, "svix-id-suppression-1");
+
+    final ArgumentCaptor<Map<String, Object>> details = ArgumentCaptor.forClass(Map.class);
+    verify(logAdminService)
+        .logAdmin(
+            org.mockito.ArgumentMatchers.eq("info"), anyString(), anyString(), details.capture());
+    assertEquals(String.valueOf("bloque@exemple.fr".hashCode()), details.getValue().get("email"));
+    verify(emailAlerteService, never()).envoyerNotificationBounce(anyString());
+    verify(emailAlerteService, never()).envoyerNotificationPlainteSpam(anyString());
+  }
+
+  @Test
+  void traiterEvenement_suppressionRetiree_journaliseEnInfo() {
+    final String corps =
+        """
+        {"type":"suppression.removed","data":{"email":"debloque@exemple.fr"}}
+        """;
+
+    controller.traiterEvenement(corps, "svix-id-suppression-2");
+
+    verify(logAdminService)
+        .logAdmin(
+            org.mockito.ArgumentMatchers.eq("info"),
+            anyString(),
+            org.mockito.ArgumentMatchers.eq("retrait liste de suppression Resend"),
+            org.mockito.ArgumentMatchers.anyMap());
   }
 }

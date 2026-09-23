@@ -5,6 +5,8 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -69,7 +71,7 @@ public class WorkerRevocationService {
                 VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
                 """,
                 Map.of(
-                    "ts", System.currentTimeMillis(),
+                    "ts", Timestamp.from(Instant.now()),
                     "niveau", "warn",
                     "source", "admin",
                     "message", "révocation admin effective — " + nb + " compte(s) rétrogradé(s)",

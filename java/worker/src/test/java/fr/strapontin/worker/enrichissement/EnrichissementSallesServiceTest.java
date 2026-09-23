@@ -91,7 +91,8 @@ class EnrichissementSallesServiceTest {
     final List<SalleAEnrichir> candidats = new ArrayList<>();
     for (int i = 0; i < 20; i++) {
       candidats.add(
-          new SalleAEnrichir(UUID.randomUUID(), "Salle " + i, "salle " + i, null, null, null));
+          new SalleAEnrichir(
+              UUID.randomUUID(), "Salle " + i, "salle " + i, null, null, null, null, null));
     }
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
@@ -116,7 +117,7 @@ class EnrichissementSallesServiceTest {
   @Test
   void enrichir_moinsDeVingtCandidatsZeroEnrichis_neJournalisePasDAlerte() {
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(UUID.randomUUID(), "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(UUID.randomUUID(), "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
     when(source.enrichirLot(any())).thenReturn(Map.of());
@@ -146,7 +147,8 @@ class EnrichissementSallesServiceTest {
     for (int i = 0; i < 30; i++) {
       final UUID id = UUID.randomUUID();
       ids.add(id);
-      candidats.add(new SalleAEnrichir(id, "Salle " + i, "salle " + i, null, null, null));
+      candidats.add(
+          new SalleAEnrichir(id, "Salle " + i, "salle " + i, null, null, null, null, null));
     }
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
@@ -188,7 +190,8 @@ class EnrichissementSallesServiceTest {
     for (int i = 0; i < 20; i++) {
       final UUID id = UUID.randomUUID();
       ids.add(id);
-      candidats.add(new SalleAEnrichir(id, "Salle " + i, "salle " + i, null, null, null));
+      candidats.add(
+          new SalleAEnrichir(id, "Salle " + i, "salle " + i, null, null, null, null, null));
     }
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
@@ -227,7 +230,7 @@ class EnrichissementSallesServiceTest {
   void enrichir_overpassTrouveWikidataId_wikidataUtiliseLeQidPropage() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final SourceEnrichissementSalle overpass = mock(SourceEnrichissementSalle.class);
@@ -236,7 +239,7 @@ class EnrichissementSallesServiceTest {
 
     final SourceEnrichissementSalle wikidata = mock(SourceEnrichissementSalle.class);
     final SalleAEnrichir candidatAvecQid =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, "Q123");
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, "Q123", null, null);
     when(wikidata.enrichirLot(List.of(candidatAvecQid)))
         .thenReturn(
             Map.of(salleId, new EnrichissementSalle("Q123", "Zénith", "Nantes", null, null)));
@@ -266,7 +269,7 @@ class EnrichissementSallesServiceTest {
   void enrichir_troisiemeSourceMockeeAjoutee_prisEnCompteSansChangementDeCode() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Salle X", "salle x", null, null, null);
+        new SalleAEnrichir(salleId, "Salle X", "salle x", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final SourceEnrichissementSalle source1 = mock(SourceEnrichissementSalle.class);
@@ -297,7 +300,7 @@ class EnrichissementSallesServiceTest {
   void enrichir_nomAfficheDejaFourniParUneSource_neSecrasePasParSuivante() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final SourceEnrichissementSalle source1 = mock(SourceEnrichissementSalle.class);
@@ -332,7 +335,7 @@ class EnrichissementSallesServiceTest {
     final Map<UUID, EnrichissementSalle> reponseAttendue = new HashMap<>();
     for (int i = 0; i < 30; i++) {
       final UUID id = UUID.randomUUID();
-      candidats.add(new SalleAEnrichir(id, "Salle" + i, "salle" + i, null, null, null));
+      candidats.add(new SalleAEnrichir(id, "Salle" + i, "salle" + i, null, null, null, null, null));
       reponseAttendue.put(id, new EnrichissementSalle("Q" + i, null, null, null, null));
     }
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(candidats);
@@ -378,9 +381,10 @@ class EnrichissementSallesServiceTest {
     final UUID salleEnConflit = UUID.randomUUID();
     final UUID salleOk = UUID.randomUUID();
     final SalleAEnrichir candidatConflit =
-        new SalleAEnrichir(salleEnConflit, "Orleans Arena", "orleans arena", null, null, null);
+        new SalleAEnrichir(
+            salleEnConflit, "Orleans Arena", "orleans arena", null, null, null, null, null);
     final SalleAEnrichir candidatOk =
-        new SalleAEnrichir(salleOk, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleOk, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidatConflit, candidatOk));
     when(jdbc.update(
             anyString(),
@@ -418,7 +422,7 @@ class EnrichissementSallesServiceTest {
     final UUID salleId = UUID.randomUUID();
     final UUID porteuseId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
     when(jdbc.update(anyString(), anyMap())).thenThrow(new DuplicateKeyException("idx"));
     when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE wikidata_id"), anyMap()))
@@ -454,7 +458,7 @@ class EnrichissementSallesServiceTest {
     final UUID salleId = UUID.randomUUID();
     final UUID porteuseId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
     when(jdbc.update(anyString(), anyMap())).thenThrow(new DuplicateKeyException("idx"));
     final Map<String, Object> porteuseSansCoordonnees = new HashMap<>();
@@ -493,7 +497,7 @@ class EnrichissementSallesServiceTest {
   void enrichir_sourceAvecBilanFetchPanneTotale_loggeErreurDansLogsAdmin() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final SourceEnrichissementSalle source =
@@ -522,7 +526,7 @@ class EnrichissementSallesServiceTest {
   void enrichir_sourceAvecBilanFetchAucunAppel_neLoggeAucunBilan() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final SourceEnrichissementSalle source =
@@ -547,6 +551,40 @@ class EnrichissementSallesServiceTest {
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 
+  // #1218 : une salle dont un candidat Wikidata a été écarté sur divergence GPS (ambiguïté,
+  // distincte d'une non-découverte ordinaire) doit être signalée pour revue manuelle.
+  @Test
+  void enrichir_sourceAvecAmbiguitesPrelevees_signaleChacune() {
+    final UUID salleId = UUID.randomUUID();
+    final SalleAEnrichir candidat =
+        new SalleAEnrichir(salleId, "Alhambra", "alhambra", "Paris", "75", null, 48.8716, 2.3616);
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
+
+    final var wikidata =
+        mock(
+            SourceEnrichissementSalle.class,
+            org.mockito.Mockito.withSettings()
+                .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
+    when(wikidata.enrichirLot(any())).thenReturn(Map.of());
+    when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
+        .thenReturn(java.util.Set.of(salleId));
+    final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
+
+    final EnrichissementSallesService service =
+        new EnrichissementSallesService(
+            jdbc,
+            List.of(wikidata),
+            logsAdminWorkerMock(),
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            signalement);
+    service.enrichir();
+
+    verify(signalement)
+        .signaler(
+            eq("wikidata_coordonnees_divergentes"), eq("salle"), eq(salleId), anyString(), any());
+  }
+
   // le streak de chronicité (persisté dans app_config) doit survivre entre deux cycles
   // enrichir() distincts sur la même instance — un taux d'échec Overpass élevé répété à chaque
   // nuit doit finir par être qualifié de chronique, pas traité comme un warn isolé à chaque fois.
@@ -554,7 +592,7 @@ class EnrichissementSallesServiceTest {
   void enrichir_echecOverpassPersistantSurTroisCycles_qualifieLeMessageDeChronique() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null);
+        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final AtomicReference<String> valeurAppConfig = new AtomicReference<>();

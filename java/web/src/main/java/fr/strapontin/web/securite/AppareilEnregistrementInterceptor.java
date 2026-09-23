@@ -25,12 +25,17 @@ public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
   private static final String ATTRIBUT_DEJA_ENREGISTRE = "appareilEnregistre";
 
   private final AppareilsService appareilsService;
+  private final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService;
 
   /**
    * @param appareilsService service d'enregistrement des appareils
+   * @param alerteActiviteUtilisateurService alertes de nouvel appareil
    */
-  public AppareilEnregistrementInterceptor(final AppareilsService appareilsService) {
+  public AppareilEnregistrementInterceptor(
+      final AppareilsService appareilsService,
+      final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService) {
     this.appareilsService = appareilsService;
+    this.alerteActiviteUtilisateurService = alerteActiviteUtilisateurService;
   }
 
   @Override
@@ -48,8 +53,12 @@ public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
       return true;
     }
 
-    appareilsService.enregistrerAppareil(
-        session.getId(), details.id(), request.getHeader("User-Agent"));
+    final String userAgent = request.getHeader("User-Agent");
+    final boolean nouvelAppareil = appareilsService.estNouvelAppareil(details.id(), userAgent);
+    appareilsService.enregistrerAppareil(session.getId(), details.id(), userAgent);
+    if (nouvelAppareil) {
+      alerteActiviteUtilisateurService.notifierNouvelAppareil(details.email(), userAgent);
+    }
     session.setAttribute(ATTRIBUT_DEJA_ENREGISTRE, Boolean.TRUE);
     return true;
   }

@@ -79,8 +79,10 @@ public class ReconciliateurSalles {
   /* package-private : implémente la façade publique, appelé uniquement au sein
    * du package persister. */
   void absorberRenommagesSalles(
-      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
-    reconciliationNoms.absorberRenommagesSalles(concerts, cachesSalles);
+      final List<ValeurConcert> concerts,
+      final Map<String, UUID> cachesSalles,
+      final Map<UUID, String> deptsConnus) {
+    reconciliationNoms.absorberRenommagesSalles(concerts, cachesSalles, deptsConnus);
   }
 
   /**

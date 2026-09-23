@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -44,14 +45,14 @@ public class SourcesService {
   /**
    * @param jdbc accès JDBC
    * @param objectMapper désérialiseur JSON (quota TM)
-   * @param restClient client HTTP partagé (test connexion Digitick)
+   * @param restClient client HTTP dédié Digitick (HTTP/1.1, User-Agent navigateur)
    * @param salleService service salle (upsert, mise à jour, déclenchement worker)
    * @param sourcesSallesListingService pagination des salles pour l'onglet Sources
    */
   public SourcesService(
       final NamedParameterJdbcTemplate jdbc,
       final ObjectMapper objectMapper,
-      final RestClient restClient,
+      @Qualifier("digitick") final RestClient restClient,
       final SalleService salleService,
       final SourcesSallesListingService sourcesSallesListingService) {
     this.jdbc = jdbc;

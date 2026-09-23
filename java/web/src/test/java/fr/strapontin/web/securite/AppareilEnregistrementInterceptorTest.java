@@ -30,6 +30,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 class AppareilEnregistrementInterceptorTest {
 
   private AppareilsService appareilsService;
+  private AlerteActiviteUtilisateurService alerteActiviteUtilisateurService;
   private AppareilEnregistrementInterceptor interceptor;
   private HttpServletRequest request;
   private HttpServletResponse response;
@@ -38,7 +39,9 @@ class AppareilEnregistrementInterceptorTest {
   @BeforeEach
   void setUp() {
     appareilsService = mock(AppareilsService.class);
-    interceptor = new AppareilEnregistrementInterceptor(appareilsService);
+    alerteActiviteUtilisateurService = mock(AlerteActiviteUtilisateurService.class);
+    interceptor =
+        new AppareilEnregistrementInterceptor(appareilsService, alerteActiviteUtilisateurService);
     request = mock(HttpServletRequest.class);
     response = mock(HttpServletResponse.class);
     session = mock(HttpSession.class);
@@ -86,7 +89,7 @@ class AppareilEnregistrementInterceptorTest {
     when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
 
     final UtilisateurDetails details =
-        new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false);
+        new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
     final Authentication auth =
         UsernamePasswordAuthenticationToken.authenticated(details, null, null);
     SecurityContextHolder.getContext().setAuthentication(auth);
@@ -95,5 +98,26 @@ class AppareilEnregistrementInterceptorTest {
 
     verify(appareilsService).enregistrerAppareil("sess-1", "u1", "Mozilla/5.0");
     verify(session).setAttribute("appareilEnregistre", Boolean.TRUE);
+    verify(alerteActiviteUtilisateurService, never())
+        .notifierNouvelAppareil(anyString(), anyString());
+  }
+
+  @Test
+  void preHandle_nouvelAppareilDétecté_alerteLUtilisateur() {
+    when(request.getSession(false)).thenReturn(session);
+    when(session.getAttribute("appareilEnregistre")).thenReturn(null);
+    when(session.getId()).thenReturn("sess-1");
+    when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
+    when(appareilsService.estNouvelAppareil("u1", "Mozilla/5.0")).thenReturn(true);
+
+    final UtilisateurDetails details =
+        new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
+    final Authentication auth =
+        UsernamePasswordAuthenticationToken.authenticated(details, null, null);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+
+    assertTrue(interceptor.preHandle(request, response, new Object()));
+
+    verify(alerteActiviteUtilisateurService).notifierNouvelAppareil("test@test.fr", "Mozilla/5.0");
   }
 }

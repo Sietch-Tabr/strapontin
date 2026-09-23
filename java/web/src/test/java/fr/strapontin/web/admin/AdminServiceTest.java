@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
+import fr.strapontin.web.email.EmailServiceSecurite;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +43,7 @@ class AdminServiceTest {
   private NamedParameterJdbcTemplate jdbc;
   private EmailService emailService;
   private EmailServiceAdmin emailServiceAdmin;
+  private EmailServiceSecurite emailServiceSecurite;
   private AdminUtilisateursListingService adminUtilisateursListingService;
   private LogAdminService logAdminService;
   private VerificationRepository verificationRepository;
@@ -52,6 +54,7 @@ class AdminServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     emailService = mock(EmailService.class);
     emailServiceAdmin = mock(EmailServiceAdmin.class);
+    emailServiceSecurite = mock(EmailServiceSecurite.class);
     adminUtilisateursListingService = mock(AdminUtilisateursListingService.class);
     logAdminService = mock(LogAdminService.class);
     verificationRepository = mock(VerificationRepository.class);
@@ -60,6 +63,7 @@ class AdminServiceTest {
             jdbc,
             emailService,
             emailServiceAdmin,
+            emailServiceSecurite,
             adminUtilisateursListingService,
             mock(AdminModificationUtilisateurService.class),
             logAdminService,
@@ -103,6 +107,7 @@ class AdminServiceTest {
             jdbc,
             emailService,
             emailServiceAdmin,
+            emailServiceSecurite,
             adminUtilisateursListingService,
             modificationService,
             logAdminService,
@@ -190,6 +195,57 @@ class AdminServiceTest {
 
     assertFalse(resultat);
     verify(jdbc, never()).update(org.mockito.ArgumentMatchers.contains("SPRING_SESSION"), anyMap());
+  }
+
+  @Test
+  void verrouillerCompte_utilisateurExistant_verrouilleRevoqueEtNotifie() {
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(Map.of("username", "user1", "email", "user1@test.fr")));
+
+    final boolean resultat = adminService.verrouillerCompte("user-1", "admin-1");
+
+    assertTrue(resultat);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("SET verrouille = true"),
+            eq(Map.of("id", "user-1")));
+    verify(jdbc)
+        .update(org.mockito.ArgumentMatchers.contains("DELETE FROM SPRING_SESSION"), anyMap());
+    verify(emailServiceSecurite).envoyerCompteVerrouille("user1@test.fr");
+    verify(logAdminService).logAdmin(eq("warn"), eq("admin"), eq("compte verrouillé"), anyMap());
+  }
+
+  @Test
+  void verrouillerCompte_utilisateurInexistant_retourneFalse() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    final boolean resultat = adminService.verrouillerCompte("inconnu", "admin-1");
+
+    assertFalse(resultat);
+    verify(emailServiceSecurite, never()).envoyerCompteVerrouille(anyString());
+  }
+
+  @Test
+  void deverrouillerCompte_utilisateurExistant_deverrouilleEtLogue() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(Map.of("id", "user-1")));
+
+    final boolean resultat = adminService.deverrouillerCompte("user-1", "admin-1");
+
+    assertTrue(resultat);
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("SET verrouille = false"),
+            eq(Map.of("id", "user-1")));
+    verify(logAdminService).logAdmin(eq("warn"), eq("admin"), eq("compte déverrouillé"), anyMap());
+  }
+
+  @Test
+  void deverrouillerCompte_utilisateurInexistant_retourneFalse() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+
+    final boolean resultat = adminService.deverrouillerCompte("inconnu", "admin-1");
+
+    assertFalse(resultat);
   }
 
   // la pagination elle-même (COUNT(*) OVER(), repli sur un second COUNT) est testée dans

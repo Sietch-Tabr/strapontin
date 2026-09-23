@@ -195,10 +195,12 @@ public class PersisterConcerts {
   private List<ValeurConcert> resoudreIdentitesSources(final List<ValeurConcert> concerts) {
     final Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
     final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
-    reconciliateurSalles.absorberRenommagesSalles(concerts, cachesSalles);
+    // Calculé avant absorberRenommagesSalles : un mapping incohérent ne doit
+    // pas renommer la mauvaise salle avant validation géographique.
+    final Map<UUID, String> deptsConnus = resoudreDeptsConnusSallesMappees(concerts, cachesSalles);
+    reconciliateurSalles.absorberRenommagesSalles(concerts, cachesSalles, deptsConnus);
     upsertSallesSourcesManquantes(concerts, cachesSalles);
 
-    final Map<UUID, String> deptsConnus = resoudreDeptsConnusSallesMappees(concerts, cachesSalles);
     final Map<String, UUID> cachesSallesParNom =
         resoudreSallesParNomFallback(concerts, cachesSalles, deptsConnus);
 
@@ -243,20 +245,29 @@ public class PersisterConcerts {
     for (final ValeurConcert c : concerts) {
       final UUID salleMappee =
           c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-      if (mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus)) {
+      final boolean mappingIncoherent = mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
+      if (mappingIncoherent) {
         journaliserMappingIncoherent(salleMappee, c, deptsConnus);
       }
-      final boolean besoinFallback =
-          c.salleSourceId() == null || mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
+      final boolean besoinFallback = c.salleSourceId() == null || mappingIncoherent;
       if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
-        UUID salleId = reconciliateurSalles.chercherSalleParTokens(c.salle(), c.dept());
-        if (salleId == null) {
-          salleId = reconciliateurSalles.chercherSalleParCleForte(c);
-        }
-        cachesSallesParNom.put(c.salleNorm(), salleId);
+        cachesSallesParNom.put(c.salleNorm(), resoudreSalleFallback(c, mappingIncoherent));
       }
     }
     return cachesSallesParNom;
+  }
+
+  // Mapping salle_sources rejeté sans repli flou disponible — traité comme absent :
+  // résolution/création complète plutôt qu'un salle_id indéfiniment null.
+  private UUID resoudreSalleFallback(final ValeurConcert concert, final boolean mappingIncoherent) {
+    UUID salleId = reconciliateurSalles.chercherSalleParTokens(concert.salle(), concert.dept());
+    if (salleId == null) {
+      salleId = reconciliateurSalles.chercherSalleParCleForte(concert);
+    }
+    if (salleId == null && mappingIncoherent) {
+      salleId = reconciliateurSalles.upsertSalleSource(concert);
+    }
+    return salleId;
   }
 
   private void journaliserMappingIncoherent(
@@ -311,7 +322,9 @@ public class PersisterConcerts {
    * @param deptsConnus départements connus par salle (cf. deptsConnus)
    * @return {@code true} si le mapping doit être écarté
    */
-  private static boolean mappingSalleIncoherent(
+  /* package-private : réutilisé par ReconciliationNomsSalles (même garde-fou,
+   * même package) pour ne pas renommer une salle sur un mapping incohérent. */
+  static boolean mappingSalleIncoherent(
       final UUID salleMappee, final String deptEntrant, final Map<UUID, String> deptsConnus) {
     if (salleMappee == null || deptEntrant == null) {
       return false;

@@ -54,7 +54,7 @@ final class NotificationDigestStats {
           VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
           """,
           new MapSqlParameterSource()
-              .addValue("ts", Instant.now().toEpochMilli())
+              .addValue("ts", Timestamp.from(Instant.now()))
               .addValue("niveau", niveau)
               .addValue("source", "worker")
               .addValue("message", message)

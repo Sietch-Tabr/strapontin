@@ -4,10 +4,11 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.GenerateurSecrets;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.email.EmailServiceAdmin;
-import fr.strapontin.web.securite.GenerateurSecrets;
+import fr.strapontin.web.email.EmailServiceSecurite;
 import fr.strapontin.web.securite.VerificationRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -36,10 +37,12 @@ public class AdminService {
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_PAR_ADMIN = "parAdmin";
   private static final String NIVEAU_WARN = "warn";
+  private static final String CLE_USERNAME = "username";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailService emailService;
   private final EmailServiceAdmin emailServiceAdmin;
+  private final EmailServiceSecurite emailServiceSecurite;
   private final AdminUtilisateursListingService adminUtilisateursListingService;
   private final AdminModificationUtilisateurService adminModificationUtilisateurService;
   private final LogAdminService logAdminService;
@@ -51,10 +54,14 @@ public class AdminService {
    * et les deux services délégués pour le listing/la modification
    * d'utilisateurs (paramètres homonymes des champs).
    */
+  // 8 collaborateurs Spring distincts à responsabilité unique — pas de sous-ensemble
+  // regroupable sans mélanger des responsabilités indépendantes.
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public AdminService(
       final NamedParameterJdbcTemplate jdbc,
       final EmailService emailService,
       final EmailServiceAdmin emailServiceAdmin,
+      final EmailServiceSecurite emailServiceSecurite,
       final AdminUtilisateursListingService adminUtilisateursListingService,
       final AdminModificationUtilisateurService adminModificationUtilisateurService,
       final LogAdminService logAdminService,
@@ -62,6 +69,7 @@ public class AdminService {
     this.jdbc = jdbc;
     this.emailService = emailService;
     this.emailServiceAdmin = emailServiceAdmin;
+    this.emailServiceSecurite = emailServiceSecurite;
     this.adminUtilisateursListingService = adminUtilisateursListingService;
     this.adminModificationUtilisateurService = adminModificationUtilisateurService;
     this.logAdminService = logAdminService;
@@ -106,7 +114,7 @@ public class AdminService {
     final Map<String, Object> paramsUser = new HashMap<>();
     paramsUser.put("id", userId);
     paramsUser.put(CLE_EMAIL, email);
-    paramsUser.put("username", usernameTemp);
+    paramsUser.put(CLE_USERNAME, usernameTemp);
     paramsUser.put("displayUsername", usernameTemp);
     jdbc.update(
         """
@@ -262,12 +270,63 @@ public class AdminService {
     final int supprimees =
         jdbc.update(
             "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME = :username",
-            Map.of("username", cible.get(0).get("username")));
+            Map.of(CLE_USERNAME, cible.get(0).get(CLE_USERNAME)));
     logAdminService.logAdmin(
         NIVEAU_WARN,
         SOURCE_ADMIN,
         "sessions révoquées",
         Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId, "sessionsSupprimees", supprimees));
+    return true;
+  }
+
+  /**
+   * Verrouille immédiatement un compte suspecté compromis — bloque toute
+   * nouvelle connexion et révoque les sessions déjà ouvertes.
+   * @param userId identifiant de l'utilisateur cible
+   * @param adminId identifiant de l'admin à l'origine de l'action
+   * @return {@code true} si l'utilisateur existait, {@code false} sinon
+   */
+  public boolean verrouillerCompte(final String userId, final String adminId) {
+    final List<Map<String, Object>> cible =
+        jdbc.queryForList(
+            "SELECT username, email FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
+    if (cible.isEmpty()) {
+      return false;
+    }
+
+    jdbc.update("UPDATE users SET verrouille = true WHERE id = :id", Map.of("id", userId));
+    final int supprimees =
+        jdbc.update(
+            "DELETE FROM SPRING_SESSION WHERE PRINCIPAL_NAME = :username",
+            Map.of(CLE_USERNAME, cible.get(0).get(CLE_USERNAME)));
+    emailServiceSecurite.envoyerCompteVerrouille((String) cible.get(0).get(CLE_EMAIL));
+    logAdminService.logAdmin(
+        NIVEAU_WARN,
+        SOURCE_ADMIN,
+        "compte verrouillé",
+        Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId, "sessionsSupprimees", supprimees));
+    return true;
+  }
+
+  /**
+   * Déverrouille un compte précédemment verrouillé.
+   * @param userId identifiant de l'utilisateur cible
+   * @param adminId identifiant de l'admin à l'origine de l'action
+   * @return {@code true} si l'utilisateur existait, {@code false} sinon
+   */
+  public boolean deverrouillerCompte(final String userId, final String adminId) {
+    final List<Map<String, Object>> cible =
+        jdbc.queryForList("SELECT id FROM users WHERE id = :userId", Map.of(CLE_USER_ID, userId));
+    if (cible.isEmpty()) {
+      return false;
+    }
+
+    jdbc.update("UPDATE users SET verrouille = false WHERE id = :id", Map.of("id", userId));
+    logAdminService.logAdmin(
+        NIVEAU_WARN,
+        SOURCE_ADMIN,
+        "compte déverrouillé",
+        Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
     return true;
   }
 

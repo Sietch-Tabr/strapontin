@@ -27,10 +27,6 @@ public final class WorkerTriggerUtils {
    * @param url URL complète du endpoint worker à appeler
    * @param messageEchec message de log en cas d'échec (exception jointe)
    */
-  // Thread.startVirtualThread est la primitive Java 21+ recommandée pour un
-  // déclenchement fire-and-forget — pas un contexte de requête J2EE, la
-  // justification de la règle ne s'applique pas ici.
-  @SuppressWarnings("PMD.DoNotUseThreads")
   public static void declencherWorkerAsync(
       final RestClient restClient, final Logger log, final String url, final String messageEchec) {
     Thread.startVirtualThread(
@@ -38,7 +34,7 @@ public final class WorkerTriggerUtils {
           try {
             restClient.post().uri(url).retrieve().toBodilessEntity();
           } catch (Exception e) {
-            log.warn(messageEchec, e);
+            log.warn("{} : {}", messageEchec, e.getMessage());
           }
         });
   }

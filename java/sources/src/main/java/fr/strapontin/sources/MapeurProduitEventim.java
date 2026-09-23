@@ -112,7 +112,7 @@ final class MapeurProduitEventim {
       final String artisteSourceId) {
     try {
       final Map<String, Object> liveEnt = extraireLiveEntertainment(produit);
-      final String dateStr = liveEnt != null ? (String) liveEnt.get("startDate") : null;
+      final String dateStr = (String) liveEnt.get("startDate");
       if (dateStr == null) {
         return null;
       }
@@ -136,9 +136,12 @@ final class MapeurProduitEventim {
   @SuppressWarnings("unchecked")
   private static Map<String, Object> extraireLiveEntertainment(final Map<String, Object> produit) {
     final Map<String, Object> typeAttributes = (Map<String, Object>) produit.get("typeAttributes");
-    return typeAttributes != null
-        ? (Map<String, Object>) typeAttributes.get("liveEntertainment")
-        : null;
+    if (typeAttributes == null) {
+      return Map.of();
+    }
+    final Map<String, Object> liveEntertainment =
+        (Map<String, Object>) typeAttributes.get("liveEntertainment");
+    return liveEntertainment != null ? liveEntertainment : Map.of();
   }
 
   @SuppressWarnings("unchecked")

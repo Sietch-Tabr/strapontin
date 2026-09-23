@@ -45,7 +45,7 @@ class UserConfigServiceTest {
   @Test
   void majNotifications_frequenceInvalide_leveErreurMetier() {
     final RequeteNotifications requete =
-        new RequeteNotifications("invalide", true, false, false, false);
+        new RequeteNotifications("invalide", true, false, false, false, false);
 
     assertThatThrownBy(() -> service.majNotifications("user-1", requete))
         .isInstanceOf(ErreurMetier.class);
@@ -54,7 +54,7 @@ class UserConfigServiceTest {
   @Test
   void majNotifications_aucunCanalActifEtFrequenceNonJamais_leveErreurMetier() {
     final RequeteNotifications requete =
-        new RequeteNotifications("quotidien", false, false, false, false);
+        new RequeteNotifications("quotidien", false, false, false, false, false);
 
     assertThatThrownBy(() -> service.majNotifications("user-1", requete))
         .isInstanceOf(ErreurMetier.class);
@@ -63,17 +63,30 @@ class UserConfigServiceTest {
   @Test
   void majNotifications_frequenceJamaisSansCanal_neLevePasErreur() {
     final RequeteNotifications requete =
-        new RequeteNotifications("jamais", false, false, false, false);
+        new RequeteNotifications("jamais", false, false, false, false, false);
 
     service.majNotifications("user-1", requete);
 
     verify(jdbc).update(anyString(), anyMap());
   }
 
+  // notifNouvelleVersion n'est pas un canal de contenu (matching artistes/salles) — activé seul
+  // sans aucun autre canal, il ne dispense pas de la règle "au moins un canal de contenu si
+  // fréquence != jamais" (sinon un utilisateur pourrait activer une fréquence email sans jamais
+  // rien recevoir de matching).
+  @Test
+  void majNotifications_notifNouvelleVersionSeulSansCanalDeContenu_leveErreurMetier() {
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", false, false, false, false, true);
+
+    assertThatThrownBy(() -> service.majNotifications("user-1", requete))
+        .isInstanceOf(ErreurMetier.class);
+  }
+
   @Test
   void majNotifications_frequenceValideAvecCanal_metAJourLaConfig() {
     final RequeteNotifications requete =
-        new RequeteNotifications("temps_reel", true, false, false, false);
+        new RequeteNotifications("temps_reel", true, false, false, false, false);
 
     service.majNotifications("user-1", requete);
 

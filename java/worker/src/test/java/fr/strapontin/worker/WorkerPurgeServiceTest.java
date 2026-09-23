@@ -37,6 +37,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class WorkerPurgeServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
+  private PurgeCompteEmailService purgeCompteEmailService;
+  private ConfigServiceWorker configService;
   private WorkerPurgeService service;
 
   @BeforeEach
@@ -55,7 +57,10 @@ class WorkerPurgeServiceTest {
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
             new SuiviChroniciteService(jdbc, new ObjectMapper()),
             new DeriveVolumeFetchService(jdbc, logsAdminWorker));
-    service = new WorkerPurgeService(jdbc, workerStatsService);
+    purgeCompteEmailService = mock(PurgeCompteEmailService.class);
+    configService = mock(ConfigServiceWorker.class);
+    service =
+        new WorkerPurgeService(jdbc, workerStatsService, purgeCompteEmailService, configService);
   }
 
   @Test
@@ -229,5 +234,67 @@ class WorkerPurgeServiceTest {
     when(jdbc.update(anyString(), anyMap())).thenThrow(new RuntimeException("DB down"));
 
     assertDoesNotThrow(() -> service.executerPurgerLogsAdmin());
+  }
+
+  @Test
+  void executerGererComptesInactifs_candidatTrouve_relanceEtProgrammeLaPurge() {
+    when(jdbc.queryForList(contains("purge_le IS NULL"), anyMap()))
+        .thenReturn(List.of(Map.of("id", "u1", "email", "a@test.fr")));
+    when(purgeCompteEmailService.envoyerRelanceInactivite("a@test.fr", 15)).thenReturn(true);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    service.executerGererComptesInactifs();
+
+    verify(purgeCompteEmailService).envoyerRelanceInactivite("a@test.fr", 15);
+    verify(jdbc).update(contains("SET purge_le = now() + make_interval"), anyMap());
+    verify(jdbc).update(contains("DELETE FROM users WHERE purge_le"), anyMap());
+    verify(jdbc)
+        .update(
+            contains("INSERT INTO fetch_jobs (type_job"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                p -> "gerer:comptes-inactifs".equals(p.get("typeJob"))));
+  }
+
+  @Test
+  void executerGererComptesInactifs_aucunCandidat_neRelancePas() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
+
+    service.executerGererComptesInactifs();
+
+    verify(purgeCompteEmailService, never())
+        .envoyerRelanceInactivite(anyString(), org.mockito.ArgumentMatchers.anyInt());
+  }
+
+  @Test
+  void executerGererInvitesExpires_candidatTrouve_relanceAvecNouveauTokenEtPurge() {
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(java.util.Optional.of("https://strapontin.fr"));
+    when(jdbc.queryForList(contains("must_change_credentials = true"), anyMap()))
+        .thenReturn(List.of(Map.of("id", "u1", "email", "b@test.fr")));
+    when(purgeCompteEmailService.envoyerRelanceInvitation(anyString(), anyString()))
+        .thenReturn(true);
+    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+
+    service.executerGererInvitesExpires();
+
+    verify(jdbc).update(contains("INSERT INTO verifications"), anyMap());
+    verify(purgeCompteEmailService)
+        .envoyerRelanceInvitation(
+            org.mockito.ArgumentMatchers.eq("b@test.fr"),
+            contains("https://strapontin.fr/reset-password?token="));
+    verify(jdbc).update(contains("relance_invitation_envoyee_le = now()"), anyMap());
+    verify(jdbc).update(contains("DELETE FROM users WHERE must_change_credentials"), anyMap());
+  }
+
+  @Test
+  void executerGererInvitesExpires_aucunCandidat_neRelancePas() {
+    when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(java.util.Optional.empty());
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
+    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
+
+    service.executerGererInvitesExpires();
+
+    verify(purgeCompteEmailService, never()).envoyerRelanceInvitation(anyString(), anyString());
   }
 }

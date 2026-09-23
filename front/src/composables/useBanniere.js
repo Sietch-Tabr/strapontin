@@ -35,35 +35,58 @@ function lancerMinuterie(val) {
   }, delai);
 }
 
-// Affiche la bannière courante si elle existe et n'a pas été rejetée manuellement.
-//
-// contrairement à chargerBanniere (poll périodique — ne doit pas ressusciter une
-// bannière auto-masquée sans navigation réelle), une navigation SPA doit réafficher une bannière
-// auto-masquée (types info/warning, Design-et-navigation.md) — seule une fermeture manuelle doit
-// bloquer la réapparition, via estDismissed (sessionStorage, persistant).
-function afficherSiPertinente() {
-  const data = banniere.value;
-  if (!data?.message) return;
-  if (estDismissed(data.id)) return;
-  visible.value = true;
-  lancerMinuterie(data);
-}
-
-export async function chargerBanniere() {
+// Récupère l'état courant de la bannière côté serveur et met à jour le cache partagé.
+// Échec réseau : ignoré (best-effort), on garde l'état affiché tel quel.
+async function fetcherBanniere() {
   try {
     const rep = await fetch("/api/banniere/json");
     const texte = rep.ok ? await rep.text() : "";
     const data = parseJsonOuNull(texte);
     banniere.value = data;
-    if (!data?.message || estDismissed(data.id) || estAutoMasque(data.id)) {
-      visible.value = false;
-      return;
-    }
-    visible.value = true;
-    lancerMinuterie(data);
+    return { ok: true, data };
   } catch (_) {
-    // échec ignoré : best-effort, la bannière ne s'affiche simplement pas
+    return { ok: false, data: null };
   }
+}
+
+function appliquerVisibilite(data, respecterAutoMasque) {
+  if (
+    !data?.message ||
+    estDismissed(data.id) ||
+    (respecterAutoMasque && estAutoMasque(data.id))
+  ) {
+    visible.value = false;
+    return;
+  }
+  visible.value = true;
+  lancerMinuterie(data);
+}
+
+// Affiche la bannière si elle existe et n'a pas été rejetée manuellement.
+//
+// Revalide toujours contre le serveur (pas seulement le cache module-scope) : une bannière
+// effacée côté admin doit cesser de réapparaître immédiatement, même chez un utilisateur qui ne
+// l'a jamais fermée manuellement (pas de flag sessionStorage posé dans ce cas).
+//
+// contrairement à chargerBanniere (poll périodique — ne doit pas ressusciter une
+// bannière auto-masquée sans navigation réelle), une navigation SPA doit réafficher une bannière
+// auto-masquée (types info/warning, Design-et-navigation.md) — seule une fermeture manuelle doit
+// bloquer la réapparition, via estDismissed (sessionStorage, persistant).
+export async function afficherSiPertinente() {
+  const { ok, data } = await fetcherBanniere();
+  if (!ok) return;
+  appliquerVisibilite(data, false);
+}
+
+export async function chargerBanniere() {
+  const { ok, data } = await fetcherBanniere();
+  if (!ok) return;
+  appliquerVisibilite(data, true);
+}
+
+// Exposé pour les tests uniquement (état module-scope non accessible sans montage Vue Router).
+export function _etatBanniereTest() {
+  return { banniere, visible };
 }
 
 export function useBanniere() {

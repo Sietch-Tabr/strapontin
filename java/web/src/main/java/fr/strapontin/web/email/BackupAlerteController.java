@@ -51,10 +51,6 @@ public class BackupAlerteController {
    * auto-descriptifs (détail : CLAUDE.md, Sécurité admin/sessions).
    * @return 200 si traité, 403 si le token est absent/invalide
    */
-  // Paramètres individuels imposés par le contrat @RequestParam (liaison HTTP),
-  // pas par choix de conception — hors de la convention DTO du projet, réservée
-  // aux endpoints @RequestBody.
-  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @PostMapping("/api/interne/backup-statut")
   public ResponseEntity<Map<String, Object>> signalerStatut(
       @RequestParam(defaultValue = "") final String statut,

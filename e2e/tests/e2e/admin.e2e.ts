@@ -158,7 +158,9 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
       .filter({ hasText: emailTest });
     await expect(carteUser).toBeVisible({ timeout: 3000 });
 
-    await carteUser.locator("button.bouton-danger").click();
+    // .bouton-danger n'est plus unique sur la carte depuis l'ajout du bouton
+    // "Verrouiller" (#1228) — cibler par texte pour rester non ambigu.
+    await carteUser.getByRole("button", { name: "Supprimer" }).click();
     await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
       timeout: 3000,
     });

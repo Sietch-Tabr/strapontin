@@ -103,9 +103,6 @@ public class CoherenceMultiSalleService {
       Map<UUID, String> nomNormParSalle,
       Map<UUID, String> signaleeParSalle) {}
 
-  // computeIfAbsent n'instancie une ArrayList que pour les salles réellement
-  // nouvelles.
-  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   private DonneesSourcesInternes regrouperParSalle(final List<Map<String, Object>> lignes) {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
     final Map<UUID, String> nomNormParSalle = new HashMap<>();
@@ -178,7 +175,34 @@ public class CoherenceMultiSalleService {
     if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) {
       return false;
     }
-    return !nomContenuDansLAutre(nomExtrait, nomNormSalle) && !estSigleDe(nomExtrait, nomNormSalle);
+    return !nomContenuDansLAutre(nomExtrait, nomNormSalle)
+        && !estSigleDe(nomExtrait, nomNormSalle)
+        && !estApostropheElideeContenue(nomExtrait, nomNormSalle);
+  }
+
+  /**
+   * Généralise {@link #nomContenuDansLAutre} à un nom commençant par une
+   * apostrophe élidée (ex. "L'Astrada" → {@code nom_norm} "l astrada") face
+   * à un identifiant source collant le mot sans apostrophe (ex. "lastrada
+   * marciac") — sans fusion, le token d'une seule lettre "l" est filtré,
+   * aucun rapport n'est détecté malgré l'évidence.
+   */
+  private static boolean estApostropheElideeContenue(final String nomNormA, final String nomNormB) {
+    return contientToken(fusionnerApostropheElidee(nomNormA), nomNormB)
+        || contientToken(fusionnerApostropheElidee(nomNormB), nomNormA);
+  }
+
+  // article élidé fusionné avec le mot suivant ("l astrada" -> "lastrada") —
+  // le token d'une seule lettre est systématiquement filtré en amont.
+  private static String fusionnerApostropheElidee(final String nomNorm) {
+    return nomNorm.replaceFirst("^([a-z]) ", "$1");
+  }
+
+  private static boolean contientToken(final String tokenFusionne, final String nomNormAutre) {
+    return !tokenFusionne.isEmpty()
+        && !tokenFusionne.contains(" ")
+        && tokenFusionne.length() >= LONGUEUR_MIN_CONTAINMENT_DOUBLON
+        && nomNormAutre.contains(tokenFusionne);
   }
 
   /**

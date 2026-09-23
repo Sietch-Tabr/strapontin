@@ -93,7 +93,7 @@ class AuthControllerTest {
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
@@ -117,7 +117,7 @@ class AuthControllerTest {
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
@@ -141,7 +141,7 @@ class AuthControllerTest {
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
@@ -165,7 +165,7 @@ class AuthControllerTest {
     when(session.getAttribute(TotpSuccessHandler.SESSION_TOTP_EN_ATTENTE)).thenReturn(Boolean.TRUE);
 
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
@@ -216,7 +216,7 @@ class AuthControllerTest {
   @Test
   void login_credentialsValides_retourneUtilisateurEtOuvreSession() {
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
@@ -238,7 +238,7 @@ class AuthControllerTest {
   @Test
   void login_sessionExistante_lInvalideAvantDEnCreerUneNouvelle() {
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
@@ -256,7 +256,7 @@ class AuthControllerTest {
   @Test
   void login_totpActif_positionneSessionTotpEnAttente() {
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
@@ -276,7 +276,7 @@ class AuthControllerTest {
   @Test
   void login_credentialsValides_peupleWebAuthenticationDetailsSurLeToken() {
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal()).thenReturn(principal);
     when(authenticationManager.authenticate(any())).thenReturn(auth);
@@ -333,7 +333,7 @@ class AuthControllerTest {
   @Test
   void moi_authentifieAvecChallengeTotpEnAttente_retourneTotpRequisVrai() {
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", true, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);
@@ -352,7 +352,7 @@ class AuthControllerTest {
   @Test
   void moi_authentifieSansSession_retourneTotpRequisFaux() {
     final UtilisateurDetails principal =
-        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false);
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
     final Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     when(auth.getPrincipal()).thenReturn(principal);

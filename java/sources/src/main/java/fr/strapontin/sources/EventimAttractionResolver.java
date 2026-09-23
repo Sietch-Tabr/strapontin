@@ -107,7 +107,7 @@ final class EventimAttractionResolver {
       return exact != null ? extraireAttractionId(exact) : null;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
-      LOG.warn("Eventim attractions erreur terme={}", terme, e);
+      LOG.warn("Eventim attractions erreur terme={} : {}", terme, e.getMessage());
       return null;
     }
   }

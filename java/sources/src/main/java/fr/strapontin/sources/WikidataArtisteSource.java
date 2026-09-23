@@ -170,7 +170,7 @@ public class WikidataArtisteSource
         } GROUP BY ?item
       }
       OPTIONAL { ?item wdt:P2722 ?deezerId . }
-      OPTIONAL { ?item wdt:P6262 ?tmId . }
+      OPTIONAL { ?item wdt:P7354 ?tmId . }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }
     """
@@ -249,7 +249,7 @@ public class WikidataArtisteSource
         BIND("groupe" AS ?typeMatch)
       }
       OPTIONAL { ?item wdt:P2722 ?deezerId . }
-      OPTIONAL { ?item wdt:P6262 ?tmId . }
+      OPTIONAL { ?item wdt:P7354 ?tmId . }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }
     ORDER BY ?num

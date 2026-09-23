@@ -114,7 +114,7 @@ public class RetryLotsService {
           identifiants.size(),
           DELAI_RETRY_MINUTES);
     } catch (SchedulerException e) {
-      LOG.warn("retry:lots échec de planification typeJob={}", typeJob, e);
+      LOG.warn("retry:lots échec de planification typeJob={} : {}", typeJob, e.getMessage());
     }
   }
 }

@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
@@ -86,10 +85,10 @@ final class ClientSparqlWikidata {
   }
 
   private static RestClient construireRestClientParDefaut() {
-    final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-    factory.setConnectTimeout(Duration.ofSeconds(5));
-    factory.setReadTimeout(TIMEOUT_LECTURE);
-    return RestClient.builder().requestFactory(factory).build();
+    return RestClient.builder()
+        .requestFactory(
+            ClientHttpFactory.creerRequestFactory(Duration.ofSeconds(5), TIMEOUT_LECTURE))
+        .build();
   }
 
   @SuppressWarnings("unchecked")
@@ -183,10 +182,6 @@ final class ClientSparqlWikidata {
     }
   }
 
-  // Thread.sleep est la seule primitive de cadencement synchrone bloquant
-  // disponible — pas un contexte de requête J2EE (appel HTTP sortant en job
-  // Quartz), la justification de la règle ne s'applique pas ici.
-  @SuppressWarnings("PMD.DoNotUseThreads")
   private static void dormir(final long ms) {
     try {
       Thread.sleep(ms);

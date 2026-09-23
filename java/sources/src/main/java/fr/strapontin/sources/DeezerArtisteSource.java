@@ -87,13 +87,8 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
 
   // return en dernière position de boucle nécessaire : arrête la recherche au
   // premier candidat valide plutôt que de poursuivre l'itération sans effet
-  // utile. Le record retourné porte les champs du candidat courant — pas
-  // d'instance hissable hors boucle.
-  @SuppressWarnings({
-    "unchecked",
-    "PMD.AvoidBranchingStatementAsLastInLoop",
-    "PMD.AvoidInstantiatingObjectsInLoops"
-  })
+  // utile.
+  @SuppressWarnings({"unchecked", "PMD.AvoidBranchingStatementAsLastInLoop"})
   private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {

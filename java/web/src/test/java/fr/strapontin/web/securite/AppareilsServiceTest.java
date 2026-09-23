@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 
 import java.sql.ResultSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,5 +97,37 @@ class AppareilsServiceTest {
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     assertTrue(service.revoquerAppareil("u1", UUID.randomUUID().toString()));
+  }
+
+  @Test
+  void estNouvelAppareil_aucunAppareilConnu_retourneFalse() {
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("total", 0L, "meme_appareil", 0L));
+
+    assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0"));
+  }
+
+  @Test
+  void estNouvelAppareil_appareilsConnusMaisUserAgentInedit_retourneTrue() {
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("total", 2L, "meme_appareil", 0L));
+
+    assertTrue(service.estNouvelAppareil("u1", "Mozilla/5.0"));
+  }
+
+  @Test
+  void estNouvelAppareil_userAgentDejaConnu_retourneFalse() {
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenReturn(Map.of("total", 2L, "meme_appareil", 1L));
+
+    assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0"));
+  }
+
+  @Test
+  void estNouvelAppareil_echecJdbc_retourneFalseSansException() {
+    when(jdbc.queryForMap(anyString(), anyMap()))
+        .thenThrow(new DataIntegrityViolationException("x"));
+
+    assertDoesNotThrow(() -> assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0")));
   }
 }

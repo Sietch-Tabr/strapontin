@@ -23,4 +23,5 @@ public record UtilisateurAdmin(
     Instant derniereActivite,
     Instant revocationAdminLe,
     int nbSalles,
-    int nbArtistes) {}
+    int nbArtistes,
+    boolean verrouille) {}

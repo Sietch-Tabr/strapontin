@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.GenerateurSecrets;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -49,17 +50,35 @@ public class WorkerPurgeService {
   // indépendante de ce compteur inopérant pour ce cas.
   private static final int SEUIL_JOURS_HORS_PORTEE = 30;
 
+  // Purge de comptes : seuil d'inactivité, délai de grâce, et fenêtre de
+  // relance/expiration d'une invitation jamais activée.
+  private static final int SEUIL_MOIS_INACTIVITE = 6;
+  private static final int DELAI_GRACE_JOURS = 15;
+  private static final int SEUIL_JOURS_RELANCE_INVITATION = 6;
+  private static final int SEUIL_JOURS_EXPIRATION_INVITATION = 7;
+  private static final String CLE_ID = "id";
+  private static final String CLE_EMAIL = "email";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
+  private final PurgeCompteEmailService purgeCompteEmailService;
+  private final ConfigServiceWorker configService;
 
   /**
    * @param jdbc accès JDBC
    * @param workerStatsService journalisation du bilan de purge
+   * @param purgeCompteEmailService envoi des relances avant purge de compte
+   * @param configService lecture de PUBLIC_BASE_URL (lien d'activation)
    */
   public WorkerPurgeService(
-      final NamedParameterJdbcTemplate jdbc, final WorkerStatsService workerStatsService) {
+      final NamedParameterJdbcTemplate jdbc,
+      final WorkerStatsService workerStatsService,
+      final PurgeCompteEmailService purgeCompteEmailService,
+      final ConfigServiceWorker configService) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
+    this.purgeCompteEmailService = purgeCompteEmailService;
+    this.configService = configService;
   }
 
   /** Supprime les concerts passés depuis plus de 7 jours. */
@@ -207,7 +226,7 @@ public class WorkerPurgeService {
    * entrées purgé à chaque insertion.
    */
   public void executerPurgerLogsAdmin() {
-    final long seuilLogs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000;
+    final Instant seuilLogs = Instant.now().minusSeconds(30L * 24 * 60 * 60);
     final Instant seuilHistorique = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     final Instant seuilVerifications = Instant.now().minusSeconds(7L * 24 * 60 * 60);
     LOG.info("purger:logs-admin seuilLogs={} seuilHistorique={}", seuilLogs, seuilHistorique);
@@ -216,7 +235,9 @@ public class WorkerPurgeService {
         "purger:logs-admin",
         () -> {
           final int supprimesLogs =
-              jdbc.update("DELETE FROM logs_admin WHERE ts < :seuil", Map.of(CLE_SEUIL, seuilLogs));
+              jdbc.update(
+                  "DELETE FROM logs_admin WHERE ts < :seuil",
+                  Map.of(CLE_SEUIL, Timestamp.from(seuilLogs)));
           final int supprimesHistorique =
               jdbc.update(
                   "DELETE FROM fetch_jobs_historique WHERE exec_le < :seuil",
@@ -233,6 +254,91 @@ public class WorkerPurgeService {
               supprimesVerifications);
           return new ResultatPersistance(
               0, supprimesLogs + supprimesHistorique + supprimesVerifications);
+        });
+  }
+
+  /**
+   * Relance les comptes inactifs (email + délai de grâce, {@code
+   * users.purge_le}), puis supprime ceux dont le délai est dépassé sans
+   * reconnexion — {@code purge_le} est remis à {@code NULL} par {@code
+   * AuthEvenementListener} (web) à chaque connexion, annulant la purge.
+   */
+  public void executerGererComptesInactifs() {
+    LOG.info("gerer:comptes-inactifs démarré");
+    workerStatsService.executerAvecStats(
+        LOG,
+        "gerer:comptes-inactifs",
+        () -> {
+          final List<Map<String, Object>> aRelancer =
+              jdbc.queryForList(
+                  "SELECT id, email FROM users WHERE purge_le IS NULL"
+                      + " AND COALESCE(derniere_connexion_le, created_at)"
+                      + " < now() - make_interval(months => :seuilMois)",
+                  Map.of("seuilMois", SEUIL_MOIS_INACTIVITE));
+          int relances = 0;
+          for (final Map<String, Object> ligne : aRelancer) {
+            final String email = (String) ligne.get(CLE_EMAIL);
+            if (purgeCompteEmailService.envoyerRelanceInactivite(email, DELAI_GRACE_JOURS)) {
+              relances++;
+            }
+            jdbc.update(
+                "UPDATE users SET purge_le = now() + make_interval(days => :delai)"
+                    + " WHERE id = :id",
+                Map.of("delai", DELAI_GRACE_JOURS, CLE_ID, ligne.get(CLE_ID)));
+          }
+          final int supprimes =
+              jdbc.update(
+                  "DELETE FROM users WHERE purge_le IS NOT NULL AND purge_le < now()", Map.of());
+          LOG.info("gerer:comptes-inactifs terminé relances={} supprimes={}", relances, supprimes);
+          return new ResultatPersistance(0, relances + supprimes);
+        });
+  }
+
+  /**
+   * Relance (nouvelle invitation/nouveau token) les comptes invités jamais
+   * activés proches de l'expiration, puis supprime ceux dont l'invitation
+   * d'origine a expiré sans activation.
+   */
+  public void executerGererInvitesExpires() {
+    LOG.info("gerer:invites-expires démarré");
+    workerStatsService.executerAvecStats(
+        LOG,
+        "gerer:invites-expires",
+        () -> {
+          final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+          final List<Map<String, Object>> aRelancer =
+              jdbc.queryForList(
+                  "SELECT id, email FROM users WHERE must_change_credentials = true"
+                      + " AND relance_invitation_envoyee_le IS NULL"
+                      + " AND created_at < now() - make_interval(days => :seuil)",
+                  Map.of(CLE_SEUIL, SEUIL_JOURS_RELANCE_INVITATION));
+          int relances = 0;
+          for (final Map<String, Object> ligne : aRelancer) {
+            final String email = (String) ligne.get(CLE_EMAIL);
+            final String token = GenerateurSecrets.genererToken(32);
+            jdbc.update(
+                "INSERT INTO verifications (id, identifier, value, expires_at, created_at,"
+                    + " updated_at) VALUES (:vid, :identifier, :value,"
+                    + " now() + interval '7 days', now(), now())",
+                Map.of(
+                    "vid", UUID.randomUUID().toString(),
+                    "identifier", "invite:" + email,
+                    "value", GenerateurSecrets.sha256Hex(token)));
+            final String lien = baseUrl + "/reset-password?token=" + token;
+            if (purgeCompteEmailService.envoyerRelanceInvitation(email, lien)) {
+              relances++;
+            }
+            jdbc.update(
+                "UPDATE users SET relance_invitation_envoyee_le = now() WHERE id = :id",
+                Map.of(CLE_ID, ligne.get(CLE_ID)));
+          }
+          final int supprimes =
+              jdbc.update(
+                  "DELETE FROM users WHERE must_change_credentials = true"
+                      + " AND created_at < now() - make_interval(days => :seuil)",
+                  Map.of(CLE_SEUIL, SEUIL_JOURS_EXPIRATION_INVITATION));
+          LOG.info("gerer:invites-expires terminé relances={} supprimes={}", relances, supprimes);
+          return new ResultatPersistance(0, relances + supprimes);
         });
   }
 }

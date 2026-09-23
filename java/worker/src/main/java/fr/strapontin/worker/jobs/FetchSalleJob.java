@@ -49,7 +49,7 @@ public class FetchSalleJob extends QuartzJobBean {
     try {
       workerFetchService.executerFetchSalle(identifiants);
     } catch (Exception e) {
-      LOG.error("fetch:salle échoué identifiants={}", identifiants, e);
+      LOG.error("fetch:salle échoué identifiants={} : {}", identifiants, e.getMessage());
       throw e;
     }
   }

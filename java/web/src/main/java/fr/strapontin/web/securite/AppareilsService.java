@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 public class AppareilsService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AppareilsService.class);
+  private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -32,6 +33,32 @@ public class AppareilsService {
    */
   public AppareilsService(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
+  }
+
+  /**
+   * Détecte un nouvel appareil pour cet utilisateur — à appeler avant
+   * {@link #enregistrerAppareil}, sans quoi la ligne tout juste insérée
+   * fausserait le résultat.
+   * @param userId identifiant de l'utilisateur
+   * @param userAgent en-tête {@code User-Agent}, peut être {@code null}
+   * @return {@code true} si un nouvel appareil est détecté
+   */
+  public boolean estNouvelAppareil(final String userId, final String userAgent) {
+    final String ua = userAgent == null ? "" : userAgent;
+    try {
+      final Map<String, Object> resultat =
+          jdbc.queryForMap(
+              "SELECT COUNT(*) AS total,"
+                  + " COUNT(*) FILTER (WHERE user_agent = :userAgent) AS meme_appareil"
+                  + " FROM session_appareils WHERE user_id = :userId",
+              Map.of(CLE_USER_ID, userId, "userAgent", ua));
+      final long total = ((Number) resultat.get("total")).longValue();
+      final long memeAppareil = ((Number) resultat.get("meme_appareil")).longValue();
+      return total > 0 && memeAppareil == 0;
+    } catch (DataAccessException e) {
+      LOG.warn("échec de détection de nouvel appareil, ignoré : {}", e.getMessage());
+      return false;
+    }
   }
 
   /**
@@ -52,7 +79,7 @@ public class AppareilsService {
           Map.of(
               "sessionId",
               sessionId,
-              "userId",
+              CLE_USER_ID,
               userId,
               "userAgent",
               userAgent == null ? "" : userAgent));
@@ -78,7 +105,7 @@ public class AppareilsService {
             + " JOIN session_appareils sa ON sa.session_id = s.SESSION_ID"
             + " WHERE sa.user_id = :userId"
             + " ORDER BY s.LAST_ACCESS_TIME DESC",
-        Map.of("userId", userId),
+        Map.of(CLE_USER_ID, userId),
         (rs, _) ->
             new AppareilDto(
                 rs.getObject("appareil_id", UUID.class).toString(),
@@ -101,7 +128,7 @@ public class AppareilsService {
             "DELETE FROM SPRING_SESSION WHERE SESSION_ID IN"
                 + " (SELECT session_id FROM session_appareils"
                 + "  WHERE CAST(appareil_id AS text) = :appareilId AND user_id = :userId)",
-            Map.of("appareilId", appareilId, "userId", userId));
+            Map.of("appareilId", appareilId, CLE_USER_ID, userId));
     return supprimees > 0;
   }
 

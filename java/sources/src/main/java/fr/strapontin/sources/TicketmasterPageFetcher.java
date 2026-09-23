@@ -33,6 +33,7 @@ final class TicketmasterPageFetcher {
   // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7
   // → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 6;
+  private static final int HTTP_TROP_DE_REQUETES = 429;
 
   private final RestClient restClient;
   private final String apiKey;
@@ -94,26 +95,34 @@ final class TicketmasterPageFetcher {
       final ResponseEntity<Map> response = restClient.get().uri(uri).retrieve().toEntity(Map.class);
       final QuotaTM quota = extraireQuotaTm(response.getHeaders());
       return construireResultatPage(response.getBody(), quota, artisteFallback);
-    } catch (Exception e) {
-      final String uriSafe = uri.replaceAll("apikey=[^&]+", "apikey=***");
-      final long dureeAppelMs = Duration.between(avantAppelHttp, Instant.now()).toMillis();
-      // Diagnostic dédié au 429 (Spike Arrest) : la durée réelle de l'appel
-      // HTTP objective si le rejet survient après une latence réseau anormale
-      // (jitter) plutôt qu'immédiatement (autre cause) — le cadenceur n'espace
-      // que l'instant de départ côté client, jamais l'instant d'arrivée
-      // effective côté serveur TM.
-      if (e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode().value() == 429) {
+    } catch (HttpClientErrorException httpEx) {
+      // Diagnostic 429 (Spike Arrest) : la durée réelle de l'appel objective un
+      // rejet après une latence réseau anormale plutôt qu'immédiat.
+      if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
         LOG.warn(
-            "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}", uriSafe, dureeAppelMs);
+            "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}",
+            uriMasquee(uri),
+            Duration.between(avantAppelHttp, Instant.now()).toMillis());
       } else {
         LOG.warn(
             "erreur HTTP Ticketmaster url={} : {}",
-            uriSafe,
-            TicketmasterSource.redigerApiKey(e.getMessage()));
+            uriMasquee(uri),
+            TicketmasterSource.redigerApiKey(httpEx.getMessage()));
       }
       etatFetch.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
+    } catch (Exception e) {
+      LOG.warn(
+          "erreur HTTP Ticketmaster url={} : {}",
+          uriMasquee(uri),
+          TicketmasterSource.redigerApiKey(e.getMessage()));
+      etatFetch.enregistrerErreur();
+      return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
     }
+  }
+
+  private static String uriMasquee(final String uri) {
+    return uri.replaceAll("apikey=[^&]+", "apikey=***");
   }
 
   private String construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {

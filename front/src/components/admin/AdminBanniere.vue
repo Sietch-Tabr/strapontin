@@ -71,6 +71,7 @@ defineOptions({ name: "AdminBanniere" });
 import { ref, onMounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { parseJsonOuNull } from "../../utils/reponseJson.js";
+import { chargerBanniere } from "../../composables/useBanniere.js";
 
 const { afficherToast } = useToasts();
 
@@ -101,6 +102,7 @@ async function publierBanniere() {
     if (rep.ok) {
       afficherToast("Bannière publiée.", "succes");
       await chargerBanniereActive();
+      await chargerBanniere();
     } else {
       afficherToast(corps.erreur || "Erreur lors de la publication.", "erreur");
     }
@@ -116,6 +118,7 @@ async function effacerBanniere() {
     if (rep.ok) {
       afficherToast("Bannière effacée.", "succes");
       await chargerBanniereActive();
+      await chargerBanniere();
     } else {
       afficherToast(corps.erreur || "Erreur lors de l'effacement.", "erreur");
     }
