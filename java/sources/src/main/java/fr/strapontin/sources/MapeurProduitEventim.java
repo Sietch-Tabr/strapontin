@@ -8,6 +8,8 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +25,8 @@ final class MapeurProduitEventim {
   private static final String DEPT_PARIS = "75";
   private static final String VILLE_PARIS = "Paris";
   private static final String SEPARATEUR_NOM_SALLE = " - ";
+  // Signalée une fois par démarrage, sinon répétée à chaque produit du lieu.
+  private static final Set<String> SALLES_VILLE_NON_CORRIGEE = ConcurrentHashMap.newKeySet();
 
   private MapeurProduitEventim() {}
 
@@ -51,8 +55,10 @@ final class MapeurProduitEventim {
       }
     }
 
-    LOG.warn(
-        "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
+    if (SALLES_VILLE_NON_CORRIGEE.add(salle)) {
+      LOG.warn(
+          "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
+    }
     return null;
   }
 
