@@ -4,6 +4,42 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.0.1 — 28 septembre 2026",
+    categories: [
+      {
+        categorie: "Sécurité",
+        items: [
+          "En cas d'incident de sécurité, un message d'information s'affiche désormais sur toutes les pages, y compris la page de connexion, et peut être accompagné d'un email ou d'une notification push.",
+          "Si un nouveau mot de passe est exigé suite à un incident, l'application vous redirige vers Paramètres → Compte jusqu'à ce qu'il soit changé.",
+        ],
+      },
+      {
+        categorie: "Concerts",
+        items: [
+          "Les concerts à Paris et dans les départements les plus actifs étaient partiellement récupérés dans la page Découverte : ils le sont désormais en totalité.",
+          "Les concerts Eventim d'un département ne se limitaient plus qu'aux tout prochains jours : ils couvrent de nouveau les mois à venir.",
+          "Un concert pouvait disparaître à tort après une coupure réseau passagère lors de sa récupération.",
+          "Un concert pouvait être rattaché à une salle homonyme d'une autre ville.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "La source Digitick, qui ne couvrait plus aucune salle, a été retirée : le badge Digitick n'apparaît plus sur les salles.",
+          "Les concerts de L'Empreinte (Savigny-le-Temple), qui n'étaient plus récupérés depuis le changement de sa billetterie, le sont de nouveau via Eventim.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Nouvelle communication d'incident de sécurité dans l'onglet Bannière.",
+          "Onglet Sources : une salle peut être associée à son lieu Eventim, avec un test du nombre de concerts trouvés.",
+          "Onglet Signalements : une contamination ou un doublon de salles jugé faux positif peut être écarté définitivement.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.0.0 — 23 septembre 2026",
     categories: [
       {
