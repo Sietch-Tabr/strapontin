@@ -251,21 +251,46 @@ public class PersisterConcerts {
       }
       final boolean besoinFallback = c.salleSourceId() == null || mappingIncoherent;
       if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
-        cachesSallesParNom.put(c.salleNorm(), resoudreSalleFallback(c, mappingIncoherent));
+        cachesSallesParNom.put(
+            c.salleNorm(), resoudreSalleFallback(c, mappingIncoherent ? salleMappee : null));
       }
     }
     return cachesSallesParNom;
   }
 
   // Mapping salle_sources rejeté sans repli flou disponible — traité comme absent :
-  // résolution/création complète plutôt qu'un salle_id indéfiniment null.
-  private UUID resoudreSalleFallback(final ValeurConcert concert, final boolean mappingIncoherent) {
+  // résolution/création complète plutôt qu'un salle_id indéfiniment null. Le mapping
+  // rejeté est ensuite réassigné à la salle cohérente trouvée, pour ne plus être
+  // recontourné à chaque cycle.
+  private UUID resoudreSalleFallback(final ValeurConcert concert, final UUID salleRejetee) {
     UUID salleId = reconciliateurSalles.chercherSalleParTokens(concert.salle(), concert.dept());
     if (salleId == null) {
       salleId = reconciliateurSalles.chercherSalleParCleForte(concert);
     }
-    if (salleId == null && mappingIncoherent) {
+    if (salleId == null && salleRejetee != null) {
       salleId = reconciliateurSalles.upsertSalleSource(concert);
+    }
+    if (salleRejetee == null || salleId == null) {
+      return salleId;
+    }
+    if (salleId.equals(salleRejetee)) {
+      return null;
+    }
+    if (reconciliateurSalles.reassignerMappingSalle(
+        concert.salleSourceId(), salleRejetee, salleId)) {
+      logsAdminWorker.inserer(
+          "info",
+          "persistance",
+          "mapping salle_sources réassigné à une salle du bon département source="
+              + concert.salleSourceId()
+              + " ancienneSalle="
+              + salleRejetee
+              + " nouvelleSalle="
+              + salleId,
+          Map.of(
+              "salleSourceId", concert.salleSourceId(),
+              "ancienneSalle", salleRejetee.toString(),
+              "nouvelleSalle", salleId.toString()));
     }
     return salleId;
   }

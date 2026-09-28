@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -210,7 +211,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_salleInconnueGeocodageTrouveSalleProche_reutiliseLaSalleExistante() {
     insererSalleAvecCoordonnees("Salle GPS Existante", 48.8566, 2.3522);
-    when(clientNominatim.geocoder("Zenith Historique Inconnu"))
+    when(clientNominatim.geocoder("Zenith Historique Inconnu, Paris"))
         .thenReturn(Optional.of(new ClientNominatim.Coordonnees(48.8567, 2.3523)));
 
     persisterConcerts.persisterConcerts(
@@ -236,7 +237,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_salleInconnueGeocodageSansSalleProche_creeNouvelleSalleAvecCoordonnees() {
     insererSalleAvecCoordonnees("Salle GPS Lointaine", 43.2965, 5.3698); // Marseille
-    when(clientNominatim.geocoder("Zenith Nouveau Lieu"))
+    when(clientNominatim.geocoder("Zenith Nouveau Lieu, Paris"))
         .thenReturn(Optional.of(new ClientNominatim.Coordonnees(48.8566, 2.3522)));
 
     persisterConcerts.persisterConcerts(
@@ -257,7 +258,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_salleInconnueGeocodageEchoue_creeNouvelleSalleSansCoordonnees() {
-    when(clientNominatim.geocoder("Zenith Sans Geocodage")).thenReturn(Optional.empty());
+    when(clientNominatim.geocoder("Zenith Sans Geocodage, Paris")).thenReturn(Optional.empty());
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -575,6 +576,12 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 + " AND message LIKE '%incohérence géographique%'",
             Map.of(), Long.class);
     assertEquals(1L, nbAvertissements, "l'incohérence doit être journalisée, pas silencieuse");
+    final UUID salleMapping =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM salle_sources WHERE identifiant_externe = 'rZFSnyZAv1F'",
+            Map.of(),
+            UUID.class);
+    assertEquals(salleEnBase, salleMapping, "le mapping rejeté est réassigné, plus recontourné");
   }
 
   @Test
@@ -1902,5 +1909,97 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         2,
         sallesDistinctesParConcert.size(),
         "chaque concert doit rester rattaché à son propre hall, jamais confondu avec l'autre");
+  }
+
+  private static ConcertBrut concertDansDept(
+      final String artiste,
+      final String salle,
+      final String ville,
+      final String dept,
+      final String salleSourceId) {
+    return new ConcertBrut(
+        artiste,
+        "2026-10-31",
+        "20:00",
+        salle,
+        ville,
+        dept,
+        "https://example.com/" + artiste.toLowerCase().replace(" ", "-") + "-" + dept,
+        "ticketmaster",
+        "music",
+        "Pop",
+        "onsale",
+        null,
+        null,
+        salleSourceId,
+        null);
+  }
+
+  private UUID insererSalleDansDept(final String nom, final String dept) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES (:cle, :nom, :norm, :dept)"
+            + " RETURNING id",
+        new MapSqlParameterSource()
+            .addValue("cle", Normalisation.normaliserTexte(nom))
+            .addValue("nom", nom)
+            .addValue("norm", Normalisation.normaliserTexte(nom))
+            .addValue("dept", dept),
+        UUID.class);
+  }
+
+  // Des dizaines de salles distinctes partagent un nom générique : un concert à Perpignan ne
+  // doit jamais être rattaché au "Palais des Congres" homonyme de Vittel déjà en base, y compris
+  // quand la clé naturelle (unique) de ce nom est déjà prise.
+  @Test
+  void persisterConcerts_nomGeneriqueHomonymeAutreDept_creeUneSalleDistincte() {
+    final UUID vittel = insererSalleDansDept("Palais des Congres", "88");
+    when(clientNominatim.geocoder("Palais des Congres, Perpignan")).thenReturn(Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertDansDept(
+                "Tina Arena", "Palais des Congres", "Perpignan", "66", "ticketmaster:venue-66")));
+
+    final Map<String, Object> salle =
+        jdbc.queryForMap(
+            "SELECT s.id, s.dept FROM concerts c JOIN salles s ON s.id = c.salle_id"
+                + " WHERE c.artiste_norm = 'tina arena'",
+            Map.of());
+    assertNotEquals(vittel, salle.get("id"), "jamais la salle homonyme d'un autre département");
+    assertEquals("66", salle.get("dept"));
+  }
+
+  // Un mapping salle_sources rejeté pour incohérence géographique était recontourné à chaque
+  // cycle sans jamais être corrigé : il doit être réassigné à la salle cohérente trouvée.
+  @Test
+  void persisterConcerts_mappingSalleSourcesIncoherent_estReassigneALaSalleCoherente() {
+    final UUID vittel = insererSalleDansDept("Palais des Congres", "88");
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'venue-perpignan')",
+        Map.of("id", vittel.toString()));
+    when(clientNominatim.geocoder("Palais des Congres, Perpignan")).thenReturn(Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertDansDept(
+                "Tina Arena",
+                "Palais des Congres",
+                "Perpignan",
+                "66",
+                "ticketmaster:venue-perpignan")));
+
+    final UUID salleMapping =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM salle_sources WHERE identifiant_externe = 'venue-perpignan'",
+            Map.of(),
+            UUID.class);
+    assertNotEquals(vittel, salleMapping, "le mapping incohérent doit être réassigné");
+    final UUID salleConcert =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'tina arena'",
+            Map.of(),
+            UUID.class);
+    assertEquals(salleMapping, salleConcert);
   }
 }

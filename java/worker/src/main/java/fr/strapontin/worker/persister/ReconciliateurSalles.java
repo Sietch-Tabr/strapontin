@@ -113,6 +113,20 @@ public class ReconciliateurSalles {
   }
 
   /**
+   * @param salleSourceId identifiant préfixé du mapping rejeté
+   * @param ancienneSalle salle du mapping rejeté
+   * @param nouvelleSalle salle cohérente résolue à sa place
+   * @return {@code true} si le mapping a été réassigné
+   * @see ResolveurSalleParConcert#reassignerMappingSalle
+   */
+  /* package-private : implémente la façade publique, appelé uniquement au sein
+   * du package persister. */
+  boolean reassignerMappingSalle(
+      final String salleSourceId, final UUID ancienneSalle, final UUID nouvelleSalle) {
+    return resolveurSalle.reassignerMappingSalle(salleSourceId, ancienneSalle, nouvelleSalle);
+  }
+
+  /**
    * @see ResolveurSalleParConcert#raccrocherSallesParNomNorm
    */
   /* package-private : implémente la façade publique, appelé uniquement au sein
