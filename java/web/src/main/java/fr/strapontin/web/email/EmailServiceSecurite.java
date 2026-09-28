@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.email;
 
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,5 +142,52 @@ public class EmailServiceSecurite {
     } catch (Exception e) {
       LOG.error("Échec envoi alerte échecs de connexion : emailHash={}", email.hashCode(), e);
     }
+  }
+
+  /**
+   * Nombre d'emails encore envoyables avant blocage par le quota Resend.
+   * @return envois restants (jour et mois confondus)
+   */
+  public int envoisEmailRestants() {
+    return emailSender.envoisRestants();
+  }
+
+  /**
+   * Communique un incident de sécurité à chaque destinataire, un email par
+   * compte (jamais un envoi groupé exposant les adresses des autres).
+   *
+   * @param destinataires adresses des comptes à prévenir
+   * @param titre titre de la communication
+   * @param message message rédigé par l'administrateur
+   * @param changementMdpForce {@code true} si un nouveau mot de passe est exigé
+   * @return nombre d'emails effectivement envoyés
+   */
+  public int envoyerCommunicationIncident(
+      final List<String> destinataires,
+      final String titre,
+      final String message,
+      final boolean changementMdpForce) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+    if (ctx.isEmpty()) {
+      LOG.warn("RESEND_API_KEY absent — communication d'incident non envoyée par email");
+      return 0;
+    }
+    final String corps =
+        EmailTemplatesSecurite.communicationIncident(
+            titre, message, changementMdpForce, ctx.get().baseUrl());
+    int envoyes = 0;
+    for (final String destinataire : destinataires) {
+      try {
+        if (emailSender.envoyer(
+            ctx.get(), destinataire, ctx.get().expediteur(), titre, corps, message)) {
+          envoyes++;
+        }
+      } catch (Exception e) {
+        LOG.error(
+            "Échec envoi communication d'incident : emailHash={}", destinataire.hashCode(), e);
+      }
+    }
+    LOG.info("communication d'incident envoyée par email : {}/{}", envoyes, destinataires.size());
+    return envoyes;
   }
 }

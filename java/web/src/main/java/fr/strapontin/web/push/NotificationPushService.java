@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
@@ -31,6 +32,7 @@ public class NotificationPushService {
 
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushService.class);
   private static final String CLE_ENDPOINT = "endpoint";
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   private final ConfigService configService;
   private final NamedParameterJdbcTemplate jdbc;
@@ -142,6 +144,51 @@ public class NotificationPushService {
     }
 
     return envoyerAUnAbonnement(abonnements.get(0), pushService, userId, payload) > 0;
+  }
+
+  /**
+   * Envoie une notification à tous les abonnements push (communication
+   * d'incident) — à faire avant toute régénération des clés VAPID, qui les
+   * invalide tous.
+   * @param titre titre de la notification
+   * @param message corps de la notification
+   * @return nombre d'abonnements effectivement notifiés
+   */
+  public int envoyerATous(final String titre, final String message) {
+    final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
+    final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
+    if (clePublique.isEmpty() || clePrivee.isEmpty()) {
+      return 0;
+    }
+    final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
+    final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
+    final String payload;
+    final PushService pushService;
+    try {
+      payload =
+          JSON.writeValueAsString(
+              Map.of(
+                  "title",
+                  titre,
+                  "body",
+                  message,
+                  "url",
+                  "/",
+                  "icon",
+                  baseUrl + "/images/icon-192.png"));
+      pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
+    } catch (Exception e) {
+      LOG.error("Impossible de préparer la notification d'incident", e);
+      return 0;
+    }
+    int envoyes = 0;
+    for (final Map<String, Object> ab :
+        jdbc.queryForList(
+            "SELECT id, user_id, endpoint, p256dh, auth FROM push_abonnements", Map.of())) {
+      envoyes += envoyerAUnAbonnement(ab, pushService, (String) ab.get("user_id"), payload);
+    }
+    LOG.info("communication d'incident envoyée par push : {}", envoyes);
+    return envoyes;
   }
 
   private void supprimerAbonnement(final UUID id, final String userId, final String endpoint) {

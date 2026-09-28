@@ -7,6 +7,7 @@ package fr.strapontin.web.email;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
+import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
 import java.util.Optional;
@@ -84,8 +85,9 @@ class EmailSender {
   }
 
   /* package-private : appelé par
-   * EmailService/EmailServiceAdmin/EmailAlerteService (même package). */
-  void envoyer(
+   * EmailService/EmailServiceAdmin/EmailAlerteService (même package) ; renvoie
+   * false si le quota a bloqué l'envoi. */
+  boolean envoyer(
       final ContexteEmail ctx,
       final String destinataire,
       final String replyTo,
@@ -94,7 +96,7 @@ class EmailSender {
       final String texte) {
     if (!gestionQuotaResend.reserverEnvoi()) {
       LOG.warn("quota Resend atteint — envoi ignoré destinataireHash={}", destinataire.hashCode());
-      return;
+      return false;
     }
     try {
       final CreateEmailOptions options =
@@ -107,8 +109,23 @@ class EmailSender {
               .text(texte)
               .build();
       ctx.client().emails().send(options);
+      return true;
     } catch (ResendException e) {
       throw new IllegalStateException("Erreur d'envoi email", e);
     }
+  }
+
+  /**
+   * Nombre d'envois encore autorisés par le quota local (jour et mois).
+   * @return envois restants avant blocage
+   */
+  /* package-private : appelé par EmailServiceSecurite (même package). */
+  int envoisRestants() {
+    final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
+    return Math.max(
+        0,
+        Math.min(
+            GestionQuotaResend.LIMITE_JOUR - compteur.envoyesJour(),
+            GestionQuotaResend.LIMITE_MOIS - compteur.envoyesMois()));
   }
 }

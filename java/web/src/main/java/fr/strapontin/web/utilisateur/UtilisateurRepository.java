@@ -99,7 +99,8 @@ class UtilisateurRepository {
    * Met à jour le hash du mot de passe dans {@code accounts}.
    *
    * @param userId identifiant de l'utilisateur
-   * @param nouveauHash hash bcrypt du nouveau mot de passe
+   * @param nouveauHash hash bcrypt du nouveau mot de passe (lève aussi un
+   *     changement exigé)
    */
   /* package-private : accès SQL réservé à ParametresService/UserController
    * (même package). */
@@ -108,6 +109,24 @@ class UtilisateurRepository {
         "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
             + " 'credential'",
         Map.of("hash", nouveauHash, CLE_USER_ID, userId));
+    jdbc.update(
+        "UPDATE users SET changement_mdp_force_le = NULL WHERE id = :userId",
+        Map.of(CLE_USER_ID, userId));
+  }
+
+  /**
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si un nouveau mot de passe est exigé (communication
+   *     d'incident)
+   */
+  /* package-private : accès SQL réservé à ParametresService (même package). */
+  boolean estChangementMotDePasseExige(final String userId) {
+    final List<Boolean> lignes =
+        jdbc.queryForList(
+            "SELECT changement_mdp_force_le IS NOT NULL FROM users WHERE id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            Boolean.class);
+    return !lignes.isEmpty() && Boolean.TRUE.equals(lignes.get(0));
   }
 
   /**
