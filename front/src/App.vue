@@ -158,10 +158,15 @@ watch(estPageAuth, (nouveau, ancien) => {
 });
 
 onMounted(async () => {
-  await chargerSession();
-  chargerBanniere();
-  chargerChangelogNonVu();
-  verifierOnboarding();
+  // Le montage précède la résolution de la route initiale (route.meta encore vide) :
+  // sans cette attente, une page publique appelait des endpoints authentifiés (401).
+  await router.isReady();
+  if (!estPageAuth.value) {
+    await chargerSession();
+    chargerBanniere();
+    chargerChangelogNonVu();
+    verifierOnboarding();
+  }
   if ("serviceWorker" in navigator) {
     ecouterMiseAJourServiceWorker(miseAJourEnCours, navigator.serviceWorker, {
       naviguerVersAncre: (url) => router.push(url),
@@ -185,7 +190,7 @@ onMounted(async () => {
       idToastHorsLigne = null;
     }
     afficherToast("Connexion rétablie.", "succes");
-    chargerSession();
+    if (!estPageAuth.value) chargerSession();
   });
 });
 </script>
