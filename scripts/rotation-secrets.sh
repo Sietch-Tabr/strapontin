@@ -72,7 +72,9 @@ if command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ]; then
     fi
 fi
 
-SAUVEGARDE="$ENV_FICHIER.avant-rotation-$(date +%Y%m%d_%H%M%S)"
+# Hors de /opt/strapontin : la règle AIDE sur .env couvre tout fichier .env* (préfixe), et
+# la suppression recommandée de cette sauvegarde passerait pour un changement externe.
+SAUVEGARDE="/root/strapontin-env-avant-rotation-$(date +%Y%m%d_%H%M%S)"
 cp -p "$ENV_FICHIER" "$SAUVEGARDE"
 chmod 600 "$SAUVEGARDE"
 echo "[rotation] .env sauvegardé : $SAUVEGARDE (à supprimer une fois la rotation validée)"
