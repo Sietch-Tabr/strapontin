@@ -40,7 +40,8 @@ class OverpassSalleSourceTest {
 
     final OverpassSalleSource source = new OverpassSalleSource(restClient);
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, "44", "Q123", null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, "44", "Q123", null, null);
 
     final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
@@ -58,7 +59,8 @@ class OverpassSalleSourceTest {
 
     final OverpassSalleSource source = new OverpassSalleSource(restClient);
     final UUID id = UUID.randomUUID();
-    final SalleAEnrichir salle = new SalleAEnrichir(id, "Zenith", "zenith", null, null, null, null, null);
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Zenith", "zenith", null, null, null, null, null);
 
     final Map<UUID, EnrichissementSalle> resultat = source.enrichirLot(List.of(salle));
 
@@ -80,7 +82,9 @@ class OverpassSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte("Zenith de Nantes"),
             null,
             "44",
-            null, null, null);
+            null,
+            null,
+            null);
 
     serveur
         .expect(requestTo(urlOverpass()))
@@ -123,7 +127,14 @@ class OverpassSalleSourceTest {
     final String nom = "Salle \"Le Central\"";
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, nom, fr.strapontin.core.Normalisation.normaliserTexte(nom), null, "44", null, null, null);
+            id,
+            nom,
+            fr.strapontin.core.Normalisation.normaliserTexte(nom),
+            null,
+            "44",
+            null,
+            null,
+            null);
 
     // Requête envoyée en corps form-urlencoded (data=...) : la comparaison doit passer par le
     // même encodage que le client, pas par la chaîne brute.
@@ -156,7 +167,9 @@ class OverpassSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte("Salle Inconnue"),
             null,
             "75",
-            null, null, null);
+            null,
+            null,
+            null);
 
     serveur
         .expect(requestTo(urlOverpass()))
@@ -190,7 +203,9 @@ class OverpassSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte("Zenith"),
             null,
             "75",
-            null, null, null);
+            null,
+            null,
+            null);
 
     serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
     serveur.expect(requestTo(urlOverpass())).andRespond(withServerError());
@@ -237,7 +252,9 @@ class OverpassSalleSourceTest {
         fr.strapontin.core.Normalisation.normaliserTexte(nom),
         null,
         dept,
-        null, null, null);
+        null,
+        null,
+        null);
   }
 
   @Test
@@ -254,7 +271,9 @@ class OverpassSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte("L'Empreinte"),
             null,
             "77",
-            null, null, null);
+            null,
+            null,
+            null);
 
     serveur
         .expect(requestTo(urlOverpass()))
@@ -397,7 +416,9 @@ class OverpassSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte("Salle A"),
             null,
             "75",
-            null, null, null);
+            null,
+            null,
+            null);
     final SalleAEnrichir salleNantes =
         new SalleAEnrichir(
             id2,
@@ -405,7 +426,9 @@ class OverpassSalleSourceTest {
             fr.strapontin.core.Normalisation.normaliserTexte("Salle B"),
             null,
             "44",
-            null, null, null);
+            null,
+            null,
+            null);
 
     serveur
         .expect(requestTo(urlOverpass()))

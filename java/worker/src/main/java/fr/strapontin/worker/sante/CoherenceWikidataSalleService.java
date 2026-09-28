@@ -350,6 +350,8 @@ public class CoherenceWikidataSalleService {
                 rs.getString("nom_norm"),
                 rs.getString("ville"),
                 rs.getString("dept"),
-                rs.getString("wikidata_id"), null, null));
+                rs.getString("wikidata_id"),
+                null,
+                null));
   }
 }
