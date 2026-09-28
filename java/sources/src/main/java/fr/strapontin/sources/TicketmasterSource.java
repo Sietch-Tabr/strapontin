@@ -468,8 +468,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   @Override
-  public ResultatRegion fetchRegionCouverte(
-      final List<String> depts, final List<String> classifs) {
+  public ResultatRegion fetchRegionCouverte(final List<String> depts, final List<String> classifs) {
     return TicketmasterRegionFetcher.fetchRegion(pageFetcher, depts, classifs);
   }
 

@@ -157,6 +157,39 @@ final class MapeurProduitEventim {
     return null;
   }
 
+  /**
+   * Extrait le lieu d'un produit Eventim (libellé, ville, coordonnées), avec
+   * le même identifiant interne que celui du concert correspondant.
+   * @param produit produit Eventim sous forme de Map imbriquée
+   * @return lieu, ou null si le produit n'en porte pas d'exploitable
+   */
+  @SuppressWarnings("unchecked")
+  /* package-private : appelé par EventimSource (même package). */
+  static LieuEventim extraireLieu(final Map<String, Object> produit) {
+    try {
+      final Map<String, Object> location =
+          (Map<String, Object>) extraireLiveEntertainment(produit).get("location");
+      if (location == null || !(location.get("name") instanceof String libelle)) {
+        return null;
+      }
+      final String salleNorm =
+          Normalisation.normaliserTexte(Normalisation.normaliserCasse(libelle));
+      if (salleNorm.isBlank()) {
+        return null;
+      }
+      final Map<String, Object> geo = (Map<String, Object>) location.get("geoLocation");
+      return new LieuEventim(
+          "internal:" + salleNorm,
+          libelle,
+          (String) location.get("city"),
+          geo != null && geo.get("latitude") instanceof Number lat ? lat.doubleValue() : null,
+          geo != null && geo.get("longitude") instanceof Number lon ? lon.doubleValue() : null);
+    } catch (Exception e) {
+      LOG.warn("lieu Eventim illisible : {}", e.getMessage());
+      return null;
+    }
+  }
+
   private static ConcertBrut construireConcertEventim(
       final Map<String, Object> produit,
       final Map<String, Object> location,

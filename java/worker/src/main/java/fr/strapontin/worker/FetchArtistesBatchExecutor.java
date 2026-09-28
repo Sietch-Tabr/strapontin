@@ -192,6 +192,7 @@ class FetchArtistesBatchExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    commun.enregistrerLieuxEventim();
     // Un concert non revu faute de réponse de la source n'est pas absent.
     if (!echecReseau.get()) {
       final List<String> artisteIds =

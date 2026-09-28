@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -551,64 +552,6 @@ class EventimSourceTest {
   }
 
   @Test
-  void fetchRegion_utiliseCategoriesEventimIndependammentDesClassifsPassees() {
-    final RestClient.Builder builder = RestClient.builder();
-    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    final RestClient restClient = builder.build();
-
-    serveur
-        .expect(
-            requestTo(
-                org.hamcrest.Matchers.allOf(
-                    org.hamcrest.Matchers.containsString("/products"),
-                    org.hamcrest.Matchers.containsString("Concerts%20%26%20Festivals"),
-                    org.hamcrest.Matchers.containsString("Classique%20%26%20Danse"))))
-        .andRespond(
-            withSuccess(
-                """
-                {"products":[],"totalResults":0}
-                """,
-                MediaType.APPLICATION_JSON));
-
-    final EventimSource source = new EventimSource(restClient);
-    // Qu'on passe null, "music" ou les classifs TM, Eventim doit toujours utiliser ses propres
-    // catégories
-    source.fetchRegion(List.of("75"), null);
-
-    serveur.verify();
-  }
-
-  @Test
-  void fetchRegion_unDept_retourneConcerts() {
-    final RestClient.Builder builder = RestClient.builder();
-    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    final RestClient restClient = builder.build();
-
-    serveur
-        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
-        .andRespond(
-            withSuccess(
-                """
-                {"products":[
-                  {"name":"Julien Clerc",
-                   "typeAttributes":{"liveEntertainment":{
-                     "startDate":"2025-09-15T20:30:00",
-                     "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"},
-                     "priceRange":{"min":39.9,"max":99.9}}},
-                   "link":"https://www.eventim.fr/event/julien-clerc-1234"}
-                ],"totalResults":1}
-                """,
-                MediaType.APPLICATION_JSON));
-
-    final EventimSource source = new EventimSource(restClient);
-    final List<ConcertBrut> resultats = source.fetchRegion(List.of("75"), List.of("music"));
-
-    assertEquals(1, resultats.size());
-    assertEquals("75", resultats.get(0).dept());
-    serveur.verify();
-  }
-
-  @Test
   void fetchArtiste_reponseValide_retourneConcerts() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
@@ -673,32 +616,6 @@ class EventimSourceTest {
     final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
 
     assertTrue(resultats.isEmpty());
-    serveur.verify();
-  }
-
-  @Test
-  void fetchRegion_requete_inclutParamInStock() {
-    // le fetch région doit inclure in_stock=true pour exclure les sold out
-    final RestClient.Builder builder = RestClient.builder();
-    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    final RestClient restClient = builder.build();
-
-    serveur
-        .expect(
-            requestTo(
-                org.hamcrest.Matchers.allOf(
-                    org.hamcrest.Matchers.containsString("/products"),
-                    org.hamcrest.Matchers.containsString("in_stock=true"))))
-        .andRespond(
-            withSuccess(
-                """
-                {"products":[],"totalResults":0}
-                """,
-                MediaType.APPLICATION_JSON));
-
-    final EventimSource source = new EventimSource(restClient);
-    source.fetchRegion(List.of("75"), List.of("music"));
-
     serveur.verify();
   }
 
@@ -850,5 +767,109 @@ class EventimSourceTest {
     assertThrows(
         org.springframework.web.client.ResourceAccessException.class,
         () -> source.fetchArtiste("Test"));
+  }
+
+  private static final String PRODUIT_ACCOR_ARENA =
+      """
+      {"name":"Julien Clerc",
+       "typeAttributes":{"liveEntertainment":{
+         "startDate":"2025-09-15T20:30:00",
+         "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012",
+                     "geoLocation":{"latitude":48.8386,"longitude":2.3786}}}},
+       "link":"https://www.eventim.fr/event/julien-clerc-1234"}
+      """;
+
+  private static final String PRODUIT_SAINT_DENIS =
+      """
+      {"name":"Autre",
+       "typeAttributes":{"liveEntertainment":{
+         "startDate":"2025-09-16T20:30:00",
+         "location":{"name":"Stade de France","city":"Saint Denis","postalCode":"93200"}}},
+       "link":"https://www.eventim.fr/event/autre-5678"}
+      """;
+
+  // L'API ignore query=<dept> : seules les villes (city_names) filtrent réellement, avec les
+  // catégories Eventim quelles que soient les classifications passées, et sans in_stock (un
+  // concert complet disparaîtrait sinon, et compterait des absences).
+  @Test
+  void fetchRegionCouverte_villesConnues_interrogeCityNamesEtCategoriesSansInStock() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("/products"),
+                    org.hamcrest.Matchers.containsString("city_names=Paris"),
+                    org.hamcrest.Matchers.containsString("Concerts%20%26%20Festivals"),
+                    org.hamcrest.Matchers.containsString("Classique%20%26%20Danse"),
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("in_stock")),
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("query=")))))
+        .andRespond(
+            withSuccess(
+                "{\"products\":["
+                    + PRODUIT_ACCOR_ARENA
+                    + ","
+                    + PRODUIT_SAINT_DENIS
+                    + "],\"totalResults\":2}",
+                MediaType.APPLICATION_JSON));
+    final EventimSource source = new EventimSource(builder.build());
+    source.definirFournisseurVilles(depts -> List.of("Paris"));
+
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), List.of("music"));
+
+    serveur.verify();
+    assertEquals(1, resultat.concerts().size());
+    assertEquals("75", resultat.concerts().get(0).dept());
+    assertEquals(LocalDate.now().plusMonths(6).minusDays(1), resultat.horizon());
+  }
+
+  @Test
+  void fetchRegionCouverte_aucuneVilleConnue_aucuneRequeteNiHorizon() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final EventimSource source = new EventimSource(builder.build());
+
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), null);
+
+    serveur.verify();
+    assertTrue(resultat.concerts().isEmpty());
+    assertNull(resultat.horizon());
+  }
+
+  @Test
+  void fetchSalle_libelleConnu_interrogeVenueNamesEtReleveLeLieu() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("venue_names=Accor%20Arena")))
+        .andRespond(
+            withSuccess(
+                "{\"products\":[" + PRODUIT_ACCOR_ARENA + "],\"totalResults\":1}",
+                MediaType.APPLICATION_JSON));
+    final EventimSource source = new EventimSource(builder.build());
+
+    final List<ConcertBrut> concerts =
+        source.fetchSalle("eventim:internal:accor arena", "Accor Arena");
+
+    serveur.verify();
+    assertEquals(1, concerts.size());
+    final List<LieuEventim> lieux = source.preleverLieuxObserves();
+    assertEquals(1, lieux.size());
+    assertEquals("internal:accor arena", lieux.get(0).identifiant());
+    assertEquals("Accor Arena", lieux.get(0).libelle());
+    assertEquals("Paris", lieux.get(0).ville());
+    assertEquals(48.8386, lieux.get(0).latitude());
+    assertTrue(source.preleverLieuxObserves().isEmpty());
+  }
+
+  @Test
+  void fetchSalle_libelleInconnu_aucuneRequete() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final EventimSource source = new EventimSource(builder.build());
+
+    assertTrue(source.fetchSalle("eventim:internal:accor arena", null).isEmpty());
+    serveur.verify();
   }
 }

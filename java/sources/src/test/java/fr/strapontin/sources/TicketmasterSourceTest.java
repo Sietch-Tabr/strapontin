@@ -1163,8 +1163,7 @@ class TicketmasterSourceTest {
         .andRespond(withSuccess(reponsePageTMJson(1400, true), MediaType.APPLICATION_JSON));
     serveur
         .expect(
-            requestTo(
-                org.hamcrest.Matchers.containsString("startDateTime=2025-09-14T00:00:00Z")))
+            requestTo(org.hamcrest.Matchers.containsString("startDateTime=2025-09-14T00:00:00Z")))
         .andRespond(withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);

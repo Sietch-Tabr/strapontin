@@ -11,6 +11,7 @@ import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
+import java.util.Map;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -93,15 +94,34 @@ public class WorkerConfiguration {
   }
 
   /**
-   * Client Eventim France.
+   * Client Eventim France, interrogé par région sur les villes connues des
+   * départements : celles de ses propres lieux déjà observés, complétées des
+   * villes des salles connues (tirets remplacés, orthographe Eventim).
    *
+   * @param jdbc accès JDBC
    * @return instance avec User-Agent par défaut
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  EventimSource eventimSource() {
-    return new EventimSource();
+  EventimSource eventimSource(final NamedParameterJdbcTemplate jdbc) {
+    final EventimSource source = new EventimSource();
+    source.definirFournisseurVilles(
+        depts ->
+            jdbc.queryForList(
+                """
+                SELECT DISTINCT ville FROM (
+                  SELECT ss.ville_source AS ville FROM salle_sources ss
+                  JOIN salles s ON s.id = ss.salle_id
+                  WHERE ss.source = 'eventim' AND ss.ville_source IS NOT NULL AND s.dept IN (:depts)
+                  UNION
+                  SELECT replace(s.ville, '-', ' ') FROM salles s
+                  WHERE s.ville IS NOT NULL AND s.dept IN (:depts)
+                ) v ORDER BY ville
+                """,
+                Map.of("depts", depts),
+                String.class));
+    return source;
   }
 
   /**

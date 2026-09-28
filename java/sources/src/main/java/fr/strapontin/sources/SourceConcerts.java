@@ -72,6 +72,17 @@ public interface SourceConcerts {
   }
 
   /**
+   * Comme {@link #fetchSalle(String)}, pour une source qui interroge un lieu
+   * par son libellé plutôt que par un identifiant (Eventim).
+   * @param identifiant identifiant préfixé de la salle
+   * @param libelle libellé du lieu chez la source, ou null
+   * @return concerts trouvés
+   */
+  default List<ConcertBrut> fetchSalle(String identifiant, String libelle) {
+    return fetchSalle(identifiant);
+  }
+
+  /**
    * Recherche les concerts à venir dans une région définie par ses départements.
    *
    * @param depts codes département (ex. {@code ["75", "92"]})

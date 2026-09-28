@@ -58,21 +58,24 @@ class FetchSallesExecutor {
    * enregistre le résultat auprès de {@link SuiviSanteSourcesService} (phase
    * 1).
    *
-   * @param identifiant identifiant préfixé {@code source:identifiant_externe}
+   * @param identifiantSalle identifiant préfixé {@code source:identifiant_externe}
+   *     et libellé du lieu chez la source
    * @param destination liste dans laquelle ajouter les concerts trouvés
    * @param horizons reçoit, par source interrogée avec succès, la dernière
    *     date qu'elle couvre
    * @return {@code false} si une source n'a pas répondu (panne réseau)
    */
   private boolean fetchEtSuivreSalle(
-      final String identifiant,
+      final IdentifiantSalle identifiantSalle,
       final List<ConcertBrut> destination,
       final Map<String, LocalDate> horizons) {
+    final String identifiant = identifiantSalle.identifiant();
     boolean joignable = true;
     for (final SourceConcerts source : sources) {
       if (source.accepteIdentifiantSalle(identifiant)) {
         try {
-          final List<ConcertBrut> resultat = source.fetchSalle(identifiant);
+          final List<ConcertBrut> resultat =
+              source.fetchSalle(identifiant, identifiantSalle.libelle());
           destination.addAll(resultat);
           rapportage
               .suiviSanteSourcesService()
@@ -111,7 +114,8 @@ class FetchSallesExecutor {
     final String[] identifiants = identifiantsStr.split(",");
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final String identifiant : identifiants) {
-      fetchEtSuivreSalle(identifiant.trim(), concerts, new HashMap<>());
+      final String id = identifiant.trim();
+      fetchEtSuivreSalle(new IdentifiantSalle(id, libelleSource(id)), concerts, new HashMap<>());
     }
     commun.sauvegarderQuota();
 
@@ -122,8 +126,28 @@ class FetchSallesExecutor {
         concerts.size(),
         dedoublonnes.size());
     persisterConcerts.persisterConcerts(dedoublonnes);
+    commun.enregistrerLieuxEventim();
     recalculerMatchesService.recalculerMatches(null);
     LOG.info("fetch:salle terminé identifiants={}", identifiantsStr);
+  }
+
+  // Seul Eventim s'interroge par libellé (aucun identifiant de lieu exposé).
+  private String libelleSource(final String identifiantPrefixe) {
+    final int sep = identifiantPrefixe.indexOf(':');
+    if (sep <= 0) {
+      return null;
+    }
+    final List<String> libelles =
+        commun
+            .obtenirJdbc()
+            .queryForList(
+                "SELECT libelle_source FROM salle_sources"
+                    + " WHERE source = :source AND identifiant_externe = :identifiant",
+                Map.of(
+                    "source", identifiantPrefixe.substring(0, sep),
+                    "identifiant", identifiantPrefixe.substring(sep + 1)),
+                String.class);
+    return libelles.isEmpty() ? null : libelles.get(0);
   }
 
   /**
@@ -167,41 +191,58 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Salle suivie à refetcher, avec ses identifiants préfixés agrégés toutes
-   * sources confondues.
+   * Identifiant préfixé d'une salle chez une source, avec le libellé du lieu
+   * chez cette source quand elle s'interroge par libellé (Eventim).
+   *
+   * @param identifiant identifiant préfixé {@code source:identifiant_externe}
+   * @param libelle libellé du lieu chez la source, ou null
+   */
+  private record IdentifiantSalle(String identifiant, String libelle) {}
+
+  /**
+   * Salle suivie à refetcher, avec ses identifiants toutes sources confondues.
    *
    * @param salleId UUID de la salle (texte), pour le suivi d'absences après
    *     persistance
-   * @param identifiants identifiants préfixés séparés par des virgules
+   * @param identifiants identifiants de la salle chez chaque source
    */
-  private record SalleAFetcher(String salleId, String identifiants) {}
+  private record SalleAFetcher(String salleId, List<IdentifiantSalle> identifiants) {}
 
   // Le préfixe émis ici doit correspondre à celui attendu par
   // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique
   // "ticketmaster" de salle_sources.source) — sans cette traduction, fetchSalle
   // n'est jamais invoqué pour aucune salle TM (mismatch silencieux, aucune
-  // exception, aucun log d'erreur). Restreint aux salles suivies (user_salles)
-  // — voir Javadoc de executerToutes.
+  // exception, aucun log d'erreur). Un lieu Eventim sans libellé connu ne peut
+  // pas être interrogé. Restreint aux salles suivies (user_salles) — voir
+  // Javadoc de executerToutes.
   private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(
       final List<String> salleIdsCibles) {
     final boolean filtre = salleIdsCibles != null;
-    return commun
+    final Map<String, List<IdentifiantSalle>> parSalle = new LinkedHashMap<>();
+    commun
         .obtenirJdbc()
         .queryForList(
-            "SELECT ss.salle_id::text AS salle_id,"
-                + " string_agg(ss.source || ':' || ss.identifiant_externe, ',') AS identifiants"
+            "SELECT ss.salle_id::text AS salle_id, ss.source AS source,"
+                + " ss.identifiant_externe AS identifiant, ss.libelle_source AS libelle"
                 + " FROM salle_sources ss"
                 + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
+                + " AND (ss.source <> 'eventim' OR ss.libelle_source IS NOT NULL)"
                 + (filtre ? " AND ss.salle_id::text IN (:ids)" : "")
-                + " GROUP BY ss.salle_id",
+                + " ORDER BY ss.salle_id, ss.source",
             filtre ? Map.of("ids", salleIdsCibles) : Map.of())
-        .stream()
-        .map(
-            ligne ->
-                new SalleAFetcher(
-                    (String) ligne.get("salle_id"),
-                    ((String) ligne.get("identifiants"))
-                        .replace("ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":")))
+        .forEach(
+            ligne -> {
+              final String source = (String) ligne.get("source");
+              final String prefixe =
+                  "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
+              parSalle
+                  .computeIfAbsent((String) ligne.get("salle_id"), _ -> new ArrayList<>())
+                  .add(
+                      new IdentifiantSalle(
+                          prefixe + ":" + ligne.get("identifiant"), (String) ligne.get("libelle")));
+            });
+    return parSalle.entrySet().stream()
+        .map(entree -> new SalleAFetcher(entree.getKey(), entree.getValue()))
         .toList();
   }
 
@@ -217,8 +258,7 @@ class FetchSallesExecutor {
         final ResultatLotSalles resultatLot = traiterLotSalles(lotSalles);
         resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
         if (!resultatLot.sallesInjoignables().isEmpty()) {
-          echecsLots.add(
-              "lot " + i + "-" + (i + lotSalles.size()) + " : panne réseau transitoire");
+          echecsLots.add("lot " + i + "-" + (i + lotSalles.size()) + " : panne réseau transitoire");
           salleIdsEnEchec.addAll(resultatLot.sallesInjoignables());
         }
       } catch (Exception e) {
@@ -238,7 +278,8 @@ class FetchSallesExecutor {
    * @param persistance bilan de persistance
    * @param sallesInjoignables salles dont une source n'a pas répondu
    */
-  private record ResultatLotSalles(ResultatPersistance persistance, List<String> sallesInjoignables) {}
+  private record ResultatLotSalles(
+      ResultatPersistance persistance, List<String> sallesInjoignables) {}
 
   /**
    * Fetch + dédoublonnage + persistance d'un lot de salles ({@value
@@ -256,8 +297,8 @@ class FetchSallesExecutor {
     for (final SalleAFetcher salle : lotSalles) {
       boolean joignable = true;
       final Map<String, LocalDate> horizons = new HashMap<>();
-      for (final String id : salle.identifiants().split(",")) {
-        joignable &= fetchEtSuivreSalle(id.trim(), tous, horizons);
+      for (final IdentifiantSalle identifiant : salle.identifiants()) {
+        joignable &= fetchEtSuivreSalle(identifiant, tous, horizons);
       }
       if (joignable) {
         horizonsParSalle.put(salle.salleId(), horizons);
@@ -275,6 +316,7 @@ class FetchSallesExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
+    commun.enregistrerLieuxEventim();
     // Une requête par salle : les sources interrogées (donc les horizons) varient.
     horizonsParSalle.forEach(
         (salleId, horizons) ->

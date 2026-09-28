@@ -247,7 +247,8 @@ final class TicketmasterPageFetcher {
    * @return concerts, succès et indicateur de plafonnement
    */
   /* package-private : appelé par TicketmasterRegionFetcher (même package). */
-  ResultatParcours parcourirPages(final UriComponentsBuilder uriBase, final String artisteFallback) {
+  ResultatParcours parcourirPages(
+      final UriComponentsBuilder uriBase, final String artisteFallback) {
     final List<ConcertBrut> tousLesEvents = new ArrayList<>();
     int borneMax = NB_PAGES_MAX;
     int totalElements = 0;

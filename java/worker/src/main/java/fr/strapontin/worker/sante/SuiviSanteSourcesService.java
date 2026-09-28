@@ -9,6 +9,7 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -28,6 +29,12 @@ public class SuiviSanteSourcesService {
 
   private static final int SEUIL_SUSPECT = 3;
 
+  // Chute brutale : un lieu qui change de billetterie ne tombe presque jamais à
+  // zéro d'un coup (un concert annulé ou un pack reste listé), il faut donc
+  // aussi comparer au volume précédent, pas seulement détecter une salle vide.
+  private static final int VOLUME_MIN_CHUTE = 5;
+  private static final int POURCENTAGE_RESTANT_CHUTE = 30;
+
   /**
    * Préfixes abrégés utilisés par le déclenchement manuel (voir
    * {@code TriggerController} , {@code "tm:venueId"}) vers la valeur canonique
@@ -40,16 +47,22 @@ public class SuiviSanteSourcesService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
+  private final SignalementMatchingService signalementMatchingService;
 
   /**
    * @param jdbc accès JDBC
    * @param tm revérification du nom TM avant effacement d'une intervention
    *     requise
+   * @param signalementMatchingService signalement d'une chute brutale du
+   *     nombre de concerts d'une salle
    */
   public SuiviSanteSourcesService(
-      final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
+      final NamedParameterJdbcTemplate jdbc,
+      final TicketmasterSource tm,
+      final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.tm = tm;
+    this.signalementMatchingService = signalementMatchingService;
   }
 
   /**
@@ -66,6 +79,62 @@ public class SuiviSanteSourcesService {
     final String source = normaliserSource(identifiantPrefixe.substring(0, sep));
     final String identifiant = identifiantPrefixe.substring(sep + 1);
     mettreAJourCompteur(TypeEntiteSource.SALLE, source, identifiant, nbResultats > 0);
+    suivreVolumeSalle(source, identifiant, nbResultats);
+  }
+
+  /**
+   * Mémorise le volume renvoyé et signale une chute brutale par rapport au
+   * fetch précédent (lieu passé à une autre billetterie, source devenue
+   * partielle).
+   */
+  private void suivreVolumeSalle(
+      final String source, final String identifiant, final int nbResultats) {
+    try {
+      final List<Map<String, Object>> lignes =
+          jdbc.queryForList(
+              """
+              UPDATE salle_sources ss SET dernier_nb_resultats = :nb
+              FROM salle_sources avant
+              WHERE ss.source = :source
+                AND ss.identifiant_externe = :identifiant
+                AND avant.source = ss.source AND avant.identifiant_externe = ss.identifiant_externe
+              RETURNING ss.salle_id AS salle_id, avant.dernier_nb_resultats AS precedent
+              """,
+              Map.of("nb", nbResultats, "source", source, "identifiant", identifiant));
+      if (lignes.isEmpty() || !(lignes.get(0).get("precedent") instanceof Number precedent)) {
+        return;
+      }
+      if (estChuteBrutale(precedent.intValue(), nbResultats)) {
+        LOG.warn(
+            "chute brutale du nombre de concerts source={} identifiant={} {} → {}",
+            source,
+            identifiant,
+            precedent,
+            nbResultats);
+        signalementMatchingService.signaler(
+            "chute_resultats_salle",
+            "salle",
+            (UUID) lignes.get(0).get("salle_id"),
+            "moyenne",
+            Map.of(
+                "source", source,
+                "identifiantExterne", identifiant,
+                "precedent", precedent.intValue(),
+                "actuel", nbResultats));
+      }
+    } catch (Exception e) {
+      LOG.warn("Suivi du volume impossible source={} identifiant={}", source, identifiant, e);
+    }
+  }
+
+  /**
+   * @param precedent volume du fetch précédent
+   * @param actuel volume du fetch courant
+   * @return {@code true} si le volume est tombé sous {@value
+   *     #POURCENTAGE_RESTANT_CHUTE}% d'un volume initial significatif
+   */
+  static boolean estChuteBrutale(final int precedent, final int actuel) {
+    return precedent >= VOLUME_MIN_CHUTE && actuel * 100 <= precedent * POURCENTAGE_RESTANT_CHUTE;
   }
 
   /**
