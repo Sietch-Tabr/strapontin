@@ -21,9 +21,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Requêtes Eventim par lieu ({@code venue_names}) ou par villes ({@code
- * city_names}), seuls filtres géographiques appliqués par l'API, reprises
- * par fenêtre de dates au-delà du plafond de pages de l'API.
+ * Requêtes Eventim par lieu ({@code venue_names}), par villes ({@code
+ * city_names}) ou par code postal, seuls filtres géographiques de l'API,
+ * reprises par fenêtre de dates au-delà du plafond de l'API.
  * @since 3.0.1
  * @author Kwaite
  */
@@ -46,6 +46,8 @@ final class EventimLieuxFetcher {
               IntStream.rangeClosed(1, 20).mapToObj(n -> String.format("750%02d", n)),
               Stream.of("75116"))
           .toList();
+  private static final String PARAM_TOP = "top";
+  private static final int TOP = EventimSource.TOP_MAX;
   private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private final String urlProduits;
@@ -57,7 +59,7 @@ final class EventimLieuxFetcher {
    * @param urlProduits URL de l'endpoint produits
    * @param webId identifiant du site Eventim
    * @param chargeur chargement d'une page (sans filtre de département)
-   * @param attente pause entre deux pages, {@code false} si interrompue
+   * @param attente pause avant chaque requête, {@code false} si interrompue
    */
   /* package-private : instancié par EventimSource (même package). */
   EventimLieuxFetcher(
@@ -114,7 +116,10 @@ final class EventimLieuxFetcher {
     }
     if (depts.contains(DEPT_PARIS)) {
       CODES_POSTAUX_PARIS.forEach(
-          code -> filtres.add(requete -> requete.queryParam("postal_code", code)));
+          code ->
+              filtres.add(
+                  requete ->
+                      requete.queryParam("postal_code", code).queryParam(PARAM_TOP, TOP)));
     }
     final LocalDate fin = LocalDate.now().plusMonths(MOIS_HORIZON_REGION);
     final List<ConcertBrut> concerts = new ArrayList<>();
@@ -148,7 +153,7 @@ final class EventimLieuxFetcher {
     final PageProduitsEventim page =
         chargeur.apply(
             requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
-                .queryParam("top", 1)
+                .queryParam(PARAM_TOP, 1)
                 .queryParam("venue_names", libelle)
                 .queryParam("page", 1)
                 .build()
@@ -184,6 +189,9 @@ final class EventimLieuxFetcher {
     final List<ConcertBrut> concerts = new ArrayList<>();
     LocalDate debut = LocalDate.now();
     for (int fenetre = 0; fenetre < NB_FENETRES_MAX; fenetre++) {
+      if (!attente.getAsBoolean()) {
+        return new ResultatRegion(concerts, null);
+      }
       final Parcours parcours = parcourirPages(requeteDepuis.apply(debut));
       parcours.concerts().stream()
           .filter(c -> depts.isEmpty() || depts.contains(c.dept()))
@@ -208,7 +216,18 @@ final class EventimLieuxFetcher {
   private record Parcours(
       List<ConcertBrut> concerts, boolean succes, boolean plafonne, LocalDate derniereDate) {}
 
+  // Avec top, page est ignoré : une seule requête, plafonnée si elle revient pleine.
   private Parcours parcourirPages(final UriComponentsBuilder requete) {
+    if (requete.build().getQueryParams().containsKey(PARAM_TOP)) {
+      final PageProduitsEventim resultat = chargeur.apply(requete.build().encode().toUri());
+      return resultat.succes()
+          ? new Parcours(
+              resultat.concerts(),
+              true,
+              resultat.nbProduits() >= TOP,
+              derniereDate(resultat.concerts()))
+          : new Parcours(List.of(), false, false, null);
+    }
     final List<ConcertBrut> concerts = new ArrayList<>();
     int totalPages = 0;
     for (int page = 1; page <= EventimSource.PLAFOND_PAGES; page++) {
@@ -229,6 +248,7 @@ final class EventimLieuxFetcher {
     return new Parcours(
         concerts, true, totalPages >= EventimSource.PLAFOND_PAGES, derniereDate(concerts));
   }
+
 
 
   private static LocalDate derniereDate(final List<ConcertBrut> concerts) {

@@ -41,11 +41,14 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String CLE_PRODUCTS = "products";
   private static final String CLE_TOTAL_RESULTS = "totalResults";
   private static final String CLE_TOTAL_PAGES = "totalPages";
-  // Au-delà, l'API répond 400 ; la taille de page est imposée (~20 produits) :
-  // un paramètre top fait ignorer page, qui renverrait toujours la première.
+  // Au-delà, l'API répond 400 ; sans top, pages d'environ 20 produits.
   /* package-private : partagé avec EventimLieuxFetcher (même package). */
   static final int PLAFOND_PAGES = 103;
-  private static final int PREMIERE_PAGE = 1;
+  // attraction_ids et postal_code exigent top (50 au plus), qui fait ignorer page :
+  // une requête par fenêtre de dates, reprise au dernier jour reçu.
+  /* package-private : partagé avec EventimLieuxFetcher (même package). */
+  static final int TOP_MAX = 50;
+  private static final int NB_FENETRES_ARTISTE = 10;
   private static final String PREFIXE_IDENTIFIANT = "eventim:";
 
   /**
@@ -281,7 +284,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       }
     }
     return new PageProduitsEventim(
-        concerts, entier(data, CLE_TOTAL_RESULTS), entier(data, CLE_TOTAL_PAGES), true);
+        concerts,
+        entier(data, CLE_TOTAL_RESULTS),
+        entier(data, CLE_TOTAL_PAGES),
+        produits.size(),
+        true);
   }
 
   private static int entier(final Map<String, Object> data, final String cle) {
@@ -296,42 +303,46 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   private ResultatArtisteEventim fetchProduitsParAttraction(
       final String attractionId, final String artisteFallback) {
-    final LocalDate dateDebut = LocalDate.now();
-    final LocalDate dateFin = dateDebut.plusMonths(24);
+    final LocalDate dateFin = LocalDate.now().plusMonths(24);
     final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     final List<ConcertBrut> concerts = new ArrayList<>();
-    boolean continuer = true;
-    boolean succes = true;
     final String artisteSourceId = "eventim:" + attractionId;
-
-    for (int page = 1; page <= PLAFOND_PAGES && continuer; page++) {
-      if (page > PREMIERE_PAGE) {
-        continuer = attendreEntrePagesEventim();
+    LocalDate debut = LocalDate.now();
+    for (int fenetre = 0; fenetre < NB_FENETRES_ARTISTE; fenetre++) {
+      if (fenetre > 0 && !attendreEntrePagesEventim()) {
+        return new ResultatArtisteEventim(concerts, false);
       }
-      if (continuer) {
-        final String uri =
-            UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-                .queryParam(PARAM_WEB_ID, WEB_ID)
-                .queryParam(PARAM_LANGUE, "fr")
-                .queryParam("attraction_ids", attractionId)
-                .queryParam("date_from", fmt.format(dateDebut))
-                .queryParam("date_to", fmt.format(dateFin))
-                .queryParam("sort", "DateAsc")
-                .queryParam("page", page)
-                .build()
-                .toUriString();
-        final PageProduitsEventim resultat =
-            chargerPageProduits(URI.create(uri), artisteFallback, null, artisteSourceId);
-        if (!resultat.succes()) {
-          succes = false;
-        }
-        concerts.addAll(resultat.concerts());
-        continuer = !resultat.estVide() && page < resultat.totalPages();
+      final String uri =
+          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+              .queryParam(PARAM_WEB_ID, WEB_ID)
+              .queryParam(PARAM_LANGUE, "fr")
+              .queryParam("attraction_ids", attractionId)
+              .queryParam("date_from", fmt.format(debut))
+              .queryParam("date_to", fmt.format(dateFin))
+              .queryParam("sort", "DateAsc")
+              .queryParam("top", TOP_MAX)
+              .build()
+              .toUriString();
+      final PageProduitsEventim resultat =
+          chargerPageProduits(URI.create(uri), artisteFallback, null, artisteSourceId);
+      if (!resultat.succes()) {
+        return new ResultatArtisteEventim(concerts, false);
       }
+      concerts.addAll(resultat.concerts());
+      final LocalDate derniere =
+          resultat.concerts().stream()
+              .map(c -> LocalDate.parse(c.date()))
+              .max(LocalDate::compareTo)
+              .orElse(null);
+      // Reprise au dernier jour reçu (doublons dédoublonnés en aval).
+      if (resultat.nbProduits() < TOP_MAX || derniere == null || !derniere.isAfter(debut)) {
+        break;
+      }
+      debut = derniere;
     }
-
-    return new ResultatArtisteEventim(concerts, succes);
+    return new ResultatArtisteEventim(concerts, true);
   }
+
 
   /**
    * Récupère les concerts d'un artiste via l'API Eventim (recherche

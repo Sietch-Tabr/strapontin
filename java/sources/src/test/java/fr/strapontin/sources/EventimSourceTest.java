@@ -551,9 +551,10 @@ class EventimSourceTest {
     serveur.verify();
   }
 
-  // L'API ignore page dès que top est présent : la pagination suit totalPages, sans top.
+  // attraction_ids exige top (50 au plus), qui fait ignorer page : une réponse pleine
+  // déclenche une nouvelle fenêtre à partir du dernier jour reçu.
   @Test
-  void fetchArtiste_deuxPagesAnnoncees_litLaSecondePageSansTop() {
+  void fetchArtiste_reponsePleine_repriseAuDernierJourAvecTop() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     serveur
@@ -564,26 +565,39 @@ class EventimSourceTest {
                 {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
                 """,
                 MediaType.APPLICATION_JSON));
-    for (final String page : List.of("page=1", "page=2")) {
-      serveur
-          .expect(
-              requestTo(
-                  org.hamcrest.Matchers.allOf(
-                      org.hamcrest.Matchers.containsString(page),
-                      org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("top=")))))
-          .andRespond(
-              withSuccess(
-                  "{\"products\":["
-                      + PRODUIT_ACCOR_ARENA
-                      + "],\"totalResults\":40,\"totalPages\":2}",
-                  MediaType.APPLICATION_JSON));
-    }
+    final String produit =
+        """
+        {"name":"Julien Clerc","typeAttributes":{"liveEntertainment":{
+          "startDate":"%s","location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"}}},
+          "link":"https://www.eventim.fr/event/julien-clerc-%d"}
+        """;
+    final LocalDate jour = LocalDate.now().plusDays(30);
+    final String pleine =
+        java.util.stream.IntStream.range(0, 50)
+            .mapToObj(n -> produit.formatted(jour + "T20:00:00", n))
+            .collect(java.util.stream.Collectors.joining(","));
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("top=50"),
+                    org.hamcrest.Matchers.containsString("date_from=" + LocalDate.now()))))
+        .andRespond(
+            withSuccess(
+                "{\"products\":[" + pleine + "],\"totalResults\":51}",
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("date_from=" + jour)))
+        .andRespond(
+            withSuccess(
+                "{\"products\":[" + produit.formatted(jour.plusDays(1) + "T20:00:00", 99) + "]}",
+                MediaType.APPLICATION_JSON));
 
     final List<ConcertBrut> resultats =
         new EventimSource(builder.build()).fetchArtiste("Julien Clerc");
 
     serveur.verify();
-    assertEquals(2, resultats.size());
+    assertEquals(51, resultats.size());
   }
 
   @Test
