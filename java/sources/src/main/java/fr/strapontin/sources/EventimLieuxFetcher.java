@@ -73,9 +73,6 @@ final class EventimLieuxFetcher {
     this.attente = attente;
   }
 
-  private static LocalDate horizonSalle() {
-    return LocalDate.now().plusMonths(MOIS_HORIZON_SALLE).minusDays(1);
-  }
 
   /**
    * Concerts à venir d'un lieu Eventim, toutes catégories confondues.
@@ -88,7 +85,8 @@ final class EventimLieuxFetcher {
     final ResultatRegion resultat =
         parcourirFenetres(
             debut -> requete(debut, fin).queryParam("venue_names", libelle), fin, Set.of());
-    if (resultat.horizon() == null || resultat.horizon().isBefore(horizonSalle())) {
+    // Même borne que la requête : un fetch à cheval sur minuit reste complet.
+    if (resultat.horizon() == null || resultat.horizon().isBefore(fin.minusDays(1))) {
       LOG.warn(
           "Eventim lieu={} : couverture tronquée au {} (volume hors norme)",
           libelle,

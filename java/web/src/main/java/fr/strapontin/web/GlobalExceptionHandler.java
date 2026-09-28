@@ -8,6 +8,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -99,6 +100,17 @@ public class GlobalExceptionHandler {
   public Map<String, Object> gererCorpsIllisible(final HttpMessageNotReadableException ex) {
     LOG.debug("Corps de requête illisible : {}", ex.getMessage());
     return Map.of(CLE_ERREUR, "Requête invalide.");
+  }
+
+  /**
+   * Client déconnecté pendant l'envoi de la réponse : rien à répondre ni à
+   * signaler (la réponse, parfois une image, ne peut plus recevoir de JSON).
+   *
+   * @param ex l'exception de connexion interrompue
+   */
+  @ExceptionHandler(ClientAbortException.class)
+  public void gererClientDeconnecte(final ClientAbortException ex) {
+    LOG.debug("Connexion interrompue par le client : {}", ex.getMessage());
   }
 
   /**

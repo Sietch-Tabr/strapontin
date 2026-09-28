@@ -11,6 +11,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
+import org.apache.catalina.connector.ClientAbortException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +61,13 @@ class GlobalExceptionHandlerTest {
     final var ex = new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
     final Map<String, Object> rep = handler.gererRessourceDejaExistante(ex);
     assertEquals("Cet artiste est déjà dans votre liste.", rep.get("erreur"));
+  }
+
+  @Test
+  void gererClientDeconnecte_connexionInterrompue_neJournalisePasEnErreur() {
+    handler.gererClientDeconnecte(new ClientAbortException("Relais brisé (pipe)"));
+
+    verifyNoInteractions(logAdminService);
   }
 
   @Test
