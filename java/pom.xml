@@ -58,7 +58,7 @@
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
         <pmdCore.version>7.27.0</pmdCore.version>
         <jacoco.version>0.8.15</jacoco.version>
-        <spotless.version>3.10.2</spotless.version>
+        <spotless.version>3.10.3</spotless.version>
     </properties>
 
     <build>
