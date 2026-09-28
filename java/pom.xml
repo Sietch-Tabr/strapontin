@@ -56,7 +56,7 @@
         <checkstyle.version>3.6.0</checkstyle.version>
         <pmd.version>3.28.0</pmd.version>
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
-        <pmdCore.version>7.27.0</pmdCore.version>
+        <pmdCore.version>7.28.0</pmdCore.version>
         <jacoco.version>0.8.15</jacoco.version>
         <spotless.version>3.10.3</spotless.version>
     </properties>
@@ -124,6 +124,9 @@
                         <!-- Bloquant depuis v2.9.1 (existant nettoyé à 0 violation, confirmé par
                              un run réel sur les 4 modules avant bascule). -->
                         <failOnViolation>true</failOnViolation>
+                        <!-- Aucun rapport HTML JXR généré : sans ce réglage, chaque module
+                             avertit qu'aucune source XRef n'est disponible. -->
+                        <linkXRef>false</linkXRef>
                     </configuration>
                     <executions>
                         <execution>
