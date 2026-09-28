@@ -188,4 +188,35 @@ class GestionQuotaResend {
             jourSeuil || compteur.alerteJourEnvoyee(),
             moisSeuil || compteur.alerteMoisEnvoyee()));
   }
+
+  /**
+   * Recale le compteur local sur la consommation réelle déclarée par Resend,
+   * sans jamais l'abaisser : le compteur partagé web/worker n'est pas atomique
+   * entre les deux JVM et peut sous-compter, jamais l'inverse sans raison.
+   * @param envoyesJourReels emails consommés aujourd'hui selon Resend
+   * @param envoyesMoisReels emails consommés ce mois selon Resend
+   * @return {@code true} si le compteur a été relevé
+   */
+  /* package-private : appelé par EmailSender (même package). */
+  boolean recalerSurUsageReel(final int envoyesJourReels, final int envoyesMoisReels) {
+    final CompteurEnvoisResend actuel = lireCompteurCourant();
+    if (envoyesJourReels <= actuel.envoyesJour() && envoyesMoisReels <= actuel.envoyesMois()) {
+      return false;
+    }
+    ecrireCompteur(
+        new CompteurEnvoisResend(
+            actuel.jour(),
+            Math.max(actuel.envoyesJour(), envoyesJourReels),
+            actuel.mois(),
+            Math.max(actuel.envoyesMois(), envoyesMoisReels),
+            actuel.alerteJourEnvoyee(),
+            actuel.alerteMoisEnvoyee()));
+    LOG.info(
+        "compteur Resend recalé sur l'usage réel jour {}→{} mois {}→{}",
+        actuel.envoyesJour(),
+        Math.max(actuel.envoyesJour(), envoyesJourReels),
+        actuel.envoyesMois(),
+        Math.max(actuel.envoyesMois(), envoyesMoisReels));
+    return true;
+  }
 }

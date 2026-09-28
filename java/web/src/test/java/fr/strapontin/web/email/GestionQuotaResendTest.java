@@ -175,4 +175,31 @@ class GestionQuotaResendTest {
     assertEquals(0, compteur.envoyesJour());
     assertEquals(0, compteur.envoyesMois());
   }
+
+  // --- recalerSurUsageReel ---
+
+  // Le compteur partagé web/worker peut sous-compter : l'usage réel Resend le relève.
+  @Test
+  void recalerSurUsageReel_usageReelSuperieur_releveLeCompteur() throws Exception {
+    enBase(new CompteurEnvoisResend(jourCourant(), 5, moisCourant(), 50, false, false));
+
+    assertTrue(gestionQuotaResend.recalerSurUsageReel(12, 80));
+
+    verify(jdbc)
+        .update(
+            anyString(),
+            eq("RESEND_QUOTA_JSON"),
+            org.mockito.ArgumentMatchers.contains("\"envoyesJour\":12"),
+            anyString());
+  }
+
+  @Test
+  void recalerSurUsageReel_usageReelInferieur_neBaissePasLeCompteur() throws Exception {
+    enBase(new CompteurEnvoisResend(jourCourant(), 5, moisCourant(), 50, false, false));
+
+    assertFalse(gestionQuotaResend.recalerSurUsageReel(3, 40));
+
+    verify(jdbc, org.mockito.Mockito.never())
+        .update(anyString(), eq("RESEND_QUOTA_JSON"), anyString(), anyString());
+  }
 }

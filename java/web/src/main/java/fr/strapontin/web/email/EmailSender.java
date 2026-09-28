@@ -7,6 +7,7 @@ package fr.strapontin.web.email;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.model.CreateEmailOptions;
+import com.resend.services.usage.model.UsageEmails;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
@@ -116,11 +117,40 @@ class EmailSender {
   }
 
   /**
-   * Nombre d'envois encore autorisés par le quota local (jour et mois).
+   * Recale le compteur de quota local sur la consommation réelle du compte
+   * Resend ({@code GET /usage}) — sans effet si Resend n'est pas configuré ou
+   * ne répond pas (le compteur local reste alors la seule référence).
+   */
+  /* package-private : appelé par AlerteQuotaResendService (même package). */
+  void recalerQuotaSurUsageReel() {
+    final Optional<ContexteEmail> ctx = obtenirContexte();
+    if (ctx.isEmpty()) {
+      return;
+    }
+    try {
+      final UsageEmails emails = ctx.get().client().usage().get().getEmails();
+      if (emails == null || emails.getDaily() == null || emails.getMonthly() == null) {
+        return;
+      }
+      gestionQuotaResend.recalerSurUsageReel(
+          valeurOuZero(emails.getDaily().getUsed()), valeurOuZero(emails.getMonthly().getUsed()));
+    } catch (ResendException e) {
+      LOG.warn("usage Resend indisponible, compteur local conservé : {}", e.getMessage());
+    }
+  }
+
+  private static int valeurOuZero(final Integer valeur) {
+    return valeur != null ? valeur : 0;
+  }
+
+  /**
+   * Nombre d'envois encore autorisés par le quota, recalé au préalable sur la
+   * consommation réelle Resend.
    * @return envois restants avant blocage
    */
   /* package-private : appelé par EmailServiceSecurite (même package). */
   int envoisRestants() {
+    recalerQuotaSurUsageReel();
     final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
     return Math.max(
         0,

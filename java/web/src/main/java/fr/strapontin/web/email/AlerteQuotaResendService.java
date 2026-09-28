@@ -24,21 +24,27 @@ class AlerteQuotaResendService {
 
   private final GestionQuotaResend gestionQuotaResend;
   private final EmailAlerteService emailAlerteService;
+  private final EmailSender emailSender;
 
   /* package-private : instancié uniquement par Spring (même package). */
   AlerteQuotaResendService(
-      final GestionQuotaResend gestionQuotaResend, final EmailAlerteService emailAlerteService) {
+      final GestionQuotaResend gestionQuotaResend,
+      final EmailAlerteService emailAlerteService,
+      final EmailSender emailSender) {
     this.gestionQuotaResend = gestionQuotaResend;
     this.emailAlerteService = emailAlerteService;
+    this.emailSender = emailSender;
   }
 
   /**
-   * Vérifie le seuil toutes les 15 minutes et envoie une alerte si franchi et
-   * pas encore signalé pour la fenêtre jour/mois courante.
+   * Vérifie le seuil toutes les 15 minutes (compteur recalé sur l'usage réel
+   * Resend) et envoie une alerte si franchi et pas encore signalé pour la
+   * fenêtre jour/mois courante.
    */
   @Scheduled(cron = "0 */15 * * * *")
   /* package-private : appelé par le scheduler Spring (même package). */
   void verifier() {
+    emailSender.recalerQuotaSurUsageReel();
     final CompteurEnvoisResend compteur = gestionQuotaResend.lireCompteurCourant();
     if (!gestionQuotaResend.seuilFranchiNonSignale(compteur)) {
       return;
