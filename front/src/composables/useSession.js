@@ -30,6 +30,13 @@ export function useSession() {
       }
       session.value = await rep.json();
       sessionErreurReseau.value = false;
+      // La garde du routeur ne voit pas encore la session au premier chargement.
+      if (
+        session.value.changementMotDePasseExige &&
+        route.path !== "/parametres"
+      ) {
+        router.push({ path: "/parametres", hash: "#compte" });
+      }
     } catch (_) {
       // une exception ici (réseau coupé, DNS, etc.) ne signifie pas que la session est
       // invalide côté serveur — contrairement à un 401 confirmé ci-dessus. Réinitialiser

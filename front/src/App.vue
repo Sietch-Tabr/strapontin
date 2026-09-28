@@ -12,6 +12,7 @@
         :est-admin="estAdmin"
       />
       <main id="contenu-principal" class="contenu-principal">
+        <BanniereIncident />
         <BanniereSysteme />
         <RouterView />
       </main>
@@ -34,7 +35,10 @@
       />
     </template>
   </template>
-  <RouterView v-else />
+  <template v-else>
+    <BanniereIncident />
+    <RouterView />
+  </template>
 
   <ToastContainer />
   <OnboardingModal />
@@ -64,6 +68,7 @@ import SidebarNav from "./components/layout/SidebarNav.vue";
 import BottomNav from "./components/layout/BottomNav.vue";
 import DrawerNav from "./components/layout/DrawerNav.vue";
 import BanniereSysteme from "./components/layout/BanniereSysteme.vue";
+import BanniereIncident from "./components/layout/BanniereIncident.vue";
 import ToastContainer from "./components/layout/ToastContainer.vue";
 import OnboardingModal from "./components/layout/OnboardingModal.vue";
 import InstallPwaBanner from "./components/layout/InstallPwaBanner.vue";
