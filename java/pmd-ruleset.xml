@@ -69,7 +69,7 @@
        Javadoc public, corrigées séparément). -->
   <rule ref="category/java/documentation.xml/CommentRequired">
     <properties>
-      <property name="fieldCommentRequirement" value="Ignored"/>
+      <property name="fieldCommentRequirement" value="ignored"/>
     </properties>
   </rule>
   <!-- AvoidCatchingGenericException (déplacée de design.xml vers errorprone.xml depuis PMD 7.2x,
