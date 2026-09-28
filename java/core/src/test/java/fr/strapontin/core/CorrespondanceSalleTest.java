@@ -330,4 +330,32 @@ class CorrespondanceSalleTest {
   void extraireBase_nomSansQualificatif_retourneNull() {
     assertNull(CorrespondanceSalle.extraireBase("Zenith Paris"));
   }
+
+  // --- Pivot sur un nom réduit à un seul token spécifique (quartier, ville) ---
+
+  // Cas réels relevés en production : un nom réduit au seul pivot après retrait des mots-types
+  // valait pour tout lieu contenant ce pivot comme simple nom de quartier ou de ville.
+  @Test
+  void estDoublonSalle_pivotQuartierSeulTokenSpecifique_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "theatre de poche montparnasse paris", "theatre montparnasse"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("theatre montparnasse", "la gaite montparnasse"));
+  }
+
+  @Test
+  void estDoublonSalle_pivotVilleSeulPointCommun_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "zenith toulouse metropole", "casino barriere toulouse"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("la condition publique roubaix", "le colisee roubaix"));
+  }
+
+  // Le suffixe de ville d'un même nom reste couvert par le containment de caractères.
+  @Test
+  void estDoublonSalle_memeNomAvecVilleEnSuffixe_resteTrue() {
+    assertTrue(CorrespondanceSalle.estDoublonSalle("theatre mogador", "theatre mogador paris"));
+  }
 }

@@ -144,8 +144,9 @@ public class CoherenceWikidataSalleService {
   /**
    * Revalide le type Wikidata de tous les wikidata_id stockés (garde-fou
    * introduit après coup, jamais appliqué rétroactivement) — type invalide
-   * (gare/tram/commerce) remis à null directement, redécouvert au prochain
-   * cycle. ville/nom_affiche inchangés.
+   * (gare/tram/commerce/administratif) remis à null directement avec les
+   * coordonnées qui en venaient, redécouvert au prochain cycle.
+   * ville/nom_affiche inchangés.
    * @return nombre de {@code wikidata_id} invalidés
    */
   public int revaliderTypes() {
@@ -171,7 +172,11 @@ public class CoherenceWikidataSalleService {
 
   private void invaliderWikidataId(final String qid) {
     jdbc.update(
-        "UPDATE salles SET wikidata_id = NULL WHERE wikidata_id = :qid", Map.of("qid", qid));
+        // Coordonnées issues de la même entité (P625) : fausses aussi, et elles
+        // serviraient sinon à rattacher par proximité GPS des lieux sans rapport.
+        "UPDATE salles SET wikidata_id = NULL, latitude = NULL, longitude = NULL"
+            + " WHERE wikidata_id = :qid",
+        Map.of("qid", qid));
     logsAdminWorker.inserer(
         "warn",
         "coherence-wikidata",

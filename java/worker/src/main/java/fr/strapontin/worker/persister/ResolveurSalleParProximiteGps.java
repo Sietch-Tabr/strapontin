@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ClientNominatim;
 import java.sql.Types;
@@ -54,21 +55,31 @@ final class ResolveurSalleParProximiteGps {
                 + " WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
                 + " AND (:dept IS NULL OR dept IS NULL OR dept = :dept)",
             new MapSqlParameterSource().addValue(CLE_DEPT, dept, Types.VARCHAR));
+    // La plus proche, pas la première dans le rayon : en centre-ville, plusieurs
+    // salles distinctes tiennent dans le même rayon.
+    UUID plusProche = null;
+    double distanceMin = Double.MAX_VALUE;
     for (final Map<String, Object> ligne : lignes) {
       final Double latitude = (Double) ligne.get("latitude");
       final Double longitude = (Double) ligne.get("longitude");
       final String nomNormCandidat = (String) ligne.get("nom_norm");
-      if (CorrespondanceSalle.jaccardTokens(nomNorm, nomNormCandidat)
-          > JACCARD_AUCUN_CHEVAUCHEMENT) {
-        continue;
-      }
-      if (FusionSallesClePorteeService.coordonneesConnuesEtProches(
-          coords.latitude(), coords.longitude(), latitude, longitude)) {
-        final UUID salleId = (UUID) ligne.get("id");
-        LOG.info("salle résolue par proximité GPS (géocodage dernier recours) uuid={}", salleId);
-        return salleId;
+      if (CorrespondanceSalle.jaccardTokens(nomNorm, nomNormCandidat) <= JACCARD_AUCUN_CHEVAUCHEMENT
+          && FusionSallesClePorteeService.coordonneesConnuesEtProches(
+              coords.latitude(), coords.longitude(), latitude, longitude)) {
+        final double distance =
+            DistanceGeo.metres(coords.latitude(), coords.longitude(), latitude, longitude);
+        if (distance < distanceMin) {
+          distanceMin = distance;
+          plusProche = (UUID) ligne.get("id");
+        }
       }
     }
-    return null;
+    if (plusProche != null) {
+      LOG.info(
+          "salle résolue par proximité GPS (géocodage dernier recours) uuid={} distance={}m",
+          plusProche,
+          Math.round(distanceMin));
+    }
+    return plusProche;
   }
 }

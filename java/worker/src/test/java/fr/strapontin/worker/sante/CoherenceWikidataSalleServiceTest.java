@@ -450,7 +450,7 @@ class CoherenceWikidataSalleServiceTest {
     assertEquals(1, resultat);
     verify(jdbc)
         .update(
-            org.mockito.ArgumentMatchers.contains("wikidata_id = NULL"),
+            org.mockito.ArgumentMatchers.contains("wikidata_id = NULL, latitude = NULL"),
             org.mockito.ArgumentMatchers.<Map<String, ?>>argThat(
                 p -> "Q110597455".equals(p.get("qid"))));
     verify(logsAdminWorker)

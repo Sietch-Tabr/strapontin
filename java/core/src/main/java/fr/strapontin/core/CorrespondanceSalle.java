@@ -232,7 +232,8 @@ public final class CorrespondanceSalle {
     if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) {
       return true;
     }
-    return (pivotAutorise && estPivotSpecifique(tokA, tokB, jaccardSpec, intersectionSpec))
+    return (pivotAutorise
+            && estPivotSpecifique(tokA, tokB, specA, specB, jaccardSpec, intersectionSpec))
         || estContainmentPartielSuffisant(specA, specB);
   }
 
@@ -260,14 +261,21 @@ public final class CorrespondanceSalle {
   }
 
   // Pivot : requiert ≥ 2 tokens dans chaque nom pour éviter les faux positifs
-  // de type "galaxie" (1 token) vs "le galaxie amneville".
+  // de type "galaxie" (1 token) vs "le galaxie amneville", et ≥ 2 tokens
+  // spécifiques : un nom réduit au seul pivot après retrait des mots-types
+  // ("Théâtre Montparnasse") vaut sinon pour tout lieu qui le contient comme
+  // simple nom de quartier ("Théâtre de Poche Montparnasse").
   private static boolean estPivotSpecifique(
       final Set<String> tokA,
       final Set<String> tokB,
+      final Set<String> specA,
+      final Set<String> specB,
       final double jaccardSpec,
       final Set<String> intersectionSpec) {
     return tokA.size() >= 2
         && tokB.size() >= 2
+        && specA.size() >= 2
+        && specB.size() >= 2
         && jaccardSpec > SEUIL_JACCARD_PIVOT
         && intersectionSpec.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
   }
