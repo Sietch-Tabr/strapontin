@@ -70,15 +70,21 @@ CLI : `tea` (pas `gh` — Codeberg est Gitea, incompatible avec `gh`). `tea issu
 
 **Jamais automatisé via Woodpecker** : le LXC Woodpecker (VLAN 20, `192.168.20.0/24`) n'a volontairement pas de route active vers le réseau de management Proxmox (`192.168.1.0/24`, gateway distincte `192.168.1.1`) — confirmé (route présente mais tout le trafic, y compris ICMP, y est filtré), cohérent avec le modèle default-deny inter-VLAN déjà en place ailleurs sur cette infra (ex. NFS VLAN20→VLAN10 nécessite une règle explicite). Percer cette frontière donnerait à un pipeline CI (code de dépendances tierces, images Docker) un accès root à l'hyperviseur entier — disproportionné face au risque de compromission d'un pipeline. `scripts/restore-test.sh` s'exécute donc uniquement à la demande, copié puis lancé directement sur Proxmox.
 
-## Variables d'environnement — java/web/.env
+## Variables d'environnement — `/opt/strapontin/.env`
+
+Généré par `provision.sh` (commun à web et worker, `chmod 600`) :
 
 ```
-DATABASE_URL=jdbc:postgresql://localhost/strapontin
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/strapontin
+SPRING_DATASOURCE_USERNAME=<rôle applicatif PostgreSQL>
+SPRING_DATASOURCE_PASSWORD=<mot de passe du rôle applicatif>
 APP_CONFIG_SECRET=<clé AES-256-GCM de chiffrement de app_config>
 BACKUP_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/backup-statut>
+INTEGRITY_INTERNAL_SECRET=<secret Bearer protégeant POST /api/interne/integrite-statut>
+SPRING_PROFILES_ACTIVE=dev|prod
 ```
 
-`BACKUP_INTERNAL_SECRET` (v2.2.2) : généré par `provision.sh`. `backup-local.sh` le lit dans `.env` et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue).
+`BACKUP_INTERNAL_SECRET` (v2.2.2) : `backup-local.sh` le lit dans `.env` et l'envoie via `Authorization: Bearer`. Absent → l'endpoint répond 403 (notifications de backup perdues, mais le dump continue). `INTEGRITY_INTERNAL_SECRET` : même mécanisme pour `aide-check.sh`/`update.sh` → `IntegriteAlerteController`.
 
 ## Configuration applicative (`app_config`)
 
