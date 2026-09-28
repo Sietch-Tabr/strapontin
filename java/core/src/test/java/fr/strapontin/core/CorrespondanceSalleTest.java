@@ -25,6 +25,18 @@ class CorrespondanceSalleTest {
   // --- Faux positifs pivot confirmés, devant devenir false après l'exclusion des
   // mots-types génériques ---
 
+  // Eventim suffixe ses lieux de l'arrondissement : « paris » ne doit pas rapprocher deux
+  // lieux parisiens distincts, ni empêcher de reconnaître le même lieu.
+  @Test
+  void estDoublonSalle_suffixeArrondissementEventim_ignore() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "cathedrale americaine paris 08", "cathedrale notre dame de paris"));
+    assertTrue(CorrespondanceSalle.estDoublonSalle("petit bain paris 13", "petit bain"));
+    assertTrue(
+        CorrespondanceSalle.estDoublonSalle("elysee montmartre paris 18", "elysee montmartre"));
+  }
+
   @Test
   void estDoublonSalle_theatresParisiensDistinctsPartageantLeMotTheatre_retourneFalse() {
     assertFalse(
