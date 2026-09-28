@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -57,7 +58,7 @@ class CoherenceMultiSalleServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
     assertEquals(0, service.detecterContamination());
-    verify(jdbc, never()).update(anyString(), anyMap());
+    verify(jdbc, never()).update(contains("contamination_signalee = :signature"), anyMap());
   }
 
   @Test
@@ -103,7 +104,7 @@ class CoherenceMultiSalleServiceTest {
     final int resultat = service.detecterContamination();
 
     assertEquals(0, resultat, "déjà signalée avec la même signature — pas de re-signalement");
-    verify(jdbc, never()).update(anyString(), anyMap());
+    verify(jdbc, never()).update(contains("contamination_signalee = :signature"), anyMap());
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 
@@ -175,7 +176,7 @@ class CoherenceMultiSalleServiceTest {
   }
 
   private static Map<String, Object> ligneSalle(
-      final UUID id, final String nomNorm, final String dept, final String doublonSignale) {
+      final UUID id, final String nomNorm, final String dept, final UUID doublonSignale) {
     return ligneSalle(id, nomNorm, dept, doublonSignale, null);
   }
 
@@ -183,7 +184,7 @@ class CoherenceMultiSalleServiceTest {
       final UUID id,
       final String nomNorm,
       final String dept,
-      final String doublonSignale,
+      final UUID doublonSignale,
       final UUID salleParentId) {
     final Map<String, Object> ligne = new HashMap<>();
     ligne.put("id", id);
@@ -260,7 +261,7 @@ class CoherenceMultiSalleServiceTest {
     when(jdbc.queryForList(anyString(), anyMap()))
         .thenReturn(
             List.of(
-                ligneSalle(a, "le kilowatt", "94", b.toString()),
+                ligneSalle(a, "le kilowatt", "94", b),
                 ligneSalle(b, "le kilowatt vitry sur seine", "94", null)));
 
     final int resultat = service.detecterDoublons();

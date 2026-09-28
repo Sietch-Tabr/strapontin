@@ -4,16 +4,20 @@
  */
 package fr.strapontin.web.admin;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Vue unifiée des signalements de matching : agrège en lecture {@code
  * signalements_matching} et les mécanismes établis ({@code
  * necessite_intervention_le}/{@code contamination_signalee}/{@code
- * doublon_signale}), résolvables depuis Salles/Artistes.
+ * doublon_signale}) ; une contamination ou un doublon jugé faux positif par
+ * un admin est mémorisé pour ne plus être re-signalé.
  * @since 2.9.0
  * @author Kwaite
  */
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 public class SignalementsAdminService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
+  private static final String CLE_ID = "id";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
@@ -65,7 +70,7 @@ public class SignalementsAdminService {
               FROM salles s WHERE s.contamination_signalee IS NOT NULL
               UNION ALL
               SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
-                     NULL, s.doublon_signale
+                     NULL, s.doublon_signale::text
               FROM salles s WHERE s.doublon_signale IS NOT NULL
             ) t
             ORDER BY t.detecte_le DESC NULLS LAST
@@ -123,5 +128,77 @@ public class SignalementsAdminService {
           "info", "admin", "signalement résolu manuellement", Map.of("signalementId", id));
     }
     return lignes > 0;
+  }
+
+  /**
+   * Marque les sources internes actuellement signalées d'une salle comme
+   * légitimes (nom d'usage, sigle officiel du même lieu) — plus jamais
+   * re-signalées tant que leur identifiant ne change pas.
+   * @param salleId salle signalée
+   * @return {@code true} si un signalement de contamination actif a été levé
+   */
+  @Transactional
+  public boolean accepterContamination(final UUID salleId) {
+    final List<String> signatures =
+        jdbc.queryForList(
+            "SELECT contamination_signalee FROM salles"
+                + " WHERE id = CAST(:id AS uuid) AND contamination_signalee IS NOT NULL",
+            Map.of(CLE_ID, salleId.toString()),
+            String.class);
+    if (signatures.isEmpty()) {
+      return false;
+    }
+    final List<String> identifiants =
+        Arrays.stream(signatures.get(0).split("\\|")).map(nom -> "internal:" + nom).toList();
+    jdbc.update(
+        "UPDATE salle_sources SET contamination_acceptee_le = now()"
+            + " WHERE salle_id = CAST(:id AS uuid) AND identifiant_externe IN (:identifiants)",
+        Map.of(CLE_ID, salleId.toString(), "identifiants", identifiants));
+    jdbc.update(
+        "UPDATE salles SET contamination_signalee = NULL WHERE id = CAST(:id AS uuid)",
+        Map.of(CLE_ID, salleId.toString()));
+    logAdminService.logAdmin(
+        "info",
+        "admin",
+        "contamination de salle déclarée faux positif",
+        Map.of("salleId", salleId.toString(), "sources", String.join(", ", identifiants)));
+    return true;
+  }
+
+  /**
+   * Déclare distinctes deux salles signalées comme doublon potentiel — la
+   * paire n'est plus jamais re-signalée.
+   * @param salleId salle portant le signalement
+   * @return {@code true} si un signalement de doublon actif a été levé
+   */
+  @Transactional
+  public boolean declarerSallesDistinctes(final UUID salleId) {
+    final List<UUID> partenaires =
+        jdbc.queryForList(
+            "SELECT doublon_signale FROM salles"
+                + " WHERE id = CAST(:id AS uuid) AND doublon_signale IS NOT NULL",
+            Map.of(CLE_ID, salleId.toString()),
+            UUID.class);
+    if (partenaires.isEmpty()) {
+      return false;
+    }
+    final UUID partenaire = partenaires.get(0);
+    // Ordre textuel, celui de PostgreSQL sur uuid (CHECK salle_a < salle_b).
+    final boolean ordre = salleId.toString().compareTo(partenaire.toString()) < 0;
+    jdbc.update(
+        "INSERT INTO salles_paires_distinctes (salle_a, salle_b)"
+            + " VALUES (CAST(:a AS uuid), CAST(:b AS uuid)) ON CONFLICT DO NOTHING",
+        Map.of(
+            "a", (ordre ? salleId : partenaire).toString(),
+            "b", (ordre ? partenaire : salleId).toString()));
+    jdbc.update(
+        "UPDATE salles SET doublon_signale = NULL WHERE id = CAST(:id AS uuid)",
+        Map.of(CLE_ID, salleId.toString()));
+    logAdminService.logAdmin(
+        "info",
+        "admin",
+        "salles déclarées distinctes",
+        Map.of("salleA", salleId.toString(), "salleB", partenaire.toString()));
+    return true;
   }
 }

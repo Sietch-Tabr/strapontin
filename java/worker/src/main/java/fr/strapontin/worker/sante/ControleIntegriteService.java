@@ -161,7 +161,31 @@ public class ControleIntegriteService {
     int signalees = 0;
     signalees += verifierSourcesOrphelines(TypeEntiteSource.ARTISTE);
     signalees += verifierSourcesOrphelines(TypeEntiteSource.SALLE);
+    fermerSourcesOrphelinesResolues();
     return signalees;
+  }
+
+  // Un signalement dont l'entité n'a plus de source sans événement (événement
+  // apparu depuis, mapping ou entité supprimés) est clos : il s'accumulait
+  // sinon jusqu'à une revue manuelle complète.
+  private void fermerSourcesOrphelinesResolues() {
+    final int fermes =
+        jdbc.update(
+            """
+            UPDATE signalements_matching sm SET resolu_le = now()
+            WHERE sm.type = 'source_orpheline' AND sm.resolu_le IS NULL
+              AND NOT (
+                (sm.entite_type = 'artiste' AND EXISTS (
+                    SELECT 1 FROM artiste_sources s WHERE s.artiste_id = sm.entite_id
+                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id = s.artiste_id)))
+                OR (sm.entite_type = 'salle' AND EXISTS (
+                    SELECT 1 FROM salle_sources s WHERE s.salle_id = sm.entite_id
+                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id))))
+            """,
+            Map.of());
+    if (fermes > 0) {
+      LOG.info("controle-integrite source_orpheline clos automatiquement={}", fermes);
+    }
   }
 
   // TypeEntiteSource exclut structurellement tout appel avec un couple

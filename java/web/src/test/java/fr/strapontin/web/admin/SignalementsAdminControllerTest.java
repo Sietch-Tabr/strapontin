@@ -59,4 +59,17 @@ class SignalementsAdminControllerTest {
 
     assertEquals(200, reponse.getStatusCode().value());
   }
+
+  @Test
+  void accepterContamination_uuidInvalide_retourne400() {
+    assertEquals(400, controller.accepterContamination("pas-un-uuid").getStatusCode().value());
+  }
+
+  @Test
+  void declarerSallesDistinctes_aucunSignalement_retourne404() {
+    final java.util.UUID id = java.util.UUID.randomUUID();
+    org.mockito.Mockito.when(service.declarerSallesDistinctes(id)).thenReturn(false);
+
+    assertEquals(404, controller.declarerSallesDistinctes(id.toString()).getStatusCode().value());
+  }
 }

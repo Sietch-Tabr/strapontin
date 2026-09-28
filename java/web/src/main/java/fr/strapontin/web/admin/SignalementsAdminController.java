@@ -5,8 +5,10 @@
 package fr.strapontin.web.admin;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
+import static fr.strapontin.web.ControllerUtils.parseUuid;
 
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/admin/signalements")
 public class SignalementsAdminController {
+
+  private static final String MESSAGE_UUID_INVALIDE = "UUID de salle invalide.";
 
   private final SignalementsAdminService service;
 
@@ -58,6 +62,44 @@ public class SignalementsAdminController {
     final boolean resolu = service.resoudre(id);
     if (!resolu) {
       return erreur(404, "Signalement inconnu ou déjà résolu.");
+    }
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  /**
+   * Déclare faux positif la contamination signalée sur une salle.
+   *
+   * @param salleId UUID de la salle
+   * @return 200 si levée, 400 si UUID invalide, 404 si aucun signalement actif
+   */
+  @PostMapping("/contamination/{salleId}/accepter")
+  public ResponseEntity<Map<String, Object>> accepterContamination(
+      @PathVariable final String salleId) {
+    final UUID uuid = parseUuid(salleId);
+    if (uuid == null) {
+      return erreur(400, MESSAGE_UUID_INVALIDE);
+    }
+    if (!service.accepterContamination(uuid)) {
+      return erreur(404, "Aucune contamination signalée pour cette salle.");
+    }
+    return ResponseEntity.ok(Map.of("succes", true));
+  }
+
+  /**
+   * Déclare distinctes les deux salles d'un doublon potentiel signalé.
+   *
+   * @param salleId UUID de la salle portant le signalement
+   * @return 200 si levé, 400 si UUID invalide, 404 si aucun signalement actif
+   */
+  @PostMapping("/doublon/{salleId}/distinctes")
+  public ResponseEntity<Map<String, Object>> declarerSallesDistinctes(
+      @PathVariable final String salleId) {
+    final UUID uuid = parseUuid(salleId);
+    if (uuid == null) {
+      return erreur(400, MESSAGE_UUID_INVALIDE);
+    }
+    if (!service.declarerSallesDistinctes(uuid)) {
+      return erreur(404, "Aucun doublon signalé pour cette salle.");
     }
     return ResponseEntity.ok(Map.of("succes", true));
   }
