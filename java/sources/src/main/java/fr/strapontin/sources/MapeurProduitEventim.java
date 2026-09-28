@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,14 +27,17 @@ final class MapeurProduitEventim {
   private static final String DEPT_PARIS = "75";
   private static final String VILLE_PARIS = "Paris";
   private static final String SEPARATEUR_NOM_SALLE = " - ";
+  // « Paris 07 » : arrondissement accolé par Eventim, jamais par Ticketmaster.
+  private static final Pattern VILLE_ARRONDISSEMENT =
+      Pattern.compile("^(Paris|Lyon|Marseille) \\d{1,2}$", Pattern.CASE_INSENSITIVE);
   // Signalée une fois par démarrage, sinon répétée à chaque produit du lieu.
   private static final Set<String> SALLES_VILLE_NON_CORRIGEE = ConcurrentHashMap.newKeySet();
 
   private MapeurProduitEventim() {}
 
   /**
-   * Corrige une incohérence connue d'Eventim (salle taguée ville=Paris
-   * hors 75) — retombe sur la commune extraite du nom ("Nom - Commune").
+   * Corrige « Paris 07 » en « Paris », et une salle taguée Paris hors 75
+   * (commune extraite du nom "Nom - Commune").
    * @param ville ville brute renvoyée par Eventim
    * @param dept département dérivé du code postal, peut être null
    * @param salle nom de la salle, source alternative de la commune
@@ -40,7 +45,14 @@ final class MapeurProduitEventim {
    */
   /* package-private : appelé par EventimSource (même package). */
   static String corrigerVilleEventim(final String ville, final String dept, final String salle) {
-    if (ville == null || dept == null) {
+    if (ville == null) {
+      return null;
+    }
+    final Matcher arrondissement = VILLE_ARRONDISSEMENT.matcher(ville.strip());
+    if (arrondissement.matches()) {
+      return arrondissement.group(1);
+    }
+    if (dept == null) {
       return ville;
     }
     if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) {

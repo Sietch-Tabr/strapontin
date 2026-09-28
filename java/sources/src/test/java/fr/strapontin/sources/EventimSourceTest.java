@@ -50,6 +50,12 @@ class EventimSourceTest {
   // --- corrigerVilleEventim ---
 
   @Test
+  void corrigerVilleEventim_arrondissementAccole_retourneLaVille() {
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris 07", "75", "Le Bon Marché"));
+    assertEquals("Lyon", EventimSource.corrigerVilleEventim("Lyon 3", "69", "Salle 3000"));
+  }
+
+  @Test
   void corrigerVilleEventim_deptParis_neCorrigePas() {
     assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "75", "Accor Arena"));
   }

@@ -135,7 +135,8 @@ public class CoherenceWikidataSalleService {
         continue;
       }
       memoriserSignature(salle.id(), signature);
-      loggerIncoherence(salle, communeWikidata, partielle);
+      loggerIncoherence(
+          salle, communeWikidata, partielle, villesConcertsReelles.get(salle.id()));
     }
     LOG.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
@@ -315,9 +316,17 @@ public class CoherenceWikidataSalleService {
    * @param partielle {@code true} si seule une partie des concerts est
    *     incohérente (message distinct pour ne pas induire en erreur sur
    *     l'ampleur réelle)
+   * @param villesConcerts villes réellement comparées, null si salles.ville
    */
   private void loggerIncoherence(
-      final SalleAEnrichir salle, final String communeWikidata, final boolean partielle) {
+      final SalleAEnrichir salle,
+      final String communeWikidata,
+      final boolean partielle,
+      final List<String> villesConcerts) {
+    final String villesComparees =
+        villesConcerts == null || villesConcerts.isEmpty()
+            ? salle.ville()
+            : String.join(", ", villesConcerts);
     logsAdminWorker.inserer(
         "warn",
         "coherence-wikidata",
@@ -326,8 +335,8 @@ public class CoherenceWikidataSalleService {
                 : "wikidata_id incohérent avec la ville")
             + " salle="
             + salle.nom()
-            + " ville="
-            + salle.ville()
+            + " villes="
+            + villesComparees
             + " communeWikidata="
             + communeWikidata
             + " wikidataId="
@@ -336,6 +345,7 @@ public class CoherenceWikidataSalleService {
             "salleId", salle.id().toString(),
             "wikidataId", salle.wikidataId(),
             "ville", salle.ville(),
+            "villesComparees", villesComparees,
             "communeWikidata", communeWikidata,
             "partielle", partielle));
   }
