@@ -29,7 +29,7 @@
         <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+. -->
-        <flyway.version>13.4.0</flyway.version>
+        <flyway.version>13.8.0</flyway.version>
         <caffeine.version>3.3.0</caffeine.version>
         <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
