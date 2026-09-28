@@ -7,15 +7,9 @@ package fr.strapontin.web.incident;
 import java.time.Instant;
 
 /**
- * Communication d'incident de sécurité publiée par un admin.
+ * Communication d'incident de sécurité publiée par un admin, avec le nombre
+ * d'emails et de notifications push effectivement envoyés.
  *
- * @param id identifiant
- * @param titre titre affiché
- * @param message message affiché
- * @param publieeLe date de publication
- * @param nbEmails emails effectivement envoyés
- * @param nbPush notifications push effectivement envoyées
- * @param changementMdpForce {@code true} si un nouveau mot de passe a été exigé
  * @since 3.0.1
  * @author Kwaite
  */

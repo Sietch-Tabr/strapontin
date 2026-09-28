@@ -19,6 +19,9 @@ import java.time.temporal.ChronoUnit;
  */
 record FenetreTempsTM(String debut, String fin) {
 
+  /* package-private : jours entièrement couverts par la fenêtre de 6 mois. */
+  static final int JOURS_COUVERTS = 6 * 30 - 1;
+
   /* package-private : appelé par TicketmasterSource/TicketmasterRegionFetcher
    * (même package). */
   static FenetreTempsTM obtenirFenetreTemps() {
@@ -37,7 +40,7 @@ record FenetreTempsTM(String debut, String fin) {
   /* package-private : appelé par TicketmasterSource/TicketmasterRegionFetcher
    * (même package). */
   static LocalDate derniereDateCouverte() {
-    return LocalDate.now(ZoneOffset.UTC).plusDays(6L * 30 - 1);
+    return LocalDate.now(ZoneOffset.UTC).plusDays(JOURS_COUVERTS);
   }
 
   /**

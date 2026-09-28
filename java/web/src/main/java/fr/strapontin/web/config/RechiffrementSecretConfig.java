@@ -18,13 +18,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Rotation de {@code APP_CONFIG_SECRET} : au démarrage, rechiffre avec le
- * secret courant toute valeur encore chiffrée avec le secret précédent
- * ({@code APP_CONFIG_SECRET_PRECEDENT}) — {@code app_config} et secrets TOTP
- * des comptes. Idempotent : une valeur déjà rechiffrée (ou stockée en clair)
- * ne se déchiffre pas avec le secret précédent et reste inchangée. Procédure
- * complète : {@code scripts/rotation-secrets.sh}, wiki Sécurité.
- *
+ * Rechiffre au démarrage, avec le secret courant, les valeurs encore
+ * chiffrées avec {@code APP_CONFIG_SECRET_PRECEDENT} (app_config, TOTP).
+ * Idempotent. Procédure : {@code scripts/rotation-secrets.sh}.
  * @since 3.0.1
  * @author Kwaite
  */

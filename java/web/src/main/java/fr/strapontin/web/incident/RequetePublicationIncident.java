@@ -8,14 +8,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * Corps JSON de publication d'une communication d'incident.
+ * Corps JSON de publication d'une communication d'incident : contenu et
+ * canaux (email, push, nouveau mot de passe exigé de tous les comptes).
  *
- * @param titre titre affiché
- * @param message message affiché (texte brut)
- * @param email {@code true} pour prévenir chaque compte par email
- * @param push {@code true} pour notifier tous les abonnements push
- * @param changementMdpForce {@code true} pour exiger un nouveau mot de passe de
- *     tous les comptes à leur prochaine connexion
  * @since 3.0.1
  * @author Kwaite
  */

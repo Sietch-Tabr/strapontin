@@ -8,7 +8,7 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailServiceSecurite;
 import fr.strapontin.web.push.NotificationPushService;
-import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,10 +89,8 @@ public class IncidentService {
   }
 
   /**
-   * Publie une communication d'incident (remplace l'éventuelle précédente)
-   * puis la diffuse sur les canaux demandés. L'envoi par email est refusé
-   * d'emblée s'il dépasse le quota restant : un envoi partiel laisserait des
-   * comptes sans nouvelles sans qu'on sache lesquels.
+   * Publie une communication d'incident (remplace la précédente) et la
+   * diffuse sur les canaux demandés.
    * @param requete contenu et canaux de diffusion
    * @param adminId administrateur à l'origine de la publication
    * @return la communication publiée, avec le nombre d'envois effectifs
@@ -100,40 +98,8 @@ public class IncidentService {
    */
   public CommunicationIncident publier(
       final RequetePublicationIncident requete, final String adminId) {
-    final List<String> destinataires =
-        requete.email()
-            ? jdbc.queryForList(
-                "SELECT email FROM users WHERE email IS NOT NULL", Map.of(), String.class)
-            : List.of();
-    final int restants = requete.email() ? emailService.envoisEmailRestants() : 0;
-    if (destinataires.size() > restants) {
-      throw new ErreurMetier(
-          "Quota d'emails insuffisant : "
-              + destinataires.size()
-              + " comptes à prévenir, "
-              + restants
-              + " envois restants. Réessayez demain ou décochez l'email.",
-          409);
-    }
-
-    jdbc.update(
-        "UPDATE communications_incident SET terminee_le = now() WHERE terminee_le IS NULL",
-        Map.of());
-    final Long id =
-        jdbc.queryForObject(
-            """
-            INSERT INTO communications_incident (titre, message, changement_mdp_force)
-            VALUES (:titre, :message, :mdp) RETURNING id
-            """,
-            Map.of(
-                "titre", requete.titre().strip(),
-                "message", requete.message().strip(),
-                "mdp", requete.changementMdpForce()),
-            Long.class);
-    if (requete.changementMdpForce()) {
-      jdbc.update("UPDATE users SET changement_mdp_force_le = now()", Map.of());
-    }
-
+    final List<String> destinataires = destinatairesEmail(requete);
+    final long id = enregistrer(requete);
     final int nbEmails =
         destinataires.isEmpty()
             ? 0
@@ -163,10 +129,54 @@ public class IncidentService {
         id,
         requete.titre().strip(),
         requete.message().strip(),
-        new Timestamp(System.currentTimeMillis()).toInstant(),
+        Instant.now(),
         nbEmails,
         nbPush,
         requete.changementMdpForce());
+  }
+
+  // Envoi partiel refusé : il laisserait des comptes sans nouvelles sans qu'on
+  // sache lesquels.
+  private List<String> destinatairesEmail(final RequetePublicationIncident requete) {
+    if (!requete.email()) {
+      return List.of();
+    }
+    final List<String> destinataires =
+        jdbc.queryForList(
+            "SELECT email FROM users WHERE email IS NOT NULL", Map.of(), String.class);
+    final int restants = emailService.envoisEmailRestants();
+    if (destinataires.size() > restants) {
+      throw new ErreurMetier(
+          "Quota d'emails insuffisant : "
+              + destinataires.size()
+              + " comptes à prévenir, "
+              + restants
+              + " envois restants. Réessayez demain ou décochez l'email.",
+          409);
+    }
+    return destinataires;
+  }
+
+  // Remplace l'éventuelle communication active, exige le nouveau mot de passe.
+  private long enregistrer(final RequetePublicationIncident requete) {
+    jdbc.update(
+        "UPDATE communications_incident SET terminee_le = now() WHERE terminee_le IS NULL",
+        Map.of());
+    final Long id =
+        jdbc.queryForObject(
+            """
+            INSERT INTO communications_incident (titre, message, changement_mdp_force)
+            VALUES (:titre, :message, :mdp) RETURNING id
+            """,
+            Map.of(
+                "titre", requete.titre().strip(),
+                "message", requete.message().strip(),
+                "mdp", requete.changementMdpForce()),
+            Long.class);
+    if (requete.changementMdpForce()) {
+      jdbc.update("UPDATE users SET changement_mdp_force_le = now()", Map.of());
+    }
+    return id;
   }
 
   /**

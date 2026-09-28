@@ -31,7 +31,7 @@ public class SessionController {
    * Retourne les données de navigation de l'utilisateur courant.
    *
    * @param auth l'authentification Spring Security
-   * @return les données de session : rôle, nbNouveau, changement de mot de passe exigé
+   * @return rôle, nbNouveau, changement de mot de passe exigé
    */
   @GetMapping("/api/session")
   public SessionDto session(final Authentication auth) {

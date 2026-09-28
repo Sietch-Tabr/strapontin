@@ -49,9 +49,9 @@ final class WikidataSalleDecouverte {
   // (Q484170), gare ferroviaire (Q55488), arrêt de transport en commun
   // (Q2175765), bar (Q187456), restaurant (Q11707), quotidien régional
   // (Q1002697), journal (Q11032), arrondissement municipal (Q702842, ex.
-  // "13e arrondissement de Paris" retenu pour "Le 13e Art") — un candidat de l'un de ces types est
-  // nécessairement une fausse correspondance, quel que soit son score de
-  // similarité de nom. Exposée pour permettre à
+  // "13e arrondissement de Paris" retenu pour "Le 13e Art") — un candidat de
+  // l'un de ces types est nécessairement une fausse correspondance, quel que
+  // soit son score de similarité de nom. Exposée pour permettre à
   // {@code CoherenceWikidataSalleService} de revalider les {@code wikidata_id}
   // déjà stockés contre ces mêmes types (garde-fou introduit après coup ne
   // s'appliquant pas rétroactivement aux découvertes antérieures).

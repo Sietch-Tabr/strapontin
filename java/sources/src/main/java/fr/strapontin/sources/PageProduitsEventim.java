@@ -8,12 +8,8 @@ import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 
 /**
- * Page de produits Eventim.
- *
- * @param concerts concerts de la page (après filtrage éventuel)
- * @param total total annoncé par l'API pour la requête
- * @param succes {@code false} si l'appel HTTP a échoué — distingue une page
- *     réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti
+ * Page de produits Eventim — {@code succes} distingue une page réellement
+ * vide d'un appel HTTP qui n'a jamais abouti.
  * @since 3.0.1
  * @author Kwaite
  */

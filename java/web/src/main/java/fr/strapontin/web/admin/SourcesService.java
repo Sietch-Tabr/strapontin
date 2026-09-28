@@ -92,10 +92,8 @@ public class SourcesService {
   }
 
   /**
-   * Définit le lieu Eventim interrogé pour une salle — vide pour le retirer ;
-   * l'identifiant interne est celui que produit l'ingestion d'un concert de
-   * ce lieu, pour qu'un concert déjà observé s'y rattache. Un lieu déjà
-   * rattaché à une autre salle lève 409 (jamais un vol silencieux).
+   * Définit le lieu Eventim d'une salle, avec l'identifiant interne que
+   * produit l'ingestion d'un concert de ce lieu.
    * @param salleId UUID de la salle
    * @param libelle nom exact du lieu chez Eventim, vide pour retirer
    * @throws ErreurMetier 409 si le lieu est déjà rattaché à une autre salle

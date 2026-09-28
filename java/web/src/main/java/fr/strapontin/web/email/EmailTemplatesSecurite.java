@@ -91,9 +91,8 @@ final class EmailTemplatesSecurite {
 
   /**
    * Communication d'un incident de sécurité à un utilisateur.
-   *
    * @param titre titre de la communication
-   * @param message message rédigé par l'administrateur (texte brut)
+   * @param message message de l'administrateur (texte brut)
    * @param changementMdpForce {@code true} si un nouveau mot de passe est exigé
    * @param baseUrl l'URL publique de base de l'application
    * @return le HTML de l'email

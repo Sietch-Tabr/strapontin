@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 final class MapeurProduitEventim {
 
   private static final Logger LOG = LoggerFactory.getLogger(MapeurProduitEventim.class);
+  private static final String CLE_NOM = "name";
   private static final String DEPT_PARIS = "75";
   private static final String VILLE_PARIS = "Paris";
   private static final String SEPARATEUR_NOM_SALLE = " - ";
@@ -117,7 +118,7 @@ final class MapeurProduitEventim {
         return null;
       }
 
-      final String titre = (String) produit.get("name");
+      final String titre = (String) produit.get(CLE_NOM);
       if (titre == null) {
         return null;
       }
@@ -163,13 +164,11 @@ final class MapeurProduitEventim {
    * @param produit produit Eventim sous forme de Map imbriquée
    * @return lieu, ou null si le produit n'en porte pas d'exploitable
    */
-  @SuppressWarnings("unchecked")
   /* package-private : appelé par EventimSource (même package). */
   static LieuEventim extraireLieu(final Map<String, Object> produit) {
     try {
-      final Map<String, Object> location =
-          (Map<String, Object>) extraireLiveEntertainment(produit).get("location");
-      if (location == null || !(location.get("name") instanceof String libelle)) {
+      if (!(extraireLiveEntertainment(produit).get("location") instanceof Map<?, ?> location)
+          || !(location.get(CLE_NOM) instanceof String libelle)) {
         return null;
       }
       final String salleNorm =
@@ -177,13 +176,14 @@ final class MapeurProduitEventim {
       if (salleNorm.isBlank()) {
         return null;
       }
-      final Map<String, Object> geo = (Map<String, Object>) location.get("geoLocation");
+      final Map<?, ?> geo =
+          location.get("geoLocation") instanceof Map<?, ?> coordonnees ? coordonnees : Map.of();
       return new LieuEventim(
           "internal:" + salleNorm,
           libelle,
-          (String) location.get("city"),
-          geo != null && geo.get("latitude") instanceof Number lat ? lat.doubleValue() : null,
-          geo != null && geo.get("longitude") instanceof Number lon ? lon.doubleValue() : null);
+          location.get("city") instanceof String ville ? ville : null,
+          geo.get("latitude") instanceof Number lat ? lat.doubleValue() : null,
+          geo.get("longitude") instanceof Number lon ? lon.doubleValue() : null);
     } catch (Exception e) {
       LOG.warn("lieu Eventim illisible : {}", e.getMessage());
       return null;
@@ -198,8 +198,8 @@ final class MapeurProduitEventim {
       final String heure,
       final String artisteSourceId) {
     final String salle =
-        location != null && location.get("name") != null
-            ? Normalisation.normaliserCasse((String) location.get("name"))
+        location != null && location.get(CLE_NOM) != null
+            ? Normalisation.normaliserCasse((String) location.get(CLE_NOM))
             : "Salle inconnue";
     String ville = location != null ? (String) location.get("city") : null;
     final String dept =

@@ -173,7 +173,7 @@ class FetchRegionExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    commun.enregistrerLieuxEventim();
+    rapportage.enregistreurLieuxEventim().enregistrer();
     // Un concert non revu faute de réponse d'une source n'est pas absent.
     if (!sourceInjoignable) {
       commun.mettreAJourAbsencesSalles(sallesConnuesDesDepartements(lotDepts), debutLot, horizons);

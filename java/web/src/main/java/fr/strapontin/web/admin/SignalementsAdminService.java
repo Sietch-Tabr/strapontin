@@ -13,11 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Vue unifiée des signalements de matching : agrège en lecture {@code
- * signalements_matching} et les mécanismes établis ({@code
- * necessite_intervention_le}/{@code contamination_signalee}/{@code
- * doublon_signale}) ; une contamination ou un doublon jugé faux positif par
- * un admin est mémorisé pour ne plus être re-signalé.
+ * Vue unifiée des signalements de matching (table dédiée et mécanismes
+ * établis) ; un faux positif jugé par un admin n'est plus re-signalé.
  * @since 2.9.0
  * @author Kwaite
  */

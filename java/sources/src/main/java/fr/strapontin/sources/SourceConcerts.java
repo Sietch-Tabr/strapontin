@@ -5,7 +5,6 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -32,7 +31,7 @@ public interface SourceConcerts {
    * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
    *     opération
    */
-  default List<ConcertBrut> fetchArtiste(String nom) {
+  default List<ConcertBrut> fetchArtiste(final String nom) {
     return List.of();
   }
 
@@ -55,7 +54,7 @@ public interface SourceConcerts {
    * @param identifiant identifiant préfixé de la salle
    * @return {@code true} si la source peut fetcher cette salle
    */
-  default boolean accepteIdentifiantSalle(String identifiant) {
+  default boolean accepteIdentifiantSalle(final String identifiant) {
     return false;
   }
 
@@ -67,7 +66,7 @@ public interface SourceConcerts {
    * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
    *     opération
    */
-  default List<ConcertBrut> fetchSalle(String identifiant) {
+  default List<ConcertBrut> fetchSalle(final String identifiant) {
     return List.of();
   }
 
@@ -78,7 +77,7 @@ public interface SourceConcerts {
    * @param libelle libellé du lieu chez la source, ou null
    * @return concerts trouvés
    */
-  default List<ConcertBrut> fetchSalle(String identifiant, String libelle) {
+  default List<ConcertBrut> fetchSalle(final String identifiant, final String libelle) {
     return fetchSalle(identifiant);
   }
 
@@ -89,7 +88,7 @@ public interface SourceConcerts {
    * @param classifs classifications à inclure
    * @return concerts trouvés, ou liste vide si non supporté
    */
-  default List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
+  default List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
     return List.of();
   }
 
@@ -100,16 +99,17 @@ public interface SourceConcerts {
    * @param classifs classifications à inclure
    * @return concerts trouvés et horizon de couverture
    */
-  default ResultatRegion fetchRegionCouverte(List<String> depts, List<String> classifs) {
+  default ResultatRegion fetchRegionCouverte(
+      final List<String> depts, final List<String> classifs) {
     return new ResultatRegion(fetchRegion(depts, classifs), null);
   }
 
   /**
-   * Dernière date couverte par {@link #fetchSalle} (fenêtre de la requête) —
-   * au-delà, un concert non revu n'est pas absent.
-   * @return horizon de couverture, ou {@code null} si aucun fetch par salle
+   * Nombre de jours à venir entièrement couverts par {@link #fetchSalle}
+   * (fenêtre de la requête) — au-delà, un concert non revu n'est pas absent.
+   * @return jours couverts, 0 si la source ne garantit aucune couverture
    */
-  default LocalDate horizonSalle() {
-    return null;
+  default int joursCouvertsParSalle() {
+    return 0;
   }
 }

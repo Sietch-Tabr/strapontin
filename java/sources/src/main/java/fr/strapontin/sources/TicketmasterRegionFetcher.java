@@ -23,22 +23,17 @@ final class TicketmasterRegionFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterRegionFetcher.class);
 
-  private TicketmasterRegionFetcher() {}
-
   // Garde-fou contre une boucle sans fin (plus de 1000 concerts sur une seule
   // journée) : au-delà, l'horizon s'arrête à la dernière fenêtre complète.
   private static final int NB_FENETRES_MAX = 15;
 
+  private TicketmasterRegionFetcher() {}
+
   /**
-   * Récupère les concerts par région (géolocalisation centre de département),
-   * par fenêtres de dates successives : TM refuse toute page au-delà du
-   * 1000e résultat, une seule requête ne couvre donc que les premières
-   * semaines d'un département dense.
-   * @param pageFetcher pagination bas niveau partagée avec TicketmasterSource
-   * @param depts liste de codes département (ex: ["75", "92"])
-   * @param classifs classifications TM à inclure ; défaut music/opera/musical
-   * @return concerts trouvés pour tous les départements, et dernière date
-   *     entièrement couverte pour tous (null si un département est ignoré)
+   * Concerts par région, par fenêtres de dates successives (TM refuse toute
+   * page au-delà du 1000e résultat : une requête ne couvre sinon que les
+   * premières semaines d'un département dense). Horizon null si un
+   * département est ignoré.
    */
   /* package-private : appelé par TicketmasterSource (même package). */
   static ResultatRegion fetchRegion(
@@ -49,12 +44,13 @@ final class TicketmasterRegionFetcher {
         classifs == null ? TicketmasterSource.CLASSIFICATIONS : classifs;
     final List<ConcertBrut> tous = new ArrayList<>();
     LocalDate horizon = FenetreTempsTM.derniereDateCouverte();
+    boolean departementIgnore = false;
 
     for (final String dept : depts) {
       final CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
       if (centre == null) {
         LOG.warn("département sans coordonnées connues, ignoré dept={}", dept);
-        horizon = null;
+        departementIgnore = true;
       } else {
         final ResultatRegion resultatDept =
             fetchDept(pageFetcher, dept, centre, classifsEffectives);
@@ -63,14 +59,14 @@ final class TicketmasterRegionFetcher {
       }
     }
 
-    return new ResultatRegion(tous, horizon);
+    return new ResultatRegion(tous, departementIgnore ? null : horizon);
   }
 
-  private static LocalDate plusProche(final LocalDate a, final LocalDate b) {
-    if (a == null || b == null) {
+  private static LocalDate plusProche(final LocalDate premiere, final LocalDate seconde) {
+    if (premiere == null || seconde == null) {
       return null;
     }
-    return a.isBefore(b) ? a : b;
+    return premiere.isBefore(seconde) ? premiere : seconde;
   }
 
   private static ResultatRegion fetchDept(

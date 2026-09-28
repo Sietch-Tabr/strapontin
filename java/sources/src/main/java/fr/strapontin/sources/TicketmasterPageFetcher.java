@@ -180,7 +180,7 @@ final class TicketmasterPageFetcher {
 
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> evt : evts) {
-      final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, artisteFallback);
+      final ConcertBrut concert = MapeurEvenementTM.mapper(evt, artisteFallback);
       if (concert != null) {
         concerts.add(concert);
       }

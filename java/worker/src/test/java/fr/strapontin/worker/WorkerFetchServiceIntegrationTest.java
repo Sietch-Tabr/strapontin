@@ -198,7 +198,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
     when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
         .thenReturn(List.<ConcertBrut>of());
-    when(ticketmasterSource.horizonSalle()).thenReturn(LocalDate.now().plusMonths(6));
+    when(ticketmasterSource.joursCouvertsParSalle()).thenReturn(180);
 
     fetchService.executerFetchSallesAll();
 
@@ -290,7 +290,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
     when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
         .thenReturn(List.<ConcertBrut>of());
-    when(ticketmasterSource.horizonSalle()).thenReturn(LocalDate.now().plusMonths(6));
+    when(ticketmasterSource.joursCouvertsParSalle()).thenReturn(180);
 
     fetchService.executerFetchSallesAll();
 

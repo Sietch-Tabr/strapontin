@@ -28,6 +28,7 @@ public class SuiviSanteSourcesService {
   private static final Logger LOG = LoggerFactory.getLogger(SuiviSanteSourcesService.class);
 
   private static final int SEUIL_SUSPECT = 3;
+  private static final String CLE_SOURCE = "source";
 
   // Chute brutale : un lieu qui change de billetterie ne tombe presque jamais à
   // zéro d'un coup (un concert annulé ou un pack reste listé), il faut donc
@@ -100,7 +101,7 @@ public class SuiviSanteSourcesService {
                 AND avant.source = ss.source AND avant.identifiant_externe = ss.identifiant_externe
               RETURNING ss.salle_id AS salle_id, avant.dernier_nb_resultats AS precedent
               """,
-              Map.of("nb", nbResultats, "source", source, "identifiant", identifiant));
+              Map.of("nb", nbResultats, CLE_SOURCE, source, "identifiant", identifiant));
       if (lignes.isEmpty() || !(lignes.get(0).get("precedent") instanceof Number precedent)) {
         return;
       }
@@ -117,10 +118,14 @@ public class SuiviSanteSourcesService {
             (UUID) lignes.get(0).get("salle_id"),
             "moyenne",
             Map.of(
-                "source", source,
-                "identifiantExterne", identifiant,
-                "precedent", precedent.intValue(),
-                "actuel", nbResultats));
+                CLE_SOURCE,
+                source,
+                "identifiantExterne",
+                identifiant,
+                "precedent",
+                precedent.intValue(),
+                "actuel",
+                nbResultats));
       }
     } catch (Exception e) {
       LOG.warn("Suivi du volume impossible source={} identifiant={}", source, identifiant, e);
@@ -133,6 +138,7 @@ public class SuiviSanteSourcesService {
    * @return {@code true} si le volume est tombé sous {@value
    *     #POURCENTAGE_RESTANT_CHUTE}% d'un volume initial significatif
    */
+  /* package-private : visibilité élargie pour SuiviSanteSourcesServiceTest. */
   static boolean estChuteBrutale(final int precedent, final int actuel) {
     return precedent >= VOLUME_MIN_CHUTE && actuel * 100 <= precedent * POURCENTAGE_RESTANT_CHUTE;
   }
@@ -185,11 +191,16 @@ public class SuiviSanteSourcesService {
       jdbc.update(
           sql,
           Map.of(
-              "succes", succes,
-              "seuil", SEUIL_SUSPECT,
-              "source", source,
-              "identifiant", identifiant,
-              "effacerIntervention", effacerIntervention));
+              "succes",
+              succes,
+              "seuil",
+              SEUIL_SUSPECT,
+              CLE_SOURCE,
+              source,
+              "identifiant",
+              identifiant,
+              "effacerIntervention",
+              effacerIntervention));
     } catch (Exception e) {
       LOG.warn(
           "Impossible de mettre à jour la santé source={} identifiant={}", source, identifiant, e);
@@ -215,7 +226,7 @@ public class SuiviSanteSourcesService {
             FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
             WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
             """,
-            Map.of("source", source, "identifiant", identifiant));
+            Map.of(CLE_SOURCE, source, "identifiant", identifiant));
     if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) {
       return true;
     }

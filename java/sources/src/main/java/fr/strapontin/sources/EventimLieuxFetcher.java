@@ -18,11 +18,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Récupération Eventim par lieu ({@code venue_names}) ou par villes ({@code
- * city_names}), seuls filtres géographiques réellement appliqués par l'API.
- * Une requête ne dépasse jamais {@value #MAX_PAGES} pages : au-delà, elle
- * reprend par fenêtre de dates plutôt que de s'arrêter en cours de route.
- *
+ * Requêtes Eventim par lieu ({@code venue_names}) ou par villes ({@code
+ * city_names}), seuls filtres géographiques appliqués par l'API, reprises
+ * par fenêtre de dates au-delà de {@value #MAX_PAGES} pages.
  * @since 3.0.1
  * @author Kwaite
  */
@@ -36,6 +34,8 @@ final class EventimLieuxFetcher {
   // Une URL trop longue est rejetée : les villes sont interrogées par paquets.
   private static final int VILLES_PAR_REQUETE = 40;
   private static final int MOIS_HORIZON_SALLE = 24;
+  /* package-private : jours toujours couverts par un fetch par lieu (24 mois). */
+  static final int JOURS_COUVERTS_SALLE = 729;
   private static final int MOIS_HORIZON_REGION = 6;
   private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -50,6 +50,7 @@ final class EventimLieuxFetcher {
    * @param chargeur chargement d'une page (sans filtre de département)
    * @param attente pause entre deux pages, {@code false} si interrompue
    */
+  /* package-private : instancié par EventimSource (même package). */
   EventimLieuxFetcher(
       final String urlProduits,
       final String webId,
@@ -61,11 +62,7 @@ final class EventimLieuxFetcher {
     this.attente = attente;
   }
 
-  /**
-   * Dernière date garantie couverte par {@link #fetchLieu}.
-   * @return horizon de couverture d'un fetch par salle
-   */
-  static LocalDate horizonSalle() {
+  private static LocalDate horizonSalle() {
     return LocalDate.now().plusMonths(MOIS_HORIZON_SALLE).minusDays(1);
   }
 
@@ -74,6 +71,7 @@ final class EventimLieuxFetcher {
    * @param libelle nom exact du lieu chez Eventim
    * @return concerts trouvés
    */
+  /* package-private : appelé par LieuxEventim (même package). */
   List<ConcertBrut> fetchLieu(final String libelle) {
     final LocalDate fin = LocalDate.now().plusMonths(MOIS_HORIZON_SALLE);
     final ResultatRegion resultat =
@@ -96,6 +94,7 @@ final class EventimLieuxFetcher {
    * @param categories catégories Eventim à inclure
    * @return concerts et dernière date couverte pour toutes les villes
    */
+  /* package-private : appelé par LieuxEventim (même package). */
   ResultatRegion fetchVilles(
       final List<String> villes, final Set<String> depts, final List<String> categories) {
     final LocalDate fin = LocalDate.now().plusMonths(MOIS_HORIZON_REGION);
@@ -118,11 +117,31 @@ final class EventimLieuxFetcher {
     return new ResultatRegion(concerts, horizon);
   }
 
-  private static LocalDate plusProche(final LocalDate a, final LocalDate b) {
-    if (a == null || b == null) {
+  /**
+   * Compte les concerts à venir d'un lieu (une seule page d'un résultat).
+   * @param libelle nom exact du lieu chez Eventim
+   * @return total annoncé par Eventim, ou -1 si la requête a échoué
+   */
+  /* package-private : appelé par LieuxEventim (même package). */
+  int compterConcerts(final String libelle) {
+    final LocalDate aujourdHui = LocalDate.now();
+    final PageProduitsEventim page =
+        chargeur.apply(
+            requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
+                .replaceQueryParam("top", 1)
+                .queryParam("venue_names", libelle)
+                .queryParam("page", 1)
+                .build()
+                .encode()
+                .toUri());
+    return page.succes() ? page.total() : -1;
+  }
+
+  private static LocalDate plusProche(final LocalDate premiere, final LocalDate seconde) {
+    if (premiere == null || seconde == null) {
       return null;
     }
-    return a.isBefore(b) ? a : b;
+    return premiere.isBefore(seconde) ? premiere : seconde;
   }
 
   private UriComponentsBuilder requete(final LocalDate debut, final LocalDate fin) {
@@ -186,13 +205,14 @@ final class EventimLieuxFetcher {
       total = resultat.total();
       continuer = resultat.succes() && !resultat.estVide() && concerts.size() < total;
     }
-    LocalDate derniere = null;
-    for (final ConcertBrut concert : concerts) {
-      final LocalDate date = LocalDate.parse(concert.date());
-      if (derniere == null || date.isAfter(derniere)) {
-        derniere = date;
-      }
-    }
-    return new Parcours(concerts, succes, succes && concerts.size() < total, derniere);
+    return new Parcours(
+        concerts, succes, succes && concerts.size() < total, derniereDate(concerts));
+  }
+
+  private static LocalDate derniereDate(final List<ConcertBrut> concerts) {
+    return concerts.stream()
+        .map(concert -> LocalDate.parse(concert.date()))
+        .max(LocalDate::compareTo)
+        .orElse(null);
   }
 }

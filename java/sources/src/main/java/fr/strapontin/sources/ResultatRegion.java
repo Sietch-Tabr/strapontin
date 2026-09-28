@@ -9,13 +9,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Concerts d'une région et date jusqu'à laquelle la source garantit les avoir
- * tous renvoyés : un concert non revu au-delà de cet horizon n'est pas absent,
- * seulement hors de portée de la requête (plafond de pagination, fenêtre).
- *
- * @param concerts concerts trouvés
- * @param horizon dernière date entièrement couverte, ou {@code null} si la
- *     source ne garantit aucune couverture complète
+ * Concerts d'une région et dernière date que la source garantit avoir
+ * entièrement couverte ({@code horizon}, null sans garantie).
  * @since 3.0.1
  * @author Kwaite
  */

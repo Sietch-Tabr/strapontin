@@ -47,6 +47,7 @@ class ResolveurSalleParConcert {
   private final ClientNominatim clientNominatim;
   private final RaccrocheurSallesParNomNorm raccrocheur;
   private final ResolveurSalleParProximiteGps resolveurGps;
+  private final CreateurSalle createur;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
    * package). */
@@ -56,6 +57,7 @@ class ResolveurSalleParConcert {
     this.clientNominatim = clientNominatim;
     this.raccrocheur = new RaccrocheurSallesParNomNorm(jdbc);
     this.resolveurGps = new ResolveurSalleParProximiteGps(jdbc);
+    this.createur = new CreateurSalle(jdbc, this::deptsConnus);
   }
 
   /**
@@ -130,18 +132,12 @@ class ResolveurSalleParConcert {
       }
     }
 
-    return salleId != null ? salleId : creerNouvelleSalle(concert, coordsGeocodees);
+    return salleId != null ? salleId : createur.creer(concert, coordsGeocodees);
   }
 
-  /**
-   * Salle portant exactement ce nom, dans le département du concert — des
-   * dizaines de salles distinctes partagent un nom générique ("Palais des
-   * Congrès", "L'Embarcadère") : sans ce filtre, la première trouvée dans un
-   * autre département était retenue.
-   * @param nom nom brut de la salle
-   * @param dept département du concert (nullable — désactive le filtre)
-   * @return UUID de la salle, ou {@code null} si aucune
-   */
+  // Salle portant exactement ce nom, dans le département du concert : des
+  // dizaines de salles distinctes partagent un nom générique ("Palais des
+  // Congrès") ; sans ce filtre, la première trouvée ailleurs était retenue.
   private UUID chercherSalleParNomExact(final String nom, final String dept) {
     final List<UUID> existants =
         jdbc.query(
@@ -159,75 +155,6 @@ class ResolveurSalleParConcert {
                 .addValue(CLE_DEPT, dept, Types.VARCHAR),
             (rs, _) -> rs.getObject("id", UUID.class));
     return existants.isEmpty() ? null : existants.get(0);
-  }
-
-  /**
-   * Réassigne un mapping {@code salle_sources} rejeté pour incohérence
-   * géographique vers la salle cohérente résolue à sa place — sans quoi il
-   * reste rejeté et recontourné à chaque cycle, et l'événement déjà rattaché
-   * à la bonne salle n'est plus jamais mis à jour.
-   * @param salleSourceId identifiant préfixé {@code source:identifiant}
-   * @param ancienneSalle salle du mapping rejeté
-   * @param nouvelleSalle salle cohérente résolue
-   * @return {@code true} si le mapping a été réassigné
-   */
-  /* package-private : appelé par ReconciliateurSalles (même package). */
-  boolean reassignerMappingSalle(
-      final String salleSourceId, final UUID ancienneSalle, final UUID nouvelleSalle) {
-    final int sep = salleSourceId.indexOf(':');
-    if (sep <= 0 || nouvelleSalle.equals(ancienneSalle)) {
-      return false;
-    }
-    return jdbc.update(
-            "UPDATE salle_sources SET salle_id = CAST(:nouvelle AS uuid)"
-                + " WHERE source = :source AND identifiant_externe = :identifiant"
-                + " AND salle_id = CAST(:ancienne AS uuid)",
-            Map.of(
-                "nouvelle", nouvelleSalle.toString(),
-                "ancienne", ancienneSalle.toString(),
-                "source", salleSourceId.substring(0, sep),
-                "identifiant", salleSourceId.substring(sep + 1)))
-        > 0;
-  }
-
-  private UUID creerNouvelleSalle(
-      final ValeurConcert concert, final Optional<ClientNominatim.Coordonnees> coordsGeocodees) {
-    final String nomNorm = Normalisation.normaliserTexte(concert.salle());
-    final UUID salleId = insererSalle(nomNorm, nomNorm, concert, coordsGeocodees);
-    // salle_cle est unique : un homonyme déjà établi dans un autre département
-    // (nom générique) serait sinon renvoyé à la place de la salle à créer.
-    final String deptExistant = deptsConnus(Set.of(salleId)).get(salleId);
-    if (concert.dept() == null || deptExistant == null || deptExistant.equals(concert.dept())) {
-      return salleId;
-    }
-    return insererSalle(nomNorm + " " + concert.dept(), nomNorm, concert, coordsGeocodees);
-  }
-
-  private UUID insererSalle(
-      final String salleCle,
-      final String nomNorm,
-      final ValeurConcert concert,
-      final Optional<ClientNominatim.Coordonnees> coordsGeocodees) {
-    final MapSqlParameterSource params =
-        new MapSqlParameterSource()
-            .addValue(CLE_SALLE_CLE, salleCle)
-            .addValue(CLE_NOM, concert.salle())
-            .addValue("nomNorm", nomNorm)
-            .addValue(CLE_DEPT, concert.dept())
-            .addValue(
-                "latitude", coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
-            .addValue(
-                "longitude",
-                coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
-    jdbc.update(
-        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude)"
-            + " VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude, :longitude)"
-            + " ON CONFLICT (salle_cle) DO NOTHING",
-        params);
-    return jdbc.queryForObject(
-        "SELECT id FROM salles WHERE salle_cle = :salleCle",
-        Map.of(CLE_SALLE_CLE, salleCle),
-        UUID.class);
   }
 
   /**

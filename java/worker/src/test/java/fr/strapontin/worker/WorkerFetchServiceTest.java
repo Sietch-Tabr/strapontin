@@ -97,10 +97,13 @@ class WorkerFetchServiceTest {
             new DeriveVolumeFetchService(jdbc, logsAdminWorker));
     final WorkerFetchCommun commun =
         new WorkerFetchCommun(
-            jdbc, resolveur, logsAdminWorker, retryLotsService, tm, gestionQuotaTM, eventim);
+            jdbc, resolveur, logsAdminWorker, retryLotsService, tm, gestionQuotaTM);
     final FetchRapportage rapportage =
         new FetchRapportage(
-            notificationDigestService, workerStatsService, suiviSanteSourcesService);
+            notificationDigestService,
+            workerStatsService,
+            suiviSanteSourcesService,
+            new EnregistreurLieuxEventim(jdbc, eventim));
     fetchService =
         new WorkerFetchService(
             sources, persisterConcerts, recalculerMatchesService, rapportage, commun);

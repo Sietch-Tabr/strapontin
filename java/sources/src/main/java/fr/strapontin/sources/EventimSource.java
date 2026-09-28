@@ -12,11 +12,9 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.ResourceAccessException;
@@ -68,11 +66,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   // le worker, via un composant partagé).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final EventimAttractionResolver attractionResolver;
-  private final EventimLieuxFetcher lieuxFetcher;
-  // Lieux vus depuis le dernier prélèvement (clé : identifiant interne), relevés
-  // par le worker pour renseigner salle_sources.
-  private final Map<String, LieuEventim> lieuxObserves = new ConcurrentHashMap<>();
-  private volatile FournisseurVillesEventim fournisseurVilles = depts -> List.of();
+  private final LieuxEventim lieux;
 
   /**
    * Crée une instance avec un RestClient par défaut (headers Eventim,
@@ -113,12 +107,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
     this.attractionResolver =
         new EventimAttractionResolver(this.restClient, compteurBilan, BASE_URL, WEB_ID);
-    this.lieuxFetcher =
-        new EventimLieuxFetcher(
-            BASE_URL + "/v1/products",
-            WEB_ID,
-            uri -> chargerPageProduits(uri, null, null, null),
-            this::attendreEntrePagesEventim);
+    this.lieux =
+        new LieuxEventim(
+            new EventimLieuxFetcher(
+                BASE_URL + "/v1/products",
+                WEB_ID,
+                uri -> chargerPageProduits(uri, null, null, null),
+                this::attendreEntrePagesEventim));
   }
 
   /**
@@ -127,7 +122,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param fournisseur villes connues par département
    */
   public void definirFournisseurVilles(final FournisseurVillesEventim fournisseur) {
-    this.fournisseurVilles = Objects.requireNonNull(fournisseur, "fournisseur");
+    lieux.definirFournisseurVilles(fournisseur);
   }
 
   /**
@@ -135,14 +130,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @return lieux observés (libellé, ville, coordonnées)
    */
   public List<LieuEventim> preleverLieuxObserves() {
-    final List<LieuEventim> lieux = new ArrayList<>();
-    for (final String identifiant : List.copyOf(lieuxObserves.keySet())) {
-      final LieuEventim lieu = lieuxObserves.remove(identifiant);
-      if (lieu != null) {
-        lieux.add(lieu);
-      }
-    }
-    return lieux;
+    return lieux.preleverLieuxObserves();
   }
 
   @Override
@@ -283,10 +271,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : produits) {
-      final LieuEventim lieu = MapeurProduitEventim.extraireLieu(p);
-      if (lieu != null) {
-        lieuxObserves.put(lieu.identifiant(), lieu);
-      }
+      lieux.relever(p);
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
       if (concert != null && (deptFiltre == null || deptFiltre.equals(concert.dept()))) {
         concerts.add(concert);
@@ -403,20 +388,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   @Override
   public ResultatRegion fetchRegionCouverte(final List<String> depts, final List<String> classifs) {
-    final List<String> villes = fournisseurVilles.villes(depts);
-    if (villes.isEmpty()) {
-      LOG.info("Eventim fetchRegion depts={} : aucune ville connue", depts);
-      return new ResultatRegion(List.of(), null);
-    }
-    final ResultatRegion resultat =
-        lieuxFetcher.fetchVilles(villes, new HashSet<>(depts), CATEGORIES_REGION);
-    LOG.info(
-        "Eventim fetchRegion depts={} villes={} total={} horizon={}",
-        depts,
-        villes.size(),
-        resultat.concerts().size(),
-        resultat.horizon());
-    return resultat;
+    return lieux.fetchRegion(depts, CATEGORIES_REGION);
   }
 
   @Override
@@ -433,45 +405,21 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   @Override
   public List<ConcertBrut> fetchSalle(final String identifiant, final String libelle) {
-    if (libelle == null || libelle.isBlank()) {
-      return List.of();
-    }
-    final List<ConcertBrut> concerts = lieuxFetcher.fetchLieu(libelle);
-    LOG.info("Eventim fetchSalle lieu={} total={}", libelle, concerts.size());
-    return concerts;
+    return lieux.fetchLieu(libelle);
   }
 
   @Override
-  public LocalDate horizonSalle() {
-    return EventimLieuxFetcher.horizonSalle();
+  public int joursCouvertsParSalle() {
+    return EventimLieuxFetcher.JOURS_COUVERTS_SALLE;
   }
 
   /**
-   * Compte les concerts à venir d'un lieu Eventim — vérifie un libellé saisi
-   * à la main avant de l'enregistrer (le filtre {@code venue_names} exige le
-   * nom exact).
+   * Compte les concerts à venir d'un lieu (vérification d'un libellé saisi à
+   * la main, le filtre {@code venue_names} exigeant le nom exact).
    * @param libelle nom exact du lieu chez Eventim
    * @return nombre de concerts (≥ 0), ou -1 si Eventim n'a pas répondu
    */
   public int compterConcertsLieu(final String libelle) {
-    if (libelle == null || libelle.isBlank()) {
-      return -1;
-    }
-    final URI uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-            .queryParam(PARAM_WEB_ID, WEB_ID)
-            .queryParam(PARAM_LANGUE, "fr")
-            .queryParam("venue_names", libelle.strip())
-            .queryParam("date_from", LocalDate.now().toString())
-            .queryParam("top", 1)
-            .build()
-            .encode()
-            .toUri();
-    try {
-      final PageProduitsEventim page = chargerPageProduits(uri, null, null, null);
-      return page.succes() ? page.total() : -1;
-    } catch (ResourceAccessException e) {
-      return -1;
-    }
+    return lieux.compterConcerts(libelle);
   }
 }

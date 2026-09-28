@@ -5,15 +5,8 @@
 package fr.strapontin.sources;
 
 /**
- * Lieu tel qu'Eventim le décrit sur un produit — libellé et ville exacts requis
- * par ses filtres {@code venue_names}/{@code city_names}.
- *
- * @param identifiant identifiant interne ({@code internal:<nom normalisé>}),
- *     tel qu'enregistré dans {@code salle_sources}
- * @param libelle nom exact du lieu chez Eventim
- * @param ville ville exacte chez Eventim, ou null
- * @param latitude latitude du lieu, ou null
- * @param longitude longitude du lieu, ou null
+ * Lieu tel qu'Eventim le décrit sur un produit (libellé et ville exacts de
+ * ses filtres venue_names/city_names), champs auto-descriptifs.
  * @since 3.0.1
  * @author Kwaite
  */

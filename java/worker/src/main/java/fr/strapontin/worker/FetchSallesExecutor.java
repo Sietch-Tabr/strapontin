@@ -54,15 +54,9 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch une salle auprès de la source qui accepte son identifiant et
-   * enregistre le résultat auprès de {@link SuiviSanteSourcesService} (phase
-   * 1).
-   *
-   * @param identifiantSalle identifiant préfixé {@code source:identifiant_externe}
-   *     et libellé du lieu chez la source
-   * @param destination liste dans laquelle ajouter les concerts trouvés
-   * @param horizons reçoit, par source interrogée avec succès, la dernière
-   *     date qu'elle couvre
+   * Fetch une salle auprès de chaque source qui accepte son identifiant, suivi
+   * de santé compris ; {@code horizons} reçoit la dernière date couverte par
+   * chaque source ayant répondu, {@code destination} les concerts trouvés.
    * @return {@code false} si une source n'a pas répondu (panne réseau)
    */
   private boolean fetchEtSuivreSalle(
@@ -80,9 +74,9 @@ class FetchSallesExecutor {
           rapportage
               .suiviSanteSourcesService()
               .enregistrerResultatSalle(identifiant, resultat.size());
-          final LocalDate horizon = source.horizonSalle();
-          if (horizon != null) {
-            horizons.put(source.nom(), horizon);
+          final int joursCouverts = source.joursCouvertsParSalle();
+          if (joursCouverts > 0) {
+            horizons.put(source.nom(), LocalDate.now().plusDays(joursCouverts));
           }
         } catch (Exception e) {
           LOG.error(
@@ -126,7 +120,7 @@ class FetchSallesExecutor {
         concerts.size(),
         dedoublonnes.size());
     persisterConcerts.persisterConcerts(dedoublonnes);
-    commun.enregistrerLieuxEventim();
+    rapportage.enregistreurLieuxEventim().enregistrer();
     recalculerMatchesService.recalculerMatches(null);
     LOG.info("fetch:salle terminé identifiants={}", identifiantsStr);
   }
@@ -283,12 +277,9 @@ class FetchSallesExecutor {
 
   /**
    * Fetch + dédoublonnage + persistance d'un lot de salles ({@value
-   * TAILLE_LOT_SALLES}) — persistance par lot plutôt qu'en bloc final,
-   * chaque chaîne d'identifiants regroupe déjà toutes les sources d'une
-   * même salle ({@code GROUP BY ss.salle_id}). Les absences ne sont comptées
-   * que pour les salles dont toutes les sources ont répondu.
-   * @param lotSalles sous-ensemble de salles suivies
-   * @return bilan du lot
+   * TAILLE_LOT_SALLES}), persistance par lot plutôt qu'en bloc final ; les
+   * absences ne sont comptées que pour les salles dont toutes les sources
+   * ont répondu.
    */
   private ResultatLotSalles traiterLotSalles(final List<SalleAFetcher> lotSalles) {
     final List<ConcertBrut> tous = new ArrayList<>();
@@ -316,7 +307,7 @@ class FetchSallesExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    commun.enregistrerLieuxEventim();
+    rapportage.enregistreurLieuxEventim().enregistrer();
     // Une requête par salle : les sources interrogées (donc les horizons) varient.
     horizonsParSalle.forEach(
         (salleId, horizons) ->

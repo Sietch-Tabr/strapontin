@@ -9,8 +9,6 @@ import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Dedoublonner;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.LieuEventim;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
@@ -84,7 +82,6 @@ public class WorkerFetchCommun {
   private final RetryLotsService retryLotsService;
   private final TicketmasterSource tm;
   private final GestionQuotaTM gestionQuotaTM;
-  private final EventimSource eventim;
 
   /**
    * @param jdbc accès JDBC
@@ -93,7 +90,6 @@ public class WorkerFetchCommun {
    * @param retryLotsService retry ciblé des lots en échec
    * @param tm fetch par lot d'attractionIds Ticketmaster
    * @param gestionQuotaTM lecture du quota Ticketmaster restant
-   * @param eventim lieux Eventim observés, relevés après persistance
    */
   public WorkerFetchCommun(
       final NamedParameterJdbcTemplate jdbc,
@@ -101,47 +97,13 @@ public class WorkerFetchCommun {
       final LogsAdminWorker logsAdminWorker,
       final RetryLotsService retryLotsService,
       final TicketmasterSource tm,
-      final GestionQuotaTM gestionQuotaTM,
-      final EventimSource eventim) {
+      final GestionQuotaTM gestionQuotaTM) {
     this.jdbc = jdbc;
     this.resolveur = resolveur;
     this.logsAdminWorker = logsAdminWorker;
     this.retryLotsService = retryLotsService;
     this.tm = tm;
     this.gestionQuotaTM = gestionQuotaTM;
-    this.eventim = eventim;
-  }
-
-  /**
-   * Renseigne dans {@code salle_sources} le libellé, la ville et les
-   * coordonnées des lieux Eventim observés depuis le dernier relevé — requis
-   * pour interroger Eventim par lieu ou par ville. À appeler après
-   * persistance : un mapping créé par ce même cycle existe alors déjà.
-   */
-  /* package-private : appelé par les exécuteurs de fetch (même package). */
-  void enregistrerLieuxEventim() {
-    final List<LieuEventim> lieux = eventim.preleverLieuxObserves();
-    if (lieux.isEmpty()) {
-      return;
-    }
-    final MapSqlParameterSource[] params =
-        lieux.stream()
-            .map(
-                lieu ->
-                    new MapSqlParameterSource()
-                        .addValue("identifiant", lieu.identifiant())
-                        .addValue("libelle", lieu.libelle())
-                        .addValue("ville", lieu.ville(), Types.VARCHAR)
-                        .addValue("latitude", lieu.latitude(), Types.DOUBLE)
-                        .addValue("longitude", lieu.longitude(), Types.DOUBLE))
-            .toArray(MapSqlParameterSource[]::new);
-    jdbc.batchUpdate(
-        "UPDATE salle_sources SET libelle_source = :libelle,"
-            + " ville_source = COALESCE(:ville, ville_source),"
-            + " latitude = COALESCE(:latitude, latitude),"
-            + " longitude = COALESCE(:longitude, longitude)"
-            + " WHERE source = 'eventim' AND identifiant_externe = :identifiant",
-        params);
   }
 
   /**

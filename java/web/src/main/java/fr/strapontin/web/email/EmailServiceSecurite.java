@@ -153,9 +153,7 @@ public class EmailServiceSecurite {
   }
 
   /**
-   * Communique un incident de sécurité à chaque destinataire, un email par
-   * compte (jamais un envoi groupé exposant les adresses des autres).
-   *
+   * Communique un incident, un email par compte (adresses jamais exposées).
    * @param destinataires adresses des comptes à prévenir
    * @param titre titre de la communication
    * @param message message rédigé par l'administrateur
