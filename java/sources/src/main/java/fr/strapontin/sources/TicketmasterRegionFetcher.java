@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -24,52 +25,112 @@ final class TicketmasterRegionFetcher {
 
   private TicketmasterRegionFetcher() {}
 
+  // Garde-fou contre une boucle sans fin (plus de 1000 concerts sur une seule
+  // journée) : au-delà, l'horizon s'arrête à la dernière fenêtre complète.
+  private static final int NB_FENETRES_MAX = 15;
+
   /**
-   * Récupère les concerts par région (géolocalisation centre de département).
+   * Récupère les concerts par région (géolocalisation centre de département),
+   * par fenêtres de dates successives : TM refuse toute page au-delà du
+   * 1000e résultat, une seule requête ne couvre donc que les premières
+   * semaines d'un département dense.
    * @param pageFetcher pagination bas niveau partagée avec TicketmasterSource
    * @param depts liste de codes département (ex: ["75", "92"])
    * @param classifs classifications TM à inclure ; défaut music/opera/musical
-   * @return liste des concerts trouvés pour tous les départements
+   * @return concerts trouvés pour tous les départements, et dernière date
+   *     entièrement couverte pour tous (null si un département est ignoré)
    */
   /* package-private : appelé par TicketmasterSource (même package). */
-  static List<ConcertBrut> fetchRegion(
+  static ResultatRegion fetchRegion(
       final TicketmasterPageFetcher pageFetcher,
       final List<String> depts,
       final List<String> classifs) {
     final List<String> classifsEffectives =
         classifs == null ? TicketmasterSource.CLASSIFICATIONS : classifs;
     final List<ConcertBrut> tous = new ArrayList<>();
+    LocalDate horizon = FenetreTempsTM.derniereDateCouverte();
 
     for (final String dept : depts) {
       final CentreDept centre = CentresDepartement.PAR_DEPT.get(dept);
       if (centre == null) {
         LOG.warn("département sans coordonnées connues, ignoré dept={}", dept);
+        horizon = null;
       } else {
-        tous.addAll(fetchDept(pageFetcher, dept, centre, classifsEffectives));
+        final ResultatRegion resultatDept =
+            fetchDept(pageFetcher, dept, centre, classifsEffectives);
+        tous.addAll(resultatDept.concerts());
+        horizon = plusProche(horizon, resultatDept.horizon());
       }
     }
 
-    return tous;
+    return new ResultatRegion(tous, horizon);
   }
 
-  private static List<ConcertBrut> fetchDept(
+  private static LocalDate plusProche(final LocalDate a, final LocalDate b) {
+    if (a == null || b == null) {
+      return null;
+    }
+    return a.isBefore(b) ? a : b;
+  }
+
+  private static ResultatRegion fetchDept(
       final TicketmasterPageFetcher pageFetcher,
       final String dept,
       final CentreDept centre,
       final List<String> classifs) {
     final FenetreTempsTM fenetre = FenetreTempsTM.obtenirFenetreTemps();
-    final UriComponentsBuilder uriBase =
-        UriComponentsBuilder.fromUriString(
-                TicketmasterSource.BASE_URL + TicketmasterSource.CHEMIN_EVENTS)
-            .queryParam("latlong", centre.lat() + "," + centre.lng())
-            .queryParam("radius", centre.rayon())
-            .queryParam("unit", "km")
-            .queryParam("classificationName", classifs.toArray())
-            .queryParam(TicketmasterSource.PARAM_SIZE, TicketmasterSource.TAILLE_PAGE_REGION)
-            .queryParam(TicketmasterSource.PARAM_SORT, TicketmasterSource.TRI_DATE_ASC)
-            .queryParam(TicketmasterSource.PARAM_START_DATE_TIME, fenetre.debut())
-            .queryParam("endDateTime", fenetre.fin());
+    final LocalDate finCouverte = FenetreTempsTM.derniereDateCouverte();
+    final List<ConcertBrut> concerts = new ArrayList<>();
+    String debut = fenetre.debut();
+    LocalDate debutFenetre = null;
 
-    return pageFetcher.fetchToutesPages(uriBase, null, "dept=" + dept).concerts();
+    for (int fenetreNum = 0; fenetreNum < NB_FENETRES_MAX; fenetreNum++) {
+      final UriComponentsBuilder uriBase =
+          UriComponentsBuilder.fromUriString(
+                  TicketmasterSource.BASE_URL + TicketmasterSource.CHEMIN_EVENTS)
+              .queryParam("latlong", centre.lat() + "," + centre.lng())
+              .queryParam("radius", centre.rayon())
+              .queryParam("unit", "km")
+              .queryParam("classificationName", classifs.toArray())
+              .queryParam(TicketmasterSource.PARAM_SIZE, TicketmasterSource.TAILLE_PAGE_REGION)
+              .queryParam(TicketmasterSource.PARAM_SORT, TicketmasterSource.TRI_DATE_ASC)
+              .queryParam(TicketmasterSource.PARAM_START_DATE_TIME, debut)
+              .queryParam("endDateTime", fenetre.fin());
+      final TicketmasterPageFetcher.ResultatParcours parcours =
+          pageFetcher.parcourirPages(uriBase, null);
+      concerts.addAll(parcours.concerts());
+      if (!parcours.plafonne()) {
+        return new ResultatRegion(concerts, finCouverte);
+      }
+
+      // Reprise la veille de la dernière date reçue : ConcertBrut porte une date
+      // locale, la borne TM est en UTC ; les doublons sont dédoublonnés en aval.
+      final LocalDate derniere = derniereDate(parcours.concerts());
+      final LocalDate reprise = derniere != null ? derniere.minusDays(1) : null;
+      if (reprise == null || (debutFenetre != null && !reprise.isAfter(debutFenetre))) {
+        pageFetcher.signalerPlafond(
+            "dept=" + dept, parcours.totalElements(), parcours.concerts().size());
+        return new ResultatRegion(concerts, derniere != null ? derniere.minusDays(2) : null);
+      }
+      debutFenetre = reprise;
+      debut = FenetreTempsTM.debutDeJournee(reprise);
+    }
+
+    LOG.warn("fetch région TM dept={} : {} fenêtres atteintes", dept, NB_FENETRES_MAX);
+    final LocalDate derniere = derniereDate(concerts);
+    return new ResultatRegion(concerts, derniere != null ? derniere.minusDays(2) : null);
+  }
+
+  private static LocalDate derniereDate(final List<ConcertBrut> concerts) {
+    LocalDate max = null;
+    for (final ConcertBrut concert : concerts) {
+      if (concert.date() != null) {
+        final LocalDate date = LocalDate.parse(concert.date());
+        if (max == null || date.isAfter(max)) {
+          max = date;
+        }
+      }
+    }
+    return max;
   }
 }

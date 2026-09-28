@@ -5,12 +5,15 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -146,10 +149,15 @@ class FetchRegionExecutor {
    */
   private ResultatLotDepartements traiterLotDepartements(final List<String> lotDepts) {
     final List<ConcertBrut> tous = new ArrayList<>();
+    final Map<String, LocalDate> horizons = new HashMap<>();
     boolean sourceInjoignable = false;
     for (final SourceConcerts source : sources) {
       try {
-        tous.addAll(source.fetchRegion(lotDepts, null));
+        final ResultatRegion resultatSource = source.fetchRegionCouverte(lotDepts, null);
+        tous.addAll(resultatSource.concerts());
+        if (resultatSource.horizon() != null) {
+          horizons.put(source.nom(), resultatSource.horizon());
+        }
       } catch (Exception e) {
         LOG.warn("{} fetchRegion échoué depts={} : {}", source.nom(), lotDepts, e.getMessage());
         sourceInjoignable |= WorkerFetchCommun.estEchecReseauTransitoire(e);
@@ -167,7 +175,8 @@ class FetchRegionExecutor {
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     // Un concert non revu faute de réponse d'une source n'est pas absent.
     if (!sourceInjoignable) {
-      commun.mettreAJourAbsences("salle_id", sallesConnuesDesDepartements(lotDepts), debutLot);
+      commun.mettreAJourAbsencesSalles(
+          sallesConnuesDesDepartements(lotDepts), debutLot, horizons);
     }
     return new ResultatLotDepartements(resultat, sourceInjoignable);
   }

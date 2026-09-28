@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.web.client.ResourceAccessException;
 
 /**
@@ -591,8 +593,8 @@ class WorkerFetchServiceTest {
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
     when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
 
@@ -608,8 +610,8 @@ class WorkerFetchServiceTest {
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any()))
         .thenReturn(new ResultatPersistance(1, 0))
         .thenThrow(new RuntimeException("panne réseau"))
@@ -633,8 +635,8 @@ class WorkerFetchServiceTest {
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any()))
         .thenReturn(new ResultatPersistance(1, 0))
         .thenThrow(new RuntimeException("panne réseau"))
@@ -651,13 +653,13 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchRegion_avecDeptsCibles_neFetchQueCesDepts() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchRegion(List.of("75", "92"));
 
-    verify(tm).fetchRegion(eq(List.of("75", "92")), any());
+    verify(tm).fetchRegionCouverte(eq(List.of("75", "92")), any());
     verify(jdbc, never())
         .query(
             contains("user_config"),
@@ -859,21 +861,22 @@ class WorkerFetchServiceTest {
     verify(jdbc)
         .update(
             contains("absences_consecutives"),
-            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
-                params -> List.of("s2").equals(params.get("ids"))));
+            org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
+                params -> List.of("s2").equals(params.getValue("ids"))));
   }
 
   @Test
   void executerFetchRegion_panneReseauSurUneSource_retenteLeLotSansCompterDAbsence() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    when(tm.fetchRegion(any(), any())).thenThrow(panneReseau());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenThrow(panneReseau());
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchRegion(List.of("75", "92"));
 
     verify(retryLotsService).gererResultat("fetch:region", List.of("75", "92"));
-    verify(jdbc, never()).update(contains("absences_consecutives"), anyMap());
+    verify(jdbc, never())
+        .update(contains("absences_consecutives"), any(SqlParameterSource.class));
   }
 
   @Test

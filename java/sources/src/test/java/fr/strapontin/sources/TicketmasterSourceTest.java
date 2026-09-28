@@ -1148,4 +1148,39 @@ class TicketmasterSourceTest {
         org.springframework.web.client.ResourceAccessException.class,
         () -> source.fetchSalle("tm:venue-1"));
   }
+
+  // Un département dense dépasse le plafond de 1000 résultats : la requête reprend par
+  // fenêtre de dates plutôt que d'abandonner la suite, et l'horizon couvre toute la fenêtre.
+  @Test
+  void fetchRegionCouverte_plafondAtteint_reprendParFenetreDeDatesJusquALaFin() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.times(6),
+            requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withSuccess(reponsePageTMJson(1400, true), MediaType.APPLICATION_JSON));
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.containsString("startDateTime=2025-09-14T00:00:00Z")))
+        .andRespond(withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), null);
+
+    serveur.verify();
+    assertEquals(7, resultat.concerts().size());
+    assertEquals(
+        java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(179), resultat.horizon());
+  }
+
+  @Test
+  void fetchRegionCouverte_departementInconnu_neGarantitAucunHorizon() {
+    final TicketmasterSource source =
+        new TicketmasterSource("fake-key", RestClient.builder().build());
+
+    assertNull(source.fetchRegionCouverte(List.of("zz"), null).horizon());
+  }
 }

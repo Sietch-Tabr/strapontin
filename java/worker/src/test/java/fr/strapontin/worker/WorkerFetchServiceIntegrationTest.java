@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.TicketmasterSource;
 import java.time.LocalDate;
 import java.util.List;
@@ -47,6 +48,9 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @BeforeEach
   void nettoyerBase() {
+    // Le nom de la source indexe son horizon de couverture (absences par salle).
+    when(ticketmasterSource.nom()).thenReturn("ticketmaster");
+    when(eventimSource.nom()).thenReturn("eventim");
     jdbc.update("DELETE FROM user_matches", Map.of());
     jdbc.update("DELETE FROM user_salles", Map.of());
     jdbc.update("DELETE FROM user_artistes", Map.of());
@@ -188,6 +192,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     insererConcertAncienSurSalle(salleSuivie);
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
     when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.horizonSalle()).thenReturn(LocalDate.now().plusMonths(6));
 
     fetchService.executerFetchSallesAll();
 
@@ -220,8 +225,10 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     jdbc.update(
         "UPDATE evenements SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
         Map.of("id", salleNonSuivie.toString()));
-    when(ticketmasterSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
-    when(eventimSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusMonths(6)));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
 
     fetchService.executerFetchRegion();
 
@@ -231,5 +238,60 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of("id", salleNonSuivie.toString()),
             Integer.class);
     assertEquals(1, absences);
+  }
+
+  // Un concert au-delà de la dernière date couverte par la requête (plafond de pagination,
+  // fenêtre) n'a pas été cherché : il ne doit pas compter d'absence.
+  @Test
+  void executerFetchRegion_concertAuDelaDeLHorizonCouvert_neCompteAucuneAbsence() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salleNonSuivie = insererSalleAvecSourceTm("salle-horizon", "venue-horizon");
+    jdbc.update(
+        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    insererConcertAncienSurSalle(salleNonSuivie);
+    jdbc.update(
+        "UPDATE evenements SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    when(ticketmasterSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusDays(7)));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
+
+    fetchService.executerFetchRegion();
+
+    final Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleNonSuivie.toString()),
+            Integer.class);
+    assertEquals(0, absences);
+  }
+
+  // Une source qui n'a pas été interrogée pour la salle (aucun identifiant chez elle) ne
+  // garantit rien : un concert qu'elle seule observe ne compte pas d'absence.
+  @Test
+  void executerFetchSallesAll_concertObserveParUneSourceNonInterrogee_neCompteAucuneAbsence() {
+    insererUser("u1");
+    final UUID salleSuivie = insererSalleAvecSourceTm("salle-eventim", "venue-eventim");
+    insererUserSalle("u1", salleSuivie);
+    insererConcertAncienSurSalle(salleSuivie);
+    jdbc.update(
+        "UPDATE observations SET source = 'eventim' WHERE evenement_id IN"
+            + " (SELECT id FROM evenements WHERE salle_id = CAST(:id AS uuid))",
+        Map.of("id", salleSuivie.toString()));
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.horizonSalle()).thenReturn(LocalDate.now().plusMonths(6));
+
+    fetchService.executerFetchSallesAll();
+
+    final Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleSuivie.toString()),
+            Integer.class);
+    assertEquals(0, absences);
   }
 }

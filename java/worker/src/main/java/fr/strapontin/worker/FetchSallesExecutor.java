@@ -10,8 +10,11 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -57,10 +60,14 @@ class FetchSallesExecutor {
    *
    * @param identifiant identifiant préfixé {@code source:identifiant_externe}
    * @param destination liste dans laquelle ajouter les concerts trouvés
+   * @param horizons reçoit, par source interrogée avec succès, la dernière
+   *     date qu'elle couvre
    * @return {@code false} si une source n'a pas répondu (panne réseau)
    */
   private boolean fetchEtSuivreSalle(
-      final String identifiant, final List<ConcertBrut> destination) {
+      final String identifiant,
+      final List<ConcertBrut> destination,
+      final Map<String, LocalDate> horizons) {
     boolean joignable = true;
     for (final SourceConcerts source : sources) {
       if (source.accepteIdentifiantSalle(identifiant)) {
@@ -70,6 +77,10 @@ class FetchSallesExecutor {
           rapportage
               .suiviSanteSourcesService()
               .enregistrerResultatSalle(identifiant, resultat.size());
+          final LocalDate horizon = source.horizonSalle();
+          if (horizon != null) {
+            horizons.put(source.nom(), horizon);
+          }
         } catch (Exception e) {
           LOG.error(
               "{} fetchSalle échoué identifiant={} : {}",
@@ -100,7 +111,7 @@ class FetchSallesExecutor {
     final String[] identifiants = identifiantsStr.split(",");
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final String identifiant : identifiants) {
-      fetchEtSuivreSalle(identifiant.trim(), concerts);
+      fetchEtSuivreSalle(identifiant.trim(), concerts, new HashMap<>());
     }
     commun.sauvegarderQuota();
 
@@ -240,14 +251,19 @@ class FetchSallesExecutor {
    */
   private ResultatLotSalles traiterLotSalles(final List<SalleAFetcher> lotSalles) {
     final List<ConcertBrut> tous = new ArrayList<>();
-    final List<String> sallesJoignables = new ArrayList<>();
+    final Map<String, Map<String, LocalDate>> horizonsParSalle = new LinkedHashMap<>();
     final List<String> sallesInjoignables = new ArrayList<>();
     for (final SalleAFetcher salle : lotSalles) {
       boolean joignable = true;
+      final Map<String, LocalDate> horizons = new HashMap<>();
       for (final String id : salle.identifiants().split(",")) {
-        joignable &= fetchEtSuivreSalle(id.trim(), tous);
+        joignable &= fetchEtSuivreSalle(id.trim(), tous, horizons);
       }
-      (joignable ? sallesJoignables : sallesInjoignables).add(salle.salleId());
+      if (joignable) {
+        horizonsParSalle.put(salle.salleId(), horizons);
+      } else {
+        sallesInjoignables.add(salle.salleId());
+      }
     }
 
     final List<ConcertBrut> dedoublonnes = commun.resoudreEtDeduplicer(tous, LOG);
@@ -259,7 +275,10 @@ class FetchSallesExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    commun.mettreAJourAbsences("salle_id", sallesJoignables, debutLot);
+    // Une requête par salle : les sources interrogées (donc les horizons) varient.
+    horizonsParSalle.forEach(
+        (salleId, horizons) ->
+            commun.mettreAJourAbsencesSalles(List.of(salleId), debutLot, horizons));
     return new ResultatLotSalles(resultat, sallesInjoignables);
   }
 }

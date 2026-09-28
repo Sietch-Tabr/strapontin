@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -79,5 +80,25 @@ public interface SourceConcerts {
    */
   default List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
     return List.of();
+  }
+
+  /**
+   * Comme {@link #fetchRegion}, avec l'horizon de couverture garanti — par
+   * défaut aucun, ce qui interdit de compter des absences sur cette source.
+   * @param depts codes département (ex. {@code ["75", "92"]})
+   * @param classifs classifications à inclure
+   * @return concerts trouvés et horizon de couverture
+   */
+  default ResultatRegion fetchRegionCouverte(List<String> depts, List<String> classifs) {
+    return new ResultatRegion(fetchRegion(depts, classifs), null);
+  }
+
+  /**
+   * Dernière date couverte par {@link #fetchSalle} (fenêtre de la requête) —
+   * au-delà, un concert non revu n'est pas absent.
+   * @return horizon de couverture, ou {@code null} si aucun fetch par salle
+   */
+  default LocalDate horizonSalle() {
+    return null;
   }
 }

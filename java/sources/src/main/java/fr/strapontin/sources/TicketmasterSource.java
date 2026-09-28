@@ -9,6 +9,7 @@ import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -463,6 +464,17 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   @Override
   public List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
+    return fetchRegionCouverte(depts, classifs).concerts();
+  }
+
+  @Override
+  public ResultatRegion fetchRegionCouverte(
+      final List<String> depts, final List<String> classifs) {
     return TicketmasterRegionFetcher.fetchRegion(pageFetcher, depts, classifs);
+  }
+
+  @Override
+  public LocalDate horizonSalle() {
+    return FenetreTempsTM.derniereDateCouverte();
   }
 }

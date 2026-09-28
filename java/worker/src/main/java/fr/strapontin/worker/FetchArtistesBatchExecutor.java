@@ -196,7 +196,7 @@ class FetchArtistesBatchExecutor {
     if (!echecReseau.get()) {
       final List<String> artisteIds =
           lot.stream().map(row -> (String) row.get(CLE_ARTISTE_ID_STR)).toList();
-      commun.mettreAJourAbsences("artiste_id", artisteIds, debutLot);
+      commun.mettreAJourAbsencesArtistes(artisteIds, debutLot);
     }
     return new ResultatLot(resultat, echecReseau.get());
   }

@@ -189,6 +189,18 @@ final class TicketmasterPageFetcher {
   }
 
   /**
+   * Résultat brut d'un parcours paginé, sans journalisation du plafond.
+   *
+   * @param concerts concerts récupérés
+   * @param succes {@code false} si au moins une page a échoué
+   * @param totalElements total annoncé par TM pour la requête
+   * @param plafonne {@code true} si NB_PAGES_MAX a empêché de tout récupérer
+   */
+  /* package-private : type de retour interne (même package). */
+  record ResultatParcours(
+      List<ConcertBrut> concerts, boolean succes, int totalElements, boolean plafonne) {}
+
+  /**
    * Récupère toutes les pages disponibles (bornées à NB_PAGES_MAX).
    * @param uriBase URI de base de la requête, sans pagination
    * @param artisteFallback nom recherché (fetch:artiste), null sinon
@@ -199,6 +211,43 @@ final class TicketmasterPageFetcher {
   /* package-private : appelé par TicketmasterSource (même package). */
   ResultatMultiPage fetchToutesPages(
       final UriComponentsBuilder uriBase, final String artisteFallback, final String contexte) {
+    final ResultatParcours parcours = parcourirPages(uriBase, artisteFallback);
+    if (parcours.plafonne()) {
+      signalerPlafond(contexte, parcours.totalElements(), parcours.concerts().size());
+    }
+    return new ResultatMultiPage(parcours.concerts(), parcours.succes());
+  }
+
+  /**
+   * Journalise et comptabilise les concerts non récupérés à cause du plafond
+   * de pagination.
+   * @param contexte identifiant de la requête (ex. "dept=75")
+   * @param totalElements total annoncé par TM
+   * @param recuperes nombre de concerts effectivement récupérés
+   */
+  /* package-private : appelé aussi par TicketmasterRegionFetcher (même package). */
+  void signalerPlafond(final String contexte, final int totalElements, final int recuperes) {
+    final int nbPagesTotal = (int) Math.ceil((double) totalElements / taillePage);
+    etatFetch.ajouterConcertsManques(Math.max(0, totalElements - recuperes));
+    LOG.warn(
+        "NB_PAGES_MAX atteint contexte={} — concerts manqués total={} recuperes={}"
+            + " pagesFetched={} pagesTotal={}",
+        contexte,
+        totalElements,
+        recuperes,
+        NB_PAGES_MAX,
+        nbPagesTotal);
+  }
+
+  /**
+   * Parcourt les pages d'une requête (bornées à NB_PAGES_MAX), sans signaler
+   * le plafond — l'appelant décide s'il le contourne (fenêtres de dates).
+   * @param uriBase URI de base de la requête, sans pagination
+   * @param artisteFallback nom recherché (fetch:artiste), null sinon
+   * @return concerts, succès et indicateur de plafonnement
+   */
+  /* package-private : appelé par TicketmasterRegionFetcher (même package). */
+  ResultatParcours parcourirPages(final UriComponentsBuilder uriBase, final String artisteFallback) {
     final List<ConcertBrut> tousLesEvents = new ArrayList<>();
     int borneMax = NB_PAGES_MAX;
     int totalElements = 0;
@@ -226,18 +275,6 @@ final class TicketmasterPageFetcher {
     }
 
     final int nbPagesTotal = (int) Math.ceil((double) totalElements / taillePage);
-    if (nbPagesTotal > NB_PAGES_MAX) {
-      etatFetch.ajouterConcertsManques(Math.max(0, totalElements - tousLesEvents.size()));
-      LOG.warn(
-          "NB_PAGES_MAX atteint contexte={} — concerts manqués total={} recuperes={}"
-              + " pagesFetched={} pagesTotal={}",
-          contexte,
-          totalElements,
-          tousLesEvents.size(),
-          NB_PAGES_MAX,
-          nbPagesTotal);
-    }
-
-    return new ResultatMultiPage(tousLesEvents, succes);
+    return new ResultatParcours(tousLesEvents, succes, totalElements, nbPagesTotal > NB_PAGES_MAX);
   }
 }
