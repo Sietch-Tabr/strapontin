@@ -148,8 +148,8 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Supprime les salles orphelines (sans concert futur, utilisateur suivi
-   * ni slug Digitick) — une par une, jamais en un seul {@code DELETE} en
+   * Supprime les salles orphelines (sans concert futur ni utilisateur
+   * suivi) — une par une, jamais en un seul {@code DELETE} en
    * masse : la cascade FK ({@code ON DELETE SET NULL}) peut entrer en
    * conflit avec {@code uq_evenements} sur un doublon TM/Eventim existant à
    * {@code salle_id = NULL}, ce qui bloquerait sinon toute la purge.
@@ -169,8 +169,6 @@ public class WorkerPurgeService {
                       SELECT 1 FROM concerts WHERE salle_id = salles.id AND date >= CURRENT_DATE)
                     AND NOT EXISTS (
                       SELECT 1 FROM user_salles WHERE salle_id = salles.id)
-                    AND NOT EXISTS (
-                      SELECT 1 FROM salle_sources WHERE salle_id = salles.id AND source = 'digitick')
                   """,
                   Map.of(),
                   (rs, _) -> rs.getObject("id", UUID.class));

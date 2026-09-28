@@ -42,23 +42,23 @@ class BilanFetchTest {
   @Test
   void evaluer_aucunAppel_retourneVide() {
     final BilanFetch bilan = new BilanFetch(0, 0);
-    assertTrue(bilan.evaluer("fetch:region", "Digitick", SEUIL).isEmpty());
+    assertTrue(bilan.evaluer("fetch:region", "Eventim", SEUIL).isEmpty());
   }
 
   @Test
   void evaluer_tousReussis_retourneVide() {
     final BilanFetch bilan = new BilanFetch(5, 0);
-    assertTrue(bilan.evaluer("fetch:region", "Digitick", SEUIL).isEmpty());
+    assertTrue(bilan.evaluer("fetch:region", "Eventim", SEUIL).isEmpty());
   }
 
   @Test
   void evaluer_panneTotale_retourneNiveauErrorEtMessageComplet() {
     final BilanFetch bilan = new BilanFetch(SEUIL, SEUIL);
-    final Optional<BilanFetch.EntreeLog> entree = bilan.evaluer("fetch:region", "Digitick", SEUIL);
+    final Optional<BilanFetch.EntreeLog> entree = bilan.evaluer("fetch:region", "Eventim", SEUIL);
 
     assertTrue(entree.isPresent());
     assertEquals("error", entree.get().niveau());
-    assertTrue(entree.get().message().contains("Digitick"));
+    assertTrue(entree.get().message().contains("Eventim"));
     assertTrue(entree.get().message().contains("intégralement en échec"));
     assertTrue(entree.get().message().contains(SEUIL + "/" + SEUIL));
     assertEquals(SEUIL, entree.get().meta().get("appels"));
@@ -68,7 +68,7 @@ class BilanFetchTest {
   @Test
   void evaluer_panneTotaleSousLeSeuil_retourneNiveauWarn() {
     final BilanFetch bilan = new BilanFetch(SEUIL - 1, SEUIL - 1);
-    final Optional<BilanFetch.EntreeLog> entree = bilan.evaluer("fetch:region", "Digitick", SEUIL);
+    final Optional<BilanFetch.EntreeLog> entree = bilan.evaluer("fetch:region", "Eventim", SEUIL);
 
     assertTrue(entree.isPresent());
     assertEquals("warn", entree.get().niveau());

@@ -56,7 +56,7 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Compare, pour chaque salle avec source Eventim/Digitick synthétique,
+   * Compare, pour chaque salle avec source Eventim synthétique,
    * le nom extrait à {@code salles.nom_norm} (détail : CLAUDE.md,
    * Hiérarchie des salles).
    * @return nombre de salles nouvellement signalées

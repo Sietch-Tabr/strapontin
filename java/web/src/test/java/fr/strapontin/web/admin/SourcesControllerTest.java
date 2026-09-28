@@ -10,7 +10,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.web.salle.SalleService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,108 +36,44 @@ class SourcesControllerTest {
   }
 
   @Test
-  void mettreAJourDigitickSlug_uuidInvalide_retourne400() {
-    final var reponse =
-        controller.mettreAJourDigitickSlug("pas-un-uuid", new RequeteSlug("slug-x"));
+  void mettreAJourLieuEventim_uuidInvalide_retourne400() {
+    final ResponseEntity<?> reponse =
+        controller.mettreAJourLieuEventim("pas-un-uuid", new RequeteLieuEventim("Accor Arena"));
 
     assertEquals(400, reponse.getStatusCode().value());
-    verify(sourcesService, org.mockito.Mockito.never()).mettreAJourDigitickSlug(any(), any());
+    verify(sourcesService, org.mockito.Mockito.never()).mettreAJourLieuEventim(any(), any());
   }
 
   @Test
-  void mettreAJourDigitickSlug_nominal_delegueAuServiceEtRetourne200() {
+  void mettreAJourLieuEventim_nominal_delegueAuServiceEtRetourne200() {
     final UUID id = UUID.randomUUID();
 
     final ResponseEntity<?> reponse =
-        controller.mettreAJourDigitickSlug(id.toString(), new RequeteSlug("le-splendid"));
+        controller.mettreAJourLieuEventim(id.toString(), new RequeteLieuEventim("Accor Arena"));
 
     assertEquals(200, reponse.getStatusCode().value());
-    verify(sourcesService).mettreAJourDigitickSlug(id, "le-splendid");
+    verify(sourcesService).mettreAJourLieuEventim(id, "Accor Arena");
   }
 
   @Test
-  void mettreAJourDigitickSlug_slugNull_transmetChaineVide() {
-    final UUID id = UUID.randomUUID();
+  void testerLieuEventim_accessible_retourne200AvecNbConcerts() {
+    when(sourcesService.testerLieuEventim("Accor Arena")).thenReturn(5);
 
-    controller.mettreAJourDigitickSlug(id.toString(), new RequeteSlug(null));
-
-    verify(sourcesService).mettreAJourDigitickSlug(id, "");
-  }
-
-  @Test
-  void testerDigitickSlug_accessible_retourne200AvecNbConcerts() {
-    when(sourcesService.testerDigitickSlug("le-splendid")).thenReturn(5);
-
-    final var reponse =
-        controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("le-splendid"));
+    final ResponseEntity<?> reponse =
+        controller.testerLieuEventim("id-non-utilise", new RequeteLieuEventim("Accor Arena"));
 
     assertEquals(200, reponse.getStatusCode().value());
-    assertEquals(5, reponse.getBody().get("nbConcerts"));
+    assertEquals(java.util.Map.of("accessible", true, "nbConcerts", 5), reponse.getBody());
   }
 
   @Test
-  void testerDigitickSlug_inaccessible_retourne404() {
-    when(sourcesService.testerDigitickSlug("mauvais-slug")).thenReturn(-1);
+  void testerLieuEventim_inaccessible_retourne404() {
+    when(sourcesService.testerLieuEventim("Inconnu")).thenReturn(-1);
 
-    final var reponse =
-        controller.testerDigitickSlug("id-non-utilise", new RequeteSlug("mauvais-slug"));
+    final ResponseEntity<?> reponse =
+        controller.testerLieuEventim("id-non-utilise", new RequeteLieuEventim("Inconnu"));
 
     assertEquals(404, reponse.getStatusCode().value());
-  }
-
-  @Test
-  void creerSalleDigitick_nomVide_retourne400() {
-    final var reponse =
-        controller.creerSalleDigitick(new RequeteDigitickSalle(" ", "slug-x", null, null));
-
-    assertEquals(400, reponse.getStatusCode().value());
-    verify(sourcesService, org.mockito.Mockito.never()).creerSalleDigitick(any());
-  }
-
-  @Test
-  void creerSalleDigitick_slugVide_retourne400() {
-    final var reponse =
-        controller.creerSalleDigitick(new RequeteDigitickSalle("Salle X", " ", null, null));
-
-    assertEquals(400, reponse.getStatusCode().value());
-    verify(sourcesService, org.mockito.Mockito.never()).creerSalleDigitick(any());
-  }
-
-  @Test
-  void creerSalleDigitick_nominal_retourne201AvecSalleId() {
-    final UUID id = UUID.randomUUID();
-    when(sourcesService.creerSalleDigitick(
-            new SalleService.DonneesSalleDigitick("Salle X", "slug-x", "Nancy", "54")))
-        .thenReturn(id);
-
-    final var reponse =
-        controller.creerSalleDigitick(new RequeteDigitickSalle("Salle X", "slug-x", "Nancy", "54"));
-
-    assertEquals(201, reponse.getStatusCode().value());
-    assertEquals(id.toString(), reponse.getBody().get("salleId"));
-  }
-
-  @Test
-  void modifierSalleDigitick_uuidInvalide_retourne400() {
-    final var reponse =
-        controller.modifierSalleDigitick(
-            "pas-un-uuid", new RequeteDigitickSalle("Salle X", null, null, null));
-
-    assertEquals(400, reponse.getStatusCode().value());
-    verify(sourcesService, org.mockito.Mockito.never())
-        .modifierSalleDigitick(any(), any(), any(), any());
-  }
-
-  @Test
-  void modifierSalleDigitick_nominal_delegueAuService() {
-    final UUID id = UUID.randomUUID();
-
-    final var reponse =
-        controller.modifierSalleDigitick(
-            id.toString(), new RequeteDigitickSalle("Nouveau nom", "  ", null, null));
-
-    assertEquals(200, reponse.getStatusCode().value());
-    verify(sourcesService).modifierSalleDigitick(id, "Nouveau nom", null, null);
   }
 
   @Test

@@ -5,7 +5,9 @@
 package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.sources.EventimSource;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.salle.SalleService;
 import java.time.Instant;
@@ -13,18 +15,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
 /**
  * Service de gestion de l'onglet admin « Sources » — agrège les statuts
- * des sources de données et gère la configuration des slugs Digitick
- * par salle.
+ * des sources de données et gère le lieu Eventim interrogé par salle
+ * (Eventim n'expose aucun identifiant de lieu, seulement son nom exact).
  * @since 2.3.0
  * @author Kwaite
  */
@@ -32,32 +31,30 @@ import org.springframework.web.client.RestClient;
 public class SourcesService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SourcesService.class);
-  private static final String URL_DIGITICK =
-      "https://web.digitick.com/ext/billetterie5/index.php?site={slug}&action=ajax&op=1";
-  private static final Pattern PATTERN_EVENEMENT = Pattern.compile("evenement\\d");
+  private static final String CLE_UUID = "uuid";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
-  private final RestClient restClient;
+  private final EventimSource eventim;
   private final SalleService salleService;
   private final SourcesSallesListingService sourcesSallesListingService;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper désérialiseur JSON (quota TM)
-   * @param restClient client HTTP dédié Digitick (HTTP/1.1, User-Agent navigateur)
+   * @param eventim client Eventim (test d'un lieu saisi à la main)
    * @param salleService service salle (upsert, mise à jour, déclenchement worker)
    * @param sourcesSallesListingService pagination des salles pour l'onglet Sources
    */
   public SourcesService(
       final NamedParameterJdbcTemplate jdbc,
       final ObjectMapper objectMapper,
-      @Qualifier("digitick") final RestClient restClient,
+      final EventimSource eventim,
       final SalleService salleService,
       final SourcesSallesListingService sourcesSallesListingService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
-    this.restClient = restClient;
+    this.eventim = eventim;
     this.salleService = salleService;
     this.sourcesSallesListingService = sourcesSallesListingService;
   }
@@ -95,117 +92,55 @@ public class SourcesService {
   }
 
   /**
-   * Crée une salle Digitick dans le référentiel et déclenche immédiatement un
-   * fetch.
-   *
-   * @param donnees données de la salle Digitick à créer (voir {@link
-   *     SalleService.DonneesSalleDigitick})
-   * @return UUID stable de la salle créée ou retrouvée
-   */
-  public UUID creerSalleDigitick(final SalleService.DonneesSalleDigitick donnees) {
-    return salleService.creerSalleDigitick(donnees);
-  }
-
-  /**
-   * Met à jour les métadonnées d'une salle Digitick (nom, ville, CP).
-   *
+   * Définit le lieu Eventim interrogé pour une salle — vide pour le retirer ;
+   * l'identifiant interne est celui que produit l'ingestion d'un concert de
+   * ce lieu, pour qu'un concert déjà observé s'y rattache. Un lieu déjà
+   * rattaché à une autre salle lève 409 (jamais un vol silencieux).
    * @param salleId UUID de la salle
-   * @param nom nouveau nom (null = inchangé)
-   * @param ville nouvelle ville (null = inchangée)
-   * @param cp nouveau code postal (null = inchangé)
+   * @param libelle nom exact du lieu chez Eventim, vide pour retirer
+   * @throws ErreurMetier 409 si le lieu est déjà rattaché à une autre salle
    */
-  public void modifierSalleDigitick(
-      final UUID salleId, final String nom, final String ville, final String cp) {
-    salleService.mettreAJourSalle(salleId, nom, ville, cp);
-  }
-
-  /**
-   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et
-   * sans concerts.
-   *
-   * @param salleId UUID de la salle
-   * @return {@code true} si supprimée, {@code false} si des contraintes
-   *     bloquent la suppression
-   */
-  public boolean supprimerSalleDigitick(final UUID salleId) {
-    return salleService.supprimerSalleDigitick(salleId);
-  }
-
-  /**
-   * Met à jour le slug Digitick d'une salle — supprime l'entrée si vide ;
-   * si déjà attribué à une autre salle, 409 (jamais un vol silencieux),
-   * vérifié avant toute suppression pour ne rien perdre si l'op échoue.
-   * @param salleId UUID de la salle
-   * @param slug nouveau slug Digitick (peut être vide pour supprimer)
-   * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
-   */
-  public void mettreAJourDigitickSlug(final UUID salleId, final String slug) {
-    final String slugStrip = slug == null ? "" : slug.strip();
-    if (!slugStrip.isEmpty()) {
-      verifierSlugDigitickLibre(salleId, slugStrip);
+  public void mettreAJourLieuEventim(final UUID salleId, final String libelle) {
+    final String libelleStrip = libelle == null ? "" : libelle.strip();
+    if (libelleStrip.isEmpty()) {
+      jdbc.update(
+          "UPDATE salle_sources SET libelle_source = NULL"
+              + " WHERE salle_id = CAST(:uuid AS uuid) AND source = 'eventim'",
+          Map.of(CLE_UUID, salleId.toString()));
+      return;
+    }
+    final String identifiant =
+        "internal:" + Normalisation.normaliserTexte(Normalisation.normaliserCasse(libelleStrip));
+    final List<String> conflits =
+        jdbc.queryForList(
+            """
+            SELECT COALESCE(s.nom_affiche, s.nom)
+            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'eventim' AND ss.identifiant_externe = :identifiant
+              AND ss.salle_id != CAST(:uuid AS uuid)
+            """,
+            Map.of("identifiant", identifiant, CLE_UUID, salleId.toString()),
+            String.class);
+    if (!conflits.isEmpty()) {
+      throw new ErreurMetier("Lieu Eventim déjà rattaché à la salle " + conflits.get(0) + ".", 409);
     }
     jdbc.update(
         """
-        DELETE FROM salle_sources
-        WHERE salle_id = CAST(:uuid AS uuid) AND source = 'digitick'
+        INSERT INTO salle_sources (salle_id, source, identifiant_externe, libelle_source)
+        VALUES (CAST(:uuid AS uuid), 'eventim', :identifiant, :libelle)
+        ON CONFLICT (source, identifiant_externe)
+        DO UPDATE SET libelle_source = EXCLUDED.libelle_source
         """,
-        Map.of("uuid", salleId.toString()));
-    if (!slugStrip.isEmpty()) {
-      jdbc.update(
-          """
-          INSERT INTO salle_sources (salle_id, source, identifiant_externe)
-          VALUES (CAST(:uuid AS uuid), 'digitick', :slug)
-          ON CONFLICT (source, identifiant_externe) DO UPDATE SET salle_id = EXCLUDED.salle_id
-          """,
-          Map.of("uuid", salleId.toString(), "slug", slugStrip));
-    }
+        Map.of(CLE_UUID, salleId.toString(), "identifiant", identifiant, "libelle", libelleStrip));
   }
 
   /**
-   * Vérifie qu'un slug Digitick n'est pas déjà attribué à une autre salle que
-   * {@code salleId} .
-   *
-   * @param salleId salle pour laquelle le slug est en cours d'attribution
-   * @param slug slug à vérifier
-   * @throws ErreurMetier 409 si le slug est déjà utilisé par une autre salle
+   * Teste un lieu Eventim : nombre de concerts à venir sous ce nom exact.
+   * @param libelle nom du lieu à tester
+   * @return nombre de concerts (≥ 0), ou -1 si vide ou Eventim injoignable
    */
-  private void verifierSlugDigitickLibre(final UUID salleId, final String slug) {
-    final List<Map<String, Object>> conflits =
-        jdbc.queryForList(
-            """
-            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
-            FROM salle_sources ss
-            JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
-              AND ss.salle_id != CAST(:uuid AS uuid)
-            """,
-            Map.of("slug", slug, "uuid", salleId.toString()));
-    if (!conflits.isEmpty()) {
-      throw new ErreurMetier(
-          "Slug déjà utilisé par la salle " + conflits.get(0).get("nom") + ".", 409);
-    }
-  }
-
-  /**
-   * Teste un slug Digitick, compte les {@code dl} de classe {@code
-   * evenementN} (même critère que {@code DigitickSource}, sous-éléments
-   * comme {@code evenementNom} exclus car non suivis d'un chiffre).
-   * @param slug slug à tester
-   * @return nombre de concerts (≥ 0) ou -1 si inaccessible / slug invalide
-   */
-  public int testerDigitickSlug(final String slug) {
-    if (slug == null || slug.isBlank()) {
-      return -1;
-    }
-    try {
-      final byte[] octets = restClient.get().uri(URL_DIGITICK, slug).retrieve().body(byte[].class);
-      final String html =
-          octets != null ? new String(octets, java.nio.charset.StandardCharsets.ISO_8859_1) : "";
-      return (int) PATTERN_EVENEMENT.matcher(html).results().count();
-    } catch (Exception e) {
-      LOG.debug("Test slug Digitick '{}' — inaccessible : {}", slug, e.getMessage());
-      return -1;
-    }
+  public int testerLieuEventim(final String libelle) {
+    return eventim.compterConcertsLieu(libelle);
   }
 
   private List<StatutSource> construireSources() {
@@ -237,16 +172,6 @@ public class SourcesService {
     sources.add(
         new StatutSource(
             "deezer", "Deezer", "metadonnees", null, null, null, null, compterArtistesDeezer()));
-    sources.add(
-        new StatutSource(
-            "digitick",
-            "Digitick",
-            "concerts",
-            null,
-            null,
-            null,
-            compterSallesParSource("digitick"),
-            null));
     sources.add(
         new StatutSource(
             "wikidata",
@@ -301,7 +226,7 @@ public class SourcesService {
    * Compte les salles reliées à une source externe donnée.
    *
    * @param source identifiant de la source (ex. {@code "ticketmaster"} ,
-   *     {@code "digitick"} )
+   *     {@code "eventim"} )
    * @return nombre de salles avec un identifiant pour cette source, 0 en cas
    *     d'échec
    */
@@ -376,14 +301,14 @@ public class SourcesService {
 
   /**
    * Liste paginée des salles pour l'onglet admin « Sources ».
-   * @param digitick true pour slug Digitick configuré, false pour sans
-   *     identifiant TM ni Eventim (candidates à une config manuelle)
+   * @param eventim true pour les salles avec lieu Eventim interrogé, false
+   *     pour sans identifiant TM ni Eventim (candidates à une config manuelle)
    * @param page numéro de page (0-indexé)
    * @param nom filtre nom partiel, peut être null
    * @return page de résultats
    */
   public ReponseSallesSources listerSalles(
-      final boolean digitick, final int page, final String nom) {
-    return sourcesSallesListingService.lister(digitick, page, nom);
+      final boolean eventim, final int page, final String nom) {
+    return sourcesSallesListingService.lister(eventim, page, nom);
   }
 }

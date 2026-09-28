@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.sources.EventimSource;
 import fr.strapontin.web.salle.SalleService;
 import java.sql.Timestamp;
 import java.util.List;
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.web.client.RestClient;
 
 /**
  * Tests unitaires pour {@link SourcesService}.
@@ -41,16 +41,18 @@ class SourcesServiceTest {
   private NamedParameterJdbcTemplate jdbc;
   private SourcesSallesListingService sourcesSallesListingService;
   private SourcesService sourcesService;
+  private EventimSource eventim;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     sourcesSallesListingService = mock(SourcesSallesListingService.class);
+    eventim = mock(EventimSource.class);
     sourcesService =
         new SourcesService(
             jdbc,
             new ObjectMapper(),
-            mock(RestClient.class),
+            eventim,
             mock(SalleService.class),
             sourcesSallesListingService);
   }
@@ -66,7 +68,7 @@ class SourcesServiceTest {
 
     assertNotNull(resultat.get("sources"));
     final List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
-    assertEquals(5, sources.size());
+    assertEquals(4, sources.size());
 
     final StatutSource tm = sources.get(0);
     assertEquals("ticketmaster", tm.id());
@@ -85,11 +87,7 @@ class SourcesServiceTest {
     assertNull(deezer.nbSallesConfigurees());
     assertEquals(0, deezer.nbArtistesConfigures());
 
-    final StatutSource digitick = sources.get(3);
-    assertEquals("digitick", digitick.id());
-    assertEquals(0, digitick.nbSallesConfigurees());
-
-    final StatutSource wikidata = sources.get(4);
+    final StatutSource wikidata = sources.get(3);
     assertEquals("wikidata", wikidata.id());
     assertEquals(0, wikidata.nbSallesConfigurees());
     assertEquals(0, wikidata.nbArtistesConfigures());
@@ -114,7 +112,6 @@ class SourcesServiceTest {
             .toList();
     assertTrue(sourcesInterrogees.contains("ticketmaster"));
     assertTrue(sourcesInterrogees.contains("eventim"));
-    assertTrue(sourcesInterrogees.contains("digitick"));
   }
 
   @Test
@@ -135,60 +132,50 @@ class SourcesServiceTest {
     assertEquals("critique", tm.etatQuota());
   }
 
+  // L'identifiant doit être celui que produit l'ingestion d'un concert de ce lieu, pour qu'un
+  // concert déjà observé s'y rattache ; le libellé exact est conservé pour le filtre Eventim.
   @Test
-  void mettreAJourDigitickSlug_slugValide_upsert() {
+  void mettreAJourLieuEventim_libelleValide_upsertAvecIdentifiantInterne() {
     final UUID uuid = UUID.randomUUID();
-    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
 
-    sourcesService.mettreAJourDigitickSlug(uuid, "lempreinte");
+    sourcesService.mettreAJourLieuEventim(uuid, " LEMPREINTE SAVIGNY LE TEMPLE CEDEX ");
 
     verify(jdbc)
         .update(
             argThat((String sql) -> sql.contains("INSERT INTO salle_sources")),
-            argThat((Map<String, ?> params) -> "lempreinte".equals(params.get("slug"))));
+            argThat(
+                (Map<String, ?> params) ->
+                    "internal:lempreinte savigny le temple cedex".equals(params.get("identifiant"))
+                        && "LEMPREINTE SAVIGNY LE TEMPLE CEDEX".equals(params.get("libelle"))));
   }
 
-  // un slug déjà attribué à une autre salle ne doit jamais être volé silencieusement —
-  // erreur 409 explicite plutôt qu'un ON CONFLICT DO UPDATE muet.
+  // un lieu déjà rattaché à une autre salle ne doit jamais être volé silencieusement.
   @Test
-  void mettreAJourDigitickSlug_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
+  void mettreAJourLieuEventim_lieuDejaRattacheAUneAutreSalle_leveErreurMetier409() {
     final UUID uuid = UUID.randomUUID();
-    when(jdbc.queryForList(anyString(), anyMap()))
-        .thenReturn(List.of(Map.of("nom", "Autre Salle")));
+    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
+        .thenReturn(List.of("Autre Salle"));
 
     final fr.strapontin.web.ErreurMetier erreur =
         org.junit.jupiter.api.Assertions.assertThrows(
             fr.strapontin.web.ErreurMetier.class,
-            () -> sourcesService.mettreAJourDigitickSlug(uuid, "lempreinte"));
+            () -> sourcesService.mettreAJourLieuEventim(uuid, "Accor Arena"));
 
     assertEquals(409, erreur.getStatus());
-    verify(jdbc, org.mockito.Mockito.never())
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
     verify(jdbc, org.mockito.Mockito.never())
         .update(argThat((String sql) -> sql.contains("INSERT INTO salle_sources")), anyMap());
   }
 
   @Test
-  void mettreAJourDigitickSlug_slugVide_supprime() {
+  void mettreAJourLieuEventim_libelleVideOuNull_retireLeLibelle() {
     final UUID uuid = UUID.randomUUID();
-    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
 
-    sourcesService.mettreAJourDigitickSlug(uuid, "");
+    sourcesService.mettreAJourLieuEventim(uuid, "  ");
+    sourcesService.mettreAJourLieuEventim(uuid, null);
 
-    verify(jdbc)
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
-  }
-
-  @Test
-  void mettreAJourDigitickSlug_slugNull_supprime() {
-    final UUID uuid = UUID.randomUUID();
-    when(jdbc.update(anyString(), anyMap())).thenReturn(0);
-
-    sourcesService.mettreAJourDigitickSlug(uuid, null);
-
-    verify(jdbc)
-        .update(argThat((String sql) -> sql.contains("DELETE FROM salle_sources")), anyMap());
+    verify(jdbc, org.mockito.Mockito.times(2))
+        .update(argThat((String sql) -> sql.contains("SET libelle_source = NULL")), anyMap());
   }
 
   // le détail de la construction SQL (HAVING, colonne id) est testé directement dans
@@ -204,37 +191,9 @@ class SourcesServiceTest {
   }
 
   @Test
-  void testerDigitickSlug_slugVide_retourneNegatif() {
-    assertTrue(sourcesService.testerDigitickSlug("") < 0);
-    assertTrue(sourcesService.testerDigitickSlug(null) < 0);
-  }
+  void testerLieuEventim_delegueAuComptageEventim() {
+    when(eventim.compterConcertsLieu("Accor Arena")).thenReturn(12);
 
-  @Test
-  void testerDigitickSlug_erreurReseau_retourneNegatif() {
-    final RestClient restClientEchoue = mock(RestClient.class);
-    when(restClientEchoue.get()).thenThrow(new RuntimeException("timeout"));
-    final SourcesService service =
-        new SourcesService(
-            jdbc,
-            new ObjectMapper(),
-            restClientEchoue,
-            mock(SalleService.class),
-            sourcesSallesListingService);
-
-    assertTrue(service.testerDigitickSlug("lempreinte") < 0);
-  }
-
-  @Test
-  @SuppressWarnings("unchecked")
-  void lireSources_comptageDigitick_reporteNbSallesConfigurees() {
-    when(jdbc.queryForList(anyString(), anyMap(), eq(String.class))).thenReturn(List.of());
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Timestamp.class))).thenReturn(null);
-    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(2);
-
-    final Map<String, Object> resultat = sourcesService.lireSources();
-
-    final List<StatutSource> sources = (List<StatutSource>) resultat.get("sources");
-    final StatutSource digitick = sources.get(3);
-    assertEquals(2, digitick.nbSallesConfigurees());
+    assertEquals(12, sourcesService.testerLieuEventim("Accor Arena"));
   }
 }

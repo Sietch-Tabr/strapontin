@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Health-check et redécouverte active des identifiants TM suspects
- * pour les salles, et signalement des slugs Digitick suspects —
+ * pour les salles, et signalement des lieux Eventim suspects —
  * extrait de {@link ReconciliationNocturneService} (voir {@link
  * HealthCheckArtistesTM}, variante artiste).
  * @since 2.9.1
@@ -162,18 +162,19 @@ public final class HealthCheckSallesTM {
   }
 
   /**
-   * Signale les slugs Digitick suspects — pas de redécouverte automatique
-   * (slugs manuels).
+   * Signale les lieux Eventim suspects — pas de redécouverte automatique
+   * (Eventim n'expose aucun identifiant de lieu, libellé corrigé à la main).
    */
   /* package-private : appelé par ReconciliationNocturneService (même
    * package). */
-  void alerterDigitickSuspect() {
+  void alerterLieuxEventimSuspects() {
     final List<Map<String, Object>> suspectes =
         jdbc.queryForList(
             """
-            SELECT ss.identifiant_externe, s.nom
+            SELECT ss.libelle_source, s.nom
             FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.suspect_depuis IS NOT NULL
+            WHERE ss.source = 'eventim' AND ss.libelle_source IS NOT NULL
+              AND ss.suspect_depuis IS NOT NULL
             """,
             Map.of());
     if (suspectes.isEmpty()) {
@@ -184,7 +185,7 @@ public final class HealthCheckSallesTM {
         NIVEAU_WARN,
         SOURCE_RECONCILIATION_NOCTURNE,
         suspectes.size()
-            + " slug(s) Digitick suspect(s) — correction manuelle via l'onglet admin Salles",
+            + " lieu(x) Eventim suspect(s) — correction manuelle via l'onglet admin Sources",
         Map.of("nbSuspectes", suspectes.size()));
   }
 }

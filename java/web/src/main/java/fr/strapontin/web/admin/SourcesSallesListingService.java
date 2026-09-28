@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Liste paginée des salles pour l'onglet admin « Sources » (candidates
- * Digitick / déjà configurées) — extrait de {@link SourcesService}.
+ * lieu Eventim interrogé) — extrait de {@link SourcesService}.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -39,18 +39,20 @@ class SourcesSallesListingService {
 
   /**
    * Liste paginée des salles pour l'onglet admin « Sources ».
-   * @param digitick true pour slug Digitick configuré, false pour sans
-   *     identifiant TM ni Eventim (candidates à une config manuelle)
+   * @param eventim true pour les salles avec lieu Eventim interrogé, false
+   *     pour sans identifiant TM ni Eventim (candidates à une config manuelle)
    * @param page numéro de page (0-indexé)
    * @param nom filtre nom partiel, peut être null
    * @return page de résultats
    */
   /* package-private : appelé par SourcesService (même package). */
-  ReponseSallesSources lister(final boolean digitick, final int page, final String nom) {
-    return digitick ? listerSallesAvecDigitick(page, nom) : listerSallesSansTmNiEventim(page, nom);
+  ReponseSallesSources lister(final boolean eventim, final int page, final String nom) {
+    return eventim
+        ? listerSallesAvecLieuEventim(page, nom)
+        : listerSallesSansTmNiEventim(page, nom);
   }
 
-  private ReponseSallesSources listerSallesAvecDigitick(final int page, final String nom) {
+  private ReponseSallesSources listerSallesAvecLieuEventim(final int page, final String nom) {
     final int pageNum = Math.max(0, page);
     final StringBuilder where = new StringBuilder(50);
     final Map<String, Object> params = new HashMap<>();
@@ -63,12 +65,15 @@ class SourcesSallesListingService {
     final long[] total = {0};
     final List<SalleSourceAdmin> salles =
         jdbc.query(
-            "SELECT s.id, s.nom, s.ville, s.dept, ss.identifiant_externe AS digitick_slug,"
+            "SELECT s.id, s.nom, s.ville, s.dept,"
+                + " string_agg(ss.libelle_source, ' | ' ORDER BY ss.libelle_source) AS lieu_eventim,"
                 + " COUNT(*) OVER() AS total_filtre"
                 + " FROM salles s"
-                + " JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'"
+                + " JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'eventim'"
+                + " AND ss.libelle_source IS NOT NULL"
                 + " WHERE 1=1 "
                 + where
+                + " GROUP BY s.id, s.nom, s.ville, s.dept"
                 + " ORDER BY lower(s.nom) LIMIT :taille OFFSET :offset",
             params,
             (rs, _) -> {
@@ -76,7 +81,7 @@ class SourcesSallesListingService {
               return new SalleSourceAdmin(
                   rs.getObject("id", UUID.class),
                   rs.getString(CLE_NOM),
-                  rs.getString("digitick_slug"),
+                  rs.getString("lieu_eventim"),
                   rs.getString("ville"),
                   rs.getString("dept"));
             });
@@ -84,11 +89,12 @@ class SourcesSallesListingService {
     if (salles.isEmpty() && pageNum > 0) {
       total[0] =
           compterAvecFallback(
-              "SELECT COUNT(*) FROM salles s JOIN salle_sources ss ON ss.salle_id = s.id AND"
-                  + " ss.source = 'digitick' WHERE 1=1 "
+              "SELECT COUNT(DISTINCT s.id) FROM salles s JOIN salle_sources ss"
+                  + " ON ss.salle_id = s.id AND ss.source = 'eventim'"
+                  + " AND ss.libelle_source IS NOT NULL WHERE 1=1 "
                   + where,
               params,
-              "salles avec Digitick");
+              "salles avec lieu Eventim");
     }
 
     final int totalPages = Math.max(1, (int) Math.ceil((double) total[0] / TAILLE_PAGE_SALLES));
@@ -127,9 +133,7 @@ class SourcesSallesListingService {
     final long[] total = {0};
     final List<SalleSourceAdmin> salles =
         jdbc.query(
-            "SELECT s.id, s.nom, s.ville, s.dept,"
-                + " MAX(CASE WHEN ss.source = 'digitick' THEN ss.identifiant_externe END) AS"
-                + " digitick_slug, COUNT(*) OVER() AS total_filtre"
+            "SELECT s.id, s.nom, s.ville, s.dept, COUNT(*) OVER() AS total_filtre"
                 + " FROM salles s"
                 + " LEFT JOIN salle_sources ss ON ss.salle_id = s.id"
                 + " WHERE 1=1 "
@@ -145,7 +149,7 @@ class SourcesSallesListingService {
               return new SalleSourceAdmin(
                   rs.getObject("id", UUID.class),
                   rs.getString(CLE_NOM),
-                  rs.getString("digitick_slug"),
+                  null,
                   rs.getString("ville"),
                   rs.getString("dept"));
             });

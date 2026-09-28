@@ -7,8 +7,8 @@ package fr.strapontin.core;
 import java.util.Objects;
 
 /**
- * Concert brut tel que renvoyé par une source (TM, Eventim,
- * Digitick), avant dédoublonnage/résolution du référentiel —
+ * Concert brut tel que renvoyé par une source (TM, Eventim),
+ * avant dédoublonnage/résolution du référentiel —
  * champs auto-descriptifs, tous nullable sauf artiste/date/
  * salle/source (validés au constructeur compact).
  */

@@ -22,8 +22,7 @@ public final class EligibiliteResolutionDeezer {
 
   /**
    * @param classification classification du concert, {@code null} si inconnue
-   * @param source source du concert ({@code ticketmaster}, {@code eventim} ,
-   *     {@code digitick} )
+   * @param source source du concert ({@code ticketmaster}, {@code eventim})
    * @return {@code true} si le concert est éligible à la résolution de nom
    *     canonique via Deezer
    */

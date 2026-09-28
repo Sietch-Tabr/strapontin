@@ -38,7 +38,7 @@ final class ResolveurArtisteParNomNorm {
 
   /**
    * Résout les {@code artiste_id} manquants par lookup sur
-   * {@code artistes.nom_norm} (couvre Digitick, sans identifiant
+   * {@code artistes.nom_norm} (couvre les concerts sans identifiant
    * externe) ; persiste les mappings trouvés dans artiste_sources.
    * @param concerts concerts après résolution par source
    * @return liste enrichie avec les artiste_id résolus par nom
@@ -87,7 +87,7 @@ final class ResolveurArtisteParNomNorm {
   /**
    * Persiste dans {@code artiste_sources} les mappings
    * nouvellement résolus par nom (source externe connue
-   * uniquement — Digitick n'en a pas).
+   * uniquement).
    * @param concerts concerts après résolution par nom
    * @param nomNormsResolus noms normalisés résolus par le lookup
    */

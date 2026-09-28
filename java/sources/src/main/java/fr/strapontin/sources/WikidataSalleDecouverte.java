@@ -134,7 +134,7 @@ final class WikidataSalleDecouverte {
   }
 
   // Convention de nommage fréquente côté sources
-  // (Ticketmaster/Eventim/Digitick) : le nom de la salle est suffixé de sa
+  // (Ticketmaster/Eventim) : le nom de la salle est suffixé de sa
   // ville sans séparateur ("Salle Poirel Nancy", "La Belle Electrique
   // Grenoble") — vérifié en direct contre l'API Wikidata, la recherche mwapi
   // échoue sur le nom complet mais trouve l'entité sur le seul nom de salle une

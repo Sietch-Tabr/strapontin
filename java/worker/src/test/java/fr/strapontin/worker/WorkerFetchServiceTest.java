@@ -44,7 +44,7 @@ import org.springframework.web.client.ResourceAccessException;
 /**
  * Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
  *
- * <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans {@code
+ * <p>Les tests du bilan de panne (Eventim/Deezer/TM concerts manqués) sont dans {@code
  * WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
  *
  * @since 2.2.3 (extrait dans sa forme actuelle en 2.7.0)
@@ -442,8 +442,7 @@ class WorkerFetchServiceTest {
         .resoudreNomCanonique(eq("artiste"), eq("Equipe de France de basket-ball"));
   }
 
-  // Contrairement à Digitick (classification toujours vide, mais filtré en amont sur de vrais
-  // concerts), Eventim omet fréquemment sa classification y compris pour des spectacles non
+  // Eventim omet fréquemment sa classification y compris pour des spectacles non
   // musicaux (ex. "Paris is Magique", comédie musicale) — la résolution Deezer ne doit pas
   // s'appliquer à un concert Eventim sans classification.
   @Test

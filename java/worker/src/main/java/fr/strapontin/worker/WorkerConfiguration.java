@@ -7,7 +7,6 @@ package fr.strapontin.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.ClientNominatim;
-import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
@@ -122,18 +121,6 @@ public class WorkerConfiguration {
                 Map.of("depts", depts),
                 String.class));
     return source;
-  }
-
-  /**
-   * Client de scraping Digitick.
-   *
-   * @return instance avec User-Agent par défaut
-   */
-  /* package-private : Bean Spring, jamais appelé directement hors du
-   * conteneur. */
-  @Bean
-  DigitickSource digitickSource() {
-    return new DigitickSource();
   }
 
   /**

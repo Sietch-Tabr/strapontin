@@ -7,7 +7,6 @@ package fr.strapontin.web.salle;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +34,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.client.RestClient;
 
 /**
- * Tests unitaires pour les méthodes Digitick de {@link SalleService}.
+ * Tests unitaires de {@link SalleService}.
  *
  * @since 2.4.0
  * @author Kwaite
@@ -69,70 +67,6 @@ class SalleServiceTest {
             salleRechercheNominatimService,
             salleRechercheTicketmasterService);
     salleService.setSelf(salleService);
-  }
-
-  @Test
-  void creerSalleDigitick_nomEtSlugValides_retourneUuid() {
-    final UUID attendu = UUID.randomUUID();
-    when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(attendu);
-
-    final UUID resultat =
-        salleService.creerSalleDigitick(
-            new SalleService.DonneesSalleDigitick(
-                "L'Empreinte", "lempreinte", "Savigny-le-Temple", "77176"));
-
-    assertEquals(attendu, resultat);
-    verify(salleRepository)
-        .upsertSalleAvecLoc("lempreinte", "L'Empreinte", "Savigny-le-Temple", "77176");
-    verify(salleRepository).enregistrerSalleSource(attendu, "digitick", "lempreinte");
-  }
-
-  @Test
-  void creerSalleDigitick_sansVilleNiCp_retourneUuid() {
-    final UUID attendu = UUID.randomUUID();
-    when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(attendu);
-
-    final UUID resultat =
-        salleService.creerSalleDigitick(
-            new SalleService.DonneesSalleDigitick("L'Olympia", "olympia", null, null));
-
-    assertNotNull(resultat);
-    verify(salleRepository).upsertSalleAvecLoc("lolympia", "L'Olympia", null, null);
-  }
-
-  @Test
-  void creerSalleDigitick_salleExistante_reutiliseMemeUuid() {
-    final UUID existant = UUID.randomUUID();
-    when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(existant);
-
-    final UUID r1 =
-        salleService.creerSalleDigitick(
-            new SalleService.DonneesSalleDigitick("L'Empreinte", "lempreinte", null, null));
-    final UUID r2 =
-        salleService.creerSalleDigitick(
-            new SalleService.DonneesSalleDigitick("L'Empreinte", "lempreinte", null, null));
-
-    assertEquals(r1, r2);
-  }
-
-  // un slug déjà attribué à une autre salle ne doit jamais créer un doublon mort (201
-  // trompeur sans source Digitick fonctionnelle) — erreur 409 explicite à la place.
-  @Test
-  void creerSalleDigitick_slugDejaAttribueAUneAutreSalle_leveErreurMetier409() {
-    final UUID nouvelleSalle = UUID.randomUUID();
-    when(salleRepository.upsertSalleAvecLoc(any(), any(), any(), any())).thenReturn(nouvelleSalle);
-    when(salleRepository.trouverConflitDigitickSlug(eq("lempreinte"), eq(nouvelleSalle)))
-        .thenReturn(Optional.of("Autre Salle"));
-
-    final ErreurMetier erreur =
-        assertThrows(
-            ErreurMetier.class,
-            () ->
-                salleService.creerSalleDigitick(
-                    new SalleService.DonneesSalleDigitick("Doublon", "lempreinte", null, null)));
-
-    assertEquals(409, erreur.getStatus());
-    verify(salleRepository, never()).enregistrerSalleSource(any(), any(), any());
   }
 
   @Test
@@ -235,10 +169,8 @@ class SalleServiceTest {
   void fusionnerOuAjouter_candidatCorrespondantExistant_fusionneLesIdentifiants() {
     final List<ResultatSalle> liste =
         new ArrayList<>(
-            List.of(
-                new ResultatSalle("Rockstore", "Montpellier", null, null, "osm", "way/1", "Q1")));
-    final ResultatSalle candidatTm =
-        new ResultatSalle("Rockstore", null, "tm123", null, "ticketmaster");
+            List.of(new ResultatSalle("Rockstore", "Montpellier", null, "osm", "way/1", "Q1")));
+    final ResultatSalle candidatTm = new ResultatSalle("Rockstore", null, "tm123", "ticketmaster");
 
     SalleSuggestions.fusionnerOuAjouter(liste, candidatTm);
 
@@ -254,29 +186,12 @@ class SalleServiceTest {
   void fusionnerOuAjouter_candidatSansCorrespondance_ajouteNouvelleEntree() {
     final List<ResultatSalle> liste = new ArrayList<>();
     final ResultatSalle candidat =
-        new ResultatSalle("Bataclan", "Paris", null, null, "osm", "way/2", "Q2");
+        new ResultatSalle("Bataclan", "Paris", null, "osm", "way/2", "Q2");
 
     SalleSuggestions.fusionnerOuAjouter(liste, candidat);
 
     assertEquals(1, liste.size());
     assertEquals("Bataclan", liste.get(0).salle());
-  }
-
-  // une salle taguée leisure/tourism (pas amenity) mais dont extratags.amenity confirme
-  // une salle de concert ne doit plus être rejetée (cas réel : Plenitude Arena, Nanterre,
-  // class=leisure/type=stadium avec extratags.amenity=music_venue).
-  @Test
-  void mettreAJourSalle_appelleRepository() {
-    final UUID uuid = UUID.randomUUID();
-    salleService.mettreAJourSalle(uuid, "Nouveau nom", "Paris", "75001");
-    verify(salleRepository).mettreAJourSalle(uuid, "Nouveau nom", "Paris", "75001");
-  }
-
-  @Test
-  void mettreAJourSalle_champsNuls_passesAuRepository() {
-    final UUID uuid = UUID.randomUUID();
-    salleService.mettreAJourSalle(uuid, null, null, null);
-    verify(salleRepository).mettreAJourSalle(uuid, null, null, null);
   }
 
   @Test
@@ -312,24 +227,10 @@ class SalleServiceTest {
   }
 
   @Test
-  void supprimerSalleDigitick_sansContrainte_retourneTrue() {
-    final UUID uuid = UUID.randomUUID();
-    when(salleRepository.supprimerSalleDigitick(uuid)).thenReturn(true);
-    assertTrue(salleService.supprimerSalleDigitick(uuid));
-  }
-
-  @Test
-  void supprimerSalleDigitick_avecContrainte_retourneFalse() {
-    final UUID uuid = UUID.randomUUID();
-    when(salleRepository.supprimerSalleDigitick(uuid)).thenReturn(false);
-    assertFalse(salleService.supprimerSalleDigitick(uuid));
-  }
-
-  @Test
   void lireIdentifiantsSources_retourneCSV() {
     final UUID uuid = UUID.randomUUID();
-    when(salleRepository.lireIdentifiantsSources(uuid)).thenReturn("digitick:lempreinte");
-    assertEquals("digitick:lempreinte", salleService.lireIdentifiantsSources(uuid));
+    when(salleRepository.lireIdentifiantsSources(uuid)).thenReturn("eventim:internal:lempreinte");
+    assertEquals("eventim:internal:lempreinte", salleService.lireIdentifiantsSources(uuid));
   }
 
   @Test
@@ -402,7 +303,7 @@ class SalleServiceTest {
     when(salleRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
     when(salleRepository.rechercherEnBase(anyString())).thenReturn(List.of());
     when(salleRechercheNominatimService.rechercher("Bataclan"))
-        .thenReturn(List.of(new ResultatSalle("Le Bataclan", "Paris", null, null, "osm")));
+        .thenReturn(List.of(new ResultatSalle("Le Bataclan", "Paris", null, "osm")));
     when(salleRechercheTicketmasterService.rechercher("Bataclan")).thenReturn(List.of());
 
     final var reponse = salleService.lister("user1", "Bataclan");
@@ -423,8 +324,8 @@ class SalleServiceTest {
     when(salleRechercheNominatimService.rechercher("terme"))
         .thenReturn(
             List.of(
-                new ResultatSalle("A", "Paris", null, null, "osm"),
-                new ResultatSalle("B", "Paris", null, null, "osm")));
+                new ResultatSalle("A", "Paris", null, "osm"),
+                new ResultatSalle("B", "Paris", null, "osm")));
     when(salleRechercheTicketmasterService.rechercher("terme")).thenReturn(List.of());
 
     salleService.lister("user1", "terme");

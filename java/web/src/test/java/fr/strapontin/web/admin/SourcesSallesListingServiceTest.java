@@ -40,7 +40,7 @@ class SourcesSallesListingServiceTest {
   }
 
   @Test
-  void lister_vueSansDigitick_excluTMEtEventim() {
+  void lister_vueSansSource_excluTMEtEventim() {
     final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     when(jdbc.query(
             sqlCaptor.capture(),
@@ -94,6 +94,22 @@ class SourcesSallesListingServiceTest {
 
     assertEquals(1, reponse.salles().size());
     assertEquals("L'Olympia", reponse.salles().get(0).nom());
-    assertNull(reponse.salles().get(0).digitickSlug());
+    assertNull(reponse.salles().get(0).lieuEventim());
+  }
+
+  // Seuls les lieux Eventim réellement interrogeables (libellé connu) sont listés.
+  @Test
+  void lister_vueLieuEventim_filtreSurLibelleConnu() {
+    final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    when(jdbc.query(
+            sqlCaptor.capture(),
+            anyMap(),
+            org.mockito.ArgumentMatchers.<RowMapper<SalleSourceAdmin>>any()))
+        .thenReturn(List.of());
+
+    service.lister(true, 0, null);
+
+    assertTrue(sqlCaptor.getValue().contains("ss.source = 'eventim'"));
+    assertTrue(sqlCaptor.getValue().contains("libelle_source IS NOT NULL"));
   }
 }

@@ -97,21 +97,21 @@ class SuiviSanteSourcesServiceTest {
   }
 
   @Test
-  void enregistrerResultatSalle_digitick_prefixePreserve() {
+  void enregistrerResultatSalle_eventim_prefixePreserve() {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     final TicketmasterSource tm = mock(TicketmasterSource.class);
     final SuiviSanteSourcesService service =
         new SuiviSanteSourcesService(jdbc, tm, mock(SignalementMatchingService.class));
 
-    service.enregistrerResultatSalle("digitick:lempreinte", 1);
+    service.enregistrerResultatSalle("eventim:internal:lempreinte", 1);
 
     verify(jdbc)
         .update(
             anyString(),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p ->
-                    "digitick".equals(p.get("source"))
-                        && "lempreinte".equals(p.get("identifiant"))));
+                    "eventim".equals(p.get("source"))
+                        && "internal:lempreinte".equals(p.get("identifiant"))));
   }
 
   @Test

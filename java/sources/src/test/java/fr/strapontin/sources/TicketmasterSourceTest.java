@@ -445,7 +445,7 @@ class TicketmasterSourceTest {
   void accepteIdentifiantSalle_prefixeTm_retourneVrai() {
     final TicketmasterSource source = new TicketmasterSource("fake-key");
     assertTrue(source.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
-    assertFalse(source.accepteIdentifiantSalle("digitick:lempreinte"));
+    assertFalse(source.accepteIdentifiantSalle("eventim:internal:accor arena"));
     assertFalse(source.accepteIdentifiantSalle("rZFSnyZdFvA"));
     assertFalse(source.accepteIdentifiantSalle(null));
   }

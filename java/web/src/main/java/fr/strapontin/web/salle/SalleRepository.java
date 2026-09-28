@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -42,9 +41,7 @@ class SalleRepository {
   }
 
   /**
-   * Retourne les salles suivies par l'utilisateur, triées par nom —
-   * {@code aDigitick} vrai si un slug Digitick est configuré dans {@code
-   * salle_sources}.
+   * Retourne les salles suivies par l'utilisateur, triées par nom.
    * @param userId identifiant de l'utilisateur
    * @return liste des salles suivies
    */
@@ -53,11 +50,7 @@ class SalleRepository {
   List<SalleUtilisateur> listerPourUtilisateur(final String userId) {
     return jdbc.query(
         """
-        SELECT us.salle_id AS id, s.nom, us.created_at,
-               EXISTS (
-                   SELECT 1 FROM salle_sources ss
-                   WHERE ss.salle_id = s.id AND ss.source = 'digitick'
-               ) AS a_digitick
+        SELECT us.salle_id AS id, s.nom, us.created_at
         FROM user_salles us
         JOIN salles s ON s.id = us.salle_id
         WHERE us.user_id = :userId
@@ -68,35 +61,29 @@ class SalleRepository {
             new SalleUtilisateur(
                 rs.getObject("id", UUID.class),
                 rs.getString(CLE_NOM),
-                rs.getTimestamp("created_at").toInstant(),
-                rs.getBoolean("a_digitick")));
+                rs.getTimestamp("created_at").toInstant()));
   }
 
   /**
-   * Recherche des salles dans les concerts existants, le référentiel
-   * Digitick et les salles connues avec concerts — union de trois sources
-   * (concert sans UUID, salle Digitick, salle connue avec concert), pour
-   * filtrer les doublons de venueId côté appelant ({@code estMemeSalle}).
+   * Recherche des salles dans les concerts existants et les salles connues
+   * avec concerts — union de deux sources (concert sans UUID, salle connue
+   * avec concert), pour filtrer les doublons de venueId côté appelant
+   * ({@code estMemeSalle}).
    * @param pattern valeur LIKE sur la clé normalisée
-   * @return lignes salle/ville/digitick_slug distinctes (max 10)
+   * @return lignes salle/ville distinctes (max 10)
    */
   /* package-private : accès SQL réservé à SalleService (même package), pattern
    * service/repository. */
   List<Map<String, Object>> rechercherEnBase(final String pattern) {
     return jdbc.queryForList(
         """
-        SELECT salle, ville, digitick_slug FROM (
-            SELECT DISTINCT salle, ville, null::text AS digitick_slug
+        SELECT salle, ville FROM (
+            SELECT DISTINCT salle, ville
             FROM concerts
             WHERE salle_cle LIKE :pattern
               AND salle_id IS NULL
             UNION
-            SELECT DISTINCT s.nom AS salle, s.ville AS ville, ss.identifiant_externe AS digitick_slug
-            FROM salles s
-            JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'digitick'
-            WHERE s.nom_cle LIKE :pattern
-            UNION
-            SELECT DISTINCT s.nom AS salle, s.ville AS ville, null::text AS digitick_slug
+            SELECT DISTINCT s.nom AS salle, s.ville AS ville
             FROM salles s
             WHERE EXISTS (SELECT 1 FROM concerts c WHERE c.salle_id = s.id)
               AND s.nom_cle LIKE :pattern
@@ -205,70 +192,8 @@ class SalleRepository {
   }
 
   /**
-   * Insère/MAJ une salle (admin Digitick), conflit MAJ nom/ville/CP.
-   * @param salleCle clé naturelle normalisée
-   * @param nom nom affiché
-   * @param ville ville (null si inconnue)
-   * @param dept numéro de département (null si inconnu)
-   * @return UUID stable de la salle
-   */
-  /* package-private : accès SQL réservé à SalleService (même package), pattern
-   * service/repository. */
-  UUID upsertSalleAvecLoc(
-      final String salleCle, final String nom, final String ville, final String dept) {
-    final Map<String, Object> params = new HashMap<>();
-    params.put("salleCle", salleCle);
-    params.put(CLE_NOM, nom);
-    params.put("nomNorm", Normalisation.normaliserTexte(nom));
-    params.put("ville", ville);
-    params.put("dept", dept);
-    return jdbc.queryForObject(
-        """
-        INSERT INTO salles (salle_cle, nom, nom_norm, ville, dept)
-        VALUES (:salleCle, :nom, :nomNorm, :ville, :dept)
-        ON CONFLICT (salle_cle) DO UPDATE
-            SET nom   = EXCLUDED.nom,
-                ville = COALESCE(EXCLUDED.ville, salles.ville),
-                dept  = COALESCE(EXCLUDED.dept, salles.dept)
-        RETURNING id
-        """,
-        params,
-        (rs, _) -> rs.getObject("id", UUID.class));
-  }
-
-  /**
-   * Met à jour nom/ville/CP — recalcule {@code nom_norm} (sinon
-   * désynchronisé, cassant le matching Wikidata/Overpass).
-   * @param salleId UUID de la salle
-   * @param nom nouveau nom (null = inchangé)
-   * @param ville nouvelle ville (null = inchangée)
-   * @param dept nouveau département (null = inchangé)
-   */
-  /* package-private : accès SQL réservé à SalleService (même package), pattern
-   * service/repository. */
-  void mettreAJourSalle(
-      final UUID salleId, final String nom, final String ville, final String dept) {
-    final MapSqlParameterSource params = new MapSqlParameterSource();
-    params.addValue(CLE_UUID, salleId.toString());
-    params.addValue(CLE_NOM, nom);
-    params.addValue("nomNorm", nom != null ? Normalisation.normaliserTexte(nom) : null);
-    params.addValue("ville", ville);
-    params.addValue("dept", dept);
-    jdbc.update(
-        """
-        UPDATE salles
-        SET nom      = COALESCE(:nom, nom),
-            nom_norm = COALESCE(:nomNorm, nom_norm),
-            ville    = COALESCE(:ville, ville),
-            dept     = COALESCE(:dept, dept)
-        WHERE id = CAST(:uuid AS uuid)
-        """,
-        params);
-  }
-
-  /**
    * Identifiants préfixés CSV de toutes les sources d'une salle (ex. {@code
-   * "tm:rZFSnyZdFvA,digitick:lempreinte"}) — préfixe TM abrégé ({@code
+   * "tm:rZFSnyZdFvA,eventim:internal:accor arena"}) — préfixe TM abrégé ({@code
    * "tm"}, pas {@code "ticketmaster"}), seul accepté par {@link
    * TicketmasterSource#accepteIdentifiantSalle} (sinon fetch TM muet).
    * @param salleId UUID de la salle
@@ -300,31 +225,6 @@ class SalleRepository {
   }
 
   /**
-   * Supprime une salle uniquement si aucun utilisateur ne la suit et si elle
-   * n'a pas de concerts.
-   *
-   * @param salleId UUID de la salle
-   * @return {@code true} si supprimée, {@code false} si des contraintes
-   *     empêchent la suppression
-   */
-  /* package-private : accès SQL réservé à SalleService (même package), pattern
-   * service/repository. */
-  boolean supprimerSalleDigitick(final UUID salleId) {
-    final int nb =
-        jdbc.update(
-            """
-            DELETE FROM salles
-            WHERE id = CAST(:uuid AS uuid)
-              AND NOT EXISTS (
-                  SELECT 1 FROM user_salles WHERE salle_id = CAST(:uuid AS uuid))
-              AND NOT EXISTS (
-                  SELECT 1 FROM concerts WHERE salle_id = CAST(:uuid AS uuid))
-            """,
-            Map.of(CLE_UUID, salleId.toString()));
-    return nb > 0;
-  }
-
-  /**
    * Met à jour {@code wikidata_id} si absent ({@code COALESCE}, jamais
    * une valeur déjà résolue) — peut lever {@link
    * org.springframework.dao.DuplicateKeyException}, à la charge de
@@ -341,30 +241,6 @@ class SalleRepository {
         WHERE id = CAST(:uuid AS uuid)
         """,
         Map.of(CLE_UUID, salleId.toString(), "wikidataId", wikidataId));
-  }
-
-  /**
-   * Recherche une salle différente de {@code exclureSalleId} déjà associée
-   * à un slug Digitick — détecte un conflit avant l'attribution plutôt que
-   * d'échouer silencieusement sur {@code ON CONFLICT DO NOTHING}.
-   * @param slug slug Digitick à vérifier
-   * @param exclureSalleId salle en cours d'attribution, exclue
-   * @return le nom affiché de la salle en conflit, si elle existe
-   */
-  /* package-private : accès SQL réservé à SalleService (même package), pattern
-   * service/repository. */
-  Optional<String> trouverConflitDigitickSlug(final String slug, final UUID exclureSalleId) {
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            """
-            SELECT COALESCE(s.nom_affiche, s.nom) AS nom
-            FROM salle_sources ss
-            JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'digitick' AND ss.identifiant_externe = :slug
-              AND ss.salle_id != CAST(:uuid AS uuid)
-            """,
-            Map.of("slug", slug, CLE_UUID, exclureSalleId.toString()));
-    return lignes.isEmpty() ? Optional.empty() : Optional.of((String) lignes.get(0).get(CLE_NOM));
   }
 
   /**

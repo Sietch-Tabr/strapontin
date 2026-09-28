@@ -445,4 +445,33 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   public LocalDate horizonSalle() {
     return EventimLieuxFetcher.horizonSalle();
   }
+
+  /**
+   * Compte les concerts à venir d'un lieu Eventim — vérifie un libellé saisi
+   * à la main avant de l'enregistrer (le filtre {@code venue_names} exige le
+   * nom exact).
+   * @param libelle nom exact du lieu chez Eventim
+   * @return nombre de concerts (≥ 0), ou -1 si Eventim n'a pas répondu
+   */
+  public int compterConcertsLieu(final String libelle) {
+    if (libelle == null || libelle.isBlank()) {
+      return -1;
+    }
+    final URI uri =
+        UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+            .queryParam(PARAM_WEB_ID, WEB_ID)
+            .queryParam(PARAM_LANGUE, "fr")
+            .queryParam("venue_names", libelle.strip())
+            .queryParam("date_from", LocalDate.now().toString())
+            .queryParam("top", 1)
+            .build()
+            .encode()
+            .toUri();
+    try {
+      final PageProduitsEventim page = chargerPageProduits(uri, null, null, null);
+      return page.succes() ? page.total() : -1;
+    } catch (ResourceAccessException e) {
+      return -1;
+    }
+  }
 }

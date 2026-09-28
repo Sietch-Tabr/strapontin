@@ -1442,9 +1442,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
-  void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
-    // Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
-    // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
+  void persisterConcerts_sansArtisteSourceId_resolutionParNomNorm() {
+    // Un concert Eventim découvert par lieu ou par ville n'a pas d'artisteSourceId : la
+    // résolution doit quand même retrouver l'artiste_id en base par artiste_norm.
     final UUID artisteId = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
@@ -1453,7 +1453,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nom", "Mika")
             .addValue("nomNorm", "mika"));
 
-    final ConcertBrut concertDigitick =
+    final ConcertBrut concertSansIdArtiste =
         new ConcertBrut(
             "Mika",
             "2026-12-10",
@@ -1461,17 +1461,17 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             "Le Zénith Paris",
             "Paris",
             "75",
-            "https://web.digitick.com/mika-zenith-paris",
-            "digitick",
+            "https://www.eventim.fr/event/mika-zenith-paris-1",
+            "eventim",
             null,
             "Concert",
             null,
             null,
             null,
-            "digitick:zenith-paris",
+            "eventim:internal:le zenith paris",
             null);
 
-    persisterConcerts.persisterConcerts(List.of(concertDigitick));
+    persisterConcerts.persisterConcerts(List.of(concertSansIdArtiste));
 
     final UUID artisteIdEnBase =
         jdbc.queryForObject(
@@ -1479,7 +1479,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of(),
             (rs, _) -> rs.getObject("artiste_id", UUID.class));
     assertEquals(
-        artisteId, artisteIdEnBase, "artiste_id doit être résolu par nom_norm pour Digitick");
+        artisteId,
+        artisteIdEnBase,
+        "artiste_id doit être résolu par nom_norm sans identifiant source");
   }
 
   @Test
@@ -1566,7 +1568,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_id");
   }
 
-  // #1192 : même artiste_id/date/heure/salle_id mais artiste_norm distinct (TM/Digitick) doit
+  // #1192 : même artiste_id/date/heure/salle_id mais artiste_norm distinct (TM/Eventim) doit
   // désormais fusionner en un seul événement au moment de la résolution, sans supprimer aucune des
   // deux observations (contrairement à l'ancien supprimerDoublonsParSalleId, qui ne couvrait que
   // les paires TM/Eventim codées en dur et perdait la ligne perdante).
@@ -1613,18 +1615,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null,
             salleId,
             artisteId);
-    final ValeurConcert viaDigitick =
+    final ValeurConcert viaEventim =
         new ValeurConcert(
             "Cold Play",
             "cold play",
             date,
             heure,
-            "Accor Arena Digitick",
-            "accor arena digitick",
+            "Accor Arena Eventim",
+            "accor arena eventim",
             "Paris",
             "75",
             null,
-            "digitick",
+            "eventim",
             null,
             null,
             null,
@@ -1635,7 +1637,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             salleId,
             artisteId);
 
-    persisteurConcertsDb.upsertLot(List.of(viaTm, viaDigitick));
+    persisteurConcertsDb.upsertLot(List.of(viaTm, viaEventim));
 
     final Long nbEvenements =
         jdbc.queryForObject(
@@ -1656,7 +1658,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of("id", artisteId.toString()),
             String.class);
     assertEquals(
-        "ticketmaster", source, "priorité Ticketmaster sur Digitick pour la référence affichée");
+        "ticketmaster", source, "priorité Ticketmaster sur Eventim pour la référence affichée");
   }
 
   // Une fiche package TM (URL /pack/) référence souvent une heure distincte de la fiche

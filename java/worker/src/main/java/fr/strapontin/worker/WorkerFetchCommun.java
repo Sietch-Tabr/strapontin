@@ -271,9 +271,8 @@ public class WorkerFetchCommun {
 
   /**
    * Exclut de la résolution Deezer les classifications "theatre"/"divers"/
-   * "sports" (jamais un vrai musicien) et, pour Eventim seul, une
-   * classification vide (Digitick l'omet aussi mais uniquement pour de
-   * vrais concerts, déjà filtrés en amont sur le genre "Concert").
+   * "sports" (jamais un vrai musicien) et, pour Eventim, une
+   * classification vide.
    * @param c concert à évaluer
    * @return {@code true} si la résolution Deezer peut s'appliquer
    */

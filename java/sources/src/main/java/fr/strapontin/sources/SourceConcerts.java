@@ -9,8 +9,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Contrat minimal d'une source de concerts (Ticketmaster, Eventim,
- * Digitick...) — méthodes non pertinentes pour une source ont une
+ * Contrat minimal d'une source de concerts (Ticketmaster, Eventim...)
+ * — méthodes non pertinentes pour une source ont une
  * implémentation par défaut (liste vide ou false).
  * @since 2.3.1
  * @author Kwaite
@@ -51,7 +51,7 @@ public interface SourceConcerts {
 
   /**
    * Indique si la source accepte cet identifiant de salle préfixé (ex.
-   * "tm:rZFSnyZdFvA", "digitick:lempreinte").
+   * "tm:rZFSnyZdFvA", "eventim:internal:accor arena").
    * @param identifiant identifiant préfixé de la salle
    * @return {@code true} si la source peut fetcher cette salle
    */

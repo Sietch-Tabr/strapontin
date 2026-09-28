@@ -19,6 +19,27 @@ export async function creerContexteAdmin(): Promise<APIRequestContext> {
   });
 }
 
+// Aucune API ne crée une salle hors suivi : la salle est créée en la suivant, puis désuivie
+// (le référentiel la conserve ; purger:salles la supprime ensuite, sans concert ni suivi).
+// Des noms sans racine commune sont requis : le suivi dédoublonne par similarité de nom.
+export async function creerSalleReferentiel(
+  ctx: APIRequestContext,
+  nom: string,
+): Promise<string> {
+  const repSuivi = await ctx.post("/api/salles", { data: { nom } });
+  expect(repSuivi.status()).toBe(201);
+  const repListe = await ctx.get(
+    `/api/admin/salles?nom=${encodeURIComponent(nom)}`,
+  );
+  expect(repListe.ok()).toBe(true);
+  const salle = (
+    (await repListe.json()).salles as { id: string; nom: string }[]
+  ).find((s) => s.nom === nom);
+  expect(salle).toBeTruthy();
+  await ctx.delete(`/api/salles/${salle!.id}`);
+  return salle!.id;
+}
+
 export async function supprimerUtilisateurParEmail(
   email: string,
 ): Promise<void> {

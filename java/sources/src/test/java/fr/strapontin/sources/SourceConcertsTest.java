@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
  * Tests unitaires pour les interfaces {@link SourceConcerts} et {@link SourceAvecFetchLot}.
  *
  * Vérifie les comportements par défaut et les implémentations de {@link TicketmasterSource},
- * {@link EventimSource} et {@link DigitickSource}.
+ * {@link EventimSource}.
  *
  * @since 2.3.1
  * @author Kwaite
@@ -85,7 +85,7 @@ class SourceConcertsTest {
 
     assertEquals("ticketmaster", tm.nom());
     assertTrue(tm.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
-    assertFalse(tm.accepteIdentifiantSalle("digitick:slug"));
+    assertFalse(tm.accepteIdentifiantSalle("eventim:internal:accor arena"));
     assertFalse(tm.accepteIdentifiantSalle("rZFSnyZdFvA"));
     assertFalse(tm.accepteIdentifiantSalle(null));
   }
@@ -103,7 +103,8 @@ class SourceConcertsTest {
 
     assertEquals("eventim", eventim.nom());
     assertFalse(eventim.accepteIdentifiantSalle("tm:venue-123"));
-    assertFalse(eventim.accepteIdentifiantSalle("eventim:id"));
+    assertTrue(eventim.accepteIdentifiantSalle("eventim:internal:accor arena"));
+    assertFalse(eventim.accepteIdentifiantSalle(null));
   }
 
   @Test
@@ -111,24 +112,6 @@ class SourceConcertsTest {
     final EventimSource eventim = new EventimSource();
     assertTrue(eventim instanceof SourceConcerts);
     assertFalse(eventim instanceof SourceAvecFetchLot);
-  }
-
-  @Test
-  void digitickSource_nomEtPrefixe_corrects() {
-    final DigitickSource digitick = new DigitickSource();
-
-    assertEquals("digitick", digitick.nom());
-    assertTrue(digitick.accepteIdentifiantSalle("digitick:lempreinte"));
-    assertFalse(digitick.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
-    assertFalse(digitick.accepteIdentifiantSalle("eventim:123"));
-    assertFalse(digitick.accepteIdentifiantSalle(null));
-  }
-
-  @Test
-  void digitickSource_implemente_sourceConcerts() {
-    final DigitickSource digitick = new DigitickSource();
-    assertTrue(digitick instanceof SourceConcerts);
-    assertFalse(digitick instanceof SourceAvecFetchLot);
   }
 
   @Test

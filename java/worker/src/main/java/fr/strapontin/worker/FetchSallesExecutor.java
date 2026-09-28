@@ -101,7 +101,7 @@ class FetchSallesExecutor {
 
   /**
    * Fetch les concerts d'une ou plusieurs salles par identifiants
-   * préfixés séparés par une virgule (ex. "tm:id1,digitick:slug").
+   * préfixés séparés par une virgule (ex. "tm:id1,eventim:internal:accor arena").
    * @param identifiantsStr identifiants préfixés séparés par des virgules
    */
   /* package-private : appelé par WorkerFetchService (même package). */

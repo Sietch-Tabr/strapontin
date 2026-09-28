@@ -47,7 +47,6 @@ final class SalleSuggestions {
         existant.salle(),
         preferer(existant.ville(), candidat.ville()),
         preferer(existant.tmVenueId(), candidat.tmVenueId()),
-        preferer(existant.digitickSlug(), candidat.digitickSlug()),
         existant.source(),
         preferer(existant.osmId(), candidat.osmId()),
         preferer(existant.wikidataId(), candidat.wikidataId()));

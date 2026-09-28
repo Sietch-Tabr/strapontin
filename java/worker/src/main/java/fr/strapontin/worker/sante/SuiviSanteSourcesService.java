@@ -67,7 +67,7 @@ public class SuiviSanteSourcesService {
 
   /**
    * Enregistre le résultat d'un fetch salle (identifiant préfixé, ex.
-   * {@code "tm:rZFSnyZdFvA"}, {@code "digitick:slug"}).
+   * {@code "tm:rZFSnyZdFvA"}, {@code "eventim:internal:accor arena"}).
    * @param identifiantPrefixe identifiant préfixé {@code source:id_externe}
    * @param nbResultats nombre de concerts retournés par ce fetch
    */

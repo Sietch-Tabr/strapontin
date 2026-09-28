@@ -145,7 +145,7 @@ class ControleIntegriteServiceTest {
     final UUID salleId = UUID.randomUUID();
     final Map<String, Object> ligne = new HashMap<>();
     ligne.put("entite_id", salleId);
-    ligne.put("source", "digitick");
+    ligne.put("source", "eventim");
     ligne.put("identifiant_externe", "slug-abandonne");
     when(jdbc.queryForList(contains("salle_sources"), anyMap())).thenReturn(List.of(ligne));
 
