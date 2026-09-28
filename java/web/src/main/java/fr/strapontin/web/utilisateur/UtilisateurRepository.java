@@ -33,9 +33,10 @@ class UtilisateurRepository {
    * (même package). */
   UtilisateurRepository(
       final NamedParameterJdbcTemplate jdbc,
-      @Value("${app.config.secret}") final String secretConfig) {
+      @Value("${app.config.secret}") final String secretConfig,
+      @Value("${app.config.secret-precedent:}") final String secretPrecedent) {
     this.jdbc = jdbc;
-    this.cipher = new ConfigCipher(secretConfig);
+    this.cipher = new ConfigCipher(secretConfig, secretPrecedent);
   }
 
   /**

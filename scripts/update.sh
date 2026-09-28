@@ -25,6 +25,7 @@ FICHIERS_DEPLOIEMENT=(
     "$APP_DIR/scripts/backup.sh"
     "$APP_DIR/scripts/restore.sh"
     "$APP_DIR/scripts/update.sh"
+    "$APP_DIR/scripts/rotation-secrets.sh"
 )
 AIDE_ACTIF=false
 command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ] && AIDE_ACTIF=true

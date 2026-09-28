@@ -38,7 +38,7 @@ class UtilisateurRepositoryTest {
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    repository = new UtilisateurRepository(jdbc, SECRET_CONFIG);
+    repository = new UtilisateurRepository(jdbc, SECRET_CONFIG, "");
   }
 
   @Test

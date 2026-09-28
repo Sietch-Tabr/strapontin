@@ -34,11 +34,14 @@ public class ConfigServiceWorker {
    * Crée le service et dérive la clé AES-256 depuis le secret applicatif.
    *
    * @param secret secret applicatif (variable {@code APP_CONFIG_SECRET})
+   * @param secretPrecedent secret remplacé lors d'une rotation en cours, vide sinon
    * @param jdbc   template JDBC Spring
    */
   public ConfigServiceWorker(
-      @Value("${app.config.secret}") final String secret, final NamedParameterJdbcTemplate jdbc) {
-    this.cipher = new ConfigCipher(secret);
+      @Value("${app.config.secret}") final String secret,
+      @Value("${app.config.secret-precedent:}") final String secretPrecedent,
+      final NamedParameterJdbcTemplate jdbc) {
+    this.cipher = new ConfigCipher(secret, secretPrecedent);
     this.jdbc = jdbc;
   }
 

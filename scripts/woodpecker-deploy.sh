@@ -11,8 +11,8 @@ SCP="scp -i /tmp/key -o StrictHostKeyChecking=no"
 HOST="root@${LXC_JAVA_HOST}"
 
 $SSH "$HOST" "mkdir -p /opt/strapontin/scripts"
-$SCP scripts/backup.sh scripts/restore.sh scripts/update.sh "$HOST":/opt/strapontin/scripts/
-$SSH "$HOST" "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh"
+$SCP scripts/backup.sh scripts/restore.sh scripts/update.sh scripts/rotation-secrets.sh "$HOST":/opt/strapontin/scripts/
+$SSH "$HOST" "chmod +x /opt/strapontin/scripts/backup.sh /opt/strapontin/scripts/restore.sh /opt/strapontin/scripts/update.sh /opt/strapontin/scripts/rotation-secrets.sh"
 
 echo "[deploy] Backup NAS avant deploiement..."
 $SSH "$HOST" /opt/strapontin/scripts/backup.sh || echo "[deploy] Backup NAS ignoré (NAS non monté)"

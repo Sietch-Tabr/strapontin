@@ -37,7 +37,7 @@ class ConfigServiceWorkerTest {
   @Mock private NamedParameterJdbcTemplate jdbc;
 
   private ConfigServiceWorker creerService() {
-    return new ConfigServiceWorker(SECRET, jdbc);
+    return new ConfigServiceWorker(SECRET, "", jdbc);
   }
 
   @Test
