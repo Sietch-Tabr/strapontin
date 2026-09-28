@@ -18,8 +18,8 @@ import org.junit.jupiter.api.Test;
 
 class EventimLieuxFetcherTest {
 
-  private static final int TAILLE_PAGE = 50;
-  private static final int MAX_PAGES = 10;
+  private static final int TAILLE_PAGE = 20;
+  private static final int PLAFOND = EventimSource.PLAFOND_PAGES;
 
   private final List<URI> requetes = new ArrayList<>();
 
@@ -70,7 +70,7 @@ class EventimLieuxFetcherTest {
     final LocalDate demain = LocalDate.now().plusDays(1);
 
     final List<ConcertBrut> concerts =
-        fetcher(_ -> new PageProduitsEventim(List.of(concert(demain, "77")), 1, true))
+        fetcher(_ -> new PageProduitsEventim(List.of(concert(demain, "77")), 1, 1, true))
             .fetchLieu("LEMPREINTE SAVIGNY LE TEMPLE CEDEX");
 
     assertThat(concerts).hasSize(1);
@@ -83,20 +83,35 @@ class EventimLieuxFetcherTest {
   @Test
   void fetchVilles_premiereFenetrePlafonnee_repriseAuDernierJourRecu() {
     final LocalDate derniereDate = LocalDate.now().plusDays(20);
-    final int totalAnnonce = TAILLE_PAGE * MAX_PAGES + 30;
+    final int totalAnnonce = 10_000;
 
     final ResultatRegion resultat =
         fetcher(
                 uri -> {
                   if (datesDebut().size() == 1) {
-                    return new PageProduitsEventim(page(derniereDate, "69"), totalAnnonce, true);
+                    return new PageProduitsEventim(page(derniereDate, "69"), totalAnnonce, PLAFOND, true);
                   }
-                  return new PageProduitsEventim(List.of(concert(derniereDate, "69")), 1, true);
+                  return new PageProduitsEventim(List.of(concert(derniereDate, "69")), 1, 1, true);
                 })
             .fetchVilles(List.of("Lyon"), Set.of("69"), List.of("Concerts"));
 
     assertThat(datesDebut()).containsExactly(LocalDate.now().toString(), derniereDate.toString());
-    assertThat(resultat.concerts()).hasSize(TAILLE_PAGE * MAX_PAGES + 1);
+    assertThat(resultat.concerts()).hasSize(TAILLE_PAGE * PLAFOND + 1);
+    assertThat(resultat.horizon()).isEqualTo(LocalDate.now().plusMonths(6).minusDays(1));
+  }
+
+  @Test
+  void fetchVilles_totalPagesSousLePlafond_litChaquePageSansTopEtCouvreTout() {
+    final LocalDate demain = LocalDate.now().plusDays(1);
+
+    final ResultatRegion resultat =
+        fetcher(_ -> new PageProduitsEventim(page(demain, "69"), 2267, 3, true))
+            .fetchVilles(List.of("Lyon"), Set.of("69"), List.of("Concerts"));
+
+    assertThat(requetes).hasSize(3);
+    assertThat(requetes).extracting(URI::getQuery).noneMatch(q -> q.contains("top="));
+    assertThat(requetes.get(2).getQuery()).contains("page=3");
+    assertThat(resultat.concerts()).hasSize(TAILLE_PAGE * 3);
     assertThat(resultat.horizon()).isEqualTo(LocalDate.now().plusMonths(6).minusDays(1));
   }
 
@@ -105,7 +120,7 @@ class EventimLieuxFetcherTest {
     final LocalDate aujourdHui = LocalDate.now();
 
     final ResultatRegion resultat =
-        fetcher(_ -> new PageProduitsEventim(page(aujourdHui, "69"), 10_000, true))
+        fetcher(_ -> new PageProduitsEventim(page(aujourdHui, "69"), 10_000, PLAFOND, true))
             .fetchVilles(List.of("Lyon"), Set.of("69"), List.of("Concerts"));
 
     assertThat(resultat.horizon()).isEqualTo(aujourdHui.minusDays(1));
@@ -120,7 +135,7 @@ class EventimLieuxFetcherTest {
                 uri ->
                     uri.getQuery().contains("page=2")
                         ? PageProduitsEventim.ECHEC
-                        : new PageProduitsEventim(page(demain, "69"), 80, true))
+                        : new PageProduitsEventim(page(demain, "69"), 80, 4, true))
             .fetchVilles(List.of("Lyon"), Set.of("69"), List.of("Concerts"));
 
     assertThat(resultat.horizon()).isNull();
@@ -135,7 +150,7 @@ class EventimLieuxFetcherTest {
         fetcher(
                 _ ->
                     new PageProduitsEventim(
-                        List.of(concert(demain, "69"), concert(demain, "33")), 2, true))
+                        List.of(concert(demain, "69"), concert(demain, "33")), 2, 1, true))
             .fetchVilles(List.of("Lyon"), Set.of("69"), List.of("Concerts"));
 
     assertThat(resultat.concerts()).extracting(ConcertBrut::dept).containsExactly("69");
@@ -181,7 +196,7 @@ class EventimLieuxFetcherTest {
         new EventimLieuxFetcher(
             "https://api.eventim.test/products",
             "web__eventim-fr",
-            _ -> new PageProduitsEventim(page(demain, "69"), 80, true),
+            _ -> new PageProduitsEventim(page(demain, "69"), 80, 4, true),
             () -> false);
 
     final ResultatRegion resultat =
@@ -193,7 +208,7 @@ class EventimLieuxFetcherTest {
   @Test
   void compterConcerts_succes_retourneLeTotalAnnonce() {
     final int total =
-        fetcher(_ -> new PageProduitsEventim(List.of(), 42, true)).compterConcerts("Accor Arena");
+        fetcher(_ -> new PageProduitsEventim(List.of(), 42, 3, true)).compterConcerts("Accor Arena");
 
     assertThat(total).isEqualTo(42);
     assertThat(requetes.getFirst().getQuery()).contains("top=1").doesNotContain("top=50");

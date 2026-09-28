@@ -551,6 +551,41 @@ class EventimSourceTest {
     serveur.verify();
   }
 
+  // L'API ignore page dès que top est présent : la pagination suit totalPages, sans top.
+  @Test
+  void fetchArtiste_deuxPagesAnnoncees_litLaSecondePageSansTop() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    for (final String page : List.of("page=1", "page=2")) {
+      serveur
+          .expect(
+              requestTo(
+                  org.hamcrest.Matchers.allOf(
+                      org.hamcrest.Matchers.containsString(page),
+                      org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("top=")))))
+          .andRespond(
+              withSuccess(
+                  "{\"products\":["
+                      + PRODUIT_ACCOR_ARENA
+                      + "],\"totalResults\":40,\"totalPages\":2}",
+                  MediaType.APPLICATION_JSON));
+    }
+
+    final List<ConcertBrut> resultats =
+        new EventimSource(builder.build()).fetchArtiste("Julien Clerc");
+
+    serveur.verify();
+    assertEquals(2, resultats.size());
+  }
+
   @Test
   void fetchArtiste_reponseValide_retourneConcerts() {
     final RestClient.Builder builder = RestClient.builder();

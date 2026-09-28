@@ -23,8 +23,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Client HTTP pour l'API publique Eventim France (recherche par artiste via
- * attractionId, et par région/département, pagination gérée jusqu'à
- * MAX_PAGES).
+ * attractionId, par lieu et par villes d'une région, pagination jusqu'au
+ * nombre de pages annoncé).
  *
  * @since 2.0.0
  * @author Kwaite
@@ -40,8 +40,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String PARAM_LANGUE = "language";
   private static final String CLE_PRODUCTS = "products";
   private static final String CLE_TOTAL_RESULTS = "totalResults";
-  private static final int TAILLE_PAGE = 50;
-  private static final int MAX_PAGES = 10;
+  private static final String CLE_TOTAL_PAGES = "totalPages";
+  // Au-delà, l'API répond 400 ; la taille de page est imposée (~20 produits) :
+  // un paramètre top fait ignorer page, qui renverrait toujours la première.
+  /* package-private : partagé avec EventimLieuxFetcher (même package). */
+  static final int PLAFOND_PAGES = 103;
   private static final int PREMIERE_PAGE = 1;
   private static final String PREFIXE_IDENTIFIANT = "eventim:";
 
@@ -277,9 +280,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         concerts.add(concert);
       }
     }
-    final int total =
-        data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
-    return new PageProduitsEventim(concerts, total, true);
+    return new PageProduitsEventim(
+        concerts, entier(data, CLE_TOTAL_RESULTS), entier(data, CLE_TOTAL_PAGES), true);
+  }
+
+  private static int entier(final Map<String, Object> data, final String cle) {
+    return data.get(cle) instanceof Number nombre ? nombre.intValue() : 0;
   }
 
   /**
@@ -298,7 +304,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     boolean succes = true;
     final String artisteSourceId = "eventim:" + attractionId;
 
-    for (int page = 1; page <= MAX_PAGES && continuer; page++) {
+    for (int page = 1; page <= PLAFOND_PAGES && continuer; page++) {
       if (page > PREMIERE_PAGE) {
         continuer = attendreEntrePagesEventim();
       }
@@ -311,7 +317,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                 .queryParam("date_from", fmt.format(dateDebut))
                 .queryParam("date_to", fmt.format(dateFin))
                 .queryParam("sort", "DateAsc")
-                .queryParam("top", TAILLE_PAGE)
                 .queryParam("page", page)
                 .build()
                 .toUriString();
@@ -321,7 +326,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
           succes = false;
         }
         concerts.addAll(resultat.concerts());
-        continuer = !resultat.estVide() && concerts.size() < resultat.total();
+        continuer = !resultat.estVide() && page < resultat.totalPages();
       }
     }
 

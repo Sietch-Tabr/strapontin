@@ -18,6 +18,7 @@ export const versionsChangelog = [
         items: [
           "Les concerts à Paris et dans les départements les plus actifs étaient partiellement récupérés dans la page Découverte : ils le sont désormais en totalité.",
           "Les concerts Eventim d'un département ne se limitaient plus qu'aux tout prochains jours : ils couvrent de nouveau les mois à venir.",
+          "Un artiste ayant beaucoup de dates chez Eventim (plus de 50) pouvait n'en afficher qu'une partie.",
           "Un concert pouvait disparaître à tort après une coupure réseau passagère lors de sa récupération.",
           "Un concert pouvait être rattaché à une salle homonyme d'une autre ville.",
         ],

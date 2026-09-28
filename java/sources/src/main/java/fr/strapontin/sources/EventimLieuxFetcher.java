@@ -23,7 +23,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 /**
  * Requêtes Eventim par lieu ({@code venue_names}) ou par villes ({@code
  * city_names}), seuls filtres géographiques appliqués par l'API, reprises
- * par fenêtre de dates au-delà de {@value #MAX_PAGES} pages.
+ * par fenêtre de dates au-delà du plafond de pages de l'API.
  * @since 3.0.1
  * @author Kwaite
  */
@@ -31,8 +31,6 @@ final class EventimLieuxFetcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(EventimLieuxFetcher.class);
 
-  private static final int TAILLE_PAGE = 50;
-  private static final int MAX_PAGES = 10;
   private static final int NB_FENETRES_MAX = 20;
   // Au-delà de 10 valeurs city_names, l'API répond 400 « Invalid search parameter ».
   private static final int VILLES_PAR_REQUETE = 10;
@@ -150,7 +148,7 @@ final class EventimLieuxFetcher {
     final PageProduitsEventim page =
         chargeur.apply(
             requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
-                .replaceQueryParam("top", 1)
+                .queryParam("top", 1)
                 .queryParam("venue_names", libelle)
                 .queryParam("page", 1)
                 .build()
@@ -172,8 +170,7 @@ final class EventimLieuxFetcher {
         .queryParam("language", "fr")
         .queryParam("date_from", FORMAT_DATE.format(debut))
         .queryParam("date_to", FORMAT_DATE.format(fin))
-        .queryParam("sort", "DateAsc")
-        .queryParam("top", TAILLE_PAGE);
+        .queryParam("sort", "DateAsc");
   }
 
   /**
@@ -213,23 +210,26 @@ final class EventimLieuxFetcher {
 
   private Parcours parcourirPages(final UriComponentsBuilder requete) {
     final List<ConcertBrut> concerts = new ArrayList<>();
-    boolean succes = true;
-    boolean continuer = true;
-    int total = 0;
-    for (int page = 1; page <= MAX_PAGES && continuer; page++) {
+    int totalPages = 0;
+    for (int page = 1; page <= EventimSource.PLAFOND_PAGES; page++) {
       if (page > 1 && !attente.getAsBoolean()) {
         return new Parcours(concerts, false, false, null);
       }
       final PageProduitsEventim resultat =
           chargeur.apply(requete.cloneBuilder().queryParam("page", page).build().encode().toUri());
-      succes &= resultat.succes();
+      if (!resultat.succes()) {
+        return new Parcours(concerts, false, false, null);
+      }
       concerts.addAll(resultat.concerts());
-      total = resultat.total();
-      continuer = resultat.succes() && !resultat.estVide() && concerts.size() < total;
+      totalPages = resultat.totalPages();
+      if (resultat.estVide() || page >= totalPages) {
+        break;
+      }
     }
     return new Parcours(
-        concerts, succes, succes && concerts.size() < total, derniereDate(concerts));
+        concerts, true, totalPages >= EventimSource.PLAFOND_PAGES, derniereDate(concerts));
   }
+
 
   private static LocalDate derniereDate(final List<ConcertBrut> concerts) {
     return concerts.stream()
