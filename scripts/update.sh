@@ -21,7 +21,12 @@ rollback() {
 
 # Fichiers qu'un déploiement légitime a déjà pu modifier avant cet appel (copiés par
 # woodpecker-deploy.sh) — les JARs ne sont remplacés qu'après le pré-contrôle ci-dessous.
+# La règle AIDE sur web.jar couvre aussi web.jar.new (préfixe) ; le dossier scripts change
+# dès qu'un script y est ajouté, chaque fichier ajouté restant listé individuellement.
 FICHIERS_DEPLOIEMENT=(
+    "$APP_DIR/web.jar.new"
+    "$APP_DIR/worker.jar.new"
+    "$APP_DIR/scripts"
     "$APP_DIR/scripts/backup.sh"
     "$APP_DIR/scripts/restore.sh"
     "$APP_DIR/scripts/update.sh"
