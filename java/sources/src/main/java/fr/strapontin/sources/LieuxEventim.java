@@ -68,7 +68,7 @@ final class LieuxEventim {
   /* package-private : appelé par EventimSource (même package). */
   ResultatRegion fetchRegion(final List<String> depts, final List<String> categories) {
     final List<String> villes = fournisseurVilles.get().villes(depts);
-    if (villes.isEmpty()) {
+    if (villes.isEmpty() && !EventimLieuxFetcher.interrogeableSansVille(depts)) {
       LOG.info("Eventim fetchRegion depts={} : aucune ville connue", depts);
       return new ResultatRegion(List.of(), null);
     }

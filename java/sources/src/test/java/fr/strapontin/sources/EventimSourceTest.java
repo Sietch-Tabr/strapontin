@@ -800,7 +800,7 @@ class EventimSourceTest {
             requestTo(
                 org.hamcrest.Matchers.allOf(
                     org.hamcrest.Matchers.containsString("/products"),
-                    org.hamcrest.Matchers.containsString("city_names=Paris"),
+                    org.hamcrest.Matchers.containsString("city_names=Saint%20Denis"),
                     org.hamcrest.Matchers.containsString("Concerts%20%26%20Festivals"),
                     org.hamcrest.Matchers.containsString("Classique%20%26%20Danse"),
                     org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("in_stock")),
@@ -814,13 +814,13 @@ class EventimSourceTest {
                     + "],\"totalResults\":2}",
                 MediaType.APPLICATION_JSON));
     final EventimSource source = new EventimSource(builder.build());
-    source.definirFournisseurVilles(depts -> List.of("Paris"));
+    source.definirFournisseurVilles(depts -> List.of("Saint Denis"));
 
-    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), List.of("music"));
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("93"), List.of("music"));
 
     serveur.verify();
     assertEquals(1, resultat.concerts().size());
-    assertEquals("75", resultat.concerts().get(0).dept());
+    assertEquals("93", resultat.concerts().get(0).dept());
     assertEquals(LocalDate.now().plusMonths(6).minusDays(1), resultat.horizon());
   }
 
@@ -830,7 +830,7 @@ class EventimSourceTest {
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final EventimSource source = new EventimSource(builder.build());
 
-    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), null);
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("69"), null);
 
     serveur.verify();
     assertTrue(resultat.concerts().isEmpty());

@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -31,12 +34,20 @@ final class EventimLieuxFetcher {
   private static final int TAILLE_PAGE = 50;
   private static final int MAX_PAGES = 10;
   private static final int NB_FENETRES_MAX = 20;
-  // Une URL trop longue est rejetée : les villes sont interrogées par paquets.
-  private static final int VILLES_PAR_REQUETE = 40;
+  // Au-delà de 10 valeurs city_names, l'API répond 400 « Invalid search parameter ».
+  private static final int VILLES_PAR_REQUETE = 10;
   private static final int MOIS_HORIZON_SALLE = 24;
   /* package-private : jours toujours couverts par un fetch par lieu (24 mois). */
   static final int JOURS_COUVERTS_SALLE = 729;
   private static final int MOIS_HORIZON_REGION = 6;
+  // Eventim classe une partie des lieux parisiens sous « Paris 07 »… sans slug :
+  // city_names ne les atteint pas, seul postal_code (une valeur exacte) le fait.
+  private static final String DEPT_PARIS = "75";
+  private static final List<String> CODES_POSTAUX_PARIS =
+      Stream.concat(
+              IntStream.rangeClosed(1, 20).mapToObj(n -> String.format("750%02d", n)),
+              Stream.of("75116"))
+          .toList();
   private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
   private final String urlProduits;
@@ -87,7 +98,7 @@ final class EventimLieuxFetcher {
   }
 
   /**
-   * Concerts à venir des villes d'une région, restreints à ses départements.
+   * Concerts à venir des villes d'une région (Paris aussi par code postal).
    * @param villes villes à interroger (orthographe Eventim)
    * @param depts départements retenus (une ville homonyme d'un autre
    *     département est écartée)
@@ -97,24 +108,35 @@ final class EventimLieuxFetcher {
   /* package-private : appelé par LieuxEventim (même package). */
   ResultatRegion fetchVilles(
       final List<String> villes, final Set<String> depts, final List<String> categories) {
+    final List<UnaryOperator<UriComponentsBuilder>> filtres = new ArrayList<>();
+    for (int i = 0; i < villes.size(); i += VILLES_PAR_REQUETE) {
+      final Object[] paquet =
+          villes.subList(i, Math.min(i + VILLES_PAR_REQUETE, villes.size())).toArray();
+      filtres.add(requete -> requete.queryParam("city_names", paquet));
+    }
+    if (depts.contains(DEPT_PARIS)) {
+      CODES_POSTAUX_PARIS.forEach(
+          code -> filtres.add(requete -> requete.queryParam("postal_code", code)));
+    }
     final LocalDate fin = LocalDate.now().plusMonths(MOIS_HORIZON_REGION);
     final List<ConcertBrut> concerts = new ArrayList<>();
     LocalDate horizon = fin.minusDays(1);
-    for (int i = 0; i < villes.size(); i += VILLES_PAR_REQUETE) {
-      final List<String> paquet =
-          villes.subList(i, Math.min(i + VILLES_PAR_REQUETE, villes.size()));
+    for (final UnaryOperator<UriComponentsBuilder> filtre : filtres) {
       final ResultatRegion resultat =
           parcourirFenetres(
               debut ->
-                  requete(debut, fin)
-                      .queryParam("city_names", paquet.toArray())
-                      .queryParam("categories", categories.toArray()),
+                  filtre.apply(requete(debut, fin).queryParam("categories", categories.toArray())),
               fin,
               depts);
       concerts.addAll(resultat.concerts());
       horizon = plusProche(horizon, resultat.horizon());
     }
     return new ResultatRegion(concerts, horizon);
+  }
+
+  /* package-private : départements interrogés même sans ville connue. */
+  static boolean interrogeableSansVille(final List<String> depts) {
+    return depts.contains(DEPT_PARIS);
   }
 
   /**
