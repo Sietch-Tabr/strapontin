@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -26,6 +27,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
@@ -825,5 +828,69 @@ class WorkerFetchServiceTest {
     fetchService.executerFetchSallesAll(List.of("salle-1"));
 
     verify(tm).fetchSalle("tm:venue-1");
+  }
+
+  private static ResourceAccessException panneReseau() {
+    return new ResourceAccessException(
+        "I/O error on GET request", new IOException("Connection reset"));
+  }
+
+  // Une source injoignable ne vaut pas une salle vide : la salle en panne est retentée et
+  // ses concerts ne comptent aucune absence, les autres salles du lot restent traitées.
+  @Test
+  void executerFetchSallesAll_panneReseauSurUneSalle_retenteEtNeCompteAucuneAbsenceSurElle() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    final Map<String, Object> salle1 = new HashMap<>();
+    salle1.put("salle_id", "s1");
+    salle1.put("identifiants", "ticketmaster:venue-1");
+    final Map<String, Object> salle2 = new HashMap<>();
+    salle2.put("salle_id", "s2");
+    salle2.put("identifiants", "ticketmaster:venue-2");
+    when(jdbc.queryForList(contains("user_salles"), anyMap())).thenReturn(List.of(salle1, salle2));
+    when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-1")).thenThrow(panneReseau());
+    when(tm.fetchSalle("tm:venue-2")).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSallesAll();
+
+    verify(retryLotsService).gererResultat("fetch:salles:all", List.of("s1"));
+    verify(suiviSanteSourcesService, never()).enregistrerResultatSalle(eq("tm:venue-1"), anyInt());
+    verify(jdbc)
+        .update(
+            contains("absences_consecutives"),
+            org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
+                params -> List.of("s2").equals(params.get("ids"))));
+  }
+
+  @Test
+  void executerFetchRegion_panneReseauSurUneSource_retenteLeLotSansCompterDAbsence() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(tm.fetchRegion(any(), any())).thenThrow(panneReseau());
+    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchRegion(List.of("75", "92"));
+
+    verify(retryLotsService).gererResultat("fetch:region", List.of("75", "92"));
+    verify(jdbc, never()).update(contains("absences_consecutives"), anyMap());
+  }
+
+  @Test
+  void executerFetchArtistesBatch_panneReseauTM_neCompteAucuneAbsence() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    final Map<String, Object> row = new HashMap<>();
+    row.put("artiste_id_str", "a1");
+    row.put("artiste_affiche", "Jain");
+    row.put("attraction_id", "K8vZ917oGV7");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenThrow(panneReseau());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(retryLotsService).gererResultat("fetch:artistes:batch", List.of("a1"));
+    verify(jdbc, never()).update(contains("absences_consecutives"), anyMap());
   }
 }

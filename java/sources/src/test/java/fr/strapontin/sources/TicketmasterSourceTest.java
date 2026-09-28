@@ -1130,4 +1130,22 @@ class TicketmasterSourceTest {
   void redigerApiKey_messageNull_retourneNull() {
     assertNull(TicketmasterSource.redigerApiKey(null));
   }
+
+  // Une panne réseau ne doit jamais être confondue avec une salle sans concert : l'appelant
+  // doit pouvoir la distinguer (retry ciblé, aucune absence comptée).
+  @Test
+  void fetchSalle_panneReseau_propageResourceAccessException() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withException(new java.io.IOException("Connection reset")));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+
+    assertThrows(
+        org.springframework.web.client.ResourceAccessException.class,
+        () -> source.fetchSalle("tm:venue-1"));
+  }
 }

@@ -149,21 +149,6 @@ class FetchArtistesBatchExecutor {
    */
   private record ResultatLot(ResultatPersistance persistance, boolean echecReseauTransitoire) {}
 
-  // Une vraie panne réseau (DNS, I/O, timeout — IOException et sous-classes, y
-  // compris en cause imbriquée) compte comme un échec de lot pour
-  // remonterEchecsLots/RetryLotsService ; un échec applicatif (erreur métier,
-  // JSON invalide) n'est pas transitoire au même sens, pas de retry auto.
-  private static boolean estEchecReseauTransitoire(final Throwable erreur) {
-    Throwable cause = erreur;
-    while (cause != null) {
-      if (cause instanceof java.io.IOException) {
-        return true;
-      }
-      cause = cause.getCause();
-    }
-    return false;
-  }
-
   /**
    * Fetch + dédoublonnage + persistance d'un lot ({@value TAILLE_LOT_TM})
    * — persistance par lot pour ne pas perdre le quota TM déjà consommé.
@@ -187,7 +172,7 @@ class FetchArtistesBatchExecutor {
           concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
         } catch (Exception e) {
           LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
-          if (estEchecReseauTransitoire(e)) {
+          if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
             echecReseau.set(true);
           }
         }
@@ -207,9 +192,12 @@ class FetchArtistesBatchExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    final List<String> artisteIds =
-        lot.stream().map(row -> (String) row.get(CLE_ARTISTE_ID_STR)).toList();
-    commun.mettreAJourAbsences("artiste_id", artisteIds, debutLot);
+    // Un concert non revu faute de réponse de la source n'est pas absent.
+    if (!echecReseau.get()) {
+      final List<String> artisteIds =
+          lot.stream().map(row -> (String) row.get(CLE_ARTISTE_ID_STR)).toList();
+      commun.mettreAJourAbsences("artiste_id", artisteIds, debutLot);
+    }
     return new ResultatLot(resultat, echecReseau.get());
   }
 
@@ -318,7 +306,7 @@ class FetchArtistesBatchExecutor {
         rapportage.suiviSanteSourcesService().enregistrerResultatArtistesLot(lot, concertsLot);
       } catch (Exception e) {
         LOG.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
-        if (estEchecReseauTransitoire(e)) {
+        if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
           echecReseau.set(true);
         }
       }
@@ -334,7 +322,7 @@ class FetchArtistesBatchExecutor {
         resultats.addAll(commun.obtenirTm().fetchArtiste(nom));
       } catch (Exception e) {
         LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
-        if (estEchecReseauTransitoire(e)) {
+        if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
           echecReseau.set(true);
         }
       }

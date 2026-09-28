@@ -14,6 +14,7 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,26 @@ public class WorkerFetchCommun {
    * package). */
   GestionQuotaTM obtenirGestionQuotaTM() {
     return gestionQuotaTM;
+  }
+
+  /**
+   * Distingue une vraie panne réseau (DNS, I/O, timeout — {@link IOException}
+   * et sous-classes, y compris en cause imbriquée) d'un échec applicatif
+   * (erreur métier, JSON invalide) : seule la première justifie un retry
+   * ciblé et interdit de compter des absences sur le périmètre concerné.
+   * @param erreur exception levée par un fetch de source
+   * @return {@code true} si l'échec est une panne réseau transitoire
+   */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
+  static boolean estEchecReseauTransitoire(final Throwable erreur) {
+    Throwable cause = erreur;
+    while (cause != null) {
+      if (cause instanceof IOException) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   /* package-private : appelé par les exécuteurs de fetch (même package). */

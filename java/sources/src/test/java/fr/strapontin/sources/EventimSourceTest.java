@@ -835,4 +835,20 @@ class EventimSourceTest {
     assertEquals(0, second.appels());
     assertEquals(0, second.erreursHttp());
   }
+
+  @Test
+  void fetchArtiste_panneReseau_propageResourceAccessException() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withException(new java.io.IOException("Connection reset")));
+
+    final EventimSource source = new EventimSource(restClient);
+
+    assertThrows(
+        org.springframework.web.client.ResourceAccessException.class,
+        () -> source.fetchArtiste("Test"));
+  }
 }

@@ -57,8 +57,11 @@ class FetchSallesExecutor {
    *
    * @param identifiant identifiant préfixé {@code source:identifiant_externe}
    * @param destination liste dans laquelle ajouter les concerts trouvés
+   * @return {@code false} si une source n'a pas répondu (panne réseau)
    */
-  private void fetchEtSuivreSalle(final String identifiant, final List<ConcertBrut> destination) {
+  private boolean fetchEtSuivreSalle(
+      final String identifiant, final List<ConcertBrut> destination) {
+    boolean joignable = true;
     for (final SourceConcerts source : sources) {
       if (source.accepteIdentifiantSalle(identifiant)) {
         try {
@@ -73,9 +76,13 @@ class FetchSallesExecutor {
               source.nom(),
               identifiant,
               e.getMessage());
+          if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
+            joignable = false;
+          }
         }
       }
     }
+    return joignable;
   }
 
   /**
@@ -196,7 +203,13 @@ class FetchSallesExecutor {
       final List<SalleAFetcher> lotSalles =
           sallesAFetcher.subList(i, Math.min(i + TAILLE_LOT_SALLES, sallesAFetcher.size()));
       try {
-        resultat = WorkerFetchCommun.accumuler(resultat, traiterLotSalles(lotSalles));
+        final ResultatLotSalles resultatLot = traiterLotSalles(lotSalles);
+        resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
+        if (!resultatLot.sallesInjoignables().isEmpty()) {
+          echecsLots.add(
+              "lot " + i + "-" + (i + lotSalles.size()) + " : panne réseau transitoire");
+          salleIdsEnEchec.addAll(resultatLot.sallesInjoignables());
+        }
       } catch (Exception e) {
         LOG.error(
             "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
@@ -209,19 +222,32 @@ class FetchSallesExecutor {
   }
 
   /**
+   * Bilan d'un lot de salles.
+   *
+   * @param persistance bilan de persistance
+   * @param sallesInjoignables salles dont une source n'a pas répondu
+   */
+  private record ResultatLotSalles(ResultatPersistance persistance, List<String> sallesInjoignables) {}
+
+  /**
    * Fetch + dédoublonnage + persistance d'un lot de salles ({@value
    * TAILLE_LOT_SALLES}) — persistance par lot plutôt qu'en bloc final,
    * chaque chaîne d'identifiants regroupe déjà toutes les sources d'une
-   * même salle ({@code GROUP BY ss.salle_id}).
+   * même salle ({@code GROUP BY ss.salle_id}). Les absences ne sont comptées
+   * que pour les salles dont toutes les sources ont répondu.
    * @param lotSalles sous-ensemble de salles suivies
-   * @return bilan de persistance du lot
+   * @return bilan du lot
    */
-  private ResultatPersistance traiterLotSalles(final List<SalleAFetcher> lotSalles) {
+  private ResultatLotSalles traiterLotSalles(final List<SalleAFetcher> lotSalles) {
     final List<ConcertBrut> tous = new ArrayList<>();
+    final List<String> sallesJoignables = new ArrayList<>();
+    final List<String> sallesInjoignables = new ArrayList<>();
     for (final SalleAFetcher salle : lotSalles) {
+      boolean joignable = true;
       for (final String id : salle.identifiants().split(",")) {
-        fetchEtSuivreSalle(id.trim(), tous);
+        joignable &= fetchEtSuivreSalle(id.trim(), tous);
       }
+      (joignable ? sallesJoignables : sallesInjoignables).add(salle.salleId());
     }
 
     final List<ConcertBrut> dedoublonnes = commun.resoudreEtDeduplicer(tous, LOG);
@@ -233,8 +259,7 @@ class FetchSallesExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    final List<String> salleIds = lotSalles.stream().map(SalleAFetcher::salleId).toList();
-    commun.mettreAJourAbsences("salle_id", salleIds, debutLot);
-    return resultat;
+    commun.mettreAJourAbsences("salle_id", sallesJoignables, debutLot);
+    return new ResultatLotSalles(resultat, sallesInjoignables);
   }
 }

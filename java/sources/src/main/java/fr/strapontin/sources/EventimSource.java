@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -236,6 +237,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
+    } catch (ResourceAccessException e) {
+      // Panne réseau (DNS, I/O, timeout) : propagée pour que l'appelant ne la confonde
+      // pas avec une réponse vide (retry ciblé, absences non comptées).
+      compteurBilan.enregistrerErreur();
+      LOG.warn("Eventim injoignable : {}", e.getMessage());
+      throw e;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       LOG.warn("Eventim erreur HTTP : {}", e.getMessage());

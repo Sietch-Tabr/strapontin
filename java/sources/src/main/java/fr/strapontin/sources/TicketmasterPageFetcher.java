@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -111,6 +112,15 @@ final class TicketmasterPageFetcher {
       }
       etatFetch.enregistrerErreur();
       return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
+    } catch (ResourceAccessException e) {
+      // Panne réseau (DNS, I/O, timeout) : propagée pour que l'appelant ne la confonde
+      // pas avec une réponse vide (retry ciblé, absences non comptées).
+      LOG.warn(
+          "Ticketmaster injoignable url={} : {}",
+          uriMasquee(uri),
+          TicketmasterSource.redigerApiKey(e.getMessage()));
+      etatFetch.enregistrerErreur();
+      throw e;
     } catch (Exception e) {
       LOG.warn(
           "erreur HTTP Ticketmaster url={} : {}",

@@ -120,7 +120,12 @@ class FetchRegionExecutor {
       final List<String> lotDepts =
           deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
       try {
-        resultat = WorkerFetchCommun.accumuler(resultat, traiterLotDepartements(lotDepts));
+        final ResultatLotDepartements resultatLot = traiterLotDepartements(lotDepts);
+        resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
+        if (resultatLot.sourceInjoignable()) {
+          echecsLots.add("depts=" + lotDepts + " : panne réseau transitoire");
+          deptsEnEchec.addAll(lotDepts);
+        }
       } catch (Exception e) {
         LOG.error("fetch:region lot {} échoué : {}", lotDepts, e.getMessage(), e);
         echecsLots.add("depts=" + lotDepts + " : " + e.getMessage());
@@ -137,15 +142,17 @@ class FetchRegionExecutor {
    * indépendamment de tout suivi utilisateur (détail : CLAUDE.md, Jobs
    * background).
    * @param lotDepts sous-ensemble de départements
-   * @return bilan de persistance du lot
+   * @return bilan du lot
    */
-  private ResultatPersistance traiterLotDepartements(final List<String> lotDepts) {
+  private ResultatLotDepartements traiterLotDepartements(final List<String> lotDepts) {
     final List<ConcertBrut> tous = new ArrayList<>();
+    boolean sourceInjoignable = false;
     for (final SourceConcerts source : sources) {
       try {
         tous.addAll(source.fetchRegion(lotDepts, null));
       } catch (Exception e) {
         LOG.warn("{} fetchRegion échoué depts={} : {}", source.nom(), lotDepts, e.getMessage());
+        sourceInjoignable |= WorkerFetchCommun.estEchecReseauTransitoire(e);
       }
     }
 
@@ -158,9 +165,21 @@ class FetchRegionExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    commun.mettreAJourAbsences("salle_id", sallesConnuesDesDepartements(lotDepts), debutLot);
-    return resultat;
+    // Un concert non revu faute de réponse d'une source n'est pas absent.
+    if (!sourceInjoignable) {
+      commun.mettreAJourAbsences("salle_id", sallesConnuesDesDepartements(lotDepts), debutLot);
+    }
+    return new ResultatLotDepartements(resultat, sourceInjoignable);
   }
+
+  /**
+   * Bilan d'un lot de départements.
+   *
+   * @param persistance bilan de persistance
+   * @param sourceInjoignable {@code true} si une source n'a pas répondu
+   */
+  private record ResultatLotDepartements(
+      ResultatPersistance persistance, boolean sourceInjoignable) {}
 
   /**
    * Salles déjà connues (concerts futurs déjà en base) pour un lot de
