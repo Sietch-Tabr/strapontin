@@ -19,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -58,6 +60,18 @@ class GlobalExceptionHandlerTest {
     final var ex = new RessourceDejaExistante("Cet artiste est déjà dans votre liste.");
     final Map<String, Object> rep = handler.gererRessourceDejaExistante(ex);
     assertEquals("Cet artiste est déjà dans votre liste.", rep.get("erreur"));
+  }
+
+  @Test
+  void gererCorpsIllisible_booleenAbsent_retourneMessageGeneriqueSansJournaliser() {
+    final HttpMessageNotReadableException ex =
+        new HttpMessageNotReadableException(
+            "Cannot map `null` into type `boolean`", new MockHttpInputMessage(new byte[0]));
+
+    final Map<String, Object> rep = handler.gererCorpsIllisible(ex);
+
+    assertEquals("Requête invalide.", rep.get("erreur"));
+    verifyNoInteractions(logAdminService);
   }
 
   @Test

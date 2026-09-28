@@ -400,14 +400,14 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    await expect(page.locator(".source-carte")).toHaveCount(5);
+    await expect(page.locator(".source-carte")).toHaveCount(4);
     await expect(page.locator(".source-carte-large")).toHaveCount(1);
     await expect(page.locator(".source-carte-large")).toContainText(
       "Ticketmaster",
     );
     await expect(
       page.locator(".source-carte:not(.source-carte-large)"),
-    ).toHaveCount(4);
+    ).toHaveCount(3);
   });
 
   test("admin_sources_table_salles_visible", async ({ page, isMobile }) => {

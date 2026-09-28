@@ -14,6 +14,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -84,6 +85,20 @@ public class GlobalExceptionHandler {
             .findFirst()
             .orElse("Données invalides.");
     return Map.of(CLE_ERREUR, message);
+  }
+
+  /**
+   * Retourne 400 pour un corps de requête illisible (JSON malformé, champ
+   * obligatoire absent ou de mauvais type).
+   *
+   * @param ex l'exception de lecture du corps
+   * @return {@code {"erreur": "Requête invalide."}}
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public Map<String, Object> gererCorpsIllisible(final HttpMessageNotReadableException ex) {
+    LOG.debug("Corps de requête illisible : {}", ex.getMessage());
+    return Map.of(CLE_ERREUR, "Requête invalide.");
   }
 
   /**

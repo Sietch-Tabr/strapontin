@@ -73,7 +73,7 @@
           Quota d'emails insuffisant pour prévenir tous les comptes aujourd'hui.
         </p>
         <button type="submit" class="bouton bouton-danger" :disabled="enCours">
-          Publier
+          Publier la communication
         </button>
       </form>
     </template>
