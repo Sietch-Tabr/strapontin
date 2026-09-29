@@ -39,6 +39,9 @@ steps:
     depends_on: [test, lint-front]
     environment:
       MAVEN_OPTS: "-Xmx768m"
+      # L'image fixe la JDK 26 du projet : le rappel PMD sur la JDK utilisée pour
+      # résoudre les classes standard n'a pas d'objet ici.
+      PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS: "true"
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:

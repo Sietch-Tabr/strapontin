@@ -8,6 +8,10 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,15 +23,21 @@ import org.slf4j.LoggerFactory;
 final class MapeurProduitEventim {
 
   private static final Logger LOG = LoggerFactory.getLogger(MapeurProduitEventim.class);
+  private static final String CLE_NOM = "name";
   private static final String DEPT_PARIS = "75";
   private static final String VILLE_PARIS = "Paris";
   private static final String SEPARATEUR_NOM_SALLE = " - ";
+  // « Paris 07 » : arrondissement accolé par Eventim, jamais par Ticketmaster.
+  private static final Pattern VILLE_ARRONDISSEMENT =
+      Pattern.compile("^(Paris|Lyon|Marseille) \\d{1,2}$", Pattern.CASE_INSENSITIVE);
+  // Signalée une fois par démarrage, sinon répétée à chaque produit du lieu.
+  private static final Set<String> SALLES_VILLE_NON_CORRIGEE = ConcurrentHashMap.newKeySet();
 
   private MapeurProduitEventim() {}
 
   /**
-   * Corrige une incohérence connue d'Eventim (salle taguée ville=Paris
-   * hors 75) — retombe sur la commune extraite du nom ("Nom - Commune").
+   * Corrige « Paris 07 » en « Paris », et une salle taguée Paris hors 75
+   * (commune extraite du nom "Nom - Commune").
    * @param ville ville brute renvoyée par Eventim
    * @param dept département dérivé du code postal, peut être null
    * @param salle nom de la salle, source alternative de la commune
@@ -35,7 +45,14 @@ final class MapeurProduitEventim {
    */
   /* package-private : appelé par EventimSource (même package). */
   static String corrigerVilleEventim(final String ville, final String dept, final String salle) {
-    if (ville == null || dept == null) {
+    if (ville == null) {
+      return null;
+    }
+    final Matcher arrondissement = VILLE_ARRONDISSEMENT.matcher(ville.strip());
+    if (arrondissement.matches()) {
+      return arrondissement.group(1);
+    }
+    if (dept == null) {
       return ville;
     }
     if (DEPT_PARIS.equals(dept) || !VILLE_PARIS.equalsIgnoreCase(ville.trim())) {
@@ -50,8 +67,10 @@ final class MapeurProduitEventim {
       }
     }
 
-    LOG.warn(
-        "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
+    if (SALLES_VILLE_NON_CORRIGEE.add(salle)) {
+      LOG.warn(
+          "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
+    }
     return null;
   }
 
@@ -117,7 +136,7 @@ final class MapeurProduitEventim {
         return null;
       }
 
-      final String titre = (String) produit.get("name");
+      final String titre = (String) produit.get(CLE_NOM);
       if (titre == null) {
         return null;
       }
@@ -157,6 +176,38 @@ final class MapeurProduitEventim {
     return null;
   }
 
+  /**
+   * Extrait le lieu d'un produit Eventim (libellé, ville, coordonnées), avec
+   * le même identifiant interne que celui du concert correspondant.
+   * @param produit produit Eventim sous forme de Map imbriquée
+   * @return lieu, ou null si le produit n'en porte pas d'exploitable
+   */
+  /* package-private : appelé par EventimSource (même package). */
+  static LieuEventim extraireLieu(final Map<String, Object> produit) {
+    try {
+      if (!(extraireLiveEntertainment(produit).get("location") instanceof Map<?, ?> location)
+          || !(location.get(CLE_NOM) instanceof String libelle)) {
+        return null;
+      }
+      final String salleNorm =
+          Normalisation.normaliserTexte(Normalisation.normaliserCasse(libelle));
+      if (salleNorm.isBlank()) {
+        return null;
+      }
+      final Map<?, ?> geo =
+          location.get("geoLocation") instanceof Map<?, ?> coordonnees ? coordonnees : Map.of();
+      return new LieuEventim(
+          "internal:" + salleNorm,
+          libelle,
+          location.get("city") instanceof String ville ? ville : null,
+          geo.get("latitude") instanceof Number lat ? lat.doubleValue() : null,
+          geo.get("longitude") instanceof Number lon ? lon.doubleValue() : null);
+    } catch (Exception e) {
+      LOG.warn("lieu Eventim illisible : {}", e.getMessage());
+      return null;
+    }
+  }
+
   private static ConcertBrut construireConcertEventim(
       final Map<String, Object> produit,
       final Map<String, Object> location,
@@ -165,8 +216,8 @@ final class MapeurProduitEventim {
       final String heure,
       final String artisteSourceId) {
     final String salle =
-        location != null && location.get("name") != null
-            ? Normalisation.normaliserCasse((String) location.get("name"))
+        location != null && location.get(CLE_NOM) != null
+            ? Normalisation.normaliserCasse((String) location.get(CLE_NOM))
             : "Salle inconnue";
     String ville = location != null ? (String) location.get("city") : null;
     final String dept =

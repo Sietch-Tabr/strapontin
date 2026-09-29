@@ -8,12 +8,14 @@ import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -84,6 +86,31 @@ public class GlobalExceptionHandler {
             .findFirst()
             .orElse("Données invalides.");
     return Map.of(CLE_ERREUR, message);
+  }
+
+  /**
+   * Retourne 400 pour un corps de requête illisible (JSON malformé, champ
+   * obligatoire absent ou de mauvais type).
+   *
+   * @param ex l'exception de lecture du corps
+   * @return {@code {"erreur": "Requête invalide."}}
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public Map<String, Object> gererCorpsIllisible(final HttpMessageNotReadableException ex) {
+    LOG.debug("Corps de requête illisible : {}", ex.getMessage());
+    return Map.of(CLE_ERREUR, "Requête invalide.");
+  }
+
+  /**
+   * Client déconnecté pendant l'envoi de la réponse : rien à répondre ni à
+   * signaler (la réponse, parfois une image, ne peut plus recevoir de JSON).
+   *
+   * @param ex l'exception de connexion interrompue
+   */
+  @ExceptionHandler(ClientAbortException.class)
+  public void gererClientDeconnecte(final ClientAbortException ex) {
+    LOG.debug("Connexion interrompue par le client : {}", ex.getMessage());
   }
 
   /**

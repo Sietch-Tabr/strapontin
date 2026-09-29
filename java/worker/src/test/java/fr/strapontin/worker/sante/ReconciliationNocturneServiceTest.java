@@ -212,17 +212,17 @@ class ReconciliationNocturneServiceTest {
   }
 
   @Test
-  void executer_digitickSuspect_loggeUneSeuleAlerteAgregee() {
-    final Map<String, Object> ligneDigitick = new HashMap<>();
-    ligneDigitick.put("identifiant_externe", "lempreinte");
-    ligneDigitick.put("nom", "L'Empreinte");
-    when(jdbc.queryForList(contains("source = 'digitick'"), anyMap()))
-        .thenReturn(List.of(ligneDigitick));
+  void executer_lieuEventimSuspect_loggeUneSeuleAlerteAgregee() {
+    final Map<String, Object> ligneEventim = new HashMap<>();
+    ligneEventim.put("libelle_source", "LEMPREINTE SAVIGNY LE TEMPLE CEDEX");
+    ligneEventim.put("nom", "L'Empreinte");
+    when(jdbc.queryForList(contains("source = 'eventim'"), anyMap()))
+        .thenReturn(List.of(ligneEventim));
 
     service.executer();
 
     verify(logsAdminWorker, org.mockito.Mockito.times(1))
-        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("Digitick"), any());
+        .inserer(eq("warn"), eq("reconciliation-nocturne"), contains("lieu(x) Eventim"), any());
   }
 
   @Test

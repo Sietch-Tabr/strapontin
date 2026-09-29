@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
@@ -26,6 +28,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,11 +38,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).
  *
- * <p>Les tests du bilan de panne (Eventim/Digitick/Deezer/TM concerts manqués) sont dans {@code
+ * <p>Les tests du bilan de panne (Eventim/Deezer/TM concerts manqués) sont dans {@code
  * WorkerStatsServiceTest}, testés directement au niveau où cette logique vit désormais.
  *
  * @since 2.2.3 (extrait dans sa forme actuelle en 2.7.0)
@@ -95,7 +100,10 @@ class WorkerFetchServiceTest {
             jdbc, resolveur, logsAdminWorker, retryLotsService, tm, gestionQuotaTM);
     final FetchRapportage rapportage =
         new FetchRapportage(
-            notificationDigestService, workerStatsService, suiviSanteSourcesService);
+            notificationDigestService,
+            workerStatsService,
+            suiviSanteSourcesService,
+            new EnregistreurLieuxEventim(jdbc, eventim));
     fetchService =
         new WorkerFetchService(
             sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
@@ -309,7 +317,7 @@ class WorkerFetchServiceTest {
 
     fetchService.executerFetchSalle("tm:venue-42");
 
-    verify(tm, never()).fetchSalle(anyString());
+    verify(tm, never()).fetchSalle(anyString(), any());
     verify(persisterConcerts, never()).persisterConcerts(any());
   }
 
@@ -317,12 +325,12 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_quotaDisponible_fetchEtPersiste() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchSalle("tm:venue-42");
 
-    verify(tm).fetchSalle("tm:venue-42");
+    verify(tm).fetchSalle("tm:venue-42", null);
     verify(persisterConcerts).persisterConcerts(any());
   }
 
@@ -367,7 +375,7 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concertHumoriste, concertMusique));
+    when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concertHumoriste, concertMusique));
     when(resolveur.resoudreNomCanonique("artiste", "Indila"))
         .thenReturn(
             new ResolveurNomCanonique.ResultatResolution(
@@ -427,7 +435,7 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concertDivers, concertSports));
+    when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concertDivers, concertSports));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchSalle("tm:venue-42");
@@ -437,8 +445,7 @@ class WorkerFetchServiceTest {
         .resoudreNomCanonique(eq("artiste"), eq("Equipe de France de basket-ball"));
   }
 
-  // Contrairement à Digitick (classification toujours vide, mais filtré en amont sur de vrais
-  // concerts), Eventim omet fréquemment sa classification y compris pour des spectacles non
+  // Eventim omet fréquemment sa classification y compris pour des spectacles non
   // musicaux (ex. "Paris is Magique", comédie musicale) — la résolution Deezer ne doit pas
   // s'appliquer à un concert Eventim sans classification.
   @Test
@@ -463,7 +470,8 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    when(eventim.fetchSalle("tm:venue-42")).thenReturn(List.of(concertEventimSansClassification));
+    when(eventim.fetchSalle("tm:venue-42", null))
+        .thenReturn(List.of(concertEventimSansClassification));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchSalle("tm:venue-42");
@@ -494,7 +502,7 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concert));
+    when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concert));
     when(resolveur.resoudreNomCanonique("artiste", "Nino Arial"))
         .thenReturn(
             new ResolveurNomCanonique.ResultatResolution(
@@ -536,7 +544,7 @@ class WorkerFetchServiceTest {
             null,
             null,
             null);
-    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of(concert));
+    when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concert));
     when(resolveur.resoudreNomCanonique("artiste", "stromae"))
         .thenReturn(
             new ResolveurNomCanonique.ResultatResolution(
@@ -557,7 +565,7 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_appelleSuiviSanteSourcesAvecLeResultat() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    when(tm.fetchSalle("tm:venue-42")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchSalle("tm:venue-42");
@@ -570,14 +578,14 @@ class WorkerFetchServiceTest {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-1")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-2")).thenReturn(true);
-    when(tm.fetchSalle("tm:venue-1")).thenReturn(List.of());
-    when(tm.fetchSalle("tm:venue-2")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-1", null)).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-2", null)).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchSalle("tm:venue-1,tm:venue-2");
 
-    verify(tm).fetchSalle("tm:venue-1");
-    verify(tm).fetchSalle("tm:venue-2");
+    verify(tm).fetchSalle("tm:venue-1", null);
+    verify(tm).fetchSalle("tm:venue-2", null);
   }
 
   // Régression : même motif que fetch:artistes:batch — persistance par lot de départements
@@ -588,8 +596,8 @@ class WorkerFetchServiceTest {
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
     when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
 
@@ -605,8 +613,8 @@ class WorkerFetchServiceTest {
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any()))
         .thenReturn(new ResultatPersistance(1, 0))
         .thenThrow(new RuntimeException("panne réseau"))
@@ -630,8 +638,8 @@ class WorkerFetchServiceTest {
     final String[] depts = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"};
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.<RowMapper<String[]>>any()))
         .thenReturn(List.<String[]>of(depts));
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any()))
         .thenReturn(new ResultatPersistance(1, 0))
         .thenThrow(new RuntimeException("panne réseau"))
@@ -648,13 +656,13 @@ class WorkerFetchServiceTest {
   @Test
   void executerFetchRegion_avecDeptsCibles_neFetchQueCesDepts() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
-    when(tm.fetchRegion(any(), any())).thenReturn(List.of());
-    when(eventim.fetchRegion(any(), any())).thenReturn(List.of());
+    when(tm.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchRegion(List.of("75", "92"));
 
-    verify(tm).fetchRegion(eq(List.of("75", "92")), any());
+    verify(tm).fetchRegionCouverte(eq(List.of("75", "92")), any());
     verify(jdbc, never())
         .query(
             contains("user_config"),
@@ -685,18 +693,16 @@ class WorkerFetchServiceTest {
   void executerFetchSallesAll_avecSalle_fetchEtPersiste() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap()))
-        .thenReturn(
-            List.of(
-                Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-99")));
+        .thenReturn(List.of(ligneSalle(UUID.randomUUID().toString(), "ticketmaster", "venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
-    when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-99", null)).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
     when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
 
     fetchService.executerFetchSallesAll();
 
-    verify(tm).fetchSalle("tm:venue-99");
+    verify(tm).fetchSalle("tm:venue-99", null);
     verify(persisterConcerts).persisterConcerts(any());
   }
 
@@ -707,35 +713,27 @@ class WorkerFetchServiceTest {
   void executerFetchSallesAll_identifiantSourceTicketmaster_traduitEnPrefixeTmAvantFetch() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap()))
-        .thenReturn(
-            List.of(
-                Map.of(
-                    "salle_id",
-                    UUID.randomUUID().toString(),
-                    "identifiants",
-                    "ticketmaster:venue-99")));
+        .thenReturn(List.of(ligneSalle(UUID.randomUUID().toString(), "ticketmaster", "venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
-    when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-99", null)).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
     when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
 
     fetchService.executerFetchSallesAll();
 
-    verify(tm).fetchSalle("tm:venue-99");
-    verify(tm, never()).fetchSalle("ticketmaster:venue-99");
+    verify(tm).fetchSalle("tm:venue-99", null);
+    verify(tm, never()).fetchSalle("ticketmaster:venue-99", null);
   }
 
   @Test
   void executerFetchSallesAll_appelleSuiviSanteSourcesAvecLeResultat() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap()))
-        .thenReturn(
-            List.of(
-                Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-99")));
+        .thenReturn(List.of(ligneSalle(UUID.randomUUID().toString(), "ticketmaster", "venue-99")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle("tm:venue-99")).thenReturn(true);
-    when(tm.fetchSalle("tm:venue-99")).thenReturn(List.of());
+    when(tm.fetchSalle("tm:venue-99", null)).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
     when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
 
@@ -750,12 +748,12 @@ class WorkerFetchServiceTest {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     final List<Map<String, Object>> lignes = new ArrayList<>();
     for (int i = 0; i < 25; i++) {
-      lignes.add(Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
+      lignes.add(ligneSalle(UUID.randomUUID().toString(), "ticketmaster", "venue-" + i));
     }
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(lignes);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
-    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(tm.fetchSalle(anyString(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
     when(recalculerMatchesService.recalculerMatches(any())).thenReturn(0);
 
@@ -770,12 +768,12 @@ class WorkerFetchServiceTest {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     final List<Map<String, Object>> lignes = new ArrayList<>();
     for (int i = 0; i < 25; i++) {
-      lignes.add(Map.of("salle_id", UUID.randomUUID().toString(), "identifiants", "tm:venue-" + i));
+      lignes.add(ligneSalle(UUID.randomUUID().toString(), "ticketmaster", "venue-" + i));
     }
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(lignes);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
-    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(tm.fetchSalle(anyString(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any()))
         .thenThrow(new RuntimeException("panne persistance"))
         .thenReturn(new ResultatPersistance(1, 0));
@@ -796,10 +794,10 @@ class WorkerFetchServiceTest {
   void executerFetchSallesAll_lotEnEchec_transmetLesSalleIdsAuRetryLotsService() {
     when(gestionQuotaTM.cronAutorise()).thenReturn(true);
     when(jdbc.queryForList(anyString(), anyMap()))
-        .thenReturn(List.of(Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
+        .thenReturn(List.of(ligneSalle("salle-1", "ticketmaster", "venue-1")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
-    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(tm.fetchSalle(anyString(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any()))
         .thenThrow(new RuntimeException("panne persistance"));
 
@@ -816,14 +814,84 @@ class WorkerFetchServiceTest {
             contains("salle_id::text IN"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params -> List.of("salle-1").equals(params.get("ids")))))
-        .thenReturn(List.of(Map.of("salle_id", "salle-1", "identifiants", "tm:venue-1")));
+        .thenReturn(List.of(ligneSalle("salle-1", "ticketmaster", "venue-1")));
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
     when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
-    when(tm.fetchSalle(anyString())).thenReturn(List.of());
+    when(tm.fetchSalle(anyString(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchSallesAll(List.of("salle-1"));
 
-    verify(tm).fetchSalle("tm:venue-1");
+    verify(tm).fetchSalle("tm:venue-1", null);
+  }
+
+  private static ResourceAccessException panneReseau() {
+    return new ResourceAccessException(
+        "I/O error on GET request", new IOException("Connection reset"));
+  }
+
+  // Une source injoignable ne vaut pas une salle vide : la salle en panne est retentée et
+  // ses concerts ne comptent aucune absence, les autres salles du lot restent traitées.
+  @Test
+  void executerFetchSallesAll_panneReseauSurUneSalle_retenteEtNeCompteAucuneAbsenceSurElle() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    final Map<String, Object> salle1 = ligneSalle("s1", "ticketmaster", "venue-1");
+    final Map<String, Object> salle2 = ligneSalle("s2", "ticketmaster", "venue-2");
+    when(jdbc.queryForList(contains("user_salles"), anyMap())).thenReturn(List.of(salle1, salle2));
+    when(tm.accepteIdentifiantSalle(anyString())).thenReturn(true);
+    when(tm.fetchSalle("tm:venue-1", null)).thenThrow(panneReseau());
+    when(tm.fetchSalle("tm:venue-2", null)).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchSallesAll();
+
+    verify(retryLotsService).gererResultat("fetch:salles:all", List.of("s1"));
+    verify(suiviSanteSourcesService, never()).enregistrerResultatSalle(eq("tm:venue-1"), anyInt());
+    verify(jdbc)
+        .update(
+            contains("absences_consecutives"),
+            org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
+                params -> List.of("s2").equals(params.getValue("ids"))));
+  }
+
+  @Test
+  void executerFetchRegion_panneReseauSurUneSource_retenteLeLotSansCompterDAbsence() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    when(tm.fetchRegionCouverte(any(), any())).thenThrow(panneReseau());
+    when(eventim.fetchRegionCouverte(any(), any())).thenReturn(new ResultatRegion(List.of(), null));
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchRegion(List.of("75", "92"));
+
+    verify(retryLotsService).gererResultat("fetch:region", List.of("75", "92"));
+    verify(jdbc, never()).update(contains("absences_consecutives"), any(SqlParameterSource.class));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_panneReseauTM_neCompteAucuneAbsence() {
+    when(gestionQuotaTM.cronAutorise()).thenReturn(true);
+    final Map<String, Object> row = new HashMap<>();
+    row.put("artiste_id_str", "a1");
+    row.put("artiste_affiche", "Jain");
+    row.put("attraction_id", "K8vZ917oGV7");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
+    when(tm.fetchArtistesLot(any())).thenThrow(panneReseau());
+    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
+
+    fetchService.executerFetchArtistesBatch();
+
+    verify(retryLotsService).gererResultat("fetch:artistes:batch", List.of("a1"));
+    verify(jdbc, never()).update(contains("absences_consecutives"), anyMap());
+  }
+
+  private static Map<String, Object> ligneSalle(
+      final String salleId, final String source, final String identifiant) {
+    final Map<String, Object> ligne = new HashMap<>();
+    ligne.put("salle_id", salleId);
+    ligne.put("source", source);
+    ligne.put("identifiant", identifiant);
+    ligne.put("libelle", null);
+    return ligne;
   }
 }

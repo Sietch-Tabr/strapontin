@@ -81,16 +81,16 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
-  void lireIdentifiantsSources_sourceDigitick_conservePrefixeInchange() {
+  void lireIdentifiantsSources_sourceEventim_conservePrefixeInchange() {
     final UUID salleId = creerSalle("lempreinte");
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
-            + " VALUES (CAST(:uuid AS uuid), 'digitick', 'lempreinte')",
+            + " VALUES (CAST(:uuid AS uuid), 'eventim', 'internal:lempreinte')",
         Map.of("uuid", salleId.toString()));
 
     final String identifiants = repository.lireIdentifiantsSources(salleId);
 
-    assertEquals("digitick:lempreinte", identifiants);
+    assertEquals("eventim:internal:lempreinte", identifiants);
   }
 
   @Test
@@ -118,7 +118,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
     assertNull(repository.lireIdentifiantsSources(salleId));
   }
 
-  // upsertSalle/upsertSalleAvecLoc écrivaient nom_norm = salleCle (fonction
+  // upsertSalle écrivait nom_norm = salleCle (fonction
   // normaliserSalleCle, sans espaces — ex. "lempreinte"), incompatible avec la tokenisation par
   // espaces qu'attend CorrespondanceSalle.tokensSignificatifs, cassant le matching Wikidata pour
   // toute salle ajoutée via le flux interactif (recherche Nominatim).
@@ -131,47 +131,6 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
             "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
 
     assertEquals("l empreinte", nomNorm);
-  }
-
-  @Test
-  void upsertSalleAvecLoc_nomAvecEspaces_nomNormConserveLesEspaces() {
-    final UUID salleId =
-        repository.upsertSalleAvecLoc("accorhotelsarena", "Accorhotels Arena", "Paris", "75");
-
-    final String nomNorm =
-        jdbc.queryForObject(
-            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
-
-    assertEquals("accorhotels arena", nomNorm);
-  }
-
-  // mettreAJourSalle mettait à jour nom sans jamais recalculer nom_norm, laissant les
-  // deux colonnes désynchronisées après un renommage (ex. correction admin Digitick) — cassant
-  // le matching Wikidata/Overpass exactement comme.
-  @Test
-  void mettreAJourSalle_nouveauNom_recalculeNomNorm() {
-    final UUID salleId = repository.upsertSalle("elyseemontmartre", "Elysee Montmartre");
-
-    repository.mettreAJourSalle(salleId, "Élysée Montmartre", null, null);
-
-    final String nomNorm =
-        jdbc.queryForObject(
-            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
-
-    assertEquals("elysee montmartre", nomNorm);
-  }
-
-  @Test
-  void mettreAJourSalle_nomNull_conserveNomNormExistant() {
-    final UUID salleId = repository.upsertSalle("elyseemontmartre", "Élysée Montmartre");
-
-    repository.mettreAJourSalle(salleId, null, "Paris", "75");
-
-    final String nomNorm =
-        jdbc.queryForObject(
-            "SELECT nom_norm FROM salles WHERE id = :id", Map.of("id", salleId), String.class);
-
-    assertEquals("elysee montmartre", nomNorm);
   }
 
   // rechercherEnBase filtrait sur regexp_replace(salle_norm/nom_norm, '[^a-z0-9]', '', 'g')
@@ -221,24 +180,7 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
-  void rechercherEnBase_salleDigitick_retourneSonSlug() {
-    final UUID salleId = creerSalle("bataclan");
-    jdbc.update(
-        "UPDATE salles SET nom = 'Bataclan', nom_norm = 'bataclan' WHERE id = :id",
-        Map.of("id", salleId));
-    jdbc.update(
-        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
-            + " VALUES (CAST(:uuid AS uuid), 'digitick', 'le-bataclan')",
-        Map.of("uuid", salleId.toString()));
-
-    final List<Map<String, Object>> resultats = repository.rechercherEnBase("%bataclan%");
-
-    assertEquals(1, resultats.size());
-    assertEquals("le-bataclan", resultats.get(0).get("digitick_slug"));
-  }
-
-  @Test
-  void rechercherEnBase_salleReferentielSansConcertNiDigitick_nApparaitPas() {
+  void rechercherEnBase_salleReferentielSansConcert_nApparaitPas() {
     creerSalle("salle inconnue du public");
 
     final List<Map<String, Object>> resultats = repository.rechercherEnBase("%salleinconnue%");

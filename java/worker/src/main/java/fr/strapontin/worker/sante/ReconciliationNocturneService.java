@@ -80,7 +80,7 @@ public class ReconciliationNocturneService {
     final int[] bilanSalles = healthCheckSallesTM.verifier();
     healthCheckArtistesTM.verifierVivacite();
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
-    healthCheckSallesTM.alerterDigitickSuspect();
+    healthCheckSallesTM.alerterLieuxEventimSuspects();
 
     final int enrichisArtistes = enrichissementArtistes.enrichir();
     final int enrichisSalles = enrichissementSalles.enrichir();

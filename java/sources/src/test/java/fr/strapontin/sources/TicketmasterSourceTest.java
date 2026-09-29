@@ -113,7 +113,7 @@ class TicketmasterSourceTest {
 
   @Test
   void mapEvenement_evenementComplet_parseTousLesChamps() {
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evenementTMRaw(), null);
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
     assertEquals("2025-09-15", resultat.date());
@@ -143,7 +143,7 @@ class TicketmasterSourceTest {
                             "name", "Zénith Paris",
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75019")))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, "Julien Clerc");
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
@@ -165,12 +165,12 @@ class TicketmasterSourceTest {
                             "name", "Zénith Paris",
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75019")))));
-    assertNull(TicketmasterSource.mapEvenement(evt, null));
+    assertNull(MapeurEvenementTM.mapper(evt, null));
   }
 
   @Test
   void mapEvenement_salleToutMajuscule_normaliseEnTitleCase() {
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evenementTMRaw(), null);
     assertNotNull(resultat);
     assertEquals("Accor Arena", resultat.salle());
   }
@@ -190,7 +190,7 @@ class TicketmasterSourceTest {
                             "name", "L'OLYMPIA",
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75009")))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
     assertNotNull(resultat);
     assertEquals("L'Olympia", resultat.salle());
   }
@@ -212,7 +212,7 @@ class TicketmasterSourceTest {
                             "name", "Madame Brasserie",
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75007")))));
-    assertNull(TicketmasterSource.mapEvenement(evt, "2 Unlimited"));
+    assertNull(MapeurEvenementTM.mapper(evt, "2 Unlimited"));
   }
 
   @Test
@@ -232,7 +232,7 @@ class TicketmasterSourceTest {
                             "name", "Zénith Paris",
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75019")))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "2 Unlimited");
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, "2 Unlimited");
     assertNotNull(resultat);
     assertEquals("2 Unlimited", resultat.artiste());
   }
@@ -241,7 +241,7 @@ class TicketmasterSourceTest {
   void mapEvenement_dateAbsente_retourneNull() {
     final Map<String, Object> evt = new HashMap<>(evenementTMRaw());
     evt.put("dates", Map.of("start", Map.of()));
-    assertNull(TicketmasterSource.mapEvenement(evt, null));
+    assertNull(MapeurEvenementTM.mapper(evt, null));
   }
 
   @Test
@@ -254,7 +254,7 @@ class TicketmasterSourceTest {
                     Map.of(
                         "segment", Map.of("name", "Arts et théâtre"),
                         "genre", Map.of("name", "Théâtre")))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
     assertNotNull(resultat);
     assertEquals("theatre", resultat.classification());
   }
@@ -263,7 +263,7 @@ class TicketmasterSourceTest {
   void mapEvenement_urlAbsente_retourneNullPourUrl() {
     final Map<String, Object> evt = new HashMap<>(evenementTMRaw());
     evt.remove("url");
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
     assertNotNull(resultat);
     assertNull(resultat.url());
   }
@@ -283,7 +283,7 @@ class TicketmasterSourceTest {
                             "name", "Salle",
                             "city", Map.of("name", "Pointe-à-Pitre"),
                             "postalCode", "97100")))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
     assertNotNull(resultat);
     assertEquals("971", resultat.dept());
   }
@@ -310,7 +310,7 @@ class TicketmasterSourceTest {
                             "4351",
                             "country",
                             Map.of("countryCode", "LU"))))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
     assertNotNull(resultat);
     assertNull(
         resultat.dept(), "Une salle hors de France ne doit jamais recevoir de dept français");
@@ -336,7 +336,7 @@ class TicketmasterSourceTest {
                             "75019",
                             "country",
                             Map.of("countryCode", "FR"))))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
     assertNotNull(resultat);
     assertEquals("75", resultat.dept());
   }
@@ -445,7 +445,7 @@ class TicketmasterSourceTest {
   void accepteIdentifiantSalle_prefixeTm_retourneVrai() {
     final TicketmasterSource source = new TicketmasterSource("fake-key");
     assertTrue(source.accepteIdentifiantSalle("tm:rZFSnyZdFvA"));
-    assertFalse(source.accepteIdentifiantSalle("digitick:lempreinte"));
+    assertFalse(source.accepteIdentifiantSalle("eventim:internal:accor arena"));
     assertFalse(source.accepteIdentifiantSalle("rZFSnyZdFvA"));
     assertFalse(source.accepteIdentifiantSalle(null));
   }
@@ -687,7 +687,7 @@ class TicketmasterSourceTest {
                 "sales",
                 Map.of("public", Map.of("startDateTime", "2099-01-01T12:00:00Z"))));
 
-    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = MapeurEvenementTM.mapper(evt, null);
 
     assertEquals("presale", concert.statut());
     assertEquals("2099-01-01T12:00:00Z", concert.presaleDebut());
@@ -722,7 +722,7 @@ class TicketmasterSourceTest {
                 "sales",
                 Map.of("public", Map.of("startDateTime", "2020-01-01T12:00:00Z"))));
 
-    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = MapeurEvenementTM.mapper(evt, null);
 
     assertEquals("offsale", concert.statut());
   }
@@ -744,7 +744,7 @@ class TicketmasterSourceTest {
                             "startDateTime", "2099-01-01T12:00:00Z",
                             "name", "Prévente carte bancaire")))));
 
-    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = MapeurEvenementTM.mapper(evt, null);
 
     assertEquals("presale", concert.statut());
     assertEquals("2099-01-01T12:00:00Z", concert.presaleDebut());
@@ -767,7 +767,7 @@ class TicketmasterSourceTest {
                             "startDateTime", "2020-01-01T12:00:00Z",
                             "name", "Prévente carte bancaire")))));
 
-    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = MapeurEvenementTM.mapper(evt, null);
 
     assertEquals("offsale", concert.statut());
   }
@@ -784,7 +784,7 @@ class TicketmasterSourceTest {
                     "presales",
                     List.of(Map.of("startDateTime", "2099-01-01T12:00:00Z", "name", "VIP")))));
 
-    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = MapeurEvenementTM.mapper(evt, null);
 
     assertNotNull(concert);
     assertNull(concert.statut());
@@ -798,7 +798,7 @@ class TicketmasterSourceTest {
         evenementTMRaw(
             Map.of("url", "https://www.ticketmaster.fr/fr/billet/angele-08-mars/event/456"));
 
-    final ConcertBrut concert = TicketmasterSource.mapEvenement(evt, null);
+    final ConcertBrut concert = MapeurEvenementTM.mapper(evt, null);
 
     assertNotNull(concert);
     assertEquals("onsale", concert.statut());
@@ -822,7 +822,7 @@ class TicketmasterSourceTest {
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75019")))));
     assertNull(
-        TicketmasterSource.mapEvenement(evt, "Jain"),
+        MapeurEvenementTM.mapper(evt, "Jain"),
         "Un concert d'Anuv Jain ne doit pas être retourné lors d'un fetch de Jain");
   }
 
@@ -841,7 +841,7 @@ class TicketmasterSourceTest {
                             "name", "Zénith Paris",
                             "city", Map.of("name", "Paris"),
                             "postalCode", "75019")))));
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evt, "Julien Clerc");
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, "Julien Clerc");
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
@@ -849,7 +849,7 @@ class TicketmasterSourceTest {
   @Test
   void mapEvenement_fallbackNullAttractionPresente_accepteEvenementSansVerification() {
     // fetchSalle passe null comme fallback — pas de filtrage par nom attendu
-    final ConcertBrut resultat = TicketmasterSource.mapEvenement(evenementTMRaw(), null);
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evenementTMRaw(), null);
     assertNotNull(resultat);
     assertEquals("Julien Clerc", resultat.artiste());
   }
@@ -1129,5 +1129,57 @@ class TicketmasterSourceTest {
   @Test
   void redigerApiKey_messageNull_retourneNull() {
     assertNull(TicketmasterSource.redigerApiKey(null));
+  }
+
+  // Une panne réseau ne doit jamais être confondue avec une salle sans concert : l'appelant
+  // doit pouvoir la distinguer (retry ciblé, aucune absence comptée).
+  @Test
+  void fetchSalle_panneReseau_propageResourceAccessException() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withException(new java.io.IOException("Connection reset")));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+
+    assertThrows(
+        org.springframework.web.client.ResourceAccessException.class,
+        () -> source.fetchSalle("tm:venue-1"));
+  }
+
+  // Un département dense dépasse le plafond de 1000 résultats : la requête reprend par
+  // fenêtre de dates plutôt que d'abandonner la suite, et l'horizon couvre toute la fenêtre.
+  @Test
+  void fetchRegionCouverte_plafondAtteint_reprendParFenetreDeDatesJusquALaFin() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.times(6),
+            requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withSuccess(reponsePageTMJson(1400, true), MediaType.APPLICATION_JSON));
+    serveur
+        .expect(
+            requestTo(org.hamcrest.Matchers.containsString("startDateTime=2025-09-14T00:00:00Z")))
+        .andRespond(withSuccess(reponsePageTMJson(1, true), MediaType.APPLICATION_JSON));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), null);
+
+    serveur.verify();
+    assertEquals(7, resultat.concerts().size());
+    assertEquals(
+        java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(179), resultat.horizon());
+  }
+
+  @Test
+  void fetchRegionCouverte_departementInconnu_neGarantitAucunHorizon() {
+    final TicketmasterSource source =
+        new TicketmasterSource("fake-key", RestClient.builder().build());
+
+    assertNull(source.fetchRegionCouverte(List.of("zz"), null).horizon());
   }
 }

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -210,7 +211,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_salleInconnueGeocodageTrouveSalleProche_reutiliseLaSalleExistante() {
     insererSalleAvecCoordonnees("Salle GPS Existante", 48.8566, 2.3522);
-    when(clientNominatim.geocoder("Zenith Historique Inconnu"))
+    when(clientNominatim.geocoder("Zenith Historique Inconnu, Paris"))
         .thenReturn(Optional.of(new ClientNominatim.Coordonnees(48.8567, 2.3523)));
 
     persisterConcerts.persisterConcerts(
@@ -236,7 +237,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_salleInconnueGeocodageSansSalleProche_creeNouvelleSalleAvecCoordonnees() {
     insererSalleAvecCoordonnees("Salle GPS Lointaine", 43.2965, 5.3698); // Marseille
-    when(clientNominatim.geocoder("Zenith Nouveau Lieu"))
+    when(clientNominatim.geocoder("Zenith Nouveau Lieu, Paris"))
         .thenReturn(Optional.of(new ClientNominatim.Coordonnees(48.8566, 2.3522)));
 
     persisterConcerts.persisterConcerts(
@@ -257,7 +258,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Test
   void persisterConcerts_salleInconnueGeocodageEchoue_creeNouvelleSalleSansCoordonnees() {
-    when(clientNominatim.geocoder("Zenith Sans Geocodage")).thenReturn(Optional.empty());
+    when(clientNominatim.geocoder("Zenith Sans Geocodage, Paris")).thenReturn(Optional.empty());
 
     persisterConcerts.persisterConcerts(
         List.of(
@@ -575,6 +576,12 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 + " AND message LIKE '%incohérence géographique%'",
             Map.of(), Long.class);
     assertEquals(1L, nbAvertissements, "l'incohérence doit être journalisée, pas silencieuse");
+    final UUID salleMapping =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM salle_sources WHERE identifiant_externe = 'rZFSnyZAv1F'",
+            Map.of(),
+            UUID.class);
+    assertEquals(salleEnBase, salleMapping, "le mapping rejeté est réassigné, plus recontourné");
   }
 
   @Test
@@ -1442,9 +1449,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
-  void persisterConcerts_digitickSansArtisteSourceId_resolutionParNomNorm() {
-    // Digitick ne fournit pas d'artisteSourceId : la résolution doit quand même
-    // retrouver l'artiste_id en base via correspondance exacte sur artiste_norm.
+  void persisterConcerts_sansArtisteSourceId_resolutionParNomNorm() {
+    // Un concert Eventim découvert par lieu ou par ville n'a pas d'artisteSourceId : la
+    // résolution doit quand même retrouver l'artiste_id en base par artiste_norm.
     final UUID artisteId = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
@@ -1453,7 +1460,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nom", "Mika")
             .addValue("nomNorm", "mika"));
 
-    final ConcertBrut concertDigitick =
+    final ConcertBrut concertSansIdArtiste =
         new ConcertBrut(
             "Mika",
             "2026-12-10",
@@ -1461,17 +1468,17 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             "Le Zénith Paris",
             "Paris",
             "75",
-            "https://web.digitick.com/mika-zenith-paris",
-            "digitick",
+            "https://www.eventim.fr/event/mika-zenith-paris-1",
+            "eventim",
             null,
             "Concert",
             null,
             null,
             null,
-            "digitick:zenith-paris",
+            "eventim:internal:le zenith paris",
             null);
 
-    persisterConcerts.persisterConcerts(List.of(concertDigitick));
+    persisterConcerts.persisterConcerts(List.of(concertSansIdArtiste));
 
     final UUID artisteIdEnBase =
         jdbc.queryForObject(
@@ -1479,7 +1486,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of(),
             (rs, _) -> rs.getObject("artiste_id", UUID.class));
     assertEquals(
-        artisteId, artisteIdEnBase, "artiste_id doit être résolu par nom_norm pour Digitick");
+        artisteId,
+        artisteIdEnBase,
+        "artiste_id doit être résolu par nom_norm sans identifiant source");
   }
 
   @Test
@@ -1566,7 +1575,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count, "les deux concerts doivent fusionner en un seul via salle_id");
   }
 
-  // #1192 : même artiste_id/date/heure/salle_id mais artiste_norm distinct (TM/Digitick) doit
+  // #1192 : même artiste_id/date/heure/salle_id mais artiste_norm distinct (TM/Eventim) doit
   // désormais fusionner en un seul événement au moment de la résolution, sans supprimer aucune des
   // deux observations (contrairement à l'ancien supprimerDoublonsParSalleId, qui ne couvrait que
   // les paires TM/Eventim codées en dur et perdait la ligne perdante).
@@ -1613,18 +1622,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             null,
             salleId,
             artisteId);
-    final ValeurConcert viaDigitick =
+    final ValeurConcert viaEventim =
         new ValeurConcert(
             "Cold Play",
             "cold play",
             date,
             heure,
-            "Accor Arena Digitick",
-            "accor arena digitick",
+            "Accor Arena Eventim",
+            "accor arena eventim",
             "Paris",
             "75",
             null,
-            "digitick",
+            "eventim",
             null,
             null,
             null,
@@ -1635,7 +1644,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             salleId,
             artisteId);
 
-    persisteurConcertsDb.upsertLot(List.of(viaTm, viaDigitick));
+    persisteurConcertsDb.upsertLot(List.of(viaTm, viaEventim));
 
     final Long nbEvenements =
         jdbc.queryForObject(
@@ -1656,7 +1665,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of("id", artisteId.toString()),
             String.class);
     assertEquals(
-        "ticketmaster", source, "priorité Ticketmaster sur Digitick pour la référence affichée");
+        "ticketmaster", source, "priorité Ticketmaster sur Eventim pour la référence affichée");
   }
 
   // Une fiche package TM (URL /pack/) référence souvent une heure distincte de la fiche
@@ -1900,5 +1909,97 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         2,
         sallesDistinctesParConcert.size(),
         "chaque concert doit rester rattaché à son propre hall, jamais confondu avec l'autre");
+  }
+
+  private static ConcertBrut concertDansDept(
+      final String artiste,
+      final String salle,
+      final String ville,
+      final String dept,
+      final String salleSourceId) {
+    return new ConcertBrut(
+        artiste,
+        "2026-10-31",
+        "20:00",
+        salle,
+        ville,
+        dept,
+        "https://example.com/" + artiste.toLowerCase().replace(" ", "-") + "-" + dept,
+        "ticketmaster",
+        "music",
+        "Pop",
+        "onsale",
+        null,
+        null,
+        salleSourceId,
+        null);
+  }
+
+  private UUID insererSalleDansDept(final String nom, final String dept) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES (:cle, :nom, :norm, :dept)"
+            + " RETURNING id",
+        new MapSqlParameterSource()
+            .addValue("cle", Normalisation.normaliserTexte(nom))
+            .addValue("nom", nom)
+            .addValue("norm", Normalisation.normaliserTexte(nom))
+            .addValue("dept", dept),
+        UUID.class);
+  }
+
+  // Des dizaines de salles distinctes partagent un nom générique : un concert à Perpignan ne
+  // doit jamais être rattaché au "Palais des Congres" homonyme de Vittel déjà en base, y compris
+  // quand la clé naturelle (unique) de ce nom est déjà prise.
+  @Test
+  void persisterConcerts_nomGeneriqueHomonymeAutreDept_creeUneSalleDistincte() {
+    final UUID vittel = insererSalleDansDept("Palais des Congres", "88");
+    when(clientNominatim.geocoder("Palais des Congres, Perpignan")).thenReturn(Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertDansDept(
+                "Tina Arena", "Palais des Congres", "Perpignan", "66", "ticketmaster:venue-66")));
+
+    final Map<String, Object> salle =
+        jdbc.queryForMap(
+            "SELECT s.id, s.dept FROM concerts c JOIN salles s ON s.id = c.salle_id"
+                + " WHERE c.artiste_norm = 'tina arena'",
+            Map.of());
+    assertNotEquals(vittel, salle.get("id"), "jamais la salle homonyme d'un autre département");
+    assertEquals("66", salle.get("dept"));
+  }
+
+  // Un mapping salle_sources rejeté pour incohérence géographique était recontourné à chaque
+  // cycle sans jamais être corrigé : il doit être réassigné à la salle cohérente trouvée.
+  @Test
+  void persisterConcerts_mappingSalleSourcesIncoherent_estReassigneALaSalleCoherente() {
+    final UUID vittel = insererSalleDansDept("Palais des Congres", "88");
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'venue-perpignan')",
+        Map.of("id", vittel.toString()));
+    when(clientNominatim.geocoder("Palais des Congres, Perpignan")).thenReturn(Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertDansDept(
+                "Tina Arena",
+                "Palais des Congres",
+                "Perpignan",
+                "66",
+                "ticketmaster:venue-perpignan")));
+
+    final UUID salleMapping =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM salle_sources WHERE identifiant_externe = 'venue-perpignan'",
+            Map.of(),
+            UUID.class);
+    assertNotEquals(vittel, salleMapping, "le mapping incohérent doit être réassigné");
+    final UUID salleConcert =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'tina arena'",
+            Map.of(),
+            UUID.class);
+    assertEquals(salleMapping, salleConcert);
   }
 }

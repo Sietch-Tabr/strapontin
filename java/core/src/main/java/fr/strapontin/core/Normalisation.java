@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 /**
  * Normalisation de texte partagée par le dédoublonnage et les sources externes
- * (TM, Eventim, Digitick, Wikidata) : mise en forme d'un nom d'artiste/salle en
+ * (TM, Eventim, Wikidata) : mise en forme d'un nom d'artiste/salle en
  * clé comparable, extraction de département, distances de similarité
  * (Levenshtein, Jaro).
  *

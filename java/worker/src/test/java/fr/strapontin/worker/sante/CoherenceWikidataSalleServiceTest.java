@@ -216,7 +216,14 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, nomSalle, Normalisation.normaliserTexte(nomSalle), villeSalle, "75", "Q1", null, null);
+            id,
+            nomSalle,
+            Normalisation.normaliserTexte(nomSalle),
+            villeSalle,
+            "75",
+            "Q1",
+            null,
+            null);
     simulerCandidats(List.of(salle));
     when(wikidata.enrichirLot(anyList()))
         .thenReturn(
@@ -262,7 +269,14 @@ class CoherenceWikidataSalleServiceTest {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
         new SalleAEnrichir(
-            id, "Espace Saint-Exupéry", "espace saint exupery", "Rubelles", "95", "Q120266538", null, null);
+            id,
+            "Espace Saint-Exupéry",
+            "espace saint exupery",
+            "Rubelles",
+            "95",
+            "Q120266538",
+            null,
+            null);
     simulerCandidats(List.of(salle));
     simulerVillesConcertsReelles(Map.of(id, List.of("Franconville-la-Garenne")));
     when(wikidata.enrichirLot(anyList()))
@@ -320,7 +334,8 @@ class CoherenceWikidataSalleServiceTest {
   void verifier_concertsReelsCoherentsMalgreVilleSalleDivergente_neJournalisePasDIncoherence() {
     final UUID id = UUID.randomUUID();
     final SalleAEnrichir salle =
-        new SalleAEnrichir(id, "Zenith", "zenith", "Ancienne Ville Erronee", "59", "Q1", null, null);
+        new SalleAEnrichir(
+            id, "Zenith", "zenith", "Ancienne Ville Erronee", "59", "Q1", null, null);
     simulerCandidats(List.of(salle));
     simulerVillesConcertsReelles(Map.of(id, List.of("Lille")));
     when(wikidata.enrichirLot(anyList()))
@@ -435,7 +450,7 @@ class CoherenceWikidataSalleServiceTest {
     assertEquals(1, resultat);
     verify(jdbc)
         .update(
-            org.mockito.ArgumentMatchers.contains("wikidata_id = NULL"),
+            org.mockito.ArgumentMatchers.contains("wikidata_id = NULL, latitude = NULL"),
             org.mockito.ArgumentMatchers.<Map<String, ?>>argThat(
                 p -> "Q110597455".equals(p.get("qid"))));
     verify(logsAdminWorker)

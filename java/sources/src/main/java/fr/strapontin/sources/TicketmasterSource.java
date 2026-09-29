@@ -10,7 +10,6 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -240,18 +239,6 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   }
 
   /**
-   * Mappe un événement TM brut (JSON désérialisé) vers un [ConcertBrut].
-   *
-   * @param evt événement TM sous forme de Map imbriquée
-   * @param artisteFallback nom recherché (fetch:artiste), null sinon
-   * @return concert extrait, ou null si l'événement est invalide ou hors périmètre
-   */
-  public static ConcertBrut mapEvenement(
-      final Map<String, Object> evt, final String artisteFallback) {
-    return MapeurEvenementTM.mapper(evt, artisteFallback);
-  }
-
-  /**
    * Retire toute clé API ({@code apikey=...}) d'un message avant
    * journalisation — {@code ResourceAccessException} embarque l'URI
    * complète (query string incluse) dans son propre message.
@@ -463,6 +450,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   @Override
   public List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
+    return fetchRegionCouverte(depts, classifs).concerts();
+  }
+
+  @Override
+  public ResultatRegion fetchRegionCouverte(final List<String> depts, final List<String> classifs) {
     return TicketmasterRegionFetcher.fetchRegion(pageFetcher, depts, classifs);
+  }
+
+  @Override
+  public int joursCouvertsParSalle() {
+    return FenetreTempsTM.JOURS_COUVERTS;
   }
 }

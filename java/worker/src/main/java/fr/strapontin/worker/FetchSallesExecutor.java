@@ -10,8 +10,11 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -51,36 +54,48 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch une salle auprès de la source qui accepte son identifiant et
-   * enregistre le résultat auprès de {@link SuiviSanteSourcesService} (phase
-   * 1).
-   *
-   * @param identifiant identifiant préfixé {@code source:identifiant_externe}
-   * @param destination liste dans laquelle ajouter les concerts trouvés
+   * Fetch une salle auprès de chaque source qui accepte son identifiant, suivi
+   * de santé compris ; {@code horizons} reçoit la dernière date couverte par
+   * chaque source ayant répondu, {@code destination} les concerts trouvés.
+   * @return {@code false} si une source n'a pas répondu (panne réseau)
    */
-  private void fetchEtSuivreSalle(final String identifiant, final List<ConcertBrut> destination) {
+  private boolean fetchEtSuivreSalle(
+      final IdentifiantSalle identifiantSalle,
+      final List<ConcertBrut> destination,
+      final Map<String, LocalDate> horizons) {
+    final String identifiant = identifiantSalle.identifiant();
+    boolean joignable = true;
     for (final SourceConcerts source : sources) {
       if (source.accepteIdentifiantSalle(identifiant)) {
         try {
-          final List<ConcertBrut> resultat = source.fetchSalle(identifiant);
+          final List<ConcertBrut> resultat =
+              source.fetchSalle(identifiant, identifiantSalle.libelle());
           destination.addAll(resultat);
           rapportage
               .suiviSanteSourcesService()
               .enregistrerResultatSalle(identifiant, resultat.size());
+          final int joursCouverts = source.joursCouvertsParSalle();
+          if (joursCouverts > 0) {
+            horizons.put(source.nom(), LocalDate.now().plusDays(joursCouverts));
+          }
         } catch (Exception e) {
           LOG.error(
               "{} fetchSalle échoué identifiant={} : {}",
               source.nom(),
               identifiant,
               e.getMessage());
+          if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
+            joignable = false;
+          }
         }
       }
     }
+    return joignable;
   }
 
   /**
    * Fetch les concerts d'une ou plusieurs salles par identifiants
-   * préfixés séparés par une virgule (ex. "tm:id1,digitick:slug").
+   * préfixés séparés par une virgule (ex. "tm:id1,eventim:internal:accor arena").
    * @param identifiantsStr identifiants préfixés séparés par des virgules
    */
   /* package-private : appelé par WorkerFetchService (même package). */
@@ -93,7 +108,8 @@ class FetchSallesExecutor {
     final String[] identifiants = identifiantsStr.split(",");
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final String identifiant : identifiants) {
-      fetchEtSuivreSalle(identifiant.trim(), concerts);
+      final String id = identifiant.trim();
+      fetchEtSuivreSalle(new IdentifiantSalle(id, libelleSource(id)), concerts, new HashMap<>());
     }
     commun.sauvegarderQuota();
 
@@ -104,8 +120,28 @@ class FetchSallesExecutor {
         concerts.size(),
         dedoublonnes.size());
     persisterConcerts.persisterConcerts(dedoublonnes);
+    rapportage.enregistreurLieuxEventim().enregistrer();
     recalculerMatchesService.recalculerMatches(null);
     LOG.info("fetch:salle terminé identifiants={}", identifiantsStr);
+  }
+
+  // Seul Eventim s'interroge par libellé (aucun identifiant de lieu exposé).
+  private String libelleSource(final String identifiantPrefixe) {
+    final int sep = identifiantPrefixe.indexOf(':');
+    if (sep <= 0) {
+      return null;
+    }
+    final List<String> libelles =
+        commun
+            .obtenirJdbc()
+            .queryForList(
+                "SELECT libelle_source FROM salle_sources"
+                    + " WHERE source = :source AND identifiant_externe = :identifiant",
+                Map.of(
+                    "source", identifiantPrefixe.substring(0, sep),
+                    "identifiant", identifiantPrefixe.substring(sep + 1)),
+                String.class);
+    return libelles.isEmpty() ? null : libelles.get(0);
   }
 
   /**
@@ -149,41 +185,58 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Salle suivie à refetcher, avec ses identifiants préfixés agrégés toutes
-   * sources confondues.
+   * Identifiant préfixé d'une salle chez une source, avec le libellé du lieu
+   * chez cette source quand elle s'interroge par libellé (Eventim).
+   *
+   * @param identifiant identifiant préfixé {@code source:identifiant_externe}
+   * @param libelle libellé du lieu chez la source, ou null
+   */
+  private record IdentifiantSalle(String identifiant, String libelle) {}
+
+  /**
+   * Salle suivie à refetcher, avec ses identifiants toutes sources confondues.
    *
    * @param salleId UUID de la salle (texte), pour le suivi d'absences après
    *     persistance
-   * @param identifiants identifiants préfixés séparés par des virgules
+   * @param identifiants identifiants de la salle chez chaque source
    */
-  private record SalleAFetcher(String salleId, String identifiants) {}
+  private record SalleAFetcher(String salleId, List<IdentifiantSalle> identifiants) {}
 
   // Le préfixe émis ici doit correspondre à celui attendu par
   // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique
   // "ticketmaster" de salle_sources.source) — sans cette traduction, fetchSalle
   // n'est jamais invoqué pour aucune salle TM (mismatch silencieux, aucune
-  // exception, aucun log d'erreur). Restreint aux salles suivies (user_salles)
-  // — voir Javadoc de executerToutes.
+  // exception, aucun log d'erreur). Un lieu Eventim sans libellé connu ne peut
+  // pas être interrogé. Restreint aux salles suivies (user_salles) — voir
+  // Javadoc de executerToutes.
   private List<SalleAFetcher> recupererIdentifiantsSallesSuivies(
       final List<String> salleIdsCibles) {
     final boolean filtre = salleIdsCibles != null;
-    return commun
+    final Map<String, List<IdentifiantSalle>> parSalle = new LinkedHashMap<>();
+    commun
         .obtenirJdbc()
         .queryForList(
-            "SELECT ss.salle_id::text AS salle_id,"
-                + " string_agg(ss.source || ':' || ss.identifiant_externe, ',') AS identifiants"
+            "SELECT ss.salle_id::text AS salle_id, ss.source AS source,"
+                + " ss.identifiant_externe AS identifiant, ss.libelle_source AS libelle"
                 + " FROM salle_sources ss"
                 + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
+                + " AND (ss.source <> 'eventim' OR ss.libelle_source IS NOT NULL)"
                 + (filtre ? " AND ss.salle_id::text IN (:ids)" : "")
-                + " GROUP BY ss.salle_id",
+                + " ORDER BY ss.salle_id, ss.source",
             filtre ? Map.of("ids", salleIdsCibles) : Map.of())
-        .stream()
-        .map(
-            ligne ->
-                new SalleAFetcher(
-                    (String) ligne.get("salle_id"),
-                    ((String) ligne.get("identifiants"))
-                        .replace("ticketmaster:", TicketmasterSource.PREFIXE_IDENTIFIANT + ":")))
+        .forEach(
+            ligne -> {
+              final String source = (String) ligne.get("source");
+              final String prefixe =
+                  "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
+              parSalle
+                  .computeIfAbsent((String) ligne.get("salle_id"), _ -> new ArrayList<>())
+                  .add(
+                      new IdentifiantSalle(
+                          prefixe + ":" + ligne.get("identifiant"), (String) ligne.get("libelle")));
+            });
+    return parSalle.entrySet().stream()
+        .map(entree -> new SalleAFetcher(entree.getKey(), entree.getValue()))
         .toList();
   }
 
@@ -196,7 +249,12 @@ class FetchSallesExecutor {
       final List<SalleAFetcher> lotSalles =
           sallesAFetcher.subList(i, Math.min(i + TAILLE_LOT_SALLES, sallesAFetcher.size()));
       try {
-        resultat = WorkerFetchCommun.accumuler(resultat, traiterLotSalles(lotSalles));
+        final ResultatLotSalles resultatLot = traiterLotSalles(lotSalles);
+        resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
+        if (!resultatLot.sallesInjoignables().isEmpty()) {
+          echecsLots.add("lot " + i + "-" + (i + lotSalles.size()) + " : panne réseau transitoire");
+          salleIdsEnEchec.addAll(resultatLot.sallesInjoignables());
+        }
       } catch (Exception e) {
         LOG.error(
             "fetch:salles:all lot {}-{} échoué : {}", i, i + lotSalles.size(), e.getMessage(), e);
@@ -209,18 +267,34 @@ class FetchSallesExecutor {
   }
 
   /**
-   * Fetch + dédoublonnage + persistance d'un lot de salles ({@value
-   * TAILLE_LOT_SALLES}) — persistance par lot plutôt qu'en bloc final,
-   * chaque chaîne d'identifiants regroupe déjà toutes les sources d'une
-   * même salle ({@code GROUP BY ss.salle_id}).
-   * @param lotSalles sous-ensemble de salles suivies
-   * @return bilan de persistance du lot
+   * Bilan d'un lot de salles.
+   *
+   * @param persistance bilan de persistance
+   * @param sallesInjoignables salles dont une source n'a pas répondu
    */
-  private ResultatPersistance traiterLotSalles(final List<SalleAFetcher> lotSalles) {
+  private record ResultatLotSalles(
+      ResultatPersistance persistance, List<String> sallesInjoignables) {}
+
+  /**
+   * Fetch + dédoublonnage + persistance d'un lot de salles ({@value
+   * TAILLE_LOT_SALLES}), persistance par lot plutôt qu'en bloc final ; les
+   * absences ne sont comptées que pour les salles dont toutes les sources
+   * ont répondu.
+   */
+  private ResultatLotSalles traiterLotSalles(final List<SalleAFetcher> lotSalles) {
     final List<ConcertBrut> tous = new ArrayList<>();
+    final Map<String, Map<String, LocalDate>> horizonsParSalle = new LinkedHashMap<>();
+    final List<String> sallesInjoignables = new ArrayList<>();
     for (final SalleAFetcher salle : lotSalles) {
-      for (final String id : salle.identifiants().split(",")) {
-        fetchEtSuivreSalle(id.trim(), tous);
+      boolean joignable = true;
+      final Map<String, LocalDate> horizons = new HashMap<>();
+      for (final IdentifiantSalle identifiant : salle.identifiants()) {
+        joignable &= fetchEtSuivreSalle(identifiant, tous, horizons);
+      }
+      if (joignable) {
+        horizonsParSalle.put(salle.salleId(), horizons);
+      } else {
+        sallesInjoignables.add(salle.salleId());
       }
     }
 
@@ -233,8 +307,11 @@ class FetchSallesExecutor {
 
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
-    final List<String> salleIds = lotSalles.stream().map(SalleAFetcher::salleId).toList();
-    commun.mettreAJourAbsences("salle_id", salleIds, debutLot);
-    return resultat;
+    rapportage.enregistreurLieuxEventim().enregistrer();
+    // Une requête par salle : les sources interrogées (donc les horizons) varient.
+    horizonsParSalle.forEach(
+        (salleId, horizons) ->
+            commun.mettreAJourAbsencesSalles(List.of(salleId), debutLot, horizons));
+    return new ResultatLotSalles(resultat, sallesInjoignables);
   }
 }

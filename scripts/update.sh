@@ -19,6 +19,46 @@ rollback() {
     set -e
 }
 
+# Fichiers qu'un déploiement légitime a déjà pu modifier avant cet appel (copiés par
+# woodpecker-deploy.sh) — les JARs ne sont remplacés qu'après le pré-contrôle ci-dessous.
+# La règle AIDE sur web.jar couvre aussi web.jar.new (préfixe) ; le dossier scripts change
+# dès qu'un script y est ajouté, chaque fichier ajouté restant listé individuellement.
+FICHIERS_DEPLOIEMENT=(
+    "$APP_DIR/web.jar.new"
+    "$APP_DIR/worker.jar.new"
+    "$APP_DIR/scripts"
+    "$APP_DIR/scripts/backup.sh"
+    "$APP_DIR/scripts/restore.sh"
+    "$APP_DIR/scripts/update.sh"
+    "$APP_DIR/scripts/rotation-secrets.sh"
+)
+AIDE_ACTIF=false
+command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ] && AIDE_ACTIF=true
+
+# Pré-contrôle AIDE avant tout remplacement : un changement hors déploiement (unit systemd,
+# .env, autre script) ne doit jamais être absorbé silencieusement par la régénération de la
+# baseline en fin de déploiement.
+CHANGEMENTS_EXTERNES=""
+if [ "$AIDE_ACTIF" = true ]; then
+    echo "[update] Pré-contrôle d'intégrité AIDE..."
+    CODE_AIDE=0
+    SORTIE_AIDE=$(aide --config=/etc/aide/aide.conf --check 2>&1) || CODE_AIDE=$?
+    if [ "$CODE_AIDE" -ne 0 ]; then
+        while read -r chemin; do
+            [ -z "$chemin" ] && continue
+            attendu=false
+            for fichier in "${FICHIERS_DEPLOIEMENT[@]}"; do
+                [ "$chemin" = "$fichier" ] && attendu=true
+            done
+            [ "$attendu" = false ] && CHANGEMENTS_EXTERNES+="$chemin"$'\n'
+        done < <(echo "$SORTIE_AIDE" | grep -oE ': (/opt/strapontin|/etc/systemd)[^ ]*' | sed 's/^: //' | sort -u)
+    fi
+    if [ -n "$CHANGEMENTS_EXTERNES" ]; then
+        echo "[update] AVERTISSEMENT : changement(s) hors déploiement détecté(s) :" >&2
+        echo "$CHANGEMENTS_EXTERNES" >&2
+    fi
+fi
+
 # Sauvegarde des JARs actifs (absent au premier déploiement)
 echo "[update] Sauvegarde des JARs..."
 [ -f "$APP_DIR/web.jar" ] && cp "$APP_DIR/web.jar" "$APP_DIR/web.jar.prev"
@@ -62,9 +102,21 @@ if ! systemctl is-active --quiet strapontin-worker; then
 fi
 echo "[update] Service worker UP"
 
-echo "[update] Régénération de la baseline AIDE..."
-if command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ]; then
-    # #976 : sans cette régénération, chaque déploiement légitime (web.jar/worker.jar modifiés)
+if [ "$AIDE_ACTIF" = true ] && [ -n "$CHANGEMENTS_EXTERNES" ]; then
+    # Baseline conservée : les JARs du déploiement apparaîtront aussi dans l'alerte
+    # quotidienne tant qu'un humain n'aura pas authentifié le changement externe puis
+    # régénéré la baseline (aide --init, cf. wiki Sécurité).
+    echo "[update] Baseline AIDE NON régénérée : changement externe à authentifier" >&2
+    INTEGRITY_SECRET=$(grep '^INTEGRITY_INTERNAL_SECRET=' "$APP_DIR/.env" | cut -d'=' -f2- || true)
+    curl -sf -X POST \
+        -H "Authorization: Bearer $INTEGRITY_SECRET" \
+        --data-urlencode "statut=modifie" \
+        --data-urlencode "detail=Déploiement : baseline conservée, changement hors déploiement : $CHANGEMENTS_EXTERNES" \
+        "http://localhost:8080/api/interne/integrite-statut" \
+        >/dev/null 2>&1 || echo "[update] AVERTISSEMENT : notification d'intégrité non envoyée" >&2
+elif [ "$AIDE_ACTIF" = true ]; then
+    echo "[update] Régénération de la baseline AIDE..."
+    # Sans cette régénération, chaque déploiement légitime (web.jar/worker.jar modifiés)
     # déclencherait une fausse alerte d'intégrité au prochain contrôle quotidien.
     aide --config=/etc/aide/aide.conf --init >/dev/null 2>&1 || true
     if [ -f /var/lib/aide/aide.db.new ]; then

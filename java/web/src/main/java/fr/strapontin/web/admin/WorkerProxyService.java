@@ -220,7 +220,8 @@ public class WorkerProxyService {
       return new ResultatRelance(
           false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
     } catch (Exception e) {
-      LOG.warn("Erreur appel worker trigger notifier-version version={} : {}", version, e.getMessage());
+      LOG.warn(
+          "Erreur appel worker trigger notifier-version version={} : {}", version, e.getMessage());
       return new ResultatRelance(false, "Worker inaccessible.", 503);
     }
   }

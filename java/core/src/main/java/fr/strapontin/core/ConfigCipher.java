@@ -31,6 +31,9 @@ public final class ConfigCipher {
   private static final int DK_LEN = 32;
 
   private final byte[] cleChiffrement;
+  // Clé du secret remplacé lors d'une rotation, tant que toutes les valeurs ne
+  // sont pas rechiffrées : null hors rotation.
+  private final ConfigCipher precedent;
 
   /**
    * Dérive la clé AES-256 depuis le secret applicatif.
@@ -41,9 +44,25 @@ public final class ConfigCipher {
   // : la clé réelle dérive de "secret" (APP_CONFIG_SECRET), jamais codé en dur
   // — changer ce sel rendrait illisibles toutes les valeurs app_config déjà
   // chiffrées, au même titre qu'un changement d'APP_CONFIG_SECRET.
-  @SuppressWarnings("PMD.HardCodedCryptoKey")
   public ConfigCipher(final String secret) {
+    this(secret, null);
+  }
+
+  /**
+   * Comme {@link #ConfigCipher(String)}, en acceptant aussi au déchiffrement
+   * les valeurs encore chiffrées avec le secret précédent (rotation en cours) —
+   * le chiffrement utilise toujours le secret courant.
+   *
+   * @param secret secret applicatif courant
+   * @param secretPrecedent secret remplacé, ou null/vide hors rotation
+   */
+  @SuppressWarnings("PMD.HardCodedCryptoKey")
+  public ConfigCipher(final String secret, final String secretPrecedent) {
     Objects.requireNonNull(secret, "secret");
+    this.precedent =
+        secretPrecedent == null || secretPrecedent.isBlank() || secretPrecedent.equals(secret)
+            ? null
+            : new ConfigCipher(secretPrecedent);
     this.cleChiffrement =
         SCrypt.generate(
             secret.getBytes(StandardCharsets.UTF_8),
@@ -95,7 +114,7 @@ public final class ConfigCipher {
    * <p>Format attendu : {@code base64(IV(12) || TAG(16) || données_chiffrées)}
    *
    * @param chiffre valeur chiffrée encodée en base64
-   * @return valeur en clair
+   * @return valeur en clair (repli sur le secret précédent pendant une rotation)
    */
   public String dechiffrer(final String chiffre) {
     try {
@@ -116,6 +135,9 @@ public final class ConfigCipher {
           new GCMParameterSpec(128, iv));
       return new String(cipher.doFinal(donneesAvecTag), StandardCharsets.UTF_8);
     } catch (GeneralSecurityException e) {
+      if (precedent != null) {
+        return precedent.dechiffrer(chiffre);
+      }
       throw new IllegalStateException("Erreur de déchiffrement de configuration", e);
     }
   }

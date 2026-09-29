@@ -9,6 +9,7 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -27,6 +28,13 @@ public class SuiviSanteSourcesService {
   private static final Logger LOG = LoggerFactory.getLogger(SuiviSanteSourcesService.class);
 
   private static final int SEUIL_SUSPECT = 3;
+  private static final String CLE_SOURCE = "source";
+
+  // Chute brutale : un lieu qui change de billetterie ne tombe presque jamais à
+  // zéro d'un coup (un concert annulé ou un pack reste listé), il faut donc
+  // aussi comparer au volume précédent, pas seulement détecter une salle vide.
+  private static final int VOLUME_MIN_CHUTE = 5;
+  private static final int POURCENTAGE_RESTANT_CHUTE = 30;
 
   /**
    * Préfixes abrégés utilisés par le déclenchement manuel (voir
@@ -40,21 +48,27 @@ public class SuiviSanteSourcesService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
+  private final SignalementMatchingService signalementMatchingService;
 
   /**
    * @param jdbc accès JDBC
    * @param tm revérification du nom TM avant effacement d'une intervention
    *     requise
+   * @param signalementMatchingService signalement d'une chute brutale du
+   *     nombre de concerts d'une salle
    */
   public SuiviSanteSourcesService(
-      final NamedParameterJdbcTemplate jdbc, final TicketmasterSource tm) {
+      final NamedParameterJdbcTemplate jdbc,
+      final TicketmasterSource tm,
+      final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.tm = tm;
+    this.signalementMatchingService = signalementMatchingService;
   }
 
   /**
    * Enregistre le résultat d'un fetch salle (identifiant préfixé, ex.
-   * {@code "tm:rZFSnyZdFvA"}, {@code "digitick:slug"}).
+   * {@code "tm:rZFSnyZdFvA"}, {@code "eventim:internal:accor arena"}).
    * @param identifiantPrefixe identifiant préfixé {@code source:id_externe}
    * @param nbResultats nombre de concerts retournés par ce fetch
    */
@@ -66,6 +80,67 @@ public class SuiviSanteSourcesService {
     final String source = normaliserSource(identifiantPrefixe.substring(0, sep));
     final String identifiant = identifiantPrefixe.substring(sep + 1);
     mettreAJourCompteur(TypeEntiteSource.SALLE, source, identifiant, nbResultats > 0);
+    suivreVolumeSalle(source, identifiant, nbResultats);
+  }
+
+  /**
+   * Mémorise le volume renvoyé et signale une chute brutale par rapport au
+   * fetch précédent (lieu passé à une autre billetterie, source devenue
+   * partielle).
+   */
+  private void suivreVolumeSalle(
+      final String source, final String identifiant, final int nbResultats) {
+    try {
+      final List<Map<String, Object>> lignes =
+          jdbc.queryForList(
+              """
+              UPDATE salle_sources ss SET dernier_nb_resultats = :nb
+              FROM salle_sources avant
+              WHERE ss.source = :source
+                AND ss.identifiant_externe = :identifiant
+                AND avant.source = ss.source AND avant.identifiant_externe = ss.identifiant_externe
+              RETURNING ss.salle_id AS salle_id, avant.dernier_nb_resultats AS precedent
+              """,
+              Map.of("nb", nbResultats, CLE_SOURCE, source, "identifiant", identifiant));
+      if (lignes.isEmpty() || !(lignes.get(0).get("precedent") instanceof Number precedent)) {
+        return;
+      }
+      if (estChuteBrutale(precedent.intValue(), nbResultats)) {
+        LOG.warn(
+            "chute brutale du nombre de concerts source={} identifiant={} {} → {}",
+            source,
+            identifiant,
+            precedent,
+            nbResultats);
+        signalementMatchingService.signaler(
+            "chute_resultats_salle",
+            "salle",
+            (UUID) lignes.get(0).get("salle_id"),
+            "moyenne",
+            Map.of(
+                CLE_SOURCE,
+                source,
+                "identifiantExterne",
+                identifiant,
+                "precedent",
+                precedent.intValue(),
+                "actuel",
+                nbResultats));
+      }
+    } catch (Exception e) {
+      LOG.warn("Suivi du volume impossible source={} identifiant={}", source, identifiant, e);
+    }
+  }
+
+  /**
+   * @param precedent volume du fetch précédent
+   * @param actuel volume du fetch courant
+   * @return {@code true} si le volume est tombé sous {@value
+   *     #POURCENTAGE_RESTANT_CHUTE}% d'un volume initial significatif
+   */
+  /* package-private : visibilité élargie pour SuiviSanteSourcesServiceTest. */
+  static boolean estChuteBrutale(final int precedent, final int actuel) {
+    return precedent >= VOLUME_MIN_CHUTE && actuel * 100 <= precedent * POURCENTAGE_RESTANT_CHUTE;
   }
 
   /**
@@ -116,11 +191,16 @@ public class SuiviSanteSourcesService {
       jdbc.update(
           sql,
           Map.of(
-              "succes", succes,
-              "seuil", SEUIL_SUSPECT,
-              "source", source,
-              "identifiant", identifiant,
-              "effacerIntervention", effacerIntervention));
+              "succes",
+              succes,
+              "seuil",
+              SEUIL_SUSPECT,
+              CLE_SOURCE,
+              source,
+              "identifiant",
+              identifiant,
+              "effacerIntervention",
+              effacerIntervention));
     } catch (Exception e) {
       LOG.warn(
           "Impossible de mettre à jour la santé source={} identifiant={}", source, identifiant, e);
@@ -146,7 +226,7 @@ public class SuiviSanteSourcesService {
             FROM artiste_sources asrc JOIN artistes a ON a.id = asrc.artiste_id
             WHERE asrc.source = :source AND asrc.identifiant_externe = :identifiant
             """,
-            Map.of("source", source, "identifiant", identifiant));
+            Map.of(CLE_SOURCE, source, "identifiant", identifiant));
     if (lignes.isEmpty() || lignes.get(0).get("necessite_intervention_le") == null) {
       return true;
     }

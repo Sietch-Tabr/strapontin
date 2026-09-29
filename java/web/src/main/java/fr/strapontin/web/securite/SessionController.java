@@ -31,16 +31,19 @@ public class SessionController {
    * Retourne les données de navigation de l'utilisateur courant.
    *
    * @param auth l'authentification Spring Security
-   * @return les données de session : rôle, nbNouveau
+   * @return rôle, nbNouveau, changement de mot de passe exigé
    */
   @GetMapping("/api/session")
   public SessionDto session(final Authentication auth) {
     if (auth == null
         || !auth.isAuthenticated()
         || !(auth.getPrincipal() instanceof UtilisateurDetails ud)) {
-      return new SessionDto("user", 0);
+      return new SessionDto("user", 0, false);
     }
-    return new SessionDto(ud.role(), parametresService.compterNouveauxMatchesArtistes(ud.id()));
+    return new SessionDto(
+        ud.role(),
+        parametresService.compterNouveauxMatchesArtistes(ud.id()),
+        parametresService.estChangementMotDePasseExige(ud.id()));
   }
 
   /**
@@ -48,6 +51,8 @@ public class SessionController {
    *
    * @param role le rôle ({@code user} ou {@code admin})
    * @param nbNouveau le nombre de concerts non encore vus
+   * @param changementMotDePasseExige {@code true} si un nouveau mot de passe est
+   *     exigé (communication d'incident)
    */
-  public record SessionDto(String role, int nbNouveau) {}
+  public record SessionDto(String role, int nbNouveau, boolean changementMotDePasseExige) {}
 }

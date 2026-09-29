@@ -62,6 +62,7 @@
         </button>
       </div>
     </div>
+    <AdminIncident />
   </section>
 </template>
 
@@ -69,6 +70,7 @@
 defineOptions({ name: "AdminBanniere" });
 
 import { ref, onMounted } from "vue";
+import AdminIncident from "./AdminIncident.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { parseJsonOuNull } from "../../utils/reponseJson.js";
 import { chargerBanniere } from "../../composables/useBanniere.js";

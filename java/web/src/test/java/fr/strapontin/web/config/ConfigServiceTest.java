@@ -39,7 +39,7 @@ class ConfigServiceTest {
   @Mock private NamedParameterJdbcTemplate jdbc;
 
   private ConfigService creerService() {
-    return new ConfigService(SECRET, jdbc);
+    return new ConfigService(SECRET, "", jdbc);
   }
 
   @Test

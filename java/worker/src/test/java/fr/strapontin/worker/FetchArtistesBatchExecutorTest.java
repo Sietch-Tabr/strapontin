@@ -77,7 +77,8 @@ class FetchArtistesBatchExecutorTest {
         new FetchRapportage(
             mock(NotificationDigestService.class),
             workerStatsService,
-            mock(SuiviSanteSourcesService.class));
+            mock(SuiviSanteSourcesService.class),
+            mock(EnregistreurLieuxEventim.class));
 
     return new FetchArtistesBatchExecutor(
         List.of((SourceConcerts) () -> "aucune-source-simple"),

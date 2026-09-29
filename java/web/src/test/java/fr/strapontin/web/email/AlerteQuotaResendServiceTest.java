@@ -34,7 +34,9 @@ class AlerteQuotaResendServiceTest {
   void setUp() {
     gestionQuotaResend = mock(GestionQuotaResend.class);
     emailAlerteService = mock(EmailAlerteService.class);
-    service = new AlerteQuotaResendService(gestionQuotaResend, emailAlerteService);
+    service =
+        new AlerteQuotaResendService(
+            gestionQuotaResend, emailAlerteService, mock(EmailSender.class));
   }
 
   @Test

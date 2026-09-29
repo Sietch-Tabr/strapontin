@@ -208,8 +208,9 @@ test.describe("Scénario: flux TOTP complet (enrollment + challenge)", () => {
         storageState: FICHIER_AUTH_ADMIN,
       });
       const u = await trouverUtilisateurParUsername(adminCtx.request, USER);
+      expect(u).toBeDefined();
       const resetRep = await adminCtx.request.post(
-        `/api/admin/utilisateurs/${u.id}/reset-totp`,
+        `/api/admin/utilisateurs/${u!.id}/reset-totp`,
       );
       expect(resetRep.status()).toBe(200);
       await adminCtx.close();

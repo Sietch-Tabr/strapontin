@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,8 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.LieuEventim;
+import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.TicketmasterSource;
 import java.time.LocalDate;
 import java.util.List;
@@ -47,6 +50,10 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @BeforeEach
   void nettoyerBase() {
+    // Le nom de la source indexe son horizon de couverture (absences par salle).
+    when(ticketmasterSource.nom()).thenReturn("ticketmaster");
+    when(eventimSource.nom()).thenReturn("eventim");
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
     jdbc.update("DELETE FROM user_matches", Map.of());
     jdbc.update("DELETE FROM user_salles", Map.of());
     jdbc.update("DELETE FROM user_artistes", Map.of());
@@ -90,11 +97,12 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     final UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
     insererUserSalle("u1", salleSuivie);
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
-    when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenReturn(List.<ConcertBrut>of());
 
     fetchService.executerFetchSallesAll();
 
-    verify(ticketmasterSource).fetchSalle("tm:venue-suivie");
+    verify(ticketmasterSource).fetchSalle("tm:venue-suivie", null);
   }
 
   @Test
@@ -102,11 +110,12 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     insererUser("u1");
     insererSalleAvecSourceTm("salle-non-suivie", "venue-non-suivie");
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
-    when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenReturn(List.<ConcertBrut>of());
 
     fetchService.executerFetchSallesAll();
 
-    verify(ticketmasterSource, never()).fetchSalle("tm:venue-non-suivie");
+    verify(ticketmasterSource, never()).fetchSalle("tm:venue-non-suivie", null);
   }
 
   private UUID insererArtisteSuivi(final String userId, final String nom) {
@@ -187,7 +196,9 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     insererUserSalle("u1", salleSuivie);
     insererConcertAncienSurSalle(salleSuivie);
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
-    when(ticketmasterSource.fetchSalle(startsWith("tm:"))).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.joursCouvertsParSalle()).thenReturn(180);
 
     fetchService.executerFetchSallesAll();
 
@@ -220,8 +231,10 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     jdbc.update(
         "UPDATE evenements SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
         Map.of("id", salleNonSuivie.toString()));
-    when(ticketmasterSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
-    when(eventimSource.fetchRegion(any(), any())).thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusMonths(6)));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
 
     fetchService.executerFetchRegion();
 
@@ -231,5 +244,137 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of("id", salleNonSuivie.toString()),
             Integer.class);
     assertEquals(1, absences);
+  }
+
+  // Un concert au-delà de la dernière date couverte par la requête (plafond de pagination,
+  // fenêtre) n'a pas été cherché : il ne doit pas compter d'absence.
+  @Test
+  void executerFetchRegion_concertAuDelaDeLHorizonCouvert_neCompteAucuneAbsence() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salleNonSuivie = insererSalleAvecSourceTm("salle-horizon", "venue-horizon");
+    jdbc.update(
+        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    insererConcertAncienSurSalle(salleNonSuivie);
+    jdbc.update(
+        "UPDATE evenements SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    when(ticketmasterSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusDays(7)));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
+
+    fetchService.executerFetchRegion();
+
+    final Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleNonSuivie.toString()),
+            Integer.class);
+    assertEquals(0, absences);
+  }
+
+  // Une source qui n'a pas été interrogée pour la salle (aucun identifiant chez elle) ne
+  // garantit rien : un concert qu'elle seule observe ne compte pas d'absence.
+  @Test
+  void executerFetchSallesAll_concertObserveParUneSourceNonInterrogee_neCompteAucuneAbsence() {
+    insererUser("u1");
+    final UUID salleSuivie = insererSalleAvecSourceTm("salle-eventim", "venue-eventim");
+    insererUserSalle("u1", salleSuivie);
+    insererConcertAncienSurSalle(salleSuivie);
+    jdbc.update(
+        "UPDATE observations SET source = 'eventim' WHERE evenement_id IN"
+            + " (SELECT id FROM evenements WHERE salle_id = CAST(:id AS uuid))",
+        Map.of("id", salleSuivie.toString()));
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenReturn(List.<ConcertBrut>of());
+    when(ticketmasterSource.joursCouvertsParSalle()).thenReturn(180);
+
+    fetchService.executerFetchSallesAll();
+
+    final Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleSuivie.toString()),
+            Integer.class);
+    assertEquals(0, absences);
+  }
+
+  private void insererSourceEventim(
+      final UUID salleId, final String identifiant, final String libelle) {
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe, libelle_source)"
+            + " VALUES (CAST(:salleId AS uuid), 'eventim', :identifiant, :libelle)",
+        new MapSqlParameterSource()
+            .addValue("salleId", salleId.toString())
+            .addValue("identifiant", identifiant)
+            .addValue("libelle", libelle));
+  }
+
+  // Eventim n'expose aucun identifiant de lieu : il s'interroge par libellé exact, et un lieu
+  // dont le libellé est encore inconnu n'est pas interrogé — le libellé relevé lors d'un fetch
+  // est ensuite enregistré pour les cycles suivants.
+  @Test
+  void executerFetchSallesAll_lieuEventim_interrogeParLibelleEtReleveLesLieuxObserves() {
+    insererUser("u1");
+    final UUID salleAvecLibelle = insererSalleAvecSourceTm("salle-eventim-1", "venue-e1");
+    insererSourceEventim(salleAvecLibelle, "internal:accor arena", "Accor Arena");
+    final UUID salleSansLibelle = insererSalleAvecSourceTm("salle-eventim-2", "venue-e2");
+    insererSourceEventim(salleSansLibelle, "internal:olympia", null);
+    insererUserSalle("u1", salleAvecLibelle);
+    insererUserSalle("u1", salleSansLibelle);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any())).thenReturn(List.of());
+    when(eventimSource.accepteIdentifiantSalle(startsWith("eventim:"))).thenReturn(true);
+    when(eventimSource.fetchSalle(startsWith("eventim:"), any())).thenReturn(List.of());
+    when(eventimSource.preleverLieuxObserves())
+        .thenReturn(List.of(new LieuEventim("internal:olympia", "Olympia", "Paris", 48.87, 2.33)))
+        .thenReturn(List.of());
+
+    fetchService.executerFetchSallesAll();
+
+    verify(eventimSource).fetchSalle("eventim:internal:accor arena", "Accor Arena");
+    verify(eventimSource, never()).fetchSalle(eq("eventim:internal:olympia"), any());
+    final Map<String, Object> lieu =
+        jdbc.queryForMap(
+            "SELECT libelle_source, ville_source, latitude FROM salle_sources"
+                + " WHERE source = 'eventim' AND identifiant_externe = 'internal:olympia'",
+            Map.of());
+    assertEquals("Olympia", lieu.get("libelle_source"));
+    assertEquals("Paris", lieu.get("ville_source"));
+    assertEquals(48.87, lieu.get("latitude"));
+  }
+
+  // Un lieu passé à une autre billetterie garde souvent un concert listé : la chute par rapport
+  // au volume précédent doit être signalée, pas seulement une salle devenue vide.
+  @Test
+  void executerFetchSallesAll_chuteBrutaleDuNombreDeConcerts_signaleLaSalle() {
+    insererUser("u1");
+    final UUID salle = insererSalleAvecSourceTm("salle-chute", "venue-chute");
+    insererUserSalle("u1", salle);
+    jdbc.update(
+        "UPDATE salle_sources SET dernier_nb_resultats = 11 WHERE identifiant_externe = 'venue-chute'",
+        Map.of());
+    when(ticketmasterSource.nom()).thenReturn("ticketmaster");
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any())).thenReturn(List.of());
+
+    fetchService.executerFetchSallesAll();
+
+    final Integer signalements =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching WHERE type = 'chute_resultats_salle'"
+                + " AND entite_id = CAST(:id AS uuid) AND resolu_le IS NULL",
+            Map.of("id", salle.toString()),
+            Integer.class);
+    assertEquals(1, signalements);
+    final Integer dernier =
+        jdbc.queryForObject(
+            "SELECT dernier_nb_resultats FROM salle_sources WHERE identifiant_externe = 'venue-chute'",
+            Map.of(),
+            Integer.class);
+    assertEquals(0, dernier);
   }
 }

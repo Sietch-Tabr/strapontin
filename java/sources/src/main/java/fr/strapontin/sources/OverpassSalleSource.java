@@ -282,7 +282,7 @@ public class OverpassSalleSource implements SourceEnrichissementSalle, SourceAve
 
   // OSM tague fréquemment ses noms avec l'apostrophe typographique courbe (’,
   // U+2019) plutôt que l'apostrophe droite (', U+0027) utilisée dans les noms
-  // Strapontin (issus de TM/Eventim/Digitick). Le filtre ["name"~"regex"] est
+  // Strapontin (issus de TM/Eventim). Le filtre ["name"~"regex"] est
   // appliqué côté serveur Overpass sur la chaîne brute : sans cette
   // substitution, une regex contenant l'apostrophe droite ne matche jamais un
   // nom OSM en apostrophe courbe (constaté sur « L'Empreinte » à

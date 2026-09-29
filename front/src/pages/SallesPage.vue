@@ -24,9 +24,8 @@
     </form>
     <p class="form-aide">
       Saisissez au moins 2 caractères. La recherche porte sur les concerts en
-      base, les salles Digitick configurées et les suggestions
-      OpenStreetMap/Ticketmaster. Si une salle n'apparaît pas, vous pouvez
-      l'ajouter directement par nom.
+      base et les suggestions OpenStreetMap/Ticketmaster. Si une salle
+      n'apparaît pas, vous pouvez l'ajouter directement par nom.
     </p>
 
     <div
@@ -51,7 +50,7 @@
         <ul class="liste-cartes">
           <li
             v-for="r in donnees.resultats"
-            :key="r.salle + r.tmVenueId + r.digitickSlug + r.osmId"
+            :key="r.salle + r.tmVenueId + r.osmId"
             class="carte-item"
           >
             <div>
@@ -62,11 +61,6 @@
                 v-if="r.osmId"
                 class="badge badge-source badge-source-metadonnees"
                 >osm</span
-              >
-              <span
-                v-if="r.digitickSlug"
-                class="badge badge-source badge-source-digitick"
-                >Digitick</span
               >
             </div>
             <button
@@ -122,11 +116,6 @@
           >
             <span class="carte-nom">
               {{ salle.nom }}
-              <span
-                v-if="salle.aDigitick"
-                class="badge badge-source badge-source-digitick"
-                >Digitick</span
-              >
             </span>
             <button
               type="button"
@@ -426,15 +415,3 @@ onMounted(async () => {
 
 onUnmounted(() => controleur.abort());
 </script>
-
-<style scoped>
-.badge-source-digitick {
-  background: #ecfdf5;
-  color: #065f46;
-}
-
-.sombre .badge-source-digitick {
-  background: #064e3b;
-  color: #6ee7b7;
-}
-</style>

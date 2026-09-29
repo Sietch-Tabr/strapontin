@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
  * Service de réconciliation des noms d'artiste et de résolution des
  * {@code artiste_id} — deux passes (intra-lot puis contre la base),
  * {@link CorrespondanceArtiste#estDoublonArtiste} partagé avec le module
- * web. La résolution par nom couvre Digitick (sans identifiant externe).
+ * web. La résolution par nom couvre les concerts sans identifiant d'artiste.
  * @since 2.5.7
  * @author Kwaite
  */
@@ -311,7 +311,7 @@ public class ReconciliateurArtistes {
 
   /**
    * Résout les {@code artiste_id} manquants par lookup sur {@code
-   * artistes.nom_norm} — couvre Digitick (sans identifiant externe). Les
+   * artistes.nom_norm} — couvre les concerts sans identifiant d'artiste. Les
    * mappings trouvés sont persistés dans {@code artiste_sources} (ON
    * CONFLICT DO NOTHING) pour accélérer les fetches suivants.
    * @param concerts concerts après résolution par source

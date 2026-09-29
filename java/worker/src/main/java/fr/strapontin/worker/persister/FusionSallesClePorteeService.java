@@ -212,6 +212,9 @@ public class FusionSallesClePorteeService {
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
     final Map<String, Object> ids =
         Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
+    // Lus avant la suppression : la salle absorbée n'est sinon plus identifiable.
+    final String nomCible = decrireSalle(cibleId);
+    final String nomSource = decrireSalle(sourceId);
 
     fusionnerEvenements(ids);
     fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
@@ -221,9 +224,11 @@ public class FusionSallesClePorteeService {
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     LOG.info(
-        "reconciliation:nocturne — salles fusionnées par clé forte cible={} source={}",
+        "reconciliation:nocturne — salles fusionnées par clé forte cible={} ({}) source={} ({})",
         cibleId,
-        sourceId);
+        nomCible,
+        sourceId,
+        nomSource);
     // Fusion automatique et destructive (suppression d'une salle établie) :
     // jamais silencieuse, contrairement au reste du cycle nocturne qui ne fait
     // que journaliser un constat.
@@ -231,10 +236,26 @@ public class FusionSallesClePorteeService {
         "info",
         "reconciliation-nocturne",
         "salles fusionnées automatiquement par clé forte (artiste+date+heure+dept) cible="
-            + cibleId
+            + nomCible
             + " source="
-            + sourceId,
-        Map.of("salleCible", cibleId.toString(), "salleSource", sourceId.toString()));
+            + nomSource,
+        Map.of(
+            "salleCible", cibleId.toString(),
+            "salleSource", sourceId.toString(),
+            "nomCible", nomCible,
+            "nomSource", nomSource));
+  }
+
+  private String decrireSalle(final UUID id) {
+    return jdbc
+        .query(
+            "SELECT nom || ' (' || coalesce(nullif(dept, ''), '?') || ')' FROM salles"
+                + " WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
+            (rs, _) -> rs.getString(1))
+        .stream()
+        .findFirst()
+        .orElse(id.toString());
   }
 
   // 1. Événements en conflit (même artiste/date/heure déjà présent côté cible)

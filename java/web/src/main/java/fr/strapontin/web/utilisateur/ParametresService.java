@@ -57,6 +57,14 @@ public class ParametresService {
   }
 
   /**
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si un nouveau mot de passe est exigé avant tout usage
+   */
+  public boolean estChangementMotDePasseExige(final String userId) {
+    return utilisateurRepository.estChangementMotDePasseExige(userId);
+  }
+
+  /**
    * Retourne le nombre d'artistes et de salles suivis par l'utilisateur.
    *
    * @param userId identifiant de l'utilisateur

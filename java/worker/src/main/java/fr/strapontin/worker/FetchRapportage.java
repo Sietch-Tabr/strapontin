@@ -8,10 +8,9 @@ import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import org.springframework.stereotype.Component;
 
 /**
- * Collaborateurs de reporting partagés par les exécuteurs de fetch —
- * notification immédiate, bilan/durée de job, suivi passif des
- * absences par source. Regroupe trois dépendances co-localisées pour
- * rester sous le seuil de paramètres de constructeur (8).
+ * Collaborateurs post-fetch partagés par les exécuteurs — notification,
+ * bilan de job, suivi passif par source, relevé des lieux Eventim ; regroupés
+ * pour rester sous le seuil de paramètres de constructeur (8).
  * @since 2.9.1
  * @author Kwaite
  */
@@ -19,4 +18,5 @@ import org.springframework.stereotype.Component;
 public record FetchRapportage(
     NotificationDigestService notificationDigestService,
     WorkerStatsService workerStatsService,
-    SuiviSanteSourcesService suiviSanteSourcesService) {}
+    SuiviSanteSourcesService suiviSanteSourcesService,
+    EnregistreurLieuxEventim enregistreurLieuxEventim) {}

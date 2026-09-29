@@ -8,10 +8,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Salle suivie par un utilisateur — {@code aDigitick} indique une
- * configuration avec slug Digitick.
+ * Salle suivie par un utilisateur.
  *
  * @since 2.1.0
  * @author Kwaite
  */
-public record SalleUtilisateur(UUID id, String nom, Instant createdAt, boolean aDigitick) {}
+public record SalleUtilisateur(UUID id, String nom, Instant createdAt) {}

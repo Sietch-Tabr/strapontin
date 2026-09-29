@@ -75,10 +75,19 @@ function listerPidsPlaywrightMcp(): string[] {
   } catch {
     return []; // ps indisponible sur cette plateforme — ne bloque pas la suite pour autant
   }
+  // Seul l'exécutable compte : un shell dont la commande cite « playwright-mcp » (grep, pkill)
+  // n'est pas une session d'automatisation.
   return sortie
     .split("\n")
-    .filter((ligne) => /playwright-mcp/i.test(ligne))
-    .map((ligne) => ligne.trim().split(/\s+/)[1])
+    .map((ligne) => ligne.trim().split(/\s+/))
+    .filter((champs) => {
+      const [executable, script = ""] = champs.slice(10);
+      return (
+        /playwright-mcp$/i.test(executable ?? "") ||
+        (/(^|\/)node$/.test(executable ?? "") && /playwright-mcp/i.test(script))
+      );
+    })
+    .map((champs) => champs[1])
     .filter((pid): pid is string => !!pid);
 }
 

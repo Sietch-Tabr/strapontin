@@ -8,8 +8,8 @@ import fr.strapontin.core.ConcertBrut;
 import java.util.List;
 
 /**
- * Contrat minimal d'une source de concerts (Ticketmaster, Eventim,
- * Digitick...) — méthodes non pertinentes pour une source ont une
+ * Contrat minimal d'une source de concerts (Ticketmaster, Eventim...)
+ * — méthodes non pertinentes pour une source ont une
  * implémentation par défaut (liste vide ou false).
  * @since 2.3.1
  * @author Kwaite
@@ -31,7 +31,7 @@ public interface SourceConcerts {
    * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
    *     opération
    */
-  default List<ConcertBrut> fetchArtiste(String nom) {
+  default List<ConcertBrut> fetchArtiste(final String nom) {
     return List.of();
   }
 
@@ -50,11 +50,11 @@ public interface SourceConcerts {
 
   /**
    * Indique si la source accepte cet identifiant de salle préfixé (ex.
-   * "tm:rZFSnyZdFvA", "digitick:lempreinte").
+   * "tm:rZFSnyZdFvA", "eventim:internal:accor arena").
    * @param identifiant identifiant préfixé de la salle
    * @return {@code true} si la source peut fetcher cette salle
    */
-  default boolean accepteIdentifiantSalle(String identifiant) {
+  default boolean accepteIdentifiantSalle(final String identifiant) {
     return false;
   }
 
@@ -66,8 +66,19 @@ public interface SourceConcerts {
    * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
    *     opération
    */
-  default List<ConcertBrut> fetchSalle(String identifiant) {
+  default List<ConcertBrut> fetchSalle(final String identifiant) {
     return List.of();
+  }
+
+  /**
+   * Comme {@link #fetchSalle(String)}, pour une source qui interroge un lieu
+   * par son libellé plutôt que par un identifiant (Eventim).
+   * @param identifiant identifiant préfixé de la salle
+   * @param libelle libellé du lieu chez la source, ou null
+   * @return concerts trouvés
+   */
+  default List<ConcertBrut> fetchSalle(final String identifiant, final String libelle) {
+    return fetchSalle(identifiant);
   }
 
   /**
@@ -77,7 +88,28 @@ public interface SourceConcerts {
    * @param classifs classifications à inclure
    * @return concerts trouvés, ou liste vide si non supporté
    */
-  default List<ConcertBrut> fetchRegion(List<String> depts, List<String> classifs) {
+  default List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
     return List.of();
+  }
+
+  /**
+   * Comme {@link #fetchRegion}, avec l'horizon de couverture garanti — par
+   * défaut aucun, ce qui interdit de compter des absences sur cette source.
+   * @param depts codes département (ex. {@code ["75", "92"]})
+   * @param classifs classifications à inclure
+   * @return concerts trouvés et horizon de couverture
+   */
+  default ResultatRegion fetchRegionCouverte(
+      final List<String> depts, final List<String> classifs) {
+    return new ResultatRegion(fetchRegion(depts, classifs), null);
+  }
+
+  /**
+   * Nombre de jours à venir entièrement couverts par {@link #fetchSalle}
+   * (fenêtre de la requête) — au-delà, un concert non revu n'est pas absent.
+   * @return jours couverts, 0 si la source ne garantit aucune couverture
+   */
+  default int joursCouvertsParSalle() {
+    return 0;
   }
 }

@@ -138,6 +138,12 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
                 + " message LIKE '%fusionnées%'",
             Map.of(), Long.class);
     assertEquals(1L, nbLogs);
+    // La salle absorbée est supprimée : seul le journal permet encore de l'identifier.
+    final String nomSource =
+        jdbc.queryForObject(
+            "SELECT meta->>'nomSource' FROM logs_admin WHERE message LIKE '%fusionnées%'",
+            Map.of(), String.class);
+    assertEquals("Grand Theatre Limoges (87)", nomSource);
   }
 
   @Test

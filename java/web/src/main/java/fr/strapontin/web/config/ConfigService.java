@@ -40,11 +40,14 @@ public class ConfigService {
 
   /**
    * @param secret secret de chiffrement {@code APP_CONFIG_SECRET}
+   * @param secretPrecedent secret remplacé lors d'une rotation en cours, vide sinon
    * @param jdbc accès JDBC
    */
   public ConfigService(
-      @Value("${app.config.secret}") final String secret, final NamedParameterJdbcTemplate jdbc) {
-    this.cipher = new ConfigCipher(secret);
+      @Value("${app.config.secret}") final String secret,
+      @Value("${app.config.secret-precedent:}") final String secretPrecedent,
+      final NamedParameterJdbcTemplate jdbc) {
+    this.cipher = new ConfigCipher(secret, secretPrecedent);
     this.jdbc = jdbc;
     this.cache =
         Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(5)).maximumSize(200).build();

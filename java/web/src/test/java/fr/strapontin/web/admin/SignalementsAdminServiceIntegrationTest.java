@@ -128,4 +128,58 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
   void resoudre_signalementInconnu_retourneFalse() {
     assertEquals(false, service.resoudre(999_999L));
   }
+
+  private UUID creerSalle(final String cle) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:cle, :cle, :cle) RETURNING id",
+        Map.of("cle", cle + "-" + UUID.randomUUID()),
+        UUID.class);
+  }
+
+  // La décision « faux positif » est mémorisée sur les sources signalées : le contrôle nocturne
+  // ne les re-signalera plus.
+  @Test
+  void accepterContamination_signalementActif_memoriseLaSourceEtLeveLeSignalement() {
+    final UUID salle = creerSalle("agen agora");
+    jdbc.update(
+        "UPDATE salles SET contamination_signalee = 'centre des congres agen'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:id AS uuid), 'eventim', 'internal:centre des congres agen')",
+        Map.of("id", salle.toString()));
+
+    assertTrue(service.accepterContamination(salle));
+
+    final Long acceptees =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM salle_sources WHERE salle_id = CAST(:id AS uuid)"
+                + " AND contamination_acceptee_le IS NOT NULL",
+            Map.of("id", salle.toString()),
+            Long.class);
+    assertEquals(1L, acceptees);
+    assertEquals(false, service.accepterContamination(salle), "plus rien à accepter");
+  }
+
+  @Test
+  void declarerSallesDistinctes_signalementActif_memoriseLaPaireEtLeveLeSignalement() {
+    final UUID salleA = creerSalle("theatre montparnasse");
+    final UUID salleB = creerSalle("theatre de poche montparnasse");
+    jdbc.update(
+        "UPDATE salles SET doublon_signale = CAST(:b AS uuid) WHERE id = CAST(:a AS uuid)",
+        Map.of("a", salleA.toString(), "b", salleB.toString()));
+
+    assertTrue(service.declarerSallesDistinctes(salleA));
+
+    final Long paires =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM salles_paires_distinctes"
+                + " WHERE (salle_a = CAST(:a AS uuid) AND salle_b = CAST(:b AS uuid))"
+                + " OR (salle_a = CAST(:b AS uuid) AND salle_b = CAST(:a AS uuid))",
+            Map.of("a", salleA.toString(), "b", salleB.toString()),
+            Long.class);
+    assertEquals(1L, paires);
+    assertEquals(0, service.lister(0).total());
+  }
 }

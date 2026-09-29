@@ -92,20 +92,6 @@
               </p>
             </template>
 
-            <template v-else-if="source.id === 'digitick'">
-              <p class="source-carte-detail">
-                <span v-if="source.nbSallesConfigurees > 0">
-                  {{ source.nbSallesConfigurees }} salle{{
-                    source.nbSallesConfigurees > 1 ? "s" : ""
-                  }}
-                  configurée{{ source.nbSallesConfigurees > 1 ? "s" : "" }}
-                </span>
-                <span v-else class="etat-vide-texte"
-                  >Aucune salle configurée (voir table ci-dessous).</span
-                >
-              </p>
-            </template>
-
             <template v-else-if="source.id === 'deezer'">
               <p class="source-carte-detail">
                 <span v-if="source.nbArtistesConfigures > 0">
@@ -139,11 +125,7 @@
               Dernier fetch : {{ formaterInstant(source.dernierFetch) }}
             </p>
             <p
-              v-else-if="
-                source.id !== 'deezer' &&
-                source.id !== 'digitick' &&
-                source.id !== 'wikidata'
-              "
+              v-else-if="source.id !== 'deezer' && source.id !== 'wikidata'"
               class="source-carte-detail param-aide"
             >
               Jamais exécuté
@@ -163,7 +145,7 @@
             <button
               type="button"
               class="bouton bouton-petit"
-              :class="vueDigitick ? 'bouton-secondaire' : 'bouton-primaire'"
+              :class="vueEventim ? 'bouton-secondaire' : 'bouton-primaire'"
               @click="basculerVue(false)"
             >
               Sans source
@@ -171,41 +153,29 @@
             <button
               type="button"
               class="bouton bouton-petit"
-              :class="vueDigitick ? 'bouton-primaire' : 'bouton-secondaire'"
+              :class="vueEventim ? 'bouton-primaire' : 'bouton-secondaire'"
               @click="basculerVue(true)"
             >
-              Avec Digitick
+              Avec lieu Eventim
             </button>
           </div>
         </div>
         <p class="param-aide">
-          <template v-if="!vueDigitick"
-            >Salles sans identifiant Ticketmaster ni Eventim — configurez leur
-            slug Digitick et vérifiez l'URL.</template
+          <template v-if="!vueEventim"
+            >Salles sans identifiant Ticketmaster ni Eventim — renseignez le nom
+            exact du lieu tel qu'Eventim l'affiche, puis testez-le.</template
           >
           <template v-else
-            >Salles gérées manuellement avec leur slug Digitick. Elles
-            apparaissent dans la recherche « Mes salles » même sans
-            concerts.</template
+            >Salles interrogées sur Eventim par le nom exact de leur lieu. Un
+            nom inexact ne renvoie aucun concert : testez avant
+            d'enregistrer.</template
           >
         </p>
-
-        <template v-if="vueDigitick">
-          <div class="source-digitick-actions">
-            <button
-              type="button"
-              class="bouton bouton-secondaire bouton-petit"
-              @click="ouvrirAjout"
-            >
-              Ajouter une salle
-            </button>
-          </div>
-        </template>
 
         <EtatChargement v-if="chargementSalles" />
         <template v-else>
           <!-- Hors du v-if salles.length : un filtrage réduisant le résultat à zéro ne doit pas
-             faire disparaître le champ, sinon plus aucun moyen de revenir en arrière (#1172). -->
+             faire disparaître le champ, sinon plus aucun moyen de revenir en arrière. -->
           <input
             v-model="recherche"
             type="search"
@@ -222,38 +192,39 @@
               <table
                 id="table-sources-salles"
                 :aria-label="
-                  vueDigitick
-                    ? 'Salles avec Digitick'
-                    : 'Salles sans Ticketmaster'
+                  vueEventim
+                    ? 'Salles avec lieu Eventim'
+                    : 'Salles sans Ticketmaster ni Eventim'
                 "
               >
                 <thead>
                   <tr>
                     <th>Salle</th>
-                    <th v-if="vueDigitick">Ville / CP</th>
-                    <th>Slug Digitick</th>
+                    <th>Ville / Dép.</th>
+                    <th>Lieu Eventim</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="salle in salles" :key="salle.salleId">
                     <td class="source-salle-nom">{{ salle.nom }}</td>
-                    <td v-if="vueDigitick" class="source-salle-loc">
+                    <td class="source-salle-loc">
                       <span v-if="salle.ville || salle.dept">{{
                         [salle.ville, salle.dept].filter(Boolean).join(" ")
                       }}</span>
                       <span v-else class="etat-vide-texte">—</span>
                     </td>
                     <td>
-                      <div class="source-slug-inline">
+                      <div class="source-lieu-inline">
                         <input
-                          :value="slugsEdites[salle.salleId]"
+                          v-model="lieuxEdites[salle.salleId]"
                           type="text"
-                          class="source-slug-input"
-                          :placeholder="slugDeduit(salle.nom)"
-                          :aria-label="'Slug Digitick pour ' + salle.nom"
-                          @input="mettreAJourSlug(salle, $event.target.value)"
-                          @keydown.enter="sauvegarderSlug(salle)"
+                          class="source-lieu-input"
+                          maxlength="200"
+                          placeholder="Nom exact chez Eventim"
+                          :aria-label="'Lieu Eventim pour ' + salle.nom"
+                          @input="statutTester[salle.salleId] = null"
+                          @keydown.enter="sauvegarderLieu(salle)"
                         />
                         <span
                           v-if="statutTester[salle.salleId]"
@@ -273,9 +244,11 @@
                       <button
                         type="button"
                         class="bouton bouton-secondaire bouton-petit"
-                        :disabled="enCours[salle.salleId + ':slug']"
-                        :aria-label="'Enregistrer le slug pour ' + salle.nom"
-                        @click="sauvegarderSlug(salle)"
+                        :disabled="enCours[salle.salleId + ':lieu']"
+                        :aria-label="
+                          'Enregistrer le lieu Eventim de ' + salle.nom
+                        "
+                        @click="sauvegarderLieu(salle)"
                       >
                         Enregistrer
                       </button>
@@ -284,44 +257,23 @@
                         class="bouton bouton-secondaire bouton-petit"
                         :disabled="
                           enCours[salle.salleId + ':test'] ||
-                          !slugCourant(salle)
+                          !lieuCourant(salle)
                         "
-                        :aria-label="'Tester le slug Digitick de ' + salle.nom"
-                        @click="testerSlug(salle)"
+                        :aria-label="'Tester le lieu Eventim de ' + salle.nom"
+                        @click="testerLieu(salle)"
                       >
                         Tester
                       </button>
-                      <template v-if="vueDigitick">
-                        <button
-                          type="button"
-                          class="bouton bouton-secondaire bouton-petit"
-                          :disabled="
-                            enCours[salle.salleId + ':fetch'] ||
-                            !slugCourant(salle)
-                          "
-                          :aria-label="'Déclencher un fetch pour ' + salle.nom"
-                          @click="fetchSalle(salle)"
-                        >
-                          Fetch
-                        </button>
-                        <button
-                          type="button"
-                          class="bouton bouton-secondaire bouton-petit"
-                          :aria-label="'Éditer ' + salle.nom"
-                          @click="ouvrirEdition(salle)"
-                        >
-                          Éditer
-                        </button>
-                        <button
-                          type="button"
-                          class="bouton bouton-danger-texte bouton-petit"
-                          :disabled="enCours[salle.salleId + ':suppr']"
-                          :aria-label="'Supprimer ' + salle.nom"
-                          @click="demanderSuppression(salle)"
-                        >
-                          Supprimer
-                        </button>
-                      </template>
+                      <button
+                        v-if="vueEventim"
+                        type="button"
+                        class="bouton bouton-secondaire bouton-petit"
+                        :disabled="enCours[salle.salleId + ':fetch']"
+                        :aria-label="'Déclencher un fetch pour ' + salle.nom"
+                        @click="fetchSalle(salle)"
+                      >
+                        Fetch
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -357,221 +309,16 @@
             <template v-if="recherche.trim()"
               >Aucune salle ne correspond à la recherche.</template
             >
-            <template v-else-if="!vueDigitick"
+            <template v-else-if="!vueEventim"
               >Toutes les salles ont un identifiant source (Ticketmaster ou
               Eventim).</template
             >
-            <template v-else
-              >Aucune salle Digitick configurée. Cliquez sur « Ajouter une salle
-              » pour commencer.</template
-            >
+            <template v-else>Aucune salle avec lieu Eventim.</template>
           </p>
         </template>
       </div>
     </template>
   </section>
-
-  <dialog
-    ref="dialogAjoutRef"
-    aria-labelledby="titre-ajout-digitick"
-    aria-modal="true"
-  >
-    <div class="dialog-entete">
-      <h2 id="titre-ajout-digitick" class="dialog-titre">
-        Ajouter une salle Digitick
-      </h2>
-    </div>
-    <form @submit.prevent="creerSalleDigitick">
-      <div class="champ">
-        <label for="ajout-nom" class="champ-label"
-          >Nom <span aria-hidden="true">*</span></label
-        >
-        <input
-          id="ajout-nom"
-          v-model="ajout.nom"
-          type="text"
-          required
-          maxlength="200"
-          autocomplete="off"
-          placeholder="L'Empreinte"
-        />
-      </div>
-      <div class="champ">
-        <label for="ajout-slug" class="champ-label"
-          >Slug Digitick <span aria-hidden="true">*</span></label
-        >
-        <div class="source-slug-inline">
-          <input
-            id="ajout-slug"
-            :value="ajout.slug"
-            type="text"
-            required
-            maxlength="100"
-            autocomplete="off"
-            placeholder="lempreinte"
-            @input="
-              ajout.slug = extraireSlugDepuisUrl($event.target.value);
-              ajoutSlugStatut = null;
-            "
-          />
-          <span
-            v-if="ajoutSlugStatut"
-            class="source-test-statut"
-            :class="
-              ajoutSlugStatut?.startsWith('ok')
-                ? 'source-test-ok'
-                : 'source-test-ko'
-            "
-            aria-live="polite"
-            >{{ formatStatutTest(ajoutSlugStatut) }}</span
-          >
-        </div>
-        <p class="param-aide">
-          Collez l'URL Digitick ou saisissez le slug directement — ex.
-          <code>lempreinte</code> ou <code>index-css5-lempreinte-pg1.html</code>
-        </p>
-      </div>
-      <div class="champ">
-        <label for="ajout-ville" class="champ-label">Ville</label>
-        <input
-          id="ajout-ville"
-          v-model="ajout.ville"
-          type="text"
-          maxlength="100"
-          autocomplete="off"
-          placeholder="Savigny-le-Temple"
-        />
-      </div>
-      <div class="champ">
-        <label for="ajout-cp" class="champ-label">Département</label>
-        <input
-          id="ajout-cp"
-          v-model="ajout.dept"
-          type="text"
-          maxlength="3"
-          autocomplete="off"
-          placeholder="77"
-        />
-      </div>
-      <div class="dialog-pied">
-        <button
-          type="submit"
-          class="bouton bouton-secondaire"
-          :disabled="enCours.ajout"
-        >
-          Ajouter
-        </button>
-        <button
-          type="button"
-          class="bouton bouton-secondaire"
-          :disabled="enCours.ajoutTest || !ajout.slug"
-          @click="testerSlugAjout"
-        >
-          Tester
-        </button>
-        <button
-          type="button"
-          class="bouton bouton-texte"
-          @click="dialogAjoutRef.close()"
-        >
-          Annuler
-        </button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog
-    ref="dialogEditionRef"
-    aria-labelledby="titre-edition-digitick"
-    aria-modal="true"
-  >
-    <div class="dialog-entete">
-      <h2 id="titre-edition-digitick" class="dialog-titre">
-        Modifier la salle
-      </h2>
-    </div>
-    <form @submit.prevent="sauvegarderEdition">
-      <div class="champ">
-        <label for="edit-nom" class="champ-label">Nom</label>
-        <input
-          id="edit-nom"
-          v-model="edition.nom"
-          type="text"
-          maxlength="200"
-          autocomplete="off"
-        />
-      </div>
-      <div class="champ">
-        <label for="edit-ville" class="champ-label">Ville</label>
-        <input
-          id="edit-ville"
-          v-model="edition.ville"
-          type="text"
-          maxlength="100"
-          autocomplete="off"
-        />
-      </div>
-      <div class="champ">
-        <label for="edit-cp" class="champ-label">Département</label>
-        <input
-          id="edit-cp"
-          v-model="edition.dept"
-          type="text"
-          maxlength="3"
-          autocomplete="off"
-          placeholder="77"
-        />
-      </div>
-      <div class="dialog-pied">
-        <button
-          type="submit"
-          class="bouton bouton-secondaire"
-          :disabled="enCours.edition"
-        >
-          Enregistrer
-        </button>
-        <button
-          type="button"
-          class="bouton bouton-texte"
-          @click="dialogEditionRef.close()"
-        >
-          Annuler
-        </button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog
-    ref="dialogSupprRef"
-    aria-labelledby="titre-suppr-digitick"
-    aria-modal="true"
-  >
-    <div class="dialog-entete">
-      <h2 id="titre-suppr-digitick" class="dialog-titre">Supprimer la salle</h2>
-    </div>
-    <p>
-      Supprimer « <strong>{{ salleASupprimer?.nom }}</strong> » et son slug
-      Digitick ?<br />Cette action est irréversible si la salle n'a pas de
-      concerts.
-    </p>
-    <div class="dialog-pied">
-      <button
-        type="button"
-        class="bouton bouton-danger"
-        :disabled="enCours[salleASupprimer?.salleId + ':suppr']"
-        @click="confirmerSuppression"
-      >
-        Supprimer
-      </button>
-      <button
-        type="button"
-        class="bouton bouton-texte"
-        @click="dialogSupprRef.close()"
-      >
-        Annuler
-      </button>
-    </div>
-  </dialog>
 </template>
 
 <script setup>
@@ -582,7 +329,6 @@ import EtatChargement from "../EtatChargement.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant, formaterTs } from "../../composables/useDates.js";
 import { corpsJsonOuVide } from "../../utils/reponseJson.js";
-import { extraireSlugDepuisUrl, slugDeduit } from "../../utils/digitickSlug.js";
 
 const { afficherToast } = useToasts();
 
@@ -593,20 +339,11 @@ const salles = shallowRef([]);
 const page = ref(0);
 const totalPages = ref(1);
 const total = ref(0);
-const vueDigitick = ref(false);
+const vueEventim = ref(false);
 const recherche = ref("");
-const slugsEdites = reactive({});
+const lieuxEdites = reactive({});
 const statutTester = reactive({});
 const enCours = reactive({});
-
-const ajout = reactive({ nom: "", slug: "", ville: "", dept: "" });
-const ajoutSlugStatut = ref(null);
-const edition = reactive({ salleId: null, nom: "", ville: "", dept: "" });
-const salleASupprimer = ref(null);
-
-const dialogAjoutRef = ref(null);
-const dialogEditionRef = ref(null);
-const dialogSupprRef = ref(null);
 
 const controleur = new AbortController();
 // controleurSalles : recréé à chaque appel de chargerSalles() — un changement rapide de vue/page
@@ -626,9 +363,8 @@ function classeBarre(source) {
   return "barre-danger";
 }
 
-function slugCourant(salle) {
-  const edite = slugsEdites[salle.salleId];
-  return edite !== undefined ? edite : (salle.digitickSlug ?? "");
+function lieuCourant(salle) {
+  return (lieuxEdites[salle.salleId] ?? "").trim();
 }
 
 async function charger() {
@@ -656,7 +392,7 @@ async function chargerSalles() {
   chargementSalles.value = true;
   try {
     const params = new URLSearchParams();
-    params.set("digitick", vueDigitick.value);
+    params.set("eventim", vueEventim.value);
     params.set("page", page.value);
     if (recherche.value.trim()) params.set("nom", recherche.value.trim());
 
@@ -670,8 +406,8 @@ async function chargerSalles() {
     totalPages.value = d.totalPages ?? 1;
     total.value = d.total ?? 0;
     for (const s of salles.value) {
-      if (slugsEdites[s.salleId] === undefined) {
-        slugsEdites[s.salleId] = s.digitickSlug ?? "";
+      if (lieuxEdites[s.salleId] === undefined) {
+        lieuxEdites[s.salleId] = s.lieuEventim ?? "";
       }
     }
   } catch (e) {
@@ -683,8 +419,8 @@ async function chargerSalles() {
   }
 }
 
-function basculerVue(digitick) {
-  vueDigitick.value = digitick;
+function basculerVue(eventim) {
+  vueEventim.value = eventim;
   page.value = 0;
   recherche.value = "";
   chargerSalles();
@@ -695,29 +431,30 @@ function allerPage(n) {
   chargerSalles();
 }
 
-function mettreAJourSlug(salle, valeur) {
-  slugsEdites[salle.salleId] = extraireSlugDepuisUrl(valeur);
-}
-
-async function sauvegarderSlug(salle) {
-  const cle = salle.salleId + ":slug";
+async function sauvegarderLieu(salle) {
+  const cle = salle.salleId + ":lieu";
   enCours[cle] = true;
   try {
-    const rep = await fetch(
-      `/api/admin/salles/${salle.salleId}/digitick-slug`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: slugsEdites[salle.salleId] ?? "" }),
-        signal: controleur.signal,
-      },
-    );
+    const rep = await fetch(`/api/admin/salles/${salle.salleId}/lieu-eventim`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ libelle: lieuCourant(salle) }),
+      signal: controleur.signal,
+    });
     if (rep.ok) {
-      salle.digitickSlug = slugsEdites[salle.salleId] || null;
-      afficherToast("Slug mis à jour.", "succes");
+      afficherToast(
+        lieuCourant(salle)
+          ? "Lieu Eventim enregistré."
+          : "Lieu Eventim retiré.",
+        "succes",
+      );
       await chargerSalles();
     } else {
-      afficherToast("Erreur lors de la mise à jour du slug.", "erreur");
+      const data = await corpsJsonOuVide(rep);
+      afficherToast(
+        data.erreur || "Erreur lors de l'enregistrement du lieu.",
+        "erreur",
+      );
     }
   } catch (e) {
     if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
@@ -726,26 +463,25 @@ async function sauvegarderSlug(salle) {
   }
 }
 
-async function testerSlug(salle) {
-  const slug = slugCourant(salle);
-  if (!slug) return;
+async function testerLieu(salle) {
+  const libelle = lieuCourant(salle);
+  if (!libelle) return;
   const cle = salle.salleId + ":test";
   enCours[cle] = true;
   statutTester[salle.salleId] = null;
   try {
     const rep = await fetch(
-      `/api/admin/salles/${salle.salleId}/tester-digitick`,
+      `/api/admin/salles/${salle.salleId}/tester-lieu-eventim`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
+        body: JSON.stringify({ libelle }),
         signal: controleur.signal,
       },
     );
     if (rep.ok) {
       const data = await corpsJsonOuVide(rep);
-      statutTester[salle.salleId] =
-        data.nbConcerts > 0 ? `ok:${data.nbConcerts}` : "ok:0";
+      statutTester[salle.salleId] = `ok:${data.nbConcerts ?? 0}`;
     } else {
       statutTester[salle.salleId] = "ko";
     }
@@ -760,7 +496,7 @@ async function testerSlug(salle) {
 
 function formatStatutTest(statut) {
   if (!statut) return "";
-  if (statut === "ko") return "404 ✗";
+  if (statut === "ko") return "Eventim injoignable ✗";
   const nb = parseInt(statut.split(":")[1] ?? "0", 10);
   return nb > 0 ? `✓ ${nb} concert${nb > 1 ? "s" : ""}` : "✓ aucun concert";
 }
@@ -783,148 +519,6 @@ async function fetchSalle(salle) {
     if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
   } finally {
     enCours[cle] = false;
-  }
-}
-
-function ouvrirAjout() {
-  ajout.nom = "";
-  ajout.slug = "";
-  ajout.ville = "";
-  ajout.dept = "";
-  ajoutSlugStatut.value = null;
-  dialogAjoutRef.value?.showModal();
-}
-
-async function testerSlugAjout() {
-  if (!ajout.slug || enCours.ajoutTest) return;
-  enCours.ajoutTest = true;
-  ajoutSlugStatut.value = null;
-  try {
-    const slug = extraireSlugDepuisUrl(ajout.slug);
-    const rep = await fetch(
-      `/api/admin/salles/00000000-0000-0000-0000-000000000001/tester-digitick`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-        signal: controleur.signal,
-      },
-    );
-    if (rep.ok) {
-      const data = await corpsJsonOuVide(rep);
-      ajoutSlugStatut.value =
-        data.nbConcerts > 0 ? `ok:${data.nbConcerts}` : "ok:0";
-    } else {
-      ajoutSlugStatut.value = "ko";
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") ajoutSlugStatut.value = "ko";
-  } finally {
-    enCours.ajoutTest = false;
-  }
-}
-
-async function creerSalleDigitick() {
-  if (enCours.ajout) return;
-  enCours.ajout = true;
-  try {
-    const rep = await fetch("/api/admin/digitick-salles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nom: ajout.nom,
-        slug: ajout.slug,
-        ville: ajout.ville || null,
-        dept: ajout.dept || null,
-      }),
-      signal: controleur.signal,
-    });
-    if (rep.ok) {
-      dialogAjoutRef.value?.close();
-      afficherToast("Salle Digitick ajoutée — fetch en cours.", "succes");
-      await chargerSalles();
-    } else {
-      const data = await corpsJsonOuVide(rep);
-      afficherToast(data.erreur || "Erreur lors de la création.", "erreur");
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
-  } finally {
-    enCours.ajout = false;
-  }
-}
-
-function ouvrirEdition(salle) {
-  edition.salleId = salle.salleId;
-  edition.nom = salle.nom ?? "";
-  edition.ville = salle.ville ?? "";
-  edition.dept = salle.dept ?? "";
-  dialogEditionRef.value?.showModal();
-}
-
-async function sauvegarderEdition() {
-  if (enCours.edition) return;
-  enCours.edition = true;
-  try {
-    const rep = await fetch(`/api/admin/digitick-salles/${edition.salleId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nom: edition.nom || null,
-        slug: null,
-        ville: edition.ville || null,
-        dept: edition.dept || null,
-      }),
-      signal: controleur.signal,
-    });
-    if (rep.ok) {
-      dialogEditionRef.value?.close();
-      afficherToast("Salle mise à jour.", "succes");
-      await chargerSalles();
-    } else {
-      afficherToast("Erreur lors de la mise à jour.", "erreur");
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
-  } finally {
-    enCours.edition = false;
-  }
-}
-
-function demanderSuppression(salle) {
-  salleASupprimer.value = salle;
-  dialogSupprRef.value?.showModal();
-}
-
-async function confirmerSuppression() {
-  const salle = salleASupprimer.value;
-  if (!salle) return;
-  const cle = salle.salleId + ":suppr";
-  enCours[cle] = true;
-  try {
-    const rep = await fetch(`/api/admin/digitick-salles/${salle.salleId}`, {
-      method: "DELETE",
-      signal: controleur.signal,
-    });
-    dialogSupprRef.value?.close();
-    if (rep.ok) {
-      afficherToast("Salle supprimée.", "succes");
-      await chargerSalles();
-    } else if (rep.status === 409) {
-      const data = await corpsJsonOuVide(rep);
-      afficherToast(
-        data.erreur ||
-          "Impossible de supprimer : salle suivie ou avec concerts.",
-        "erreur",
-      );
-    } else {
-      afficherToast("Erreur lors de la suppression.", "erreur");
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
-  } finally {
-    enCours[cle] = false;
-    salleASupprimer.value = null;
   }
 }
 
@@ -1038,30 +632,30 @@ onUnmounted(() => {
   margin: 0;
 }
 
-.source-slug-inline {
+.source-lieu-inline {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   flex-wrap: wrap;
 }
 
-.source-slug-input {
+.source-lieu-input {
   font-size: 0.82rem;
   padding: 0.2rem 0.45rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
   color: var(--fg);
-  width: 5rem;
+  width: 9rem;
 }
 
 @media (width >= 641px) {
-  .source-slug-inline {
+  .source-lieu-inline {
     flex-wrap: nowrap;
   }
 
-  .source-slug-input {
-    width: 9rem;
+  .source-lieu-input {
+    width: 16rem;
   }
 }
 
@@ -1076,10 +670,6 @@ onUnmounted(() => {
 
 .source-test-ko {
   color: #991b1b;
-}
-
-.source-digitick-actions {
-  margin-bottom: 0.75rem;
 }
 
 .source-salle-loc {

@@ -116,6 +116,9 @@ public class VerificationRepository {
         WHERE user_id = (SELECT id FROM users WHERE email = :email)
         """,
         Map.of("hash", hash, CLE_EMAIL, email));
+    jdbc.update(
+        "UPDATE users SET changement_mdp_force_le = NULL WHERE email = :email",
+        Map.of(CLE_EMAIL, email));
   }
 
   /**

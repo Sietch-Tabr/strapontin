@@ -75,4 +75,32 @@ class ResolveurSalleParProximiteGpsTest {
 
     assertEquals(salleProche, resultat);
   }
+
+  // En centre-ville, plusieurs salles distinctes tiennent dans le rayon autorisé : la plus
+  // proche doit l'emporter, pas la première renvoyée par la requête.
+  @Test
+  void chercher_plusieursCandidatsDansLeRayon_retourneLePlusProche() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ResolveurSalleParProximiteGps resolveur = new ResolveurSalleParProximiteGps(jdbc);
+    final UUID eloigne = UUID.randomUUID();
+    final UUID proche = UUID.randomUUID();
+    final Map<String, Object> candidatEloigne = new HashMap<>();
+    candidatEloigne.put("id", eloigne);
+    candidatEloigne.put("nom_norm", "salle alpha");
+    candidatEloigne.put("latitude", 48.8600);
+    candidatEloigne.put("longitude", 2.3500);
+    final Map<String, Object> candidatProche = new HashMap<>();
+    candidatProche.put("id", proche);
+    candidatProche.put("nom_norm", "salle beta");
+    candidatProche.put("latitude", 48.8567);
+    candidatProche.put("longitude", 2.3523);
+    when(jdbc.queryForList(anyString(), any(SqlParameterSource.class)))
+        .thenReturn(List.of(candidatEloigne, candidatProche));
+
+    final UUID resultat =
+        resolveur.chercher(
+            new ClientNominatim.Coordonnees(48.8566, 2.3522), "Zenith Inconnu", "75");
+
+    assertEquals(proche, resultat);
+  }
 }

@@ -25,6 +25,28 @@ class CorrespondanceSalleTest {
   // --- Faux positifs pivot confirmés, devant devenir false après l'exclusion des
   // mots-types génériques ---
 
+  // Eventim suffixe ses lieux de l'arrondissement : « paris » ne doit pas rapprocher deux
+  // lieux parisiens distincts, ni empêcher de reconnaître le même lieu.
+  @Test
+  void estDoublonSalle_suffixeArrondissementEventim_ignore() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "cathedrale americaine paris 08", "cathedrale notre dame de paris"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "bon secours eglise lutherienne paris 11",
+            "eglise lutherienne de la trinite paris 13"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "theatre de la bastille paris 11", "opera bastille paris 12"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "la divine comedie paris 09", "la comedie bastille paris"));
+    assertTrue(CorrespondanceSalle.estDoublonSalle("petit bain paris 13", "petit bain"));
+    assertTrue(
+        CorrespondanceSalle.estDoublonSalle("elysee montmartre paris 18", "elysee montmartre"));
+  }
+
   @Test
   void estDoublonSalle_theatresParisiensDistinctsPartageantLeMotTheatre_retourneFalse() {
     assertFalse(
@@ -329,5 +351,33 @@ class CorrespondanceSalleTest {
   @Test
   void extraireBase_nomSansQualificatif_retourneNull() {
     assertNull(CorrespondanceSalle.extraireBase("Zenith Paris"));
+  }
+
+  // --- Pivot sur un nom réduit à un seul token spécifique (quartier, ville) ---
+
+  // Cas réels relevés en production : un nom réduit au seul pivot après retrait des mots-types
+  // valait pour tout lieu contenant ce pivot comme simple nom de quartier ou de ville.
+  @Test
+  void estDoublonSalle_pivotQuartierSeulTokenSpecifique_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "theatre de poche montparnasse paris", "theatre montparnasse"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("theatre montparnasse", "la gaite montparnasse"));
+  }
+
+  @Test
+  void estDoublonSalle_pivotVilleSeulPointCommun_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "zenith toulouse metropole", "casino barriere toulouse"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("la condition publique roubaix", "le colisee roubaix"));
+  }
+
+  // Le suffixe de ville d'un même nom reste couvert par le containment de caractères.
+  @Test
+  void estDoublonSalle_memeNomAvecVilleEnSuffixe_resteTrue() {
+    assertTrue(CorrespondanceSalle.estDoublonSalle("theatre mogador", "theatre mogador paris"));
   }
 }

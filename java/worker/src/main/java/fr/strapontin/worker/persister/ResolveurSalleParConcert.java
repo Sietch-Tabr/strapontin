@@ -37,11 +37,17 @@ class ResolveurSalleParConcert {
   private static final String CLE_DEPT = "dept";
   private static final String CLE_NOM = "nom";
   private static final String CLE_SALLE_CLE = "salleCle";
+  // Département connu d'une salle, avec repli sur un concert déjà rattaché
+  // (salles.dept n'est pas toujours renseigné).
+  private static final String DEPT_SALLE =
+      "COALESCE(s.dept, (SELECT c.dept FROM concerts c WHERE c.salle_id = s.id"
+          + " AND c.dept IS NOT NULL LIMIT 1))";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ClientNominatim clientNominatim;
   private final RaccrocheurSallesParNomNorm raccrocheur;
   private final ResolveurSalleParProximiteGps resolveurGps;
+  private final CreateurSalle createur;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
    * package). */
@@ -51,6 +57,7 @@ class ResolveurSalleParConcert {
     this.clientNominatim = clientNominatim;
     this.raccrocheur = new RaccrocheurSallesParNomNorm(jdbc);
     this.resolveurGps = new ResolveurSalleParProximiteGps(jdbc);
+    this.createur = new CreateurSalle(jdbc, this::deptsConnus);
   }
 
   /**
@@ -99,12 +106,7 @@ class ResolveurSalleParConcert {
   }
 
   private UUID resoudreOuCreerSalleId(final ValeurConcert concert) {
-    final List<UUID> existants =
-        jdbc.query(
-            "SELECT id FROM salles WHERE unaccent(lower(nom)) = unaccent(lower(:nom)) LIMIT 1",
-            Map.of(CLE_NOM, concert.salle()),
-            (rs, _) -> rs.getObject("id", UUID.class));
-    UUID salleId = existants.isEmpty() ? null : existants.get(0);
+    UUID salleId = chercherSalleParNomExact(concert.salle(), concert.dept());
 
     if (salleId == null) {
       salleId = chercherSalleParTokens(concert.salle(), concert.dept());
@@ -120,38 +122,39 @@ class ResolveurSalleParConcert {
 
     Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
     if (salleId == null) {
-      coordsGeocodees = clientNominatim.geocoder(concert.salle());
+      // Un nom générique ("Palais des Congrès") se géocode n'importe où en France
+      // sans la ville.
+      coordsGeocodees =
+          clientNominatim.geocoder(
+              concert.ville() != null ? concert.salle() + ", " + concert.ville() : concert.salle());
       if (coordsGeocodees.isPresent()) {
         salleId = resolveurGps.chercher(coordsGeocodees.get(), concert.salle(), concert.dept());
       }
     }
 
-    return salleId != null ? salleId : creerNouvelleSalle(concert, coordsGeocodees);
+    return salleId != null ? salleId : createur.creer(concert, coordsGeocodees);
   }
 
-  private UUID creerNouvelleSalle(
-      final ValeurConcert concert, final Optional<ClientNominatim.Coordonnees> coordsGeocodees) {
-    final String salleCle = Normalisation.normaliserTexte(concert.salle());
-    final MapSqlParameterSource params =
-        new MapSqlParameterSource()
-            .addValue(CLE_SALLE_CLE, salleCle)
-            .addValue(CLE_NOM, concert.salle())
-            .addValue("nomNorm", salleCle)
-            .addValue(CLE_DEPT, concert.dept())
-            .addValue(
-                "latitude", coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
-            .addValue(
-                "longitude",
-                coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
-    jdbc.update(
-        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude)"
-            + " VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude, :longitude)"
-            + " ON CONFLICT (salle_cle) DO NOTHING",
-        params);
-    return jdbc.queryForObject(
-        "SELECT id FROM salles WHERE salle_cle = :salleCle",
-        Map.of(CLE_SALLE_CLE, salleCle),
-        UUID.class);
+  // Salle portant exactement ce nom, dans le département du concert : des
+  // dizaines de salles distinctes partagent un nom générique ("Palais des
+  // Congrès") ; sans ce filtre, la première trouvée ailleurs était retenue.
+  private UUID chercherSalleParNomExact(final String nom, final String dept) {
+    final List<UUID> existants =
+        jdbc.query(
+            "SELECT s.id FROM salles s WHERE unaccent(lower(s.nom)) = unaccent(lower(:nom))"
+                + " AND (CAST(:dept AS text) IS NULL OR "
+                + DEPT_SALLE
+                + " IS NULL OR "
+                + DEPT_SALLE
+                + " = :dept)"
+                + " ORDER BY ("
+                + DEPT_SALLE
+                + " = :dept) DESC NULLS LAST LIMIT 1",
+            new MapSqlParameterSource()
+                .addValue(CLE_NOM, nom)
+                .addValue(CLE_DEPT, dept, Types.VARCHAR),
+            (rs, _) -> rs.getObject("id", UUID.class));
+    return existants.isEmpty() ? null : existants.get(0);
   }
 
   /**

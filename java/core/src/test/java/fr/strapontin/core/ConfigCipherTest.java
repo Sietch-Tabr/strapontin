@@ -72,4 +72,25 @@ class ConfigCipherTest {
     final String valeur = "valeur-partagee";
     assertEquals(valeur, cipherWorker.dechiffrer(cipherWeb.chiffrer(valeur)));
   }
+
+  // Pendant une rotation, une valeur encore chiffrée avec l'ancien secret reste lisible, et
+  // toute nouvelle valeur est chiffrée avec le secret courant.
+  @Test
+  void dechiffrer_rotationEnCours_litLesValeursDeLAncienSecret() {
+    final String ancienne = new ConfigCipher("ancien-secret").chiffrer("cle-tm");
+    final ConfigCipher enRotation = new ConfigCipher("nouveau-secret", "ancien-secret");
+
+    assertEquals("cle-tm", enRotation.dechiffrer(ancienne));
+    final String nouvelle = enRotation.chiffrer("cle-resend");
+    assertEquals("cle-resend", new ConfigCipher("nouveau-secret").dechiffrer(nouvelle));
+  }
+
+  @Test
+  void dechiffrer_horsRotationAvecAutreSecret_leveUneErreur() {
+    final String chiffre = new ConfigCipher("ancien-secret").chiffrer("cle-tm");
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> new ConfigCipher("nouveau-secret", "").dechiffrer(chiffre));
+  }
 }

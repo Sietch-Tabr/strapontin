@@ -20,7 +20,12 @@
           <tbody>
             <tr v-for="s in signalements" :key="s.categorie + s.id">
               <td data-label="Type">{{ s.type }}</td>
-              <td data-label="Entité">{{ s.entiteType }} — {{ s.entiteId }}</td>
+              <td data-label="Entité">
+                {{ s.entiteType }} — {{ s.entiteId }}
+                <span v-if="s.details" class="signalement-details">{{
+                  s.details
+                }}</span>
+              </td>
               <td data-label="Confiance">{{ s.confiance }}</td>
               <td data-label="Détecté le">
                 {{ s.detecteLe ? formaterInstant(s.detecteLe) : "—" }}
@@ -34,9 +39,30 @@
                 >
                   Résoudre
                 </button>
+                <button
+                  v-else-if="s.categorie === 'contamination_salle'"
+                  type="button"
+                  class="bouton bouton-secondaire bouton-petit"
+                  :aria-label="
+                    'Déclarer faux positif la contamination de ' + s.entiteId
+                  "
+                  @click="decider(s, 'contamination', 'accepter')"
+                >
+                  Faux positif
+                </button>
+                <button
+                  v-else-if="s.categorie === 'doublon_salle'"
+                  type="button"
+                  class="bouton bouton-secondaire bouton-petit"
+                  :aria-label="
+                    'Déclarer distinctes les salles de ' + s.entiteId
+                  "
+                  @click="decider(s, 'doublon', 'distinctes')"
+                >
+                  Salles distinctes
+                </button>
                 <span v-else class="etat-vide-texte">
-                  Depuis l'onglet
-                  {{ s.entiteType === "salle" ? "Salles" : "Artistes" }}
+                  Depuis l'onglet Artistes
                 </span>
               </td>
             </tr>
@@ -121,6 +147,28 @@ function allerPage(n) {
   charger();
 }
 
+// Décision mémorisée côté serveur : le signalement ne réapparaîtra plus au
+// prochain contrôle nocturne.
+async function decider(signalement, categorie, action) {
+  try {
+    const rep = await fetch(
+      `/api/admin/signalements/${categorie}/${signalement.entiteId}/${action}`,
+      { method: "POST", signal: controleur.signal },
+    );
+    if (rep.ok) {
+      afficherToast("Décision enregistrée.", "succes");
+      await charger();
+    } else {
+      afficherToast(
+        "Erreur lors de l'enregistrement de la décision.",
+        "erreur",
+      );
+    }
+  } catch (e) {
+    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
+  }
+}
+
 async function resoudre(signalement) {
   try {
     const rep = await fetch(
@@ -144,3 +192,12 @@ async function resoudre(signalement) {
 onMounted(charger);
 onUnmounted(() => controleur.abort());
 </script>
+
+<style scoped>
+.signalement-details {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+</style>

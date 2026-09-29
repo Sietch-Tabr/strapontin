@@ -1251,4 +1251,11 @@ class WikidataSalleSourceTest {
     assertEquals(Set.of(), src.preleverAmbiguites());
     serveur.verify();
   }
+
+  // "Le 13e Art" avait reçu l'entité du 13e arrondissement de Paris : un arrondissement
+  // municipal n'est jamais une salle de spectacle.
+  @Test
+  void typesExclus_arrondissementMunicipal_estExclu() {
+    assertTrue(WikidataSalleDecouverte.TYPES_EXCLUS.contains("Q702842"));
+  }
 }

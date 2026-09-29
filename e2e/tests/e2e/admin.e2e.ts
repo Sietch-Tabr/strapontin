@@ -3,6 +3,7 @@ import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 import {
   BASE_URL,
   creerContexteAdmin,
+  creerSalleReferentiel,
   supprimerUtilisateurParEmail,
   naviguerVersUtilisateurs,
 } from "./helpers/admin.js";
@@ -399,14 +400,14 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    await expect(page.locator(".source-carte")).toHaveCount(5);
+    await expect(page.locator(".source-carte")).toHaveCount(4);
     await expect(page.locator(".source-carte-large")).toHaveCount(1);
     await expect(page.locator(".source-carte-large")).toContainText(
       "Ticketmaster",
     );
     await expect(
       page.locator(".source-carte:not(.source-carte-large)"),
-    ).toHaveCount(4);
+    ).toHaveCount(3);
   });
 
   test("admin_sources_table_salles_visible", async ({ page, isMobile }) => {
@@ -442,13 +443,13 @@ test.describe("Scénario: admin — onglet Sources", () => {
     }
   });
 
-  test("admin_sources_toggle_digitick", async ({ page, isMobile }) => {
+  test("admin_sources_toggle_lieuEventim", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
     const toggle = page.locator(".source-vue-bascule button", {
-      hasText: /[Dd]igitick/,
+      hasText: "Avec lieu Eventim",
     });
     await expect(toggle).toBeVisible();
     await toggle.click();
@@ -479,50 +480,49 @@ test.describe("Scénario: admin — onglet Sources", () => {
     ).toBeVisible();
   });
 
-  // Ce test effectue un appel HTTP réel vers web.digitick.com — une défaillance réseau
+  // Ce test effectue un appel HTTP réel vers l'API Eventim — une défaillance réseau
   // transitoire peut le faire échouer. retries: 1 tolère un incident passager sans masquer un vrai bug.
-  test.describe("admin_sources_api_tester_slug_valide (réseau externe)", () => {
+  test.describe("admin_sources_api_tester_lieuEventim_connu (réseau externe)", () => {
     test.describe.configure({ retries: 1 });
 
-    test("admin_sources_api_tester_slug_valide", async () => {
+    test("admin_sources_api_tester_lieuEventim_connu", async () => {
       const ctx = await creerContexteAdmin();
       try {
         const uuid = "00000000-0000-0000-0000-000000000001";
         const rep = await ctx.post(
-          `/api/admin/salles/${uuid}/tester-digitick`,
-          {
-            data: { slug: "lempreinte" },
-          },
+          `/api/admin/salles/${uuid}/tester-lieu-eventim`,
+          { data: { libelle: "Zénith Paris - La Villette" } },
         );
         expect(rep.status()).toBe(200);
         const corps = await rep.json();
         expect(corps.accessible).toBe(true);
+        expect(corps.nbConcerts).toBeGreaterThan(0);
       } finally {
         await ctx.dispose();
       }
     });
   });
 
-  test("admin_sources_api_tester_slug_invalide", async () => {
+  test("admin_sources_api_tester_lieuEventim_vide_retourne404", async () => {
     const ctx = await creerContexteAdmin();
     try {
       const uuid = "00000000-0000-0000-0000-000000000001";
-      const rep = await ctx.post(`/api/admin/salles/${uuid}/tester-digitick`, {
-        data: { slug: "slug-inexistant-xyz-strapontin" },
-      });
+      const rep = await ctx.post(
+        `/api/admin/salles/${uuid}/tester-lieu-eventim`,
+        { data: { libelle: "  " } },
+      );
       expect(rep.status()).toBe(404);
-      const corps = await rep.json();
-      expect(corps.accessible).toBe(false);
+      expect((await rep.json()).accessible).toBe(false);
     } finally {
       await ctx.dispose();
     }
   });
 
-  test("admin_sources_api_modifier_slug_uuid_invalide_retourne_400", async () => {
+  test("admin_sources_api_modifier_lieuEventim_uuid_invalide_retourne_400", async () => {
     const ctx = await creerContexteAdmin();
     try {
-      const rep = await ctx.put("/api/admin/salles/pas-un-uuid/digitick-slug", {
-        data: { slug: "lempreinte" },
+      const rep = await ctx.put("/api/admin/salles/pas-un-uuid/lieu-eventim", {
+        data: { libelle: "Accor Arena" },
       });
       expect(rep.status()).toBe(400);
     } finally {
@@ -530,7 +530,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     }
   });
 
-  test("admin_sources_section_salles_digitick_visible", async ({
+  test("admin_sources_section_salles_lieuEventim_visible", async ({
     page,
     isMobile,
   }) => {
@@ -539,7 +539,7 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
     const toggle = page.locator(".source-vue-bascule button", {
-      hasText: /[Dd]igitick/,
+      hasText: "Avec lieu Eventim",
     });
     await toggle.click();
     await expect(
@@ -577,113 +577,44 @@ test.describe("Scénario: admin — onglet Sources", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test("admin_sources_digitick_boutonAjouter_visible_dansVueDigitick", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-bascule button", {
-      hasText: /[Dd]igitick/,
-    });
-    // Comme admin_sources_toggle_digitick ci-dessus : attendre le toggle avant de cliquer,
-    // sinon le clic peut atteindre le bouton avant la fin du chargement (EtatChargement)
-    // qui conditionne son rendu (v-else), le rendant introuvable par intermittence.
-    await expect(toggle).toBeVisible();
-    await toggle.click();
-    await expect(
-      page.locator("button", { hasText: "Ajouter une salle" }),
-    ).toBeVisible();
-  });
-
-  test("admin_sources_digitick_api_creerEtSupprimerSalle", async () => {
+  // Un lieu enregistré à la main fait passer la salle dans la vue « Avec lieu Eventim », et
+  // un lieu déjà rattaché à une autre salle est refusé (jamais un vol silencieux).
+  test("admin_sources_lieuEventim_api_enregistrerPuisConflit", async () => {
     const ctx = await creerContexteAdmin();
-    let salleId: string | null = null;
     try {
-      const repCreation = await ctx.post("/api/admin/digitick-salles", {
-        data: {
-          nom: "Salle Test E2E Digitick",
-          slug: "salle-test-e2e",
-          ville: "Paris",
-          cp: "75001",
-        },
-      });
-      expect(repCreation.status()).toBe(201);
-      const corps = await repCreation.json();
-      salleId = corps.salleId;
-      expect(salleId).toBeTruthy();
-
-      const repSalles = await ctx.get(
-        "/api/admin/sources/salles?digitick=true&nom=Salle+Test+E2E+Digitick",
+      const suffixe = Date.now();
+      const salleA = await creerSalleReferentiel(
+        ctx,
+        `Ornithorynque${suffixe}`,
       );
-      expect(repSalles.ok()).toBe(true);
-      const donnees = await repSalles.json();
-      const sallesDigitick: { nom: string }[] = donnees.salles ?? [];
-      expect(
-        sallesDigitick.some((s) => s.nom === "Salle Test E2E Digitick"),
-      ).toBe(true);
-    } finally {
-      if (salleId) {
-        await ctx.delete(`/api/admin/digitick-salles/${salleId}`);
-      }
-      await ctx.dispose();
-    }
-  });
+      const salleB = await creerSalleReferentiel(ctx, `Kangourou${suffixe}`);
+      const libelle = `LIEU E2E ${suffixe}`;
 
-  test("admin_sources_digitick_api_supprimer_salleAvecContrainte_retourne409", async () => {
-    const ctx = await creerContexteAdmin();
-    let salleId: string | null = null;
-    try {
-      const repCreation = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: "Salle Test Contrainte", slug: "salle-contrainte-e2e" },
+      const repA = await ctx.put(`/api/admin/salles/${salleA}/lieu-eventim`, {
+        data: { libelle },
       });
-      expect(repCreation.status()).toBe(201);
-      salleId = (await repCreation.json()).salleId;
-
-      const repSuivi = await ctx.post("/api/salles", {
-        data: { nom: "Salle Test Contrainte", tmVenueId: null },
-      });
-      expect([200, 201, 409].includes(repSuivi.status())).toBe(true);
-
-      const repSuppression = await ctx.delete(
-        `/api/admin/digitick-salles/${salleId}`,
+      expect(repA.status()).toBe(200);
+      const repListe = await ctx.get(
+        `/api/admin/sources/salles?eventim=true&nom=Ornithorynque${suffixe}`,
       );
-      expect(repSuppression.status()).toBe(409);
-    } finally {
-      if (salleId) {
-        await ctx.delete(`/api/salles/${salleId}`).catch(() => {});
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleId}`)
-          .catch(() => {});
-      }
-      await ctx.dispose();
-    }
-  });
+      const salles: { salleId: string; lieuEventim: string }[] = (
+        await repListe.json()
+      ).salles;
+      expect(salles.find((s) => s.salleId === salleA)?.lieuEventim).toBe(
+        libelle,
+      );
 
-  test("admin_sources_digitick_api_rechercheSalleAvecSlug", async () => {
-    const ctx = await creerContexteAdmin();
-    let salleId: string | null = null;
-    try {
-      const repCreation = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: "Zenith E2E Digitick", slug: "zenith-e2e" },
+      const repB = await ctx.put(`/api/admin/salles/${salleB}/lieu-eventim`, {
+        data: { libelle },
       });
-      expect(repCreation.status()).toBe(201);
-      salleId = (await repCreation.json()).salleId;
+      expect(repB.status()).toBe(409);
 
-      const repRecherche = await ctx.get("/api/salles?q=Zenith+E2E");
-      expect(repRecherche.ok()).toBe(true);
-      const donnees = await repRecherche.json();
-      const resultats: { salle: string; digitickSlug: string | null }[] =
-        donnees.resultats ?? [];
-      const trouvee = resultats.find((r) => r.salle === "Zenith E2E Digitick");
-      expect(trouvee).toBeTruthy();
-      expect(trouvee?.digitickSlug).toBe("zenith-e2e");
+      const repRetrait = await ctx.put(
+        `/api/admin/salles/${salleA}/lieu-eventim`,
+        { data: { libelle: "" } },
+      );
+      expect(repRetrait.status()).toBe(200);
     } finally {
-      if (salleId) {
-        await ctx.delete(`/api/admin/digitick-salles/${salleId}`);
-      }
       await ctx.dispose();
     }
   });
@@ -798,16 +729,16 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(Array.isArray(corps.sources)).toBe(true);
-    expect(corps.sources.length).toBe(5);
+    expect(corps.sources.length).toBe(4);
     const ids = corps.sources.map((s: { id: string }) => s.id);
     expect(ids).toContain("ticketmaster");
     expect(ids).toContain("eventim");
     expect(ids).toContain("deezer");
-    expect(ids).toContain("digitick");
+    expect(ids).not.toContain("digitick");
     expect(ids).toContain("wikidata");
 
     // #777 : TM/Eventim/Deezer doivent désormais exposer un décompte d'items suivis, comme
-    // Digitick/Wikidata le faisaient déjà — sans ça les cartes admin ne peuvent pas afficher
+    // Wikidata le faisait déjà — sans ça les cartes admin ne peuvent pas afficher
     // le nombre de salles/artistes suivis via cette source.
     type Source = {
       id: string;

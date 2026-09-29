@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,7 +16,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -42,8 +42,12 @@ public class CoherenceMultiSalleService {
   // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
 
+  // Même seuil que la fusion par clé forte : au-delà, deux lieux distincts.
+  private static final double DISTANCE_MEME_LIEU_METRES = 500;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
+  private final DetectionDoublonsSalles detectionDoublons;
 
   /**
    * @param jdbc accès JDBC
@@ -53,10 +57,11 @@ public class CoherenceMultiSalleService {
       final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
+    this.detectionDoublons = new DetectionDoublonsSalles(jdbc, logsAdminWorker);
   }
 
   /**
-   * Compare, pour chaque salle avec source Eventim/Digitick synthétique,
+   * Compare, pour chaque salle avec source Eventim synthétique,
    * le nom extrait à {@code salles.nom_norm} (détail : CLAUDE.md,
    * Hiérarchie des salles).
    * @return nombre de salles nouvellement signalées
@@ -64,6 +69,7 @@ public class CoherenceMultiSalleService {
   public int detecterContamination() {
     final List<Map<String, Object>> lignes = chargerSourcesInternes();
     if (lignes.isEmpty()) {
+      leverContaminationsSansSource();
       return 0;
     }
 
@@ -79,6 +85,7 @@ public class CoherenceMultiSalleService {
         signalees++;
       }
     }
+    leverContaminationsSansSource();
     LOG.info(
         "coherence:multi-salle:contamination candidats={} signalees={}",
         donnees.nomsExtraitsParSalle().size(),
@@ -86,14 +93,31 @@ public class CoherenceMultiSalleService {
     return signalees;
   }
 
+  // Salle qui n'a plus aucune source interne à examiner (mapping supprimé ou
+  // accepté par un admin) : sa signature ne serait sinon jamais levée.
+  private void leverContaminationsSansSource() {
+    jdbc.update(
+        """
+        UPDATE salles SET contamination_signalee = NULL
+        WHERE contamination_signalee IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM salle_sources ss
+              WHERE ss.salle_id = salles.id AND ss.identifiant_externe LIKE :prefixe
+                AND ss.contamination_acceptee_le IS NULL)
+        """,
+        Map.of("prefixe", PREFIXE_INTERNAL + "%"));
+  }
+
   private List<Map<String, Object>> chargerSourcesInternes() {
     return jdbc.queryForList(
         """
         SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
-               s.nom_norm AS nom_norm, s.contamination_signalee AS signalee
+               s.nom_norm AS nom_norm, s.contamination_signalee AS signalee,
+               ss.latitude AS lat_source, ss.longitude AS lon_source,
+               s.latitude AS lat_salle, s.longitude AS lon_salle
         FROM salle_sources ss
         JOIN salles s ON s.id = ss.salle_id
-        WHERE ss.identifiant_externe LIKE :prefixe
+        WHERE ss.identifiant_externe LIKE :prefixe AND ss.contamination_acceptee_le IS NULL
         """,
         Map.of("prefixe", PREFIXE_INTERNAL + "%"));
   }
@@ -110,13 +134,26 @@ public class CoherenceMultiSalleService {
     for (final Map<String, Object> ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
       final String identifiant = (String) ligne.get("identifiant");
-      nomsExtraitsParSalle
-          .computeIfAbsent(salleId, _ -> new ArrayList<>())
-          .add(identifiant.substring(PREFIXE_INTERNAL.length()));
+      final List<String> noms =
+          nomsExtraitsParSalle.computeIfAbsent(salleId, _ -> new ArrayList<>());
+      // La source situe elle-même le lieu à la position de la salle : même lieu,
+      // quel que soit le nom d'usage ou l'abréviation employés.
+      if (!estMemePosition(ligne)) {
+        noms.add(identifiant.substring(PREFIXE_INTERNAL.length()));
+      }
       nomNormParSalle.put(salleId, (String) ligne.get("nom_norm"));
       signaleeParSalle.put(salleId, (String) ligne.get("signalee"));
     }
     return new DonneesSourcesInternes(nomsExtraitsParSalle, nomNormParSalle, signaleeParSalle);
+  }
+
+  private static boolean estMemePosition(final Map<String, Object> ligne) {
+    return DistanceGeo.connuesEtProches(
+        (Double) ligne.get("lat_source"),
+        (Double) ligne.get("lon_source"),
+        (Double) ligne.get("lat_salle"),
+        (Double) ligne.get("lon_salle"),
+        DISTANCE_MEME_LIEU_METRES);
   }
 
   /**
@@ -235,69 +272,12 @@ public class CoherenceMultiSalleService {
   }
 
   /**
-   * Balayage pairwise par containment de {@code nom_norm} et département
-   * compatible, sans exiger de {@code wikidata_id} ni de concert partagé
-   * (détail : CLAUDE.md, Hiérarchie des salles).
+   * Balayage pairwise des doublons potentiels (détail : {@link
+   * DetectionDoublonsSalles}).
    * @return nombre de paires nouvellement signalées
    */
   public int detecterDoublons() {
-    final List<Map<String, Object>> salles =
-        jdbc.queryForList(
-            "SELECT id, nom_norm, dept, doublon_signale, salle_parent_id FROM salles ORDER BY id",
-            Map.of());
-
-    int signalees = 0;
-    for (int i = 0; i < salles.size(); i++) {
-      for (int j = i + 1; j < salles.size(); j++) {
-        if (evaluerPaireDoublon(salles.get(i), salles.get(j))) {
-          signalees++;
-        }
-      }
-    }
-    LOG.info("coherence:multi-salle:doublon salles={} signalees={}", salles.size(), signalees);
-    return signalees;
-  }
-
-  /**
-   * @return {@code true} si la paire est un doublon potentiel nouvellement
-   *     signalé (ni déjà connu, ni un complexe/sous-salle apparenté, ni de
-   *     départements incompatibles).
-   */
-  private boolean evaluerPaireDoublon(
-      final Map<String, Object> salleA, final Map<String, Object> salleB) {
-    final UUID idA = (UUID) salleA.get("id");
-    final UUID idB = (UUID) salleB.get("id");
-    final UUID parentA = (UUID) salleA.get("salle_parent_id");
-    final UUID parentB = (UUID) salleB.get("salle_parent_id");
-    // Un complexe et sa sous-salle déjà reliée ne sont jamais des doublons —
-    // leur nom qualifié ("X - Y") satisferait sinon le containment de tokens
-    // ci-dessous par construction.
-    if (idA.equals(parentB) || idB.equals(parentA)) {
-      return false;
-    }
-    final String deptA = (String) salleA.get("dept");
-    final String deptB = (String) salleB.get("dept");
-    if (deptA != null && deptB != null && !deptA.equals(deptB)) {
-      return false;
-    }
-    if (!nomContenuDansLAutre((String) salleA.get("nom_norm"), (String) salleB.get("nom_norm"))) {
-      return false;
-    }
-    final String dejaSignale = (String) salleA.get("doublon_signale");
-    if (idB.toString().equals(dejaSignale)) {
-      return false;
-    }
-
-    memoriserDoublonSignale(idA, idB);
-    logsAdminWorker.inserer(
-        "warn",
-        "coherence-salle",
-        "doublon de salle potentiel sans wikidata_id ni concert partagé salleA="
-            + idA
-            + " salleB="
-            + idB,
-        Map.of("salleA", idA.toString(), "salleB", idB.toString()));
-    return true;
+    return detectionDoublons.detecter();
   }
 
   // Containment par token complet plutôt que sous-chaîne brute (#1203) : un
@@ -305,7 +285,8 @@ public class CoherenceMultiSalleService {
   // trivialement présent dans un token du nom long ("lessaion") sans aucun
   // rapport sémantique réel — même classe de faux positif que
   // CorrespondanceSalle#estContainmentTokensPartiel.
-  private static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
+  /* package-private : partagé avec DetectionDoublonsSalles (même package). */
+  static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
     final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
     if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) {
       return false;
@@ -314,13 +295,5 @@ public class CoherenceMultiSalleService {
     final Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
     final Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
     return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);
-  }
-
-  private void memoriserDoublonSignale(final UUID idA, final UUID idB) {
-    jdbc.update(
-        "UPDATE salles SET doublon_signale = :idB WHERE id = CAST(:idA AS uuid)",
-        new MapSqlParameterSource()
-            .addValue("idA", idA.toString())
-            .addValue("idB", idB.toString()));
   }
 }

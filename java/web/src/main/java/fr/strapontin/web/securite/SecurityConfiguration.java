@@ -144,6 +144,8 @@ public class SecurityConfiguration {
         .permitAll()
         .requestMatchers(HttpMethod.GET, "/api/push")
         .permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/incident")
+        .permitAll()
         .requestMatchers("/actuator/health")
         .permitAll()
         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")

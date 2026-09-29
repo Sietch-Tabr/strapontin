@@ -38,8 +38,7 @@ class EligibiliteResolutionDeezerTest {
 
   @Test
   void estEligible_classificationNullSourceEventim_nEstPasEligible() {
-    // Sans classification, Eventim ne garantit rien sur la nature musicale du concert —
-    // contrairement à Digitick, qui filtre déjà en amont sur le genre "Concert".
+    // Sans classification, Eventim ne garantit rien sur la nature musicale du concert.
     assertFalse(EligibiliteResolutionDeezer.estEligible(null, "eventim"));
   }
 

@@ -17,13 +17,14 @@ import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Client HTTP pour l'API publique Eventim France (recherche par artiste via
- * attractionId, et par région/département, pagination gérée jusqu'à
- * MAX_PAGES).
+ * attractionId, par lieu et par villes d'une région, pagination jusqu'au
+ * nombre de pages annoncé).
  *
  * @since 2.0.0
  * @author Kwaite
@@ -39,9 +40,16 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private static final String PARAM_LANGUE = "language";
   private static final String CLE_PRODUCTS = "products";
   private static final String CLE_TOTAL_RESULTS = "totalResults";
-  private static final int TAILLE_PAGE = 50;
-  private static final int MAX_PAGES = 10;
-  private static final int PREMIERE_PAGE = 1;
+  private static final String CLE_TOTAL_PAGES = "totalPages";
+  // Au-delà, l'API répond 400 ; sans top, pages d'environ 20 produits.
+  /* package-private : partagé avec EventimLieuxFetcher (même package). */
+  static final int PLAFOND_PAGES = 103;
+  // attraction_ids et postal_code exigent top (50 au plus), qui fait ignorer page :
+  // une requête par fenêtre de dates, reprise au dernier jour reçu.
+  /* package-private : partagé avec EventimLieuxFetcher (même package). */
+  static final int TOP_MAX = 50;
+  private static final int NB_FENETRES_ARTISTE = 10;
+  private static final String PREFIXE_IDENTIFIANT = "eventim:";
 
   /**
    * Catégories Eventim correspondant aux spectacles musicaux (concerts et
@@ -64,6 +72,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   // le worker, via un composant partagé).
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final EventimAttractionResolver attractionResolver;
+  private final LieuxEventim lieux;
 
   /**
    * Crée une instance avec un RestClient par défaut (headers Eventim,
@@ -104,6 +113,30 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
     this.attractionResolver =
         new EventimAttractionResolver(this.restClient, compteurBilan, BASE_URL, WEB_ID);
+    this.lieux =
+        new LieuxEventim(
+            new EventimLieuxFetcher(
+                BASE_URL + "/v1/products",
+                WEB_ID,
+                uri -> chargerPageProduits(uri, null, null, null),
+                this::attendreEntrePagesEventim));
+  }
+
+  /**
+   * Définit la source des villes interrogées par {@link #fetchRegionCouverte}
+   * (aucune par défaut : le fetch région Eventim ne renvoie alors rien).
+   * @param fournisseur villes connues par département
+   */
+  public void definirFournisseurVilles(final FournisseurVillesEventim fournisseur) {
+    lieux.definirFournisseurVilles(fournisseur);
+  }
+
+  /**
+   * Retourne les lieux observés depuis le dernier prélèvement et vide la liste.
+   * @return lieux observés (libellé, ville, coordonnées)
+   */
+  public List<LieuEventim> preleverLieuxObserves() {
+    return lieux.preleverLieuxObserves();
   }
 
   @Override
@@ -195,27 +228,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return MapeurProduitEventim.mapper(produit, artisteFallback, artisteSourceId);
   }
 
-  /**
-   * @param succes {@code false} si l'appel HTTP a échoué — distingue une page
-   *     réellement vide (succès, 0 résultat) d'un appel qui n'a jamais abouti.
-   */
-  private record ResultatPageEventim(List<ConcertBrut> concerts, int total, boolean succes) {
-    // Page légitimement vide (0 résultat, pas d'échec HTTP) — distinct de ECHEC
-    // ci-dessous.
-    /* package-private : membre du record privé ResultatPageEventim, sans portée
-     * réelle hors de EventimSource. */
-    static final ResultatPageEventim VIDE = new ResultatPageEventim(List.of(), 0, true);
-    /* package-private : membre du record privé ResultatPageEventim, sans portée
-     * réelle hors de EventimSource. */
-    static final ResultatPageEventim ECHEC = new ResultatPageEventim(List.of(), 0, false);
-
-    /* package-private : membre du record privé ResultatPageEventim, sans portée
-     * réelle hors de EventimSource. */
-    boolean estVide() {
-      return concerts.isEmpty();
-    }
-  }
-
   private boolean attendreEntrePagesEventim() {
     try {
       Thread.sleep(200);
@@ -227,7 +239,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   @SuppressWarnings("unchecked")
-  private ResultatPageEventim chargerPageProduits(
+  private PageProduitsEventim chargerPageProduits(
       final URI uri,
       final String artisteFallback,
       final String deptFiltre,
@@ -236,120 +248,101 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       return parserReponseProduits(data, artisteFallback, deptFiltre, artisteSourceId);
+    } catch (ResourceAccessException e) {
+      // Panne réseau (DNS, I/O, timeout) : propagée pour que l'appelant ne la confonde
+      // pas avec une réponse vide (retry ciblé, absences non comptées).
+      compteurBilan.enregistrerErreur();
+      LOG.warn("Eventim injoignable : {}", e.getMessage());
+      throw e;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       LOG.warn("Eventim erreur HTTP : {}", e.getMessage());
-      return ResultatPageEventim.ECHEC;
+      return PageProduitsEventim.ECHEC;
     }
   }
 
   @SuppressWarnings("unchecked")
-  private ResultatPageEventim parserReponseProduits(
+  private PageProduitsEventim parserReponseProduits(
       final Map<String, Object> data,
       final String artisteFallback,
       final String deptFiltre,
       final String artisteSourceId) {
     if (data == null) {
-      return ResultatPageEventim.VIDE;
+      return PageProduitsEventim.VIDE;
     }
     final List<Map<String, Object>> produits = (List<Map<String, Object>>) data.get(CLE_PRODUCTS);
     if (produits == null || produits.isEmpty()) {
-      return ResultatPageEventim.VIDE;
+      return PageProduitsEventim.VIDE;
     }
 
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : produits) {
+      lieux.relever(p);
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
       if (concert != null && (deptFiltre == null || deptFiltre.equals(concert.dept()))) {
         concerts.add(concert);
       }
     }
-    final int total =
-        data.get(CLE_TOTAL_RESULTS) != null ? ((Number) data.get(CLE_TOTAL_RESULTS)).intValue() : 0;
-    return new ResultatPageEventim(concerts, total, true);
+    return new PageProduitsEventim(
+        concerts,
+        entier(data, CLE_TOTAL_RESULTS),
+        entier(data, CLE_TOTAL_PAGES),
+        produits.size(),
+        true);
+  }
+
+  private static int entier(final Map<String, Object> data, final String cle) {
+    return data.get(cle) instanceof Number nombre ? nombre.intValue() : 0;
   }
 
   /**
    * @param succes {@code false} si au moins une page a échoué (voir
-   *     {@link ResultatPageEventim} ).
+   *     {@link PageProduitsEventim} ).
    */
   private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
 
   private ResultatArtisteEventim fetchProduitsParAttraction(
       final String attractionId, final String artisteFallback) {
-    final LocalDate dateDebut = LocalDate.now();
-    final LocalDate dateFin = dateDebut.plusMonths(24);
+    final LocalDate dateFin = LocalDate.now().plusMonths(24);
     final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     final List<ConcertBrut> concerts = new ArrayList<>();
-    boolean continuer = true;
-    boolean succes = true;
     final String artisteSourceId = "eventim:" + attractionId;
-
-    for (int page = 1; page <= MAX_PAGES && continuer; page++) {
-      if (page > PREMIERE_PAGE) {
-        continuer = attendreEntrePagesEventim();
+    LocalDate debut = LocalDate.now();
+    for (int fenetre = 0; fenetre < NB_FENETRES_ARTISTE; fenetre++) {
+      if (fenetre > 0 && !attendreEntrePagesEventim()) {
+        return new ResultatArtisteEventim(concerts, false);
       }
-      if (continuer) {
-        final String uri =
-            UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-                .queryParam(PARAM_WEB_ID, WEB_ID)
-                .queryParam(PARAM_LANGUE, "fr")
-                .queryParam("attraction_ids", attractionId)
-                .queryParam("date_from", fmt.format(dateDebut))
-                .queryParam("date_to", fmt.format(dateFin))
-                .queryParam("sort", "DateAsc")
-                .queryParam("top", TAILLE_PAGE)
-                .queryParam("page", page)
-                .build()
-                .toUriString();
-        final ResultatPageEventim resultat =
-            chargerPageProduits(URI.create(uri), artisteFallback, null, artisteSourceId);
-        if (!resultat.succes()) {
-          succes = false;
-        }
-        concerts.addAll(resultat.concerts());
-        continuer = !resultat.estVide() && concerts.size() < resultat.total();
+      final String uri =
+          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+              .queryParam(PARAM_WEB_ID, WEB_ID)
+              .queryParam(PARAM_LANGUE, "fr")
+              .queryParam("attraction_ids", attractionId)
+              .queryParam("date_from", fmt.format(debut))
+              .queryParam("date_to", fmt.format(dateFin))
+              .queryParam("sort", "DateAsc")
+              .queryParam("top", TOP_MAX)
+              .build()
+              .toUriString();
+      final PageProduitsEventim resultat =
+          chargerPageProduits(URI.create(uri), artisteFallback, null, artisteSourceId);
+      if (!resultat.succes()) {
+        return new ResultatArtisteEventim(concerts, false);
       }
+      concerts.addAll(resultat.concerts());
+      final LocalDate derniere =
+          resultat.concerts().stream()
+              .map(c -> LocalDate.parse(c.date()))
+              .max(LocalDate::compareTo)
+              .orElse(null);
+      // Reprise au dernier jour reçu (doublons dédoublonnés en aval).
+      if (resultat.nbProduits() < TOP_MAX || derniere == null || !derniere.isAfter(debut)) {
+        break;
+      }
+      debut = derniere;
     }
-
-    return new ResultatArtisteEventim(concerts, succes);
+    return new ResultatArtisteEventim(concerts, true);
   }
 
-  private List<ConcertBrut> fetchProduitsParRegion(
-      final String dept, final List<String> classifications) {
-    final LocalDate dateDebut = LocalDate.now();
-    final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    final List<ConcertBrut> concerts = new ArrayList<>();
-    boolean continuer = true;
-
-    for (int page = 1; page <= MAX_PAGES && continuer; page++) {
-      if (page > PREMIERE_PAGE) {
-        continuer = attendreEntrePagesEventim();
-      }
-      if (continuer) {
-        UriComponentsBuilder uriBuilder =
-            UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-                .queryParam(PARAM_WEB_ID, WEB_ID)
-                .queryParam(PARAM_LANGUE, "fr")
-                .queryParam("country", "FR")
-                .queryParam("query", dept)
-                .queryParam("date_from", fmt.format(dateDebut))
-                .queryParam("sort", "DateAsc")
-                .queryParam("in_stock", "true")
-                .queryParam("top", TAILLE_PAGE)
-                .queryParam("page", page);
-        for (final String c : classifications) {
-          uriBuilder = uriBuilder.queryParam("categories", c);
-        }
-        final URI uri = uriBuilder.build().encode().toUri();
-        final ResultatPageEventim resultat = chargerPageProduits(uri, null, dept, null);
-        concerts.addAll(resultat.concerts());
-        continuer = !resultat.estVide() && concerts.size() < resultat.total();
-      }
-    }
-
-    return concerts;
-  }
 
   /**
    * Récupère les concerts d'un artiste via l'API Eventim (recherche
@@ -398,17 +391,51 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    */
   @Override
   public List<ConcertBrut> fetchRegion(final List<String> depts, final List<String> classifs) {
-    final List<String> categories = CATEGORIES_REGION;
-    final List<ConcertBrut> tous = new ArrayList<>();
+    return fetchRegionCouverte(depts, classifs).concerts();
+  }
 
-    for (final String dept : depts) {
-      final List<ConcertBrut> concerts = fetchProduitsParRegion(dept, categories);
-      tous.addAll(concerts);
-      if (!attendreEntrePagesEventim()) {
-        break;
-      }
-    }
+  /**
+   * Interroge les villes connues des départements ({@code city_names}, seul
+   * filtre géographique réellement appliqué par l'API) ; aucune ville connue
+   * = aucune garantie de couverture.
+   * @param depts liste de codes département
+   * @param classifs ignoré — toujours {@link #CATEGORIES_REGION}
+   * @return concerts des départements et dernière date couverte
+   */
+  @Override
+  public ResultatRegion fetchRegionCouverte(final List<String> depts, final List<String> classifs) {
+    return lieux.fetchRegion(depts, CATEGORIES_REGION);
+  }
 
-    return tous;
+  @Override
+  public boolean accepteIdentifiantSalle(final String identifiant) {
+    return identifiant != null && identifiant.startsWith(PREFIXE_IDENTIFIANT);
+  }
+
+  /**
+   * Eventim n'expose aucun identifiant de lieu interrogeable : sans libellé
+   * exact, aucune requête n'est possible.
+   * @param identifiant identifiant préfixé ({@code eventim:internal:...})
+   * @param libelle nom exact du lieu chez Eventim
+   * @return concerts à venir du lieu, vide si le libellé est inconnu
+   */
+  @Override
+  public List<ConcertBrut> fetchSalle(final String identifiant, final String libelle) {
+    return lieux.fetchLieu(libelle);
+  }
+
+  @Override
+  public int joursCouvertsParSalle() {
+    return EventimLieuxFetcher.JOURS_COUVERTS_SALLE;
+  }
+
+  /**
+   * Compte les concerts à venir d'un lieu (vérification d'un libellé saisi à
+   * la main, le filtre {@code venue_names} exigeant le nom exact).
+   * @param libelle nom exact du lieu chez Eventim
+   * @return nombre de concerts (≥ 0), ou -1 si Eventim n'a pas répondu
+   */
+  public int compterConcertsLieu(final String libelle) {
+    return lieux.compterConcerts(libelle);
   }
 }

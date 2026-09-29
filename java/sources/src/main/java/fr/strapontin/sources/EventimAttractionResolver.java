@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -105,6 +106,12 @@ final class EventimAttractionResolver {
       final Map<String, Object> exact =
           selectionnerAttraction(attractions, terme, identiteConfirmee);
       return exact != null ? extraireAttractionId(exact) : null;
+    } catch (ResourceAccessException e) {
+      // Panne réseau : un artiste introuvable ne doit pas être confondu avec une source
+      // injoignable (ses concerts compteraient sinon une absence).
+      compteurBilan.enregistrerErreur();
+      LOG.warn("Eventim injoignable (attractions) terme={} : {}", terme, e.getMessage());
+      throw e;
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       LOG.warn("Eventim attractions erreur terme={} : {}", terme, e.getMessage());

@@ -95,6 +95,14 @@
 
       <div class="param-bloc">
         <h3 class="param-libelle">Mot de passe</h3>
+        <p
+          v-if="sessionRef?.changementMotDePasseExige"
+          class="alerte alerte-avertissement"
+          role="alert"
+        >
+          Suite à un incident de sécurité, choisissez un nouveau mot de passe
+          avant de continuer.
+        </p>
         <p class="param-aide">La session sera invalidée après le changement.</p>
         <form
           class="form-vertical form-compact"
@@ -208,6 +216,7 @@ defineOptions({ name: "ParametresCompte" });
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useToasts } from "../../composables/useToasts.js";
+import { sessionRef } from "../../composables/useSession.js";
 import EtatChargement from "../EtatChargement.vue";
 import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
@@ -414,6 +423,9 @@ async function changerMotDePasse() {
     });
     if (rep.ok) {
       afficherToast("Mot de passe modifié. Reconnectez-vous.", "succes");
+      // Session invalidée côté serveur : l'oublier évite que la garde du routeur
+      // renvoie vers l'accueil (ou vers ce formulaire) au lieu de la connexion.
+      sessionRef.value = null;
       router.push("/login?reset=true");
     } else {
       const corps = await corpsJsonOuVide(rep);

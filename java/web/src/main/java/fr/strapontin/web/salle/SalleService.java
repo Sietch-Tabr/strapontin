@@ -116,12 +116,9 @@ public class SalleService {
               .filter(
                   r -> !sallesDejaAjoutees.contains(normaliserSalleCle((String) r.get("salle"))))
               .map(
-                  r -> {
-                    final String digitickSlug = (String) r.get("digitick_slug");
-                    final String src = digitickSlug != null ? "base-digitick" : "base";
-                    return new ResultatSalle(
-                        (String) r.get("salle"), (String) r.get("ville"), null, digitickSlug, src);
-                  })
+                  r ->
+                      new ResultatSalle(
+                          (String) r.get("salle"), (String) r.get("ville"), null, "base"))
               .collect(Collectors.toCollection(ArrayList::new));
 
       completerAvecSourcesExternes(listeResultats, sallesDejaAjoutees, recherche);
@@ -315,7 +312,7 @@ public class SalleService {
    * Déclenche immédiatement un fetch pour une salle identifiée par son UUID.
    *
    * <p>Lit toutes les sources configurées dans {@code salle_sources} (TM,
-   * Digitick…) et les transmet au worker en une seule requête.
+   * Eventim…) et les transmet au worker en une seule requête.
    *
    * @param salleId UUID de la salle
    */
@@ -342,71 +339,14 @@ public class SalleService {
   }
 
   /**
-   * Crée une salle Digitick (upsert + slug + déclenche worker). Si le slug
-   * est déjà attribué, lève 409 plutôt qu'une salle sans source réelle.
-   * @param nom nom affiché de la salle
-   * @param slug slug Digitick
-   * @param ville ville, peut être {@code null}
-   * @param dept numéro de département, peut être {@code null}
-   */
-  public record DonneesSalleDigitick(String nom, String slug, String ville, String dept) {}
-
-  /**
-   * @param donnees données de la salle Digitick à créer (voir
-   *     {@link DonneesSalleDigitick} )
-   * @return UUID stable de la salle créée ou retrouvée
-   * @throws ErreurMetier 409 si le slug est déjà attribué à une autre salle
-   */
-  @Transactional
-  public UUID creerSalleDigitick(final DonneesSalleDigitick donnees) {
-    final String salleCle = normaliserSalleCle(donnees.nom());
-    final UUID salleId =
-        salleRepository.upsertSalleAvecLoc(
-            salleCle, donnees.nom(), donnees.ville(), donnees.dept());
-    salleRepository
-        .trouverConflitDigitickSlug(donnees.slug(), salleId)
-        .ifPresent(
-            nomConflit -> {
-              throw new ErreurMetier("Slug déjà utilisé par la salle " + nomConflit + ".", 409);
-            });
-    salleRepository.enregistrerSalleSource(salleId, "digitick", donnees.slug());
-    executerApresCommit(salleId);
-    return salleId;
-  }
-
-  /**
-   * Met à jour les métadonnées d'une salle (nom, ville, département).
-   *
-   * @param salleId UUID de la salle
-   * @param nom nouveau nom (null = inchangé)
-   * @param ville nouvelle ville (null = inchangée)
-   * @param dept nouveau numéro de département (null = inchangé)
-   */
-  public void mettreAJourSalle(
-      final UUID salleId, final String nom, final String ville, final String dept) {
-    salleRepository.mettreAJourSalle(salleId, nom, ville, dept);
-  }
-
-  /**
    * Retourne les identifiants sources CSV d'une salle (ex.
-   * {@code "digitick:lempreinte,tm:rZ..."} ).
+   * {@code "eventim:internal:accor arena,tm:rZ..."} ).
    *
    * @param salleId UUID de la salle
    * @return CSV d'identifiants ou {@code null} si aucun
    */
   public String lireIdentifiantsSources(final UUID salleId) {
     return salleRepository.lireIdentifiantsSources(salleId);
-  }
-
-  /**
-   * Supprime une salle Digitick si elle n'est suivie par aucun utilisateur et
-   * sans concerts.
-   *
-   * @param salleId UUID de la salle
-   * @return {@code true} si supprimée, {@code false} si une contrainte bloque
-   */
-  public boolean supprimerSalleDigitick(final UUID salleId) {
-    return salleRepository.supprimerSalleDigitick(salleId);
   }
 
   /**

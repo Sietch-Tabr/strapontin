@@ -88,4 +88,36 @@ final class EmailTemplatesSecurite {
             .formatted(EmailTemplates.C_TEXTE, EmailTemplates.C_MUTE);
     return EmailTemplates.envelopper("Échecs de connexion répétés", corps, baseUrl);
   }
+
+  /**
+   * Communication d'un incident de sécurité à un utilisateur.
+   * @param titre titre de la communication
+   * @param message message de l'administrateur (texte brut)
+   * @param changementMdpForce {@code true} si un nouveau mot de passe est exigé
+   * @param baseUrl l'URL publique de base de l'application
+   * @return le HTML de l'email
+   */
+  /* package-private : appelé par EmailServiceSecurite (même package). */
+  static String communicationIncident(
+      final String titre,
+      final String message,
+      final boolean changementMdpForce,
+      final String baseUrl) {
+    final String consigne =
+        changementMdpForce
+            ? "Par précaution, un nouveau mot de passe vous sera demandé à votre prochaine"
+                + " connexion."
+            : "";
+    final String corps =
+        """
+        <p style="color: %s; margin: 0 0 24px; white-space: pre-line">%s</p>
+        <p style="color: %s; font-size: 13px; margin-top: 24px">%s</p>
+        """
+            .formatted(
+                EmailTemplates.C_TEXTE,
+                EmailTemplates.e(message),
+                EmailTemplates.C_MUTE,
+                EmailTemplates.e(consigne));
+    return EmailTemplates.envelopper(titre, corps, baseUrl);
+  }
 }

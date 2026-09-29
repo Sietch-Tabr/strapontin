@@ -14,10 +14,14 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import java.io.IOException;
+import java.sql.Types;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -62,7 +66,15 @@ public class WorkerFetchCommun {
           + " WHERE %s::text IN (:ids) AND date >= CURRENT_DATE";
 
   private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
-  private static final String SQL_ABSENCES_SALLE = SQL_ABSENCES_BASE.formatted("salle_id");
+
+  // Par salle, une absence n'est comptée que si l'événement est observé par une
+  // source qui garantit avoir couvert sa date (fenêtre de requête, plafond de
+  // pagination) : au-delà, il est seulement hors de portée, pas disparu.
+  private static final String SQL_ABSENCES_SALLE =
+      SQL_ABSENCES_BASE.formatted("salle_id")
+          + " AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = evenements.id AND ("
+          + "   (o.source = 'ticketmaster' AND evenements.date <= CAST(:horizonTicketmaster AS date))"
+          + "   OR (o.source = 'eventim' AND evenements.date <= CAST(:horizonEventim AS date))))";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurNomCanonique resolveur;
@@ -121,6 +133,26 @@ public class WorkerFetchCommun {
     return gestionQuotaTM;
   }
 
+  /**
+   * Distingue une vraie panne réseau (DNS, I/O, timeout — {@link IOException}
+   * et sous-classes, y compris en cause imbriquée) d'un échec applicatif
+   * (erreur métier, JSON invalide) : seule la première justifie un retry
+   * ciblé et interdit de compter des absences sur le périmètre concerné.
+   * @param erreur exception levée par un fetch de source
+   * @return {@code true} si l'échec est une panne réseau transitoire
+   */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
+  static boolean estEchecReseauTransitoire(final Throwable erreur) {
+    Throwable cause = erreur;
+    while (cause != null) {
+      if (cause instanceof IOException) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+    return false;
+  }
+
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   static ResultatPersistance accumuler(
       final ResultatPersistance resultatA, final ResultatPersistance resultatB) {
@@ -159,32 +191,50 @@ public class WorkerFetchCommun {
   }
 
   /**
-   * Met à jour le compteur d'absences consécutives des entités retraitées
-   * ce cycle (détail : CLAUDE.md, Jobs background) — remis à zéro si revu,
+   * Met à jour le compteur d'absences consécutives des artistes retraités ce
+   * cycle (détail : CLAUDE.md, Jobs background) — remis à zéro si revu,
    * incrémenté sinon.
-   * @param colonne "artiste_id" ou "salle_id"
-   * @param ids identifiants (texte) des entités traitées dans ce cycle
+   * @param ids identifiants (texte) des artistes traités dans ce cycle
    * @param debutCycle horodatage capturé avant la persistance du lot
    */
   /* package-private : appelé par les exécuteurs de fetch (même package). */
-  void mettreAJourAbsences(final String colonne, final List<String> ids, final String debutCycle) {
+  void mettreAJourAbsencesArtistes(final List<String> ids, final String debutCycle) {
     if (ids.isEmpty()) {
       return;
     }
-    final String sql =
-        switch (colonne) {
-          case "artiste_id" -> SQL_ABSENCES_ARTISTE;
-          case "salle_id" -> SQL_ABSENCES_SALLE;
-          default -> throw new IllegalArgumentException("colonne inconnue : " + colonne);
-        };
-    jdbc.update(sql, Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
+    jdbc.update(
+        SQL_ABSENCES_ARTISTE,
+        Map.of("debut", debutCycle, "seuil", SEUIL_ABSENCES_CONSECUTIVES, "ids", ids));
+  }
+
+  /**
+   * Met à jour le compteur d'absences des événements des salles retraitées
+   * ce cycle, limité aux dates effectivement couvertes par chaque source.
+   * @param ids identifiants (texte) des salles traitées dans ce cycle
+   * @param debutCycle horodatage capturé avant la persistance du lot
+   * @param horizons dernière date couverte par nom de source ({@code
+   *     "ticketmaster"}, {@code "eventim"}) ; source absente = aucune absence
+   */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
+  void mettreAJourAbsencesSalles(
+      final List<String> ids, final String debutCycle, final Map<String, LocalDate> horizons) {
+    if (ids.isEmpty()) {
+      return;
+    }
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource()
+            .addValue("debut", debutCycle)
+            .addValue("seuil", SEUIL_ABSENCES_CONSECUTIVES)
+            .addValue("ids", ids)
+            .addValue("horizonTicketmaster", horizons.get("ticketmaster"), Types.DATE)
+            .addValue("horizonEventim", horizons.get("eventim"), Types.DATE);
+    jdbc.update(SQL_ABSENCES_SALLE, params);
   }
 
   /**
    * Exclut de la résolution Deezer les classifications "theatre"/"divers"/
-   * "sports" (jamais un vrai musicien) et, pour Eventim seul, une
-   * classification vide (Digitick l'omet aussi mais uniquement pour de
-   * vrais concerts, déjà filtrés en amont sur le genre "Concert").
+   * "sports" (jamais un vrai musicien) et, pour Eventim, une
+   * classification vide.
    * @param c concert à évaluer
    * @return {@code true} si la résolution Deezer peut s'appliquer
    */

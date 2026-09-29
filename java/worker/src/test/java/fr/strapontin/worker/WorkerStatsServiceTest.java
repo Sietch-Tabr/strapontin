@@ -17,9 +17,9 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.BilanFetch;
-import fr.strapontin.sources.DigitickSource;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
@@ -140,16 +140,19 @@ class WorkerStatsServiceTest {
                         && params.get("message").toString().contains("Eventim")));
   }
 
-  // le bilan de panne n'est plus limité à Eventim — Digitick en bénéficie via la boucle
-  // générique sur `sources` (instanceof SourceAvecBilanFetch), sans méthode dédiée.
+  // le bilan de panne n'est pas limité à Eventim — toute source SourceAvecBilanFetch en bénéficie
+  // via la boucle générique sur `sources`, sans méthode dédiée.
   @Test
-  void enregistrerStatJob_digitickPanneTotale_insereLogsAdminNiveauError() {
-    final DigitickSource digitick = mock(DigitickSource.class);
-    when(digitick.nom()).thenReturn("digitick");
-    when(digitick.preleverBilan()).thenReturn(new BilanFetch(4, 4));
-    final WorkerStatsService serviceAvecDigitick = creerService(List.of(tm, eventim, digitick));
+  void enregistrerStatJob_autreSourcePanneTotale_insereLogsAdminNiveauError() {
+    final SourceConcerts autre =
+        mock(
+            SourceConcerts.class,
+            org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
+    when(autre.nom()).thenReturn("autresource");
+    when(((SourceAvecBilanFetch) autre).preleverBilan()).thenReturn(new BilanFetch(4, 4));
+    final WorkerStatsService serviceAvecAutre = creerService(List.of(tm, eventim, autre));
 
-    serviceAvecDigitick.enregistrerStatJob(
+    serviceAvecAutre.enregistrerStatJob(
         "fetch:artistes:batch", 10, new ResultatPersistance(0, 0), null);
 
     verify(jdbc)
@@ -158,7 +161,7 @@ class WorkerStatsServiceTest {
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 params ->
                     "error".equals(params.get("niveau"))
-                        && params.get("message").toString().contains("Digitick")));
+                        && params.get("message").toString().contains("Autresource")));
   }
 
   // même bilan de panne étendu à Deezer (ResolveurNomCanonique, hors liste `sources` car

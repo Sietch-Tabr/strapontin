@@ -237,4 +237,26 @@ test.describe("Scénario: API auth", () => {
     expect(setCookie).toContain("samesite=lax");
     await ctx.close();
   });
+
+  for (const chemin of [
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/setup",
+  ]) {
+    test(`page_publique_${chemin}_sans_appel_authentifie_en_401`, async ({
+      browser,
+    }) => {
+      const ctx = await browser.newContext({ storageState: undefined });
+      const page = await ctx.newPage();
+      const reponses401: string[] = [];
+      page.on("response", (rep) => {
+        if (rep.status() === 401) reponses401.push(rep.url());
+      });
+      await page.goto(chemin);
+      await page.waitForLoadState("networkidle");
+      expect(reponses401).toEqual([]);
+      await ctx.close();
+    });
+  }
 });

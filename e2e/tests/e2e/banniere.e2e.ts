@@ -189,7 +189,7 @@ test.describe("Bannière système overlay", () => {
     await page.goto("/admin#banniere");
     await page.locator("#banniere-message").fill("Test formulaire admin");
     await page.locator("#banniere-type").selectOption("error");
-    await page.getByRole("button", { name: "Publier" }).click();
+    await page.getByRole("button", { name: "Publier", exact: true }).click();
     await expect(page.locator("section#banniere")).toContainText(
       "Test formulaire admin",
     );

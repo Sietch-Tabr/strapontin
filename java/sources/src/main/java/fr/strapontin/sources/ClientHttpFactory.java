@@ -11,7 +11,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 /**
  * Fabrique de {@link JdkClientHttpRequestFactory} à timeouts explicites
  * (HTTP/3 dès qu'une API tierce le supportera), partagée entre les
- * sources qui en ont besoin ({@link DigitickSource}, {@link
+ * sources qui en ont besoin ({@link EventimSource}, {@link
  * OverpassSalleSource}, {@link ClientSparqlWikidata}).
  * @since 2.7.0
  * @author Kwaite

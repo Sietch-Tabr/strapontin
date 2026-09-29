@@ -6,12 +6,10 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.worker.LogsAdminWorker;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -45,24 +43,25 @@ public class PersisterConcerts {
   private final PersisteurConcertsDb db;
   private final ReconciliateurSalles reconciliateurSalles;
   private final ReconciliateurArtistes reconciliateurArtistes;
-  private final LogsAdminWorker logsAdminWorker;
+  private final RepliMappingSalle repliMappingSalle;
   private PersisterConcerts self;
 
   /**
    * @param db service de persistance SQL
    * @param reconciliateurSalles service de réconciliation des salles
    * @param reconciliateurArtistes service de réconciliation des artistes
-   * @param logsAdminWorker journalisation admin
+   * @param repliMappingSalle repli quand un mapping salle_sources est absent
+   *     ou géographiquement incohérent
    */
   public PersisterConcerts(
       final PersisteurConcertsDb db,
       final ReconciliateurSalles reconciliateurSalles,
       final ReconciliateurArtistes reconciliateurArtistes,
-      final LogsAdminWorker logsAdminWorker) {
+      final RepliMappingSalle repliMappingSalle) {
     this.db = db;
     this.reconciliateurSalles = reconciliateurSalles;
     this.reconciliateurArtistes = reconciliateurArtistes;
-    this.logsAdminWorker = logsAdminWorker;
+    this.repliMappingSalle = repliMappingSalle;
   }
 
   /**
@@ -202,7 +201,7 @@ public class PersisterConcerts {
     upsertSallesSourcesManquantes(concerts, cachesSalles);
 
     final Map<String, UUID> cachesSallesParNom =
-        resoudreSallesParNomFallback(concerts, cachesSalles, deptsConnus);
+        repliMappingSalle.resoudreSallesParNomFallback(concerts, cachesSalles, deptsConnus);
 
     final List<ValeurConcert> resolus =
         appliquerResolutionUuids(
@@ -232,58 +231,6 @@ public class PersisterConcerts {
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     return reconciliateurSalles.deptsConnus(sallesMappees);
-  }
-
-  // Un mapping salle_sources réutilisé contourne les garde-fous géographiques
-  // appliqués à la création d'un nouveau mapping — à valider avant de lui faire
-  // confiance.
-  private Map<String, UUID> resoudreSallesParNomFallback(
-      final List<ValeurConcert> concerts,
-      final Map<String, UUID> cachesSalles,
-      final Map<UUID, String> deptsConnus) {
-    final Map<String, UUID> cachesSallesParNom = new HashMap<>();
-    for (final ValeurConcert c : concerts) {
-      final UUID salleMappee =
-          c.salleSourceId() != null ? cachesSalles.get(c.salleSourceId()) : null;
-      final boolean mappingIncoherent = mappingSalleIncoherent(salleMappee, c.dept(), deptsConnus);
-      if (mappingIncoherent) {
-        journaliserMappingIncoherent(salleMappee, c, deptsConnus);
-      }
-      final boolean besoinFallback = c.salleSourceId() == null || mappingIncoherent;
-      if (besoinFallback && !cachesSallesParNom.containsKey(c.salleNorm())) {
-        cachesSallesParNom.put(c.salleNorm(), resoudreSalleFallback(c, mappingIncoherent));
-      }
-    }
-    return cachesSallesParNom;
-  }
-
-  // Mapping salle_sources rejeté sans repli flou disponible — traité comme absent :
-  // résolution/création complète plutôt qu'un salle_id indéfiniment null.
-  private UUID resoudreSalleFallback(final ValeurConcert concert, final boolean mappingIncoherent) {
-    UUID salleId = reconciliateurSalles.chercherSalleParTokens(concert.salle(), concert.dept());
-    if (salleId == null) {
-      salleId = reconciliateurSalles.chercherSalleParCleForte(concert);
-    }
-    if (salleId == null && mappingIncoherent) {
-      salleId = reconciliateurSalles.upsertSalleSource(concert);
-    }
-    return salleId;
-  }
-
-  private void journaliserMappingIncoherent(
-      final UUID salleMappee, final ValeurConcert concert, final Map<UUID, String> deptsConnus) {
-    logsAdminWorker.inserer(
-        "warn",
-        "persistance",
-        "mapping salle_sources ignoré — incohérence géographique salleId="
-            + salleMappee
-            + " deptConnu="
-            + deptsConnus.get(salleMappee)
-            + " deptEntrant="
-            + concert.dept()
-            + " artiste="
-            + concert.artisteNorm(),
-        Map.of("salleId", salleMappee.toString(), "artiste", concert.artisteNorm()));
   }
 
   private List<ValeurConcert> appliquerResolutionUuids(

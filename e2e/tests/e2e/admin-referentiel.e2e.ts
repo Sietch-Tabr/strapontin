@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
-import { creerContexteAdmin } from "./helpers/admin.js";
+import { creerContexteAdmin, creerSalleReferentiel } from "./helpers/admin.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
@@ -168,19 +168,12 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
     if (isMobile) test.skip();
 
     const suffixe = Date.now();
-    const nomA = `ZZTestFusionIhmA-${suffixe}`;
-    const nomB = `ZZTestFusionIhmB-${suffixe}`;
+    const nomA = `Ornithorynque${suffixe}`;
+    const nomB = `Kangourou${suffixe}`;
     const ctx = await creerContexteAdmin();
-    let salleRestante: string | null = null;
     try {
-      const repA = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: nomA, slug: `zztest-fusion-ihm-a-${suffixe}` },
-      });
-      expect(repA.status()).toBe(201);
-      const repB = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: nomB, slug: `zztest-fusion-ihm-b-${suffixe}` },
-      });
-      expect(repB.status()).toBe(201);
+      await creerSalleReferentiel(ctx, nomA);
+      await creerSalleReferentiel(ctx, nomB);
 
       await page.goto("/admin");
       await page.locator('a[href="#salles"]').click();
@@ -232,18 +225,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
       ).toBeVisible({ timeout: 5000 });
       await expect(ligneB).not.toBeVisible({ timeout: 5000 });
       await expect(ligneA).toBeVisible();
-
-      const repListe = await ctx.get(
-        `/api/admin/salles?nom=${encodeURIComponent(nomA)}`,
-      );
-      const donnees = await repListe.json();
-      salleRestante = donnees.salles[0]?.id ?? null;
     } finally {
-      if (salleRestante) {
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleRestante}`)
-          .catch(() => {});
-      }
       await ctx.dispose();
     }
   });
@@ -320,16 +302,11 @@ test.describe("Scénario: admin — API référentiel salles", () => {
 
   test("api_admin_salles_reinitialiserEnrichissement_fluxComplet_effaceWikidataId", async () => {
     const ctx = await creerContexteAdmin();
-    let salleId: string | null = null;
     try {
-      const repCreation = await ctx.post("/api/admin/digitick-salles", {
-        data: {
-          nom: "Salle Reinit Test",
-          slug: `reinit-test-${Date.now()}`,
-        },
-      });
-      expect(repCreation.status()).toBe(201);
-      salleId = (await repCreation.json()).salleId;
+      const salleId = await creerSalleReferentiel(
+        ctx,
+        `Reinitialisation${Date.now()}`,
+      );
 
       // La réinitialisation est un no-op sûr même sans wikidata_id préexistant : vérifie
       // uniquement que l'endpoint répond 200 sur une salle existante.
@@ -338,11 +315,6 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       );
       expect(repReinit.status()).toBe(200);
     } finally {
-      if (salleId) {
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleId}`)
-          .catch(() => {});
-      }
       await ctx.dispose();
     }
   });
@@ -388,26 +360,12 @@ test.describe("Scénario: admin — API référentiel salles", () => {
 
   test("api_admin_salles_modifierEtFusionner_fluxComplet", async () => {
     const ctx = await creerContexteAdmin();
-    let salleA: string | null = null;
-    let salleB: string | null = null;
+    const suffixe = Date.now();
+    const nomA = `Hippopotame${suffixe}`;
+    const nomB = `Salamandre${suffixe}`;
     try {
-      const repA = await ctx.post("/api/admin/digitick-salles", {
-        data: {
-          nom: "Salle Referentiel Test A",
-          slug: `referentiel-test-a-${Date.now()}`,
-        },
-      });
-      expect(repA.status()).toBe(201);
-      salleA = (await repA.json()).salleId;
-
-      const repB = await ctx.post("/api/admin/digitick-salles", {
-        data: {
-          nom: "Salle Referentiel Test B",
-          slug: `referentiel-test-b-${Date.now()}`,
-        },
-      });
-      expect(repB.status()).toBe(201);
-      salleB = (await repB.json()).salleId;
+      const salleA = await creerSalleReferentiel(ctx, nomA);
+      const salleB = await creerSalleReferentiel(ctx, nomB);
 
       const repPatch = await ctx.patch(`/api/admin/salles/${salleA}`, {
         data: { nomAffiche: "Nom Canonique Test" },
@@ -415,7 +373,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       expect(repPatch.status()).toBe(200);
 
       const repListe = await ctx.get(
-        `/api/admin/salles?nom=${encodeURIComponent("Salle Referentiel Test A")}`,
+        `/api/admin/salles?nom=${encodeURIComponent(nomA)}`,
       );
       const donnees = await repListe.json();
       const trouvee = donnees.salles.find(
@@ -429,24 +387,13 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       expect(repFusion.status()).toBe(200);
 
       const repListeApresFusion = await ctx.get(
-        `/api/admin/salles?nom=${encodeURIComponent("Salle Referentiel Test B")}`,
+        `/api/admin/salles?nom=${encodeURIComponent(nomB)}`,
       );
       const donneesApres = await repListeApresFusion.json();
       expect(
         donneesApres.salles.some((s: { id: string }) => s.id === salleB),
       ).toBe(false);
-      salleB = null;
     } finally {
-      if (salleA) {
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleA}`)
-          .catch(() => {});
-      }
-      if (salleB) {
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleB}`)
-          .catch(() => {});
-      }
       await ctx.dispose();
     }
   });
@@ -458,8 +405,7 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   // POST /api/artistes passe par la dédup floue de suivi (CorrespondanceArtiste.estDoublonArtiste,
   // Jaro ≥ 0.95 | containment ≥ 0.65) — deux noms de test qui ne diffèrent que par 1 caractère
   // (ex. suffixe "-A"/"-B" sur un même préfixe long) sont détectés comme doublon du même artiste
-  // et le second POST échoue en 409, contrairement aux salles (créées via /digitick-salles, un
-  // flux admin CRUD indépendant sans dédup de suivi).
+  // et le second POST échoue en 409 — même contrainte que creerSalleReferentiel côté salles.
   test("api_admin_artistes_modifierEtFusionner_fluxComplet", async () => {
     const ctx = await creerContexteAdmin();
     const nomA = `Zzargonautfusiontest${Date.now()}`;
@@ -529,20 +475,12 @@ test.describe("Scénario: admin — API référentiel salles", () => {
   test("api_admin_salles_fusion_chevauchementUserSalles_preserveLeSuiviSansDoublon", async () => {
     const ctx = await creerContexteAdmin();
     const suffixe = Date.now();
-    const nomA = `ZZTestChevauchementA-${suffixe}`;
-    const nomB = `ZZTestChevauchementB-${suffixe}`;
+    const nomA = `Ornithorynque${suffixe}`;
+    const nomB = `Kangourou${suffixe}`;
     let salleA: string | null = null;
     try {
-      const repA = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: nomA, slug: `zztest-chevauchement-a-${suffixe}` },
-      });
-      expect(repA.status()).toBe(201);
-      salleA = (await repA.json()).salleId;
-      const repB = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: nomB, slug: `zztest-chevauchement-b-${suffixe}` },
-      });
-      expect(repB.status()).toBe(201);
-      const salleB = (await repB.json()).salleId;
+      salleA = await creerSalleReferentiel(ctx, nomA);
+      const salleB = await creerSalleReferentiel(ctx, nomB);
 
       // L'admin (utilisateur) suit les deux salles avant la fusion — chevauchement réel.
       const repSuiviA = await ctx.post("/api/salles", { data: { nom: nomA } });
@@ -570,62 +508,6 @@ test.describe("Scénario: admin — API référentiel salles", () => {
     } finally {
       if (salleA) {
         await ctx.delete(`/api/salles/${salleA}`).catch(() => {});
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleA}`)
-          .catch(() => {});
-      }
-      await ctx.dispose();
-    }
-  });
-
-  // #830 : un slug Digitick déjà attribué à une autre salle doit être refusé explicitement
-  // (409), sur les deux chemins d'écriture (création ET édition) — avant correctif, la création
-  // répondait 201 sans source Digitick fonctionnelle (échec silencieux) et l'édition volait le
-  // mapping à l'autre salle sans avertissement.
-  test("api_admin_digitickSalles_slugDejaAttribue_creationEtEditionRetournent409", async () => {
-    const ctx = await creerContexteAdmin();
-    let salleExistante: string | null = null;
-    let salleAutre: string | null = null;
-    try {
-      const slugPartage = `slug-conflit-${Date.now()}`;
-      const repExistante = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: "Salle Slug Existante", slug: slugPartage },
-      });
-      expect(repExistante.status()).toBe(201);
-      salleExistante = (await repExistante.json()).salleId;
-
-      // Chemin création : POST /digitick-salles avec un slug déjà attribué.
-      const repCreationConflit = await ctx.post("/api/admin/digitick-salles", {
-        data: { nom: "Salle Slug Conflit Creation", slug: slugPartage },
-      });
-      expect(repCreationConflit.status()).toBe(409);
-
-      // Chemin édition : créer une autre salle avec un slug distinct, puis tenter de lui
-      // attribuer le slug déjà pris via PUT digitick-slug.
-      const repAutre = await ctx.post("/api/admin/digitick-salles", {
-        data: {
-          nom: "Salle Slug Conflit Edition",
-          slug: `slug-autre-${Date.now()}`,
-        },
-      });
-      expect(repAutre.status()).toBe(201);
-      salleAutre = (await repAutre.json()).salleId;
-
-      const repEditionConflit = await ctx.put(
-        `/api/admin/salles/${salleAutre}/digitick-slug`,
-        { data: { slug: slugPartage } },
-      );
-      expect(repEditionConflit.status()).toBe(409);
-    } finally {
-      if (salleExistante) {
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleExistante}`)
-          .catch(() => {});
-      }
-      if (salleAutre) {
-        await ctx
-          .delete(`/api/admin/digitick-salles/${salleAutre}`)
-          .catch(() => {});
       }
       await ctx.dispose();
     }
