@@ -32,6 +32,16 @@ class CorrespondanceSalleTest {
     assertFalse(
         CorrespondanceSalle.estDoublonSalle(
             "cathedrale americaine paris 08", "cathedrale notre dame de paris"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "bon secours eglise lutherienne paris 11",
+            "eglise lutherienne de la trinite paris 13"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "theatre de la bastille paris 11", "opera bastille paris 12"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "la divine comedie paris 09", "la comedie bastille paris"));
     assertTrue(CorrespondanceSalle.estDoublonSalle("petit bain paris 13", "petit bain"));
     assertTrue(
         CorrespondanceSalle.estDoublonSalle("elysee montmartre paris 18", "elysee montmartre"));
