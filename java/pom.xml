@@ -46,7 +46,6 @@
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.1</springdoc.version>
         <bucket4j.version>8.20.0</bucket4j.version>
-        <jsoup.version>1.23.2</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
@@ -281,13 +280,6 @@
                 <groupId>com.bucket4j</groupId>
                 <artifactId>bucket4j_jdk17-core</artifactId>
                 <version>${bucket4j.version}</version>
-            </dependency>
-
-            <!-- Parsing HTML (scraping Digitick) -->
-            <dependency>
-                <groupId>org.jsoup</groupId>
-                <artifactId>jsoup</artifactId>
-                <version>${jsoup.version}</version>
             </dependency>
 
         </dependencies>
