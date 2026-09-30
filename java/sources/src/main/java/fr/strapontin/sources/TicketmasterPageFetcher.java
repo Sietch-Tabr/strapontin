@@ -6,6 +6,7 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -88,7 +89,7 @@ final class TicketmasterPageFetcher {
   ResultatPage fetchPage(
       final UriComponentsBuilder uriBase, final int numPage, final String artisteFallback) {
     cadenceur.attendre();
-    final String uri = construireUriFetchPage(uriBase, numPage);
+    final URI uri = construireUriFetchPage(uriBase, numPage);
 
     etatFetch.enregistrerAppel();
     final Instant avantAppelHttp = Instant.now();
@@ -131,21 +132,20 @@ final class TicketmasterPageFetcher {
     }
   }
 
-  private static String uriMasquee(final String uri) {
-    return uri.replaceAll("apikey=[^&]+", "apikey=***");
+  private static String uriMasquee(final URI uri) {
+    return uri.toString().replaceAll("apikey=[^&]+", "apikey=***");
   }
 
-  private String construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
-    return uriBase
+  private URI construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
+    return UriSources.encoder(
+        uriBase
         .cloneBuilder()
         .queryParam("apikey", apiKey)
         .queryParam("locale", "fr,en,*")
         .queryParam("countryCode", "FR")
         .queryParam("includeTBA", "no")
         .queryParam("includeTBD", "no")
-        .queryParam("page", numPage)
-        .build()
-        .toUriString();
+        .queryParam("page", numPage));
   }
 
   private static QuotaTM extraireQuotaTm(final HttpHeaders headers) {

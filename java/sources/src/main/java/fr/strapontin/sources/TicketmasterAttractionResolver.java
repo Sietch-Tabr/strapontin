@@ -8,6 +8,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.Normalisation;
 import java.time.Duration;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -82,14 +83,14 @@ final class TicketmasterAttractionResolver {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   String rechercherAttractionId(final String nom) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(baseUrl + "/attractions.json")
+    final URI uri =
+        UriSources.encoder(UriComponentsBuilder.fromUriString(baseUrl + "/attractions.json")
             .queryParam("keyword", nom)
             .queryParam("locale", "*")
             .queryParam("size", 10)
             .queryParam("apikey", apiKey)
-            .build()
-            .toUriString();
+            
+        );
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);

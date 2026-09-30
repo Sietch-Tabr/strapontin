@@ -6,6 +6,7 @@ package fr.strapontin.sources;
 
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,11 +52,11 @@ final class TicketmasterHealthCheck {
   }
 
   private StatutIdTM verifierRessource(final String chemin) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + chemin)
+    final URI uri =
+        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + chemin)
             .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+            
+        );
     cadenceur.attendre();
     try {
       restClient.get().uri(uri).retrieve().toBodilessEntity();
@@ -74,11 +75,11 @@ final class TicketmasterHealthCheck {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   String recupererNomAttraction(final String attractionId) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
+    final URI uri =
+        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
             .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+            
+        );
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -95,13 +96,13 @@ final class TicketmasterHealthCheck {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
+    final URI uri =
+        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
             .queryParam("keyword", nom)
             .queryParam("countryCode", "FR")
             .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+            
+        );
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -134,13 +135,13 @@ final class TicketmasterHealthCheck {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   int compterEventsVenue(final String venueId) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
+    final URI uri =
+        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
             .queryParam("venueId", venueId)
             .queryParam("size", 1)
             .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+            
+        );
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);

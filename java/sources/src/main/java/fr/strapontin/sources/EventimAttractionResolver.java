@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.UtilitairesChaine;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +90,7 @@ final class EventimAttractionResolver {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par EventimSource (même package). */
   String rechercherAttractionId(final String terme, final boolean identiteConfirmee) {
-    final String uri = construireUriRechercheAttractions(terme);
+    final URI uri = construireUriRechercheAttractions(terme);
 
     compteurBilan.enregistrerAppel();
     try {
@@ -119,14 +120,12 @@ final class EventimAttractionResolver {
     }
   }
 
-  private String construireUriRechercheAttractions(final String terme) {
-    return UriComponentsBuilder.fromUriString(baseUrl + "/v1/attractions")
+  private URI construireUriRechercheAttractions(final String terme) {
+    return UriSources.encoder(UriComponentsBuilder.fromUriString(baseUrl + "/v1/attractions")
         .queryParam(PARAM_WEB_ID, webId)
         .queryParam(PARAM_LANGUE, "fr")
         .queryParam("search_term", terme)
-        .queryParam("top", 5)
-        .build()
-        .toUriString();
+        .queryParam("top", 5));
   }
 
   /**

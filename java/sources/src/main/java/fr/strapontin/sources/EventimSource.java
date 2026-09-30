@@ -312,19 +312,17 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       if (fenetre > 0 && !attendreEntrePagesEventim()) {
         return new ResultatArtisteEventim(concerts, false);
       }
-      final String uri =
-          UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+      final URI uri =
+          UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
               .queryParam(PARAM_WEB_ID, WEB_ID)
               .queryParam(PARAM_LANGUE, "fr")
               .queryParam("attraction_ids", attractionId)
               .queryParam("date_from", fmt.format(debut))
               .queryParam("date_to", fmt.format(dateFin))
               .queryParam("sort", "DateAsc")
-              .queryParam("top", TOP_MAX)
-              .build()
-              .toUriString();
+              .queryParam("top", TOP_MAX));
       final PageProduitsEventim resultat =
-          chargerPageProduits(URI.create(uri), artisteFallback, null, artisteSourceId);
+          chargerPageProduits(uri, artisteFallback, null, artisteSourceId);
       if (!resultat.succes()) {
         return new ResultatArtisteEventim(concerts, false);
       }

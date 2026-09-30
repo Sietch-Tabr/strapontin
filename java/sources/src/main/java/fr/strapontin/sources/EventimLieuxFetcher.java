@@ -150,13 +150,10 @@ final class EventimLieuxFetcher {
     final LocalDate aujourdHui = LocalDate.now();
     final PageProduitsEventim page =
         chargeur.apply(
-            requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
+            UriSources.encoder(requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
                 .queryParam(PARAM_TOP, 1)
                 .queryParam("venue_names", libelle)
-                .queryParam("page", 1)
-                .build()
-                .encode()
-                .toUri());
+                .queryParam("page", 1)));
     return page.succes() ? page.total() : -1;
   }
 
@@ -217,7 +214,7 @@ final class EventimLieuxFetcher {
   // Avec top, page est ignoré : une seule requête, plafonnée si elle revient pleine.
   private Parcours parcourirPages(final UriComponentsBuilder requete) {
     if (requete.build().getQueryParams().containsKey(PARAM_TOP)) {
-      final PageProduitsEventim resultat = chargeur.apply(requete.build().encode().toUri());
+      final PageProduitsEventim resultat = chargeur.apply(UriSources.encoder(requete));
       return resultat.succes()
           ? new Parcours(
               resultat.concerts(),
@@ -233,7 +230,7 @@ final class EventimLieuxFetcher {
         return new Parcours(concerts, false, false, null);
       }
       final PageProduitsEventim resultat =
-          chargeur.apply(requete.cloneBuilder().queryParam("page", page).build().encode().toUri());
+          chargeur.apply(UriSources.encoder(requete.cloneBuilder().queryParam("page", page)));
       if (!resultat.succes()) {
         return new Parcours(concerts, false, false, null);
       }
