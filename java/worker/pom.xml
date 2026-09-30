@@ -63,15 +63,16 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Migrations Flyway — starter apporte FlywayAutoConfiguration -->
+        <!-- Migrations Flyway du module web, appliquées par les seuls tests (le web migre la prod) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
+            <scope>test</scope>
         </dependency>
-        <!-- Support PostgreSQL 18 (Flyway 12.x) -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- Hashage mots de passe scrypt (format Better-Auth) -->
