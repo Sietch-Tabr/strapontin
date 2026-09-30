@@ -10,6 +10,7 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
 import java.net.http.HttpClient;
+import java.time.Clock;
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,6 +46,18 @@ public class WebConfiguration implements WebMvcConfigurer {
   public void addInterceptors(final InterceptorRegistry registry) {
     registry.addInterceptor(appareilEnregistrementInterceptor).addPathPatterns("/api/**");
     registry.addInterceptor(activiteUtilisateurInterceptor).addPathPatterns("/api/**");
+  }
+
+  /**
+   * Horloge système, injectable pour figer le temps en test.
+   *
+   * @return horloge du fuseau par défaut de la JVM
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  Clock horloge() {
+    return Clock.systemDefaultZone();
   }
 
   /**

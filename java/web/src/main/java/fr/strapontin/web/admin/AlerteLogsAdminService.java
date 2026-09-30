@@ -6,6 +6,8 @@ package fr.strapontin.web.admin;
 
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailAlerteService;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -25,40 +27,63 @@ import org.springframework.stereotype.Service;
 public class AlerteLogsAdminService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AlerteLogsAdminService.class);
-  private static final String CLE_CURSEUR = "ALERTE_LOGS_ADMIN_CURSEUR";
+  // Ancien curseur temporel (ms) : relu une seule fois pour initialiser le curseur d'identifiant.
+  private static final String CLE_CURSEUR_TS = "ALERTE_LOGS_ADMIN_CURSEUR";
+  private static final String CLE_CURSEUR_ID = "ALERTE_LOGS_ADMIN_CURSEUR_ID";
+  private static final String CLE_ENVOIS_JOUR = "ALERTE_LOGS_ADMIN_ENVOIS_JOUR";
+  // Plafond d'emails d'alerte par jour : le quota Resend (100/jour) doit rester disponible pour
+  // les emails fonctionnels, quel que soit le volume d'erreurs. Au-delà, les erreurs attendent
+  // le digest du lendemain, agrégées.
+  /* package-private : visibilité élargie pour AlerteLogsAdminServiceTest (même package). */
+  static final int MAX_DIGESTS_PAR_JOUR = 8;
 
   private final LogAdminService logAdminService;
   private final ConfigService configService;
   private final EmailAlerteService emailAlerteService;
+  private final Clock horloge;
 
   /**
    * @param logAdminService lecture des entrées d'erreur depuis le curseur
-   * @param configService lecture/écriture du curseur
+   * @param configService lecture/écriture du curseur et du compteur journalier
    * @param emailAlerteService envoi du digest et résolution du destinataire
    *     d'alerte
+   * @param horloge horloge de référence du compteur journalier
    */
   public AlerteLogsAdminService(
       final LogAdminService logAdminService,
       final ConfigService configService,
-      final EmailAlerteService emailAlerteService) {
+      final EmailAlerteService emailAlerteService,
+      final Clock horloge) {
     this.logAdminService = logAdminService;
     this.configService = configService;
     this.emailAlerteService = emailAlerteService;
+    this.horloge = horloge;
   }
 
   /**
    * Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest
    * agrégé.
    *
-   * <p>Le curseur n'avance qu'après envoi réussi — un échec temporaire de
-   * Resend ou l'absence de {@code CONTACT_EMAIL} laisse les erreurs disponibles
-   * pour le prochain cycle.
+   * <p>Le curseur (identifiant de la dernière entrée notifiée) n'avance
+   * qu'après envoi réussi — un échec temporaire de Resend, l'absence de
+   * destinataire ou le plafond de {@value #MAX_DIGESTS_PAR_JOUR} digests par
+   * jour laissent les erreurs disponibles pour un cycle suivant.
    */
   @Scheduled(cron = "0 */15 * * * *")
   public void verifier() {
     final long curseur = lireCurseur();
     final List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);
     if (erreurs.isEmpty()) {
+      return;
+    }
+
+    final LocalDate aujourdhui = LocalDate.now(horloge);
+    final int envoisDuJour = lireEnvoisDuJour(aujourdhui);
+    if (envoisDuJour >= MAX_DIGESTS_PAR_JOUR) {
+      LOG.warn(
+          "alerteLogsAdmin: plafond de {} digests atteint — {} erreur(s) reportée(s) à demain",
+          MAX_DIGESTS_PAR_JOUR,
+          erreurs.size());
       return;
     }
 
@@ -79,11 +104,28 @@ public class AlerteLogsAdminService {
       return;
     }
 
-    final long nouveauCurseur = erreurs.get(erreurs.size() - 1).ts();
-    configService.sauvegarderConfig(CLE_CURSEUR, String.valueOf(nouveauCurseur));
+    final long nouveauCurseur = erreurs.get(erreurs.size() - 1).id();
+    configService.sauvegarderConfig(CLE_CURSEUR_ID, String.valueOf(nouveauCurseur));
+    configService.sauvegarderConfig(CLE_ENVOIS_JOUR, aujourdhui + ":" + (envoisDuJour + 1));
   }
 
   private long lireCurseur() {
-    return configService.lireConfig(CLE_CURSEUR).map(Long::parseLong).orElse(0L);
+    final Optional<String> curseurId = configService.lireConfig(CLE_CURSEUR_ID);
+    if (curseurId.isPresent()) {
+      return Long.parseLong(curseurId.get());
+    }
+    return configService
+        .lireConfig(CLE_CURSEUR_TS)
+        .map(ts -> logAdminService.idMaxJusquA(Long.parseLong(ts)))
+        .orElse(0L);
+  }
+
+  // Format "AAAA-MM-JJ:nombre" ; un autre jour remet le compteur à zéro.
+  private int lireEnvoisDuJour(final LocalDate aujourdhui) {
+    return configService
+        .lireConfig(CLE_ENVOIS_JOUR)
+        .filter(v -> v.startsWith(aujourdhui + ":"))
+        .map(v -> Integer.parseInt(v.substring(v.indexOf(':') + 1)))
+        .orElse(0);
   }
 }

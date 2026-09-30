@@ -56,7 +56,7 @@ class LogAdminServiceTest {
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p ->
                     Integer.valueOf(1000).equals(p.get("limite"))
-                        && p.get("tsDepuis").equals(Timestamp.from(Instant.ofEpochMilli(1000L)))),
+                        && Long.valueOf(1000L).equals(p.get("idDepuis"))),
             any(RowMapper.class));
   }
 
