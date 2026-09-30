@@ -56,6 +56,10 @@ public class WorkerPurgeService {
   private static final int DELAI_GRACE_JOURS = 15;
   private static final int SEUIL_JOURS_RELANCE_INVITATION = 6;
   private static final int SEUIL_JOURS_EXPIRATION_INVITATION = 7;
+  // Au-delà, une seule exécution touche assez de comptes pour signer une anomalie de
+  // référence (date de dernière activité manquante ou faussée) plutôt qu'une inactivité réelle.
+  /* package-private : visibilité élargie pour WorkerPurgeServiceTest (même package). */
+  static final int SEUIL_VAGUE_COMPTES = 3;
   private static final String CLE_ID = "id";
   private static final String CLE_EMAIL = "email";
 
@@ -63,22 +67,26 @@ public class WorkerPurgeService {
   private final WorkerStatsService workerStatsService;
   private final PurgeCompteEmailService purgeCompteEmailService;
   private final ConfigServiceWorker configService;
+  private final LogsAdminWorker logsAdminWorker;
 
   /**
    * @param jdbc accès JDBC
    * @param workerStatsService journalisation du bilan de purge
    * @param purgeCompteEmailService envoi des relances avant purge de compte
    * @param configService lecture de PUBLIC_BASE_URL (lien d'activation)
+   * @param logsAdminWorker signalement admin des relances et suppressions de comptes
    */
   public WorkerPurgeService(
       final NamedParameterJdbcTemplate jdbc,
       final WorkerStatsService workerStatsService,
       final PurgeCompteEmailService purgeCompteEmailService,
-      final ConfigServiceWorker configService) {
+      final ConfigServiceWorker configService,
+      final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
     this.purgeCompteEmailService = purgeCompteEmailService;
     this.configService = configService;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /** Supprime les concerts passés depuis plus de 7 jours. */
@@ -271,10 +279,14 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Relance les comptes inactifs (email + délai de grâce, {@code
+   * Relance les comptes activés inactifs (email + délai de grâce, {@code
    * users.purge_le}), puis supprime ceux dont le délai est dépassé sans
-   * reconnexion — {@code purge_le} est remis à {@code NULL} par {@code
-   * AuthEvenementListener} (web) à chaque connexion, annulant la purge.
+   * activité — {@code derniere_connexion_le} est tenue à jour et {@code
+   * purge_le} remis à {@code NULL} par le module web à chaque connexion et à
+   * chaque journée d'activité, annulant la purge. Un compte sans date de
+   * dernière activité n'est jamais relancé. Chaque relance ou suppression est
+   * signalée dans {@code logs_admin}, en {@code warn} au-delà de {@link
+   * #SEUIL_VAGUE_COMPTES}.
    */
   public void executerGererComptesInactifs() {
     LOG.info("gerer:comptes-inactifs démarré");
@@ -285,8 +297,8 @@ public class WorkerPurgeService {
           final List<Map<String, Object>> aRelancer =
               jdbc.queryForList(
                   "SELECT id, email FROM users WHERE purge_le IS NULL"
-                      + " AND COALESCE(derniere_connexion_le, created_at)"
-                      + " < now() - make_interval(months => :seuilMois)",
+                      + " AND must_change_credentials = false"
+                      + " AND derniere_connexion_le < now() - make_interval(months => :seuilMois)",
                   Map.of("seuilMois", SEUIL_MOIS_INACTIVITE));
           int relances = 0;
           for (final Map<String, Object> ligne : aRelancer) {
@@ -303,6 +315,7 @@ public class WorkerPurgeService {
               jdbc.update(
                   "DELETE FROM users WHERE purge_le IS NOT NULL AND purge_le < now()", Map.of());
           LOG.info("gerer:comptes-inactifs terminé relances={} supprimes={}", relances, supprimes);
+          signalerComptesTouches(aRelancer.size(), supprimes);
           return new ResultatPersistance(0, relances + supprimes);
         });
   }
@@ -353,5 +366,20 @@ public class WorkerPurgeService {
           LOG.info("gerer:invites-expires terminé relances={} supprimes={}", relances, supprimes);
           return new ResultatPersistance(0, relances + supprimes);
         });
+  }
+
+  private void signalerComptesTouches(final int relances, final int supprimes) {
+    if (relances + supprimes == 0) {
+      return;
+    }
+    final boolean vague = relances + supprimes >= SEUIL_VAGUE_COMPTES;
+    logsAdminWorker.inserer(
+        vague ? "warn" : "info",
+        "purge-comptes",
+        vague
+            ? "vague de relances ou suppressions de comptes pour inactivité — vérifier les dates"
+                + " de dernière activité"
+            : "relance ou suppression de compte pour inactivité",
+        Map.of("relances", relances, "supprimes", supprimes));
   }
 }

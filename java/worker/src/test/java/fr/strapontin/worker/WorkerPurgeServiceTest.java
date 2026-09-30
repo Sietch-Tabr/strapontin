@@ -60,7 +60,8 @@ class WorkerPurgeServiceTest {
     purgeCompteEmailService = mock(PurgeCompteEmailService.class);
     configService = mock(ConfigServiceWorker.class);
     service =
-        new WorkerPurgeService(jdbc, workerStatsService, purgeCompteEmailService, configService);
+        new WorkerPurgeService(
+            jdbc, workerStatsService, purgeCompteEmailService, configService, logsAdminWorker);
   }
 
   @Test

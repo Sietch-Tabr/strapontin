@@ -7,6 +7,7 @@ package fr.strapontin.web;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -25,19 +26,25 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfiguration implements WebMvcConfigurer {
 
   private final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor;
+  private final ActiviteUtilisateurInterceptor activiteUtilisateurInterceptor;
 
   /**
    * @param appareilEnregistrementInterceptor intercepteur d'enregistrement
    *     d'appareil
+   * @param activiteUtilisateurInterceptor suivi de la dernière activité
+   *     (référence de la purge d'inactivité)
    */
   public WebConfiguration(
-      final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
+      final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor,
+      final ActiviteUtilisateurInterceptor activiteUtilisateurInterceptor) {
     this.appareilEnregistrementInterceptor = appareilEnregistrementInterceptor;
+    this.activiteUtilisateurInterceptor = activiteUtilisateurInterceptor;
   }
 
   @Override
   public void addInterceptors(final InterceptorRegistry registry) {
     registry.addInterceptor(appareilEnregistrementInterceptor).addPathPatterns("/api/**");
+    registry.addInterceptor(activiteUtilisateurInterceptor).addPathPatterns("/api/**");
   }
 
   /**
