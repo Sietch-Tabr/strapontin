@@ -42,7 +42,7 @@
              et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
              bien okhttp3.RequestBody). -->
         <!-- À partir de 4.19.0, publication sur Maven Central sans le préfixe "v" -->
-        <resend.version>4.27.0</resend.version>
+        <resend.version>4.28.0</resend.version>
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.1</springdoc.version>
         <bucket4j.version>8.20.0</bucket4j.version>
