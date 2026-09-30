@@ -4,10 +4,9 @@
  */
 package fr.strapontin.web.admin;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
@@ -64,13 +63,9 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   @BeforeEach
   void setUp() {
     jdbc.update("DELETE FROM users", Map.of());
-    final AdminRevocationService revocationService =
-        new AdminRevocationService(
-            jdbc, mock(EmailServiceAdmin.class), mock(LogAdminService.class));
-    revocationService.setSelf(revocationService);
     final AdminModificationUtilisateurService modificationService =
         new AdminModificationUtilisateurService(
-            jdbc, mock(LogAdminService.class), revocationService, mock(EmailServiceAdmin.class));
+            jdbc, mock(LogAdminService.class), mock(EmailServiceAdmin.class));
     service =
         new AdminService(
             jdbc,
@@ -119,22 +114,23 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
-  void modifierUtilisateur_seulementRetrogradation_appliqueLaRevocationDifferee() {
+  void modifierUtilisateur_seulementRetrogradation_rejetteSansEcrireEnBase() {
     insererAdmin("admin3");
     insererAdmin("admin4");
     final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
 
-    assertDoesNotThrow(() -> service.modifierUtilisateur("admin4", requete, "admin3"));
+    assertThrows(
+        ErreurMetier.class, () -> service.modifierUtilisateur("admin4", requete, "admin3"));
 
     final Timestamp revocationLe =
         jdbc.queryForObject(
             "SELECT revocation_admin_le FROM users WHERE id = :id",
             Map.of("id", "admin4"),
             Timestamp.class);
-    assertNotNull(revocationLe, "la révocation différée doit être planifiée");
+    assertNull(revocationLe);
     final String roleEnBase =
         jdbc.queryForObject(
             "SELECT role::text FROM users WHERE id = :id", Map.of("id", "admin4"), String.class);
-    assertEquals("admin", roleEnBase, "le rôle ne change qu'à l'échéance (RevoquerAdminsJob)");
+    assertEquals("admin", roleEnBase);
   }
 }
