@@ -11,7 +11,9 @@ import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -38,6 +40,23 @@ public class WorkerConfiguration {
   @Bean
   ObjectMapper objectMapper() {
     return new ObjectMapper();
+  }
+
+  /**
+   * Authentifie l'API interne {@code /trigger} par jeton ({@link FiltreJetonInterne}).
+   *
+   * @param secret valeur de {@code APP_CONFIG_SECRET}
+   * @return l'enregistrement du filtre, limité à {@code /trigger/*}
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  FilterRegistrationBean<FiltreJetonInterne> filtreJetonInterne(
+      @Value("${app.config.secret}") final String secret) {
+    final FilterRegistrationBean<FiltreJetonInterne> enregistrement =
+        new FilterRegistrationBean<>(new FiltreJetonInterne(secret));
+    enregistrement.addUrlPatterns("/trigger/*");
+    return enregistrement;
   }
 
   /**

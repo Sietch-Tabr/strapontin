@@ -496,7 +496,7 @@ class NotificationDigestServiceTest {
         .thenReturn(List.of(ligneTest("u2")));
     final Map<String, Object> abonnement = new HashMap<>();
     abonnement.put("id", 1);
-    abonnement.put("endpoint", "https://push.exemple.test/abonnement-xyz");
+    abonnement.put("endpoint", "https://fcm.googleapis.com/fcm/send/abonnement-xyz");
     // Vraie clé publique EC P-256 (point non compressé, base64url) — le constructeur
     // Notification(Subscription, String) parse réellement p256dh en ECPublicKey, une valeur
     // arbitraire lève InvalidKeySpecException avant même l'appel à pushService.send().

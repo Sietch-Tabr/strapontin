@@ -4,14 +4,17 @@
  */
 package fr.strapontin.web;
 
+import fr.strapontin.core.JetonInterneWorker;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -25,6 +28,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 @Configuration
 public class WebConfiguration implements WebMvcConfigurer {
+
+  private static final int PORT_WORKER = 8081;
 
   private final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor;
   private final ActiviteUtilisateurInterceptor activiteUtilisateurInterceptor;
@@ -64,7 +69,12 @@ public class WebConfiguration implements WebMvcConfigurer {
    * RestClient partagé pour les appels HTTP vers des API externes (ex.
    * Ticketmaster).
    *
-   * <p>Timeout connexion : 5 s — timeout lecture : 10 s.
+   * <p>Timeout connexion : 5 s — timeout lecture : 10 s. Les requêtes vers
+   * l'API interne du worker ({@code localhost:8081}) reçoivent le jeton qui
+   * l'authentifie ({@link JetonInterneWorker}), jamais les autres.
+   *
+   * @param secret valeur de {@code APP_CONFIG_SECRET}
+   * @return client partagé
    */
   // HttpClient jamais fermé : bean Spring singleton, pool de connexions
   // réutilisé pour toute la durée de vie de l'application.
@@ -72,12 +82,28 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  RestClient restClient() {
+  RestClient restClient(@Value("${app.config.secret}") final String secret) {
     final HttpClient httpClient =
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     final JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
     factory.setReadTimeout(Duration.ofSeconds(10));
-    return RestClient.builder().requestFactory(factory).build();
+    final String jeton = JetonInterneWorker.calculer(secret);
+    return RestClient.builder()
+        .requestFactory(factory)
+        .requestInterceptor(
+            (requete, corps, execution) -> {
+              if (estApiInterneWorker(requete.getURI())) {
+                requete.getHeaders().set(JetonInterneWorker.ENTETE, jeton);
+              }
+              return execution.execute(requete, corps);
+            })
+        .build();
+  }
+
+  /* package-private : visibilité élargie pour WebConfigurationTest (même package). */
+  static boolean estApiInterneWorker(final URI uri) {
+    return uri.getPort() == PORT_WORKER
+        && ("localhost".equals(uri.getHost()) || "127.0.0.1".equals(uri.getHost()));
   }
 
   /**

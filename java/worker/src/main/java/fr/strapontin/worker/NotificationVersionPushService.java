@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +150,10 @@ public class NotificationVersionPushService {
 
   private boolean envoyerAUnAbonnement(
       final PushService pushService, final Map<String, Object> ab, final String payload) {
+    if (!EndpointPush.estAutorise((String) ab.get("endpoint"))) {
+      LOG.warn("Notification nouvelle version : endpoint hors services de push ignoré");
+      return false;
+    }
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");

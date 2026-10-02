@@ -52,7 +52,7 @@ class NotificationVersionPushServiceTest {
 
   private static Map<String, Object> abonnementTest() {
     final Map<String, Object> ab = new HashMap<>();
-    ab.put("endpoint", "https://push.exemple.test/abonnement-xyz");
+    ab.put("endpoint", "https://fcm.googleapis.com/fcm/send/abonnement-xyz");
     ab.put(
         "p256dh",
         "BPKi4XnOYaPYQWcKZsUfMxTQZV0JyJA-zx65BGYqeHJ8KDlO2AL5lhoFUCXC1iFMUlTzt_sgos9GiYMxFEgCDQE");

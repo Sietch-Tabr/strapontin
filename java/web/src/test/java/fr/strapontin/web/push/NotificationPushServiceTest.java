@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -16,9 +17,11 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -86,5 +89,22 @@ class NotificationPushServiceTest {
     verify(jdbc).queryForList(sqlCaptor.capture(), anyMap());
     assertTrue(sqlCaptor.getValue().contains("ORDER BY id DESC"));
     assertTrue(sqlCaptor.getValue().contains("LIMIT 1"));
+  }
+
+  // Un abonnement enregistré avant la validation des endpoints n'est jamais appelé : il est
+  // supprimé au premier envoi.
+  @Test
+  void envoyerNotificationTest_abonnementHorsServicesDePush_supprimeSansEnvoyer() {
+    final Map<String, Object> ab = new HashMap<>();
+    ab.put("id", UUID.randomUUID());
+    ab.put("endpoint", "http://127.0.0.1:8081/trigger/tout");
+    ab.put("p256dh", "BPk");
+    ab.put("auth", "au");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ab));
+
+    final boolean resultat = service.envoyerNotificationTest("u1", null);
+
+    assertFalse(resultat);
+    verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
   }
 }

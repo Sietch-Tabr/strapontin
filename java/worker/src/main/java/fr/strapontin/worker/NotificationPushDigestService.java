@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
+import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -162,6 +163,11 @@ class NotificationPushDigestService {
       final String userId) {
     int nbEnvoyes = 0;
     for (final Map<String, Object> ab : abonnements) {
+      if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
+        jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
+        LOG.warn("Abonnement push hors services de push supprimé : {}", userId);
+        continue;
+      }
       compteurPush.enregistrerAppel();
       try {
         final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");

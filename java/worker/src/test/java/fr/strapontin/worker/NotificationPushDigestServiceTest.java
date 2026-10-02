@@ -61,7 +61,7 @@ class NotificationPushDigestServiceTest {
   private static Map<String, Object> abonnement(final Object id) {
     final Map<String, Object> abonnement = new HashMap<>();
     abonnement.put("id", id);
-    abonnement.put("endpoint", "https://push.exemple.test/abonnement-xyz");
+    abonnement.put("endpoint", "https://fcm.googleapis.com/fcm/send/abonnement-xyz");
     abonnement.put("p256dh", P256DH);
     abonnement.put("auth", AUTH);
     return abonnement;
