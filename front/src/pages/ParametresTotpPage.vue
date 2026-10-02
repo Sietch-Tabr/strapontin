@@ -93,6 +93,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "ParametresTotpPage" });
 
 import { ref, computed, onMounted } from "vue";
@@ -123,12 +124,12 @@ async function chargerSetup() {
   chargement.value = true;
   erreurChargement.value = null;
   try {
-    const rep = await fetch("/api/totp/setup");
+    const rep = await appelApi("/api/totp/setup");
     if (!rep.ok) {
       erreurChargement.value = "Impossible de charger la configuration TOTP.";
       return;
     }
-    const donnees = await rep.json();
+    const donnees = await lireJson(rep);
     otpUri.value = donnees.otpUri ?? "";
     totpSecret.value = donnees.totpSecret ?? "";
     qrCodeSvg.value = donnees.qrCodeSvg ?? "";
@@ -143,12 +144,12 @@ async function confirmer() {
   erreurCode.value = null;
   enCours.value = true;
   try {
-    const rep = await fetch("/api/totp/confirmer", {
+    const rep = await appelApi("/api/totp/confirmer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: code.value }),
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast("Authentification à deux facteurs activée.", "succes");
       router.push("/parametres#compte");

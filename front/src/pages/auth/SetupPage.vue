@@ -73,12 +73,12 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "SetupPage" });
 
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import AuthLayout from "../../components/auth/AuthLayout.vue";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const router = useRouter();
 
@@ -93,9 +93,9 @@ const champIdentifiant = ref(null);
 onMounted(async () => {
   champIdentifiant.value?.focus();
   try {
-    const rep = await fetch("/api/setup");
+    const rep = await appelApi("/api/setup");
     if (rep.ok) {
-      const data = await rep.json();
+      const data = await lireJson(rep);
       if (data.deja_configure) {
         router.replace("/login");
       }
@@ -109,7 +109,7 @@ async function soumettre() {
   erreur.value = "";
   chargement.value = true;
   try {
-    const rep = await fetch("/api/setup", {
+    const rep = await appelApi("/api/setup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -120,7 +120,7 @@ async function soumettre() {
       }),
     });
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       erreur.value = data.erreur || "Une erreur est survenue.";
       return;
     }

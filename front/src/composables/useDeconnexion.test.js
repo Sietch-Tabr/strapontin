@@ -25,8 +25,8 @@ describe("useDeconnexion", () => {
 
     await deconnecter();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
-      method: "POST",
-    });
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/auth/logout");
+    expect(options.method).toBe("POST");
   });
 });

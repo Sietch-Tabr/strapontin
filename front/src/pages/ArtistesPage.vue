@@ -172,13 +172,13 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "ArtistesPage" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
-import { corpsJsonOuVide } from "../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 
@@ -194,11 +194,11 @@ const controleur = new AbortController();
 async function charger(recherche = "") {
   const params =
     recherche.trim().length >= 2 ? "?q=" + encodeURIComponent(recherche) : "";
-  const rep = await fetch("/api/artistes" + params, {
+  const rep = await appelApi("/api/artistes" + params, {
     signal: controleur.signal,
   });
   if (!rep.ok) throw new Error();
-  return rep.json();
+  return lireJson(rep);
 }
 
 async function rechercher() {
@@ -218,9 +218,9 @@ async function ajouter(nom, wikidataId = null) {
   // lui-même comme preuve d'un compte déjà actif.
   let premierAjout = false;
   try {
-    const repStats = await fetch("/api/parametres/stats");
+    const repStats = await appelApi("/api/parametres/stats");
     if (repStats.ok) {
-      const stats = await corpsJsonOuVide(repStats);
+      const stats = await lireJson(repStats);
       premierAjout = (stats.nbArtistes ?? 0) + (stats.nbSalles ?? 0) === 0;
     }
   } catch (_) {
@@ -228,7 +228,7 @@ async function ajouter(nom, wikidataId = null) {
   }
 
   try {
-    const rep = await fetch("/api/artistes", {
+    const rep = await appelApi("/api/artistes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nom, wikidataId }),
@@ -239,7 +239,7 @@ async function ajouter(nom, wikidataId = null) {
       return;
     }
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors de l'ajout.", "erreur");
       return;
     }
@@ -271,7 +271,7 @@ async function confirmerSuppression() {
   fermerDialog();
   if (!artisteASupprimer.value) return;
   try {
-    const rep = await fetch("/api/artistes/" + artisteASupprimer.value.id, {
+    const rep = await appelApi("/api/artistes/" + artisteASupprimer.value.id, {
       method: "DELETE",
       signal: controleur.signal,
     });

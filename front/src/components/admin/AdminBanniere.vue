@@ -67,6 +67,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminBanniere" });
 
 import { ref, onMounted } from "vue";
@@ -83,7 +84,7 @@ const banniereActive = ref(null);
 
 async function chargerBanniereActive() {
   try {
-    const rep = await fetch("/api/banniere/json");
+    const rep = await appelApi("/api/banniere/json");
     const texte = rep.ok ? await rep.text() : "";
     banniereActive.value = parseJsonOuNull(texte);
   } catch {
@@ -95,12 +96,12 @@ async function publierBanniere() {
   const msg = banniereMessage.value.trim();
   if (!msg) return;
   try {
-    const rep = await fetch("/api/admin/banniere", {
+    const rep = await appelApi("/api/admin/banniere", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: msg, type: banniereType.value }),
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast("Bannière publiée.", "succes");
       await chargerBanniereActive();
@@ -115,8 +116,8 @@ async function publierBanniere() {
 
 async function effacerBanniere() {
   try {
-    const rep = await fetch("/api/admin/banniere", { method: "DELETE" });
-    const corps = await rep.json();
+    const rep = await appelApi("/api/admin/banniere", { method: "DELETE" });
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast("Bannière effacée.", "succes");
       await chargerBanniereActive();

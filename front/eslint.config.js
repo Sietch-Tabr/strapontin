@@ -33,6 +33,25 @@ export default [
     },
   },
   {
+    // Un seul comportement d'appel et de lecture des réponses API (utils/api.js) : en-tête
+    // exigé par la protection CSRF du serveur, corps non JSON jamais pris pour une erreur réseau.
+    files: ["src/**/*.{js,vue}"],
+    ignores: ["src/utils/api.js", "src/**/*.test.js"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        { name: "fetch", message: "Utiliser appelApi (src/utils/api.js)." },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name='json'][arguments.length=0]",
+          message: "Utiliser lireJson (src/utils/api.js).",
+        },
+      ],
+    },
+  },
+  {
     files: ["vite.config.js", "vitest.config.js", "scripts/**/*.mjs"],
     languageOptions: {
       globals: {

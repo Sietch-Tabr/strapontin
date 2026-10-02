@@ -116,6 +116,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminLogs" });
 
 import { ref, shallowRef, computed, onMounted } from "vue";
@@ -177,8 +178,8 @@ function parseMeta(meta) {
 
 async function charger() {
   try {
-    const rep = await fetch("/api/admin/logs");
-    if (rep.ok) logs.value = await rep.json();
+    const rep = await appelApi("/api/admin/logs");
+    if (rep.ok) logs.value = await lireJson(rep);
   } catch (_) {
     afficherToast("Erreur lors du chargement des logs.", "erreur");
   } finally {

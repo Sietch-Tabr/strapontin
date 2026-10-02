@@ -58,6 +58,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "./utils/api.js";
 defineOptions({ name: "App" });
 
 import { ref, computed, watchEffect, watch, onMounted } from "vue";
@@ -119,8 +120,8 @@ const estAdmin = computed(() => session.value?.role === "admin");
 const changelogNonVu = ref(false);
 async function chargerChangelogNonVu() {
   try {
-    const rep = await fetch("/api/changelog/nouveaute");
-    if (rep.ok) changelogNonVu.value = (await rep.json()).nonVu;
+    const rep = await appelApi("/api/changelog/nouveaute");
+    if (rep.ok) changelogNonVu.value = (await lireJson(rep)).nonVu;
   } catch (e) {
     console.error("Échec chargement statut changelog", e);
   }

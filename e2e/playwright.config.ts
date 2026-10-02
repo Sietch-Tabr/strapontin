@@ -24,6 +24,9 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     storageState: "tests/e2e/.auth-user.json",
+    // En-tête posé par le front (front/src/utils/api.js), exigé par la protection CSRF du
+    // serveur sur toute requête modifiante : les appels API directs des tests le portent aussi.
+    extraHTTPHeaders: { "X-Requested-With": "strapontin" },
     trace: "on-first-retry",
   },
 

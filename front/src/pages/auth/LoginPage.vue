@@ -58,13 +58,13 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "LoginPage" });
 
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import AuthLayout from "../../components/auth/AuthLayout.vue";
 import { useSession } from "../../composables/useSession.js";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -97,7 +97,7 @@ async function soumettre() {
   erreurSoumission.value = "";
   chargement.value = true;
   try {
-    const rep = await fetch("/api/auth/login", {
+    const rep = await appelApi("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -107,19 +107,22 @@ async function soumettre() {
     });
     if (!rep.ok) {
       if (rep.status === 429) {
-        const corps = await corpsJsonOuVide(rep);
+        const corps = await lireJson(rep);
         erreurSoumission.value =
           corps.erreur ??
           "Trop de tentatives de connexion. Réessayez dans quelques minutes.";
       } else if (rep.status === 401) {
         erreurSoumission.value = "Identifiant ou mot de passe incorrect.";
+      } else if (rep.status === 403) {
+        erreurSoumission.value =
+          "Suite à un incident de sécurité, un nouveau mot de passe est exigé. Utilisez « Mot de passe oublié » pour le définir depuis le lien reçu par email.";
       } else {
         erreurSoumission.value =
           "Connexion impossible pour le moment. Réessayez plus tard.";
       }
       return;
     }
-    const data = await rep.json();
+    const data = await lireJson(rep);
     if (data.totpRequis) {
       router.push("/auth/totp");
     } else {

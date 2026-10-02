@@ -1,3 +1,4 @@
+import { appelApi } from "../utils/api.js";
 import { ref, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { parseJsonOuNull } from "../utils/reponseJson.js";
@@ -39,7 +40,7 @@ function lancerMinuterie(val) {
 // Échec réseau : ignoré (best-effort), on garde l'état affiché tel quel.
 async function fetcherBanniere() {
   try {
-    const rep = await fetch("/api/banniere/json");
+    const rep = await appelApi("/api/banniere/json");
     const texte = rep.ok ? await rep.text() : "";
     const data = parseJsonOuNull(texte);
     banniere.value = data;

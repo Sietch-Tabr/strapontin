@@ -347,6 +347,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminArtistes" });
 
 import { reactive, ref } from "vue";
@@ -355,7 +356,6 @@ import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
 import { classeStatut, libelleStatut } from "../../utils/statutReferentiel.js";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const {
   chargement,
@@ -400,7 +400,7 @@ const { afficherToast } = useToasts();
 // — implémentées localement plutôt que dans useReferentielAdmin.js, partagé avec AdminSalles.vue.
 async function ignorerIntervention(artiste) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/artistes/${artiste.id}/ignorer-intervention`,
       {
         method: "POST",
@@ -435,7 +435,7 @@ async function sauvegarderIdentifiantTm() {
   if (enCoursIdentifiantTm.value || !identifiantTm.valeur.trim()) return;
   enCoursIdentifiantTm.value = true;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/artistes/${identifiantTm.artisteId}/identifiant-tm`,
       {
         method: "PATCH",
@@ -448,7 +448,7 @@ async function sauvegarderIdentifiantTm() {
       afficherToast("Identifiant Ticketmaster corrigé.", "succes");
       await charger();
     } else {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors de la correction.", "erreur");
     }
   } catch {

@@ -5,6 +5,7 @@
 package fr.strapontin.web.securite;
 
 import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
@@ -81,6 +83,7 @@ public class SecurityConfiguration {
       final RateLimitingLoginFilter rateLimitingFilter,
       final BloquerAccesDirectIpFilter bloquerIpFilter,
       final TotpGuardFilter totpGuardFilter,
+      final ConfigService configService,
       final SessionRegistry sessionRegistry,
       final LogAdminService logAdminService)
       throws Exception {
@@ -89,8 +92,11 @@ public class SecurityConfiguration {
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
+        // Après l'autorisation : un appel non authentifié reste un 401, pas un 403.
+        .addFilterAfter(new ProtectionCsrfFilter(configService), AuthorizationFilter.class)
         .authorizeHttpRequests(this::configurerAutorisations)
-        // CSRF désactivé : sessions SameSite=Lax + HttpOnly (identique v1)
+        // Jeton CSRF de Spring désactivé : protection assurée par ProtectionCsrfFilter
+        // (Fetch Metadata, Origin, en-tête applicatif), sans état côté serveur.
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(session -> configurerSessions(session, sessionRegistry))
         .exceptionHandling(ex -> configurerExceptions(ex, logAdminService));

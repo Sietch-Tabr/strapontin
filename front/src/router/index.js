@@ -60,9 +60,6 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.authPage && sessionRef.value) return "/";
-  // Communication d'incident : un nouveau mot de passe est exigé avant tout autre usage.
-  if (sessionRef.value?.changementMotDePasseExige && to.path !== "/parametres")
-    return { path: "/parametres", hash: "#compte" };
   // ne redirige vers /login que sur un 401 confirmé — pas quand la session n'a jamais pu
   // être vérifiée faute de réseau (redémarrage PWA hors-ligne depuis le cache SW), où le cookie
   // de session reste potentiellement valide.

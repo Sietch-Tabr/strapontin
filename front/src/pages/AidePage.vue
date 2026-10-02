@@ -309,11 +309,11 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "AidePage" });
 
 import { ref, shallowRef, onMounted } from "vue";
 import { useToasts } from "../composables/useToasts.js";
-import { corpsJsonOuVide } from "../utils/reponseJson.js";
 import { useOnboarding } from "../composables/useOnboarding.js";
 import ChecklistPremiersPas from "../components/ChecklistPremiersPas.vue";
 
@@ -339,7 +339,7 @@ async function envoyerSignalement() {
   erreurSignalement.value = "";
   envoiEnCours.value = true;
   try {
-    const rep = await fetch("/api/aide/signalement", {
+    const rep = await appelApi("/api/aide/signalement", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -353,7 +353,7 @@ async function envoyerSignalement() {
       return;
     }
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       erreurSignalement.value = data.erreur || "Une erreur est survenue.";
       return;
     }
@@ -373,8 +373,8 @@ async function envoyerSignalement() {
 
 onMounted(async () => {
   try {
-    const rep = await fetch("/api/aide/config");
-    if (rep.ok) config.value = await rep.json();
+    const rep = await appelApi("/api/aide/config");
+    if (rep.ok) config.value = await lireJson(rep);
   } catch (e) {
     console.error("Échec chargement config aide", e);
   }

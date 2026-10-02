@@ -111,13 +111,13 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminIncident" });
 
 import { ref, reactive, onMounted, onUnmounted } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant } from "../../composables/useDates.js";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 const chargement = ref(true);
@@ -133,10 +133,10 @@ const controleur = new AbortController();
 
 async function charger() {
   try {
-    const rep = await fetch("/api/admin/incident", {
+    const rep = await appelApi("/api/admin/incident", {
       signal: controleur.signal,
     });
-    if (rep.ok) Object.assign(etat, await rep.json());
+    if (rep.ok) Object.assign(etat, await lireJson(rep));
   } catch (e) {
     if (e.name !== "AbortError")
       afficherToast("Erreur lors du chargement de l'incident.", "erreur");
@@ -149,7 +149,7 @@ async function publier() {
   dialogConfirmationRef.value?.close();
   enCours.value = true;
   try {
-    const rep = await fetch("/api/admin/incident", {
+    const rep = await appelApi("/api/admin/incident", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -161,7 +161,7 @@ async function publier() {
       }),
       signal: controleur.signal,
     });
-    const corps = await corpsJsonOuVide(rep);
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast(
         `Communication publiée (${corps.nbEmails} email(s), ${corps.nbPush} push).`,
@@ -183,7 +183,7 @@ async function publier() {
 async function terminer() {
   enCours.value = true;
   try {
-    const rep = await fetch("/api/admin/incident/terminer", {
+    const rep = await appelApi("/api/admin/incident/terminer", {
       method: "POST",
       signal: controleur.signal,
     });

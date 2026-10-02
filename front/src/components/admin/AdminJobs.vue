@@ -167,6 +167,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminJobs" });
 
 import {
@@ -249,9 +250,11 @@ function formaterDuree(ms) {
 
 async function charger() {
   try {
-    const rep = await fetch("/api/admin/jobs", { signal: controleur.signal });
+    const rep = await appelApi("/api/admin/jobs", {
+      signal: controleur.signal,
+    });
     if (!rep.ok) return;
-    const d = await rep.json();
+    const d = await lireJson(rep);
     statsJobs.value = d.statsJobs ?? [];
     jobsEnCours.value = d.jobsEnCours ?? [];
     workerLastSuccess.value = d.workerLastSuccess ?? null;
@@ -267,7 +270,7 @@ async function charger() {
 async function relancerFetches() {
   relancerEnCours.value = true;
   try {
-    const rep = await fetch("/api/admin/relancer", {
+    const rep = await appelApi("/api/admin/relancer", {
       method: "POST",
       signal: controleur.signal,
     });
@@ -288,7 +291,7 @@ async function relancerFetches() {
 async function relancerJob(typeJob) {
   relanceJobEnCours[typeJob] = true;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/jobs/relancer?typeJob=${encodeURIComponent(typeJob)}`,
       { method: "POST", signal: controleur.signal },
     );
@@ -309,9 +312,11 @@ function demarrerPolling() {
   arreterPolling();
   pollingInterval = setInterval(async () => {
     try {
-      const rep = await fetch("/api/admin/jobs", { signal: controleur.signal });
+      const rep = await appelApi("/api/admin/jobs", {
+        signal: controleur.signal,
+      });
       if (!rep.ok) return;
-      const d = await rep.json();
+      const d = await lireJson(rep);
       statsJobs.value = d.statsJobs ?? statsJobs.value;
       jobsEnCours.value = d.jobsEnCours ?? [];
       if (jobsEnCours.value.length === 0) {

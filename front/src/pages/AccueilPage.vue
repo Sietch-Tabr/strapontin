@@ -185,6 +185,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "AccueilPage" });
 
 import {
@@ -231,7 +232,7 @@ async function charger() {
     if (filtreNouveau.value) params.set("nouveau", "true");
     if (filtreIndisponibles.value) params.set("indisponibles", "1");
     if (filtreMasques.value) params.set("masques", "true");
-    const rep = await fetch("/api/accueil?" + params, {
+    const rep = await appelApi("/api/accueil?" + params, {
       signal: controleur.signal,
     });
     // au démarrage PWA (shell servi depuis le cache SW), cet appel peut partir avant que
@@ -239,7 +240,7 @@ async function charger() {
     // toast dans ce cas, comme le fait déjà App.vue pour ses propres appels de montage.
     if (rep.status === 401) return;
     if (!rep.ok) throw new Error();
-    donnees.value = await rep.json();
+    donnees.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger les concerts.", "erreur");
@@ -262,7 +263,7 @@ function basculerFiltre(filtre) {
 
 async function masquerConcert(concert, groupe) {
   try {
-    const rep = await fetch(`/api/spectacles/matches/${concert.id}`, {
+    const rep = await appelApi(`/api/spectacles/matches/${concert.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ masquer: true }),
@@ -284,7 +285,7 @@ async function masquerConcert(concert, groupe) {
 
 async function demasquerConcert(concert, groupe) {
   try {
-    const rep = await fetch(`/api/spectacles/matches/${concert.id}`, {
+    const rep = await appelApi(`/api/spectacles/matches/${concert.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ masquer: false }),
@@ -309,7 +310,7 @@ async function demasquerConcert(concert, groupe) {
 // même artiste réel selon la source de fetch. artisteNorm reste utilisé pour les clés Vue/ancres.
 async function masquerGroupe(groupe) {
   try {
-    const rep = await fetch("/api/spectacles/masquer-artiste", {
+    const rep = await appelApi("/api/spectacles/masquer-artiste", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ artisteId: groupe.artisteId }),
@@ -328,7 +329,7 @@ async function masquerGroupe(groupe) {
 
 async function demasquerGroupe(groupe) {
   try {
-    const rep = await fetch("/api/spectacles/demasquer-artiste", {
+    const rep = await appelApi("/api/spectacles/demasquer-artiste", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ artisteId: groupe.artisteId }),
@@ -373,7 +374,7 @@ onMounted(async () => {
   // chargement de la page (chargerSession/charger/scrollVersAncre ci-dessous) — un badge
   // "nouveau" resté affiché un cycle de plus n'est pas grave, une page blanche l'est.
   try {
-    await fetch("/api/accueil/marquer-vus", {
+    await appelApi("/api/accueil/marquer-vus", {
       method: "POST",
       signal: controleurComposant.signal,
     });

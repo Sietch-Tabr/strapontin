@@ -293,6 +293,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "SpectaclesPage" });
 
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
@@ -374,11 +375,11 @@ async function charger() {
     sources.value.forEach((s) => params.append("source", s));
     if (indisponiblesActive.value) params.set("indisponibles", "1");
     if (route.query.page) params.set("page", route.query.page);
-    const rep = await fetch("/api/spectacles?" + params, {
+    const rep = await appelApi("/api/spectacles?" + params, {
       signal: controleur.signal,
     });
     if (!rep.ok) throw new Error();
-    donnees.value = await rep.json();
+    donnees.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger les spectacles.", "erreur");
@@ -457,7 +458,7 @@ function changerPage(page) {
 
 async function demasquerConcert(concert) {
   try {
-    const rep = await fetch(`/api/spectacles/matches/${concert.id}`, {
+    const rep = await appelApi(`/api/spectacles/matches/${concert.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ masquer: false }),

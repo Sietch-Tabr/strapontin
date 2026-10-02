@@ -69,6 +69,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ResetPasswordPage" });
 
 import { ref, onMounted, nextTick } from "vue";
@@ -96,11 +97,11 @@ onMounted(async () => {
     return;
   }
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/auth/type-token?token=${encodeURIComponent(token)}`,
     );
     if (rep.ok) {
-      const data = await rep.json();
+      const data = await lireJson(rep);
       estInvite.value = data.type === "invite";
     }
   } catch (_) {
@@ -122,7 +123,7 @@ async function soumettre() {
   try {
     const corps = { token, motDePasse: motDePasse.value };
     if (estInvite.value) corps.identifiant = identifiant.value;
-    const rep = await fetch("/api/auth/reset-password", {
+    const rep = await appelApi("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(corps),
@@ -136,7 +137,7 @@ async function soumettre() {
       }
       return;
     }
-    const data = await rep.json();
+    const data = await lireJson(rep);
     erreur.value =
       data.erreur ??
       "Lien invalide ou expiré. Recommencez depuis le formulaire.";

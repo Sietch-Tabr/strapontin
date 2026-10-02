@@ -288,6 +288,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "DecouvertePage" });
 
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
@@ -367,11 +368,11 @@ async function charger() {
     if (triLocal.value && triLocal.value !== "date")
       params.set("tri", triLocal.value);
     if (route.query.page) params.set("page", route.query.page);
-    const rep = await fetch("/api/decouverte?" + params, {
+    const rep = await appelApi("/api/decouverte?" + params, {
       signal: controleur.signal,
     });
     if (!rep.ok) throw new Error();
-    donnees.value = await rep.json();
+    donnees.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger les concerts.", "erreur");
@@ -417,7 +418,7 @@ function changerPage(page) {
 
 async function actualiser() {
   try {
-    const rep = await fetch("/api/decouverte/fetcher", {
+    const rep = await appelApi("/api/decouverte/fetcher", {
       method: "POST",
       signal: controleurComposant.signal,
     });

@@ -322,13 +322,13 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminSources" });
 
 import { ref, shallowRef, reactive, onMounted, onUnmounted } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant, formaterTs } from "../../composables/useDates.js";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 
@@ -369,11 +369,11 @@ function lieuCourant(salle) {
 
 async function charger() {
   try {
-    const rep = await fetch("/api/admin/sources", {
+    const rep = await appelApi("/api/admin/sources", {
       signal: controleur.signal,
     });
     if (!rep.ok) return;
-    const d = await rep.json();
+    const d = await lireJson(rep);
     sources.value = d.sources ?? [];
   } catch (e) {
     if (e.name === "AbortError") return;
@@ -396,11 +396,11 @@ async function chargerSalles() {
     params.set("page", page.value);
     if (recherche.value.trim()) params.set("nom", recherche.value.trim());
 
-    const rep = await fetch(`/api/admin/sources/salles?${params}`, {
+    const rep = await appelApi(`/api/admin/sources/salles?${params}`, {
       signal: controleurCourant.signal,
     });
     if (!rep.ok) return;
-    const d = await rep.json();
+    const d = await lireJson(rep);
     salles.value = d.salles ?? [];
     page.value = d.page ?? 0;
     totalPages.value = d.totalPages ?? 1;
@@ -435,12 +435,15 @@ async function sauvegarderLieu(salle) {
   const cle = salle.salleId + ":lieu";
   enCours[cle] = true;
   try {
-    const rep = await fetch(`/api/admin/salles/${salle.salleId}/lieu-eventim`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ libelle: lieuCourant(salle) }),
-      signal: controleur.signal,
-    });
+    const rep = await appelApi(
+      `/api/admin/salles/${salle.salleId}/lieu-eventim`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ libelle: lieuCourant(salle) }),
+        signal: controleur.signal,
+      },
+    );
     if (rep.ok) {
       afficherToast(
         lieuCourant(salle)
@@ -450,7 +453,7 @@ async function sauvegarderLieu(salle) {
       );
       await chargerSalles();
     } else {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(
         data.erreur || "Erreur lors de l'enregistrement du lieu.",
         "erreur",
@@ -470,7 +473,7 @@ async function testerLieu(salle) {
   enCours[cle] = true;
   statutTester[salle.salleId] = null;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/salles/${salle.salleId}/tester-lieu-eventim`,
       {
         method: "POST",
@@ -480,7 +483,7 @@ async function testerLieu(salle) {
       },
     );
     if (rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       statutTester[salle.salleId] = `ok:${data.nbConcerts ?? 0}`;
     } else {
       statutTester[salle.salleId] = "ko";
@@ -505,14 +508,14 @@ async function fetchSalle(salle) {
   const cle = salle.salleId + ":fetch";
   enCours[cle] = true;
   try {
-    const rep = await fetch(`/api/admin/salles/${salle.salleId}/fetch`, {
+    const rep = await appelApi(`/api/admin/salles/${salle.salleId}/fetch`, {
       method: "POST",
       signal: controleur.signal,
     });
     if (rep.ok) {
       afficherToast("Fetch déclenché.", "succes");
     } else {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors du déclenchement.", "erreur");
     }
   } catch (e) {

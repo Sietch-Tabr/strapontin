@@ -70,6 +70,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresPreferences" });
 
 import { ref, onMounted } from "vue";
@@ -92,9 +93,9 @@ const optionsTheme = [
 
 async function charger() {
   try {
-    const rep = await fetch("/api/user/config");
+    const rep = await appelApi("/api/user/config");
     if (rep.ok) {
-      const config = await rep.json();
+      const config = await lireJson(rep);
       departements.value = config.departements?.join(", ") ?? "";
       filtreDisponibles.value = config.filtreDisponibles ?? false;
     }
@@ -108,12 +109,12 @@ async function charger() {
 
 async function sauvegarderDepartements() {
   try {
-    const rep = await fetch("/api/user/config/departements", {
+    const rep = await appelApi("/api/user/config/departements", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ departements: departements.value }),
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       if (corps.ignores?.length) {
         afficherToast(
@@ -133,7 +134,7 @@ async function sauvegarderDepartements() {
 
 async function sauvegarderFiltres() {
   try {
-    const rep = await fetch("/api/user/config/filtres", {
+    const rep = await appelApi("/api/user/config/filtres", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filtreDisponibles: filtreDisponibles.value }),
@@ -149,7 +150,7 @@ async function changerTheme(valeur) {
   theme.value = valeur;
   enregistrerTheme(valeur);
   try {
-    const rep = await fetch("/api/user/config/theme", {
+    const rep = await appelApi("/api/user/config/theme", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ valeur }),

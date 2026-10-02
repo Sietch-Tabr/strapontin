@@ -44,6 +44,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "TotpChallengePage" });
 
 import { ref, onMounted } from "vue";
@@ -67,7 +68,7 @@ async function soumettre() {
   erreur.value = "";
   chargement.value = true;
   try {
-    const rep = await fetch("/api/auth/totp", {
+    const rep = await appelApi("/api/auth/totp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: code.value.replace(/\D/g, "") }),
@@ -87,7 +88,7 @@ async function soumettre() {
       router.push("/");
       return;
     }
-    const data = await rep.json();
+    const data = await lireJson(rep);
     erreur.value = data.erreur ?? "Code incorrect.";
     code.value = "";
     champCode.value?.focus();
@@ -99,7 +100,7 @@ async function soumettre() {
 }
 
 async function seDeconnecter() {
-  await fetch("/api/auth/logout", { method: "POST" });
+  await appelApi("/api/auth/logout", { method: "POST" });
   router.push("/login?deconnecte=true");
 }
 </script>

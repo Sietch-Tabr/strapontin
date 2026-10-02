@@ -33,6 +33,7 @@
 </template>
 
 <script setup>
+import { appelApi } from "../utils/api.js";
 defineOptions({ name: "ChangelogPage" });
 
 import { onMounted } from "vue";
@@ -41,7 +42,7 @@ import { versionsChangelog } from "./changelogVersions.js";
 
 onMounted(async () => {
   try {
-    await fetch("/api/changelog/marquer-vue", { method: "POST" });
+    await appelApi("/api/changelog/marquer-vue", { method: "POST" });
   } catch (e) {
     console.error("Échec marquage changelog vu", e);
   }

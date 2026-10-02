@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminSignalements" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
@@ -118,11 +119,11 @@ const controleur = new AbortController();
 async function charger() {
   chargement.value = true;
   try {
-    const rep = await fetch(`/api/admin/signalements?page=${page.value}`, {
+    const rep = await appelApi(`/api/admin/signalements?page=${page.value}`, {
       signal: controleur.signal,
     });
     if (rep.ok) {
-      const data = await rep.json();
+      const data = await lireJson(rep);
       signalements.value = data.signalements ?? [];
       page.value = data.page ?? 0;
       totalPages.value = data.totalPages ?? 1;
@@ -151,7 +152,7 @@ function allerPage(n) {
 // prochain contrôle nocturne.
 async function decider(signalement, categorie, action) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/signalements/${categorie}/${signalement.entiteId}/${action}`,
       { method: "POST", signal: controleur.signal },
     );
@@ -171,7 +172,7 @@ async function decider(signalement, categorie, action) {
 
 async function resoudre(signalement) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/signalements/${signalement.id}/resoudre`,
       {
         method: "POST",

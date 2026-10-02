@@ -157,12 +157,12 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresNotifications" });
 
 import { ref, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 
@@ -188,11 +188,11 @@ const controleur = new AbortController();
 async function charger() {
   try {
     const [repConfig, repPush] = await Promise.all([
-      fetch("/api/user/config", { signal: controleur.signal }),
-      fetch("/api/push", { signal: controleur.signal }),
+      appelApi("/api/user/config", { signal: controleur.signal }),
+      appelApi("/api/push", { signal: controleur.signal }),
     ]);
     if (repConfig.ok) {
-      const config = await repConfig.json();
+      const config = await lireJson(repConfig);
       resendDisponible.value = config.resendDisponible ?? false;
       frequenceNotifications.value = config.frequenceNotifications ?? "jamais";
       notifArtistes.value = config.notifArtistes ?? false;
@@ -202,7 +202,7 @@ async function charger() {
       notifNouvelleVersion.value = config.notifNouvelleVersion ?? false;
     }
     if (repPush.ok) {
-      const vapid = await repPush.json();
+      const vapid = await lireJson(repPush);
       vapidDisponible.value = vapid.disponible ?? false;
       cleVapidPublique = vapid.clePublique ?? null;
     }
@@ -244,7 +244,7 @@ function urlBase64VersUint8Array(base64) {
 
 async function sauvegarderNotifications() {
   try {
-    const rep = await fetch("/api/user/config/notifications", {
+    const rep = await appelApi("/api/user/config/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -260,7 +260,7 @@ async function sauvegarderNotifications() {
     if (rep.ok) {
       afficherToast("Préférences de notification enregistrées.", "succes");
     } else {
-      const corps = await corpsJsonOuVide(rep);
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Erreur.", "erreur");
     }
   } catch (e) {
@@ -282,7 +282,7 @@ async function abonnerPush() {
       applicationServerKey: urlBase64VersUint8Array(cleVapidPublique),
     });
 
-    const rep = await fetch("/api/push", {
+    const rep = await appelApi("/api/push", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -304,7 +304,7 @@ async function abonnerPush() {
       afficherToast("Notifications push activées.", "succes");
     } else {
       await abonnement.unsubscribe();
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Erreur lors de l'abonnement.", "erreur");
     }
   } catch (_) {
@@ -325,7 +325,7 @@ async function testerPush() {
       const abonnement = await swRegistration.pushManager.getSubscription();
       endpoint = abonnement?.endpoint ?? null;
     }
-    const rep = await fetch("/api/push/tester", {
+    const rep = await appelApi("/api/push/tester", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint }),
@@ -334,7 +334,7 @@ async function testerPush() {
     if (rep.ok) {
       afficherToast("Notification de test envoyée.", "succes");
     } else {
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Erreur lors du test.", "erreur");
     }
   } catch (_) {
@@ -350,7 +350,7 @@ async function desabonnerPush() {
   try {
     const abonnement = await swRegistration.pushManager.getSubscription();
     if (abonnement) {
-      await fetch("/api/push", {
+      await appelApi("/api/push", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: abonnement.endpoint }),
