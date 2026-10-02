@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.authentication.ProviderManager;
@@ -52,6 +53,8 @@ public class SessionSecurityConfiguration {
    * @param userDetailsService le service de chargement des utilisateurs
    * @param passwordEncoder l'encodeur de mots de passe
    * @param eventPublisher l'éditeur d'événements applicatif Spring
+   * @param jdbc accès JDBC (refus d'un compte dont un nouveau mot de passe
+   *     est exigé, {@link VerificationMotDePasseExige})
    * @return l'AuthenticationManager configuré
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -60,9 +63,11 @@ public class SessionSecurityConfiguration {
   AuthenticationManager authenticationManager(
       final UserDetailsService userDetailsService,
       final PasswordEncoder passwordEncoder,
-      final ApplicationEventPublisher eventPublisher) {
+      final ApplicationEventPublisher eventPublisher,
+      final NamedParameterJdbcTemplate jdbc) {
     final DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     provider.setPasswordEncoder(passwordEncoder);
+    provider.setPostAuthenticationChecks(new VerificationMotDePasseExige(jdbc));
     final ProviderManager providerManager = new ProviderManager(provider);
     providerManager.setAuthenticationEventPublisher(
         new DefaultAuthenticationEventPublisher(eventPublisher));

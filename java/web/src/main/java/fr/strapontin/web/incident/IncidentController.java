@@ -7,6 +7,8 @@ package fr.strapontin.web.incident;
 import static fr.strapontin.web.ControllerUtils.erreur;
 
 import fr.strapontin.web.securite.UtilisateurDetails;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
@@ -72,13 +74,20 @@ public class IncidentController {
    * Publie une communication d'incident et la diffuse.
    * @param requete contenu et canaux
    * @param admin administrateur connecté
+   * @param request requête HTTP (session de l'admin, conservée)
    * @return 200 avec la communication publiée, 409 si quota email insuffisant
    */
   @PostMapping("/api/admin/incident")
   public ResponseEntity<CommunicationIncident> publier(
       @Valid @RequestBody final RequetePublicationIncident requete,
-      @AuthenticationPrincipal final UtilisateurDetails admin) {
-    return ResponseEntity.ok(service.publier(requete, admin != null ? admin.id() : "inconnu"));
+      @AuthenticationPrincipal final UtilisateurDetails admin,
+      final HttpServletRequest request) {
+    final HttpSession session = request.getSession(false);
+    return ResponseEntity.ok(
+        service.publier(
+            requete,
+            admin != null ? admin.id() : "inconnu",
+            session != null ? session.getId() : null));
   }
 
   /**

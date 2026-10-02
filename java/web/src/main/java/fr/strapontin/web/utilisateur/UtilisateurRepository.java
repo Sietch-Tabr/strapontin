@@ -99,8 +99,9 @@ class UtilisateurRepository {
    * Met à jour le hash du mot de passe dans {@code accounts}.
    *
    * @param userId identifiant de l'utilisateur
-   * @param nouveauHash hash bcrypt du nouveau mot de passe (lève aussi un
-   *     changement exigé)
+   * @param nouveauHash hash bcrypt du nouveau mot de passe — ne lève pas un
+   *     changement exigé après incident, réservé à la réinitialisation par
+   *     email (seule preuve de possession du compte si le mot de passe a fui)
    */
   /* package-private : accès SQL réservé à ParametresService/UserController
    * (même package). */
@@ -109,9 +110,6 @@ class UtilisateurRepository {
         "UPDATE accounts SET password = :hash WHERE user_id = :userId AND provider_id ="
             + " 'credential'",
         Map.of("hash", nouveauHash, CLE_USER_ID, userId));
-    jdbc.update(
-        "UPDATE users SET changement_mdp_force_le = NULL WHERE id = :userId",
-        Map.of(CLE_USER_ID, userId));
   }
 
   /**

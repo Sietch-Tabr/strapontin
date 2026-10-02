@@ -16,6 +16,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -157,6 +158,23 @@ public class GlobalExceptionHandler {
    * @param ex l'exception d'authentification
    * @return {@code {"erreur": "Authentification requise."}}
    */
+  /**
+   * Retourne 403 quand le mot de passe est correct mais qu'un nouveau mot de
+   * passe est exigé : il ne se définit que par réinitialisation par email.
+   *
+   * @param ex l'exception levée après vérification du mot de passe
+   * @return {@code {"erreur": "...", "code": "reinitialisation_requise"}}
+   */
+  @ExceptionHandler(CredentialsExpiredException.class)
+  @ResponseStatus(HttpStatus.FORBIDDEN)
+  public Map<String, Object> gererMotDePasseExige(final CredentialsExpiredException ex) {
+    return Map.of(
+        CLE_ERREUR,
+        "Un nouveau mot de passe est exigé : utilisez « Mot de passe oublié ».",
+        "code",
+        "reinitialisation_requise");
+  }
+
   @ExceptionHandler(AuthenticationException.class)
   @ResponseStatus(HttpStatus.UNAUTHORIZED)
   public Map<String, Object> gererErreurAuthentification(final AuthenticationException ex) {

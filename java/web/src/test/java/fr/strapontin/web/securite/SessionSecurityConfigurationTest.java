@@ -6,13 +6,20 @@ package fr.strapontin.web.securite;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
@@ -52,7 +59,8 @@ class SessionSecurityConfigurationTest {
     final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     final AuthenticationManager authenticationManager =
-        config.authenticationManager(userDetailsService, encodeur, eventPublisher);
+        config.authenticationManager(
+            userDetailsService, encodeur, eventPublisher, mock(NamedParameterJdbcTemplate.class));
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken("alice", "motdepasse12345"));
 
@@ -71,13 +79,42 @@ class SessionSecurityConfigurationTest {
     final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     final AuthenticationManager authenticationManager =
-        config.authenticationManager(userDetailsService, encodeur, eventPublisher);
+        config.authenticationManager(
+            userDetailsService, encodeur, eventPublisher, mock(NamedParameterJdbcTemplate.class));
 
     assertThrows(
         BadCredentialsException.class,
         () ->
             authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken("alice", "mauvais-mot-de-passe")));
+    verify(eventPublisher).publishEvent(any(AbstractAuthenticationFailureEvent.class));
+  }
+
+  @Test
+  void authenticationManager_motDePasseCorrectMaisNouveauExige_refuseEtPublieUnEchec() {
+    final PasswordEncoder encodeur = new BCryptPasswordEncoder();
+    final UtilisateurDetails utilisateur =
+        new UtilisateurDetails(
+            "u1",
+            "alice",
+            "alice@test.fr",
+            encodeur.encode("motdepasse12345"),
+            "user",
+            false,
+            false,
+            false);
+    final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    when(jdbc.queryForList(anyString(), anyMap(), eq(Boolean.class))).thenReturn(List.of(true));
+
+    final AuthenticationManager authenticationManager =
+        config.authenticationManager(_ -> utilisateur, encodeur, eventPublisher, jdbc);
+
+    assertThrows(
+        CredentialsExpiredException.class,
+        () ->
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken("alice", "motdepasse12345")));
     verify(eventPublisher).publishEvent(any(AbstractAuthenticationFailureEvent.class));
   }
 
