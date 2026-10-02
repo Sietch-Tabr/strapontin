@@ -153,10 +153,9 @@ class ResolveurSalleParConcert {
       salleId = retenir(chercherSalleParCleForte(concert), concert);
     }
 
+    // Créée sans coordonnées : l'enregistrement des positions y pose celle publiée par la source.
     if (salleId == null && resolutionParPosition && position.estGeolocalisee()) {
-      return createur.creer(
-          concert,
-          Optional.of(new ClientNominatim.Coordonnees(position.latitude(), position.longitude())));
+      return createur.creer(concert, Optional.empty());
     }
 
     Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();

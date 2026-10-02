@@ -180,6 +180,7 @@ class RepartitionSalleRepository {
     jdbc.update(
         """
         UPDATE salles s SET latitude = ss.latitude, longitude = ss.longitude,
+                            origine_position = 'sources',
                             code_postal = COALESCE(s.code_postal, ss.code_postal)
         FROM (SELECT latitude, longitude, code_postal FROM salle_sources
               WHERE salle_id = CAST(:cible AS uuid) AND latitude IS NOT NULL LIMIT 1) ss

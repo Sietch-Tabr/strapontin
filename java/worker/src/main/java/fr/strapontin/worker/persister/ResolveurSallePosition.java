@@ -35,7 +35,9 @@ final class ResolveurSallePosition {
 
   /* package-private : visibilité élargie pour les tests et la simulation (même package). */
   static final double RAYON_MEME_LIEU_METRES = 300;
-  static final double DISTANCE_INCOMPATIBLE_METRES = 1000;
+  // Les positions publiées s'écartent du lieu réel de quelques kilomètres (centre-ville publié
+  // pour une salle de périphérie, mesuré jusqu'à 7 km) : seul un autre lieu urbain est exclu.
+  static final double DISTANCE_INCOMPATIBLE_METRES = 20_000;
   // Approximation du rayon en degrés pour le préfiltre SQL (au plus ~0,005° en latitude
   // et longitude en France métropolitaine pour 300 m).
   private static final double DEGRES_PREFILTRE = 0.005;

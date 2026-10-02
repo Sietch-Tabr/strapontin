@@ -237,10 +237,10 @@ public final class HealthCheckSallesTM {
       jdbc.update(
           """
           UPDATE salles
-          SET latitude = COALESCE(latitude, :latitude),
-              longitude = CASE WHEN latitude IS NULL THEN :longitude ELSE longitude END,
+          SET latitude = :latitude, longitude = :longitude, origine_position = 'sources',
               code_postal = COALESCE(code_postal, :codePostal)
           WHERE id = CAST(:salleId AS uuid)
+            AND (origine_position IS NULL OR origine_position = 'geocodage')
           """,
           params);
       obtenues++;

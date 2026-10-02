@@ -15,7 +15,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Enregistre la position publiée de chaque lieu source (coordonnées, code postal) sur son mapping
- * {@code salle_sources}, et la reporte sur la salle tant qu'elle n'en a pas : sans position, les
+ * {@code salle_sources}, et la reporte sur la salle tant qu'elle n'a ni position Wikidata ni
+ * position de source (une position géocodée est remplacée) : sans position, les
  * garde-fous géographiques (fusion, résolution, dispersion) restaient inopérants pour la plupart
  * des salles.
  *
@@ -74,11 +75,17 @@ final class EnregistreurPositionsLieux {
         params);
     jdbc.batchUpdate(
         """
-        UPDATE salles
-        SET latitude = COALESCE(latitude, :latitude),
-            longitude = CASE WHEN latitude IS NULL THEN :longitude ELSE longitude END,
-            code_postal = COALESCE(code_postal, :codePostal)
+        UPDATE salles SET code_postal = COALESCE(code_postal, :codePostal)
         WHERE id = CAST(:salleId AS uuid)
+        """,
+        params);
+    // Position publiée par la source, à défaut de Wikidata : remplace un géocodage du nom.
+    jdbc.batchUpdate(
+        """
+        UPDATE salles
+        SET latitude = :latitude, longitude = :longitude, origine_position = 'sources'
+        WHERE id = CAST(:salleId AS uuid) AND CAST(:latitude AS double precision) IS NOT NULL
+          AND (origine_position IS NULL OR origine_position = 'geocodage')
         """,
         params);
   }

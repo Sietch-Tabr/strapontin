@@ -135,8 +135,7 @@ public class CoherenceWikidataSalleService {
         continue;
       }
       memoriserSignature(salle.id(), signature);
-      loggerIncoherence(
-          salle, communeWikidata, partielle, villesConcertsReelles.get(salle.id()));
+      loggerIncoherence(salle, communeWikidata, partielle, villesConcertsReelles.get(salle.id()));
     }
     LOG.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
@@ -175,7 +174,8 @@ public class CoherenceWikidataSalleService {
     jdbc.update(
         // Coordonnées issues de la même entité (P625) : fausses aussi, et elles
         // serviraient sinon à rattacher par proximité GPS des lieux sans rapport.
-        "UPDATE salles SET wikidata_id = NULL, latitude = NULL, longitude = NULL"
+        "UPDATE salles SET wikidata_id = NULL, latitude = NULL, longitude = NULL,"
+            + " origine_position = NULL"
             + " WHERE wikidata_id = :qid",
         Map.of("qid", qid));
     logsAdminWorker.inserer(
@@ -342,12 +342,18 @@ public class CoherenceWikidataSalleService {
             + " wikidataId="
             + salle.wikidataId(),
         Map.of(
-            "salleId", salle.id().toString(),
-            "wikidataId", salle.wikidataId(),
-            "ville", salle.ville(),
-            "villesComparees", villesComparees,
-            "communeWikidata", communeWikidata,
-            "partielle", partielle));
+            "salleId",
+            salle.id().toString(),
+            "wikidataId",
+            salle.wikidataId(),
+            "ville",
+            salle.ville(),
+            "villesComparees",
+            villesComparees,
+            "communeWikidata",
+            communeWikidata,
+            "partielle",
+            partielle));
   }
 
   private List<SalleAEnrichir> selectionnerCandidats() {

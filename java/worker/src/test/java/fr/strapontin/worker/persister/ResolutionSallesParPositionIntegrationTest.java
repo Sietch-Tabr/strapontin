@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.ClientNominatim;
@@ -127,7 +128,7 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
   }
 
   @Test
-  void resolution_parPositionActivee_homonymeDistantEcarteEtSalleCreeeALaPosition() {
+  void resolution_parPositionActivee_homonymeDistantEcarteEtSalleCreeeSansGeocodage() {
     final UUID vittel = creerSalle("Palais des Congres", "88", VITTEL);
     final ResolveurSalleParConcert resolveur = new ResolveurSalleParConcert(jdbc, clientNominatim);
     resolveur.setResolutionParPosition(true);
@@ -144,12 +145,7 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
     final UUID salle = resolveur.upsertSalleSource(concert);
 
     assertNotEquals(vittel, salle);
-    assertEquals(
-        42.7025,
-        jdbc.queryForObject(
-            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
-            Map.of("id", salle.toString()),
-            Double.class),
-        1e-9);
+    // Créée sans géocodage du nom : l'enregistrement des positions y posera celle de la source.
+    verifyNoInteractions(clientNominatim);
   }
 }

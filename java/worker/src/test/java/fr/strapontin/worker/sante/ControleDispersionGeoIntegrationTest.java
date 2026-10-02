@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
+import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -47,16 +48,20 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     return id;
   }
 
+  // Le code postal est celui qui qualifie l'identifiant (internal:<nom>@<code postal>).
   private void lieu(
       final UUID salle, final String identifiant, final double lat, final double lon) {
+    final int arobase = identifiant.lastIndexOf('@');
     jdbc.update(
-        "INSERT INTO salle_sources (salle_id, source, identifiant_externe, latitude, longitude)"
-            + " VALUES (CAST(:id AS uuid), 'eventim', :identifiant, :lat, :lon)",
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe, latitude, longitude,"
+            + " code_postal) VALUES (CAST(:id AS uuid), 'eventim', :identifiant, :lat, :lon, :cp)",
         new MapSqlParameterSource()
             .addValue("id", salle.toString())
             .addValue("identifiant", identifiant)
             .addValue("lat", lat)
-            .addValue("lon", lon));
+            .addValue("lon", lon)
+            .addValue(
+                "cp", arobase > 0 ? identifiant.substring(arobase + 1) : null, Types.VARCHAR));
   }
 
   private List<String> typesSignales() {
@@ -98,5 +103,48 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     lieu(sousSalle, "internal:grande seine@92100", 48.8296, 2.2404);
 
     assertEquals(0, controle.verifier());
+  }
+
+  // Zénith d'Auvergne : Eventim publie une position décalée de 3 km, même code postal que TM.
+  @Test
+  void verifier_positionsDecaleesMemeCodePostal_neSignalePasDeDispersion() {
+    final UUID zenith = creerSalle("zenith d auvergne");
+    lieu(zenith, "internal:zenith dauvergne clermont ferrand@63800", 45.7403, 3.1537);
+    lieu(zenith, "internal:zenith d auvergne@63800", 45.7424, 3.1966);
+
+    assertEquals(0, controle.verifier());
+  }
+
+  // « Comédie de Paris » géocodée à Montpellier : la position de ses lieux sources la remplace.
+  @Test
+  void consoliderPositions_salleGeocodeeChezUnHomonyme_prendLaPositionDeSesSources() {
+    final UUID salle = creerSalle("comedie de paris paris 09");
+    jdbc.update(
+        "UPDATE salles SET latitude = 43.6068, longitude = 3.8764, origine_position = 'geocodage'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    lieu(salle, "internal:comedie de paris paris 09@75009", 48.8820, 2.3361);
+
+    assertEquals(1, controle.consoliderPositions());
+
+    assertEquals(
+        48.8820,
+        jdbc.queryForObject(
+            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Double.class),
+        1e-9);
+  }
+
+  @Test
+  void consoliderPositions_positionWikidata_estConservee() {
+    final UUID salle = creerSalle("sud de france arena");
+    jdbc.update(
+        "UPDATE salles SET latitude = 43.5722, longitude = 3.9522, origine_position = 'wikidata'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    lieu(salle, "ticketmaster:centre-montpellier@34000", 43.6082, 3.8794);
+
+    assertEquals(0, controle.consoliderPositions());
   }
 }

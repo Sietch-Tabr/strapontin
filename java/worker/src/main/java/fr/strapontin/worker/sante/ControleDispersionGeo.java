@@ -17,7 +17,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /**
  * Contrôle de la dispersion géographique des lieux sources, indépendant de leurs noms : une salle
  * dont les lieux sources sont éloignés en mélange plusieurs (contamination), deux salles dont des
- * lieux sources coïncident désignent probablement le même lieu (doublon).
+ * lieux sources coïncident désignent probablement le même lieu (doublon). Consolide d'abord la
+ * position de chaque salle sur celle de ses lieux sources.
  *
  * @since 3.0.2
  * @author Kwaite
@@ -26,12 +27,15 @@ final class ControleDispersionGeo {
 
   /* package-private : visibilité élargie pour les tests (même package). */
   static final double DISTANCE_DISPERSION_METRES = 1000;
+  // Au-delà, deux positions désignent des villes différentes quels que soient les codes postaux.
+  static final double DISTANCE_AUTRE_VILLE_METRES = 20_000;
   static final double DISTANCE_MEME_LIEU_METRES = 50;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
 
-  private record LieuSource(UUID salleId, String identifiant, double latitude, double longitude) {}
+  private record LieuSource(
+      UUID salleId, String identifiant, double latitude, double longitude, String codePostal) {}
 
   ControleDispersionGeo(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
@@ -43,6 +47,7 @@ final class ControleDispersionGeo {
    * @return nombre de signalements posés
    */
   int verifier() {
+    consoliderPositions();
     final List<LieuSource> lieux = chargerLieux();
     return verifierDispersionParSalle(lieux) + verifierSallesAuMemeLieu(lieux);
   }
@@ -51,7 +56,8 @@ final class ControleDispersionGeo {
   private List<LieuSource> chargerLieux() {
     return jdbc.query(
         """
-        SELECT salle_id, source || ':' || identifiant_externe AS identifiant, latitude, longitude
+        SELECT salle_id, source || ':' || identifiant_externe AS identifiant, latitude, longitude,
+               code_postal
         FROM salle_sources
         WHERE latitude IS NOT NULL AND longitude IS NOT NULL
           AND contamination_acceptee_le IS NULL
@@ -63,7 +69,8 @@ final class ControleDispersionGeo {
                 rs.getObject("salle_id", UUID.class),
                 rs.getString("identifiant"),
                 rs.getDouble("latitude"),
-                rs.getDouble("longitude")));
+                rs.getDouble("longitude"),
+                rs.getString("code_postal")));
   }
 
   private int verifierDispersionParSalle(final List<LieuSource> lieux) {
@@ -78,7 +85,7 @@ final class ControleDispersionGeo {
       for (int i = 0; i < sources.size(); i++) {
         for (int j = i + 1; j < sources.size(); j++) {
           final double d = distance(sources.get(i), sources.get(j));
-          if (d > distanceMax) {
+          if (d > distanceMax && lieuxDistincts(sources.get(i), sources.get(j), d)) {
             distanceMax = d;
             identifiantA = sources.get(i).identifiant();
             identifiantB = sources.get(j).identifiant();
@@ -150,6 +157,43 @@ final class ControleDispersionGeo {
           exclues.add(cle(rs.getObject("a", UUID.class), rs.getObject("b", UUID.class)));
         });
     return exclues;
+  }
+
+  // Une position publiée peut s'écarter de quelques kilomètres du lieu réel : deux positions
+  // éloignées ne désignent des lieux distincts que si leurs codes postaux diffèrent aussi, ou
+  // si elles sont dans des villes différentes.
+  private static boolean lieuxDistincts(final LieuSource a, final LieuSource b, final double d) {
+    if (d > DISTANCE_AUTRE_VILLE_METRES) {
+      return true;
+    }
+    return d > DISTANCE_DISPERSION_METRES
+        && a.codePostal() != null
+        && b.codePostal() != null
+        && !a.codePostal().equals(b.codePostal());
+  }
+
+  /**
+   * Aligne la position de chaque salle sans position Wikidata sur la médiane des positions de ses
+   * lieux sources : remplace un géocodage de son nom, parfois celui d'un homonyme lointain.
+   * @return nombre de salles repositionnées
+   */
+  int consoliderPositions() {
+    return jdbc.update(
+        """
+        UPDATE salles s
+        SET latitude = m.latitude, longitude = m.longitude, origine_position = 'sources'
+        FROM (SELECT salle_id,
+                     percentile_cont(0.5) WITHIN GROUP (ORDER BY latitude) AS latitude,
+                     percentile_cont(0.5) WITHIN GROUP (ORDER BY longitude) AS longitude
+              FROM salle_sources
+              WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                AND contamination_acceptee_le IS NULL
+              GROUP BY salle_id) m
+        WHERE s.id = m.salle_id
+          AND (s.origine_position IS NULL OR s.origine_position IN ('sources', 'geocodage'))
+          AND (s.latitude IS DISTINCT FROM m.latitude OR s.longitude IS DISTINCT FROM m.longitude)
+        """,
+        Map.of());
   }
 
   private static String cle(final UUID a, final UUID b) {
