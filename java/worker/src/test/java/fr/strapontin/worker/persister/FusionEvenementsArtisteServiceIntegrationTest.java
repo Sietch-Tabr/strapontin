@@ -210,4 +210,113 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
 
     assertEquals(0, fusions, "des salles différentes ne doivent jamais suffire à fusionner");
   }
+
+  // --- fusionnerFichesPerimees ---
+
+  private static final String URL_TM =
+      "https://www.ticketmaster.fr/fr/manifestation/x/idmanif/613943";
+
+  private UUID creerFiche(
+      final UUID salleId,
+      final String date,
+      final String heure,
+      final int absences,
+      final String url) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id,"
+                + " absences_consecutives) VALUES ('tina arena', CAST(:date AS date),"
+                + " CAST(:heure AS time), 'palais des congres', CAST(:salleId AS uuid), :absences)"
+                + " RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("date", date)
+                .addValue("heure", heure)
+                .addValue("salleId", salleId == null ? null : salleId.toString())
+                .addValue("absences", absences),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :url,"
+            + " 'Tina Arena', 'Palais des Congres')",
+        Map.of("id", id.toString(), "url", url));
+    return id;
+  }
+
+  private boolean existe(final UUID id) {
+    return jdbc.queryForObject(
+            "SELECT count(*) FROM evenements WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
+            Integer.class)
+        == 1;
+  }
+
+  @Test
+  void
+      fusionnerFichesPerimees_ficheMalRattacheeFigeeEtFicheCorrecteVivante_fusionneDansLaVivante() {
+    final UUID mauvaiseSalle = creerSalle("Palais des Congres Vittel");
+    final UUID perimee = creerFiche(mauvaiseSalle, DATE_FUTURE, "20:00", 10, URL_TM);
+    final UUID vivante = creerFiche(salle, DATE_FUTURE, "20:00", 0, URL_TM);
+    jdbc.update(
+        "INSERT INTO users (id, username, email) VALUES ('u1', 'u1', 'u1@test.fr')", Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id) VALUES ('u1', CAST(:id AS uuid))",
+        Map.of("id", perimee.toString()));
+
+    final int fusions = fusionEvenementsArtiste.fusionnerFichesPerimees();
+
+    assertEquals(1, fusions);
+    assertFalse(existe(perimee));
+    assertTrue(existe(vivante));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM user_matches WHERE concert_id = CAST(:id AS uuid)",
+            Map.of("id", vivante.toString()),
+            Integer.class));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_reportSousUneAutreUrlMemeIdmanifMemeDate_fusionne() {
+    final UUID perimee = creerFiche(salle, DATE_FUTURE, "20:00", 10, URL_TM + "/idtier/18864121");
+    final UUID vivante = creerFiche(salle, DATE_FUTURE, "19:30", 0, URL_TM + "/idseance/4350510");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertFalse(existe(perimee));
+    assertTrue(existe(vivante));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_deuxFichesVivantes_neFusionnePas() {
+    final UUID a = creerFiche(salle, DATE_FUTURE, "15:00", 0, URL_TM + "/idseance/1");
+    final UUID b = creerFiche(salle, DATE_FUTURE, "20:00", 0, URL_TM + "/idseance/2");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(a));
+    assertTrue(existe(b));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_memeIdmanifAutreDateSansUrlCommune_neFusionnePas() {
+    final String autreDate = LocalDate.now().plusMonths(3).toString();
+    final UUID perimee = creerFiche(salle, DATE_FUTURE, "20:00", 10, URL_TM + "/idseance/1");
+    creerFiche(salle, autreDate, "20:00", 0, URL_TM + "/idseance/2");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(perimee));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_absencesSousLeSeuil_neFusionnePas() {
+    final UUID recente =
+        creerFiche(
+            salle,
+            DATE_FUTURE,
+            "20:00",
+            FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE - 1,
+            URL_TM);
+    creerFiche(creerSalle("Autre"), DATE_FUTURE, "20:00", 0, URL_TM);
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(recente));
+  }
 }

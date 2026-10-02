@@ -87,8 +87,12 @@ public class ReconciliationNocturneService {
     final int incoherencesWikidata = coherenceWikidataSalle.verifier();
     final int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
+    // Avant la fusion de salles par clé forte : une fiche périmée rattachée à la mauvaise salle
+    // fournirait sinon la coïncidence artiste/date/heure qui fusionne deux salles distinctes.
+    final int fichesPerimeesFusionnees = fusionEvenementsArtiste.fusionnerFichesPerimees();
     final int sallesFusionnees = fusionSallesClePortee.fusionner();
-    final int evenementsFusionnes = fusionEvenementsArtiste.fusionner();
+    final int evenementsFusionnes =
+        fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();

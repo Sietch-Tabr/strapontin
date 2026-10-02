@@ -20,8 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Détecte et fusionne en cycle nocturne des paires d'événements déjà
- * persistés séparément dont l'{@code artiste_norm} converge après coup —
- * {@link ReconciliateurArtistes} ne dédoublonne qu'à la création.
+ * persistés séparément : dont l'{@code artiste_norm} converge après coup —
+ * {@link ReconciliateurArtistes} ne dédoublonne qu'à la création — ou dont
+ * l'un n'est plus qu'une fiche périmée de l'autre (même fiche source, l'une
+ * n'étant plus observée, l'autre l'étant encore).
  * @since 3.0.0
  * @author Kwaite
  */
@@ -32,6 +34,10 @@ public class FusionEvenementsArtisteService {
   private static final String CLE_CIBLE = "cible";
   private static final String CLE_SOURCE = "source";
   private static final int NB_EVENEMENTS_PAIRE = 2;
+  // Absences consécutives au-delà desquelles un événement n'est plus une fiche vivante : écarte
+  // un cycle de fetch manqué ponctuellement.
+  /* package-private : visibilité élargie pour les tests (même package). */
+  static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -69,6 +75,55 @@ public class FusionEvenementsArtisteService {
       }
       fusionnerUnePaire(cibleSource[0], cibleSource[1]);
       dejaAbsorbes.add(cibleSource[1]);
+      fusions++;
+    }
+    return fusions;
+  }
+
+  /**
+   * Fusionne chaque événement périmé dans l'événement vivant qui porte la
+   * même fiche source : même observation {@code (source, url)}, ou même
+   * manifestation Ticketmaster ({@code idmanif}) à la même date. Couvre une
+   * fiche rattachée à la mauvaise salle puis recréée correctement, et un
+   * report publié sous une autre URL ; sans fusion, la ligne figée reste
+   * suivie et visible jusqu'à sa purge, avec ses informations obsolètes. Un
+   * événement périmé rapproché de plusieurs événements vivants est ignoré
+   * (ambigu). À exécuter avant la fusion de salles par clé forte, que ces
+   * doublons fausseraient.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerFichesPerimees() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            WITH obs AS (
+              SELECT o.evenement_id, o.source, o.url, e.date, e.absences_consecutives,
+                     CASE WHEN o.source = 'ticketmaster'
+                          THEN substring(o.url FROM '/idmanif/([0-9]+)') END AS idmanif
+              FROM observations o
+              JOIN evenements e ON e.id = o.evenement_id
+              WHERE o.url IS NOT NULL AND e.date >= CURRENT_DATE
+            )
+            SELECT p.evenement_id AS perime, min(v.evenement_id::text) AS vivant,
+                   count(DISTINCT v.evenement_id) AS nb_vivants
+            FROM obs p
+            JOIN obs v
+              ON v.evenement_id <> p.evenement_id
+             AND v.source = p.source
+             AND (v.url = p.url OR (p.idmanif IS NOT NULL AND v.idmanif = p.idmanif
+                                    AND v.date = p.date))
+            WHERE p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+            GROUP BY p.evenement_id
+            """,
+            Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+    int fusions = 0;
+    for (final Map<String, Object> ligne : lignes) {
+      final UUID perime = (UUID) ligne.get("perime");
+      if (((Number) ligne.get("nb_vivants")).longValue() != 1) {
+        LOG.warn("fiche périmée {} rapprochée de plusieurs événements vivants — ignorée", perime);
+        continue;
+      }
+      fusionner(UUID.fromString((String) ligne.get("vivant")), perime, "fiche source périmée");
       fusions++;
     }
     return fusions;
@@ -165,6 +220,10 @@ public class FusionEvenementsArtisteService {
    */
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
+    fusionner(cibleId, sourceId, "artiste_norm convergent");
+  }
+
+  private void fusionner(final UUID cibleId, final UUID sourceId, final String motif) {
     final Map<String, Object> ids =
         Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
@@ -213,18 +272,26 @@ public class FusionEvenementsArtisteService {
     jdbc.update("DELETE FROM evenements WHERE id = CAST(:source AS uuid)", ids);
 
     LOG.info(
-        "reconciliation:nocturne — événements fusionnés (artiste_norm convergent) cible={}"
-            + " source={}",
+        "reconciliation:nocturne — événements fusionnés ({}) cible={} source={}",
+        motif,
         cibleId,
         sourceId);
     // Fusion automatique et destructive : jamais silencieuse.
     logsAdminWorker.inserer(
         "info",
         "reconciliation-nocturne",
-        "événements fusionnés automatiquement (artiste_norm convergent) cible="
+        "événements fusionnés automatiquement ("
+            + motif
+            + ") cible="
             + cibleId
             + " source="
             + sourceId,
-        Map.of("evenementCible", cibleId.toString(), "evenementSource", sourceId.toString()));
+        Map.of(
+            "evenementCible",
+            cibleId.toString(),
+            "evenementSource",
+            sourceId.toString(),
+            "motif",
+            motif));
   }
 }
