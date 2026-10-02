@@ -620,72 +620,60 @@ test.describe("Scénario: admin — onglet Sources", () => {
   });
 });
 
-test.describe("Scénario: admin — onglet Jobs (sections Fetches/Maintenance)", () => {
-  test("admin_jobs_desktop_section_fetches_visible", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
+test.describe("Scénario: admin — onglet Jobs (cartes par thème)", () => {
+  test("admin_jobs_themes_recuperationEtPurges_visibles", async ({ page }) => {
     await page.goto("/admin");
     await expect(
-      page.locator("section#jobs .param-bloc", { hasText: "Fetches" }),
+      page.locator("section#jobs .param-bloc", {
+        hasText: "Récupération des concerts",
+      }),
+    ).toBeVisible();
+    await expect(
+      page.locator("section#jobs .param-bloc", { hasText: "Purges" }),
     ).toBeVisible();
   });
 
-  test("admin_jobs_desktop_section_maintenance_visible", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
+  // Chaque job s'affiche sous son nom : aucun identifiant technique (ex. gerer:comptes-inactifs).
+  test("admin_jobs_aucunIdentifiantTechniqueAffiche", async ({ page }) => {
     await page.goto("/admin");
+    await expect(page.locator("section#jobs .job-carte").first()).toBeVisible();
+    const libelles = await page
+      .locator("section#jobs .job-carte-libelle")
+      .allInnerTexts();
+    expect(libelles.length).toBeGreaterThan(0);
+    for (const libelle of libelles) {
+      expect(libelle).not.toMatch(/^[a-z]+:[a-z:-]+$/);
+    }
     await expect(
-      page.locator("section#jobs .param-bloc", { hasText: "Maintenance" }),
-    ).toBeVisible();
-  });
-
-  test("admin_jobs_desktop_bouton_relancer_dans_fetches", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    const sectionFetches = page.locator("section#jobs .param-bloc", {
-      hasText: "Fetches",
-    });
-    await expect(sectionFetches).toBeVisible();
-    await expect(sectionFetches.locator("button#btn-relancer")).toBeVisible();
-  });
-
-  test("admin_jobs_desktop_boutonRelancerGlobal_absent_maintenance", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    const sectionMaintenance = page.locator("section#jobs .param-bloc", {
-      hasText: "Maintenance",
-    });
-    await expect(sectionMaintenance).toBeVisible();
-    // Le bouton global "Relancer les fetches maintenant" (#btn-relancer) reste réservé à la
-    // section Fetches — la Maintenance a un bouton "Relancer" par job (v2.6.0, #706/#710).
-    await expect(
-      sectionMaintenance.locator("button#btn-relancer"),
+      page.locator("section#jobs .param-bloc", { hasText: "À classer" }),
     ).not.toBeAttached();
   });
 
-  test("admin_jobs_desktop_boutonRelancerParJob_present_maintenance", async ({
+  test("admin_jobs_boutonRelancerGlobal_dansRecuperationSeulement", async ({
     page,
-    isMobile,
   }) => {
-    if (isMobile) test.skip();
     await page.goto("/admin");
-    const sectionMaintenance = page.locator("section#jobs .param-bloc", {
-      hasText: "Maintenance",
+    const recuperation = page.locator("section#jobs .param-bloc", {
+      hasText: "Récupération des concerts",
     });
-    await expect(sectionMaintenance).toBeVisible();
-    const premiereCarte = sectionMaintenance.locator(".job-carte").first();
+    await expect(recuperation.locator("button#btn-relancer")).toBeVisible();
+    await expect(page.locator("section#jobs button#btn-relancer")).toHaveCount(
+      1,
+    );
+  });
+
+  test("admin_jobs_boutonRelancerParJob_presentDansPurges", async ({
+    page,
+  }) => {
+    await page.goto("/admin");
+    const purges = page.locator("section#jobs .param-bloc", {
+      hasText: "Purges",
+    });
     await expect(
-      premiereCarte.getByRole("button", { name: "Relancer" }),
+      purges
+        .locator(".job-carte")
+        .first()
+        .getByRole("button", { name: "Relancer" }),
     ).toBeVisible();
   });
 });

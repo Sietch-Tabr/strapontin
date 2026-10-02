@@ -5,9 +5,11 @@
 package fr.strapontin.web.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.CatalogueJobs;
 import fr.strapontin.core.QuotaTM;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -53,7 +55,8 @@ public class JobsAdminService {
    * Retourne les statistiques des jobs Quartz et le quota TM.
    *
    * @return map contenant statsJobs, quotaTM, etatQuota, workerLastSuccess,
-   *     jobsEnCours
+   *     jobsEnCours, catalogue (nom, rôle et thème de chaque job) et themes
+   *     (ordre d'affichage)
    */
   public Map<String, Object> lireJobs() {
     final List<StatJob> statsJobs = chargerStatsJobsBrutes();
@@ -73,6 +76,12 @@ public class JobsAdminService {
     reponse.put("etatQuota", calculerEtatQuota(quotaTM));
     reponse.put("workerLastSuccess", workerLastSuccess);
     reponse.put("jobsEnCours", jobsEnCours);
+    reponse.put("catalogue", CatalogueJobs.tous());
+    reponse.put(
+        "themes",
+        Arrays.stream(CatalogueJobs.Theme.values())
+            .map(t -> Map.of("code", t.name(), "libelle", t.libelle()))
+            .toList());
     return reponse;
   }
 

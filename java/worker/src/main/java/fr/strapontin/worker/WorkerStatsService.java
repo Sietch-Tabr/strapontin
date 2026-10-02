@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CatalogueJobs;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecBilanFetch;
@@ -89,10 +90,24 @@ public class WorkerStatsService {
       final ResultatPersistance resultat,
       final String erreur) {
     final Instant maintenant = Instant.now();
+    signalerJobNonRepertorie(typeJob);
     enregistrerMetriqueDuree(typeJob, dureeMs);
     enregistrerLignesFetchJobs(typeJob, maintenant, dureeMs, resultat, erreur);
     if (typeJob.startsWith("fetch:")) {
       remonterBilansFetch(typeJob, resultat, erreur, maintenant);
+    }
+  }
+
+  // Un job absent du catalogue s'afficherait sous son identifiant technique dans le tableau de
+  // bord admin : signalé à chaque exécution tant qu'il n'y est pas ajouté.
+  private void signalerJobNonRepertorie(final String typeJob) {
+    if (CatalogueJobs.decrire(typeJob).isEmpty()) {
+      LOG.warn("job absent de CatalogueJobs : {}", typeJob);
+      logsAdminWorker.inserer(
+          "warn",
+          SOURCE_WORKER,
+          "job sans libellé dans le catalogue des jobs : " + typeJob,
+          Map.of("typeJob", typeJob));
     }
   }
 

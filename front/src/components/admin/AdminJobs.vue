@@ -1,19 +1,31 @@
 <template>
   <section id="jobs" class="admin-section">
-    <div class="param-bloc">
-      <h3 class="param-libelle">Fetches</h3>
-      <EtatChargement v-if="chargement" />
-      <div v-else-if="statsFetches.length" class="jobs-liste">
-        <div v-for="stat in statsFetches" :key="stat.typeJob" class="job-carte">
+    <EtatChargement v-if="chargement" />
+    <p v-else-if="!groupes.length" class="etat-vide-texte">
+      Aucun job exécuté pour l'instant.
+    </p>
+    <div v-for="groupe in groupes" v-else :key="groupe.code" class="param-bloc">
+      <h3 class="param-libelle">{{ groupe.libelle }}</h3>
+      <p
+        v-if="groupe.code === THEME_A_CLASSER"
+        class="alerte alerte-avertissement"
+        role="alert"
+      >
+        Ces jobs n'ont pas encore de nom ni de thème dans le catalogue des jobs.
+      </p>
+      <div class="jobs-grille">
+        <article
+          v-for="stat in groupe.jobs"
+          :key="stat.typeJob"
+          class="job-carte"
+        >
           <div class="job-carte-entete">
             <span
               class="job-pastille"
               :class="classePastille(stat)"
               aria-hidden="true"
             ></span>
-            <p class="job-carte-libelle">
-              {{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}
-            </p>
+            <h4 class="job-carte-libelle">{{ stat.libelle }}</h4>
             <span
               v-if="jobsEnCours.includes(stat.typeJob)"
               class="job-en-cours"
@@ -34,6 +46,9 @@
               </svg>
             </span>
           </div>
+          <p v-if="stat.description" class="job-carte-description">
+            {{ stat.description }}
+          </p>
           <p class="job-carte-detail">
             <span v-if="stat.derniereExec">{{
               formaterInstant(stat.derniereExec)
@@ -48,7 +63,9 @@
               " · " + stat.nbMisAJour + " màj"
             }}</span>
             <span v-if="!stat.derniereExec">Pas encore exécuté</span>
-            <span v-if="stat.erreur" class="badge badge-erreur">{{
+          </p>
+          <p v-if="stat.erreur" class="job-carte-detail">
+            <span class="badge badge-erreur">{{
               stat.erreur.length > 80
                 ? stat.erreur.substring(0, 80) + "…"
                 : stat.erreur
@@ -57,10 +74,21 @@
           <p v-if="stat.prochaineExec" class="job-carte-detail">
             Prochaine exécution : {{ formaterInstant(stat.prochaineExec) }}
           </p>
-        </div>
+          <button
+            v-if="groupe.code !== 'RECUPERATION'"
+            type="button"
+            class="bouton bouton-secondaire bouton-petit job-carte-action"
+            :disabled="
+              jobsEnCours.includes(stat.typeJob) ||
+              relanceJobEnCours[stat.typeJob]
+            "
+            @click="relancerJob(stat.typeJob)"
+          >
+            Relancer
+          </button>
+        </article>
       </div>
-      <p v-else class="etat-vide-texte">Aucun fetch exécuté pour l'instant.</p>
-      <div class="relancer-actions">
+      <div v-if="groupe.code === 'RECUPERATION'" class="relancer-actions">
         <button
           id="btn-relancer"
           type="button"
@@ -71,79 +99,6 @@
           Relancer les fetches maintenant
         </button>
       </div>
-    </div>
-
-    <div class="param-bloc">
-      <h3 class="param-libelle">Maintenance</h3>
-      <EtatChargement v-if="chargement" />
-      <div v-else-if="statsMaintenance.length" class="jobs-liste">
-        <div
-          v-for="stat in statsMaintenance"
-          :key="stat.typeJob"
-          class="job-carte"
-        >
-          <div class="job-carte-entete">
-            <span
-              class="job-pastille"
-              :class="classePastille(stat)"
-              aria-hidden="true"
-            ></span>
-            <p class="job-carte-libelle">
-              {{ LABELS_JOBS[stat.typeJob] ?? stat.typeJob }}
-            </p>
-            <span
-              v-if="jobsEnCours.includes(stat.typeJob)"
-              class="job-en-cours"
-              aria-busy="true"
-              aria-label="En cours"
-            >
-              <svg
-                class="roue-chargement"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                aria-hidden="true"
-              >
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            </span>
-          </div>
-          <p class="job-carte-detail">
-            <span v-if="stat.derniereExec">{{
-              formaterInstant(stat.derniereExec)
-            }}</span>
-            <span v-if="stat.derniereExec && stat.dureeMs != null">{{
-              " · " + formaterDuree(stat.dureeMs)
-            }}</span>
-            <span v-if="!stat.derniereExec">Pas encore exécuté</span>
-            <span v-if="stat.erreur" class="badge badge-erreur">{{
-              stat.erreur.length > 80
-                ? stat.erreur.substring(0, 80) + "…"
-                : stat.erreur
-            }}</span>
-          </p>
-          <p v-if="stat.prochaineExec" class="job-carte-detail">
-            Prochaine exécution : {{ formaterInstant(stat.prochaineExec) }}
-          </p>
-          <button
-            type="button"
-            class="bouton bouton-secondaire bouton-petit"
-            :disabled="
-              jobsEnCours.includes(stat.typeJob) ||
-              relanceJobEnCours[stat.typeJob]
-            "
-            @click="relancerJob(stat.typeJob)"
-          >
-            Relancer
-          </button>
-        </div>
-      </div>
-      <p v-else class="etat-vide-texte">
-        Aucun job de maintenance exécuté pour l'instant.
-      </p>
     </div>
 
     <div class="param-bloc">
@@ -168,6 +123,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import { grouperJobsParTheme, THEME_A_CLASSER } from "../../utils/jobsAdmin.js";
 defineOptions({ name: "AdminJobs" });
 
 import {
@@ -184,22 +140,6 @@ import EtatChargement from "../EtatChargement.vue";
 
 const { afficherToast } = useToasts();
 
-const LABELS_JOBS = {
-  "fetch:artistes:batch": "Artistes suivis",
-  "fetch:region": "Concerts par région",
-  "notifier:digest": "Notifications digest",
-  "purger:concerts": "Purge concerts",
-  "purger:salles": "Purge salles orphelines",
-  "purger:artistes": "Purge artistes orphelins",
-  "recalculer:matches": "Recalcul matchs",
-  "fetch:salle": "Salle",
-  "reconciliation:nocturne": "Réconciliation nocturne",
-  "purger:logs-admin": "Purge logs admin",
-  "revoquer:admins": "Révocation admins",
-};
-
-const TYPES_FETCHES = new Set(["fetch:artistes:batch", "fetch:region"]);
-
 const chargement = ref(true);
 const statsJobs = shallowRef([]);
 const jobsEnCours = shallowRef([]);
@@ -210,11 +150,10 @@ let pollingInterval = null;
 // annule les fetch en vol à la destruction du composant (pas de maj de refs mortes).
 const controleur = new AbortController();
 
-const statsFetches = computed(() =>
-  statsJobs.value.filter((s) => TYPES_FETCHES.has(s.typeJob)),
-);
-const statsMaintenance = computed(() =>
-  statsJobs.value.filter((s) => !TYPES_FETCHES.has(s.typeJob)),
+const catalogue = shallowRef([]);
+const themes = shallowRef([]);
+const groupes = computed(() =>
+  grouperJobsParTheme(statsJobs.value, catalogue.value, themes.value),
 );
 
 const workerEnAlerte = computed(() => {
@@ -256,6 +195,8 @@ async function charger() {
     if (!rep.ok) return;
     const d = await lireJson(rep);
     statsJobs.value = d.statsJobs ?? [];
+    catalogue.value = d.catalogue ?? [];
+    themes.value = d.themes ?? [];
     jobsEnCours.value = d.jobsEnCours ?? [];
     workerLastSuccess.value = d.workerLastSuccess ?? null;
     if (jobsEnCours.value.length > 0) demarrerPolling();
@@ -345,18 +286,42 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.jobs-liste {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+.jobs-grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (width >= 641px) {
+  .jobs-grille {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (width >= 1024px) {
+  .jobs-grille {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .job-carte {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   padding: 0.75rem 1rem;
 }
 
-.job-carte + .job-carte {
-  border-top: 1px solid var(--border);
+.job-carte-description {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.job-carte-action {
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 .job-carte-entete {
@@ -368,6 +333,7 @@ onUnmounted(() => {
 .job-carte-libelle {
   font-size: 0.875rem;
   font-weight: 500;
+  margin: 0;
 }
 
 .job-carte-detail {
