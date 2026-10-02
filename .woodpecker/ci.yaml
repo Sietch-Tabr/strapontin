@@ -64,6 +64,7 @@ steps:
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
+      - sh scripts/verifier-outillage.sh
       - cd front && npm ci && npm run lint && npm run lint:css
     when:
       - event: push

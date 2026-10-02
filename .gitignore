@@ -15,8 +15,6 @@ java/web/src/main/resources/static/offline-fallback.js
 .understand-anything/tmp/
 .understand-anything/fingerprints.json
 CLAUDE.local.md
-.claude/settings.local.json
-.claude/agent-memory/
 
 # IDE
 .idea/
@@ -33,7 +31,30 @@ CLAUDE.local.md
 AGENTS.md
 GEMINI.md
 QODER.md
-.claude/
 .mcp.json
 /tests/
 .playwright-mcp/
+
+# Outillage Claude Code : seul l'outillage partagé du projet est versionné (liste blanche).
+# Jamais : configuration ou mémoire personnelle, accès à l'infrastructure, données de prod,
+# état d'exécution. Contrôlé en CI par scripts/verifier-outillage.sh.
+.claude/*
+!.claude/rules/
+!.claude/commands/
+!.claude/agents/
+!.claude/hooks/
+!.claude/scripts/
+!.claude/settings.json
+.claude/scripts/*.local.*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/check-deps/
+!.claude/skills/suivi-fiabilite/
+!.claude/skills/ticket/
+!.claude/skills/cloture-jalon/
+!.claude/skills/restauration-dev/
+.claude/skills/suivi-fiabilite/snapshots/
+.claude/skills/suivi-fiabilite/scripts/curseurs_rotation.json
+.claude/skills/suivi-fiabilite/scripts/decrypt_config.py
+.DS_Store
+__pycache__/
