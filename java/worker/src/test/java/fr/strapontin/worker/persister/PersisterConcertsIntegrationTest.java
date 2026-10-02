@@ -181,7 +181,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_concertValide_insereEnBase() {
     final List<ConcertBrut> liste =
-        List.of(concert("Julien Clerc", "2026-09-15", "Accor Arena", "ticketmaster"));
+        List.of(concert("Julien Clerc", "2098-09-15", "Accor Arena", "ticketmaster"));
 
     final PersisterConcerts.ResultatPersistance res = persisterConcerts.persisterConcerts(liste);
 
@@ -218,7 +218,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId(
                 "Artiste GPS",
-                "2026-09-20",
+                "2098-09-20",
                 "Zenith Historique Inconnu",
                 "ticketmaster:venue-gps-1",
                 null)));
@@ -244,7 +244,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId(
                 "Artiste GPS 2",
-                "2026-09-21",
+                "2098-09-21",
                 "Zenith Nouveau Lieu",
                 "ticketmaster:venue-gps-2",
                 null)));
@@ -264,7 +264,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId(
                 "Artiste GPS 3",
-                "2026-09-22",
+                "2098-09-22",
                 "Zenith Sans Geocodage",
                 "ticketmaster:venue-gps-3",
                 null)));
@@ -279,11 +279,11 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_upsertConflitMemeArtisteDateSalleHeure_metsAJourPasInsertion() {
     // Même artiste, date, heure et salle → conflit → mise à jour (pas doublon)
-    final ConcertBrut v1 = concert("Mika", "2026-07-10", "Olympia", "ticketmaster");
+    final ConcertBrut v1 = concert("Mika", "2098-07-10", "Olympia", "ticketmaster");
     final ConcertBrut v2 =
         new ConcertBrut(
             "Mika",
-            "2026-07-10",
+            "2098-07-10",
             "20:30",
             "Olympia",
             "Paris",
@@ -313,7 +313,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final ConcertBrut viaTm =
         new ConcertBrut(
             "Angele",
-            "2026-11-06",
+            "2098-11-06",
             "20:30",
             "Zenith",
             "Paris",
@@ -330,7 +330,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final ConcertBrut viaEventim =
         new ConcertBrut(
             "Angele",
-            "2026-11-06",
+            "2098-11-06",
             "20:30",
             "Zenith",
             "Paris",
@@ -361,11 +361,11 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // observation par priorité de source) sur la branche de conflit de l'upsert, pas seulement à
     // l'insertion initiale — Eventim arrive en premier, Ticketmaster (priorité supérieure)
     // en second, devient donc la référence affichée aux deux upserts.
-    final ConcertBrut v1 = concert("Mika", "2026-07-10", "THEATRE HEBERTOT", "eventim");
+    final ConcertBrut v1 = concert("Mika", "2098-07-10", "THEATRE HEBERTOT", "eventim");
     final ConcertBrut v2 =
         new ConcertBrut(
             "Mika",
-            "2026-07-10",
+            "2098-07-10",
             "20:30",
             "Théâtre du Châtelet",
             "Paris",
@@ -397,7 +397,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Julien Dore",
-                "2026-08-20",
+                "2098-08-20",
                 "20:00",
                 "Zenith Paris",
                 "Paris",
@@ -413,7 +413,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 null),
             new ConcertBrut(
                 "Julien Doré",
-                "2026-08-20",
+                "2098-08-20",
                 "20:00",
                 "Zénith Paris",
                 "Paris",
@@ -463,12 +463,12 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concert(
-                "Comédies Musicales", "2026-11-19", "Cirque D'Hiver Bouglione", "ticketmaster")));
+                "Comédies Musicales", "2098-11-19", "Cirque D'Hiver Bouglione", "ticketmaster")));
     persisterConcerts.persisterConcerts(
         List.of(
             concert(
                 "Les Comédies Musicales",
-                "2026-11-19",
+                "2098-11-19",
                 "Cirque D'Hiver Bouglione",
                 "ticketmaster")));
 
@@ -507,7 +507,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Stromae", "2026-10-01", "Accor Arena", "ticketmaster:KovZpaZGFe", null)));
+                "Stromae", "2098-10-01", "Accor Arena", "ticketmaster:KovZpaZGFe", null)));
 
     final UUID uuidEnBase =
         jdbc.queryForObject(
@@ -541,7 +541,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Chimène Badi",
-                "2027-12-18",
+                "2099-12-18",
                 "20:30",
                 "Parc Des Expositions Brezillet",
                 "Saint-Brieuc",
@@ -617,7 +617,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Jerome Commandeur",
-                "2027-03-03",
+                "2099-03-03",
                 "20:30",
                 "Parc Des Expositions Brezillet",
                 "Saint-Brieuc",
@@ -665,7 +665,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Dua Lipa", "2026-11-15", "Plenitude Arena", "ticketmaster:KovZpbFGFe", null)));
+                "Dua Lipa", "2098-11-15", "Plenitude Arena", "ticketmaster:KovZpbFGFe", null)));
 
     final UUID uuidEnBase =
         jdbc.queryForObject(
@@ -703,13 +703,13 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Mika", "2026-10-10", "Zénith Paris", "ticketmaster:KovZpZenith", null)));
+                "Mika", "2098-10-10", "Zénith Paris", "ticketmaster:KovZpZenith", null)));
 
     // Deuxième fetch — variante mineure de nom → réconciliation salle déclenchée
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Mika", "2026-10-10", "Zenith de Paris", "ticketmaster:KovZpZenith", null)));
+                "Mika", "2098-10-10", "Zenith de Paris", "ticketmaster:KovZpZenith", null)));
 
     final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "la réconciliation ne doit pas créer un doublon");
@@ -729,7 +729,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Stromae", "2026-11-20", "L'Empreinte", "ticketmaster:KovZpEmpreinte", null)));
+                "Stromae", "2098-11-20", "L'Empreinte", "ticketmaster:KovZpEmpreinte", null)));
 
     final Long nbSalles =
         jdbc.queryForObject(
@@ -771,7 +771,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId(
                 "Billie Eilish",
-                "2026-11-01",
+                "2098-11-01",
                 "LA SEINE MUSICALE",
                 "ticketmaster:rZ7SnyZaA4L",
                 null)));
@@ -837,7 +837,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Stromae",
-                "2026-11-21",
+                "2098-11-21",
                 "20:30",
                 "LOlympia",
                 "Paris",
@@ -859,7 +859,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final UUID uuidConcertEventim =
         jdbc.queryForObject(
             "SELECT salle_id FROM concerts WHERE artiste_norm = 'stromae' AND date ="
-                + " '2026-11-21'",
+                + " '2098-11-21'",
             Map.of(),
             (rs, _) -> rs.getObject("salle_id", UUID.class));
     assertEquals(
@@ -885,7 +885,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             (rs, _) -> rs.getObject("id", UUID.class));
 
     persisterConcerts.persisterConcerts(
-        List.of(concertAvecSourceId("AC/DC", "2026-11-25", "LOlympia", null, null)));
+        List.of(concertAvecSourceId("AC/DC", "2098-11-25", "LOlympia", null, null)));
 
     final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(1L, nbSalles, "aucune salle dupliquée ne doit être créée sans identifiant source");
@@ -909,7 +909,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId(
                 "Vincent Dedienne",
-                "2027-05-23",
+                "2099-05-23",
                 "Le Forum - Salle Gounod",
                 "ticketmaster:leforum",
                 null)));
@@ -924,7 +924,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Vincent Dedienne",
-                "2027-05-23",
+                "2099-05-23",
                 "20:30",
                 "Theatre le Forum Frejus",
                 "Paris",
@@ -971,7 +971,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             concertAvecSourceId(
                 "Vincent Dedienne",
-                "2027-05-23",
+                "2099-05-23",
                 "Le Forum - Salle Gounod",
                 "ticketmaster:leforum2",
                 null)));
@@ -980,7 +980,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Vincent Dedienne",
-                "2027-05-23",
+                "2099-05-23",
                 "20:30",
                 "Theatre le Forum Frejus",
                 "Lyon",
@@ -1033,7 +1033,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Artiste Toulouse",
-                "2026-11-28",
+                "2098-11-28",
                 "20:30",
                 "Casino - Barriere",
                 "Toulouse",
@@ -1074,7 +1074,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(
             concertAvecSourceId(
-                "Julien Clerc", "2026-12-01", "Accor Arena", "ticketmaster:venue-aa", null)));
+                "Julien Clerc", "2098-12-01", "Accor Arena", "ticketmaster:venue-aa", null)));
 
     final String dept =
         jdbc.queryForObject(
@@ -1095,7 +1095,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Julien Clerc",
-                "2026-12-01",
+                "2098-12-01",
                 "20:30",
                 "Accor Arena",
                 "Lyon",
@@ -1123,7 +1123,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // quand un identifiant source fiable est disponible).
     persisterConcerts.persisterConcerts(
         List.of(
-            concertAvecSourceId("Angele", "2026-11-26", "Salle Totalement Inconnue", null, null)));
+            concertAvecSourceId("Angele", "2098-11-26", "Salle Totalement Inconnue", null, null)));
 
     final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(0L, nbSalles, "aucune salle ne doit être créée sans identifiant source fiable");
@@ -1144,9 +1144,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // URL null pour que supprimerDoublonsParUrl n'interfère pas dans le comptage.
     final List<ConcertBrut> liste =
         List.of(
-            concertSansUrl("Mika", "2026-10-01", "Olympia", "ticketmaster"),
-            concertSansUrl("Mika", "2026-10-01", "L'Olympia", "ticketmaster"),
-            concertSansUrl("Mika", "2026-10-01", "L'Olympia Paris", "ticketmaster"));
+            concertSansUrl("Mika", "2098-10-01", "Olympia", "ticketmaster"),
+            concertSansUrl("Mika", "2098-10-01", "L'Olympia", "ticketmaster"),
+            concertSansUrl("Mika", "2098-10-01", "L'Olympia Paris", "ticketmaster"));
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -1178,9 +1178,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final List<ConcertBrut> liste =
         List.of(
             concertAvecSourceId(
-                "Mika", "2026-10-01", "Accor Aréna", "ticketmaster:KovZpAccor", null),
+                "Mika", "2098-10-01", "Accor Aréna", "ticketmaster:KovZpAccor", null),
             concertAvecSourceId(
-                "Coldplay", "2026-10-02", "ACCOR ARENA", "ticketmaster:KovZpAccor", null));
+                "Coldplay", "2098-10-02", "ACCOR ARENA", "ticketmaster:KovZpAccor", null));
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -1197,7 +1197,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final ConcertBrut concert =
         new ConcertBrut(
             "???",
-            "2026-09-01",
+            "2098-09-01",
             null,
             "Salle",
             null,
@@ -1226,9 +1226,9 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final List<ConcertBrut> liste =
         List.of(
             concertAvecHeure(
-                "Tartuffe", "2026-10-10", "14:30", "Comédie-Française", "ticketmaster"),
+                "Tartuffe", "2098-10-10", "14:30", "Comédie-Française", "ticketmaster"),
             concertAvecHeure(
-                "Tartuffe", "2026-10-10", "20:00", "Comédie-Française", "ticketmaster"));
+                "Tartuffe", "2098-10-10", "20:00", "Comédie-Française", "ticketmaster"));
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -1463,7 +1463,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final ConcertBrut concertSansIdArtiste =
         new ConcertBrut(
             "Mika",
-            "2026-12-10",
+            "2098-12-10",
             "20:00",
             "Le Zénith Paris",
             "Paris",
@@ -1496,8 +1496,8 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // deux enregistrements sans heure pour le même (artiste, date, salle) → 1 seul concert
     final List<ConcertBrut> liste =
         List.of(
-            concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "ticketmaster"),
-            concertAvecHeure("Muse", "2026-11-15", null, "Accor Arena", "eventim"));
+            concertAvecHeure("Muse", "2098-11-15", null, "Accor Arena", "ticketmaster"),
+            concertAvecHeure("Muse", "2098-11-15", null, "Accor Arena", "eventim"));
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -1535,7 +1535,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         List.of(
             new ConcertBrut(
                 "Radiohead",
-                "2026-11-20",
+                "2098-11-20",
                 null,
                 "Zenith Paris La Villette",
                 "Paris",
@@ -1551,7 +1551,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
                 null),
             new ConcertBrut(
                 "Radiohead",
-                "2026-11-20",
+                "2098-11-20",
                 null,
                 "Zenith de Paris",
                 "Paris",
@@ -1599,7 +1599,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nom", "Accor Arena")
             .addValue("nomNorm", "accor arena"));
 
-    final LocalDate date = LocalDate.parse("2026-12-05");
+    final LocalDate date = LocalDate.parse("2098-12-05");
     final LocalTime heure = LocalTime.parse("20:00");
     final ValeurConcert viaTm =
         new ValeurConcert(
@@ -1919,7 +1919,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
       final String salleSourceId) {
     return new ConcertBrut(
         artiste,
-        "2026-10-31",
+        "2098-10-31",
         "20:00",
         salle,
         ville,
@@ -2001,5 +2001,15 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of(),
             UUID.class);
     assertEquals(salleMapping, salleConcert);
+  }
+
+  // Produit Eventim sans séance réelle (billet à validité longue) daté d'un placeholder passé.
+  @Test
+  void persisterConcerts_dateDejaPassee_nEstPasIngere() {
+    persisterConcerts.persisterConcerts(
+        List.of(concert("Rex Studios", "2024-01-01", "Le Grand Rex", "eventim")));
+
+    assertEquals(
+        0L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
   }
 }

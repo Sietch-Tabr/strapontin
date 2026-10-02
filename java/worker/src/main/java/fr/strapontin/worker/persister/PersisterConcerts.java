@@ -9,6 +9,7 @@ import fr.strapontin.core.Normalisation;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -302,10 +303,22 @@ public class PersisterConcerts {
     }
 
     final List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
+    final LocalDate aujourdHui = LocalDate.now();
     final List<ConcertBrut> listeFiltree =
         apresDedup.stream()
             .filter(
                 c -> {
+                  // Une source peut dater un produit sans séance réelle (billet à validité
+                  // longue, visite) : un événement déjà passé n'est jamais ingéré.
+                  if (estDejaPasse(c, aujourdHui)) {
+                    LOG.info(
+                        "concert ignoré — date déjà passée source={} artiste={} date={} url={}",
+                        c.source(),
+                        c.artiste(),
+                        c.date(),
+                        c.url());
+                    return false;
+                  }
                   if (Normalisation.normaliserTexte(c.artiste()).isBlank()) {
                     LOG.warn(
                         "concert rejeté — artiste_norm vide artiste={} date={} salle={}",
@@ -335,6 +348,14 @@ public class PersisterConcerts {
         totalInserts,
         totalUpdates);
     return new ResultatPersistance(totalInserts, totalUpdates);
+  }
+
+  private static boolean estDejaPasse(final ConcertBrut concert, final LocalDate aujourdHui) {
+    try {
+      return LocalDate.parse(concert.date()).isBefore(aujourdHui);
+    } catch (DateTimeParseException e) {
+      return false;
+    }
   }
 
   /**

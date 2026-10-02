@@ -295,8 +295,8 @@ class PersisterConcertsTest {
   void deduplicerParCleConflit_concertsIdentiques_retourneUnSeul() {
     final List<ConcertBrut> liste =
         List.of(
-            concert("Mika", "2026-06-01", "Accor Arena"),
-            concert("Mika", "2026-06-01", "Accor Arena"));
+            concert("Mika", "2098-06-01", "Accor Arena"),
+            concert("Mika", "2098-06-01", "Accor Arena"));
     assertEquals(1, PersisterConcerts.deduplicerParCleConflit(liste).size());
   }
 
@@ -304,8 +304,8 @@ class PersisterConcertsTest {
   void deduplicerParCleConflit_resolverCreDoublon_conserveVersionAvecDiacritiques() {
     final List<ConcertBrut> liste =
         List.of(
-            concert("MIKA", "2026-06-01", "Accor Arena", "ticketmaster"),
-            concert("Mika", "2026-06-01", "Accor Arena", "eventim"));
+            concert("MIKA", "2098-06-01", "Accor Arena", "ticketmaster"),
+            concert("Mika", "2098-06-01", "Accor Arena", "eventim"));
     final List<ConcertBrut> resultat = PersisterConcerts.deduplicerParCleConflit(liste);
     assertEquals(1, resultat.size());
     assertEquals("Mika", resultat.get(0).artiste());
@@ -315,8 +315,8 @@ class PersisterConcertsTest {
   void deduplicerParCleConflit_salleAvecAccentEtSans_conserveAccents() {
     final List<ConcertBrut> liste =
         List.of(
-            concert("Amel Bent", "2026-05-10", "Zenith de Dijon", "ticketmaster"),
-            concert("Amel Bent", "2026-05-10", "Zénith de Dijon", "eventim"));
+            concert("Amel Bent", "2098-05-10", "Zenith de Dijon", "ticketmaster"),
+            concert("Amel Bent", "2098-05-10", "Zénith de Dijon", "eventim"));
     final List<ConcertBrut> resultat = PersisterConcerts.deduplicerParCleConflit(liste);
     assertEquals(1, resultat.size());
     assertEquals("Zénith de Dijon", resultat.get(0).salle());
@@ -328,8 +328,8 @@ class PersisterConcertsTest {
     // existe en base sous "Elysée Montmartre" — les deux doivent produire la même clé
     final List<ConcertBrut> liste =
         List.of(
-            concert("Artiste", "2026-09-10", "Elysée Montmartre", "eventim"),
-            concert("Artiste", "2026-09-10", "Elysee Montmartre", "ticketmaster"));
+            concert("Artiste", "2098-09-10", "Elysée Montmartre", "eventim"),
+            concert("Artiste", "2098-09-10", "Elysee Montmartre", "ticketmaster"));
     final List<ConcertBrut> resultat = PersisterConcerts.deduplicerParCleConflit(liste);
     assertEquals(1, resultat.size());
     assertEquals("Elysée Montmartre", resultat.get(0).salle());
@@ -339,8 +339,8 @@ class PersisterConcertsTest {
   void deduplicerParCleConflit_datesDifferentes_conserveLesDeuxConcerts() {
     final List<ConcertBrut> liste =
         List.of(
-            concert("Mika", "2026-06-01", "Accor Arena"),
-            concert("Mika", "2026-06-02", "Accor Arena"));
+            concert("Mika", "2098-06-01", "Accor Arena"),
+            concert("Mika", "2098-06-02", "Accor Arena"));
     assertEquals(2, PersisterConcerts.deduplicerParCleConflit(liste).size());
   }
 
@@ -348,8 +348,8 @@ class PersisterConcertsTest {
   void deduplicerParCleConflit_artistesDifferents_conserveLesDeuxConcerts() {
     final List<ConcertBrut> liste =
         List.of(
-            concert("Mika", "2026-06-01", "Accor Arena"),
-            concert("Coldplay", "2026-06-01", "Accor Arena"));
+            concert("Mika", "2098-06-01", "Accor Arena"),
+            concert("Coldplay", "2098-06-01", "Accor Arena"));
     assertEquals(2, PersisterConcerts.deduplicerParCleConflit(liste).size());
   }
 
@@ -374,8 +374,8 @@ class PersisterConcertsTest {
   void deduplicerLotReconcilie_clesDifferentes_conserveLesDeuxConcerts() {
     final List<ValeurConcert> lot =
         List.of(
-            valeur("mika", "2026-06-01", "accor arena"),
-            valeur("coldplay", "2026-06-01", "stade de france"));
+            valeur("mika", "2098-06-01", "accor arena"),
+            valeur("coldplay", "2098-06-01", "stade de france"));
     assertEquals(2, PersisterConcerts.deduplicerLotReconcilie(lot).size());
   }
 
@@ -383,8 +383,8 @@ class PersisterConcertsTest {
   void deduplicerLotReconcilie_doublonMemeCle_conserveVersionAvecDiacritiquesArtiste() {
     final List<ValeurConcert> lot =
         List.of(
-            valeur("julien dore", "2026-05-10", "olympia", "Julien Dore", "Olympia"),
-            valeur("julien dore", "2026-05-10", "olympia", "Julien Doré", "Olympia"));
+            valeur("julien dore", "2098-05-10", "olympia", "Julien Dore", "Olympia"),
+            valeur("julien dore", "2098-05-10", "olympia", "Julien Doré", "Olympia"));
     final List<ValeurConcert> resultat = PersisterConcerts.deduplicerLotReconcilie(lot);
     assertEquals(1, resultat.size());
     assertEquals("Julien Doré", resultat.get(0).artiste());
@@ -394,8 +394,8 @@ class PersisterConcertsTest {
   void deduplicerLotReconcilie_doublonMemeCle_conserveVersionAvecCasseMixteSalle() {
     final List<ValeurConcert> lot =
         List.of(
-            valeur("mika", "2026-07-01", "zenith paris", "Mika", "ZENITH PARIS"),
-            valeur("mika", "2026-07-01", "zenith paris", "Mika", "Zénith Paris"));
+            valeur("mika", "2098-07-01", "zenith paris", "Mika", "ZENITH PARIS"),
+            valeur("mika", "2098-07-01", "zenith paris", "Mika", "Zénith Paris"));
     final List<ValeurConcert> resultat = PersisterConcerts.deduplicerLotReconcilie(lot);
     assertEquals(1, resultat.size());
     assertEquals("Zénith Paris", resultat.get(0).salle());
