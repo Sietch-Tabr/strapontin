@@ -54,23 +54,6 @@ EOF
 - Base : branche d'intégration courante (ne pas spécifier `--base` pour utiliser la branche par défaut du dépôt).
 - Labels : selon nature (`Bug`, `Feature`, `Task`…).
 
-## 8. Merge et nettoyage
+## 8. Suite
 
-Après création de la PR, afficher l'URL et attendre la confirmation explicite de l'utilisateur avant de merger.
-
-Une fois le merge confirmé :
-
-```bash
-# Merger la PR
-tea pr merge -r Kwaite/strapontin <PR_ID> --merge
-
-# Supprimer la branche locale
-git branch -d <branche>
-
-# Supprimer la branche distante
-git push origin --delete <branche>
-
-# Se repositionner sur la branche d'intégration et mettre à jour
-git checkout <branche-base>
-git pull
-```
+Afficher l'URL de la PR et s'arrêter. Le merge, la vérification de la prod, le tag, la release et la fermeture du jalon relèvent de `/cloture-jalon`, lancé par l'utilisateur.

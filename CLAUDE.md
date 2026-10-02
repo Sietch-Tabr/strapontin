@@ -166,7 +166,7 @@ Seul l'outillage partagé de `.claude/` est versionné (liste blanche dans `.git
 | `check-deps`        | Mises à jour Maven/npm/stack infra + changelogs — auto en début de jalon (`"Tickets du jalon X.Y.Z à implémenter :"`, mises à jour sûres appliquées au jalon) ; résumé + proposition de ticket en invocation ad-hoc |
 | `/check-pipeline`   | Statut et journaux de la dernière pipeline Woodpecker sur `main`                                                                                                                                                    |
 | `/ticket`           | Création de ticket : doublon recherché, constat/analyse/attendu sans solution, étiquette et jalon vérifiés côté serveur                                                                                             |
-| `/cloture-jalon`    | Après merge : pipeline et journaux, vérification prod, tickets du jalon fermés ; tag, release lisible et fermeture du jalon sur demande explicite                                                                   |
+| `/cloture-jalon`    | Lancé par l'utilisateur uniquement : merge de la PR, pipeline, vérification prod, tag et release lisible, fermeture du jalon, nettoyage, wiki et mémoire                                                            |
 | `/restauration-dev` | Base du dev remplacée par une copie de la prod, configuration du dev conservée (jamais `restore.sh`)                                                                                                                |
 
 ## Migration Vue 2.2.0
