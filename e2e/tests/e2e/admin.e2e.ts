@@ -69,8 +69,8 @@ test.describe("Scénario: admin — sections et contenus", () => {
   test("admin_desktop_section_banniere_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#banniere"]').click();
-    await expect(page.locator("section#banniere")).toBeVisible();
+    await page.locator('a[href="#communication"]').click();
+    await expect(page.locator("section#communication")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
 
@@ -108,8 +108,8 @@ test.describe("Scénario: admin — sections et contenus", () => {
   }) => {
     if (!isMobile) test.skip();
     await page.goto("/admin");
-    await page.selectOption("select.param-onglets-mobile", "#banniere");
-    await expect(page.locator("section#banniere")).toBeVisible();
+    await page.selectOption("select.param-onglets-mobile", "#communication");
+    await expect(page.locator("section#communication")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
 
@@ -790,5 +790,33 @@ test.describe("Scénario: admin — API endpoints", () => {
         encodeURIComponent("job:inexistant"),
     );
     expect(rep.status()).toBe(400);
+  });
+});
+
+test.describe("Scénario: admin — onglet Communication", () => {
+  // Le modèle pré-rempli bloque la publication tant qu'un champ entre crochets reste à
+  // compléter ; le test ne publie jamais (emails et push réels).
+  test("admin_incident_modelePreRempli_publicationBloqueeTantQueIncomplet", async ({
+    page,
+  }) => {
+    await page.goto("/admin#communication");
+    await expect(page.locator("#incident-titre")).toHaveValue(
+      "Incident de sécurité sur Strapontin",
+    );
+    await expect(page.locator("#incident-message")).toHaveValue(
+      /\[nature de l'incident\]/,
+    );
+    const publier = page.getByRole("button", {
+      name: "Publier la communication",
+    });
+    await expect(publier).toBeDisabled();
+
+    await page
+      .locator("#incident-message")
+      .fill(
+        "Le 2 octobre, un accès non autorisé a été détecté. Contact : admin.",
+      );
+
+    await expect(publier).toBeEnabled();
   });
 });

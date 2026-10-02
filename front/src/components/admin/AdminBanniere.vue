@@ -1,7 +1,7 @@
 <template>
-  <section id="banniere" class="admin-section">
+  <section id="communication" class="admin-section">
     <div class="param-bloc">
-      <h3 class="param-libelle">Message système</h3>
+      <h3 class="param-libelle">Bannière d'information</h3>
       <p class="param-aide">
         Publiez un message visible par tous les utilisateurs connectés dans la
         minute. Le message réapparaît à chaque changement de page, sauf si

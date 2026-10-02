@@ -50,7 +50,7 @@
         ><AdminConfig v-if="ongletActif === '#configuration'"
       /></KeepAlive>
       <KeepAlive
-        ><AdminBanniere v-if="ongletActif === '#banniere'"
+        ><AdminBanniere v-if="ongletActif === '#communication'"
       /></KeepAlive>
       <KeepAlive
         ><AdminUtilisateurs v-if="ongletActif === '#utilisateurs'"
@@ -89,7 +89,7 @@ const onglets = [
   { ancre: "#signalements", label: "Signalements" },
   { ancre: "#logs", label: "Logs" },
   { ancre: "#configuration", label: "Configuration" },
-  { ancre: "#banniere", label: "Bannière" },
+  { ancre: "#communication", label: "Communication" },
   { ancre: "#utilisateurs", label: "Utilisateurs" },
 ];
 const ongletActif = ref("#jobs");

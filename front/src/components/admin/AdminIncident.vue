@@ -48,8 +48,13 @@
             v-model="message"
             required
             maxlength="2000"
-            rows="5"
+            rows="12"
+            aria-describedby="incident-aide"
           ></textarea>
+          <p id="incident-aide" class="param-aide">
+            Modèle à adapter : remplacez chaque texte entre crochets. L'email
+            envoyé ne pourra plus être corrigé.
+          </p>
         </div>
         <div class="form-groupe form-checkboxes">
           <label>
@@ -72,7 +77,14 @@
         >
           Quota d'emails insuffisant pour prévenir tous les comptes aujourd'hui.
         </p>
-        <button type="submit" class="bouton bouton-danger" :disabled="enCours">
+        <p v-if="aCompleter.length" class="alerte alerte-avertissement">
+          Reste à compléter : {{ aCompleter.join(", ") }}
+        </p>
+        <button
+          type="submit"
+          class="bouton bouton-danger"
+          :disabled="enCours || aCompleter.length > 0"
+        >
           Publier la communication
         </button>
       </form>
@@ -112,9 +124,14 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import {
+  champsACompleter,
+  MODELE_MESSAGE_INCIDENT,
+  MODELE_TITRE_INCIDENT,
+} from "../../utils/modeleIncident.js";
 defineOptions({ name: "AdminIncident" });
 
-import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant } from "../../composables/useDates.js";
@@ -123,8 +140,9 @@ const { afficherToast } = useToasts();
 const chargement = ref(true);
 const enCours = ref(false);
 const etat = reactive({ active: null, nbComptes: 0, envoisEmailRestants: 0 });
-const titre = ref("");
-const message = ref("");
+const titre = ref(MODELE_TITRE_INCIDENT);
+const message = ref(MODELE_MESSAGE_INCIDENT);
+const aCompleter = computed(() => champsACompleter(titre.value, message.value));
 const email = ref(false);
 const push = ref(false);
 const changementMdpForce = ref(false);
@@ -167,8 +185,8 @@ async function publier() {
         `Communication publiée (${corps.nbEmails} email(s), ${corps.nbPush} push).`,
         "succes",
       );
-      titre.value = "";
-      message.value = "";
+      titre.value = MODELE_TITRE_INCIDENT;
+      message.value = MODELE_MESSAGE_INCIDENT;
       await charger();
     } else {
       afficherToast(corps.erreur || "Erreur lors de la publication.", "erreur");
