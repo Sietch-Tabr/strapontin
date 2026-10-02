@@ -32,12 +32,49 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReferentielSallesController {
 
   private final ReferentielSallesService service;
+  private final RepartitionSalleService repartitionService;
 
   /**
    * @param service service de gestion du référentiel salles
+   * @param repartitionService répartition d'une salle mélangeant plusieurs lieux
    */
-  public ReferentielSallesController(final ReferentielSallesService service) {
+  public ReferentielSallesController(
+      final ReferentielSallesService service, final RepartitionSalleService repartitionService) {
     this.service = service;
+    this.repartitionService = repartitionService;
+  }
+
+  /**
+   * Libellés source des événements d'une salle, pour préparer sa répartition.
+   *
+   * @param uuid UUID de la salle
+   * @return 200 avec les libellés et leur nombre d'événements, 400 si UUID invalide
+   */
+  @GetMapping("/salles/{uuid}/libelles-sources")
+  public ResponseEntity<?> listerLibellesSources(@PathVariable final String uuid) {
+    final UUID salleId = parseUuid(uuid);
+    if (salleId == null) {
+      return erreur(400, "UUID invalide.");
+    }
+    return ResponseEntity.ok(repartitionService.listerLibelles(salleId));
+  }
+
+  /**
+   * Répartit une salle : les événements publiés sous les libellés choisis passent à une salle
+   * existante ou créée.
+   *
+   * @param uuid UUID de la salle à répartir
+   * @param requete libellés et destination
+   * @return 200 avec le bilan, 400 si invalide, 404 si salle inconnue
+   */
+  @PostMapping("/salles/{uuid}/repartir")
+  public ResponseEntity<?> repartir(
+      @PathVariable final String uuid, @Valid @RequestBody final RequeteRepartitionSalle requete) {
+    final UUID salleId = parseUuid(uuid);
+    if (salleId == null) {
+      return erreur(400, "UUID invalide.");
+    }
+    return ResponseEntity.ok(repartitionService.repartir(salleId, requete));
   }
 
   /**
