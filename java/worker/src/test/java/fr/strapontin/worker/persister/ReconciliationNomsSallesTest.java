@@ -12,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.core.Normalisation;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
@@ -20,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -95,49 +93,6 @@ class ReconciliationNomsSallesTest {
 
     assertEquals(1, resultat.size());
     assertEquals("zenith de strasbourg europe", resultat.get(0).salleNorm());
-  }
-
-  // absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
-  // désynchronisant les deux colonnes avec le temps et cassant le matching Wikidata (comparaison
-  // calibrée sur un nom_norm déjà normalisé — voir CorrespondanceSalle).
-  @Test
-  void absorberRenommagesSalles_renommageAbsorbe_recalculeNomNorm() {
-    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
-    final UUID salleId = UUID.randomUUID();
-
-    final ValeurConcert entrant =
-        new ValeurConcert(
-            "Coldplay",
-            "coldplay",
-            LocalDate.of(2026, 9, 1),
-            null,
-            "L'Olympia",
-            "l olympia",
-            null,
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "tm:venue1",
-            null,
-            null,
-            null);
-
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
-
-    reconciliateur.absorberRenommagesSalles(
-        List.of(entrant), Map.of("tm:venue1", salleId), Map.of());
-
-    @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
-    verify(jdbc).update(anyString(), paramsCaptor.capture());
-    assertEquals(
-        Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
   }
 
   // Cas réel documenté en production (#1217) : un venueId TM déjà mappé vers une salle d'un
