@@ -350,6 +350,10 @@
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminArtistes" });
 
+const props = defineProps({
+  rechercheInitiale: { type: String, default: "" },
+});
+
 import { reactive, ref } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
@@ -387,6 +391,7 @@ const {
   fermerEdition,
   fermerFusion,
 } = useReferentielAdmin({
+  rechercheInitiale: props.rechercheInitiale,
   endpoint: "artistes",
   cleListe: "artistes",
   cleTotal: "totalArtistes",

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,9 @@ public class SignalementsAdminService {
     final List<EntreeSignalement> signalements =
         jdbc.query(
             """
-            SELECT * FROM (
+            SELECT t.*, COALESCE(s.nom_affiche, s.nom, a.nom_affiche, a.nom, u.username)
+                     AS entite_nom
+            FROM (
               SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
                      sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
                      sm.confiance AS confiance, sm.detecte_le AS detecte_le,
@@ -70,6 +73,9 @@ public class SignalementsAdminService {
                      NULL, s.doublon_signale::text
               FROM salles s WHERE s.doublon_signale IS NOT NULL
             ) t
+            LEFT JOIN salles s ON t.entite_type = 'salle' AND s.id::text = t.entite_id
+            LEFT JOIN artistes a ON t.entite_type = 'artiste' AND a.id::text = t.entite_id
+            LEFT JOIN users u ON t.entite_type = 'utilisateur' AND u.id::text = t.entite_id
             ORDER BY t.detecte_le DESC NULLS LAST
             LIMIT :taille OFFSET :offset
             """,
@@ -80,16 +86,19 @@ public class SignalementsAdminService {
                   rs.getString("categorie"),
                   rs.getString("id"),
                   rs.getString("type"),
-                  rs.getString("entite_type"),
-                  rs.getString("entite_id"),
+                  new EntreeSignalement.EntiteSignalee(
+                      rs.getString("entite_type"),
+                      rs.getString("entite_id"),
+                      rs.getString("entite_nom")),
                   rs.getString("confiance"),
-                  detecteLeBrut != null ? ((java.sql.Timestamp) detecteLeBrut).toInstant() : null,
+                  detecteLeBrut != null ? ((Timestamp) detecteLeBrut).toInstant() : null,
                   rs.getString("details"));
             });
 
     final long total = totalActifs();
     final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
-    return new ReponseSignalements(signalements, pageNum, totalPages, total);
+    return new ReponseSignalements(
+        signalements, pageNum, totalPages, total, CatalogueSignalements.tous());
   }
 
   private long totalActifs() {

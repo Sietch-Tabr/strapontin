@@ -34,7 +34,7 @@ class SignalementsAdminControllerTest {
 
   @Test
   void lister_delegueAuService() {
-    when(service.lister(0)).thenReturn(new ReponseSignalements(List.of(), 0, 1, 0));
+    when(service.lister(0)).thenReturn(new ReponseSignalements(List.of(), 0, 1, 0, List.of()));
 
     final ResponseEntity<ReponseSignalements> reponse = controller.lister(0);
 

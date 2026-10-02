@@ -2,6 +2,10 @@
   <section id="concerts" class="admin-section">
     <div class="param-bloc">
       <h3 class="param-libelle">Concerts à confirmer</h3>
+      <p class="param-aide">
+        Concerts absents des billetteries depuis plusieurs passages : annulés ou
+        simplement retirés de la vente. Gardez-les ou supprimez-les.
+      </p>
       <p v-if="!chargement && !concerts.length" class="etat-vide-texte">
         Aucun concert flagué pour suppression pour l'instant.
       </p>

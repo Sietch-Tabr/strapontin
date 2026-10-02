@@ -3,12 +3,13 @@ import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
-test.describe("Scénario: admin — onglet Concerts (à confirmer)", () => {
+test.describe("Scénario: admin — onglet À traiter", () => {
   test("admin_desktop_section_concerts_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#concerts"]').click();
+    await page.locator('a[href="#a-traiter"]').click();
     await expect(page.locator("section#concerts")).toBeVisible();
+    await expect(page.locator("section#signalements")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
 
@@ -18,8 +19,9 @@ test.describe("Scénario: admin — onglet Concerts (à confirmer)", () => {
   }) => {
     if (!isMobile) test.skip();
     await page.goto("/admin");
-    await page.selectOption("select.param-onglets-mobile", "#concerts");
+    await page.selectOption("select.param-onglets-mobile", "#a-traiter");
     await expect(page.locator("section#concerts")).toBeVisible();
+    await expect(page.locator("section#signalements")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
 
@@ -29,13 +31,30 @@ test.describe("Scénario: admin — onglet Concerts (à confirmer)", () => {
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#concerts"]').click();
+    await page.locator('a[href="#a-traiter"]').click();
     await expect(page.locator("section#concerts")).toBeVisible();
     await expect(
       page.locator(
         "section#concerts table, section#concerts p.etat-vide-texte",
       ),
     ).toBeVisible();
+  });
+
+  test("admin_anomalies_listeOuEtatVide_visible", async ({ page }) => {
+    await page.goto("/admin#a-traiter");
+    await expect(
+      page
+        .locator(
+          "section#signalements ul.liste-signalements, section#signalements p.etat-vide-texte",
+        )
+        .first(),
+    ).toBeVisible();
+  });
+
+  test("admin_ancreHistoriqueSignalements_ouvreATraiter", async ({ page }) => {
+    await page.goto("/admin#signalements");
+    await expect(page).toHaveURL(/#a-traiter$/);
+    await expect(page.locator("section#signalements")).toBeVisible();
   });
 });
 

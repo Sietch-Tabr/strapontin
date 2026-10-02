@@ -13,6 +13,7 @@ import { useDialog } from "./useDialog.js";
 /// @param libellePluriel  libellé pluriel pour les messages génériques (`artistes`/`salles`)
 /// @param filtresExtra    callback retournant les filtres additionnels propres au composant
 ///                        appelant (ex. ville/dept pour les salles)
+/// @param rechercheInitiale nom recherché à l'ouverture (lien depuis « À traiter »)
 export function useReferentielAdmin({
   endpoint,
   cleListe,
@@ -20,6 +21,7 @@ export function useReferentielAdmin({
   messageFusionne,
   libellePluriel,
   filtresExtra = () => ({}),
+  rechercheInitiale = "",
 }) {
   const { afficherToast } = useToasts();
 
@@ -28,7 +30,7 @@ export function useReferentielAdmin({
   const page = ref(0);
   const totalPages = ref(1);
   const total = ref(0);
-  const filtreNom = ref("");
+  const filtreNom = ref(rechercheInitiale);
   const filtreStatut = ref("");
   const filtreWikidataManquant = ref(false);
   const selection = reactive([]);

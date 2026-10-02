@@ -150,6 +150,20 @@
                       Éditer
                     </button>
                     <button
+                      v-if="salle.nbConcerts > 0"
+                      type="button"
+                      class="bouton bouton-secondaire bouton-petit"
+                      title="Déplacer vers une autre salle les concerts publiés sous certains noms de lieu"
+                      @click="
+                        repartition.ouvrir({
+                          id: salle.id,
+                          nom: salle.nomAffiche || salle.nom,
+                        })
+                      "
+                    >
+                      Répartir
+                    </button>
+                    <button
                       v-if="salle.wikidataId"
                       type="button"
                       class="bouton bouton-danger bouton-petit"
@@ -288,16 +302,23 @@
       </button>
     </div>
   </dialog>
+  <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
 </template>
 
 <script setup>
 defineOptions({ name: "AdminSalles" });
 
+const props = defineProps({
+  rechercheInitiale: { type: String, default: "" },
+});
+
 import { ref } from "vue";
 import EtatChargement from "../EtatChargement.vue";
+import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
 import { classeStatut, libelleStatut } from "../../utils/statutReferentiel.js";
 
+const repartition = ref(null);
 const filtreVille = ref("");
 const filtreDept = ref("");
 
@@ -319,6 +340,7 @@ const {
   itemB,
   cibleChoisie,
   enCoursFusion,
+  charger,
   rechargerPage0,
   allerPage,
   basculerSelection,
@@ -330,6 +352,7 @@ const {
   fermerEdition,
   fermerFusion,
 } = useReferentielAdmin({
+  rechercheInitiale: props.rechercheInitiale,
   endpoint: "salles",
   cleListe: "salles",
   cleTotal: "totalSalles",

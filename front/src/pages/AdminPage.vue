@@ -35,15 +35,11 @@
     <div class="admin-sections">
       <KeepAlive><AdminJobs v-if="ongletActif === '#jobs'" /></KeepAlive>
       <KeepAlive><AdminSources v-if="ongletActif === '#sources'" /></KeepAlive>
-      <KeepAlive><AdminSalles v-if="ongletActif === '#salles'" /></KeepAlive>
       <KeepAlive
-        ><AdminArtistes v-if="ongletActif === '#artistes'"
+        ><AdminATraiter v-if="ongletActif === '#a-traiter'"
       /></KeepAlive>
       <KeepAlive
-        ><AdminConcerts v-if="ongletActif === '#concerts'"
-      /></KeepAlive>
-      <KeepAlive
-        ><AdminSignalements v-if="ongletActif === '#signalements'"
+        ><AdminReferentiel v-if="ongletActif === '#referentiel'"
       /></KeepAlive>
       <KeepAlive><AdminLogs v-if="ongletActif === '#logs'" /></KeepAlive>
       <KeepAlive
@@ -62,15 +58,13 @@
 <script setup>
 defineOptions({ name: "AdminPage" });
 
-import { ref, onMounted } from "vue";
+import { ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useEstMobile } from "../composables/useBreakpoint.js";
 import AdminJobs from "../components/admin/AdminJobs.vue";
 import AdminSources from "../components/admin/AdminSources.vue";
-import AdminSalles from "../components/admin/AdminSalles.vue";
-import AdminArtistes from "../components/admin/AdminArtistes.vue";
-import AdminConcerts from "../components/admin/AdminConcerts.vue";
-import AdminSignalements from "../components/admin/AdminSignalements.vue";
+import AdminATraiter from "../components/admin/AdminATraiter.vue";
+import AdminReferentiel from "../components/admin/AdminReferentiel.vue";
 import AdminLogs from "../components/admin/AdminLogs.vue";
 import AdminConfig from "../components/admin/AdminConfig.vue";
 import AdminBanniere from "../components/admin/AdminBanniere.vue";
@@ -82,16 +76,21 @@ const estMobile = useEstMobile();
 
 const onglets = [
   { ancre: "#jobs", label: "Tableau de bord" },
+  { ancre: "#a-traiter", label: "À traiter" },
+  { ancre: "#referentiel", label: "Référentiel" },
   { ancre: "#sources", label: "Sources" },
-  { ancre: "#salles", label: "Salles" },
-  { ancre: "#artistes", label: "Artistes" },
-  { ancre: "#concerts", label: "Concerts" },
-  { ancre: "#signalements", label: "Signalements" },
   { ancre: "#logs", label: "Logs" },
   { ancre: "#configuration", label: "Configuration" },
   { ancre: "#communication", label: "Communication" },
   { ancre: "#utilisateurs", label: "Utilisateurs" },
 ];
+// Anciennes ancres (favoris, liens d'emails d'alerte) vers l'onglet qui les regroupe.
+const ANCRES_HISTORIQUES = {
+  "#signalements": { hash: "#a-traiter" },
+  "#concerts": { hash: "#a-traiter" },
+  "#salles": { hash: "#referentiel", query: { entite: "salle" } },
+  "#artistes": { hash: "#referentiel", query: { entite: "artiste" } },
+};
 const ongletActif = ref("#jobs");
 
 function naviguerVers(ancre) {
@@ -99,10 +98,21 @@ function naviguerVers(ancre) {
   router.replace({ hash: ancre });
 }
 
-onMounted(() => {
-  const hash = route.hash || "#jobs";
-  ongletActif.value = onglets.some((o) => o.ancre === hash) ? hash : "#jobs";
-});
+watch(
+  () => route.hash,
+  (hash) => {
+    const redirection = ANCRES_HISTORIQUES[hash];
+    if (redirection) {
+      router.replace(redirection);
+      return;
+    }
+    const ancre = hash || "#jobs";
+    ongletActif.value = onglets.some((o) => o.ancre === ancre)
+      ? ancre
+      : "#jobs";
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped>
