@@ -49,6 +49,24 @@ public interface SourceConcerts {
   }
 
   /**
+   * Recherche par nom, identité confirmée et autres noms connus (libellé et
+   * alias Wikidata) — délègue par défaut à {@link #fetchArtiste(String,
+   * String, String)} en ignorant ces noms.
+   * @param nom nom de l'artiste
+   * @param deezerId identifiant Deezer déjà connu, ou null si non confirmé
+   * @param wikidataId identifiant Wikidata déjà connu, ou null si non confirmé
+   * @param autresNomsConnus libellé et alias connus de l'artiste
+   * @return concerts trouvés, ou liste vide si non supporté
+   */
+  default List<ConcertBrut> fetchArtiste(
+      final String nom,
+      final String deezerId,
+      final String wikidataId,
+      final List<String> autresNomsConnus) {
+    return fetchArtiste(nom, deezerId, wikidataId);
+  }
+
+  /**
    * Indique si la source accepte cet identifiant de salle préfixé (ex.
    * "tm:rZFSnyZdFvA", "eventim:internal:accor arena").
    * @param identifiant identifiant préfixé de la salle

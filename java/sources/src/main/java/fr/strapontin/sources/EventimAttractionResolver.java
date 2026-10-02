@@ -11,7 +11,11 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.ResourceAccessException;
@@ -87,9 +91,24 @@ final class EventimAttractionResolver {
    *     n'accepte plus qu'une correspondance exacte
    * @return attractionId trouvé, ou null si aucune correspondance
    */
-  @SuppressWarnings("unchecked")
   /* package-private : appelé par EventimSource (même package). */
   String rechercherAttractionId(final String terme, final boolean identiteConfirmee) {
+    return rechercherAttractionId(terme, identiteConfirmee, List.of());
+  }
+
+  /**
+   * Recherche l'attractionId Eventim correspondant à un terme de recherche.
+   * @param terme nom de l'artiste cherché
+   * @param identiteConfirmee true restreint le repli par containment aux
+   *     candidats dont le reste du nom est un autre nom connu de l'artiste
+   * @param autresNomsConnus libellé et alias de l'artiste (Wikidata), hors
+   *     terme
+   * @return attractionId trouvé, ou null si aucune correspondance
+   */
+  @SuppressWarnings("unchecked")
+  /* package-private : appelé par EventimSource (même package). */
+  String rechercherAttractionId(
+      final String terme, final boolean identiteConfirmee, final List<String> autresNomsConnus) {
     final URI uri = construireUriRechercheAttractions(terme);
 
     compteurBilan.enregistrerAppel();
@@ -105,7 +124,7 @@ final class EventimAttractionResolver {
       }
 
       final Map<String, Object> exact =
-          selectionnerAttraction(attractions, terme, identiteConfirmee);
+          selectionnerAttraction(attractions, terme, identiteConfirmee, autresNomsConnus);
       return exact != null ? extraireAttractionId(exact) : null;
     } catch (ResourceAccessException e) {
       // Panne réseau : un artiste introuvable ne doit pas être confondu avec une source
@@ -121,11 +140,12 @@ final class EventimAttractionResolver {
   }
 
   private URI construireUriRechercheAttractions(final String terme) {
-    return UriSources.encoder(UriComponentsBuilder.fromUriString(baseUrl + "/v1/attractions")
-        .queryParam(PARAM_WEB_ID, webId)
-        .queryParam(PARAM_LANGUE, "fr")
-        .queryParam("search_term", terme)
-        .queryParam("top", 5));
+    return UriSources.encoder(
+        UriComponentsBuilder.fromUriString(baseUrl + "/v1/attractions")
+            .queryParam(PARAM_WEB_ID, webId)
+            .queryParam(PARAM_LANGUE, "fr")
+            .queryParam("search_term", terme)
+            .queryParam("top", 5));
   }
 
   /**
@@ -133,7 +153,8 @@ final class EventimAttractionResolver {
    * repli sur containment si l'identité n'est pas déjà confirmée.
    * @param attractions résultats bruts de l'API attractions Eventim
    * @param terme terme recherché
-   * @param identiteConfirmee désactive le repli par containment si vrai
+   * @param identiteConfirmee restreint le repli par containment si vrai
+   * @param autresNomsConnus libellé et alias connus de l'artiste
    * @return l'attraction retenue, ou null si aucune correspondance
    */
   // La map représente une attraction unique (un enregistrement), pas une
@@ -143,8 +164,15 @@ final class EventimAttractionResolver {
   private Map<String, Object> selectionnerAttraction(
       final List<Map<String, Object>> attractions,
       final String terme,
-      final boolean identiteConfirmee) {
+      final boolean identiteConfirmee,
+      final List<String> autresNomsConnus) {
     final String termeNorm = Normalisation.normaliserTexte(terme);
+    final Set<String> autresNomsNorm =
+        autresNomsConnus.stream()
+            .filter(Objects::nonNull)
+            .map(Normalisation::normaliserTexte)
+            .filter(n -> !n.isEmpty() && !n.equals(termeNorm))
+            .collect(Collectors.toSet());
     Map<String, Object> parContainment = null;
     for (final Map<String, Object> a : attractions) {
       final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
@@ -152,7 +180,7 @@ final class EventimAttractionResolver {
         return a;
       }
       if (parContainment == null
-          && estContainmentEligible(terme, termeNorm, nomNorm, identiteConfirmee)) {
+          && estContainmentEligible(terme, termeNorm, nomNorm, identiteConfirmee, autresNomsNorm)) {
         parContainment = a;
       }
     }
@@ -172,20 +200,25 @@ final class EventimAttractionResolver {
   }
 
   // Accepte "terme" contenu dans le nom Eventim (ex. "-M-" dans "-M- Matthieu
-  // Chedid") — seulement si l'identité n'est pas déjà confirmée par ailleurs :
-  // sinon ce repli approximatif a fini par accepter à répétition un mauvais
-  // rapprochement (ex. "Furies" dans "Love & Furies", deux entités distinctes).
-  // Seuil sur la longueur brute pour éviter les faux positifs sur un seul
-  // caractère.
+  // Chedid"). Pour une identité déjà confirmée, le reste du nom doit être un
+  // autre nom connu de l'artiste : un containment libre a accepté à répétition
+  // un mauvais rapprochement ("Furies" dans "Love & Furies"). Seuil sur la
+  // longueur brute pour éviter les faux positifs sur un seul caractère.
   private static boolean estContainmentEligible(
       final String terme,
       final String termeNorm,
       final String nomNorm,
-      final boolean identiteConfirmee) {
-    return !identiteConfirmee
-        && terme.length() >= 2
-        && !termeNorm.isEmpty()
-        && nomNorm.contains(termeNorm);
+      final boolean identiteConfirmee,
+      final Set<String> autresNomsNorm) {
+    if (terme.length() < 2 || termeNorm.isEmpty() || !nomNorm.contains(termeNorm)) {
+      return false;
+    }
+    if (!identiteConfirmee) {
+      return true;
+    }
+    final String reste =
+        (" " + nomNorm + " ").replaceFirst(" " + Pattern.quote(termeNorm) + " ", " ").strip();
+    return autresNomsNorm.contains(reste);
   }
 
   private void journaliserContainmentAccepte(

@@ -145,7 +145,7 @@ class WorkerFetchServiceTest {
     }
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(rows);
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch();
@@ -165,7 +165,7 @@ class WorkerFetchServiceTest {
     row.put("attraction_id", "attractionId1");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any()))
         .thenThrow(new RuntimeException("panne persistance"));
 
@@ -192,7 +192,7 @@ class WorkerFetchServiceTest {
     row.put("attraction_id", "attractionId1");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any()))
         .thenThrow(new RuntimeException("panne persistance"));
 
@@ -215,12 +215,12 @@ class WorkerFetchServiceTest {
                 params -> List.of("artiste-1").equals(params.get("ids")))))
         .thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch(List.of("artiste-1"));
 
-    verify(eventim).fetchArtiste("Artiste 1", null, null);
+    verify(eventim).fetchArtiste("Artiste 1", null, null, List.of());
   }
 
   // Un cycle propre doit remettre à zéro le compteur de tentatives de retry — sans quoi il
@@ -234,7 +234,7 @@ class WorkerFetchServiceTest {
     row.put("attraction_id", "attractionId1");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch();
@@ -253,7 +253,7 @@ class WorkerFetchServiceTest {
     row.put("attraction_id", "attractionId1");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch();
@@ -303,12 +303,12 @@ class WorkerFetchServiceTest {
     row.put("deezer_id", "656219");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenReturn(List.of());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch();
 
-    verify(eventim).fetchArtiste("Furies", "656219", null);
+    verify(eventim).fetchArtiste("Furies", "656219", null, List.of());
   }
 
   @Test
@@ -876,7 +876,7 @@ class WorkerFetchServiceTest {
     row.put("attraction_id", "K8vZ917oGV7");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(row));
     when(tm.fetchArtistesLot(any())).thenThrow(panneReseau());
-    when(eventim.fetchArtiste(anyString(), any(), any())).thenReturn(List.of());
+    when(eventim.fetchArtiste(anyString(), any(), any(), any())).thenReturn(List.of());
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
     fetchService.executerFetchArtistesBatch();

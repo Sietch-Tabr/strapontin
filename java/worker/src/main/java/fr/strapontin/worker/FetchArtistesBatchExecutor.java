@@ -10,8 +10,11 @@ import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
+import java.sql.Array;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -101,13 +104,14 @@ class FetchArtistesBatchExecutor {
                 + " MAX(asm.identifiant_externe) AS attraction_id,"
                 + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
                 + " MAX(a.deezer_id) AS deezer_id,"
-                + " MAX(a.wikidata_id) AS wikidata_id"
+                + " MAX(a.wikidata_id) AS wikidata_id,"
+                + " a.nom_affiche AS nom_affiche, a.alias_wikidata AS alias_wikidata"
                 + " FROM user_artistes ua"
                 + " JOIN artistes a ON a.id = ua.artiste_id"
                 + " LEFT JOIN artiste_sources asm"
                 + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
                 + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
-                + " GROUP BY ua.artiste_id",
+                + " GROUP BY ua.artiste_id, a.id",
             retry ? Map.of("ids", artisteIdsCibles) : Map.of());
   }
 
@@ -169,7 +173,8 @@ class FetchArtistesBatchExecutor {
         final String deezerId = (String) row.get("deezer_id");
         final String wikidataId = (String) row.get("wikidata_id");
         try {
-          concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
+          concertsAutresSources.addAll(
+              source.fetchArtiste(nom, deezerId, wikidataId, autresNomsConnus(row)));
         } catch (Exception e) {
           LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
           if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
@@ -330,5 +335,22 @@ class FetchArtistesBatchExecutor {
       commun.attendreRateLimit();
     }
     return resultats;
+  }
+
+  // Libellé et alias Wikidata : permettent de reconnaître un nom de scène publié sous une forme
+  // longue par une source (« -M- Matthieu Chedid »).
+  private static List<String> autresNomsConnus(final Map<String, Object> row) {
+    final List<String> noms = new ArrayList<>();
+    if (row.get("nom_affiche") instanceof String nomAffiche) {
+      noms.add(nomAffiche);
+    }
+    if (row.get("alias_wikidata") instanceof Array alias) {
+      try {
+        noms.addAll(Arrays.asList((String[]) alias.getArray()));
+      } catch (SQLException e) {
+        LOG.warn("alias Wikidata illisibles : {}", e.getMessage());
+      }
+    }
+    return noms;
   }
 }

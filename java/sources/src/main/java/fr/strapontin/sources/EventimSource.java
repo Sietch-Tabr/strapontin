@@ -313,14 +313,15 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         return new ResultatArtisteEventim(concerts, false);
       }
       final URI uri =
-          UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
-              .queryParam(PARAM_WEB_ID, WEB_ID)
-              .queryParam(PARAM_LANGUE, "fr")
-              .queryParam("attraction_ids", attractionId)
-              .queryParam("date_from", fmt.format(debut))
-              .queryParam("date_to", fmt.format(dateFin))
-              .queryParam("sort", "DateAsc")
-              .queryParam("top", TOP_MAX));
+          UriSources.encoder(
+              UriComponentsBuilder.fromUriString(BASE_URL + "/v1/products")
+                  .queryParam(PARAM_WEB_ID, WEB_ID)
+                  .queryParam(PARAM_LANGUE, "fr")
+                  .queryParam("attraction_ids", attractionId)
+                  .queryParam("date_from", fmt.format(debut))
+                  .queryParam("date_to", fmt.format(dateFin))
+                  .queryParam("sort", "DateAsc")
+                  .queryParam("top", TOP_MAX));
       final PageProduitsEventim resultat =
           chargerPageProduits(uri, artisteFallback, null, artisteSourceId);
       if (!resultat.succes()) {
@@ -340,7 +341,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
     return new ResultatArtisteEventim(concerts, true);
   }
-
 
   /**
    * Récupère les concerts d'un artiste via l'API Eventim (recherche
@@ -365,8 +365,29 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   @Override
   public List<ConcertBrut> fetchArtiste(
       final String nom, final String deezerId, final String wikidataId) {
+    return fetchArtiste(nom, deezerId, wikidataId, List.of());
+  }
+
+  /**
+   * Comme {@link #fetchArtiste(String, String, String)}, avec les autres noms
+   * connus de l'artiste : pour une identité confirmée, un nom Eventim
+   * contenant le nom suivi n'est retenu que si le reste est l'un d'eux (nom
+   * de scène « -M- » publié « -M- Matthieu Chedid »).
+   * @param nom nom de l'artiste
+   * @param deezerId identifiant Deezer déjà connu, ou {@code null}
+   * @param wikidataId identifiant Wikidata déjà connu, ou {@code null}
+   * @param autresNomsConnus libellé et alias Wikidata de l'artiste
+   * @return liste des concerts trouvés, vide si non référencé
+   */
+  @Override
+  public List<ConcertBrut> fetchArtiste(
+      final String nom,
+      final String deezerId,
+      final String wikidataId,
+      final List<String> autresNomsConnus) {
     final boolean identiteConfirmee = deezerId != null || wikidataId != null;
-    final String attractionId = attractionResolver.rechercherAttractionId(nom, identiteConfirmee);
+    final String attractionId =
+        attractionResolver.rechercherAttractionId(nom, identiteConfirmee, autresNomsConnus);
     if (attractionId == null) {
       LOG.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();

@@ -367,6 +367,56 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
+  // Nom de scène d'une identité confirmée publié sous une forme longue : « -M- » →
+  // « -M- Matthieu Chedid », reconnu car le reste du nom est le libellé Wikidata de l'artiste.
+  @Test
+  void fetchArtiste_identiteConfirmeeResteDuNomConnu_accepteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess("{\"products\":[],\"totalResults\":0}", MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("-M-", "867", "Q2365459", List.of("Matthieu Chedid", "M"));
+
+    serveur.verify();
+    assertEquals(1, source.preleverContainmentsAcceptes().size());
+  }
+
+  @Test
+  void fetchArtiste_identiteConfirmeeResteDuNomInconnu_rejetteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats =
+        source.fetchArtiste("Furies", "656219", null, List.of("The Furies"));
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
   // Symétrique côté wikidataId : même comportement attendu qu'avec un deezerId connu.
   @Test
   void fetchArtiste_identiteConfirmeeParWikidataId_rejetteLeContainment() {
@@ -590,8 +640,7 @@ class EventimSourceTest {
                     org.hamcrest.Matchers.containsString("date_from=" + LocalDate.now()))))
         .andRespond(
             withSuccess(
-                "{\"products\":[" + pleine + "],\"totalResults\":51}",
-                MediaType.APPLICATION_JSON));
+                "{\"products\":[" + pleine + "],\"totalResults\":51}", MediaType.APPLICATION_JSON));
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("date_from=" + jour)))
         .andRespond(
