@@ -12,15 +12,6 @@
 .tronque-info a {
   text-decoration: underline;
 }
-/* ── Spectacles — container query table → cartes ────────── */
-@container spectacles (max-width: 600px) {
-  .spectacles-conteneur .table-conteneur {
-    overflow-x: visible;
-  }
-  .spectacles-conteneur td.cel-vide {
-    display: none;
-  }
-}
 /* ── Concerts — hiérarchie typographique ────────────────── */
 .concert-artiste {
   font-weight: 600;
@@ -31,22 +22,6 @@
 .concert-ville {
   color: var(--fg-muted);
   font-size: 0.875em;
-}
-/* ── Logs admin — container query table → cartes ─────────── */
-@container logs (max-width: 560px) {
-  .logs-conteneur .table-conteneur {
-    overflow-x: visible;
-  }
-  .logs-conteneur td.log-ts {
-    font-size: 0.75rem;
-    color: var(--fg-muted);
-    padding-bottom: 0;
-  }
-  .logs-conteneur td.log-message {
-    padding-top: 0.25rem;
-    padding-bottom: 0.5rem;
-    word-break: break-word;
-  }
 }
 /* ── Filtres spectacles — disclosure mobile ──────────────── */
 .filtres-bascule {
@@ -101,15 +76,6 @@
   letter-spacing: 0.1em;
   color: var(--fg-muted);
   margin-bottom: 1rem;
-}
-/* ── Container query — Découverte ───────────────────────── */
-@container decouverte (max-width: 700px) {
-  .decouverte-conteneur .table-conteneur {
-    overflow-x: visible;
-  }
-  .decouverte-conteneur td.cel-vide {
-    display: none;
-  }
 }
 /* ── Page Paramètres ─────────────────────────────────────── */
 .param-onglets {
@@ -340,27 +306,6 @@ fieldset.notif-grille {
   gap: 0.375rem;
   font-size: 0.9rem;
   white-space: nowrap;
-}
-/* ── Admin Salles/Artistes — container query table → cartes ─ */
-.salles-conteneur,
-.artistes-conteneur {
-  container-type: inline-size;
-}
-@container salles (max-width: 700px) {
-  .salles-conteneur .table-conteneur {
-    overflow-x: visible;
-  }
-  .salles-conteneur td.source-actions {
-    flex-wrap: wrap;
-  }
-}
-@container artistes (max-width: 700px) {
-  .artistes-conteneur .table-conteneur {
-    overflow-x: visible;
-  }
-  .artistes-conteneur td.source-actions {
-    flex-wrap: wrap;
-  }
 }
 .badge-compteur {
   display: inline-block;

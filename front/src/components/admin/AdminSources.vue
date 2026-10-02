@@ -188,7 +188,7 @@
             "
           />
           <div v-if="salles.length">
-            <div class="table-conteneur">
+            <div class="table-conteneur table-cartes">
               <table
                 id="table-sources-salles"
                 :aria-label="
@@ -207,14 +207,14 @@
                 </thead>
                 <tbody>
                   <tr v-for="salle in salles" :key="salle.salleId">
-                    <td class="source-salle-nom">{{ salle.nom }}</td>
-                    <td class="source-salle-loc">
+                    <td class="source-salle-nom" data-label="Salle">{{ salle.nom }}</td>
+                    <td class="source-salle-loc" data-label="Ville / Dép.">
                       <span v-if="salle.ville || salle.dept">{{
                         [salle.ville, salle.dept].filter(Boolean).join(" ")
                       }}</span>
                       <span v-else class="etat-vide-texte">—</span>
                     </td>
-                    <td>
+                    <td data-label="Lieu Eventim">
                       <div class="source-lieu-inline">
                         <input
                           v-model="lieuxEdites[salle.salleId]"
@@ -240,7 +240,7 @@
                         </span>
                       </div>
                     </td>
-                    <td class="source-actions">
+                    <td class="source-actions" data-label="">
                       <button
                         type="button"
                         class="bouton bouton-secondaire bouton-petit"

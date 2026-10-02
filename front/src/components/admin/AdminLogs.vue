@@ -63,7 +63,7 @@
       </p>
       <EtatChargement v-if="chargement" />
       <div v-else-if="logs.length" class="logs-conteneur">
-        <div class="table-conteneur">
+        <div class="table-conteneur table-cartes">
           <table id="table-logs">
             <thead>
               <tr>
@@ -191,28 +191,10 @@ onMounted(charger);
 </script>
 
 <style scoped>
-.logs-conteneur {
-  container-type: inline-size;
-  container-name: logs;
-}
-
-@container logs (max-width: 560px) {
-  .logs-conteneur table,
-  .logs-conteneur tbody {
-    display: block;
-  }
-
-  .logs-conteneur thead {
-    display: none;
-  }
-
+/* Variante compacte des cartes partagées : une ligne de journal par carte, sans libellés. */
+@container table-cartes (max-width: 700px) {
   .logs-conteneur tr {
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-card);
     margin-bottom: 0.375rem;
-    overflow: hidden;
   }
 
   .logs-conteneur tr.log-erreur {
@@ -229,6 +211,10 @@ onMounted(charger);
     font-size: 0.8125rem;
   }
 
+  .logs-conteneur td::before {
+    display: none;
+  }
+
   .logs-conteneur td[data-label="Niveau"] {
     display: none;
   }
@@ -237,6 +223,18 @@ onMounted(charger);
     font-size: 0.75rem;
     color: var(--fg-muted);
     padding-top: 0;
+  }
+
+  .logs-conteneur td.log-ts {
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    padding-bottom: 0;
+  }
+
+  .logs-conteneur td.log-message {
+    padding-top: 0.25rem;
+    padding-bottom: 0.5rem;
+    overflow-wrap: anywhere;
   }
 }
 

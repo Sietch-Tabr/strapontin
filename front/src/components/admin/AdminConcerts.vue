@@ -10,7 +10,7 @@
         Aucun concert flagué pour suppression pour l'instant.
       </p>
       <EtatChargement v-if="chargement" />
-      <div v-else-if="concerts.length" class="table-conteneur">
+      <div v-else-if="concerts.length" class="table-conteneur table-cartes">
         <table id="table-concerts-a-confirmer">
           <thead>
             <tr>

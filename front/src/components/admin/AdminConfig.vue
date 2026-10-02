@@ -211,7 +211,7 @@
           endpoint).
         </p>
         <EtatChargement v-if="chargementWebhooks" />
-        <div v-else-if="evenementsWebhook.length" class="table-conteneur">
+        <div v-else-if="evenementsWebhook.length" class="table-conteneur table-cartes">
           <table id="table-webhooks-resend">
             <thead>
               <tr>
@@ -267,7 +267,7 @@
           Aucune adresse sur la liste de suppression.
         </p>
         <EtatChargement v-if="chargementSuppressions" />
-        <div v-else-if="suppressions.length" class="table-conteneur">
+        <div v-else-if="suppressions.length" class="table-conteneur table-cartes">
           <table id="table-suppressions-resend">
             <thead>
               <tr>
