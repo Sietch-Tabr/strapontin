@@ -147,4 +147,17 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
 
     assertEquals(0, controle.consoliderPositions());
   }
+
+  @Test
+  void verifier_positionWikidataDUnHomonymeLointain_signaleLIncoherence() {
+    final UUID salle = creerSalle("espace des arts");
+    jdbc.update(
+        "UPDATE salles SET latitude = 46.779, longitude = 4.849, origine_position = 'wikidata',"
+            + " wikidata_id = 'Q61860839' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    lieu(salle, "ticketmaster:rZ6SnyZ1a6@93320", 48.903, 2.508);
+
+    assertEquals(1, controle.verifier());
+    assertEquals(List.of("position_wikidata_incoherente"), typesSignales());
+  }
 }
