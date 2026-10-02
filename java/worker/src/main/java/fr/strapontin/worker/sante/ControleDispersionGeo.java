@@ -69,7 +69,7 @@ final class ControleDispersionGeo {
   private int verifierDispersionParSalle(final List<LieuSource> lieux) {
     final Map<UUID, List<LieuSource>> parSalle = new LinkedHashMap<>();
     lieux.forEach(l -> parSalle.computeIfAbsent(l.salleId(), _ -> new ArrayList<>()).add(l));
-    int signales = 0;
+    final Set<UUID> dispersees = new HashSet<>();
     for (final Map.Entry<UUID, List<LieuSource>> entree : parSalle.entrySet()) {
       final List<LieuSource> sources = entree.getValue();
       double distanceMax = 0;
@@ -95,16 +95,17 @@ final class ControleDispersionGeo {
                 "distanceMetres", Math.round(distanceMax),
                 "sourceA", identifiantA,
                 "sourceB", identifiantB));
-        signales++;
+        dispersees.add(entree.getKey());
       }
     }
-    return signales;
+    signalements.clore("dispersion_sources_salle", dispersees);
+    return dispersees.size();
   }
 
   private int verifierSallesAuMemeLieu(final List<LieuSource> lieux) {
     final Set<String> exclues = chargerPairesExclues();
     final Set<String> signalees = new HashSet<>();
-    int signales = 0;
+    final Set<UUID> entites = new HashSet<>();
     for (int i = 0; i < lieux.size(); i++) {
       for (int j = i + 1; j < lieux.size(); j++) {
         final LieuSource a = lieux.get(i);
@@ -127,10 +128,11 @@ final class ControleDispersionGeo {
                 (aPremier ? b.salleId() : a.salleId()).toString(),
                 "distanceMetres",
                 Math.round(distance(a, b))));
-        signales++;
+        entites.add(aPremier ? a.salleId() : b.salleId());
       }
     }
-    return signales;
+    signalements.clore("meme_lieu_salles", entites);
+    return entites.size();
   }
 
   // Complexe et sous-salle partagent une adresse ; une paire déclarée distincte par un admin

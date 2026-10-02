@@ -37,6 +37,7 @@ public class ControleIntegriteService {
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalementMatchingService;
   private final ControleDispersionGeo dispersionGeo;
+  private final ControleInvariantsDonnees invariants;
 
   /**
    * @param jdbc accès JDBC
@@ -48,11 +49,13 @@ public class ControleIntegriteService {
     this.jdbc = jdbc;
     this.signalementMatchingService = signalementMatchingService;
     this.dispersionGeo = new ControleDispersionGeo(jdbc, signalementMatchingService);
+    this.invariants = new ControleInvariantsDonnees(jdbc, signalementMatchingService);
   }
 
   /**
    * Exécute les invariants (dont la dispersion géographique des lieux
-   * sources, {@link ControleDispersionGeo}) et retourne le nombre total de
+   * sources, {@link ControleDispersionGeo}, et les invariants objectifs des
+   * données, {@link ControleInvariantsDonnees}) et retourne le nombre total de
    * signalements nouvellement posés.
    *
    * @return nombre de signalements nouvellement posés, tous invariants
@@ -65,6 +68,7 @@ public class ControleIntegriteService {
     signales += verifierEvenementsOrphelinsAnciens();
     signales += verifierSourcesOrphelines();
     signales += dispersionGeo.verifier();
+    signales += invariants.verifier();
     LOG.info("controle:integrite signales={}", signales);
     return signales;
   }

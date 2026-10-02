@@ -6,6 +6,7 @@ package fr.strapontin.worker.sante;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -71,5 +72,26 @@ public class SignalementMatchingService {
     } catch (Exception e) {
       LOG.warn("Erreur insertion signalement type={} : {}", type, e.getMessage());
     }
+  }
+
+  /**
+   * Clôt les signalements actifs d'un type dont l'entité ne présente plus l'anomalie — un
+   * contrôle périodique se referme ainsi de lui-même une fois la donnée corrigée.
+   * @param type type de signalement
+   * @param entitesEncoreEnAnomalie entités toujours concernées au dernier contrôle
+   * @return nombre de signalements clos
+   */
+  public int clore(final String type, final Collection<UUID> entitesEncoreEnAnomalie) {
+    return jdbc.update(
+        """
+        UPDATE signalements_matching SET resolu_le = now()
+        WHERE type = :type AND resolu_le IS NULL
+          AND NOT (entite_id = ANY(CAST(:encore AS uuid[])))
+        """,
+        new MapSqlParameterSource()
+            .addValue("type", type)
+            .addValue(
+                "encore",
+                entitesEncoreEnAnomalie.stream().map(UUID::toString).toArray(String[]::new)));
   }
 }
