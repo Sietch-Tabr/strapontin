@@ -86,9 +86,15 @@ public class FusionSallesClePorteeService {
 
   /**
    * Repère les paires de salle_id distincts partageant exactement même
-   * artiste/date/heure/dept (clé forte, appliquée rétroactivement), filtrées
-   * par estDoublonSalle sur les noms — un seul concert coïncidant par erreur
-   * ne doit jamais suffire à fusionner (voir le rationale de classe).
+   * artiste/date/heure/dept (clé forte, appliquée rétroactivement). Un
+   * concert coïncidant ne suffit jamais : la paire doit aussi avoir des noms
+   * doublons sans qualificatif de sous-salle divergent, le même département,
+   * des coordonnées connues des deux côtés à moins de {@value
+   * #DISTANCE_MAX_FUSION_METRES} m, et ne pas être un complexe et sa
+   * sous-salle ni une paire déclarée distincte par un admin. Sans
+   * coordonnées, la fusion attend : des homonymes de villes différentes
+   * (« Palais des Congrès ») ou deux halls d'un même complexe ont été
+   * fusionnés à tort sur la seule coïncidence d'un concert.
    */
   private List<PaireSalles> detecterPaires() {
     final List<Map<String, Object>> lignes =
@@ -96,6 +102,7 @@ public class FusionSallesClePorteeService {
             """
             SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
                    sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
+                   sa.nom AS brut_a, sb.nom AS brut_b,
                    sa.latitude AS lat_a, sa.longitude AS lon_a,
                    sb.latitude AS lat_b, sb.longitude AS lon_b
             FROM concerts c1
@@ -110,16 +117,26 @@ public class FusionSallesClePorteeService {
             WHERE c1.salle_id IS NOT NULL AND c2.salle_id IS NOT NULL
               AND c1.heure IS NOT NULL AND c1.dept IS NOT NULL
               AND c1.date >= CURRENT_DATE
+              AND sa.dept IS NOT DISTINCT FROM sb.dept
+              AND sa.salle_parent_id IS DISTINCT FROM sb.id
+              AND sb.salle_parent_id IS DISTINCT FROM sa.id
+              AND NOT EXISTS (
+                SELECT 1 FROM salles_paires_distinctes d
+                WHERE d.salle_a = LEAST(sa.id, sb.id)
+                  AND d.salle_b = GREATEST(sa.id, sb.id))
             """,
             Map.of());
     final List<PaireSalles> paires = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
-      final String nomA = (String) ligne.get("nom_a");
-      final String nomB = (String) ligne.get("nom_b");
-      if (!CorrespondanceSalle.estDoublonSalle(nomA, nomB)) {
-        continue;
-      }
-      if (distanceExcessive(ligne)) {
+      if (!CorrespondanceSalle.estDoublonSalle(
+              (String) ligne.get("nom_a"), (String) ligne.get("nom_b"))
+          || CorrespondanceSalle.qualificatifsDivergents(
+              (String) ligne.get("brut_a"), (String) ligne.get("brut_b"))
+          || !coordonneesConnuesEtProches(
+              (Double) ligne.get("lat_a"),
+              (Double) ligne.get("lon_a"),
+              (Double) ligne.get("lat_b"),
+              (Double) ligne.get("lon_b"))) {
         continue;
       }
       paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
@@ -128,27 +145,8 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * @return {@code true} si les deux salles ont toutes deux des coordonnées
-   *     connues et que leur distance dépasse
-   *     {@value #DISTANCE_MAX_FUSION_METRES} m — {@code false} si l'une des
-   *     deux coordonnées est inconnue (comportement actuel nom+dept inchangé
-   *     dans ce cas).
-   */
-  private static boolean distanceExcessive(final Map<String, Object> ligne) {
-    final Double latA = (Double) ligne.get("lat_a");
-    final Double lonA = (Double) ligne.get("lon_a");
-    final Double latB = (Double) ligne.get("lat_b");
-    final Double lonB = (Double) ligne.get("lon_b");
-    if (latA == null || lonA == null || latB == null || lonB == null) {
-      return false;
-    }
-    return DistanceGeo.metres(latA, lonA, latB, lonB) > DISTANCE_MAX_FUSION_METRES;
-  }
-
-  /**
    * Vérifie que deux salles ont des coordonnées connues et proches, seul
-   * signal positif suffisant pour une fusion automatique (contrairement à
-   * distanceExcessive, permissif si une coordonnée manque).
+   * signal positif suffisant pour une fusion automatique.
    * @return {@code true} si coordonnées connues et à moins de
    *     {@value #DISTANCE_MAX_FUSION_METRES} m l'une de l'autre
    */
@@ -240,10 +238,14 @@ public class FusionSallesClePorteeService {
             + " source="
             + nomSource,
         Map.of(
-            "salleCible", cibleId.toString(),
-            "salleSource", sourceId.toString(),
-            "nomCible", nomCible,
-            "nomSource", nomSource));
+            "salleCible",
+            cibleId.toString(),
+            "salleSource",
+            sourceId.toString(),
+            "nomCible",
+            nomCible,
+            "nomSource",
+            nomSource));
   }
 
   private String decrireSalle(final UUID id) {
