@@ -211,7 +211,10 @@
           endpoint).
         </p>
         <EtatChargement v-if="chargementWebhooks" />
-        <div v-else-if="evenementsWebhook.length" class="table-conteneur table-cartes">
+        <div
+          v-else-if="evenementsWebhook.length"
+          class="table-conteneur table-cartes"
+        >
           <table id="table-webhooks-resend">
             <thead>
               <tr>
@@ -267,7 +270,10 @@
           Aucune adresse sur la liste de suppression.
         </p>
         <EtatChargement v-if="chargementSuppressions" />
-        <div v-else-if="suppressions.length" class="table-conteneur table-cartes">
+        <div
+          v-else-if="suppressions.length"
+          class="table-conteneur table-cartes"
+        >
           <table id="table-suppressions-resend">
             <thead>
               <tr>
@@ -374,8 +380,15 @@
     </template>
   </section>
 
-  <dialog id="dialog-notifier-version" ref="dialogNotifierVersionRef">
-    <p class="dialog-titre">Notifier la nouvelle version ?</p>
+  <dialog
+    id="dialog-notifier-version"
+    ref="dialogNotifierVersionRef"
+    aria-labelledby="titre-dialog-notifier-version"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-notifier-version" class="dialog-titre">
+      Notifier la nouvelle version ?
+    </h2>
     <p class="dialog-corps">
       Une notification push sera envoyée à tous les utilisateurs ayant activé «
       Nouvelle version de l'application » — vérifiez au préalable qu'une entrée
@@ -402,8 +415,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-vapid" ref="dialogVapidRef">
-    <p class="dialog-titre">Régénérer les clés VAPID ?</p>
+  <dialog
+    id="dialog-vapid"
+    ref="dialogVapidRef"
+    aria-labelledby="titre-dialog-vapid"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-vapid" class="dialog-titre">
+      Régénérer les clés VAPID ?
+    </h2>
     <p class="dialog-corps">
       Tous les abonnements push existants seront invalidés. Les utilisateurs
       devront se réabonner aux notifications.
@@ -428,8 +448,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-tentatives" ref="dialogTentativesRef">
-    <p class="dialog-titre">Tentatives de livraison</p>
+  <dialog
+    id="dialog-tentatives"
+    ref="dialogTentativesRef"
+    aria-labelledby="titre-dialog-tentatives"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-tentatives" class="dialog-titre">
+      Tentatives de livraison
+    </h2>
     <EtatChargement v-if="chargementTentatives" />
     <p v-else-if="!tentatives.length" class="etat-vide-texte">
       Aucune tentative trouvée.

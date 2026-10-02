@@ -269,7 +269,11 @@
       >
         <div class="form-groupe">
           <label for="type-signalement">Type</label>
-          <select id="type-signalement" v-model="typeSignalement" autofocus>
+          <select
+            id="type-signalement"
+            ref="typeSignalementRef"
+            v-model="typeSignalement"
+          >
             <option value="bug">Bug</option>
             <option value="suggestion">Amélioration</option>
             <option value="question">Question</option>
@@ -322,6 +326,7 @@ const { ouvrir: revoirOnboarding } = useOnboarding();
 
 const config = shallowRef(null);
 const dialogRef = ref(null);
+const typeSignalementRef = ref(null);
 const typeSignalement = ref("bug");
 const messageSignalement = ref("");
 const erreurSignalement = ref("");
@@ -333,6 +338,7 @@ function ouvrirSignalement() {
   erreurSignalement.value = "";
   messageSignalement.value = "";
   dialogRef.value?.showModal();
+  typeSignalementRef.value?.focus();
 }
 
 async function envoyerSignalement() {

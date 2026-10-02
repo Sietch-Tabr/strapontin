@@ -3,6 +3,7 @@
 // Prettier via le hook d'écriture (eslint-config-prettier désactive les règles redondantes).
 import js from "@eslint/js";
 import pluginVue from "eslint-plugin-vue";
+import pluginVueA11y from "eslint-plugin-vuejs-accessibility";
 import eslintConfigPrettier from "eslint-config-prettier";
 import globals from "globals";
 
@@ -12,6 +13,7 @@ export default [
   },
   js.configs.recommended,
   ...pluginVue.configs["flat/recommended"],
+  ...pluginVueA11y.configs["flat/recommended"],
   {
     languageOptions: {
       ecmaVersion: "latest",
@@ -21,6 +23,12 @@ export default [
       },
     },
     rules: {
+      // Un libellé est associé à son champ par for/id ou par imbrication : l'un des deux suffit
+      // (WCAG 1.3.1), le réglage par défaut exige les deux.
+      "vuejs-accessibility/label-has-for": [
+        "error",
+        { required: { some: ["nesting", "id"] } },
+      ],
       // Convention JS répandue : préfixe _ pour un paramètre/variable volontairement ignoré.
       "no-unused-vars": [
         "error",

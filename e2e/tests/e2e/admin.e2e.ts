@@ -162,9 +162,10 @@ test.describe("Scénario: admin — gestion des utilisateurs", () => {
     // .bouton-danger n'est plus unique sur la carte depuis l'ajout du bouton
     // "Verrouiller" (#1228) — cibler par texte pour rester non ambigu.
     await carteUser.getByRole("button", { name: "Supprimer" }).click();
-    await expect(page.locator("dialog#dialog-supprimer-user")).toBeVisible({
-      timeout: 3000,
-    });
+    // Nom accessible annoncé par le lecteur d'écran : l'objet de la confirmation.
+    await expect(
+      page.getByRole("dialog", { name: "Supprimer ce compte ?" }),
+    ).toBeVisible({ timeout: 3000 });
     await page.click("button#dialog-supprimer-user-confirmer");
 
     await expect(

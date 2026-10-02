@@ -4,7 +4,6 @@
     ref="dialogRef"
     aria-label="Menu supplémentaire"
     aria-modal="true"
-    @click="clicBackdrop"
     @close="$emit('fermer')"
   >
     <div ref="handleRef" class="dialog-nav-poignee" aria-hidden="true"></div>
@@ -75,7 +74,7 @@
 <script setup>
 defineOptions({ name: "DrawerNav" });
 
-import { ref, watch } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { useNavigation } from "../../composables/useNavigation.js";
 import { useDeconnexion } from "../../composables/useDeconnexion.js";
 
@@ -117,11 +116,17 @@ function naviguerEtFermer(href) {
   naviguer(href);
 }
 
+// Un clic sur le fond (hors du contenu) ferme le menu ; Échap le ferme nativement. Écouteur
+// posé par script : le dialogue n'est pas un élément interactif au sens du gabarit.
 function clicBackdrop(e) {
   if (e.target === dialogRef.value) {
     dialogRef.value.close();
   }
 }
+onMounted(() => dialogRef.value?.addEventListener("click", clicBackdrop));
+onBeforeUnmount(() =>
+  dialogRef.value?.removeEventListener("click", clicBackdrop),
+);
 
 let touchDepart = 0;
 let swipeAbortController = null;

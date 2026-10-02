@@ -66,7 +66,6 @@
                 pattern="[0-9]{6}"
                 maxlength="6"
                 autocomplete="one-time-code"
-                autofocus
                 required
               />
             </div>
@@ -96,7 +95,7 @@
 import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "ParametresTotpPage" });
 
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import EtatChargement from "../components/EtatChargement.vue";
 import { useRouter } from "vue-router";
 import { useToasts } from "../composables/useToasts.js";
@@ -138,6 +137,9 @@ async function chargerSetup() {
   } finally {
     chargement.value = false;
   }
+  // Le champ n'existe qu'une fois le chargement terminé : focus posé après son rendu.
+  await nextTick();
+  codeRef.value?.focus();
 }
 
 async function confirmer() {

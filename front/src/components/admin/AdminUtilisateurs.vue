@@ -201,8 +201,15 @@
     </div>
   </section>
 
-  <dialog id="dialog-supprimer-user" ref="dialogSupprimerUserRef">
-    <p class="dialog-titre">Supprimer ce compte ?</p>
+  <dialog
+    id="dialog-supprimer-user"
+    ref="dialogSupprimerUserRef"
+    aria-labelledby="titre-dialog-supprimer-user"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-supprimer-user" class="dialog-titre">
+      Supprimer ce compte ?
+    </h2>
     <p id="dialog-supprimer-user-nom" class="dialog-corps">
       {{ userASupprimer?.email }}
     </p>
@@ -226,8 +233,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-reinit-mdp" ref="dialogReinitMdpRef">
-    <p class="dialog-titre">Réinitialiser le mot de passe ?</p>
+  <dialog
+    id="dialog-reinit-mdp"
+    ref="dialogReinitMdpRef"
+    aria-labelledby="titre-dialog-reinit-mdp"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-reinit-mdp" class="dialog-titre">
+      Réinitialiser le mot de passe ?
+    </h2>
     <p class="dialog-corps">
       Un email de réinitialisation sera envoyé à
       <strong>{{ userAReinitMdp?.email }}</strong
@@ -253,8 +267,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-reinit-totp" ref="dialogReinitTotpRef">
-    <p class="dialog-titre">Désactiver la 2FA ?</p>
+  <dialog
+    id="dialog-reinit-totp"
+    ref="dialogReinitTotpRef"
+    aria-labelledby="titre-dialog-reinit-totp"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-reinit-totp" class="dialog-titre">
+      Désactiver la 2FA ?
+    </h2>
     <p class="dialog-corps">
       La double authentification de
       <strong>{{ userAReinitTotp?.email }}</strong> sera désactivée.
@@ -279,8 +300,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-revoquer-sessions" ref="dialogRevoquerSessionsRef">
-    <p class="dialog-titre">Révoquer toutes les sessions ?</p>
+  <dialog
+    id="dialog-revoquer-sessions"
+    ref="dialogRevoquerSessionsRef"
+    aria-labelledby="titre-dialog-revoquer-sessions"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-revoquer-sessions" class="dialog-titre">
+      Révoquer toutes les sessions ?
+    </h2>
     <p class="dialog-corps">
       Toutes les sessions actives de
       <strong>{{ userARevoquerSessions?.email }}</strong> seront déconnectées.
@@ -305,8 +333,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-verrouiller-compte" ref="dialogVerrouillerCompteRef">
-    <p class="dialog-titre">Verrouiller ce compte ?</p>
+  <dialog
+    id="dialog-verrouiller-compte"
+    ref="dialogVerrouillerCompteRef"
+    aria-labelledby="titre-dialog-verrouiller-compte"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-verrouiller-compte" class="dialog-titre">
+      Verrouiller ce compte ?
+    </h2>
     <p class="dialog-corps">
       <strong>{{ userAVerrouiller?.email }}</strong> ne pourra plus se connecter
       et toutes ses sessions actives seront déconnectées.
@@ -331,8 +366,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-confirmer-role" ref="dialogConfirmerRoleRef">
-    <p class="dialog-titre">Confirmer le changement de rôle ?</p>
+  <dialog
+    id="dialog-confirmer-role"
+    ref="dialogConfirmerRoleRef"
+    aria-labelledby="titre-dialog-confirmer-role"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-confirmer-role" class="dialog-titre">
+      Confirmer le changement de rôle ?
+    </h2>
     <p id="dialog-confirmer-role-texte" class="dialog-corps">
       {{ texteConfirmationRole }}
     </p>
@@ -356,9 +398,16 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-invitation" ref="dialogInvitationRef">
+  <dialog
+    id="dialog-invitation"
+    ref="dialogInvitationRef"
+    aria-labelledby="titre-dialog-invitation"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-invitation" class="dialog-titre">
+      {{ lienInvitation ? "Compte créé" : "Invitation envoyée" }}
+    </h2>
     <template v-if="lienInvitation">
-      <p class="dialog-titre">Compte créé</p>
       <p class="dialog-corps">
         Aucun service email n'est configuré : transmettez ce lien à
         <strong>{{ inviteEmail }}</strong> pour qu'il finalise son inscription.
@@ -382,7 +431,6 @@
       </div>
     </template>
     <template v-else>
-      <p class="dialog-titre">Invitation envoyée</p>
       <p class="dialog-corps">
         Un email d'invitation a été envoyé à <strong>{{ inviteEmail }}</strong
         >. Le lien est valable 7 jours.

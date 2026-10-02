@@ -5,7 +5,9 @@
     <EtatChargement v-if="chargement" />
     <template v-else>
       <div class="param-bloc">
-        <h3 class="param-libelle">Départements de découverte</h3>
+        <h3 id="label-departements" class="param-libelle">
+          Départements de découverte
+        </h3>
         <p class="param-aide">
           Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page
           Découverte. Pour la Corse, utilisez 2A ou 2B.
@@ -14,6 +16,7 @@
           <input
             v-model="departements"
             name="departements"
+            aria-labelledby="label-departements"
             type="text"
             placeholder="75, 92, 93…"
             autocomplete="off"

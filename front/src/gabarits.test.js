@@ -2,8 +2,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Tout tableau passe en cartes sur mobile via la classe partagée « table-cartes » : sans elle,
-// ou sans data-label sur ses cellules, il déborde horizontalement de la page.
+// Contrôles statiques des gabarits Vue, que le lint ne couvre pas : tableaux lisibles sur
+// mobile et dialogues annoncés par leur objet aux lecteurs d'écran.
 
 const RACINE = new URL(".", import.meta.url).pathname;
 
@@ -59,6 +59,34 @@ describe("tableaux adaptés au mobile", () => {
       balisesOuvrantes(html, "td")
         .filter(({ balise }) => !/\sdata-label=/.test(balise))
         .map(({ balise }) => `${nom} : ${balise.slice(0, 60)}`),
+    );
+    expect(fautifs).toEqual([]);
+  });
+});
+
+describe("dialogues nommés", () => {
+  it("l'analyse trouve bien des dialogues", () => {
+    const total = fichiers.reduce(
+      (n, f) => n + balisesOuvrantes(f.html, "dialog").length,
+      0,
+    );
+    expect(total).toBeGreaterThan(10);
+  });
+
+  // Convention unique : titre <h2 class="dialog-titre"> relié par aria-labelledby ; aria-label
+  // seulement pour un dialogue sans titre visible.
+  it("chaque dialogue a un nom accessible qui pointe vers un titre existant", () => {
+    const fautifs = fichiers.flatMap(({ nom, html }) =>
+      balisesOuvrantes(html, "dialog")
+        .filter(({ balise }) => {
+          if (/\saria-label=/.test(balise)) return false;
+          const reference = balise.match(/\saria-labelledby="([^"]+)"/)?.[1];
+          return !reference || !html.includes(`id="${reference}"`);
+        })
+        .map(
+          ({ balise }) =>
+            `${nom} : ${balise.replace(/\s+/g, " ").slice(0, 80)}`,
+        ),
     );
     expect(fautifs).toEqual([]);
   });

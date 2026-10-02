@@ -92,7 +92,15 @@
     </div>
   </section>
 
-  <dialog id="dialog-supprimer-compte" ref="dialogSuppressionRef">
+  <dialog
+    id="dialog-supprimer-compte"
+    ref="dialogSuppressionRef"
+    aria-labelledby="titre-dialog-supprimer-compte"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-supprimer-compte" class="dialog-titre">
+      Supprimer mon compte ?
+    </h2>
     <p>
       Supprime définitivement votre compte et toutes vos données. Cette action
       est irréversible.
