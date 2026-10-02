@@ -40,26 +40,16 @@ class ResolveurSalleParConcertTest {
       final LocalTime heure,
       final String salleNorm,
       final String dept) {
-    return new ValeurConcert(
-        "Artiste",
-        artisteNorm,
-        date,
-        heure,
-        "Salle",
-        salleNorm,
-        null,
-        dept,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm(artisteNorm)
+        .date(date)
+        .heure(heure)
+        .salle("Salle")
+        .salleNorm(salleNorm)
+        .dept(dept)
+        .source("ticketmaster")
+        .construire();
   }
 
   // "L'Olympia" (TM, nom_norm="l olympia") déjà en base, Eventim fetch "LOlympia" (sans
@@ -322,26 +312,16 @@ class ResolveurSalleParConcertTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(candidatLille));
 
     final ValeurConcert entrant =
-        new ValeurConcert(
-            "Artiste Toulouse",
-            "artiste toulouse",
-            LocalDate.of(2026, 11, 28),
-            null,
-            "Casino - Barriere",
-            "casino barriere",
-            "Toulouse",
-            "31",
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Artiste Toulouse")
+            .artisteNorm("artiste toulouse")
+            .date(LocalDate.of(2026, 11, 28))
+            .salle("Casino - Barriere")
+            .salleNorm("casino barriere")
+            .ville("Toulouse")
+            .dept("31")
+            .source("ticketmaster")
+            .construire();
 
     final List<ValeurConcert> resultat = resolveur.raccrocherSallesParNomNorm(List.of(entrant));
 
@@ -363,26 +343,16 @@ class ResolveurSalleParConcertTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(candidatToulouse));
 
     final ValeurConcert entrant =
-        new ValeurConcert(
-            "Artiste Toulouse",
-            "artiste toulouse",
-            LocalDate.of(2026, 11, 28),
-            null,
-            "Casino - Barriere",
-            "casino barriere",
-            "Toulouse",
-            "31",
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Artiste Toulouse")
+            .artisteNorm("artiste toulouse")
+            .date(LocalDate.of(2026, 11, 28))
+            .salle("Casino - Barriere")
+            .salleNorm("casino barriere")
+            .ville("Toulouse")
+            .dept("31")
+            .source("ticketmaster")
+            .construire();
 
     final List<ValeurConcert> resultat = resolveur.raccrocherSallesParNomNorm(List.of(entrant));
 
@@ -413,26 +383,18 @@ class ResolveurSalleParConcertTest {
         .thenReturn(List.of(candidatSousSalle));
 
     final ValeurConcert entrant =
-        new ValeurConcert(
-            "Lara Fabian",
-            "lara fabian",
-            LocalDate.of(2026, 10, 15),
-            LocalTime.of(20, 0),
-            "La Seine Musicale - Boulogne Billancourt",
-            "la seine musicale grande seine",
-            "Boulogne-Billancourt",
-            "92",
-            null,
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            complexe,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Lara Fabian")
+            .artisteNorm("lara fabian")
+            .date(LocalDate.of(2026, 10, 15))
+            .heure(LocalTime.of(20, 0))
+            .salle("La Seine Musicale - Boulogne Billancourt")
+            .salleNorm("la seine musicale grande seine")
+            .ville("Boulogne-Billancourt")
+            .dept("92")
+            .source("eventim")
+            .salleId(complexe)
+            .construire();
 
     final List<ValeurConcert> resultat = resolveur.raccrocherSallesParNomNorm(List.of(entrant));
 
@@ -457,26 +419,16 @@ class ResolveurSalleParConcertTest {
         .thenReturn(List.of());
 
     final ValeurConcert entrant =
-        new ValeurConcert(
-            "Artiste",
-            "artiste",
-            LocalDate.of(2026, 11, 28),
-            null,
-            "Ed&n",
-            "ed n",
-            null,
-            "31",
-            null,
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            salleResolue,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Artiste")
+            .artisteNorm("artiste")
+            .date(LocalDate.of(2026, 11, 28))
+            .salle("Ed&n")
+            .salleNorm("ed n")
+            .dept("31")
+            .source("eventim")
+            .salleId(salleResolue)
+            .construire();
 
     final List<ValeurConcert> resultat = resolveur.raccrocherSallesParNomNorm(List.of(entrant));
 

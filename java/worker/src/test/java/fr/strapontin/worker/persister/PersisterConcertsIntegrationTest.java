@@ -8,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -60,9 +62,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
   private static ConcertBrut concertSansUrl(
       final String artiste, final String date, final String salle, final String source) {
-    return new ConcertBrut(
-        artiste, date, "20:30", salle, "Paris", "75", null, source, "music", "Pop", "onsale", null,
-        null, null, null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure("20:30")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .source(source)
+        .classification("music")
+        .genre("Pop")
+        .statut("onsale")
+        .construire();
   }
 
   private static ConcertBrut concertAvecHeure(
@@ -71,29 +82,35 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
       final String heure,
       final String salle,
       final String source) {
-    return new ConcertBrut(
-        artiste, date, heure, salle, "Paris", "75", null, source, "music", "Pop", "onsale", null,
-        null, null, null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure(heure)
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .source(source)
+        .classification("music")
+        .genre("Pop")
+        .statut("onsale")
+        .construire();
   }
 
   private static ConcertBrut concert(
       final String artiste, final String date, final String salle, final String source) {
-    return new ConcertBrut(
-        artiste,
-        date,
-        "20:30",
-        salle,
-        "Paris",
-        "75",
-        "https://example.com/" + artiste.toLowerCase().replace(" ", "-"),
-        source,
-        "music",
-        "Pop",
-        "onsale",
-        null,
-        null,
-        null,
-        null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure("20:30")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .url("https://example.com/" + artiste.toLowerCase().replace(" ", "-"))
+        .source(source)
+        .classification("music")
+        .genre("Pop")
+        .statut("onsale")
+        .construire();
   }
 
   private static ConcertBrut concertAvecUrl(
@@ -102,9 +119,19 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
       final String salle,
       final String source,
       final String url) {
-    return new ConcertBrut(
-        artiste, date, "20:30", salle, "Paris", "75", url, source, "music", "Pop", "onsale", null,
-        null, null, null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure("20:30")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .url(url)
+        .source(source)
+        .classification("music")
+        .genre("Pop")
+        .statut("onsale")
+        .construire();
   }
 
   private static ConcertBrut concertAvecSourceId(
@@ -113,22 +140,21 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
       final String salle,
       final String salleSourceId,
       final String artisteSourceId) {
-    return new ConcertBrut(
-        artiste,
-        date,
-        "20:30",
-        salle,
-        "Paris",
-        "75",
-        "https://example.com/" + artiste.toLowerCase().replace(" ", "-"),
-        "ticketmaster",
-        "music",
-        "Pop",
-        "onsale",
-        null,
-        null,
-        salleSourceId,
-        artisteSourceId);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure("20:30")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .url("https://example.com/" + artiste.toLowerCase().replace(" ", "-"))
+        .source("ticketmaster")
+        .classification("music")
+        .genre("Pop")
+        .statut("onsale")
+        .salleSourceId(salleSourceId)
+        .artisteSourceId(artisteSourceId)
+        .construire();
   }
 
   /**
@@ -281,22 +307,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // Même artiste, date, heure et salle → conflit → mise à jour (pas doublon)
     final ConcertBrut v1 = concert("Mika", "2098-07-10", "Olympia", "ticketmaster");
     final ConcertBrut v2 =
-        new ConcertBrut(
-            "Mika",
-            "2098-07-10",
-            "20:30",
-            "Olympia",
-            "Paris",
-            "75",
-            "https://example.com/mika-v2",
-            "eventim",
-            "music",
-            "Pop",
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Mika")
+            .date("2098-07-10")
+            .heure("20:30")
+            .salle("Olympia")
+            .ville("Paris")
+            .dept("75")
+            .url("https://example.com/mika-v2")
+            .source("eventim")
+            .classification("music")
+            .genre("Pop")
+            .construire();
 
     persisterConcerts.persisterConcerts(List.of(v1));
     persisterConcerts.persisterConcerts(List.of(v2));
@@ -311,39 +333,30 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // complète côté API) — un premier cycle Eventim change déjà concerts.source, un second
     // cycle Eventim ne doit pas pour autant écraser le statut détecté par TM.
     final ConcertBrut viaTm =
-        new ConcertBrut(
-            "Angele",
-            "2098-11-06",
-            "20:30",
-            "Zenith",
-            "Paris",
-            "75",
-            null,
-            "ticketmaster",
-            "music",
-            "Pop",
-            "presale",
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Angele")
+            .date("2098-11-06")
+            .heure("20:30")
+            .salle("Zenith")
+            .ville("Paris")
+            .dept("75")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Pop")
+            .statut("presale")
+            .construire();
     final ConcertBrut viaEventim =
-        new ConcertBrut(
-            "Angele",
-            "2098-11-06",
-            "20:30",
-            "Zenith",
-            "Paris",
-            "75",
-            null,
-            "eventim",
-            "music",
-            "Pop",
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Angele")
+            .date("2098-11-06")
+            .heure("20:30")
+            .salle("Zenith")
+            .ville("Paris")
+            .dept("75")
+            .source("eventim")
+            .classification("music")
+            .genre("Pop")
+            .construire();
 
     persisterConcerts.persisterConcerts(List.of(viaTm));
     persisterConcerts.persisterConcerts(List.of(viaEventim));
@@ -363,22 +376,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // en second, devient donc la référence affichée aux deux upserts.
     final ConcertBrut v1 = concert("Mika", "2098-07-10", "THEATRE HEBERTOT", "eventim");
     final ConcertBrut v2 =
-        new ConcertBrut(
-            "Mika",
-            "2098-07-10",
-            "20:30",
-            "Théâtre du Châtelet",
-            "Paris",
-            "75",
-            "https://example.com/mika-v2",
-            "ticketmaster",
-            "music",
-            "Pop",
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Mika")
+            .date("2098-07-10")
+            .heure("20:30")
+            .salle("Théâtre du Châtelet")
+            .ville("Paris")
+            .dept("75")
+            .url("https://example.com/mika-v2")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Pop")
+            .construire();
 
     persisterConcerts.persisterConcerts(List.of(v1));
     persisterConcerts.persisterConcerts(List.of(v2));
@@ -386,47 +395,35 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final Map<String, Object> row =
         jdbc.queryForMap("SELECT salle, salle_norm FROM concerts", Map.of());
     assertEquals("Théâtre du Châtelet", row.get("salle"));
-    assertEquals(
-        fr.strapontin.core.Normalisation.normaliserTexte("Théâtre du Châtelet"),
-        row.get("salle_norm"));
+    assertEquals(Normalisation.normaliserTexte("Théâtre du Châtelet"), row.get("salle_norm"));
   }
 
   @Test
   void persisterConcerts_preferenceArtisteDiacritiques_conserveNomAvecAccents() {
     final List<ConcertBrut> liste =
         List.of(
-            new ConcertBrut(
-                "Julien Dore",
-                "2098-08-20",
-                "20:00",
-                "Zenith Paris",
-                "Paris",
-                "75",
-                null,
-                "ticketmaster",
-                "music",
-                "Pop",
-                null,
-                null,
-                null,
-                null,
-                null),
-            new ConcertBrut(
-                "Julien Doré",
-                "2098-08-20",
-                "20:00",
-                "Zénith Paris",
-                "Paris",
-                "75",
-                null,
-                "eventim",
-                "music",
-                "Pop",
-                null,
-                null,
-                null,
-                null,
-                null));
+            ConcertBrut.nouveau()
+                .artiste("Julien Dore")
+                .date("2098-08-20")
+                .heure("20:00")
+                .salle("Zenith Paris")
+                .ville("Paris")
+                .dept("75")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .construire(),
+            ConcertBrut.nouveau()
+                .artiste("Julien Doré")
+                .date("2098-08-20")
+                .heure("20:00")
+                .salle("Zénith Paris")
+                .ville("Paris")
+                .dept("75")
+                .source("eventim")
+                .classification("music")
+                .genre("Pop")
+                .construire());
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -539,22 +536,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Chimène Badi",
-                "2099-12-18",
-                "20:30",
-                "Parc Des Expositions Brezillet",
-                "Saint-Brieuc",
-                "22",
-                "https://www.ticketmaster.fr/chimene-badi",
-                "ticketmaster",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:rZFSnyZAv1F",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Chimène Badi")
+                .date("2099-12-18")
+                .heure("20:30")
+                .salle("Parc Des Expositions Brezillet")
+                .ville("Saint-Brieuc")
+                .dept("22")
+                .url("https://www.ticketmaster.fr/chimene-badi")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:rZFSnyZAv1F")
+                .construire()));
 
     final UUID salleEnBase =
         jdbc.queryForObject(
@@ -615,22 +610,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Jerome Commandeur",
-                "2099-03-03",
-                "20:30",
-                "Parc Des Expositions Brezillet",
-                "Saint-Brieuc",
-                "22",
-                "https://www.ticketmaster.fr/jerome-commandeur",
-                "ticketmaster",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:rZFSnyZAv1F",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Jerome Commandeur")
+                .date("2099-03-03")
+                .heure("20:30")
+                .salle("Parc Des Expositions Brezillet")
+                .ville("Saint-Brieuc")
+                .dept("22")
+                .url("https://www.ticketmaster.fr/jerome-commandeur")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:rZFSnyZAv1F")
+                .construire()));
 
     final UUID salleEnBase =
         jdbc.queryForObject(
@@ -809,22 +802,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // créerait une deuxième salle distincte au lieu de rattacher au salle_id existant.
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Stromae",
-                DATE_RECENTE,
-                "20:30",
-                "L'Olympia",
-                "Paris",
-                "75",
-                "https://example.com/stromae-tm",
-                "ticketmaster",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:KovZOlympia",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Stromae")
+                .date(DATE_RECENTE)
+                .heure("20:30")
+                .salle("L'Olympia")
+                .ville("Paris")
+                .dept("75")
+                .url("https://example.com/stromae-tm")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:KovZOlympia")
+                .construire()));
 
     final UUID uuidOriginal =
         jdbc.queryForObject(
@@ -835,22 +826,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Stromae",
-                "2098-11-21",
-                "20:30",
-                "LOlympia",
-                "Paris",
-                "75",
-                "https://example.com/stromae-eventim",
-                "eventim",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "eventim:internal:lolympia",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Stromae")
+                .date("2098-11-21")
+                .heure("20:30")
+                .salle("LOlympia")
+                .ville("Paris")
+                .dept("75")
+                .url("https://example.com/stromae-eventim")
+                .source("eventim")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("eventim:internal:lolympia")
+                .construire()));
 
     final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(
@@ -922,22 +911,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Vincent Dedienne",
-                "2099-05-23",
-                "20:30",
-                "Theatre le Forum Frejus",
-                "Paris",
-                "75",
-                "https://example.com/dedienne-eventim",
-                "eventim",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "eventim:leforumfrejus",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Vincent Dedienne")
+                .date("2099-05-23")
+                .heure("20:30")
+                .salle("Theatre le Forum Frejus")
+                .ville("Paris")
+                .dept("75")
+                .url("https://example.com/dedienne-eventim")
+                .source("eventim")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("eventim:leforumfrejus")
+                .construire()));
 
     final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(
@@ -978,22 +965,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Vincent Dedienne",
-                "2099-05-23",
-                "20:30",
-                "Theatre le Forum Frejus",
-                "Lyon",
-                "69",
-                "https://example.com/dedienne-eventim-lyon",
-                "eventim",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "eventim:leforumfrejus2",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Vincent Dedienne")
+                .date("2099-05-23")
+                .heure("20:30")
+                .salle("Theatre le Forum Frejus")
+                .ville("Lyon")
+                .dept("69")
+                .url("https://example.com/dedienne-eventim-lyon")
+                .source("eventim")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("eventim:leforumfrejus2")
+                .construire()));
 
     final Long nbSalles = jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class);
     assertEquals(2L, nbSalles, "deux salles distinctes doivent être créées, dept différent");
@@ -1031,22 +1016,19 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     // Toulouse (31) — doit être rejeté par le filtre plutôt que fusionné à tort avec Lille.
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Artiste Toulouse",
-                "2098-11-28",
-                "20:30",
-                "Casino - Barriere",
-                "Toulouse",
-                "31",
-                "https://example.com/artiste-toulouse",
-                "ticketmaster",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Artiste Toulouse")
+                .date("2098-11-28")
+                .heure("20:30")
+                .salle("Casino - Barriere")
+                .ville("Toulouse")
+                .dept("31")
+                .url("https://example.com/artiste-toulouse")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .construire()));
 
     final UUID salleIdConcertToulouse =
         jdbc.queryForObject(
@@ -1093,22 +1075,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Julien Clerc",
-                "2098-12-01",
-                "20:30",
-                "Accor Arena",
-                "Lyon",
-                "69",
-                "https://example.com/julien-clerc",
-                "ticketmaster",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:venue-aa",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Julien Clerc")
+                .date("2098-12-01")
+                .heure("20:30")
+                .salle("Accor Arena")
+                .ville("Lyon")
+                .dept("69")
+                .url("https://example.com/julien-clerc")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:venue-aa")
+                .construire()));
 
     final String dept =
         jdbc.queryForObject(
@@ -1195,22 +1175,12 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_artisteNormVide_rejetteLeConcert() {
     final ConcertBrut concert =
-        new ConcertBrut(
-            "???",
-            "2098-09-01",
-            null,
-            "Salle",
-            null,
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("???")
+            .date("2098-09-01")
+            .salle("Salle")
+            .source("ticketmaster")
+            .construire();
 
     final PersisterConcerts.ResultatPersistance res =
         persisterConcerts.persisterConcerts(List.of(concert));
@@ -1276,41 +1246,33 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Holiday Nice",
-                DATE_RECENTE,
-                "20:30",
-                "Zenith Paris - la Villette",
-                "Paris",
-                "75",
-                urlEvenement,
-                "ticketmaster",
-                "divers",
-                null,
-                "onsale",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Holiday Nice")
+                .date(DATE_RECENTE)
+                .heure("20:30")
+                .salle("Zenith Paris - la Villette")
+                .ville("Paris")
+                .dept("75")
+                .url(urlEvenement)
+                .source("ticketmaster")
+                .classification("divers")
+                .statut("onsale")
+                .construire()));
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Holiday On Ice",
-                DATE_RECENTE,
-                "20:30",
-                "Zenith Paris - la Villette",
-                "Paris",
-                "75",
-                urlEvenement,
-                "ticketmaster",
-                "divers",
-                null,
-                "onsale",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Holiday On Ice")
+                .date(DATE_RECENTE)
+                .heure("20:30")
+                .salle("Zenith Paris - la Villette")
+                .ville("Paris")
+                .dept("75")
+                .url(urlEvenement)
+                .source("ticketmaster")
+                .classification("divers")
+                .statut("onsale")
+                .construire()));
 
     final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "l'ancienne ligne corrompue doit être absorbée, pas dupliquée");
@@ -1331,41 +1293,33 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "The Pussycat Dolls",
-                DATE_RECENTE,
-                "20:00",
-                "Accor Arena",
-                "Paris",
-                "75",
-                urlEvenement,
-                "ticketmaster",
-                "music",
-                null,
-                "onsale",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("The Pussycat Dolls")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Accor Arena")
+                .ville("Paris")
+                .dept("75")
+                .url(urlEvenement)
+                .source("ticketmaster")
+                .classification("music")
+                .statut("onsale")
+                .construire()));
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "The Pussycat Dolls",
-                DATE_RECENTE,
-                "19:00",
-                "Accor Arena",
-                "Paris",
-                "75",
-                urlEvenement,
-                "ticketmaster",
-                "music",
-                null,
-                "rescheduled",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("The Pussycat Dolls")
+                .date(DATE_RECENTE)
+                .heure("19:00")
+                .salle("Accor Arena")
+                .ville("Paris")
+                .dept("75")
+                .url(urlEvenement)
+                .source("ticketmaster")
+                .classification("music")
+                .statut("rescheduled")
+                .construire()));
 
     final Long count = jdbc.queryForObject("SELECT COUNT(*) FROM concerts", Map.of(), Long.class);
     assertEquals(1L, count, "l'ancienne ligne (20h, en vente) doit être absorbée, pas dupliquée");
@@ -1384,58 +1338,46 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Les Misérables",
-                DATE_RECENTE,
-                "15:00",
-                "Zenith Paris",
-                "Paris",
-                "75",
-                urlProduction,
-                "ticketmaster",
-                "theatre",
-                null,
-                "onsale",
-                null,
-                null,
-                null,
-                null),
-            new ConcertBrut(
-                "Les Misérables",
-                DATE_RECENTE,
-                "20:00",
-                "Zenith Paris",
-                "Paris",
-                "75",
-                urlProduction,
-                "ticketmaster",
-                "theatre",
-                null,
-                "onsale",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Les Misérables")
+                .date(DATE_RECENTE)
+                .heure("15:00")
+                .salle("Zenith Paris")
+                .ville("Paris")
+                .dept("75")
+                .url(urlProduction)
+                .source("ticketmaster")
+                .classification("theatre")
+                .statut("onsale")
+                .construire(),
+            ConcertBrut.nouveau()
+                .artiste("Les Misérables")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Zenith Paris")
+                .ville("Paris")
+                .dept("75")
+                .url(urlProduction)
+                .source("ticketmaster")
+                .classification("theatre")
+                .statut("onsale")
+                .construire()));
 
     // Annulation de la seule séance du soir, même URL/date, heure différente des deux existantes.
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Les Misérables",
-                DATE_RECENTE,
-                "20:00",
-                "Zenith Paris",
-                "Paris",
-                "75",
-                urlProduction,
-                "ticketmaster",
-                "theatre",
-                null,
-                "cancelled",
-                null,
-                null,
-                null,
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Les Misérables")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Zenith Paris")
+                .ville("Paris")
+                .dept("75")
+                .url(urlProduction)
+                .source("ticketmaster")
+                .classification("theatre")
+                .statut("cancelled")
+                .construire()));
 
     final List<String> heures =
         jdbc.queryForList(
@@ -1461,22 +1403,18 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("nomNorm", "mika"));
 
     final ConcertBrut concertSansIdArtiste =
-        new ConcertBrut(
-            "Mika",
-            "2098-12-10",
-            "20:00",
-            "Le Zénith Paris",
-            "Paris",
-            "75",
-            "https://www.eventim.fr/event/mika-zenith-paris-1",
-            "eventim",
-            null,
-            "Concert",
-            null,
-            null,
-            null,
-            "eventim:internal:le zenith paris",
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Mika")
+            .date("2098-12-10")
+            .heure("20:00")
+            .salle("Le Zénith Paris")
+            .ville("Paris")
+            .dept("75")
+            .url("https://www.eventim.fr/event/mika-zenith-paris-1")
+            .source("eventim")
+            .genre("Concert")
+            .salleSourceId("eventim:internal:le zenith paris")
+            .construire();
 
     persisterConcerts.persisterConcerts(List.of(concertSansIdArtiste));
 
@@ -1533,38 +1471,28 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     final List<ConcertBrut> liste =
         List.of(
-            new ConcertBrut(
-                "Radiohead",
-                "2098-11-20",
-                null,
-                "Zenith Paris La Villette",
-                "Paris",
-                "75",
-                "https://www.ticketmaster.fr/radiohead",
-                "ticketmaster",
-                null,
-                "Concert",
-                null,
-                null,
-                null,
-                "tm:TM_VENUE_001",
-                null),
-            new ConcertBrut(
-                "Radiohead",
-                "2098-11-20",
-                null,
-                "Zenith de Paris",
-                "Paris",
-                "75",
-                "https://www.eventim.fr/radiohead",
-                "eventim",
-                null,
-                "Concert",
-                null,
-                null,
-                null,
-                "eventim:internal:zenith de paris",
-                null));
+            ConcertBrut.nouveau()
+                .artiste("Radiohead")
+                .date("2098-11-20")
+                .salle("Zenith Paris La Villette")
+                .ville("Paris")
+                .dept("75")
+                .url("https://www.ticketmaster.fr/radiohead")
+                .source("ticketmaster")
+                .genre("Concert")
+                .salleSourceId("tm:TM_VENUE_001")
+                .construire(),
+            ConcertBrut.nouveau()
+                .artiste("Radiohead")
+                .date("2098-11-20")
+                .salle("Zenith de Paris")
+                .ville("Paris")
+                .dept("75")
+                .url("https://www.eventim.fr/radiohead")
+                .source("eventim")
+                .genre("Concert")
+                .salleSourceId("eventim:internal:zenith de paris")
+                .construire());
 
     assertDoesNotThrow(
         () -> persisterConcerts.persisterConcerts(liste),
@@ -1602,47 +1530,33 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     final LocalDate date = LocalDate.parse("2098-12-05");
     final LocalTime heure = LocalTime.parse("20:00");
     final ValeurConcert viaTm =
-        new ValeurConcert(
-            "Coldplay",
-            "coldplay",
-            date,
-            heure,
-            "Accor Arena",
-            "accor arena",
-            "Paris",
-            "75",
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            salleId,
-            artisteId);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Coldplay")
+            .artisteNorm("coldplay")
+            .date(date)
+            .heure(heure)
+            .salle("Accor Arena")
+            .salleNorm("accor arena")
+            .ville("Paris")
+            .dept("75")
+            .source("ticketmaster")
+            .salleId(salleId)
+            .artisteId(artisteId)
+            .construire();
     final ValeurConcert viaEventim =
-        new ValeurConcert(
-            "Cold Play",
-            "cold play",
-            date,
-            heure,
-            "Accor Arena Eventim",
-            "accor arena eventim",
-            "Paris",
-            "75",
-            null,
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            salleId,
-            artisteId);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Cold Play")
+            .artisteNorm("cold play")
+            .date(date)
+            .heure(heure)
+            .salle("Accor Arena Eventim")
+            .salleNorm("accor arena eventim")
+            .ville("Paris")
+            .dept("75")
+            .source("eventim")
+            .salleId(salleId)
+            .artisteId(artisteId)
+            .construire();
 
     persisteurConcertsDb.upsertLot(List.of(viaTm, viaEventim));
 
@@ -1680,38 +1594,33 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
 
     final List<ConcertBrut> liste =
         List.of(
-            new ConcertBrut(
-                "Jay Z",
-                DATE_RECENTE,
-                "19:00",
-                "Stade De France",
-                "Saint-Denis",
-                "93",
-                "https://tm.example/jay-z-billet",
-                "ticketmaster",
-                "music",
-                "Pop",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:venue-stade-de-france",
-                null),
-            new ConcertBrut(
-                "Jay Z",
-                DATE_RECENTE,
-                "20:00",
-                "Stade De France",
-                "Saint-Denis",
-                "93",
-                "https://tm.example/pack/jay-z-vip-billet",
-                "ticketmaster",
-                "music",
-                "Pop",
-                null,
-                null,
-                null,
-                "ticketmaster:venue-stade-de-france",
-                null));
+            ConcertBrut.nouveau()
+                .artiste("Jay Z")
+                .date(DATE_RECENTE)
+                .heure("19:00")
+                .salle("Stade De France")
+                .ville("Saint-Denis")
+                .dept("93")
+                .url("https://tm.example/jay-z-billet")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:venue-stade-de-france")
+                .construire(),
+            ConcertBrut.nouveau()
+                .artiste("Jay Z")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Stade De France")
+                .ville("Saint-Denis")
+                .dept("93")
+                .url("https://tm.example/pack/jay-z-vip-billet")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Pop")
+                .salleSourceId("ticketmaster:venue-stade-de-france")
+                .construire());
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -1740,38 +1649,33 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   void persisterConcerts_artisteNonSuiviCoTeteAffiche_fusionneSansArtisteId() {
     final List<ConcertBrut> liste =
         List.of(
-            new ConcertBrut(
-                "Earl Sweatshirt",
-                DATE_RECENTE,
-                "20:00",
-                "Elysee Montmartre",
-                "Paris",
-                "75",
-                "https://tm.example/earl-sweatshirt-billet",
-                "ticketmaster",
-                "music",
-                "Rap",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:venue-elysee-montmartre",
-                null),
-            new ConcertBrut(
-                "Earl Sweatshirt & Mike",
-                DATE_RECENTE,
-                "20:00",
-                "Elysee Montmartre",
-                "Paris",
-                "75",
-                "https://www.eventim.fr/earl-sweatshirt-mike-billet",
-                "eventim",
-                "music",
-                "Rap",
-                null,
-                null,
-                null,
-                "ticketmaster:venue-elysee-montmartre",
-                null));
+            ConcertBrut.nouveau()
+                .artiste("Earl Sweatshirt")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Elysee Montmartre")
+                .ville("Paris")
+                .dept("75")
+                .url("https://tm.example/earl-sweatshirt-billet")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Rap")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:venue-elysee-montmartre")
+                .construire(),
+            ConcertBrut.nouveau()
+                .artiste("Earl Sweatshirt & Mike")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Elysee Montmartre")
+                .ville("Paris")
+                .dept("75")
+                .url("https://www.eventim.fr/earl-sweatshirt-mike-billet")
+                .source("eventim")
+                .classification("music")
+                .genre("Rap")
+                .salleSourceId("ticketmaster:venue-elysee-montmartre")
+                .construire());
 
     persisterConcerts.persisterConcerts(liste);
 
@@ -1792,41 +1696,36 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   void persisterConcerts_artisteNonSuiviDeuxCyclesDeFetchDistincts_fusionneSansArtisteId() {
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Earl Sweatshirt",
-                DATE_RECENTE,
-                "20:00",
-                "Elysee Montmartre",
-                "Paris",
-                "75",
-                "https://tm.example/earl-sweatshirt-billet",
-                "ticketmaster",
-                "music",
-                "Rap",
-                "onsale",
-                null,
-                null,
-                "ticketmaster:venue-elysee-montmartre-2",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Earl Sweatshirt")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Elysee Montmartre")
+                .ville("Paris")
+                .dept("75")
+                .url("https://tm.example/earl-sweatshirt-billet")
+                .source("ticketmaster")
+                .classification("music")
+                .genre("Rap")
+                .statut("onsale")
+                .salleSourceId("ticketmaster:venue-elysee-montmartre-2")
+                .construire()));
 
     persisterConcerts.persisterConcerts(
         List.of(
-            new ConcertBrut(
-                "Earl Sweatshirt & Mike",
-                DATE_RECENTE,
-                "20:00",
-                "Elysee Montmartre",
-                "Paris",
-                "75",
-                "https://www.eventim.fr/earl-sweatshirt-mike-billet-2",
-                "eventim",
-                "music",
-                "Rap",
-                null,
-                null,
-                null,
-                "ticketmaster:venue-elysee-montmartre-2",
-                null)));
+            ConcertBrut.nouveau()
+                .artiste("Earl Sweatshirt & Mike")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("Elysee Montmartre")
+                .ville("Paris")
+                .dept("75")
+                .url("https://www.eventim.fr/earl-sweatshirt-mike-billet-2")
+                .source("eventim")
+                .classification("music")
+                .genre("Rap")
+                .salleSourceId("ticketmaster:venue-elysee-montmartre-2")
+                .construire()));
 
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
@@ -1843,41 +1742,37 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
   @Test
   void persisterConcerts_complexeMultiSalles_creeUneSousSalleDistincteEnEnfant() {
     final ConcertBrut grandeSeine =
-        new ConcertBrut(
-            "Artiste Grande Seine",
-            DATE_RECENTE,
-            "20:30",
-            "La Seine Musicale - Grande Seine",
-            "Boulogne-Billancourt",
-            "92",
-            "https://tm.example/grande-seine",
-            "ticketmaster",
-            "music",
-            "Pop",
-            "onsale",
-            null,
-            null,
-            "ticketmaster:venue-grande-seine",
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Artiste Grande Seine")
+            .date(DATE_RECENTE)
+            .heure("20:30")
+            .salle("La Seine Musicale - Grande Seine")
+            .ville("Boulogne-Billancourt")
+            .dept("92")
+            .url("https://tm.example/grande-seine")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Pop")
+            .statut("onsale")
+            .salleSourceId("ticketmaster:venue-grande-seine")
+            .construire();
     persisterConcerts.persisterConcerts(List.of(grandeSeine));
 
     final ConcertBrut auditorium =
-        new ConcertBrut(
-            "Artiste Auditorium",
-            DATE_RECENTE,
-            "20:30",
-            "La Seine Musicale - Auditorium P.devedjian",
-            "Boulogne-Billancourt",
-            "92",
-            "https://tm.example/auditorium",
-            "ticketmaster",
-            "music",
-            "Pop",
-            "onsale",
-            null,
-            null,
-            "ticketmaster:venue-auditorium",
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Artiste Auditorium")
+            .date(DATE_RECENTE)
+            .heure("20:30")
+            .salle("La Seine Musicale - Auditorium P.devedjian")
+            .ville("Boulogne-Billancourt")
+            .dept("92")
+            .url("https://tm.example/auditorium")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Pop")
+            .statut("onsale")
+            .salleSourceId("ticketmaster:venue-auditorium")
+            .construire();
     persisterConcerts.persisterConcerts(List.of(auditorium));
 
     final List<Map<String, Object>> salles =
@@ -1917,22 +1812,20 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
       final String ville,
       final String dept,
       final String salleSourceId) {
-    return new ConcertBrut(
-        artiste,
-        "2098-10-31",
-        "20:00",
-        salle,
-        ville,
-        dept,
-        "https://example.com/" + artiste.toLowerCase().replace(" ", "-") + "-" + dept,
-        "ticketmaster",
-        "music",
-        "Pop",
-        "onsale",
-        null,
-        null,
-        salleSourceId,
-        null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date("2098-10-31")
+        .heure("20:00")
+        .salle(salle)
+        .ville(ville)
+        .dept(dept)
+        .url("https://example.com/" + artiste.toLowerCase().replace(" ", "-") + "-" + dept)
+        .source("ticketmaster")
+        .classification("music")
+        .genre("Pop")
+        .statut("onsale")
+        .salleSourceId(salleSourceId)
+        .construire();
   }
 
   private UUID insererSalleDansDept(final String nom, final String dept) {
@@ -2009,7 +1902,102 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(
         List.of(concert("Rex Studios", "2024-01-01", "Le Grand Rex", "eventim")));
 
+    assertEquals(0L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  // --- position et identifiant qualifié des lieux ---
+
+  private ConcertBrut concertEventimPositionne(
+      final String salle, final String codePostal, final String dept) {
+    final String nomNorm = Normalisation.normaliserTexte(salle);
+    return ConcertBrut.nouveau()
+        .artiste("Tina Arena")
+        .date(DATE_RECENTE)
+        .heure("20:00")
+        .salle(salle)
+        .dept(dept)
+        .url("https://www.eventim.fr/event/tina-" + codePostal)
+        .source("eventim")
+        .salleSourceId("eventim:" + IdentifiantLieuEventim.calculer(nomNorm, codePostal))
+        .position(new PositionLieu(42.70, 2.89, codePostal))
+        .construire();
+  }
+
+  @Test
+  void persisterConcerts_lieuPositionne_enregistreLaPositionSurLeMappingEtLaSalle() {
+    persisterConcerts.persisterConcerts(
+        List.of(concertEventimPositionne("Palais des Congres", "66000", "66")));
+
     assertEquals(
-        0L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+        "66000",
+        jdbc.queryForObject(
+            "SELECT code_postal FROM salle_sources WHERE identifiant_externe ="
+                + " 'internal:palais des congres@66000'",
+            Map.of(),
+            String.class));
+    assertEquals(
+        42.70,
+        jdbc.queryForObject(
+            "SELECT s.latitude FROM salles s JOIN salle_sources ss ON ss.salle_id = s.id"
+                + " WHERE ss.identifiant_externe = 'internal:palais des congres@66000'",
+            Map.of(),
+            Double.class),
+        1e-9);
+  }
+
+  @Test
+  void persisterConcerts_identifiantHistoriqueMemeDepartement_rattacheEtQualifieLeMapping() {
+    final UUID salle = creerSalleAvecMappingEventim("Palais des Congres", "66");
+
+    persisterConcerts.persisterConcerts(
+        List.of(concertEventimPositionne("Palais des Congres", "66000", "66")));
+
+    assertEquals(
+        salle,
+        jdbc.queryForObject(
+            "SELECT salle_id FROM salle_sources WHERE identifiant_externe ="
+                + " 'internal:palais des congres@66000'",
+            Map.of(),
+            UUID.class));
+  }
+
+  // Un homonyme d'un autre département ne récupère jamais la salle de l'identifiant historique.
+  @Test
+  void persisterConcerts_identifiantHistoriqueAutreDepartement_neRattachePas() {
+    final UUID salleVittel = creerSalleAvecMappingEventim("Palais des Congres", "88");
+
+    persisterConcerts.persisterConcerts(
+        List.of(concertEventimPositionne("Palais des Congres", "66000", "66")));
+
+    final UUID salleConcert =
+        jdbc.queryForObject(
+            "SELECT salle_id FROM concerts WHERE artiste_norm = 'tina arena'",
+            Map.of(),
+            UUID.class);
+    assertNotEquals(salleVittel, salleConcert);
+  }
+
+  private UUID creerSalleAvecMappingEventim(final String nom, final String dept) {
+    final UUID id = UUID.randomUUID();
+    final String nomNorm = Normalisation.normaliserTexte(nom);
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept)"
+            + " VALUES (CAST(:id AS uuid), :cle, :nom, :nomNorm, :dept)",
+        Map.of(
+            "id",
+            id.toString(),
+            "cle",
+            nomNorm + " " + dept,
+            "nom",
+            nom,
+            "nomNorm",
+            nomNorm,
+            "dept",
+            dept));
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:id AS uuid), 'eventim', :identifiant)",
+        Map.of("id", id.toString(), "identifiant", "internal:" + nomNorm));
+    return id;
   }
 }

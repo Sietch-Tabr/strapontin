@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceArtiste;
+import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
 import java.sql.Time;
 import java.sql.Types;
@@ -37,10 +38,12 @@ public class PersisteurConcertsDb {
   private static final String CLE_SALLE = "salle";
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
+  private static final String PREFIXE_EVENTIM = "eventim:";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurArtisteParUrl resolveurArtisteParUrl;
   private final AlignementReportTM alignementReportTM;
+  private final EnregistreurPositionsLieux enregistreurPositions;
 
   private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
@@ -53,6 +56,84 @@ public class PersisteurConcertsDb {
     this.jdbc = jdbc;
     this.resolveurArtisteParUrl = resolveurArtisteParUrl;
     this.alignementReportTM = new AlignementReportTM(jdbc);
+    this.enregistreurPositions = new EnregistreurPositionsLieux(jdbc);
+  }
+
+  /**
+   * Enregistre la position publiée de chaque lieu sur son mapping et sa
+   * salle ({@link EnregistreurPositionsLieux}).
+   * @param concerts concerts dont l'identifiant source de salle est résolu
+   * @param cachesSalles identifiant source préfixé → salle
+   */
+  /* package-private : appelé par PersisterConcerts (même package). */
+  void enregistrerPositions(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    enregistreurPositions.enregistrer(concerts, cachesSalles);
+  }
+
+  /**
+   * Rattache un lieu Eventim publié sous un identifiant qualifié par code
+   * postal encore inconnu à la salle de son identifiant historique (nom
+   * seul), si cette salle est dans le même département : un mapping qualifié
+   * est alors créé. Les lieux homonymes d'autres départements, qui
+   * partageaient l'identifiant historique, en restent écartés.
+   * @param concerts concerts du lot
+   * @param cachesSalles identifiant source préfixé → salle, complété en place
+   */
+  /* package-private : appelé par PersisterConcerts (même package). */
+  void reprendreIdentifiantsEventimHistoriques(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    final Map<String, ValeurConcert> qualifiesInconnus = new HashMap<>();
+    for (final ValeurConcert c : concerts) {
+      final String id = c.salleSourceId();
+      if (id != null
+          && id.startsWith(PREFIXE_EVENTIM)
+          && !cachesSalles.containsKey(id)
+          && !IdentifiantLieuEventim.historique(id).equals(id)) {
+        qualifiesInconnus.putIfAbsent(id, c);
+      }
+    }
+    if (qualifiesInconnus.isEmpty()) {
+      return;
+    }
+    final List<String> historiques =
+        qualifiesInconnus.keySet().stream()
+            .map(id -> IdentifiantLieuEventim.historique(id.substring(PREFIXE_EVENTIM.length())))
+            .distinct()
+            .toList();
+    final Map<String, Map<String, Object>> parHistorique = new HashMap<>();
+    for (final Map<String, Object> ligne :
+        jdbc.queryForList(
+            """
+            SELECT ss.identifiant_externe AS identifiant, ss.salle_id AS salle_id, s.dept AS dept
+            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+            WHERE ss.source = 'eventim' AND ss.identifiant_externe IN (:ids)
+            """,
+            Map.of("ids", historiques))) {
+      parHistorique.put((String) ligne.get("identifiant"), ligne);
+    }
+    for (final Map.Entry<String, ValeurConcert> entree : qualifiesInconnus.entrySet()) {
+      final String qualifie = entree.getKey().substring(PREFIXE_EVENTIM.length());
+      final Map<String, Object> historique =
+          parHistorique.get(IdentifiantLieuEventim.historique(qualifie));
+      if (historique == null) {
+        continue;
+      }
+      final String deptSalle = (String) historique.get("dept");
+      final String deptEntrant = entree.getValue().dept();
+      if (deptSalle != null && deptEntrant != null && !deptSalle.equals(deptEntrant)) {
+        continue;
+      }
+      final UUID salleId = (UUID) historique.get("salle_id");
+      jdbc.update(
+          """
+          INSERT INTO salle_sources (salle_id, source, identifiant_externe)
+          VALUES (CAST(:salleId AS uuid), 'eventim', :identifiant)
+          ON CONFLICT (source, identifiant_externe) DO NOTHING
+          """,
+          Map.of("salleId", salleId.toString(), "identifiant", qualifie));
+      cachesSalles.put(entree.getKey(), salleId);
+    }
   }
 
   /**

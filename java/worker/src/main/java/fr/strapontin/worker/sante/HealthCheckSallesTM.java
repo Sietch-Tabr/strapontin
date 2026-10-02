@@ -4,15 +4,18 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
+import java.sql.Types;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +34,8 @@ public final class HealthCheckSallesTM {
   private static final String NIVEAU_WARN = "warn";
   private static final String SOURCE_RECONCILIATION_NOCTURNE = "reconciliation-nocturne";
   private static final int NB_CANDIDATS_NON_AMBIGU = 1;
+  /* package-private : visibilité élargie pour les tests (même package). */
+  static final int LIMITE_POSITIONS_PAR_NUIT = 50;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final TicketmasterSource tm;
@@ -187,5 +192,59 @@ public final class HealthCheckSallesTM {
         suspectes.size()
             + " lieu(x) Eventim suspect(s) — correction manuelle via l'onglet admin Sources",
         Map.of("nbSuspectes", suspectes.size()));
+  }
+
+  /**
+   * Rattrape la position des lieux Ticketmaster qui n'en ont pas : un lieu
+   * programmé la reçoit à l'ingestion de ses concerts, un lieu sans concert
+   * en cours jamais. Borné à {@value #LIMITE_POSITIONS_PAR_NUIT} lieux par
+   * nuit pour préserver le quota Ticketmaster.
+   * @return nombre de lieux dont la position a été obtenue
+   */
+  /* package-private : appelé par ReconciliationNocturneService (même package). */
+  int rattraperPositions() {
+    final List<Map<String, Object>> lieux =
+        jdbc.queryForList(
+            """
+            SELECT salle_id::text AS salle_id, identifiant_externe
+            FROM salle_sources
+            WHERE source = 'ticketmaster' AND latitude IS NULL
+            ORDER BY identifiant_externe
+            LIMIT :limite
+            """,
+            Map.of("limite", LIMITE_POSITIONS_PAR_NUIT));
+    int obtenues = 0;
+    for (final Map<String, Object> lieu : lieux) {
+      final PositionLieu position = tm.lirePositionVenue((String) lieu.get("identifiant_externe"));
+      if (!position.estGeolocalisee()) {
+        continue;
+      }
+      final MapSqlParameterSource params =
+          new MapSqlParameterSource()
+              .addValue("identifiant", lieu.get("identifiant_externe"))
+              .addValue("salleId", lieu.get("salle_id"))
+              .addValue("latitude", position.latitude(), Types.DOUBLE)
+              .addValue("longitude", position.longitude(), Types.DOUBLE)
+              .addValue("codePostal", position.codePostal(), Types.VARCHAR);
+      jdbc.update(
+          """
+          UPDATE salle_sources
+          SET latitude = :latitude, longitude = :longitude,
+              code_postal = COALESCE(:codePostal, code_postal)
+          WHERE source = 'ticketmaster' AND identifiant_externe = :identifiant
+          """,
+          params);
+      jdbc.update(
+          """
+          UPDATE salles
+          SET latitude = COALESCE(latitude, :latitude),
+              longitude = CASE WHEN latitude IS NULL THEN :longitude ELSE longitude END,
+              code_postal = COALESCE(code_postal, :codePostal)
+          WHERE id = CAST(:salleId AS uuid)
+          """,
+          params);
+      obtenues++;
+    }
+    return obtenues;
   }
 }

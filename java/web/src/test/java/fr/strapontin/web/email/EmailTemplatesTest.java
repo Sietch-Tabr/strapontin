@@ -227,11 +227,14 @@ class EmailTemplatesTest {
     final List<fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin> erreurs =
         List.of(
             new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
-                1L,
-                1751500000000L, "error", "worker", "échec purger:logs-admin", null),
+                1L, 1751500000000L, "error", "worker", "échec purger:logs-admin", null),
             new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
                 2L,
-                1751500100000L, "error", "reconciliation-nocturne", "conflit wikidataId", null));
+                1751500100000L,
+                "error",
+                "reconciliation-nocturne",
+                "conflit wikidataId",
+                null));
 
     final String html = EmailTemplatesAlertes.alerteLogsAdmin(erreurs, "https://app.fr");
 
@@ -248,8 +251,7 @@ class EmailTemplatesTest {
     final List<fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin> erreurs =
         List.of(
             new fr.strapontin.web.admin.LogAdminService.EntreeLogAdmin(
-                1L,
-                1751500000000L, "error", "worker", "<script>alert(1)</script>", null));
+                1L, 1751500000000L, "error", "worker", "<script>alert(1)</script>", null));
 
     final String html = EmailTemplatesAlertes.alerteLogsAdmin(erreurs, "https://app.fr");
 

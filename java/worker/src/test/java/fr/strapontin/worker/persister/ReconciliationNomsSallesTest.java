@@ -40,26 +40,16 @@ class ReconciliationNomsSallesTest {
       final LocalTime heure,
       final String salleNorm,
       final String dept) {
-    return new ValeurConcert(
-        "Artiste",
-        artisteNorm,
-        date,
-        heure,
-        "Salle",
-        salleNorm,
-        null,
-        dept,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm(artisteNorm)
+        .date(date)
+        .heure(heure)
+        .salle("Salle")
+        .salleNorm(salleNorm)
+        .dept(dept)
+        .source("ticketmaster")
+        .construire();
   }
 
   // Cas réel documenté (wiki Sources-de-données, tick) : "zenith europe strasbourg" /
@@ -105,26 +95,16 @@ class ReconciliationNomsSallesTest {
     final UUID salleQuimperId = UUID.randomUUID();
 
     final ValeurConcert entrant =
-        new ValeurConcert(
-            "Chimene Badi",
-            "chimene badi",
-            LocalDate.of(2027, 12, 18),
-            null,
-            "Parc Des Expositions Brezillet",
-            "parc des expositions brezillet",
-            null,
-            "22",
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "ticketmaster:rZFSnyZAv1F",
-            null,
-            null,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Chimene Badi")
+            .artisteNorm("chimene badi")
+            .date(LocalDate.of(2027, 12, 18))
+            .salle("Parc Des Expositions Brezillet")
+            .salleNorm("parc des expositions brezillet")
+            .dept("22")
+            .source("ticketmaster")
+            .salleSourceId("ticketmaster:rZFSnyZAv1F")
+            .construire();
 
     reconciliateur.absorberRenommagesSalles(
         List.of(entrant),

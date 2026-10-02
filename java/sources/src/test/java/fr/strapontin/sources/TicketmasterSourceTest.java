@@ -82,6 +82,35 @@ class TicketmasterSourceTest {
 
   // --- parseDateTM ---
 
+  // La position du lieu (venue.location, publiée sous forme de texte) et son code postal sont
+  // conservés pour l'identification géographique de la salle.
+  @Test
+  void mapper_venueAvecLocation_conserveLaPositionDuLieu() {
+    final Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name",
+                                "ACCOR ARENA",
+                                "city",
+                                Map.of("name", "Paris"),
+                                "postalCode",
+                                "75012",
+                                "location",
+                                Map.of("latitude", "48.83861", "longitude", "2.37861"))))));
+
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
+
+    assertEquals(48.83861, resultat.position().latitude(), 1e-9);
+    assertEquals(2.37861, resultat.position().longitude(), 1e-9);
+    assertEquals("75012", resultat.position().codePostal());
+  }
+
   @Test
   void parseDateTM_dateEtHeureValides_retourneDateEtHeure() {
     final String[] resultat = TicketmasterSource.parseDateTM("2025-09-15", "20:30:00");

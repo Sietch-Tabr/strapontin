@@ -91,7 +91,9 @@ class LogAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
     final List<LogAdminService.EntreeLogAdmin> entrees = service.lireErreursDepuis(0L);
 
-    assertEquals(List.of("première", "seconde"), entrees.stream().map(LogAdminService.EntreeLogAdmin::message).toList());
+    assertEquals(
+        List.of("première", "seconde"),
+        entrees.stream().map(LogAdminService.EntreeLogAdmin::message).toList());
   }
 
   @Test
@@ -102,7 +104,9 @@ class LogAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
 
     final long id = service.idMaxJusquA(ancienCurseur);
 
-    assertEquals(List.of("nouvelle"), service.lireErreursDepuis(id).stream()
+    assertEquals(
+        List.of("nouvelle"),
+        service.lireErreursDepuis(id).stream()
             .map(LogAdminService.EntreeLogAdmin::message)
             .toList());
   }

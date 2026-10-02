@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.PositionLieu;
 import java.util.Map;
 
 /**
@@ -23,7 +24,8 @@ final class ExtracteurVenueTM {
   private ExtracteurVenueTM() {}
 
   /* package-private : appelé par MapeurEvenementTM (même package). */
-  record InfosVenueTM(String salle, String ville, String dept, String salleSourceId) {}
+  record InfosVenueTM(
+      String salle, String ville, String dept, String salleSourceId, PositionLieu position) {}
 
   /* package-private : appelé par MapeurEvenementTM (même package). */
   static InfosVenueTM extraireInfosVenueTM(final Map<String, Object> venue) {
@@ -31,7 +33,19 @@ final class ExtracteurVenueTM {
         extraireNomSalleTM(venue),
         extraireVilleTM(venue),
         extraireDeptTM(venue),
-        extraireSalleSourceIdTM(venue));
+        extraireSalleSourceIdTM(venue),
+        extrairePositionTM(venue));
+  }
+
+  // location.latitude/longitude sont publiées sous forme de texte par l'API Discovery.
+  /* package-private : réutilisé par TicketmasterHealthCheck (même package). */
+  static PositionLieu extrairePositionTM(final Map<String, Object> venue) {
+    if (venue == null) {
+      return PositionLieu.INCONNUE;
+    }
+    final Map<?, ?> location = venue.get("location") instanceof Map<?, ?> loc ? loc : Map.of();
+    return PositionLieu.depuis(
+        location.get("latitude"), location.get("longitude"), venue.get("postalCode"));
   }
 
   private static String extraireNomSalleTM(final Map<String, Object> venue) {

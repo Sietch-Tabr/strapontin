@@ -78,6 +78,7 @@ public class ReconciliationNocturneService {
    */
   public ResultatReconciliation executer() {
     final int[] bilanSalles = healthCheckSallesTM.verifier();
+    healthCheckSallesTM.rattraperPositions();
     healthCheckArtistesTM.verifierVivacite();
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     healthCheckSallesTM.alerterLieuxEventimSuspects();
@@ -91,8 +92,7 @@ public class ReconciliationNocturneService {
     // fournirait sinon la coïncidence artiste/date/heure qui fusionne deux salles distinctes.
     final int fichesPerimeesFusionnees = fusionEvenementsArtiste.fusionnerFichesPerimees();
     final int sallesFusionnees = fusionSallesClePortee.fusionner();
-    final int evenementsFusionnes =
-        fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
+    final int evenementsFusionnes = fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();

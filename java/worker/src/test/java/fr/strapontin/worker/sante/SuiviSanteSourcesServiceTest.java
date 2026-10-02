@@ -28,22 +28,15 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class SuiviSanteSourcesServiceTest {
 
   private static ConcertBrut concertAvecArtisteSourceId(final String artisteSourceId) {
-    return new ConcertBrut(
-        "Artiste",
-        "2026-08-01",
-        null,
-        "Salle",
-        "Ville",
-        "75",
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        artisteSourceId);
+    return ConcertBrut.nouveau()
+        .artiste("Artiste")
+        .date("2026-08-01")
+        .salle("Salle")
+        .ville("Ville")
+        .dept("75")
+        .source("ticketmaster")
+        .artisteSourceId(artisteSourceId)
+        .construire();
   }
 
   @Test

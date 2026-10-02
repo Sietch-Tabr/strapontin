@@ -72,8 +72,8 @@ public class WorkerFetchCommun {
   // pagination) : au-delà, il est seulement hors de portée, pas disparu.
   private static final String SQL_ABSENCES_SALLE =
       SQL_ABSENCES_BASE.formatted("salle_id")
-          + " AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = evenements.id AND ("
-          + "   (o.source = 'ticketmaster' AND evenements.date <= CAST(:horizonTicketmaster AS date))"
+          + " AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = evenements.id AND (  "
+          + " (o.source = 'ticketmaster' AND evenements.date <= CAST(:horizonTicketmaster AS date))"
           + "   OR (o.source = 'eventim' AND evenements.date <= CAST(:horizonEventim AS date))))";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -306,22 +306,23 @@ public class WorkerFetchCommun {
               if (nomResolu.equals(c.artiste())) {
                 return c;
               }
-              return new ConcertBrut(
-                  nomResolu,
-                  c.date(),
-                  c.heure(),
-                  c.salle(),
-                  c.ville(),
-                  c.dept(),
-                  c.url(),
-                  c.source(),
-                  c.classification(),
-                  c.genre(),
-                  c.statut(),
-                  c.presaleDebut(),
-                  c.presaleNom(),
-                  c.salleSourceId(),
-                  c.artisteSourceId());
+              return ConcertBrut.nouveau()
+                  .artiste(nomResolu)
+                  .date(c.date())
+                  .heure(c.heure())
+                  .salle(c.salle())
+                  .ville(c.ville())
+                  .dept(c.dept())
+                  .url(c.url())
+                  .source(c.source())
+                  .classification(c.classification())
+                  .genre(c.genre())
+                  .statut(c.statut())
+                  .presaleDebut(c.presaleDebut())
+                  .presaleNom(c.presaleNom())
+                  .salleSourceId(c.salleSourceId())
+                  .artisteSourceId(c.artisteSourceId())
+                  .construire();
             })
         .toList();
   }

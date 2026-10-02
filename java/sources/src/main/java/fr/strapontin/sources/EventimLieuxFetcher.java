@@ -73,7 +73,6 @@ final class EventimLieuxFetcher {
     this.attente = attente;
   }
 
-
   /**
    * Concerts à venir d'un lieu Eventim, toutes catégories confondues.
    * @param libelle nom exact du lieu chez Eventim
@@ -116,8 +115,7 @@ final class EventimLieuxFetcher {
       CODES_POSTAUX_PARIS.forEach(
           code ->
               filtres.add(
-                  requete ->
-                      requete.queryParam("postal_code", code).queryParam(PARAM_TOP, TOP)));
+                  requete -> requete.queryParam("postal_code", code).queryParam(PARAM_TOP, TOP)));
     }
     final LocalDate fin = LocalDate.now().plusMonths(MOIS_HORIZON_REGION);
     final List<ConcertBrut> concerts = new ArrayList<>();
@@ -150,10 +148,11 @@ final class EventimLieuxFetcher {
     final LocalDate aujourdHui = LocalDate.now();
     final PageProduitsEventim page =
         chargeur.apply(
-            UriSources.encoder(requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
-                .queryParam(PARAM_TOP, 1)
-                .queryParam("venue_names", libelle)
-                .queryParam("page", 1)));
+            UriSources.encoder(
+                requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
+                    .queryParam(PARAM_TOP, 1)
+                    .queryParam("venue_names", libelle)
+                    .queryParam("page", 1)));
     return page.succes() ? page.total() : -1;
   }
 
@@ -243,8 +242,6 @@ final class EventimLieuxFetcher {
     return new Parcours(
         concerts, true, totalPages >= EventimSource.PLAFOND_PAGES, derniereDate(concerts));
   }
-
-
 
   private static LocalDate derniereDate(final List<ConcertBrut> concerts) {
     return concerts.stream()

@@ -225,22 +225,7 @@ public final class Dedoublonner {
 
     final ConcertBrut cb = gagnant.concert();
     final ConcertBrut fusionne =
-        new ConcertBrut(
-            meilleurArtiste,
-            cb.date(),
-            cb.heure(),
-            meilleureSalle,
-            cb.ville(),
-            cb.dept(),
-            cb.url(),
-            cb.source(),
-            cb.classification(),
-            cb.genre(),
-            cb.statut(),
-            cb.presaleDebut(),
-            cb.presaleNom(),
-            cb.salleSourceId(),
-            cb.artisteSourceId());
+        cb.copier().artiste(meilleurArtiste).salle(meilleureSalle).construire();
     return new ConcertEnrichi(
         fusionne, gagnant.artisteNorm(), gagnant.villeNorm(), gagnant.salleNorm());
   }

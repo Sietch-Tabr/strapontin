@@ -8,7 +8,6 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.text.Normalizer;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -194,6 +193,7 @@ public class PersisterConcerts {
    */
   private List<ValeurConcert> resoudreIdentitesSources(final List<ValeurConcert> concerts) {
     final Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
+    db.reprendreIdentifiantsEventimHistoriques(concerts, cachesSalles);
     final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
     // Calculé avant absorberRenommagesSalles : un mapping incohérent ne doit
     // pas renommer la mauvaise salle avant validation géographique.
@@ -207,6 +207,7 @@ public class PersisterConcerts {
     final List<ValeurConcert> resolus =
         appliquerResolutionUuids(
             concerts, cachesSalles, cachesArtistes, cachesSallesParNom, deptsConnus);
+    db.enregistrerPositions(concerts, cachesSalles);
 
     return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
   }
@@ -369,31 +370,7 @@ public class PersisterConcerts {
   /* package-private : requis pour l'auto-invocation via le proxy self
    * (transaction dédiée par lot). */
   ResultatPersistance persisterLotTransactionnel(final List<ConcertBrut> lot) {
-    final List<ValeurConcert> valeursBrutes =
-        lot.stream()
-            .map(
-                c ->
-                    new ValeurConcert(
-                        c.artiste(),
-                        Normalisation.normaliserTexte(c.artiste()),
-                        LocalDate.parse(c.date()),
-                        c.heure() != null ? LocalTime.parse(c.heure()) : null,
-                        c.salle(),
-                        Normalisation.normaliserTexte(c.salle()),
-                        c.ville(),
-                        c.dept(),
-                        c.url(),
-                        c.source(),
-                        c.classification(),
-                        c.genre(),
-                        c.statut(),
-                        c.presaleDebut(),
-                        c.presaleNom(),
-                        c.salleSourceId(),
-                        c.artisteSourceId(),
-                        null,
-                        null))
-            .toList();
+    final List<ValeurConcert> valeursBrutes = lot.stream().map(ValeurConcert::depuis).toList();
 
     List<ValeurConcert> valeurs = resoudreIdentitesSources(valeursBrutes);
     valeurs = db.resoudreParUrl(valeurs);

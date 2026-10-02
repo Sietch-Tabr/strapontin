@@ -41,22 +41,22 @@ class SchemaClesEtrangeresIntegrationTest extends AbstractWebIntegrationTest {
     final List<String> nonIndexees =
         jdbc.getJdbcOperations()
             .queryForList(
-            """
-            SELECT c.conrelid::regclass || '(' || string_agg(a.attname, ',' ORDER BY k.ord) || ')'
-            FROM pg_constraint c
-            CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
-            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
-            WHERE c.contype = 'f'
-              AND c.connamespace = 'public'::regnamespace
-              AND NOT EXISTS (
-                SELECT 1 FROM pg_index i
-                WHERE i.indrelid = c.conrelid
-                  AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] @> c.conkey
-                  AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] <@ c.conkey)
-            GROUP BY c.conrelid, c.conname
-            ORDER BY 1
-            """,
-            String.class);
+                """
+                SELECT c.conrelid::regclass || '(' || string_agg(a.attname, ',' ORDER BY k.ord) || ')'
+                FROM pg_constraint c
+                CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+                WHERE c.contype = 'f'
+                  AND c.connamespace = 'public'::regnamespace
+                  AND NOT EXISTS (
+                    SELECT 1 FROM pg_index i
+                    WHERE i.indrelid = c.conrelid
+                      AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] @> c.conkey
+                      AND (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1] <@ c.conkey)
+                GROUP BY c.conrelid, c.conname
+                ORDER BY 1
+                """,
+                String.class);
     assertEquals(List.of(), nonIndexees, "clés étrangères sans index dont elles sont le préfixe");
   }
 }

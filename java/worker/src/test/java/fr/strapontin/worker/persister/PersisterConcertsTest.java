@@ -21,9 +21,17 @@ class PersisterConcertsTest {
 
   private static ConcertBrut concert(
       final String artiste, final String date, final String salle, final String source) {
-    return new ConcertBrut(
-        artiste, date, "20:00", salle, "Paris", "75", null, source, "music", "Pop", null, null,
-        null, null, null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure("20:00")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .source(source)
+        .classification("music")
+        .genre("Pop")
+        .construire();
   }
 
   private static ValeurConcert valeur(
@@ -32,26 +40,14 @@ class PersisterConcertsTest {
       final String salleNorm,
       final String artiste,
       final String salle) {
-    return new ValeurConcert(
-        artiste,
-        artisteNorm,
-        LocalDate.parse(date),
-        null,
-        salle,
-        salleNorm,
-        null,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste(artiste)
+        .artisteNorm(artisteNorm)
+        .date(LocalDate.parse(date))
+        .salle(salle)
+        .salleNorm(salleNorm)
+        .source("ticketmaster")
+        .construire();
   }
 
   private static ValeurConcert valeur(

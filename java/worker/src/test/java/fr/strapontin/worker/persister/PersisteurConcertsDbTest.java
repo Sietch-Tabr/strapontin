@@ -35,26 +35,17 @@ class PersisteurConcertsDbTest {
 
   private static ValeurConcert concert(
       final String url, final LocalTime heure, final String statut) {
-    return new ValeurConcert(
-        "Artiste",
-        "artiste",
-        LocalDate.of(2027, 3, 12),
-        heure,
-        "Salle",
-        "salle",
-        null,
-        null,
-        url,
-        "ticketmaster",
-        null,
-        null,
-        statut,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm("artiste")
+        .date(LocalDate.of(2027, 3, 12))
+        .heure(heure)
+        .salle("Salle")
+        .salleNorm("salle")
+        .url(url)
+        .source("ticketmaster")
+        .statut(statut)
+        .construire();
   }
 
   // Un event TM "package" (VIP/bundle) n'a pas de statut — Set.of(...).contains(null) lève une NPE.
@@ -94,7 +85,14 @@ class PersisteurConcertsDbTest {
   private static Map<String, Object> representation(
       final UUID id, final LocalDate date, final LocalTime heure) {
     return Map.of(
-        "id", id, "cle", "idmanif:661370", "date", Date.valueOf(date), "heure", Time.valueOf(heure));
+        "id",
+        id,
+        "cle",
+        "idmanif:661370",
+        "date",
+        Date.valueOf(date),
+        "heure",
+        Time.valueOf(heure));
   }
 
   private static PersisteurConcertsDb db(

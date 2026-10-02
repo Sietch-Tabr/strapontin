@@ -169,9 +169,7 @@ class AdminModificationUtilisateurService {
   }
 
   private void notifierModification(
-      final String userId,
-      final String adminId,
-      final ChampsModification champs) {
+      final String userId, final String adminId, final ChampsModification champs) {
     if (!champs.nom().isEmpty()) {
       logAdminService.logAdmin(
           "info", SOURCE_ADMIN, "nom modifié", Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));

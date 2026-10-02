@@ -6,6 +6,7 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,7 +33,7 @@ public class CoherenceMultiSalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoherenceMultiSalleService.class);
 
-  private static final String PREFIXE_INTERNAL = "internal:";
+  private static final String PREFIXE_INTERNAL = IdentifiantLieuEventim.PREFIXE;
 
   // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur
   // une seule lettre.
@@ -139,7 +140,10 @@ public class CoherenceMultiSalleService {
       // La source situe elle-même le lieu à la position de la salle : même lieu,
       // quel que soit le nom d'usage ou l'abréviation employés.
       if (!estMemePosition(ligne)) {
-        noms.add(identifiant.substring(PREFIXE_INTERNAL.length()));
+        final String nom = IdentifiantLieuEventim.nom(identifiant);
+        if (!noms.contains(nom)) {
+          noms.add(nom);
+        }
       }
       nomNormParSalle.put(salleId, (String) ligne.get("nom_norm"));
       signaleeParSalle.put(salleId, (String) ligne.get("signalee"));

@@ -33,26 +33,16 @@ class ResolveurArtisteParUrlTest {
 
   private static ValeurConcert concert(
       final String artisteNorm, final String url, final String source) {
-    return new ValeurConcert(
-        "Artiste",
-        artisteNorm,
-        LocalDate.of(2027, 3, 12),
-        LocalTime.of(20, 0),
-        "Salle",
-        "salle",
-        null,
-        null,
-        url,
-        source,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm(artisteNorm)
+        .date(LocalDate.of(2027, 3, 12))
+        .heure(LocalTime.of(20, 0))
+        .salle("Salle")
+        .salleNorm("salle")
+        .url(url)
+        .source(source)
+        .construire();
   }
 
   @Test

@@ -5,7 +5,9 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.PositionLieu;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -194,14 +196,13 @@ final class MapeurProduitEventim {
       if (salleNorm.isBlank()) {
         return null;
       }
-      final Map<?, ?> geo =
-          location.get("geoLocation") instanceof Map<?, ?> coordonnees ? coordonnees : Map.of();
+      final PositionLieu position = extrairePosition(location);
       return new LieuEventim(
-          "internal:" + salleNorm,
+          IdentifiantLieuEventim.calculer(salleNorm, position.codePostal()),
           libelle,
           location.get("city") instanceof String ville ? ville : null,
-          geo.get("latitude") instanceof Number lat ? lat.doubleValue() : null,
-          geo.get("longitude") instanceof Number lon ? lon.doubleValue() : null);
+          position.latitude(),
+          position.longitude());
     } catch (Exception e) {
       LOG.warn("lieu Eventim illisible : {}", e.getMessage());
       return null;
@@ -230,29 +231,38 @@ final class MapeurProduitEventim {
     // impossible à distinguer via l'API Eventim. On ne stocke pas de statut
     // pour éviter les faux positifs.
     final String statut = null;
-    // Eventim n'expose pas de venueId stable : on génère un identifiant interne
-    // basé sur le nom normalisé pour alimenter salle_sources et vider la liste
-    // admin "Sans source". Écrasable par un vrai venueId si Eventim en expose
-    // un à l'avenir (ON CONFLICT DO NOTHING).
+    // Eventim n'expose pas de venueId stable : identifiant interne tiré du nom
+    // normalisé et du code postal (IdentifiantLieuEventim).
     final String salleNorm = Normalisation.normaliserTexte(salle);
     final boolean salleInconnue = "Salle inconnue".equals(salle);
+    final PositionLieu position = extrairePosition(location);
     final String salleSourceId =
-        (salleNorm.isBlank() || salleInconnue) ? null : "eventim:internal:" + salleNorm;
-    return new ConcertBrut(
-        artiste,
-        date,
-        heure,
-        salle,
-        ville,
-        dept,
-        url,
-        "eventim",
-        null,
-        null,
-        statut,
-        null,
-        null,
-        salleSourceId,
-        artisteSourceId);
+        (salleNorm.isBlank() || salleInconnue)
+            ? null
+            : "eventim:" + IdentifiantLieuEventim.calculer(salleNorm, position.codePostal());
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .heure(heure)
+        .salle(salle)
+        .ville(ville)
+        .dept(dept)
+        .url(url)
+        .source("eventim")
+        .statut(statut)
+        .salleSourceId(salleSourceId)
+        .artisteSourceId(artisteSourceId)
+        .position(position)
+        .construire();
+  }
+
+  private static PositionLieu extrairePosition(final Map<?, ?> location) {
+    if (location == null) {
+      return PositionLieu.INCONNUE;
+    }
+    final Map<?, ?> geo =
+        location.get("geoLocation") instanceof Map<?, ?> coordonnees ? coordonnees : Map.of();
+    return PositionLieu.depuis(
+        geo.get("latitude"), geo.get("longitude"), location.get("postalCode"));
   }
 }

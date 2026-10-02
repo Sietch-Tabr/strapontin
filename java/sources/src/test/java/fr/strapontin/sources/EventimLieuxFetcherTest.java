@@ -24,22 +24,16 @@ class EventimLieuxFetcherTest {
   private final List<URI> requetes = new ArrayList<>();
 
   private static ConcertBrut concert(final LocalDate date, final String dept) {
-    return new ConcertBrut(
-        "Artiste",
-        date.toString(),
-        "20:00",
-        "Salle",
-        "Ville",
-        dept,
-        "https://eventim.fr/" + date,
-        "eventim",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return ConcertBrut.nouveau()
+        .artiste("Artiste")
+        .date(date.toString())
+        .heure("20:00")
+        .salle("Salle")
+        .ville("Ville")
+        .dept(dept)
+        .url("https://eventim.fr/" + date)
+        .source("eventim")
+        .construire();
   }
 
   private static List<ConcertBrut> page(final LocalDate date, final String dept) {
@@ -152,9 +146,7 @@ class EventimLieuxFetcherTest {
     final LocalDate demain = LocalDate.now().plusDays(1);
 
     final ResultatRegion resultat =
-        fetcher(
-                _ ->
-                    reponse(List.of(concert(demain, "69"), concert(demain, "33")), 2, 1))
+        fetcher(_ -> reponse(List.of(concert(demain, "69"), concert(demain, "33")), 2, 1))
             .fetchVilles(List.of("Lyon"), Set.of("69"), List.of("Concerts"));
 
     assertThat(resultat.concerts()).extracting(ConcertBrut::dept).containsExactly("69");
@@ -189,7 +181,9 @@ class EventimLieuxFetcherTest {
   void fetchVilles_codePostalReponsePleine_repriseAuDernierJourSansPage() {
     final LocalDate derniereDate = LocalDate.now().plusDays(12);
     final List<ConcertBrut> pleine =
-        IntStream.range(0, EventimSource.TOP_MAX).mapToObj(_ -> concert(derniereDate, "75")).toList();
+        IntStream.range(0, EventimSource.TOP_MAX)
+            .mapToObj(_ -> concert(derniereDate, "75"))
+            .toList();
 
     fetcher(
             uri ->
@@ -231,8 +225,7 @@ class EventimLieuxFetcherTest {
 
   @Test
   void compterConcerts_succes_retourneLeTotalAnnonce() {
-    final int total =
-        fetcher(_ -> reponse(List.of(), 42, 3)).compterConcerts("Accor Arena");
+    final int total = fetcher(_ -> reponse(List.of(), 42, 3)).compterConcerts("Accor Arena");
 
     assertThat(total).isEqualTo(42);
     assertThat(requetes.getFirst().getQuery()).contains("top=1").doesNotContain("top=50");

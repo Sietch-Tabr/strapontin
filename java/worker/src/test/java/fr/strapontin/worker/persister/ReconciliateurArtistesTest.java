@@ -32,26 +32,14 @@ class ReconciliateurArtistesTest {
 
   private static ValeurConcert concert(
       final String artisteNorm, final LocalDate date, final String salleNorm) {
-    return new ValeurConcert(
-        "Artiste",
-        artisteNorm,
-        date,
-        null,
-        "Salle",
-        salleNorm,
-        null,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm(artisteNorm)
+        .date(date)
+        .salle("Salle")
+        .salleNorm(salleNorm)
+        .source("ticketmaster")
+        .construire();
   }
 
   // Cas réel documenté (wiki Sources-de-données) : "krash karma" / "krashkarma" donnent un Jaro
@@ -92,26 +80,16 @@ class ReconciliateurArtistesTest {
 
   private static ValeurConcert concertAvecUrlEtClassification(
       final String artiste, final String url, final String classification, final String source) {
-    return new ValeurConcert(
-        artiste,
-        artiste.toLowerCase(),
-        LocalDate.of(2026, 12, 12),
-        null,
-        "Salle",
-        "salle",
-        null,
-        null,
-        url,
-        source,
-        classification,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste(artiste)
+        .artisteNorm(artiste.toLowerCase())
+        .date(LocalDate.of(2026, 12, 12))
+        .salle("Salle")
+        .salleNorm("salle")
+        .url(url)
+        .source(source)
+        .classification(classification)
+        .construire();
   }
 
   @Test

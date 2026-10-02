@@ -752,7 +752,7 @@ class EventimSourceTest {
         resultat.salleSourceId().startsWith("eventim:internal:"),
         "salleSourceId doit commencer par 'eventim:internal:' mais était : "
             + resultat.salleSourceId());
-    assertEquals("eventim:internal:accor arena", resultat.salleSourceId());
+    assertEquals("eventim:internal:accor arena@75012", resultat.salleSourceId());
   }
 
   @Test
@@ -960,7 +960,7 @@ class EventimSourceTest {
     assertEquals(1, concerts.size());
     final List<LieuEventim> lieux = source.preleverLieuxObserves();
     assertEquals(1, lieux.size());
-    assertEquals("internal:accor arena", lieux.get(0).identifiant());
+    assertEquals("internal:accor arena@75012", lieux.get(0).identifiant());
     assertEquals("Accor Arena", lieux.get(0).libelle());
     assertEquals("Paris", lieux.get(0).ville());
     assertEquals(48.8386, lieux.get(0).latitude());

@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import com.github.benmanes.caffeine.cache.Cache;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
 import java.util.List;
@@ -384,6 +385,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param nom nom de la salle chez TM
    */
   public record CandidatVenueTM(String id, String nom) {}
+
+  /**
+   * Lit la position (coordonnées, code postal) d'un lieu Ticketmaster.
+   *
+   * @param venueId identifiant TM du lieu, sans préfixe
+   * @return la position, {@link PositionLieu#INCONNUE} si illisible ou en cas d'erreur
+   */
+  public PositionLieu lirePositionVenue(final String venueId) {
+    return healthCheck.lirePositionVenue(venueId);
+  }
 
   /**
    * Vérifie qu'un venueId TM existe toujours.

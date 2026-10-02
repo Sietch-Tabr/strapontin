@@ -18,6 +18,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.ResultatRegion;
@@ -341,40 +342,30 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_concertClassificationTheatre_nAppliquePasLaResolutionDeezer() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    final fr.strapontin.core.ConcertBrut concertHumoriste =
-        new fr.strapontin.core.ConcertBrut(
-            "Fabrice Eboue",
-            "2026-09-01",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://x",
-            "ticketmaster",
-            "theatre",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-    final fr.strapontin.core.ConcertBrut concertMusique =
-        new fr.strapontin.core.ConcertBrut(
-            "Indila",
-            "2026-09-02",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://y",
-            "ticketmaster",
-            "music",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+    final ConcertBrut concertHumoriste =
+        ConcertBrut.nouveau()
+            .artiste("Fabrice Eboue")
+            .date("2026-09-01")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://x")
+            .source("ticketmaster")
+            .classification("theatre")
+            .construire();
+    final ConcertBrut concertMusique =
+        ConcertBrut.nouveau()
+            .artiste("Indila")
+            .date("2026-09-02")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://y")
+            .source("ticketmaster")
+            .classification("music")
+            .construire();
     when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concertHumoriste, concertMusique));
     when(resolveur.resoudreNomCanonique("artiste", "Indila"))
         .thenReturn(
@@ -386,10 +377,10 @@ class WorkerFetchServiceTest {
 
     verify(resolveur, never()).resoudreNomCanonique(eq("artiste"), eq("Fabrice Eboue"));
     verify(resolveur).resoudreNomCanonique("artiste", "Indila");
-    final org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+    final org.mockito.ArgumentCaptor<List<ConcertBrut>> captor =
         org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
-    final List<fr.strapontin.core.ConcertBrut> persistes = captor.getValue();
+    final List<ConcertBrut> persistes = captor.getValue();
     assertTrue(persistes.stream().anyMatch(c -> "Fabrice Eboue".equals(c.artiste())));
     assertTrue(persistes.stream().anyMatch(c -> "Indila Officiel".equals(c.artiste())));
   }
@@ -401,40 +392,30 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_concertClassificationDiversOuSports_nAppliquePasLaResolutionDeezer() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    final fr.strapontin.core.ConcertBrut concertDivers =
-        new fr.strapontin.core.ConcertBrut(
-            "Holiday On Ice",
-            "2026-09-01",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://x",
-            "ticketmaster",
-            "divers",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-    final fr.strapontin.core.ConcertBrut concertSports =
-        new fr.strapontin.core.ConcertBrut(
-            "Equipe de France de basket-ball",
-            "2026-09-02",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://y",
-            "ticketmaster",
-            "sports",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+    final ConcertBrut concertDivers =
+        ConcertBrut.nouveau()
+            .artiste("Holiday On Ice")
+            .date("2026-09-01")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://x")
+            .source("ticketmaster")
+            .classification("divers")
+            .construire();
+    final ConcertBrut concertSports =
+        ConcertBrut.nouveau()
+            .artiste("Equipe de France de basket-ball")
+            .date("2026-09-02")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://y")
+            .source("ticketmaster")
+            .classification("sports")
+            .construire();
     when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concertDivers, concertSports));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
 
@@ -453,23 +434,17 @@ class WorkerFetchServiceTest {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(false);
     when(eventim.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    final fr.strapontin.core.ConcertBrut concertEventimSansClassification =
-        new fr.strapontin.core.ConcertBrut(
-            "Paris is Magique",
-            "2026-09-01",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://x",
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+    final ConcertBrut concertEventimSansClassification =
+        ConcertBrut.nouveau()
+            .artiste("Paris is Magique")
+            .date("2026-09-01")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://x")
+            .source("eventim")
+            .construire();
     when(eventim.fetchSalle("tm:venue-42", null))
         .thenReturn(List.of(concertEventimSansClassification));
     when(persisterConcerts.persisterConcerts(any())).thenReturn(new ResultatPersistance(0, 0));
@@ -485,23 +460,18 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_candidatDeezerDivergeDuNomAfficheWikidataConnu_gardeLeNomBrut() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    final fr.strapontin.core.ConcertBrut concert =
-        new fr.strapontin.core.ConcertBrut(
-            "Nino Arial",
-            "2026-09-01",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://x",
-            "ticketmaster",
-            "music",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+    final ConcertBrut concert =
+        ConcertBrut.nouveau()
+            .artiste("Nino Arial")
+            .date("2026-09-01")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://x")
+            .source("ticketmaster")
+            .classification("music")
+            .construire();
     when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concert));
     when(resolveur.resoudreNomCanonique("artiste", "Nino Arial"))
         .thenReturn(
@@ -513,7 +483,7 @@ class WorkerFetchServiceTest {
 
     fetchService.executerFetchSalle("tm:venue-42");
 
-    final org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+    final org.mockito.ArgumentCaptor<List<ConcertBrut>> captor =
         org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
     assertTrue(captor.getValue().stream().allMatch(c -> "Nino Arial".equals(c.artiste())));
@@ -527,23 +497,18 @@ class WorkerFetchServiceTest {
   void executerFetchSalle_candidatDeezerCoherentAvecNomAfficheWikidataConnu_accepteLeNomDeezer() {
     when(gestionQuotaTM.verifier("fetch:salle")).thenReturn(true);
     when(tm.accepteIdentifiantSalle("tm:venue-42")).thenReturn(true);
-    final fr.strapontin.core.ConcertBrut concert =
-        new fr.strapontin.core.ConcertBrut(
-            "stromae",
-            "2026-09-01",
-            "20:00",
-            "Salle",
-            "Paris",
-            "75",
-            "http://x",
-            "ticketmaster",
-            "music",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+    final ConcertBrut concert =
+        ConcertBrut.nouveau()
+            .artiste("stromae")
+            .date("2026-09-01")
+            .heure("20:00")
+            .salle("Salle")
+            .ville("Paris")
+            .dept("75")
+            .url("http://x")
+            .source("ticketmaster")
+            .classification("music")
+            .construire();
     when(tm.fetchSalle("tm:venue-42", null)).thenReturn(List.of(concert));
     when(resolveur.resoudreNomCanonique("artiste", "stromae"))
         .thenReturn(
@@ -555,7 +520,7 @@ class WorkerFetchServiceTest {
 
     fetchService.executerFetchSalle("tm:venue-42");
 
-    final org.mockito.ArgumentCaptor<List<fr.strapontin.core.ConcertBrut>> captor =
+    final org.mockito.ArgumentCaptor<List<ConcertBrut>> captor =
         org.mockito.ArgumentCaptor.captor();
     verify(persisterConcerts).persisterConcerts(captor.capture());
     assertTrue(captor.getValue().stream().allMatch(c -> "Stromae".equals(c.artiste())));

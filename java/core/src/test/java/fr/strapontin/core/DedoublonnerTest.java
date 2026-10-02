@@ -12,42 +12,23 @@ import org.junit.jupiter.api.Test;
 class DedoublonnerTest {
 
   private static ConcertBrut concert(final String artiste, final String date, final String salle) {
-    return new ConcertBrut(
-        artiste,
-        date,
-        null,
-        salle,
-        null,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .salle(salle)
+        .source("ticketmaster")
+        .construire();
   }
 
   private static ConcertBrut concert(
       final String artiste, final String date, final String salle, final String ville) {
-    return new ConcertBrut(
-        artiste,
-        date,
-        null,
-        salle,
-        ville,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .salle(salle)
+        .ville(ville)
+        .source("ticketmaster")
+        .construire();
   }
 
   private static ConcertBrut concert(
@@ -56,9 +37,13 @@ class DedoublonnerTest {
       final String salle,
       final String ville,
       final String source) {
-    return new ConcertBrut(
-        artiste, date, null, salle, ville, null, null, source, null, null, null, null, null, null,
-        null);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(date)
+        .salle(salle)
+        .ville(ville)
+        .source(source)
+        .construire();
   }
 
   // --- Cas limites ---
@@ -77,22 +62,18 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_concertUnique_conserveTousLesChamps() {
     final var c =
-        new ConcertBrut(
-            "Radiohead",
-            "2025-06-15",
-            "20:00",
-            "Zénith Paris",
-            "Paris",
-            "75",
-            "https://example.com",
-            "ticketmaster",
-            "music",
-            "Rock",
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Radiohead")
+            .date("2025-06-15")
+            .heure("20:00")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .dept("75")
+            .url("https://example.com")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Rock")
+            .construire();
     final var resultat = Dedoublonner.dedoublonner(List.of(c));
     assertEquals(1, resultat.size());
     final var r = resultat.get(0);
@@ -124,22 +105,15 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_passeExacte_choisitPlusComplet() {
     final var complet =
-        new ConcertBrut(
-            "Daft Punk",
-            "2025-08-20",
-            "21:00",
-            "Zénith Paris",
-            "Paris",
-            null,
-            "https://example.com",
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Daft Punk")
+            .date("2025-08-20")
+            .heure("21:00")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .url("https://example.com")
+            .source("eventim")
+            .construire();
     final var incomplet =
         concert("Daft Punk", "2025-08-20", "Zénith Paris", "Paris", "ticketmaster");
     final var resultat = Dedoublonner.dedoublonner(List.of(incomplet, complet));
@@ -163,39 +137,32 @@ class DedoublonnerTest {
     // liste quel que soit son statut — placer le concert sans statut en tête reproduit le biais
     // d'ordre du bug.
     final var sansStatut =
-        new ConcertBrut(
-            "Angele",
-            "2026-11-06",
-            "20:30",
-            "Zenith",
-            "Paris",
-            "75",
-            "https://example.com",
-            "eventim",
-            "music",
-            "Pop",
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Angele")
+            .date("2026-11-06")
+            .heure("20:30")
+            .salle("Zenith")
+            .ville("Paris")
+            .dept("75")
+            .url("https://example.com")
+            .source("eventim")
+            .classification("music")
+            .genre("Pop")
+            .construire();
     final var avecStatut =
-        new ConcertBrut(
-            "Angele",
-            "2026-11-06",
-            "20:30",
-            "Zenith",
-            "Paris",
-            "75",
-            "https://example.com",
-            "ticketmaster",
-            "music",
-            "Pop",
-            "presale",
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Angele")
+            .date("2026-11-06")
+            .heure("20:30")
+            .salle("Zenith")
+            .ville("Paris")
+            .dept("75")
+            .url("https://example.com")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Pop")
+            .statut("presale")
+            .construire();
 
     final var resultat = Dedoublonner.dedoublonner(List.of(sansStatut, avecStatut));
 
@@ -315,39 +282,23 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_matineeEtSoiree_nePasseFusionnerHeuresDifferentes() {
     final var matinee =
-        new ConcertBrut(
-            "Comédie Musicale",
-            "2025-06-15",
-            "15:00",
-            "Zénith Paris",
-            "Paris",
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Comédie Musicale")
+            .date("2025-06-15")
+            .heure("15:00")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .source("ticketmaster")
+            .construire();
     final var soiree =
-        new ConcertBrut(
-            "Comédie Musicale",
-            "2025-06-15",
-            "20:00",
-            "Zénith Paris",
-            "Paris",
-            null,
-            null,
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Comédie Musicale")
+            .date("2025-06-15")
+            .heure("20:00")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .source("eventim")
+            .construire();
     assertEquals(2, Dedoublonner.dedoublonner(List.of(matinee, soiree)).size());
   }
 
@@ -356,117 +307,68 @@ class DedoublonnerTest {
   @Test
   void dedoublonner_heuresEcartUneMinute_fusionneMalgreEcart() {
     final var prestation =
-        new ConcertBrut(
-            "Baby Keem",
-            "2026-09-03",
-            "20:31",
-            "L'Olympia",
-            "Paris",
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Baby Keem")
+            .date("2026-09-03")
+            .heure("20:31")
+            .salle("L'Olympia")
+            .ville("Paris")
+            .source("ticketmaster")
+            .construire();
     final var pack =
-        new ConcertBrut(
-            "Baby Keem",
-            "2026-09-03",
-            "20:30",
-            "L'Olympia",
-            "Paris",
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Baby Keem")
+            .date("2026-09-03")
+            .heure("20:30")
+            .salle("L'Olympia")
+            .ville("Paris")
+            .source("ticketmaster")
+            .construire();
     assertEquals(1, Dedoublonner.dedoublonner(List.of(prestation, pack)).size());
   }
 
   @Test
   void dedoublonner_heuresEcartAuDelaDeLaTolerance_nePasseFusionner() {
     final var vingtHeures =
-        new ConcertBrut(
-            "Comédie Musicale",
-            "2025-06-15",
-            "20:00",
-            "Zénith Paris",
-            "Paris",
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Comédie Musicale")
+            .date("2025-06-15")
+            .heure("20:00")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .source("ticketmaster")
+            .construire();
     final var vingtHeuresDix =
-        new ConcertBrut(
-            "Comédie Musicale",
-            "2025-06-15",
-            "20:10",
-            "Zénith Paris",
-            "Paris",
-            null,
-            null,
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Comédie Musicale")
+            .date("2025-06-15")
+            .heure("20:10")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .source("eventim")
+            .construire();
     assertEquals(2, Dedoublonner.dedoublonner(List.of(vingtHeures, vingtHeuresDix)).size());
   }
 
   @Test
   void dedoublonner_heureAbsenteDunCote_fusionneMalgreTout() {
     final var sansHeure =
-        new ConcertBrut(
-            "Comédie Musicale",
-            "2025-06-15",
-            null,
-            "Zénith Paris",
-            "Paris",
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Comédie Musicale")
+            .date("2025-06-15")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .source("ticketmaster")
+            .construire();
     final var avecHeure =
-        new ConcertBrut(
-            "Comédie Musicale",
-            "2025-06-15",
-            "20:00",
-            "Zénith Paris",
-            "Paris",
-            null,
-            null,
-            "eventim",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
+        ConcertBrut.nouveau()
+            .artiste("Comédie Musicale")
+            .date("2025-06-15")
+            .heure("20:00")
+            .salle("Zénith Paris")
+            .ville("Paris")
+            .source("eventim")
+            .construire();
     assertEquals(1, Dedoublonner.dedoublonner(List.of(sansHeure, avecHeure)).size());
   }
 }

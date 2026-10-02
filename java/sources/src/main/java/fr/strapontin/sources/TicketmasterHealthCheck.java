@@ -4,6 +4,7 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
 import java.net.URI;
@@ -47,16 +48,35 @@ final class TicketmasterHealthCheck {
   }
 
   /* package-private : appelé par TicketmasterSource (même package). */
+  @SuppressWarnings("unchecked")
+  PositionLieu lirePositionVenue(final String venueId) {
+    final URI uri =
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + "/venues/" + venueId + ".json")
+                .queryParam(PARAM_APIKEY, apiKey));
+    cadenceur.attendre();
+    try {
+      final Map<String, Object> venue = restClient.get().uri(uri).retrieve().body(Map.class);
+      return ExtracteurVenueTM.extrairePositionTM(venue);
+    } catch (Exception e) {
+      LOG.warn(
+          "lirePositionVenue TM échoué venueId={} : {}",
+          venueId,
+          TicketmasterSource.redigerApiKey(e.getMessage()));
+      return PositionLieu.INCONNUE;
+    }
+  }
+
+  /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierAttraction(final String attractionId) {
     return verifierRessource("/attractions/" + attractionId + ".json");
   }
 
   private StatutIdTM verifierRessource(final String chemin) {
     final URI uri =
-        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + chemin)
-            .queryParam(PARAM_APIKEY, apiKey)
-            
-        );
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + chemin).queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       restClient.get().uri(uri).retrieve().toBodilessEntity();
@@ -76,10 +96,10 @@ final class TicketmasterHealthCheck {
   /* package-private : appelé par TicketmasterSource (même package). */
   String recupererNomAttraction(final String attractionId) {
     final URI uri =
-        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
-            .queryParam(PARAM_APIKEY, apiKey)
-            
-        );
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
+                .queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -97,12 +117,12 @@ final class TicketmasterHealthCheck {
   /* package-private : appelé par TicketmasterSource (même package). */
   List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
     final URI uri =
-        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
-            .queryParam("keyword", nom)
-            .queryParam("countryCode", "FR")
-            .queryParam(PARAM_APIKEY, apiKey)
-            
-        );
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
+                .queryParam("keyword", nom)
+                .queryParam("countryCode", "FR")
+                .queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -136,12 +156,12 @@ final class TicketmasterHealthCheck {
   /* package-private : appelé par TicketmasterSource (même package). */
   int compterEventsVenue(final String venueId) {
     final URI uri =
-        UriSources.encoder(UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
-            .queryParam("venueId", venueId)
-            .queryParam("size", 1)
-            .queryParam(PARAM_APIKEY, apiKey)
-            
-        );
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
+                .queryParam("venueId", venueId)
+                .queryParam("size", 1)
+                .queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);

@@ -145,12 +145,14 @@ public class SignalementsAdminService {
     if (signatures.isEmpty()) {
       return false;
     }
-    final List<String> identifiants =
-        Arrays.stream(signatures.get(0).split("\\|")).map(nom -> "internal:" + nom).toList();
+    // Le nom du lieu, sans préfixe ni code postal : couvre la forme historique et la forme
+    // qualifiée d'un même lieu (IdentifiantLieuEventim).
+    final List<String> noms = Arrays.asList(signatures.get(0).split("\\|"));
     jdbc.update(
         "UPDATE salle_sources SET contamination_acceptee_le = now()"
-            + " WHERE salle_id = CAST(:id AS uuid) AND identifiant_externe IN (:identifiants)",
-        Map.of(CLE_ID, salleId.toString(), "identifiants", identifiants));
+            + " WHERE salle_id = CAST(:id AS uuid) AND identifiant_externe LIKE 'internal:%'"
+            + " AND split_part(substring(identifiant_externe FROM 10), '@', 1) IN (:noms)",
+        Map.of(CLE_ID, salleId.toString(), "noms", noms));
     jdbc.update(
         "UPDATE salles SET contamination_signalee = NULL WHERE id = CAST(:id AS uuid)",
         Map.of(CLE_ID, salleId.toString()));
@@ -158,7 +160,7 @@ public class SignalementsAdminService {
         "info",
         "admin",
         "contamination de salle déclarée faux positif",
-        Map.of("salleId", salleId.toString(), "sources", String.join(", ", identifiants)));
+        Map.of("salleId", salleId.toString(), "sources", String.join(", ", noms)));
     return true;
   }
 

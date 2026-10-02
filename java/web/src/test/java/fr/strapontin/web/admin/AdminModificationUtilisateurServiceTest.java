@@ -41,8 +41,7 @@ class AdminModificationUtilisateurServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     logAdminService = mock(LogAdminService.class);
     emailServiceAdmin = mock(EmailServiceAdmin.class);
-    service =
-        new AdminModificationUtilisateurService(jdbc, logAdminService, emailServiceAdmin);
+    service = new AdminModificationUtilisateurService(jdbc, logAdminService, emailServiceAdmin);
   }
 
   @Test

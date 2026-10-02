@@ -54,26 +54,17 @@ class ReconciliationNomsSallesIntegrationTest extends AbstractWorkerIntegrationT
 
   private void absorber(final String source, final String identifiant, final String nom) {
     final ValeurConcert concert =
-        new ValeurConcert(
-            "Stromae",
-            "stromae",
-            LocalDate.now().plusMonths(2),
-            null,
-            nom,
-            nom.toLowerCase(),
-            "Paris",
-            "75",
-            null,
-            source,
-            null,
-            null,
-            null,
-            null,
-            null,
-            identifiant,
-            null,
-            null,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Stromae")
+            .artisteNorm("stromae")
+            .date(LocalDate.now().plusMonths(2))
+            .salle(nom)
+            .salleNorm(nom.toLowerCase())
+            .ville("Paris")
+            .dept("75")
+            .source(source)
+            .salleSourceId(identifiant)
+            .construire();
     reconciliation.absorberRenommagesSalles(
         List.of(concert), Map.of(identifiant, salleId), Map.of());
   }

@@ -229,11 +229,18 @@ class FetchSallesExecutor {
               final String source = (String) ligne.get("source");
               final String prefixe =
                   "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
-              parSalle
-                  .computeIfAbsent((String) ligne.get("salle_id"), _ -> new ArrayList<>())
-                  .add(
-                      new IdentifiantSalle(
-                          prefixe + ":" + ligne.get("identifiant"), (String) ligne.get("libelle")));
+              final String libelle = (String) ligne.get("libelle");
+              final List<IdentifiantSalle> identifiants =
+                  parSalle.computeIfAbsent((String) ligne.get("salle_id"), _ -> new ArrayList<>());
+              // Un lieu Eventim peut porter un identifiant historique et un identifiant qualifié
+              // par code postal : Eventim n'est interrogé que par libellé, une fois.
+              final boolean dejaInterroge =
+                  "eventim".equals(source)
+                      && identifiants.stream().anyMatch(i -> libelle.equals(i.libelle()));
+              if (!dejaInterroge) {
+                identifiants.add(
+                    new IdentifiantSalle(prefixe + ":" + ligne.get("identifiant"), libelle));
+              }
             });
     return parSalle.entrySet().stream()
         .map(entree -> new SalleAFetcher(entree.getKey(), entree.getValue()))

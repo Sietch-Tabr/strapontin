@@ -139,13 +139,13 @@ final class TicketmasterPageFetcher {
   private URI construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
     return UriSources.encoder(
         uriBase
-        .cloneBuilder()
-        .queryParam("apikey", apiKey)
-        .queryParam("locale", "fr,en,*")
-        .queryParam("countryCode", "FR")
-        .queryParam("includeTBA", "no")
-        .queryParam("includeTBD", "no")
-        .queryParam("page", numPage));
+            .cloneBuilder()
+            .queryParam("apikey", apiKey)
+            .queryParam("locale", "fr,en,*")
+            .queryParam("countryCode", "FR")
+            .queryParam("includeTBA", "no")
+            .queryParam("includeTBD", "no")
+            .queryParam("page", numPage));
   }
 
   private static QuotaTM extraireQuotaTm(final HttpHeaders headers) {
