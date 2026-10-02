@@ -11,6 +11,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.worker.persister.SimulationResolutionSalles;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,8 @@ class TriggerControllerTest {
   @Test
   void relancerJob_typeJobInconnu_retourne400() {
     final Scheduler scheduler = mock(Scheduler.class);
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("job:inexistant");
 
@@ -45,7 +47,8 @@ class TriggerControllerTest {
   void relancerJob_reconciliationNocturne_aucuneInstanceEnCours_declenche() throws Exception {
     final Scheduler scheduler = mock(Scheduler.class);
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
@@ -59,7 +62,8 @@ class TriggerControllerTest {
   void relancerJob_purgerSalles_declenche() throws Exception {
     final Scheduler scheduler = mock(Scheduler.class);
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("purger:salles");
 
@@ -77,7 +81,8 @@ class TriggerControllerTest {
             .build();
     when(ctxEnCours.getJobDetail()).thenReturn(jobDetail);
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of(ctxEnCours));
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
@@ -92,7 +97,8 @@ class TriggerControllerTest {
     final Scheduler scheduler = mock(Scheduler.class);
     when(scheduler.getCurrentlyExecutingJobs())
         .thenThrow(new org.quartz.SchedulerException("boom"));
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
@@ -103,7 +109,8 @@ class TriggerControllerTest {
   @Test
   void notifierVersion_succes_planifieLeJobEtRetourne200() throws Exception {
     final Scheduler scheduler = mock(Scheduler.class);
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.notifierVersion("3.0.0");
 
@@ -122,7 +129,8 @@ class TriggerControllerTest {
             org.mockito.ArgumentMatchers.any(JobDetail.class),
             org.mockito.ArgumentMatchers.any(org.quartz.Trigger.class)))
         .thenThrow(new org.quartz.SchedulerException("boom"));
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.notifierVersion("3.0.0");
 

@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.ClientNominatim;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -48,6 +51,8 @@ class ResolveurSalleParConcert {
   private final RaccrocheurSallesParNomNorm raccrocheur;
   private final ResolveurSalleParProximiteGps resolveurGps;
   private final CreateurSalle createur;
+  private final ResolveurSallePosition parPosition;
+  private boolean resolutionParPosition;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
    * package). */
@@ -58,6 +63,20 @@ class ResolveurSalleParConcert {
     this.raccrocheur = new RaccrocheurSallesParNomNorm(jdbc);
     this.resolveurGps = new ResolveurSalleParProximiteGps(jdbc);
     this.createur = new CreateurSalle(jdbc, this::deptsConnus);
+    this.parPosition = new ResolveurSallePosition(jdbc);
+  }
+
+  /**
+   * Active la résolution par position du lieu ({@link ResolveurSallePosition}) :
+   * recherche d'abord une salle au même endroit, écarte toute salle trouvée
+   * par son nom mais distante du lieu, et crée une salle à la position
+   * publiée plutôt que de géocoder son nom.
+   * @param active valeur de {@code strapontin.resolution-salles.par-position}
+   */
+  @Autowired
+  void setResolutionParPosition(
+      @Value("${strapontin.resolution-salles.par-position:false}") final boolean active) {
+    this.resolutionParPosition = active;
   }
 
   /**
@@ -106,18 +125,38 @@ class ResolveurSalleParConcert {
   }
 
   private UUID resoudreOuCreerSalleId(final ValeurConcert concert) {
-    UUID salleId = chercherSalleParNomExact(concert.salle(), concert.dept());
+    final PositionLieu position = concert.position();
+    if (resolutionParPosition) {
+      final ResolveurSallePosition.SalleProche proche =
+          parPosition.chercher(concert.salle(), concert.dept(), position);
+      if (proche != null) {
+        LOG.info(
+            "salle résolue par position salle={} uuid={} distance={}m",
+            concert.salle(),
+            proche.id(),
+            Math.round(proche.distance()));
+        return proche.id();
+      }
+    }
+
+    UUID salleId = retenir(chercherSalleParNomExact(concert.salle(), concert.dept()), concert);
 
     if (salleId == null) {
-      salleId = chercherSalleParTokens(concert.salle(), concert.dept());
+      salleId = retenir(chercherSalleParTokens(concert.salle(), concert.dept()), concert);
     }
 
     if (salleId == null) {
-      salleId = resoudreSousSalle(concert.salle(), concert.dept());
+      salleId = retenir(resoudreSousSalle(concert.salle(), concert.dept()), concert);
     }
 
     if (salleId == null) {
-      salleId = chercherSalleParCleForte(concert);
+      salleId = retenir(chercherSalleParCleForte(concert), concert);
+    }
+
+    if (salleId == null && resolutionParPosition && position.estGeolocalisee()) {
+      return createur.creer(
+          concert,
+          Optional.of(new ClientNominatim.Coordonnees(position.latitude(), position.longitude())));
     }
 
     Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
@@ -133,6 +172,18 @@ class ResolveurSalleParConcert {
     }
 
     return salleId != null ? salleId : createur.creer(concert, coordsGeocodees);
+  }
+
+  // Écarte une salle trouvée par son nom mais géolocalisée loin du lieu publié (homonyme).
+  private UUID retenir(final UUID candidat, final ValeurConcert concert) {
+    if (resolutionParPosition && parPosition.incompatible(candidat, concert.position())) {
+      LOG.warn(
+          "salle candidate écartée : position incompatible avec le lieu salle={} candidat={}",
+          concert.salle(),
+          candidat);
+      return null;
+    }
+    return candidat;
   }
 
   // Salle portant exactement ce nom, dans le département du concert : des

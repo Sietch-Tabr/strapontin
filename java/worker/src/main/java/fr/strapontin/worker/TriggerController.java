@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import fr.strapontin.worker.jobs.FetchSalleJob;
 import fr.strapontin.worker.jobs.NotifierVersionJob;
+import fr.strapontin.worker.persister.SimulationResolutionSalles;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -48,12 +49,26 @@ public class TriggerController {
   private static final String PREFIXE_ERREUR_QUARTZ = "Erreur Quartz : ";
 
   private final Scheduler scheduler;
+  private final SimulationResolutionSalles simulationResolutionSalles;
 
   /**
    * @param scheduler planificateur Quartz portant les jobs déclenchables
+   * @param simulationResolutionSalles mesure de la résolution des salles par position
    */
-  public TriggerController(final Scheduler scheduler) {
+  public TriggerController(
+      final Scheduler scheduler, final SimulationResolutionSalles simulationResolutionSalles) {
     this.scheduler = scheduler;
+    this.simulationResolutionSalles = simulationResolutionSalles;
+  }
+
+  /**
+   * Simule, sans rien écrire, la résolution des salles par position du lieu sur les données
+   * actuelles et en rapporte les écarts avec le rattachement en base.
+   * @return effectifs par catégorie et exemples
+   */
+  @GetMapping("/simulation-salles")
+  public ResponseEntity<Map<String, Object>> simulerResolutionSalles() {
+    return ResponseEntity.ok(simulationResolutionSalles.simuler());
   }
 
   /**
