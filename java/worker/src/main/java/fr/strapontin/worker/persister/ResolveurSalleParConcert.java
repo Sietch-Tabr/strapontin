@@ -52,7 +52,7 @@ class ResolveurSalleParConcert {
   private final ResolveurSalleParProximiteGps resolveurGps;
   private final CreateurSalle createur;
   private final ResolveurSallePosition parPosition;
-  private boolean resolutionParPosition;
+  private boolean resolutionParPosition = true;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
    * package). */
@@ -67,7 +67,7 @@ class ResolveurSalleParConcert {
   }
 
   /**
-   * Active la résolution par position du lieu ({@link ResolveurSallePosition}) :
+   * Active (par défaut) la résolution par position du lieu ({@link ResolveurSallePosition}) :
    * recherche d'abord une salle au même endroit, écarte toute salle trouvée
    * par son nom mais distante du lieu, et crée une salle à la position
    * publiée plutôt que de géocoder son nom.
@@ -75,7 +75,7 @@ class ResolveurSalleParConcert {
    */
   @Autowired
   void setResolutionParPosition(
-      @Value("${strapontin.resolution-salles.par-position:false}") final boolean active) {
+      @Value("${strapontin.resolution-salles.par-position:true}") final boolean active) {
     this.resolutionParPosition = active;
   }
 
