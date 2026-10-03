@@ -16,6 +16,7 @@
       </span>
       <span v-else class="synchro-info">Jamais synchronisé</span>
       <button
+        v-if="estAdmin"
         type="button"
         class="bouton bouton-petit bouton-secondaire"
         @click="actualiser"
@@ -295,6 +296,7 @@ import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { formaterAvecHeure, formaterInstant } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
+import { sessionRef } from "../composables/useSession.js";
 import EtatChargement from "../components/EtatChargement.vue";
 
 const route = useRoute();
@@ -415,6 +417,9 @@ function toggleDept(dept) {
 function changerPage(page) {
   router.push({ query: { ...route.query, page: String(page) } });
 }
+
+// La récupération d'un département coûte du quota Ticketmaster : réservée aux admins.
+const estAdmin = computed(() => sessionRef.value?.role === "admin");
 
 async function actualiser() {
   try {

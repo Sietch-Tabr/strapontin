@@ -446,3 +446,28 @@ test.describe("Scénario: garde de session — coupure réseau transitoire (#823
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
   });
 });
+
+test.describe("Scénario: Découverte — actualisation réservée aux admins", () => {
+  test.describe("utilisateur", () => {
+    test.use({ storageState: FICHIER_AUTH_USER });
+
+    test("decouverte_utilisateur_boutonActualiserAbsent", async ({ page }) => {
+      await page.goto("/decouverte");
+      await expect(page.locator("main")).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Actualiser" }),
+      ).toHaveCount(0);
+    });
+  });
+
+  test.describe("admin", () => {
+    test.use({ storageState: FICHIER_AUTH_ADMIN });
+
+    test("decouverte_admin_boutonActualiserVisible", async ({ page }) => {
+      await page.goto("/decouverte");
+      await expect(
+        page.getByRole("button", { name: "Actualiser" }),
+      ).toBeVisible();
+    });
+  });
+});
