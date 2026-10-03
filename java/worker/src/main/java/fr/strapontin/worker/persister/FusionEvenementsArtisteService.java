@@ -82,8 +82,9 @@ public class FusionEvenementsArtisteService {
 
   /**
    * Fusionne chaque événement périmé dans l'unique événement vivant de même
-   * fiche (même url, ou même idmanif TM à la même date) ; ambigu : ignoré.
-   * À exécuter avant la fusion de salles par clé forte, qu'il fausserait.
+   * fiche (même url, ou même idmanif TM à la même date, apparue plus d'une
+   * heure après la dernière vue de la périmée : deux séances vues au même
+   * passage restent distinctes) ; ambigu : ignoré. Avant la fusion de salles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimees() {
@@ -92,6 +93,7 @@ public class FusionEvenementsArtisteService {
             """
             WITH obs AS (
               SELECT o.evenement_id, o.source, o.url, e.date, e.absences_consecutives,
+                     o.first_seen, o.updated_at,
                      CASE WHEN o.source = 'ticketmaster'
                           THEN substring(o.url FROM '/idmanif/([0-9]+)') END AS idmanif
               FROM observations o
@@ -105,7 +107,8 @@ public class FusionEvenementsArtisteService {
               ON v.evenement_id <> p.evenement_id
              AND v.source = p.source
              AND (v.url = p.url OR (p.idmanif IS NOT NULL AND v.idmanif = p.idmanif
-                                    AND v.date = p.date))
+                                    AND v.date = p.date
+                                    AND p.updated_at < v.first_seen - interval '1 hour'))
             WHERE p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
             GROUP BY p.evenement_id
             """,

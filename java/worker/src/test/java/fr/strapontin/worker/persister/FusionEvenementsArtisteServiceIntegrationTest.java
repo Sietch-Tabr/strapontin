@@ -355,14 +355,37 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
             Integer.class));
   }
 
+  private void vueIlYA(final UUID evenementId, final int heures) {
+    jdbc.update(
+        "UPDATE observations SET first_seen = date_trunc('hour', now()) - make_interval(hours =>"
+            + " :heures), updated_at = date_trunc('hour', now()) - make_interval(hours => :heures)"
+            + " WHERE evenement_id = CAST(:id AS uuid)",
+        Map.of("id", evenementId.toString(), "heures", heures));
+  }
+
   @Test
   void fusionnerFichesPerimees_reportSousUneAutreUrlMemeIdmanifMemeDate_fusionne() {
     final UUID perimee = creerFiche(salle, DATE_FUTURE, "20:00", 10, URL_TM + "/idtier/18864121");
+    vueIlYA(perimee, 72);
     final UUID vivante = creerFiche(salle, DATE_FUTURE, "19:30", 0, URL_TM + "/idseance/4350510");
 
     assertEquals(1, fusionEvenementsArtiste.fusionnerFichesPerimees());
     assertFalse(existe(perimee));
     assertTrue(existe(vivante));
+  }
+
+  // Le Roi Lion à Mogador : séances de 13 h et 18 h sous un même idmanif, vues
+  // au même passage ; une absence de l'une ne fait pas d'elle un report.
+  @Test
+  void fusionnerFichesPerimees_deuxSeancesVuesEnsembleMemeIdmanif_neFusionnePas() {
+    final UUID soir = creerFiche(salle, DATE_FUTURE, "18:00", 10, URL_TM + "/idseance/4424739");
+    final UUID matinee = creerFiche(salle, DATE_FUTURE, "13:00", 0, URL_TM + "/idseance/4424738");
+    vueIlYA(soir, 72);
+    vueIlYA(matinee, 72);
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(soir));
+    assertTrue(existe(matinee));
   }
 
   @Test
