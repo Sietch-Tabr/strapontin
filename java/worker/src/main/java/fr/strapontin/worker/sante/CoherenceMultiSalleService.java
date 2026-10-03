@@ -4,16 +4,15 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.IdentifiantLieuEventim;
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -213,66 +212,7 @@ public class CoherenceMultiSalleService {
    */
   private static boolean estContaminationReelle(
       final String nomExtrait, final String nomNormSalle) {
-    if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) {
-      return false;
-    }
-    return !nomContenuDansLAutre(nomExtrait, nomNormSalle)
-        && !estSigleDe(nomExtrait, nomNormSalle)
-        && !estApostropheElideeContenue(nomExtrait, nomNormSalle);
-  }
-
-  /**
-   * Généralise {@link #nomContenuDansLAutre} à un nom commençant par une
-   * apostrophe élidée (ex. "L'Astrada" → {@code nom_norm} "l astrada") face
-   * à un identifiant source collant le mot sans apostrophe (ex. "lastrada
-   * marciac") — sans fusion, le token d'une seule lettre "l" est filtré,
-   * aucun rapport n'est détecté malgré l'évidence.
-   */
-  private static boolean estApostropheElideeContenue(final String nomNormA, final String nomNormB) {
-    return contientToken(fusionnerApostropheElidee(nomNormA), nomNormB)
-        || contientToken(fusionnerApostropheElidee(nomNormB), nomNormA);
-  }
-
-  // article élidé fusionné avec le mot suivant ("l astrada" -> "lastrada") —
-  // le token d'une seule lettre est systématiquement filtré en amont.
-  private static String fusionnerApostropheElidee(final String nomNorm) {
-    return nomNorm.replaceFirst("^([a-z]) ", "$1");
-  }
-
-  private static boolean contientToken(final String tokenFusionne, final String nomNormAutre) {
-    return !tokenFusionne.isEmpty()
-        && !tokenFusionne.contains(" ")
-        && tokenFusionne.length() >= LONGUEUR_MIN_CONTAINMENT_DOUBLON
-        && nomNormAutre.contains(tokenFusionne);
-  }
-
-  /**
-   * Vérifie si la plus courte des deux chaînes est le sigle de la plus longue —
-   * les initiales de chaque mot de la plus longue, concaténées sans espace,
-   * égalent exactement la plus courte sans espace (ex. "ed n" pour "espace
-   * dollfus noack" → initiales e, d, n).
-   */
-  private static boolean estSigleDe(final String nomA, final String nomB) {
-    final String court = nomA.length() <= nomB.length() ? nomA : nomB;
-    final String sigleObserve = court.replace(" ", "");
-    if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) {
-      return false;
-    }
-
-    final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;
-    final String[] mots = plusLong.split("\\s+");
-    if (mots.length != sigleObserve.length()) {
-      return false;
-    }
-
-    final StringBuilder initiales = new StringBuilder();
-    for (final String mot : mots) {
-      if (mot.isEmpty()) {
-        return false;
-      }
-      initiales.append(mot.charAt(0));
-    }
-    return initiales.toString().equals(sigleObserve);
+    return !NomsDeLieu.designentLeMemeLieu(nomExtrait, nomNormSalle);
   }
 
   /**
@@ -282,22 +222,5 @@ public class CoherenceMultiSalleService {
    */
   public int detecterDoublons() {
     return detectionDoublons.detecter();
-  }
-
-  // Containment par token complet plutôt que sous-chaîne brute (#1203) : un
-  // containment de caractères validait à tort un article court ("les")
-  // trivialement présent dans un token du nom long ("lessaion") sans aucun
-  // rapport sémantique réel — même classe de faux positif que
-  // CorrespondanceSalle#estContainmentTokensPartiel.
-  /* package-private : partagé avec DetectionDoublonsSalles (même package). */
-  static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
-    final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
-    if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) {
-      return false;
-    }
-    final String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
-    final Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
-    final Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
-    return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);
   }
 }

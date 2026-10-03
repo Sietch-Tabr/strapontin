@@ -80,6 +80,28 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     assertEquals(List.of("dispersion_sources_salle"), typesSignales());
   }
 
+  // Élysée Montmartre et Théâtre Montmartre-Galabru, 818 m, même arrondissement : le mot
+  // « montmartre » les avait réunis sous une seule salle.
+  @Test
+  void verifier_lieuxVoisinsAuxNomsDistincts_signaleUneDispersion() {
+    final UUID salle = creerSalle("theatre montmartre galabru paris 18");
+    lieu(salle, "internal:elysee montmartre paris 18@75018", 48.88310, 2.34368);
+    lieu(salle, "internal:theatre montmartre galabru paris 18@75018", 48.88732, 2.33453);
+
+    assertEquals(1, controle.verifier());
+    assertEquals(List.of("dispersion_sources_salle"), typesSignales());
+  }
+
+  // Théâtre Galli : une billetterie complète le nom de la ville, positions à 374 m.
+  @Test
+  void verifier_memeLieuNomCompleteDeSaVille_neSignalePas() {
+    final UUID salle = creerSalle("theatre galli");
+    lieu(salle, "internal:theatre galli@83110", 43.11880, 5.80140);
+    lieu(salle, "internal:theatre galli sanary sur mer@83110", 43.12190, 5.80310);
+
+    assertEquals(0, controle.verifier());
+  }
+
   // Parc des Expos Hermione / Parc des Expositions Brézillet : même lieu, noms sans rapport.
   @Test
   void verifier_deuxSallesAuMemeLieu_signaleUnDoublonSansDependreDesNoms() {

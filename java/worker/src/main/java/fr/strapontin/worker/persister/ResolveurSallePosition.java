@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
 import java.sql.Types;
@@ -19,7 +20,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * Salle d'un lieu par sa position publiée : à moins de
  * {@value #RAYON_MEME_LIEU_METRES} m, même département, nom doublon (deux
  * salles mitoyennes restent distinctes). Veto d'une salle trouvée par son nom
- * à plus de {@value #DISTANCE_INCOMPATIBLE_METRES} m (homonyme).
+ * à plus de {@value #DISTANCE_INCOMPATIBLE_METRES} m (homonyme), ou entre 300
+ * m et 1 km sans nom fortement commun (lieu voisin).
  * @since 3.0.2
  * @author Kwaite
  */
@@ -30,6 +32,9 @@ final class ResolveurSallePosition {
   /* package-private : positions publiées décalées jusqu'à 7 km (centre-ville
    * pour une salle de périphérie) : seul un autre lieu urbain est exclu. */
   static final double DISTANCE_INCOMPATIBLE_METRES = 20_000;
+  // Au-delà, une position publiée imprécise (salle de périphérie) n'est plus
+  // un signal de lieu voisin : seul le veto à 20 km s'applique.
+  private static final double DISTANCE_LIEUX_VOISINS_MAX_METRES = 1000;
   // Rayon en degrés du préfiltre SQL (au plus ~0,005° pour 300 m en
   // France métropolitaine).
   private static final double DEGRES_PREFILTRE = 0.005;
@@ -92,25 +97,36 @@ final class ResolveurSallePosition {
 
   /**
    * @param salleId salle candidate, peut être null
+   * @param nom nom brut du lieu publié
+   * @param position position publiée du lieu
    * @return true si salle et lieu sont géolocalisés et trop éloignés pour
-   *     être le même lieu
+   *     être le même lieu : au-delà de {@value #DISTANCE_INCOMPATIBLE_METRES}
+   *     m, ou au-delà de {@value #RAYON_MEME_LIEU_METRES} m quand seul un
+   *     critère de nom faible les rapproche (lieux voisins)
    */
   /* package-private : appelé par ResolveurSalleParConcert et la simulation. */
-  boolean incompatible(final UUID salleId, final PositionLieu position) {
+  boolean incompatible(final UUID salleId, final String nom, final PositionLieu position) {
     if (salleId == null || !position.estGeolocalisee()) {
       return false;
     }
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)"
+            "SELECT latitude, longitude, nom_norm FROM salles WHERE id = CAST(:id AS uuid)"
                 + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
             Map.of("id", salleId.toString()));
-    return !lignes.isEmpty()
-        && DistanceGeo.metres(
-                position.latitude(),
-                position.longitude(),
-                (Double) lignes.get(0).get("latitude"),
-                (Double) lignes.get(0).get("longitude"))
-            > DISTANCE_INCOMPATIBLE_METRES;
+    if (lignes.isEmpty()) {
+      return false;
+    }
+    final double distance =
+        DistanceGeo.metres(
+            position.latitude(),
+            position.longitude(),
+            (Double) lignes.get(0).get("latitude"),
+            (Double) lignes.get(0).get("longitude"));
+    return distance > DISTANCE_INCOMPATIBLE_METRES
+        || distance > RAYON_MEME_LIEU_METRES
+            && distance <= DISTANCE_LIEUX_VOISINS_MAX_METRES
+            && !NomsDeLieu.designentFortementLeMemeLieu(
+                Normalisation.normaliserTexte(nom), (String) lignes.get(0).get("nom_norm"));
   }
 }

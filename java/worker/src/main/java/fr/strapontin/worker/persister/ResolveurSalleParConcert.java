@@ -159,7 +159,8 @@ class ResolveurSalleParConcert {
 
   // Écarte une salle trouvée par son nom mais loin du lieu publié (homonyme).
   private UUID retenir(final UUID candidat, final ValeurConcert concert) {
-    if (resolutionParPosition && parPosition.incompatible(candidat, concert.position())) {
+    if (resolutionParPosition
+        && parPosition.incompatible(candidat, concert.salle(), concert.position())) {
       LOG.warn(
           "salle candidate écartée : position incompatible avec le lieu salle={} candidat={}",
           concert.salle(),

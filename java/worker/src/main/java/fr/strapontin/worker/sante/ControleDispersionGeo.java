@@ -5,6 +5,8 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.NomsDeLieu;
+import fr.strapontin.core.Normalisation;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -15,9 +17,10 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Dispersion géographique des lieux sources, indépendante des noms : lieux
- * éloignés d'une salle (contamination), lieux de deux salles qui coïncident
- * (doublon). Consolide d'abord la position des salles sur leurs lieux.
+ * Dispersion géographique des lieux sources : lieux éloignés d'une salle
+ * (contamination ; entre 300 m et 1 km, seulement si leurs noms ne sont pas
+ * des doublons forts), lieux de deux salles qui coïncident (doublon). Consolide
+ * d'abord la position des salles sur leurs lieux.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -30,12 +33,20 @@ final class ControleDispersionGeo {
   static final double DISTANCE_AUTRE_VILLE_METRES = 20_000;
   /* package-private : visibilité élargie pour les tests (même package). */
   static final double DISTANCE_MEME_LIEU_METRES = 50;
+  /* package-private : rayon d'un même lieu à la résolution ; au-delà, deux
+   * noms qui ne sont pas des doublons forts désignent deux lieux voisins. */
+  static final double DISTANCE_LIEUX_VOISINS_METRES = 300;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
 
   private record LieuSource(
-      UUID salleId, String identifiant, double latitude, double longitude, String codePostal) {}
+      UUID salleId,
+      String identifiant,
+      String nom,
+      double latitude,
+      double longitude,
+      String codePostal) {}
 
   /* package-private : instancié par ControleIntegriteService. */
   ControleDispersionGeo(
@@ -98,18 +109,23 @@ final class ControleDispersionGeo {
   private List<LieuSource> chargerLieux() {
     return jdbc.query(
         """
-        SELECT salle_id, source || ':' || identifiant_externe AS identifiant, latitude, longitude,
-               code_postal
-        FROM salle_sources
-        WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-          AND contamination_acceptee_le IS NULL
-        ORDER BY salle_id
+        SELECT ss.salle_id, ss.source || ':' || ss.identifiant_externe AS identifiant,
+               COALESCE(ss.libelle_source,
+                        CASE WHEN ss.identifiant_externe LIKE 'internal:%'
+                             THEN split_part(substr(ss.identifiant_externe, 10), '@', 1) END,
+                        s.nom) AS nom,
+               ss.latitude, ss.longitude, ss.code_postal
+        FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
+        WHERE ss.latitude IS NOT NULL AND ss.longitude IS NOT NULL
+          AND ss.contamination_acceptee_le IS NULL
+        ORDER BY ss.salle_id
         """,
         Map.of(),
         (rs, _) ->
             new LieuSource(
                 rs.getObject("salle_id", UUID.class),
                 rs.getString("identifiant"),
+                Normalisation.normaliserTexte(rs.getString("nom")),
                 rs.getDouble("latitude"),
                 rs.getDouble("longitude"),
                 rs.getString("code_postal")));
@@ -135,7 +151,7 @@ final class ControleDispersionGeo {
           }
         }
       }
-      if (distanceMax > DISTANCE_DISPERSION_METRES) {
+      if (identifiantA != null) {
         signalements.signaler(
             "dispersion_sources_salle",
             "salle",
@@ -210,14 +226,20 @@ final class ControleDispersionGeo {
   }
 
   // Une position publiée s'écarte de quelques km : lieux distincts si les
-  // codes postaux diffèrent aussi, ou s'ils sont dans deux villes.
+  // codes postaux diffèrent aussi, ou s'ils sont dans deux villes. Sous 1 km,
+  // deux noms sans doublon fort (le mot pivot rapprochait Galabru et
+  // l'Élysée Montmartre) désignent deux lieux voisins.
   private static boolean lieuxDistincts(
       final LieuSource premier, final LieuSource second, final double ecart) {
-    return ecart > DISTANCE_AUTRE_VILLE_METRES
-        || ecart > DISTANCE_DISPERSION_METRES
-            && premier.codePostal() != null
+    final boolean codesPostauxDifferents =
+        premier.codePostal() != null
             && second.codePostal() != null
             && !premier.codePostal().equals(second.codePostal());
+    return ecart > DISTANCE_AUTRE_VILLE_METRES
+        || ecart > DISTANCE_DISPERSION_METRES && codesPostauxDifferents
+        || ecart > DISTANCE_LIEUX_VOISINS_METRES
+            && ecart <= DISTANCE_DISPERSION_METRES
+            && !NomsDeLieu.designentFortementLeMemeLieu(premier.nom(), second.nom());
   }
 
   /**

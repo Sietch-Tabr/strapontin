@@ -221,6 +221,23 @@ public final class CorrespondanceSalle {
         pivotAutorise)) {
       return true;
     }
+    return estDoublonParMots(nomA, nomB, pivotAutorise);
+  }
+
+  /**
+   * Doublon établi par les seuls mots du nom, sans similarité de caractères
+   * ni mot pivot : deux églises voisines (« eglise saint ephrem » / « eglise
+   * saint sulpice ») partagent assez de caractères pour tromper Levenshtein.
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
+   * @return {@code true} si les mots spécifiques désignent la même salle
+   */
+  public static boolean estDoublonSalleParMots(final String nomA, final String nomB) {
+    return estDoublonParMots(nomA, nomB, false);
+  }
+
+  private static boolean estDoublonParMots(
+      final String nomA, final String nomB, final boolean pivotAutorise) {
     if (UtilitairesChaine.estEgaliteSansEspaces(nomA, nomB)) {
       return true;
     }

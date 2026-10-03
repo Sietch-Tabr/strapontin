@@ -108,9 +108,23 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
   void incompatible_salleGeolocaliseeLoinDuLieu_vrai() {
     final UUID vittel = creerSalle("Palais des Congres", "88", VITTEL);
 
-    assertTrue(parPosition.incompatible(vittel, PERPIGNAN));
-    assertFalse(parPosition.incompatible(vittel, VITTEL));
-    assertFalse(parPosition.incompatible(vittel, PositionLieu.INCONNUE));
+    assertTrue(parPosition.incompatible(vittel, "Palais des Congrès", PERPIGNAN));
+    assertFalse(parPosition.incompatible(vittel, "Palais des Congrès", VITTEL));
+    assertFalse(parPosition.incompatible(vittel, "Palais des Congrès", PositionLieu.INCONNUE));
+  }
+
+  // Élysée Montmartre à 818 m d'une salle Galabru : seul le mot « montmartre » est commun.
+  @Test
+  void incompatible_lieuVoisinRapprocheParUnMotCommun_vrai() {
+    final UUID galabru =
+        creerSalle(
+            "Theatre Montmartre Galabru Paris 18",
+            "75",
+            new PositionLieu(48.88732, 2.33453, "75018"));
+    final PositionLieu elysee = new PositionLieu(48.88310, 2.34368, "75018");
+
+    assertTrue(parPosition.incompatible(galabru, "ELYSEE MONTMARTRE PARIS 18", elysee));
+    assertFalse(parPosition.incompatible(galabru, "THEATRE MONTMARTRE GALABRU", elysee));
   }
 
   @Test

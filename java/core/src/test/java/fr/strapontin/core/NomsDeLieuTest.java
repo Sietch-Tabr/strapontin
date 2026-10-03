@@ -1,0 +1,51 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.core;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
+
+/**
+ * Tests unitaires pour {@link NomsDeLieu}, sur des noms de lieux publiés en production.
+ *
+ * @since 3.0.2
+ * @author Kwaite
+ */
+class NomsDeLieuTest {
+
+  @Test
+  void designentFortementLeMemeLieu_nomCompleteDeSaVille_vrai() {
+    assertTrue(
+        NomsDeLieu.designentFortementLeMemeLieu("theatre galli", "theatre galli sanary sur mer"));
+  }
+
+  @Test
+  void designentFortementLeMemeLieu_sigleDesInitiales_vrai() {
+    assertTrue(NomsDeLieu.designentFortementLeMemeLieu("ed n", "espace dollfus noack"));
+  }
+
+  @Test
+  void designentFortementLeMemeLieu_seulMotPivotCommunSansPivot_faux() {
+    assertFalse(
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "elysee montmartre paris 18", "theatre montmartre galabru paris 18"));
+  }
+
+  @Test
+  void designentFortementLeMemeLieu_deuxEglisesDistinctes_faux() {
+    assertFalse(
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "eglise saint ephrem paris 05", "eglise saint sulpice paris 06"));
+  }
+
+  @Test
+  void designentFortementLeMemeLieu_hallsDistinctsDUnMemeSite_faux() {
+    assertFalse(
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "la grande halle de la villette", "la petite halle de la villette"));
+  }
+}
