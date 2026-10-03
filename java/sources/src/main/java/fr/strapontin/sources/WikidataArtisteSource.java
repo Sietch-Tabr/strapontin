@@ -156,23 +156,20 @@ public class WikidataArtisteSource
             .filter(ClientSparqlWikidata::estQIdValide)
             .map(q -> "wd:" + q)
             .collect(Collectors.joining(" "));
-    // Les alias (skos:altLabel) sont agrégés dans une sous-requête groupée par
-    // ?item avant la jointure avec deezerId/tmId et le SERVICE label — les
-    // grouper dans la requête principale forcerait un GROUP BY sur toutes les
-    // colonnes, y compris ?itemLabel produit procéduralement par le label
-    // service, ce qui n'est pas supporté proprement en SPARQL 1.1.
+    // Un seul GROUP BY, libellés lus directement : la sous-requête groupée
+    // jointe au SERVICE label dépassait le délai de Wikidata (60 s) ou
+    // renvoyait des alias vides, et aucun alias n'était jamais enregistré.
     return """
-    SELECT ?item ?itemLabel ?deezerId ?tmId ?aliases WHERE {
-      {
-        SELECT ?item (GROUP_CONCAT(DISTINCT ?altLabel; separator="|") AS ?aliases) WHERE {
-          VALUES ?item { %s }
-          OPTIONAL { ?item skos:altLabel ?altLabel . FILTER(LANG(?altLabel) IN ("fr", "en")) }
-        } GROUP BY ?item
-      }
-      OPTIONAL { ?item wdt:P2722 ?deezerId . }
-      OPTIONAL { ?item wdt:P7354 ?tmId . }
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
-    }
+    SELECT ?item (SAMPLE(COALESCE(?libelleFr, ?libelleEn)) AS ?itemLabel)
+           (SAMPLE(?deezer) AS ?deezerId) (SAMPLE(?tm) AS ?tmId)
+           (GROUP_CONCAT(DISTINCT ?altLabel; separator="|") AS ?aliases) WHERE {
+      VALUES ?item { %s }
+      OPTIONAL { ?item rdfs:label ?libelleFr . FILTER(LANG(?libelleFr) = "fr") }
+      OPTIONAL { ?item rdfs:label ?libelleEn . FILTER(LANG(?libelleEn) = "en") }
+      OPTIONAL { ?item wdt:P2722 ?deezer . }
+      OPTIONAL { ?item wdt:P7354 ?tm . }
+      OPTIONAL { ?item skos:altLabel ?altLabel . FILTER(LANG(?altLabel) IN ("fr", "en")) }
+    } GROUP BY ?item
     """
         .formatted(values);
   }
