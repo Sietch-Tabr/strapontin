@@ -118,6 +118,67 @@ class EventimSourceTest {
     assertEquals("21:45", r[1]);
   }
 
+  // --- concerneArtiste (têtes d'affiche de festival attachées à tous les produits) ---
+
+  private static final List<Map<String, Object>> ARTISTES_FESTIVAL =
+      List.of(
+          Map.of("name", "Cascadeur"),
+          Map.of("name", "Pi Ja Ma"),
+          Map.of("name", "Les Rendez-Vous Soniques"),
+          Map.of("name", "Suzane"),
+          Map.of("name", "Benjamin Biolay"));
+
+  private static Map<String, Object> produitFestival(final String titre) {
+    return Map.of("name", titre, "attractions", ARTISTES_FESTIVAL);
+  }
+
+  @Test
+  void concerneArtiste_dateDUnAutreArtisteDuFestival_estEcartee() {
+    assertFalse(
+        MapeurProduitEventim.concerneArtiste(
+            produitFestival("Cascadeur + Betty Pop - Les Rendez-Vous Soniques #17"), "Suzane"));
+    assertFalse(
+        MapeurProduitEventim.concerneArtiste(
+            produitFestival("PI JA MA & La Chorale du Normandy - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+  }
+
+  @Test
+  void concerneArtiste_dateOuLArtisteJoue_estGardee() {
+    assertTrue(
+        MapeurProduitEventim.concerneArtiste(
+            produitFestival("Suzane + Marguerite + Sam Sauvage - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+  }
+
+  @Test
+  void concerneArtiste_titreSansArtisteReconnu_estGarde() {
+    assertTrue(
+        MapeurProduitEventim.concerneArtiste(
+            produitFestival("Pionnières par DeLaurentis - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+    assertTrue(
+        MapeurProduitEventim.concerneArtiste(
+            Map.of(
+                "name",
+                "Les 30 ans de Rêves de Gosse",
+                "attractions",
+                List.of(Map.of("name", "Shy'm"))),
+            "Shy'm"));
+  }
+
+  @Test
+  void concerneArtiste_nomDeLArtisteContenuDansUneAttraction_nEstPasUnAutreArtiste() {
+    assertTrue(
+        MapeurProduitEventim.concerneArtiste(
+            Map.of(
+                "name",
+                "-M- Matthieu Chedid - Tournée",
+                "attractions",
+                List.of(Map.of("name", "-M- Matthieu Chedid"))),
+            "-M-"));
+  }
+
   // --- extraireNomArtiste ---
 
   @Test
