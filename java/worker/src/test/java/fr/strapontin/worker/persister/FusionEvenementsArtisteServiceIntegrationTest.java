@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -122,6 +123,56 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     creerEvenement("behemoth and dimmu borgir", creerArtiste("Dimmu Borgir"));
 
     assertEquals(0, fusionEvenementsArtiste.fusionner());
+  }
+
+  private UUID creerEvenementDansSalle(
+      final UUID salleId, final String artisteNorm, final int absences, final String url) {
+    final UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept,"
+                + " absences_consecutives) VALUES (:artisteNorm, CAST(:date AS date),"
+                + " CAST('20:00' AS time), 'salle', CAST(:salleId AS uuid), '75', :absences)"
+                + " RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("artisteNorm", artisteNorm)
+                .addValue("date", DATE_FUTURE)
+                .addValue("salleId", salleId.toString())
+                .addValue("absences", absences),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :url,"
+            + " :artiste, 'salle')",
+        Map.of("id", evenementId.toString(), "url", url, "artiste", artisteNorm));
+    return evenementId;
+  }
+
+  // Father of Peace : publié à La Maroquinerie, republié à l'Alhambra sous un autre idmanif.
+  @Test
+  void fusionnerConcertsDeplaces_ancienneFicheAbsenteEtNouvelleVivante_fusionne() {
+    final UUID maroquinerie = creerSalle("La Maroquinerie");
+    final UUID alhambra = creerSalle("Alhambra");
+    creerEvenementDansSalle(maroquinerie, "father of peace", 32, "https://tm/idmanif/663875");
+    final UUID vivant =
+        creerEvenementDansSalle(alhambra, "father of peace", 0, "https://tm/idmanif/668351");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerConcertsDeplaces());
+    assertEquals(
+        List.of(vivant),
+        jdbc.queryForList(
+            "SELECT id FROM evenements WHERE artiste_norm = 'father of peace'",
+            Map.of(),
+            UUID.class));
+  }
+
+  @Test
+  void fusionnerConcertsDeplaces_aucunEvenementVivant_neFusionnePas() {
+    final UUID maroquinerie = creerSalle("La Maroquinerie");
+    final UUID alhambra = creerSalle("Alhambra");
+    creerEvenementDansSalle(maroquinerie, "zebrahead", 4, "https://tm/idmanif/642731");
+    creerEvenementDansSalle(alhambra, "zebrahead", 2, "https://tm/idmanif/668864");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerConcertsDeplaces());
   }
 
   // Second cas réel documenté (#1240) : "dexys midnight runners" / "dexy s midnight runners"

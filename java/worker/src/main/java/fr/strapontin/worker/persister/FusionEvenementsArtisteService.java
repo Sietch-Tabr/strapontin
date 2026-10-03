@@ -109,15 +109,56 @@ public class FusionEvenementsArtisteService {
             GROUP BY p.evenement_id
             """,
             Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+    return fusionnerSiVivantUnique(lignes, "fiche source périmée");
+  }
+
+  /**
+   * Concert déplacé : la fiche de l'ancienne salle, absente, rejoint l'unique
+   * événement vivant de même artiste, date, heure, département et source dans
+   * une autre salle ; ambigu : ignoré.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerConcertsDeplaces() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT p.id AS perime, min(v.id::text) AS vivant, count(DISTINCT v.id) AS nb_vivants
+            FROM evenements p
+            JOIN evenements v
+              ON v.id <> p.id
+             AND v.artiste_norm = p.artiste_norm
+             AND v.date = p.date
+             AND v.heure = p.heure
+             AND v.dept = p.dept
+             AND v.salle_id IS DISTINCT FROM p.salle_id
+            WHERE p.date >= CURRENT_DATE
+              AND p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+              AND EXISTS (SELECT 1 FROM observations op JOIN observations ov
+                            ON ov.source = op.source
+                          WHERE op.evenement_id = p.id AND ov.evenement_id = v.id)
+            GROUP BY p.id
+            """,
+            Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+    return fusionnerSiVivantUnique(lignes, "concert déplacé");
+  }
+
+  // Plusieurs vivants (même adresse pour plusieurs séances) : aucun choix sûr.
+  private int fusionnerSiVivantUnique(final List<Map<String, Object>> lignes, final String motif) {
     int fusions = 0;
+    int ambigues = 0;
     for (final Map<String, Object> ligne : lignes) {
-      final UUID perime = (UUID) ligne.get("perime");
       if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
-        LOG.warn("fiche périmée {} rapprochée de plusieurs événements vivants — ignorée", perime);
+        ambigues++;
         continue;
       }
-      fusionner(UUID.fromString((String) ligne.get("vivant")), perime, "fiche source périmée");
+      fusionner(UUID.fromString((String) ligne.get("vivant")), (UUID) ligne.get("perime"), motif);
       fusions++;
+    }
+    if (ambigues > 0) {
+      LOG.info(
+          "{} : {} fiche(s) rapprochée(s) de plusieurs événements vivants, ignorée(s)",
+          motif,
+          ambigues);
     }
     return fusions;
   }

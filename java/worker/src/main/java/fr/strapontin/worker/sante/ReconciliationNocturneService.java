@@ -90,7 +90,9 @@ public class ReconciliationNocturneService {
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
     // Avant la fusion par clé forte : une fiche périmée sur la mauvaise salle
     // fournirait la coïncidence qui fusionne deux salles distinctes.
-    final int fichesPerimeesFusionnees = fusionEvenementsArtiste.fusionnerFichesPerimees();
+    final int fichesPerimeesFusionnees =
+        fusionEvenementsArtiste.fusionnerFichesPerimees()
+            + fusionEvenementsArtiste.fusionnerConcertsDeplaces();
     final int sallesFusionnees = fusionSallesClePortee.fusionner();
     final int evenementsFusionnes = fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
