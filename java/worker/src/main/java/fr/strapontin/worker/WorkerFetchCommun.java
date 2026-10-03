@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.Classement;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Dedoublonner;
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -65,16 +67,22 @@ public class WorkerFetchCommun {
           + "   ELSE suppression_suggeree_le END"
           + " WHERE %s::text IN (:ids) AND date >= CURRENT_DATE";
 
+  // Valeur qu'aucune clé de classement ne peut prendre (elle contient « | »).
+  private static final String CLASSEMENT_AUCUN = "-";
+
   private static final String SQL_ABSENCES_ARTISTE = SQL_ABSENCES_BASE.formatted("artiste_id");
 
   // Par salle, une absence n'est comptée que si l'événement est observé par une
   // source qui garantit avoir couvert sa date (fenêtre de requête, plafond de
-  // pagination) : au-delà, il est seulement hors de portée, pas disparu.
+  // pagination) et son classement : au-delà, il est hors de portée, pas disparu.
   private static final String SQL_ABSENCES_SALLE =
       SQL_ABSENCES_BASE.formatted("salle_id")
           + " AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = evenements.id AND (  "
-          + " (o.source = 'ticketmaster' AND evenements.date <= CAST(:horizonTicketmaster AS date))"
-          + "   OR (o.source = 'eventim' AND evenements.date <= CAST(:horizonEventim AS date))))";
+          + " (o.source = 'ticketmaster' AND evenements.date <= CAST(:horizonTicketmaster AS date) "
+          + "   AND (CAST(:tousClassementsTicketmaster AS boolean)      OR"
+          + " coalesce(evenements.classification, '') || '|' || coalesce(evenements.genre, '')     "
+          + "    || '|' || coalesce(evenements.sous_genre, '') IN (:classementsTicketmaster)))   OR"
+          + " (o.source = 'eventim' AND evenements.date <= CAST(:horizonEventim AS date))))";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurNomCanonique resolveur;
@@ -218,16 +226,43 @@ public class WorkerFetchCommun {
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   void mettreAJourAbsencesSalles(
       final List<String> ids, final String debutCycle, final Map<String, LocalDate> horizons) {
+    mettreAJourAbsencesSalles(ids, debutCycle, horizons, null);
+  }
+
+  /**
+   * Variante d'une recherche filtrée par classification : seuls les
+   * événements Ticketmaster d'un classement que la recherche a renvoyé
+   * (clé {@link Classement#cle()}) peuvent être absents.
+   * @param ids identifiants (texte) des salles traitées dans ce cycle
+   * @param debutCycle horodatage capturé avant la persistance du lot
+   * @param horizons dernière date couverte par nom de source
+   * @param classementsTicketmaster classements renvoyés par Ticketmaster, ou
+   *     {@code null} pour une recherche sans filtre de classification
+   */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
+  void mettreAJourAbsencesSalles(
+      final List<String> ids,
+      final String debutCycle,
+      final Map<String, LocalDate> horizons,
+      final Set<String> classementsTicketmaster) {
     if (ids.isEmpty()) {
       return;
     }
+    final boolean tous = classementsTicketmaster == null;
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
             .addValue("debut", debutCycle)
             .addValue("seuil", SEUIL_ABSENCES_CONSECUTIVES)
             .addValue("ids", ids)
             .addValue("horizonTicketmaster", horizons.get("ticketmaster"), Types.DATE)
-            .addValue("horizonEventim", horizons.get("eventim"), Types.DATE);
+            .addValue("horizonEventim", horizons.get("eventim"), Types.DATE)
+            .addValue("tousClassementsTicketmaster", tous)
+            // Liste jamais vide : IN () n'est pas du SQL valide.
+            .addValue(
+                "classementsTicketmaster",
+                tous || classementsTicketmaster.isEmpty()
+                    ? List.of(CLASSEMENT_AUCUN)
+                    : List.copyOf(classementsTicketmaster));
     jdbc.update(SQL_ABSENCES_SALLE, params);
   }
 

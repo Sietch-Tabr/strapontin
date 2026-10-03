@@ -143,7 +143,7 @@ final class MapeurEvenementTM {
   private static String[] extraireClassificationTM(
       final List<Map<String, Object>> classificationsData) {
     if (classificationsData == null || classificationsData.isEmpty()) {
-      return new String[] {null, null};
+      return new String[] {null, null, null};
     }
     final Map<String, String> segment =
         (Map<String, String>) classificationsData.get(0).get("segment");
@@ -154,7 +154,10 @@ final class MapeurEvenementTM {
     final Map<String, String> genreMap =
         (Map<String, String>) classificationsData.get(0).get("genre");
     final String genre = genreMap != null ? genreMap.get(CLE_NAME) : null;
-    return new String[] {segmentNom, genre};
+    final Map<String, String> sousGenreMap =
+        (Map<String, String>) classificationsData.get(0).get("subGenre");
+    final String sousGenre = sousGenreMap != null ? sousGenreMap.get(CLE_NAME) : null;
+    return new String[] {segmentNom, genre, sousGenre};
   }
 
   @SuppressWarnings(UNCHECKED)
@@ -203,6 +206,7 @@ final class MapeurEvenementTM {
         .source("ticketmaster")
         .classification(normaliserClassification(segmentGenre[0]))
         .genre(segmentGenre[1])
+        .sousGenre(segmentGenre[2])
         .statut(infosVente.statut())
         .presaleDebut(infosVente.presaleDebut())
         .presaleNom(infosVente.presaleNom())

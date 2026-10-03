@@ -53,7 +53,8 @@ class TicketmasterSourceTest {
         List.of(
             Map.of(
                 "segment", Map.of("name", "Music"),
-                "genre", Map.of("name", "Pop"))));
+                "genre", Map.of("name", "Pop"),
+                "subGenre", Map.of("name", "Pop Rock"))));
     base.put("priceRanges", List.of(Map.of("min", 39.9, "max", 99.9)));
     base.put("url", "https://example.com");
     base.putAll(surcharge);
@@ -154,6 +155,7 @@ class TicketmasterSourceTest {
     assertEquals("ticketmaster", resultat.source());
     assertEquals("music", resultat.classification());
     assertEquals("Pop", resultat.genre());
+    assertEquals("Pop Rock", resultat.sousGenre());
     assertEquals("onsale", resultat.statut());
   }
 

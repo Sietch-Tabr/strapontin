@@ -20,8 +20,7 @@ public record ConcertBrut(
     LieuBrut lieu,
     String url,
     String source,
-    String classification,
-    String genre,
+    Classement classement,
     InfosVente vente) {
 
   /** Valide la présence des champs obligatoires. */
@@ -31,6 +30,28 @@ public record ConcertBrut(
     Objects.requireNonNull(lieu, "lieu");
     Objects.requireNonNull(source, "source");
     vente = vente != null ? vente : InfosVente.INCONNUE;
+    classement = classement != null ? classement : Classement.INCONNU;
+  }
+
+  /**
+   * @return classification (segment), peut être null
+   */
+  public String classification() {
+    return classement.classification();
+  }
+
+  /**
+   * @return genre, peut être null
+   */
+  public String genre() {
+    return classement.genre();
+  }
+
+  /**
+   * @return sous-genre, peut être null
+   */
+  public String sousGenre() {
+    return classement.sousGenre();
   }
 
   /**
@@ -56,8 +77,7 @@ public record ConcertBrut(
         .position(lieu.position())
         .url(url)
         .source(source)
-        .classification(classification)
-        .genre(genre)
+        .classement(classement)
         .vente(vente);
   }
 
@@ -131,8 +151,7 @@ public record ConcertBrut(
     private PositionLieu positionLieu;
     private String urlFiche;
     private String nomSource;
-    private String classificationConcert;
-    private String genreConcert;
+    private Classement classementConcert = Classement.INCONNU;
     private InfosVente infosVente = InfosVente.INCONNUE;
 
     private Constructeur() {}
@@ -241,7 +260,8 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur classification(final String valeur) {
-      this.classificationConcert = valeur;
+      this.classementConcert =
+          new Classement(valeur, classementConcert.genre(), classementConcert.sousGenre());
       return this;
     }
 
@@ -250,7 +270,27 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur genre(final String valeur) {
-      this.genreConcert = valeur;
+      this.classementConcert =
+          new Classement(classementConcert.classification(), valeur, classementConcert.sousGenre());
+      return this;
+    }
+
+    /**
+     * @param valeur sous-genre
+     * @return ce constructeur
+     */
+    public Constructeur sousGenre(final String valeur) {
+      this.classementConcert =
+          new Classement(classementConcert.classification(), classementConcert.genre(), valeur);
+      return this;
+    }
+
+    /**
+     * @param valeur classement complet
+     * @return ce constructeur
+     */
+    public Constructeur classement(final Classement valeur) {
+      this.classementConcert = valeur != null ? valeur : Classement.INCONNU;
       return this;
     }
 
@@ -303,8 +343,7 @@ public record ConcertBrut(
           new LieuBrut(nomSalle, villeLieu, deptLieu, idLieuSource, positionLieu),
           urlFiche,
           nomSource,
-          classificationConcert,
-          genreConcert,
+          classementConcert,
           infosVente);
     }
   }

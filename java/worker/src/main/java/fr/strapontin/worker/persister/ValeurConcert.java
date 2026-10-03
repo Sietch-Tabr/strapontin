@@ -105,6 +105,13 @@ public record ValeurConcert(
   }
 
   /**
+   * @return sous-genre, peut être null
+   */
+  public String sousGenre() {
+    return brut.sousGenre();
+  }
+
+  /**
    * @return statut de vente, peut être null
    */
   public String statut() {

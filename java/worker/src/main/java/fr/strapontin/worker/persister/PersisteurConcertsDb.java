@@ -169,9 +169,9 @@ public class PersisteurConcertsDb {
         """
         INSERT INTO evenements
             (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
-             genre, statut, presale_debut, presale_nom, artiste_id)
+             genre, sous_genre, statut, presale_debut, presale_nom, artiste_id)
         VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
-                :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
+                :classification, :genre, :sousGenre, :statut, CAST(:presaleDebut AS timestamptz),
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
         """,
@@ -191,6 +191,7 @@ public class PersisteurConcertsDb {
         .addValue("dept", concert.dept())
         .addValue("classification", concert.classification())
         .addValue("genre", concert.genre())
+        .addValue("sousGenre", concert.sousGenre())
         .addValue("statut", concert.statut())
         .addValue("presaleDebut", concert.presaleDebut())
         .addValue("presaleNom", concert.presaleNom())
@@ -216,6 +217,7 @@ public class PersisteurConcertsDb {
             dept           = COALESCE(:dept, dept),
             classification = COALESCE(:classification, classification),
             genre          = COALESCE(:genre, genre),
+            sous_genre     = COALESCE(:sousGenre, sous_genre),
             statut         = CASE
                                WHEN statut IN ('cancelled', 'rescheduled', 'postponed') THEN statut
                                ELSE COALESCE(:statut, statut) END,

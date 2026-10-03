@@ -18,6 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -176,9 +177,23 @@ class FetchRegionExecutor {
     rapportage.enregistreurLieuxEventim().enregistrer();
     // Un concert non revu faute de réponse d'une source n'est pas absent.
     if (!sourceInjoignable) {
-      commun.mettreAJourAbsencesSalles(sallesConnuesDesDepartements(lotDepts), debutLot, horizons);
+      commun.mettreAJourAbsencesSalles(
+          sallesConnuesDesDepartements(lotDepts),
+          debutLot,
+          horizons,
+          classementsRenvoyes(tous, "ticketmaster"));
     }
     return new ResultatLotDepartements(resultat, sourceInjoignable);
+  }
+
+  // Ticketmaster ne renvoie que les classifications demandées : un spectacle
+  // d'humour venu d'une salle autrefois suivie n'y apparaîtra jamais.
+  private static Set<String> classementsRenvoyes(
+      final List<ConcertBrut> concerts, final String source) {
+    return concerts.stream()
+        .filter(c -> source.equals(c.source()))
+        .map(c -> c.classement().cle())
+        .collect(Collectors.toSet());
   }
 
   /**
