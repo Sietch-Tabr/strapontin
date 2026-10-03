@@ -293,9 +293,10 @@ public class NotificationDigestService {
       final String email,
       final List<ConcertNotif> concerts,
       final ConfigNotifUser config) {
-    final boolean emailActif = !"jamais".equals(config.frequenceNotifications());
+    // « Jamais » coupe emails et push.
+    final boolean notificationsActives = !"jamais".equals(config.frequenceNotifications());
     final List<ConcertNotif> concertsEmail =
-        emailActif
+        notificationsActives
             ? concerts.stream()
                 .filter(
                     c ->
@@ -304,12 +305,14 @@ public class NotificationDigestService {
                 .toList()
             : List.of();
     final List<ConcertNotif> concertsPush =
-        concerts.stream()
-            .filter(
-                c ->
-                    ("ARTISTE".equals(c.source()) && config.notifArtistesPush())
-                        || ("SALLE".equals(c.source()) && config.notifSallesPush()))
-            .toList();
+        notificationsActives
+            ? concerts.stream()
+                .filter(
+                    c ->
+                        ("ARTISTE".equals(c.source()) && config.notifArtistesPush())
+                            || ("SALLE".equals(c.source()) && config.notifSallesPush()))
+                .toList()
+            : List.of();
     final boolean emailOk = envoyerEmail(email, concertsEmail);
     final boolean pushOk = pushDigestService.envoyerPush(userId, concertsPush);
     return new ResultatDigest(emailOk, pushOk, concertsEmail, concertsPush);

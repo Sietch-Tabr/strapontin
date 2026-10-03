@@ -51,6 +51,7 @@ export const versionsChangelog = [
         categorie: "Notifications",
         items: [
           "Paramètres signale des notifications push activées sans aucun appareil abonné, qui ne vous parvenaient pas.",
+          "La fréquence « Jamais » coupe aussi les notifications push, comme l'indique la page Paramètres.",
         ],
       },
       {

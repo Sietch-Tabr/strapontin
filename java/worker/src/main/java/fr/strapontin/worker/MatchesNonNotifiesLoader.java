@@ -42,37 +42,19 @@ class MatchesNonNotifiesLoader {
       JOIN user_config uc ON uc.user_id = um.user_id
       WHERE um.notification_envoyee_le IS NULL
         AND um.masque_le  IS NULL
+        AND uc.frequence_notifications = CAST(:frequence AS frequence_notif)
         AND (
-          (uc.frequence_notifications = CAST(:frequence AS frequence_notif)
-           AND (
-             ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
-               SELECT 1 FROM user_artistes ua
-               WHERE ua.user_id = um.user_id
-                 AND c.artiste_id = ua.artiste_id
-             ))
-             OR
-             ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
-               SELECT 1 FROM user_salles us
-               WHERE us.user_id = um.user_id
-                 AND c.salle_id = us.salle_id
-             ))
-           ))
+          ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
+            SELECT 1 FROM user_artistes ua
+            WHERE ua.user_id = um.user_id
+              AND c.artiste_id = ua.artiste_id
+          ))
           OR
-          (CAST(:frequence AS frequence_notif) = 'temps_reel'
-           AND uc.frequence_notifications = 'jamais'
-           AND (
-             (uc.notif_artistes_push = true AND EXISTS (
-               SELECT 1 FROM user_artistes ua
-               WHERE ua.user_id = um.user_id
-                 AND c.artiste_id = ua.artiste_id
-             ))
-             OR
-             (uc.notif_salles_push = true AND EXISTS (
-               SELECT 1 FROM user_salles us
-               WHERE us.user_id = um.user_id
-                 AND c.salle_id = us.salle_id
-             ))
-           ))
+          ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (
+            SELECT 1 FROM user_salles us
+            WHERE us.user_id = um.user_id
+              AND c.salle_id = us.salle_id
+          ))
         )
       ORDER BY um.user_id, c.date
       """;

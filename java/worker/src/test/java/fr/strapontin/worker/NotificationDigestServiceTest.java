@@ -539,6 +539,50 @@ class NotificationDigestServiceTest {
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
+  // « Jamais » coupe aussi le push : seul l'email était coupé, contrairement à l'interface.
+  @Test
+  void executerDigest_frequenceJamais_nEnvoieAucunPush() throws Exception {
+    final Map<String, Object> ligne = ligneTest("u3");
+    ligne.put("frequence_notifications", "jamais");
+    when(jdbc.queryForList(contains("FROM user_matches"), anyMap())).thenReturn(List.of(ligne));
+    // Push configuré et appareil abonné : lus seulement si un canal est actif.
+    final Map<String, Object> abonnement = new HashMap<>();
+    abonnement.put("id", 1);
+    abonnement.put("endpoint", "https://fcm.googleapis.com/fcm/send/abonnement-jamais");
+    abonnement.put(
+        "p256dh",
+        "BPKi4XnOYaPYQWcKZsUfMxTQZV0JyJA-zx65BGYqeHJ8KDlO2AL5lhoFUCXC1iFMUlTzt_sgos9GiYMxFEgCDQE");
+    abonnement.put("auth", "RZIK8q0lRcIbLO9VyII_4Q");
+    lenient()
+        .when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
+        .thenReturn(List.of(abonnement));
+    lenient()
+        .when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+    lenient().when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+    lenient()
+        .when(configService.lireConfig("VAPID_PUBLIC_KEY"))
+        .thenReturn(Optional.of("cle-publique"));
+    lenient()
+        .when(configService.lireConfig("VAPID_PRIVATE_KEY"))
+        .thenReturn(Optional.of("cle-privee"));
+    final PushService pushServiceMock = mock(PushService.class);
+
+    new NotificationDigestService(
+            configService,
+            jdbc,
+            new ObjectMapper(),
+            logsAdminWorker,
+            gestionQuotaResendWorker,
+            _ -> {
+              throw new IllegalStateException("Resend non configuré en test");
+            },
+            (_, _, _) -> pushServiceMock)
+        .executerDigest("quotidien");
+
+    verify(pushServiceMock, never()).send(any(Notification.class));
+  }
+
   private static Map<String, Object> ligneTest(final String userId) {
     final Map<String, Object> ligne = new HashMap<>();
     ligne.put("user_id", userId);
