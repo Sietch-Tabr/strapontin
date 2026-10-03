@@ -5,8 +5,6 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.sources.CadenceurAppels;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
@@ -37,21 +35,23 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
     this.delaiMinMs = delaiMinMs;
   }
 
+  // Attente calculée par PostgreSQL sur sa seule horloge : la comparer à celle de la JVM
+  // la fausserait de leur décalage.
   @Override
   public void attendre() {
-    final Instant prochainAppelAutorise =
+    final Long attenteMs =
         jdbc.queryForObject(
             """
             UPDATE cadences_appels_externes
-            SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, now())
+            SET prochain_appel_autorise = GREATEST(prochain_appel_autorise, clock_timestamp())
                 + (:delaiMs || ' milliseconds')::interval
             WHERE cle = :cle
-            RETURNING prochain_appel_autorise
+            RETURNING CEIL(EXTRACT(EPOCH FROM prochain_appel_autorise - clock_timestamp()) * 1000)
+                ::bigint
             """,
             Map.of("cle", cle, "delaiMs", delaiMinMs),
-            Instant.class);
-    final long attenteMs = Duration.between(Instant.now(), prochainAppelAutorise).toMillis();
-    if (attenteMs <= 0) {
+            Long.class);
+    if (attenteMs == null || attenteMs <= 0) {
       return;
     }
     try {
