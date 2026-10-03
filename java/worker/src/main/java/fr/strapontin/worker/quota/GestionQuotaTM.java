@@ -5,9 +5,8 @@
 package fr.strapontin.worker.quota;
 
 import fr.strapontin.core.QuotaTM;
-import java.sql.Timestamp;
+import fr.strapontin.worker.LogsAdminWorker;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -39,14 +38,20 @@ public class GestionQuotaTM {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
+  private final LogsAdminWorker logsAdmin;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper sérialisation du quota en JSON
+   * @param logsAdmin journal d'administration
    */
-  public GestionQuotaTM(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
+  public GestionQuotaTM(
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final LogsAdminWorker logsAdmin) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.logsAdmin = logsAdmin;
   }
 
   /**
@@ -160,24 +165,6 @@ public class GestionQuotaTM {
   }
 
   private void logAdmin(final String niveau, final String message, final Map<String, Object> meta) {
-    try {
-      final String metaJson = objectMapper.writeValueAsString(meta);
-      final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Timestamp.from(Instant.now()));
-      params.put("niveau", niveau);
-      params.put("source", "worker");
-      params.put("message", message);
-      params.put("meta", metaJson);
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-    } catch (JacksonException e) {
-      LOG.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
-    } catch (Exception _) {
-      LOG.warn("Impossible d'insérer log quota admin");
-    }
+    logsAdmin.inserer(niveau, "worker", message, meta);
   }
 }

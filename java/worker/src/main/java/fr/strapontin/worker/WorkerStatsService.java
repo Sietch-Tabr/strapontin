@@ -14,7 +14,6 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -179,7 +178,7 @@ public class WorkerStatsService {
     bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
     bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
     if (!bilanLoggue && erreur == null && resultat.nbInseres() == 0 && resultat.nbMisAJour() == 0) {
-      remonterResultatVide(typeJob, maintenant);
+      remonterResultatVide(typeJob);
     }
     if (erreur == null) {
       deriveVolumeFetchService.verifier(
@@ -354,24 +353,12 @@ public class WorkerStatsService {
    * aucun concert persisté.
    *
    * @param typeJob le type de job de fetch
-   * @param execLe l'horodatage de l'exécution
    */
-  private void remonterResultatVide(final String typeJob, final Instant execLe) {
-    try {
-      final Map<String, Object> params = new LinkedHashMap<>();
-      params.put("ts", Timestamp.from(execLe));
-      params.put("niveau", NIVEAU_WARN);
-      params.put("source", SOURCE_WORKER);
-      params.put("message", typeJob + " — 0 concert inséré ou mis à jour (résultat vide)");
-      params.put("meta", "{}");
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-    } catch (Exception e) {
-      LOG.warn("Impossible de remonter le résultat vide pour {} : {}", typeJob, e.getMessage());
-    }
+  private void remonterResultatVide(final String typeJob) {
+    logsAdminWorker.inserer(
+        NIVEAU_WARN,
+        SOURCE_WORKER,
+        typeJob + " — 0 concert inséré ou mis à jour (résultat vide)",
+        null);
   }
 }
