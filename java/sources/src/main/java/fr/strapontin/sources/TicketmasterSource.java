@@ -181,7 +181,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     Objects.requireNonNull(
         avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
     this.cadenceur = Objects.requireNonNull(cadenceur, "cadenceur");
-    this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur);
+    this.healthCheck =
+        new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur, etatFetch);
     this.pageFetcher =
         new TicketmasterPageFetcher(
             this.restClient, this.apiKey, this.cadenceur, etatFetch, TAILLE_PAGE_REGION);
@@ -202,6 +203,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   public QuotaTM obtenirQuota() {
     return etatFetch.quota();
+  }
+
+  /**
+   * @return {@code true} si Ticketmaster a refusé un appel faute de quota du
+   *     jour, depuis la dernière réponse portant un quota disponible
+   */
+  public boolean quotaEpuise() {
+    return etatFetch.quotaEpuise();
   }
 
   /**
@@ -375,7 +384,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /** Statut de vivacité d'un identifiant TM (phase 1). */
   public enum StatutIdTM {
     VIVANT,
-    MORT
+    MORT,
+    /** Vérification impossible (quota épuisé, panne) : rien n'est conclu. */
+    INDETERMINE
   }
 
   /**

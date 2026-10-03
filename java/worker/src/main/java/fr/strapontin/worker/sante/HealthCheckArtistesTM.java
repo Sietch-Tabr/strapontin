@@ -74,6 +74,9 @@ public final class HealthCheckArtistesTM {
 
     int incoherences = 0;
     for (final Map<String, Object> ligne : lies) {
+      if (quotaEpuise("vérification des noms")) {
+        break;
+      }
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String attractionId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -199,15 +202,28 @@ public final class HealthCheckArtistesTM {
             Map.of());
 
     for (final Map<String, Object> ligne : suspects) {
+      if (quotaEpuise("vérification de vivacité")) {
+        break;
+      }
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String ancienAttractionId = (String) ligne.get("identifiant_externe");
-      final String nom = (String) ligne.get("nom");
-      if (tm.verifierAttraction(ancienAttractionId) != StatutIdTM.MORT) {
+      final StatutIdTM statut = tm.verifierAttraction(ancienAttractionId);
+      // Indéterminé (appel en échec) : rien n'est conclu, l'artiste reste suspect.
+      if (statut == StatutIdTM.VIVANT) {
         reinitialiserSuspect(artisteId);
-        continue;
+      } else if (statut == StatutIdTM.MORT) {
+        redecouvrirArtiste(artisteId, ancienAttractionId, (String) ligne.get("nom"));
       }
-      redecouvrirArtiste(artisteId, ancienAttractionId, nom);
     }
+  }
+
+  // Quota du jour épuisé : poursuivre ne ferait qu'accumuler des refus.
+  private boolean quotaEpuise(final String etape) {
+    if (tm.quotaEpuise()) {
+      LOG.info("reconciliation:nocturne — {} interrompue : quota Ticketmaster épuisé", etape);
+      return true;
+    }
+    return false;
   }
 
   /**

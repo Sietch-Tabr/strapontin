@@ -74,12 +74,19 @@ public final class HealthCheckSallesTM {
     int redecouvertes = 0;
     int ambigues = 0;
     for (final Map<String, Object> ligne : suspectes) {
+      if (quotaEpuise("vérification des salles")) {
+        break;
+      }
       final UUID salleId = (UUID) ligne.get("salle_id");
       final String ancienVenueId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
       verifiees++;
-      if (tm.verifierVenue(ancienVenueId) != StatutIdTM.MORT) {
-        reinitialiserSuspect(salleId);
+      final StatutIdTM statut = tm.verifierVenue(ancienVenueId);
+      // Indéterminé (appel en échec) : rien n'est conclu, la salle reste suspecte.
+      if (statut != StatutIdTM.MORT) {
+        if (statut == StatutIdTM.VIVANT) {
+          reinitialiserSuspect(salleId);
+        }
         continue;
       }
 
@@ -215,6 +222,9 @@ public final class HealthCheckSallesTM {
             Map.of("limite", LIMITE_POSITIONS_PAR_NUIT));
     int obtenues = 0;
     for (final Map<String, Object> lieu : lieux) {
+      if (quotaEpuise("lecture des positions")) {
+        break;
+      }
       final PositionLieu position = tm.lirePositionVenue((String) lieu.get("identifiant_externe"));
       if (!position.estGeolocalisee()) {
         continue;
@@ -246,5 +256,14 @@ public final class HealthCheckSallesTM {
       obtenues++;
     }
     return obtenues;
+  }
+
+  // Quota du jour épuisé : poursuivre ne ferait qu'accumuler des refus.
+  private boolean quotaEpuise(final String etape) {
+    if (tm.quotaEpuise()) {
+      LOG.info("reconciliation:nocturne — {} interrompue : quota Ticketmaster épuisé", etape);
+      return true;
+    }
+    return false;
   }
 }

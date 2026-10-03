@@ -33,14 +33,25 @@ final class TicketmasterHealthCheck {
   private final String apiKey;
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
+  private final EtatFetchTM etatFetch;
 
   /* package-private : instancié uniquement par TicketmasterSource (même
    * package). */
   TicketmasterHealthCheck(
-      final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
+      final String apiKey,
+      final RestClient restClient,
+      final CadenceurAppels cadenceur,
+      final EtatFetchTM etatFetch) {
     this.apiKey = apiKey;
     this.restClient = restClient;
     this.cadenceur = cadenceur;
+    this.etatFetch = etatFetch;
+  }
+
+  private void noterQuotaEpuise(final Exception erreur) {
+    if (EtatFetchTM.estQuotaEpuise(erreur)) {
+      etatFetch.signalerQuotaEpuise();
+    }
   }
 
   /* package-private : appelé par TicketmasterSource (même package). */
@@ -55,6 +66,7 @@ final class TicketmasterHealthCheck {
     try {
       return ExtracteurVenueTM.extrairePositionTM(lireObjet(uri));
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "lirePositionVenue TM échoué venueId={} : {}",
           venueId,
@@ -80,11 +92,12 @@ final class TicketmasterHealthCheck {
     } catch (HttpClientErrorException.NotFound e) {
       return StatutIdTM.MORT;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "verifierRessource TM échoué chemin={} : {}",
           chemin,
           TicketmasterSource.redigerApiKey(e.getMessage()));
-      return StatutIdTM.VIVANT;
+      return StatutIdTM.INDETERMINE;
     }
   }
 
@@ -97,6 +110,7 @@ final class TicketmasterHealthCheck {
       final Map<String, Object> data = lireObjet(uri);
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "recupererNomAttraction TM échoué attractionId={} : {}",
           attractionId,
@@ -136,6 +150,7 @@ final class TicketmasterHealthCheck {
       }
       return resultat;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "rechercherVenuesParNom TM échoué nom='{}' : {}",
           nom,
@@ -163,6 +178,7 @@ final class TicketmasterHealthCheck {
       final Map<String, Object> page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "compterEventsVenue TM échoué venueId={} : {}",
           venueId,

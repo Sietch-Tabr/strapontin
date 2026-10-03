@@ -933,6 +933,50 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
+  private static final String CORPS_QUOTA_EPUISE =
+      """
+      {"fault":{"faultstring":"Rate limit quota violation. Quota limit exceeded.",
+      "detail":{"errorcode":"policies.ratelimit.QuotaViolation"}}}
+      """;
+
+  // Une vérification en échec ne prouve pas que l'identifiant est vivant : le croire
+  // effaçait la suspicion et la date de vérification bloquait la suivante pendant 7 jours.
+  @Test
+  void verifierAttraction_quotaEpuise_retourneIndetermineEtSignaleLeQuota() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions/K1.json")))
+        .andRespond(
+            withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                .body(CORPS_QUOTA_EPUISE)
+                .contentType(MediaType.APPLICATION_JSON));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(TicketmasterSource.StatutIdTM.INDETERMINE, source.verifierAttraction("K1"));
+    assertTrue(source.quotaEpuise());
+    assertEquals(0, source.obtenirQuota().dispo());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtiste_spikeArrest_neSignalePasLeQuotaEpuise() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    assertFalse(source.quotaEpuise());
+  }
+
   @Test
   void rechercherVenuesParNom_reponseValide_retourneCandidats() {
     final RestClient.Builder builder = RestClient.builder();

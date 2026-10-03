@@ -100,7 +100,10 @@ final class TicketmasterPageFetcher {
     } catch (HttpClientErrorException httpEx) {
       // Diagnostic 429 (Spike Arrest) : la durée réelle de l'appel objective un
       // rejet après une latence réseau anormale plutôt qu'immédiat.
-      if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
+      if (EtatFetchTM.estQuotaEpuise(httpEx)) {
+        LOG.warn("Ticketmaster : quota du jour épuisé url={}", uriMasquee(uri));
+        etatFetch.signalerQuotaEpuise();
+      } else if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
         LOG.warn(
             "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}",
             uriMasquee(uri),
