@@ -88,6 +88,10 @@ final class TicketmasterPageFetcher {
   /* package-private : appelé par TicketmasterSource (même package). */
   ResultatPage fetchPage(
       final UriComponentsBuilder uriBase, final int numPage, final String artisteFallback) {
+    // Quota du jour épuisé : rien n'est demandé jusqu'à la date de nouvel essai.
+    if (etatFetch.quotaEpuise()) {
+      return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
+    }
     cadenceur.attendre();
     final URI uri = construireUriFetchPage(uriBase, numPage);
 
@@ -100,9 +104,11 @@ final class TicketmasterPageFetcher {
     } catch (HttpClientErrorException httpEx) {
       // Diagnostic 429 (Spike Arrest) : la durée réelle de l'appel objective un
       // rejet après une latence réseau anormale plutôt qu'immédiat.
+      // Refus pour quota : ni panne ni erreur de la source, pas compté au bilan.
       if (EtatFetchTM.estQuotaEpuise(httpEx)) {
         LOG.warn("Ticketmaster : quota du jour épuisé url={}", uriMasquee(uri));
         etatFetch.signalerQuotaEpuise();
+        return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
       } else if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
         LOG.warn(
             "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}",

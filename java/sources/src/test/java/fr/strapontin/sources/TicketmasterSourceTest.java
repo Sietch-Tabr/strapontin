@@ -963,6 +963,31 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
+  // Quota épuisé : plus aucun appel jusqu'au nouvel essai, et ce refus n'est pas une panne
+  // (il déclenchait l'alerte « Ticketmaster intégralement en échec »).
+  @Test
+  void fetchArtiste_apresQuotaEpuise_nAppellePlusEtNeCompteAucuneErreur() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.once(),
+            requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                .body(CORPS_QUOTA_EPUISE)
+                .contentType(MediaType.APPLICATION_JSON));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    source.fetchArtiste("Julien Clerc");
+    source.fetchArtiste("Zazie");
+
+    serveur.verify();
+    assertEquals(0, source.preleverBilan().erreursHttp());
+  }
+
   @Test
   void fetchArtiste_spikeArrest_neSignalePasLeQuotaEpuise() {
     final RestClient.Builder builder = RestClient.builder();

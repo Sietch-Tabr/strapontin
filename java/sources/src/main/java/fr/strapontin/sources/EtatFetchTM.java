@@ -94,12 +94,13 @@ final class EtatFetchTM {
   }
 
   /**
-   * @return {@code true} si Ticketmaster a signalé le quota du jour épuisé
-   *     depuis la dernière réponse portant un quota disponible
+   * @return {@code true} si Ticketmaster a signalé le quota du jour épuisé,
+   *     jusqu'à la date de nouvel essai
    */
   /* package-private : appelé par TicketmasterSource (même package). */
   boolean quotaEpuise() {
-    return refusPourQuota.get();
+    final QuotaTM quota = dernierQuota.get();
+    return refusPourQuota.get() && quota != null && System.currentTimeMillis() < quota.reset();
   }
 
   /**

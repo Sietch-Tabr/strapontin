@@ -280,6 +280,7 @@ public class WikidataArtisteSource
     if (aliases == null || aliases.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).toList();
+    // Le même libellé en français et en anglais revient deux fois.
+    return Arrays.stream(aliases.split("\\|")).filter(a -> !a.isBlank()).distinct().toList();
   }
 }
