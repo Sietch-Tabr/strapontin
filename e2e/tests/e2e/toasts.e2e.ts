@@ -106,7 +106,12 @@ test.describe("Toasts (Popover API)", () => {
 test.describe("Toasts — actions admin", () => {
   test.use({ storageState: FICHIER_AUTH_ADMIN });
 
-  test("toast succes admin relancer fetches", async ({ page }) => {
+  test("toast succes admin relancer fetches", async ({ page }, testInfo) => {
+    // Déclenche de vraies récupérations : quota Ticketmaster et absences des concerts.
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "récupérations réelles, un seul navigateur",
+    );
     await page.goto("/admin#jobs");
     await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
       timeout: 5000,

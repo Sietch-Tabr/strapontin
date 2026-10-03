@@ -220,6 +220,17 @@ public class WorkerStatsService {
    */
   public record ResultatJob(ResultatPersistance resultat, String erreur) {
     /**
+     * Motif d'un cycle suspendu volontairement faute de quota Ticketmaster :
+     * une protection, pas une panne de source.
+     */
+    public static final String MOTIF_QUOTA_INSUFFISANT = "quota insuffisant";
+
+    /** @return un résultat vide marqué comme suspendu pour quota */
+    public static ResultatJob quotaInsuffisant() {
+      return new ResultatJob(new ResultatPersistance(0, 0), MOTIF_QUOTA_INSUFFISANT);
+    }
+
+    /**
      * @param resultat bilan de persistance d'un job réellement réussi
      * @return un résultat sans erreur
      */

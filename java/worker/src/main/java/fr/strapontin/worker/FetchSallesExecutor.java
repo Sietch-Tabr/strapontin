@@ -164,8 +164,7 @@ class FetchSallesExecutor {
             () -> {
               if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
                 LOG.warn("fetch:salles:all suspendu — quota TM insuffisant");
-                return new WorkerStatsService.ResultatJob(
-                    new ResultatPersistance(0, 0), "quota insuffisant");
+                return WorkerStatsService.ResultatJob.quotaInsuffisant();
               }
 
               final List<SalleAFetcher> sallesAFetcher =
