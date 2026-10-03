@@ -30,6 +30,11 @@ export const versionsChangelog = [
           "Les artistes dont le nom contient &, # ou + sont de nouveau trouvés.",
           "Un artiste connu sous un nom de scène (comme -M-) est reconnu chez Eventim.",
           "Les concerts déjà passés ne sont plus ajoutés.",
+          "Un même concert publié par deux billetteries sous deux affiches (« Meryl » et « Meryl + 1ère partie », co-plateaux) n'apparaît plus qu'une fois.",
+          "Un festival ne vous signale plus les dates des autres artistes de l'affiche : seules celles où votre artiste joue sont retenues.",
+          "Un concert déplacé dans une autre salle rejoint sa nouvelle fiche au lieu de rester en double.",
+          "Les dates Eventim continuent d'arriver quand Ticketmaster limite ses réponses pour la journée.",
+          "Les spectacles toujours programmés ne sont plus proposés à tort à la suppression.",
         ],
       },
       {
@@ -37,6 +42,13 @@ export const versionsChangelog = [
         items: [
           "Les salles sont reconnues grâce à l'adresse publiée par la billetterie : deux salles homonymes de villes différentes ne sont plus confondues.",
           "Le nom d'une salle ne change plus d'une mise à jour à l'autre.",
+          "Deux salles voisines aux noms différents (comme l'Élysée Montmartre et le Théâtre Montmartre-Galabru) ne sont plus réunies.",
+        ],
+      },
+      {
+        categorie: "Notifications",
+        items: [
+          "Paramètres signale des notifications push activées sans aucun appareil abonné, qui ne vous parvenaient pas.",
         ],
       },
       {
@@ -45,7 +57,7 @@ export const versionsChangelog = [
           "Nouvel onglet « À traiter » : les anomalies sont décrites en clair, avec la salle ou l'artiste concerné, et se traitent sur place, comme les concerts à confirmer.",
           "Nouvel onglet « Référentiel » réunissant salles et artistes, avec la répartition des concerts d'une salle qui mélange plusieurs lieux.",
           "Tableau de bord : les tâches automatiques sont présentées en cartes par thème, avec leur rôle.",
-          "Des contrôles automatiques vérifient chaque nuit la cohérence des données.",
+          "Des contrôles automatiques vérifient chaque nuit la cohérence des données ; les signalements sans anomalie réelle (artiste suivi sans date annoncée, salles voisines, communes d'une même agglomération) ont disparu.",
           "L'onglet Bannière devient « Communication », avec un modèle de message d'incident.",
           "Les tableaux de l'administration sont lisibles sur mobile.",
         ],
