@@ -211,14 +211,10 @@ public final class HealthCheckArtistesTM {
   }
 
   /**
-   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort un
-   * identifiant suspect alors qu'il s'agit simplement d'un artiste sans
-   * événement à venir pour l'instant — la vérification active de cette phase
-   * fait autorité et doit effacer ce faux positif dès qu'elle confirme que
-   * l'identifiant TM est toujours vivant, plutôt que de laisser le statut
-   * "suspect" perdurer jusqu'à expiration (24h). La date de vérification
-   * évite de le revérifier chaque nuit (délai de
-   * {@link SuiviSanteSourcesService#DELAI_REVERIFICATION_VIVACITE_JOURS} jours).
+   * Identifiant confirmé vivant : le compteur passif signalait à tort un
+   * artiste simplement sans date annoncée. La date de vérification évite de
+   * le revérifier chaque nuit (voir
+   * {@link SuiviSanteSourcesService#DELAI_REVERIFICATION_VIVACITE_JOURS}).
    */
   private void reinitialiserSuspect(final UUID artisteId) {
     jdbc.update(

@@ -212,16 +212,14 @@ public final class CorrespondanceSalle {
    */
   public static boolean estDoublonSalle(
       final String nomA, final String nomB, final boolean pivotAutorise) {
-    if (estDoublonTexte(
-        nomA,
-        nomB,
-        SEUIL_SIMILARITE_SALLE,
-        LONGUEUR_MIN_CONTAINMENT_SALLE,
-        RATIO_MIN_CONTAINMENT_SALLE,
-        pivotAutorise)) {
-      return true;
-    }
-    return estDoublonParMots(nomA, nomB, pivotAutorise);
+    return estDoublonTexte(
+            nomA,
+            nomB,
+            SEUIL_SIMILARITE_SALLE,
+            LONGUEUR_MIN_CONTAINMENT_SALLE,
+            RATIO_MIN_CONTAINMENT_SALLE,
+            pivotAutorise)
+        || estDoublonParMots(nomA, nomB, pivotAutorise);
   }
 
   /**

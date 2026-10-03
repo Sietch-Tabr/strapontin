@@ -53,11 +53,9 @@ public final class CorrespondanceArtiste {
   private CorrespondanceArtiste() {}
 
   /**
-   * Indique si deux noms normalisés désignent la même affiche, à n'employer
-   * qu'entre deux événements de même salle, date et heure : tous les mots
-   * significatifs de l'un figurent dans l'autre ("meryl" / "meryl 1ere
-   * partie", "behemoth" / "behemoth and dimmu borgir", "le sserafim" / "2026
-   * le sserafim tour"). Hors de ce contexte, la règle est trop large.
+   * Même affiche (« meryl » / « meryl 1ere partie ») : tous les mots de l'un
+   * figurent dans l'autre. Trop large hors de deux événements de même salle,
+   * date et heure.
    * @param nomA premier nom normalisé
    * @param nomB deuxième nom normalisé
    * @return {@code true} si l'un des noms est contenu, mot à mot, dans l'autre

@@ -8,7 +8,6 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -116,45 +115,6 @@ final class MapeurProduitEventim {
       }
     }
     return titre;
-  }
-
-  /**
-   * Indique si un produit trouvé par artiste concerne bien cet artiste.
-   * Eventim attache les têtes d'affiche d'un festival à tous ses produits :
-   * un produit dont la partie artiste du titre nomme un autre de ses artistes,
-   * mais pas celui recherché, est la date d'un autre artiste. Sans nom
-   * reconnaissable dans le titre (gala, nom de festival seul), il est gardé.
-   * @param produit produit Eventim sous forme de Map imbriquée
-   * @param artiste nom de l'artiste recherché
-   * @return {@code false} seulement si le titre désigne un autre artiste
-   */
-  @SuppressWarnings("unchecked")
-  /* package-private : appelé par EventimSource (même package). */
-  static boolean concerneArtiste(final Map<String, Object> produit, final String artiste) {
-    final String titre = (String) produit.get(CLE_NOM);
-    if (titre == null || artiste == null) {
-      return true;
-    }
-    final String partieArtiste =
-        " " + Normalisation.normaliserTexte(extraireNomArtiste(titre)) + " ";
-    final String recherche = Normalisation.normaliserTexte(artiste);
-    if (recherche.isEmpty() || partieArtiste.contains(" " + recherche + " ")) {
-      return true;
-    }
-    final Object attractions = produit.get("attractions");
-    if (!(attractions instanceof List<?> liste)) {
-      return true;
-    }
-    for (final Object attraction : liste) {
-      if (attraction instanceof Map<?, ?> a && a.get(CLE_NOM) instanceof String nom) {
-        final String autre = Normalisation.normaliserTexte(nom);
-        final boolean memeArtiste = autre.contains(recherche) || recherche.contains(autre);
-        if (!autre.isEmpty() && !memeArtiste && partieArtiste.contains(" " + autre + " ")) {
-          return false;
-        }
-      }
-    }
-    return true;
   }
 
   /**

@@ -164,13 +164,10 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Repère les paires d'{@code evenement_id} distincts partageant
-   * exactement même salle/date/heure, filtrées par
-   * {@link CorrespondanceArtiste#estDoublonArtiste} sur les
-   * {@code artiste_norm}, ou par {@link CorrespondanceArtiste#estMemeAffiche}
-   * quand l'heure est connue et qu'aucun artiste n'est rattaché — la contrainte unique {@code uq_evenements}
-   * garantit déjà qu'aucune paire ne partage un {@code artiste_norm}
-   * strictement identique.
+   * Paires d'événements de même salle, date et heure aux artistes doublons
+   * ({@link CorrespondanceArtiste#estDoublonArtiste}), ou de même affiche
+   * ({@link CorrespondanceArtiste#estMemeAffiche}) sans artiste rattaché et à
+   * heure connue ; {@code uq_evenements} exclut déjà un nom identique.
    */
   private List<PaireEvenements> detecterPaires() {
     final List<Map<String, Object>> lignes =

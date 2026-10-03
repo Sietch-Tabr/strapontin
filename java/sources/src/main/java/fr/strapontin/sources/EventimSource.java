@@ -275,24 +275,15 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       return PageProduitsEventim.VIDE;
     }
 
+    produits.forEach(lieux::relever);
+    final List<Map<String, Object>> retenus =
+        artisteFallback != null ? ProduitsDeLArtiste.retenir(produits, artisteFallback) : produits;
     final List<ConcertBrut> concerts = new ArrayList<>();
-    int datesDAutresArtistes = 0;
-    for (final Map<String, Object> p : produits) {
-      lieux.relever(p);
-      if (artisteFallback != null && !MapeurProduitEventim.concerneArtiste(p, artisteFallback)) {
-        datesDAutresArtistes++;
-        continue;
-      }
+    for (final Map<String, Object> p : retenus) {
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
       if (concert != null && (deptFiltre == null || deptFiltre.equals(concert.dept()))) {
         concerts.add(concert);
       }
-    }
-    if (datesDAutresArtistes > 0) {
-      LOG.info(
-          "Eventim artiste={} : {} produit(s) d'un autre artiste du même festival écarté(s)",
-          artisteFallback,
-          datesDAutresArtistes);
     }
     return new PageProduitsEventim(
         concerts,

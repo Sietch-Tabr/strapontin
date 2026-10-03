@@ -135,10 +135,10 @@ class EventimSourceTest {
   @Test
   void concerneArtiste_dateDUnAutreArtisteDuFestival_estEcartee() {
     assertFalse(
-        MapeurProduitEventim.concerneArtiste(
+        ProduitsDeLArtiste.concerneArtiste(
             produitFestival("Cascadeur + Betty Pop - Les Rendez-Vous Soniques #17"), "Suzane"));
     assertFalse(
-        MapeurProduitEventim.concerneArtiste(
+        ProduitsDeLArtiste.concerneArtiste(
             produitFestival("PI JA MA & La Chorale du Normandy - Les Rendez-Vous Soniques #17"),
             "Suzane"));
   }
@@ -146,7 +146,7 @@ class EventimSourceTest {
   @Test
   void concerneArtiste_dateOuLArtisteJoue_estGardee() {
     assertTrue(
-        MapeurProduitEventim.concerneArtiste(
+        ProduitsDeLArtiste.concerneArtiste(
             produitFestival("Suzane + Marguerite + Sam Sauvage - Les Rendez-Vous Soniques #17"),
             "Suzane"));
   }
@@ -154,11 +154,11 @@ class EventimSourceTest {
   @Test
   void concerneArtiste_titreSansArtisteReconnu_estGarde() {
     assertTrue(
-        MapeurProduitEventim.concerneArtiste(
+        ProduitsDeLArtiste.concerneArtiste(
             produitFestival("Pionnières par DeLaurentis - Les Rendez-Vous Soniques #17"),
             "Suzane"));
     assertTrue(
-        MapeurProduitEventim.concerneArtiste(
+        ProduitsDeLArtiste.concerneArtiste(
             Map.of(
                 "name",
                 "Les 30 ans de Rêves de Gosse",
@@ -170,7 +170,7 @@ class EventimSourceTest {
   @Test
   void concerneArtiste_nomDeLArtisteContenuDansUneAttraction_nEstPasUnAutreArtiste() {
     assertTrue(
-        MapeurProduitEventim.concerneArtiste(
+        ProduitsDeLArtiste.concerneArtiste(
             Map.of(
                 "name",
                 "-M- Matthieu Chedid - Tournée",

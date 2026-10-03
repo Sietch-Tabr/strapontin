@@ -17,11 +17,9 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Salle d'un lieu par sa position publiée : à moins de
- * {@value #RAYON_MEME_LIEU_METRES} m, même département, nom doublon (deux
- * salles mitoyennes restent distinctes). Veto d'une salle trouvée par son nom
- * à plus de {@value #DISTANCE_INCOMPATIBLE_METRES} m (homonyme), ou entre 300
- * m et 1 km sans nom fortement commun (lieu voisin).
+ * Salle d'un lieu par sa position publiée : à moins de 300 m, même
+ * département, nom doublon. Veto d'une salle trouvée par son nom à plus de
+ * 20 km (homonyme), ou entre 300 m et 1 km sans nom commun (lieu voisin).
  * @since 3.0.2
  * @author Kwaite
  */
@@ -99,10 +97,8 @@ final class ResolveurSallePosition {
    * @param salleId salle candidate, peut être null
    * @param nom nom brut du lieu publié
    * @param position position publiée du lieu
-   * @return true si salle et lieu sont géolocalisés et trop éloignés pour
-   *     être le même lieu : au-delà de {@value #DISTANCE_INCOMPATIBLE_METRES}
-   *     m, ou au-delà de {@value #RAYON_MEME_LIEU_METRES} m quand seul un
-   *     critère de nom faible les rapproche (lieux voisins)
+   * @return true si salle et lieu, géolocalisés, sont trop éloignés pour
+   *     être le même lieu (voir la classe)
    */
   /* package-private : appelé par ResolveurSalleParConcert et la simulation. */
   boolean incompatible(final UUID salleId, final String nom, final PositionLieu position) {

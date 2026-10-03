@@ -230,14 +230,12 @@ public class WorkerFetchCommun {
   }
 
   /**
-   * Variante d'une recherche filtrée par classification : seuls les
-   * événements Ticketmaster d'un classement que la recherche a renvoyé
-   * (clé {@link Classement#cle()}) peuvent être absents.
+   * Recherche filtrée par classification : seuls les événements Ticketmaster
+   * d'un classement renvoyé ({@link Classement#cle()}) peuvent être absents.
    * @param ids identifiants (texte) des salles traitées dans ce cycle
    * @param debutCycle horodatage capturé avant la persistance du lot
    * @param horizons dernière date couverte par nom de source
-   * @param classementsTicketmaster classements renvoyés par Ticketmaster, ou
-   *     {@code null} pour une recherche sans filtre de classification
+   * @param classementsTicketmaster classements renvoyés, null sans filtre
    */
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   void mettreAJourAbsencesSalles(

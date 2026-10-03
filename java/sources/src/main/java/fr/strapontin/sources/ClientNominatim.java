@@ -35,6 +35,7 @@ public final class ClientNominatim {
   // Environ 2 km de côté à nos latitudes : une position publiée peut s'écarter
   // de quelques centaines de mètres de l'objet OSM.
   private static final double DEMI_COTE_ZONE_DEGRES = 0.01;
+  private static final int TAILLE_URL_RECHERCHE = 256;
 
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
@@ -125,7 +126,8 @@ public final class ClientNominatim {
     cadenceur.attendre();
     try {
       final StringBuilder url =
-          new StringBuilder(BASE_URL)
+          new StringBuilder(TAILLE_URL_RECHERCHE)
+              .append(BASE_URL)
               .append("?q=")
               .append(URLEncoder.encode(requete, StandardCharsets.UTF_8))
               .append("&format=jsonv2&extratags=1&limit=5&countrycodes=fr");

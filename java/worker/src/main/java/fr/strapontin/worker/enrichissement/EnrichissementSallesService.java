@@ -144,10 +144,9 @@ public class EnrichissementSallesService {
   /**
    * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque
    * source implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de
-   * se terminer — même mécanisme générique que
-   * {@code WorkerStatsService.remonterBilan} , absent jusqu'ici sur les sources
-   * d'enrichissement : la panne d'une source publique de 3+ mois n'avait ainsi jamais généré
-   * la moindre entrée {@code logs_admin}.
+   * se terminer — même mécanisme que {@code WorkerStatsService.remonterBilan}
+   * : une panne de plus de 3 mois d'une source publique n'avait laissé
+   * aucune trace dans {@code logs_admin}.
    */
   private void remonterBilans() {
     for (final SourceEnrichissementSalle source : sources) {

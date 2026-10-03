@@ -106,11 +106,9 @@ final class RechercheEvenementExistant {
       return false;
     }
     final String candArtisteNorm = (String) candidat.get("artiste_norm");
-    if (CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, concert.artisteNorm())) {
-      return true;
-    }
-    return memeHeure(heure, concert.heure())
-        && CorrespondanceArtiste.estMemeAffiche(candArtisteNorm, concert.artisteNorm());
+    return CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, concert.artisteNorm())
+        || memeHeure(heure, concert.heure())
+            && CorrespondanceArtiste.estMemeAffiche(candArtisteNorm, concert.artisteNorm());
   }
 
   private static boolean memeHeure(final LocalTime existante, final LocalTime entrante) {
