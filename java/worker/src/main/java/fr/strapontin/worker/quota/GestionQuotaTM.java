@@ -57,7 +57,8 @@ public class GestionQuotaTM {
   /**
    * Lit le quota courant depuis {@code app_config} (détail :
    * CLAUDE.md, Jobs background).
-   * @return quota lu, ou vide si absent ou malformé
+   * @return quota en vigueur (renouvelé après la remise à zéro), ou vide si
+   *     absent, malformé ou de total inconnu
    */
   public Optional<QuotaTM> lireQuota() {
     try {
@@ -70,14 +71,18 @@ public class GestionQuotaTM {
         return Optional.empty();
       }
       final QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
-      if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
-        final QuotaTM renouvele =
-            new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
-        ecrireQuota(renouvele);
-        LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
-        return Optional.of(renouvele);
+      final QuotaTM enVigueur = quota.enVigueur(Instant.now());
+      if (enVigueur == null) {
+        // Total inconnu : le prochain appel Ticketmaster réécrira le vrai quota.
+        jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of("cle", CLE_QUOTA));
+        LOG.info("quota TM inconnu après reset — repris au prochain appel Ticketmaster");
+        return Optional.empty();
       }
-      return Optional.of(quota);
+      if (!enVigueur.equals(quota)) {
+        ecrireQuota(enVigueur);
+        LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", enVigueur.dispo());
+      }
+      return Optional.of(enVigueur);
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
     } catch (JacksonException e) {

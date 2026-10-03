@@ -193,7 +193,7 @@ public class SourcesService {
       return null;
     }
     try {
-      return objectMapper.readValue(quotaJson.get(0), QuotaTM.class);
+      return objectMapper.readValue(quotaJson.get(0), QuotaTM.class).enVigueur(Instant.now());
     } catch (Exception e) {
       LOG.warn("Quota TM malformé — ignoré");
       return null;
