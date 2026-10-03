@@ -16,30 +16,38 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 
 **Suivi**
 
-- Artistes et salles favoris (jusqu'à 500 artistes, 200 salles)
-- Actualisation automatique toutes les 2 heures depuis Ticketmaster et Eventim
-- Dédoublonnage inter-sources automatique
+- Artistes et salles favoris (jusqu'à 500 artistes et 200 salles)
+- Concerts récupérés automatiquement chez Ticketmaster et Eventim, 11 fois par jour
+- Un même concert publié par plusieurs billetteries n'apparaît qu'une fois
+- Prévente, complet, report et annulation signalés sur chaque concert
+- Page Découverte : les concerts des départements choisis, même sans suivre l'artiste
 
 **Notifications**
 
-- Email ou notification push (immédiat ou récapitulatif quotidien à 8h)
+- Email ou notification push, à chaque nouvelle date ou en récapitulatif quotidien (8h)
 
 **Interface**
 
-- Filtrage par département, mois, budget, catégorie
-- Thème clair / sombre / automatique
-- Application installable (PWA)
-- Export / import des préférences au format JSON
+- Filtres par mois, genre et catégorie, tri au choix
+- Thème clair, sombre ou automatique
+- Application installable (PWA), utilisable sur mobile
+- Export et import des préférences (JSON)
+
+**Comptes**
+
+- Accès sur invitation, double authentification (TOTP) facultative
+- Administration : santé des sources, anomalies à traiter, référentiel des salles et artistes, communication aux utilisateurs
 
 ## Stack
 
-- [Spring Boot 4](https://spring.io/projects/spring-boot) — API REST, Java 26
-- [Vue 3](https://vuejs.org/) + [Vite](https://vite.dev/) — SPA côté client
-- [Spring Security 7](https://spring.io/projects/spring-security) + Spring Session JDBC — authentification, sessions persistantes
-- [Quartz Scheduler](http://www.quartz-scheduler.org/) — jobs background (fetch concerts)
-- [Flyway 12](https://flywaydb.org/) + PostgreSQL 18 — migrations et persistance
-- [Resend](https://resend.com/) — emails transactionnels
-- [Maven](https://maven.apache.org/) — monorepo (modules `core`, `sources`, `web`, `worker`)
+- [Spring Boot 4](https://spring.io/projects/spring-boot), Java 26 : API REST (`web`) et jobs de récupération (`worker`)
+- [Vue 3](https://vuejs.org/) + [Vite](https://vite.dev/) : application côté client
+- [Spring Security 7](https://spring.io/projects/spring-security) + Spring Session JDBC : authentification, sessions persistantes
+- [Quartz](https://www.quartz-scheduler.org/) : planification des jobs
+- [PostgreSQL 18](https://www.postgresql.org/) + [Flyway 13](https://flywaydb.org/) : persistance et migrations
+- [Resend](https://resend.com/) : emails ; Web Push (VAPID) : notifications
+- Wikidata, OpenStreetMap et Deezer : noms canoniques et position des salles
+- [Maven](https://maven.apache.org/) : monorepo (`core`, `sources`, `web`, `worker`)
 
 ## Installation
 

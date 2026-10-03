@@ -4,7 +4,60 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
-    entete: "v 3.0.1 — 28 septembre 2026",
+    entete: "v 3.0.2 — 3 octobre 2026",
+    categories: [
+      {
+        categorie: "Sécurité",
+        items: [
+          "Les notifications push ne peuvent plus être envoyées qu'aux services de push des navigateurs.",
+          "Quand un nouveau mot de passe est exigé après un incident, la connexion est refusée tant qu'il n'a pas été défini par « Mot de passe oublié », et les autres sessions sont fermées.",
+          "Protection renforcée contre les actions déclenchées à votre insu depuis un autre site.",
+        ],
+      },
+      {
+        categorie: "Compte",
+        items: [
+          "Un compte utilisé régulièrement n'est plus considéré comme inactif : l'utilisation de l'application compte, pas seulement la connexion.",
+        ],
+      },
+      {
+        categorie: "Concerts",
+        items: [
+          "Un concert reporté par Ticketmaster n'apparaît plus en double : sa date et son heure sont mises à jour.",
+          "Un concert republié par une billetterie remplace l'ancienne fiche au lieu de s'y ajouter.",
+          "Les artistes dont le nom contient &, # ou + sont de nouveau trouvés.",
+          "Un artiste connu sous un nom de scène (comme -M-) est reconnu chez Eventim.",
+          "Les concerts déjà passés ne sont plus ajoutés.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "Les salles sont reconnues grâce à l'adresse publiée par la billetterie : deux salles homonymes de villes différentes ne sont plus confondues.",
+          "Le nom d'une salle ne change plus d'une mise à jour à l'autre.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Nouvel onglet « À traiter » : les anomalies sont décrites en clair, avec la salle ou l'artiste concerné, et se traitent sur place, comme les concerts à confirmer.",
+          "Nouvel onglet « Référentiel » réunissant salles et artistes, avec la répartition des concerts d'une salle qui mélange plusieurs lieux.",
+          "Tableau de bord : les tâches automatiques sont présentées en cartes par thème, avec leur rôle.",
+          "Des contrôles automatiques vérifient chaque nuit la cohérence des données.",
+          "L'onglet Bannière devient « Communication », avec un modèle de message d'incident.",
+          "Les tableaux de l'administration sont lisibles sur mobile.",
+        ],
+      },
+      {
+        categorie: "Accessibilité",
+        items: [
+          "Les fenêtres de confirmation et le champ des départements sont correctement annoncés par les lecteurs d'écran.",
+        ],
+      },
+    ],
+  },
+  {
+    entete: "v 3.0.1 — 29 septembre 2026",
     categories: [
       {
         categorie: "Sécurité",
@@ -72,7 +125,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.9.1 — 15 septembre 2026",
+    entete: "v 2.9.1 — 18 septembre 2026",
     categories: [
       {
         categorie: "Concerts",
@@ -115,7 +168,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.8.8 — 8 septembre 2026",
+    entete: "v 2.8.8 — 9 septembre 2026",
     categories: [
       {
         categorie: "Apparence",
@@ -222,7 +275,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.7.7 — 30 juillet 2026",
+    entete: "v 2.7.7 — 31 juillet 2026",
     categories: [
       {
         categorie: "Application installée (PWA)",
@@ -328,7 +381,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.7.0 — 8 juillet 2026",
+    entete: "v 2.7.0 — 17 juillet 2026",
     categories: [
       {
         categorie: "Administration",
@@ -479,7 +532,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.6.2 — 2 juillet 2026",
+    entete: "v 2.6.2 — 3 juillet 2026",
     categories: [
       {
         categorie: "Salles",
@@ -555,7 +608,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.6.0 — 1er juillet 2026",
+    entete: "v 2.6.0 — 2 juillet 2026",
     categories: [
       {
         categorie: "Qualité des données",
@@ -587,7 +640,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.6 — 27 juillet 2026",
+    entete: "v 2.5.6 — 30 juin 2026",
     categories: [
       {
         categorie: "Sécurité",
@@ -598,7 +651,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.5 — 22 juillet 2026",
+    entete: "v 2.5.5 — 30 juin 2026",
     categories: [
       {
         categorie: "Performances",
@@ -609,7 +662,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.4 — 15 juillet 2026",
+    entete: "v 2.5.4 — 29 juin 2026",
     categories: [
       {
         categorie: "Notifications",
@@ -620,7 +673,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.3 — 12 juillet 2026",
+    entete: "v 2.5.3 — 29 juin 2026",
     categories: [
       {
         categorie: "Accessibilité",
@@ -685,7 +738,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.4.0 — 25 juin 2026",
+    entete: "v 2.4.0 — 28 juin 2026",
     categories: [
       {
         categorie: "Concerts",
@@ -722,7 +775,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.3.0 — 23 juin 2026",
+    entete: "v 2.3.0 — 25 juin 2026",
     categories: [
       {
         categorie: "Interface",
@@ -979,7 +1032,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.1.1 — 2 juin 2026",
+    entete: "v 2.1.1 — 1er juin 2026",
     categories: [
       {
         categorie: "Performance",
@@ -999,7 +1052,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.1.0 — 29 mai 2026",
+    entete: "v 2.1.0 — 30 mai 2026",
     categories: [
       {
         categorie: "Interface",
