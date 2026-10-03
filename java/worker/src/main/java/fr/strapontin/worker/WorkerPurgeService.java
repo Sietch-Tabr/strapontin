@@ -337,21 +337,7 @@ public class WorkerPurgeService {
           int relances = 0;
           for (final Map<String, Object> ligne : aRelancer) {
             final String email = (String) ligne.get(CLE_EMAIL);
-            final String token = GenerateurSecrets.genererToken(32);
-            jdbc.update(
-                "INSERT INTO verifications (id, identifier, value, expires_at, created_at,"
-                    + " updated_at) VALUES (:vid, :identifier, :value,"
-                    + " now() + make_interval(days => :duree), now(), now())",
-                Map.of(
-                    "vid",
-                    UUID.randomUUID().toString(),
-                    "identifier",
-                    "invite:" + email,
-                    "value",
-                    GenerateurSecrets.sha256Hex(token),
-                    "duree",
-                    DUREE_LIEN_RELANCE_JOURS));
-            final String lien = baseUrl + "/reset-password?token=" + token;
+            final String lien = baseUrl + "/reset-password?token=" + creerJetonInvitation(email);
             if (purgeCompteEmailService.envoyerRelanceInvitation(
                 email, lien, LocalDate.now().plusDays(DUREE_LIEN_RELANCE_JOURS))) {
               relances++;
@@ -373,6 +359,25 @@ public class WorkerPurgeService {
           LOG.info("gerer:invites-expires terminé relances={} supprimes={}", relances, supprimes);
           return new ResultatPersistance(0, relances + supprimes);
         });
+  }
+
+  /** Enregistre un nouveau jeton d'invitation et le renvoie en clair. */
+  private String creerJetonInvitation(final String email) {
+    final String token = GenerateurSecrets.genererToken(32);
+    jdbc.update(
+        "INSERT INTO verifications (id, identifier, value, expires_at, created_at,"
+            + " updated_at) VALUES (:vid, :identifier, :value,"
+            + " now() + make_interval(days => :duree), now(), now())",
+        Map.of(
+            "vid",
+            UUID.randomUUID().toString(),
+            "identifier",
+            "invite:" + email,
+            "value",
+            GenerateurSecrets.sha256Hex(token),
+            "duree",
+            DUREE_LIEN_RELANCE_JOURS));
+    return token;
   }
 
   private void signalerComptesTouches(final int relances, final int supprimes) {

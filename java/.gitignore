@@ -4,6 +4,7 @@ target/
 !**/src/main/**/*.jar
 .mvn/*
 !.mvn/jvm.config
+!.mvn/maven.config
 .project
 .classpath
 .settings/
