@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
@@ -63,34 +64,44 @@ class FetchSallesExecutor {
       final IdentifiantSalle identifiantSalle,
       final List<ConcertBrut> destination,
       final Map<String, LocalDate> horizons) {
-    final String identifiant = identifiantSalle.identifiant();
     boolean joignable = true;
     for (final SourceConcerts source : sources) {
-      if (source.accepteIdentifiantSalle(identifiant)) {
-        try {
-          final List<ConcertBrut> resultat =
-              source.fetchSalle(identifiant, identifiantSalle.libelle());
-          destination.addAll(resultat);
-          rapportage
-              .suiviSanteSourcesService()
-              .enregistrerResultatSalle(identifiant, resultat.size());
-          final int joursCouverts = source.joursCouvertsParSalle();
-          if (joursCouverts > 0) {
-            horizons.put(source.nom(), LocalDate.now().plusDays(joursCouverts));
-          }
-        } catch (Exception e) {
-          LOG.error(
-              "{} fetchSalle échoué identifiant={} : {}",
-              source.nom(),
-              identifiant,
-              e.getMessage());
-          if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
-            joignable = false;
-          }
-        }
+      if (source.accepteIdentifiantSalle(identifiantSalle.identifiant())) {
+        joignable &= fetchSalleSource(source, identifiantSalle, destination, horizons);
       }
     }
     return joignable;
+  }
+
+  // false seulement sur panne réseau transitoire (retentée).
+  private boolean fetchSalleSource(
+      final SourceConcerts source,
+      final IdentifiantSalle identifiantSalle,
+      final List<ConcertBrut> destination,
+      final Map<String, LocalDate> horizons) {
+    final String identifiant = identifiantSalle.identifiant();
+    try {
+      final List<ConcertBrut> resultat = source.fetchSalle(identifiant, identifiantSalle.libelle());
+      destination.addAll(resultat);
+      rapportage.suiviSanteSourcesService().enregistrerResultatSalle(identifiant, resultat.size());
+      final int joursCouverts = source.joursCouvertsParSalle();
+      if (joursCouverts > 0) {
+        horizons.put(source.nom(), LocalDate.now().plusDays(joursCouverts));
+      }
+    } catch (ReponseIncompleteException incomplete) {
+      // Concerts reçus gardés ; au-delà de la couverture connue, un concert
+      // non reçu n'est pas absent (ni compté dans le suivi de santé).
+      LOG.warn("{} : réponse incomplète", incomplete.getMessage());
+      destination.addAll(incomplete.concertsRecus());
+      if (incomplete.couvertJusquau() != null) {
+        horizons.put(source.nom(), incomplete.couvertJusquau());
+      }
+    } catch (Exception e) {
+      LOG.error(
+          "{} fetchSalle échoué identifiant={} : {}", source.nom(), identifiant, e.getMessage());
+      return !WorkerFetchCommun.estEchecReseauTransitoire(e);
+    }
+    return true;
   }
 
   /**

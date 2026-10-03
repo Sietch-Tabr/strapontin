@@ -30,6 +30,7 @@ public interface SourceConcerts {
    * @param nom nom de l'artiste
    * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
    *     opération
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   default List<ConcertBrut> fetchArtiste(final String nom) {
     return List.of();
@@ -74,11 +75,9 @@ public interface SourceConcerts {
 
   /**
    * Recherche les concerts d'une salle par son identifiant préfixé.
-   *
-   * @param identifiant identifiant préfixé de la salle (ex.
-   *     {@code "tm:rZFSnyZdFvA"} )
-   * @return concerts trouvés, ou liste vide si la source ne supporte pas cette
-   *     opération
+   * @param identifiant identifiant préfixé (ex. {@code "tm:rZFSnyZdFvA"})
+   * @return concerts trouvés, liste vide si l'opération n'est pas supportée
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   default List<ConcertBrut> fetchSalle(final String identifiant) {
     return List.of();
@@ -90,6 +89,7 @@ public interface SourceConcerts {
    * @param identifiant identifiant préfixé de la salle
    * @param libelle libellé du lieu chez la source, ou null
    * @return concerts trouvés
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   default List<ConcertBrut> fetchSalle(final String identifiant, final String libelle) {
     return fetchSalle(identifiant);

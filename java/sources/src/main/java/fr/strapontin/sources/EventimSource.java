@@ -301,7 +301,15 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param succes {@code false} si au moins une page a échoué (voir
    *     {@link PageProduitsEventim} ).
    */
-  private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {}
+  private record ResultatArtisteEventim(List<ConcertBrut> concerts, boolean succes) {
+    /* package-private : appelé par fetchArtiste (même classe). */
+    List<ConcertBrut> concertsOuEchec(final String contexte) {
+      if (!succes) {
+        throw new ReponseIncompleteException(contexte, concerts, null);
+      }
+      return concerts;
+    }
+  }
 
   private ResultatArtisteEventim fetchProduitsParAttraction(
       final String attractionId, final String artisteFallback) {
@@ -350,6 +358,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * non confirmée par une source indépendante).
    * @param nom nom de l'artiste
    * @return liste des concerts trouvés, vide si l'artiste n'est pas référencé
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchArtiste(final String nom) {
@@ -357,12 +366,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Comme {@link #fetchArtiste(String)}, désactive le containment si
-   * deezerId/wikidataId connu (évite la contamination récurrente, wiki).
+   * Sans containment si deezerId/wikidataId connu (contamination récurrente).
    * @param nom nom de l'artiste
    * @param deezerId identifiant Deezer déjà connu, ou {@code null}
    * @param wikidataId identifiant Wikidata déjà connu, ou {@code null}
    * @return liste des concerts trouvés, vide si non référencé
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchArtiste(
@@ -375,6 +384,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * que si le reste est un autre nom connu (« -M- Matthieu Chedid »).
    * @param autresNomsConnus libellé et alias Wikidata de l'artiste
    * @return concerts trouvés, vide si non référencé
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchArtiste(
@@ -389,13 +399,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
       LOG.info("Eventim: artiste non trouvé artiste={}", nom);
       return List.of();
     }
-    final ResultatArtisteEventim resultat = fetchProduitsParAttraction(attractionId, nom);
-    if (resultat.succes()) {
-      LOG.info("Eventim fetchArtiste artiste={} total={}", nom, resultat.concerts().size());
-    } else {
-      LOG.warn("Eventim fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
-    }
-    return resultat.concerts();
+    final List<ConcertBrut> concerts =
+        fetchProduitsParAttraction(attractionId, nom)
+            .concertsOuEchec("Eventim fetchArtiste artiste=" + nom);
+    LOG.info("Eventim fetchArtiste artiste={} total={}", nom, concerts.size());
+    return concerts;
   }
 
   /**
@@ -434,6 +442,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * @param identifiant identifiant préfixé ({@code eventim:internal:...})
    * @param libelle nom exact du lieu chez Eventim
    * @return concerts à venir du lieu, vide si le libellé est inconnu
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchSalle(final String identifiant, final String libelle) {

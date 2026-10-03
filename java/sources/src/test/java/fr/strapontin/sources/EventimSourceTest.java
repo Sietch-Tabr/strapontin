@@ -756,10 +756,9 @@ class EventimSourceTest {
   }
 
   // Contrairement à un artiste réellement absent d'Eventim (liste vide, succès), un échec HTTP
-  // sur le fetch des produits après une résolution d'identité réussie doit aussi retourner une
-  // liste vide sans lever d'exception — voir ResultatPageEventim#succes.
+  // sur les produits lève une réponse incomplète : aucune absence comptée.
   @Test
-  void fetchArtiste_erreurHttpSurFetchProduits_retourneListeVideSansLeverDException() {
+  void fetchArtiste_erreurHttpSurFetchProduits_leveReponseIncomplete() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -778,9 +777,10 @@ class EventimSourceTest {
         .andRespond(withServerError());
 
     final EventimSource source = new EventimSource(restClient);
-    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    final ReponseIncompleteException incomplete =
+        assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
-    assertTrue(resultats.isEmpty());
+    assertTrue(incomplete.concertsRecus().isEmpty());
     serveur.verify();
   }
 
@@ -892,7 +892,7 @@ class EventimSourceTest {
         .andRespond(withServerError());
 
     final EventimSource source = new EventimSource(restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
     final BilanFetch bilan = source.preleverBilan();
     assertEquals(2, bilan.appels(), "un appel /attractions + un appel /products");

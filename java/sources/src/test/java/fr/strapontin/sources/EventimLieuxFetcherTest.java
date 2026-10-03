@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import fr.strapontin.core.ConcertBrut;
 import java.net.URI;
@@ -77,6 +78,25 @@ class EventimLieuxFetcherTest {
     assertThat(requetes.getFirst().getQuery())
         .contains("venue_names=LEMPREINTE SAVIGNY LE TEMPLE CEDEX")
         .doesNotContain("in_stock");
+  }
+
+  // Lieu en échec : ses concerts non reçus ne sont pas absents (ancien comportement : couverture
+  // complète supposée, une absence par concert du lieu).
+  @Test
+  void fetchLieu_echecHttp_leveReponseIncompleteAvecLesConcertsRecus() {
+    final LocalDate demain = LocalDate.now().plusDays(1);
+    final EventimLieuxFetcher lieux =
+        fetcher(
+            uri ->
+                uri.getQuery().contains("page=2")
+                    ? PageProduitsEventim.ECHEC
+                    : reponse(page(demain, "77"), 80, 4));
+
+    final ReponseIncompleteException incomplete =
+        assertThrows(ReponseIncompleteException.class, () -> lieux.fetchLieu("LE PLAN"));
+
+    assertThat(incomplete.concertsRecus()).hasSize(TAILLE_PAGE);
+    assertThat(incomplete.couvertJusquau()).isNull();
   }
 
   @Test

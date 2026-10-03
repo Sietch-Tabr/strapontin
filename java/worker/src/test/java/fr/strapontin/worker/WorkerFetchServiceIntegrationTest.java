@@ -17,6 +17,7 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.LieuEventim;
+import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.quota.GestionQuotaTM;
@@ -228,6 +229,49 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of("id", salleSuivie.toString()),
             Integer.class);
     assertEquals(1, absences);
+  }
+
+  // Le Roi Lion (dev, 03/10/2026) : quota Ticketmaster refusé, la salle semblait vide et chaque
+  // séance gagnait une absence jusqu'à être fusionnée à tort dans une autre.
+  @Test
+  void executerFetchSallesAll_reponseIncomplete_neCompteAucuneAbsence() {
+    insererUser("u1");
+    final UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
+    insererUserSalle("u1", salleSuivie);
+    insererConcertAncienSurSalle(salleSuivie);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenThrow(new ReponseIncompleteException("quota", List.of(), null));
+    when(ticketmasterSource.joursCouvertsParSalle()).thenReturn(180);
+
+    fetchService.executerFetchSallesAll();
+
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleSuivie.toString()),
+            Integer.class));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_reponseIncomplete_neCompteAucuneAbsence() {
+    insererUser("u1");
+    final UUID artisteId = insererArtisteSuivi("u1", "Indila");
+    insererConcertAncien(artisteId, "Indila");
+    when(ticketmasterSource.rechercherAttractionId(anyString())).thenReturn(null);
+    when(ticketmasterSource.fetchArtiste(anyString()))
+        .thenThrow(new ReponseIncompleteException("quota", List.of(), null));
+    when(eventimSource.fetchArtiste(anyString(), any(), any())).thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchArtistesBatch();
+
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE artiste_id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
+            Integer.class));
   }
 
   private void insererUserConfigDept(final String userId, final String dept) {

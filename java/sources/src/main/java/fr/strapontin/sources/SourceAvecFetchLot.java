@@ -22,6 +22,7 @@ public interface SourceAvecFetchLot extends SourceConcerts {
    * @param identifiantsSources identifiants source des artistes (attractionId
    *     TM, etc.)
    * @return concerts trouvés pour l'ensemble du lot
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   List<ConcertBrut> fetchArtistesLot(List<String> identifiantsSources);
 }

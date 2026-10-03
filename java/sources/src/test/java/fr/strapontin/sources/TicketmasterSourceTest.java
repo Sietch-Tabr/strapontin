@@ -544,10 +544,10 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
-  // Un échec HTTP (contrairement à une salle réellement sans concert, testé ci-dessus) doit
-  // rester distinguable après coup — voir ResultatPage#succes, propagé jusqu'au log de fetchSalle.
+  // Un échec HTTP, contrairement à une salle réellement sans concert (testé ci-dessus), lève
+  // une réponse incomplète : le worker ne compte alors aucune absence.
   @Test
-  void fetchSalle_erreurHttp_retourneListeVideSansLeverDException() {
+  void fetchSalle_erreurHttp_leveReponseIncompleteSansConcert() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -557,9 +557,11 @@ class TicketmasterSourceTest {
         .andRespond(withServerError());
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    final List<ConcertBrut> resultats = source.fetchSalle("tm:venue-en-echec");
+    final ReponseIncompleteException incomplete =
+        assertThrows(
+            ReponseIncompleteException.class, () -> source.fetchSalle("tm:venue-en-echec"));
 
-    assertTrue(resultats.isEmpty());
+    assertTrue(incomplete.concertsRecus().isEmpty());
     serveur.verify();
   }
 
@@ -981,8 +983,8 @@ class TicketmasterSourceTest {
                 .contentType(MediaType.APPLICATION_JSON));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    source.fetchArtiste("Julien Clerc");
-    source.fetchArtiste("Zazie");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Zazie"));
 
     serveur.verify();
     assertEquals(0, source.preleverBilan().erreursHttp());
@@ -999,7 +1001,7 @@ class TicketmasterSourceTest {
         .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
     assertFalse(source.quotaEpuise());
   }
@@ -1113,7 +1115,7 @@ class TicketmasterSourceTest {
         .andRespond(withServerError());
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
     final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
@@ -1134,9 +1136,8 @@ class TicketmasterSourceTest {
         .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
-    assertTrue(resultats.isEmpty());
     final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
@@ -1153,7 +1154,7 @@ class TicketmasterSourceTest {
         .andRespond(withServerError());
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
     source.preleverBilan();
 
     final BilanFetch second = source.preleverBilan();
@@ -1275,6 +1276,25 @@ class TicketmasterSourceTest {
     assertEquals(7, resultat.concerts().size());
     assertEquals(
         java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(179), resultat.horizon());
+  }
+
+  // Page en échec (quota refusé) : l'horizon complet faisait gagner une absence à chaque concert
+  // du département que Ticketmaster n'avait pas renvoyé.
+  @Test
+  void fetchRegionCouverte_pageEnEchec_neCouvrePasLaFenetreEntiere() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), null);
+
+    serveur.verify();
+    assertTrue(resultat.concerts().isEmpty());
+    assertNull(resultat.horizon());
   }
 
   @Test
