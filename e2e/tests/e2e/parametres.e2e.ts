@@ -509,6 +509,39 @@ test.describe("Scénario: API compte — mot de passe", () => {
   });
 });
 
+test.describe("Scénario: notifications push sans appareil abonné", () => {
+  // Push activés, aucun appareil abonné : l'utilisateur ne reçoit rien sans le savoir.
+  test("notifications_pushSansAppareil_afficheUnAvertissement", async ({
+    page,
+  }) => {
+    await page.route("**/api/push/abonnements", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "[]",
+      }),
+    );
+    await page.route("**/api/push", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ disponible: true, clePublique: "cle" }),
+          })
+        : route.continue(),
+    );
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+    await expect(section).toBeVisible();
+    await section.locator('input[type="radio"][value="quotidien"]').check();
+    await section.getByLabel("Push — artistes suivis").check();
+
+    await expect(
+      section.getByText("Aucun appareil n'est abonné aux notifications push"),
+    ).toBeVisible();
+  });
+});
+
 test.describe("Scénario: Données — suppression de compte", () => {
   test("suppression_compte_bouton_dialog_desactive_sans_texte", async ({
     page,

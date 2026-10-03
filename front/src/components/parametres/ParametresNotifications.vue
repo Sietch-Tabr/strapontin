@@ -89,6 +89,12 @@
             </div>
           </fieldset>
 
+          <p v-if="pushSansAppareil" class="alerte alerte-avertissement">
+            Aucun appareil n'est abonné aux notifications push : celles de vos
+            artistes et salles ne vous parviennent pas. Activez-les ci-dessous
+            sur au moins un appareil.
+          </p>
+
           <button type="submit" class="bouton bouton-secondaire">
             Enregistrer
           </button>
@@ -160,7 +166,7 @@
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresNotifications" });
 
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
 
@@ -179,6 +185,15 @@ const pushSupporte = ref(false);
 const vapidDisponible = ref(false);
 const pushPermission = ref("default");
 const pushAbonne = ref(false);
+// Abonnements push du compte, tous appareils confondus (null : inconnu).
+const nbAppareilsAbonnes = ref(null);
+const pushSansAppareil = computed(
+  () =>
+    nbAppareilsAbonnes.value === 0 &&
+    vapidDisponible.value &&
+    frequenceNotifications.value !== "jamais" &&
+    (notifArtistesPush.value || notifSallesPush.value),
+);
 const pushEnCours = ref(false);
 const testEnCours = ref(false);
 let swRegistration = null;
@@ -190,6 +205,7 @@ async function charger() {
     const [repConfig, repPush] = await Promise.all([
       appelApi("/api/user/config", { signal: controleur.signal }),
       appelApi("/api/push", { signal: controleur.signal }),
+      compterAppareilsAbonnes(),
     ]);
     if (repConfig.ok) {
       const config = await lireJson(repConfig);
@@ -213,6 +229,18 @@ async function charger() {
     }
   } finally {
     chargement.value = false;
+  }
+}
+
+async function compterAppareilsAbonnes() {
+  const rep = await appelApi("/api/push/abonnements", {
+    signal: controleur.signal,
+  });
+  if (rep.ok) {
+    const abonnements = await lireJson(rep);
+    nbAppareilsAbonnes.value = Array.isArray(abonnements)
+      ? abonnements.length
+      : null;
   }
 }
 
@@ -297,6 +325,7 @@ async function abonnerPush() {
 
     if (rep.ok) {
       pushAbonne.value = true;
+      await compterAppareilsAbonnes();
       document.cookie =
         "push_opt_in=1; path=/; max-age=" +
         365 * 24 * 3600 +
@@ -359,6 +388,7 @@ async function desabonnerPush() {
       await abonnement.unsubscribe();
     }
     pushAbonne.value = false;
+    await compterAppareilsAbonnes();
     document.cookie = "push_opt_in=; path=/; max-age=0; SameSite=Strict";
     afficherToast("Notifications push désactivées.", "succes");
   } catch (_) {
