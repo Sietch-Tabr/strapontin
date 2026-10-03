@@ -18,6 +18,7 @@ export const versionsChangelog = [
         categorie: "Compte",
         items: [
           "Un compte utilisé régulièrement n'est plus considéré comme inactif : l'utilisation de l'application compte, pas seulement la connexion.",
+          "Une invitation relancée reste valable jusqu'à la date indiquée dans l'email de relance : elle n'est plus annulée dès le lendemain.",
         ],
       },
       {

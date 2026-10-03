@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -74,6 +75,44 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             "SELECT niveau FROM logs_admin WHERE source = 'purge-comptes'",
             Map.of(),
             String.class));
+  }
+
+  // Un invité relancé garde son nouveau lien : il n'est supprimé qu'une fois tous ses liens
+  // expirés, jamais le lendemain de la relance.
+  @Test
+  void executerGererInvitesExpires_inviteRelance_conserveJusquALExpirationDuNouveauLien() {
+    creerInvite("relance", ilYA(8), null);
+    creerInvite("expire", ilYA(20), ilYA(14));
+    lienInvitation("expire@test.fr", ilYA(7));
+    when(purgeCompteEmailService.envoyerRelanceInvitation(anyString(), anyString(), any()))
+        .thenReturn(true);
+
+    service.executerGererInvitesExpires();
+
+    assertEquals(
+        List.of("relance"),
+        jdbc.queryForList("SELECT id FROM users ORDER BY id", Map.of(), String.class));
+  }
+
+  private void creerInvite(final String id, final Timestamp creeLe, final Timestamp relanceLe) {
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials, created_at,"
+            + " relance_invitation_envoyee_le) VALUES (:id, :id, :email, true, :creeLe,"
+            + " :relanceLe)",
+        new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("email", id + "@test.fr")
+            .addValue("creeLe", creeLe, Types.TIMESTAMP)
+            .addValue("relanceLe", relanceLe, Types.TIMESTAMP));
+  }
+
+  private void lienInvitation(final String email, final Timestamp expireLe) {
+    jdbc.update(
+        "INSERT INTO verifications (id, identifier, value, expires_at, created_at, updated_at)"
+            + " VALUES (gen_random_uuid()::text, :identifiant, 'x', :expireLe, now(), now())",
+        new MapSqlParameterSource()
+            .addValue("identifiant", "invite:" + email)
+            .addValue("expireLe", expireLe, Types.TIMESTAMP));
   }
 
   private static Timestamp ilYA(final int jours) {

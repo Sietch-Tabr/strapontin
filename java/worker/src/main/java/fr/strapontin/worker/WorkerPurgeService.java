@@ -56,6 +56,7 @@ public class WorkerPurgeService {
   private static final int DELAI_GRACE_JOURS = 15;
   private static final int SEUIL_JOURS_RELANCE_INVITATION = 6;
   private static final int SEUIL_JOURS_EXPIRATION_INVITATION = 7;
+  private static final int DUREE_LIEN_RELANCE_JOURS = 7;
   // Au-delà, une seule exécution signe une anomalie de référence (dernière
   // activité manquante ou faussée) plutôt qu'une inactivité réelle.
   /* package-private : visibilité élargie pour WorkerPurgeServiceTest (même package). */
@@ -317,9 +318,8 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Relance (nouvelle invitation/nouveau token) les comptes invités jamais
-   * activés proches de l'expiration, puis supprime ceux dont l'invitation
-   * d'origine a expiré sans activation.
+   * Relance les invités jamais activés proches de l'expiration (nouveau lien
+   * valable 7 jours), puis supprime ceux dont plus aucun lien n'est valide.
    */
   public void executerGererInvitesExpires() {
     LOG.info("gerer:invites-expires démarré");
@@ -341,13 +341,19 @@ public class WorkerPurgeService {
             jdbc.update(
                 "INSERT INTO verifications (id, identifier, value, expires_at, created_at,"
                     + " updated_at) VALUES (:vid, :identifier, :value,"
-                    + " now() + interval '7 days', now(), now())",
+                    + " now() + make_interval(days => :duree), now(), now())",
                 Map.of(
-                    "vid", UUID.randomUUID().toString(),
-                    "identifier", "invite:" + email,
-                    "value", GenerateurSecrets.sha256Hex(token)));
+                    "vid",
+                    UUID.randomUUID().toString(),
+                    "identifier",
+                    "invite:" + email,
+                    "value",
+                    GenerateurSecrets.sha256Hex(token),
+                    "duree",
+                    DUREE_LIEN_RELANCE_JOURS));
             final String lien = baseUrl + "/reset-password?token=" + token;
-            if (purgeCompteEmailService.envoyerRelanceInvitation(email, lien)) {
+            if (purgeCompteEmailService.envoyerRelanceInvitation(
+                email, lien, LocalDate.now().plusDays(DUREE_LIEN_RELANCE_JOURS))) {
               relances++;
             }
             jdbc.update(
@@ -356,8 +362,13 @@ public class WorkerPurgeService {
           }
           final int supprimes =
               jdbc.update(
-                  "DELETE FROM users WHERE must_change_credentials = true"
-                      + " AND created_at < now() - make_interval(days => :seuil)",
+                  """
+                  DELETE FROM users u WHERE u.must_change_credentials = true
+                    AND u.created_at < now() - make_interval(days => :seuil)
+                    AND NOT EXISTS (SELECT 1 FROM verifications v
+                                    WHERE v.identifier = 'invite:' || u.email
+                                      AND v.expires_at > now())
+                  """,
                   Map.of(CLE_SEUIL, SEUIL_JOURS_EXPIRATION_INVITATION));
           LOG.info("gerer:invites-expires terminé relances={} supprimes={}", relances, supprimes);
           return new ResultatPersistance(0, relances + supprimes);
