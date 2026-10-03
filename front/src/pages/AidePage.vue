@@ -30,12 +30,13 @@
             <ul>
               <li>Recherchez et ajoutez les artistes et salles à suivre.</li>
               <li>
-                Les concerts sont mis à jour automatiquement toutes les 2 heures
-                depuis Ticketmaster et Eventim.
+                Les concerts sont mis à jour automatiquement depuis Ticketmaster
+                et Eventim, toutes les deux heures en journée.
               </li>
               <li>
-                Le badge <strong>Nouveau</strong> signale les concerts apparus
-                depuis votre dernière notification.
+                Le badge <strong>Nouveau</strong> signale les concerts que vous
+                n'avez pas encore vus ; il disparaît après votre passage sur
+                l'accueil.
               </li>
             </ul>
           </div>
@@ -113,11 +114,11 @@
             <ul>
               <li>
                 <strong>Mes spectacles</strong> : vos prochains concerts
-                filtrables par catégorie et mois. Paginé par 100.
+                filtrables par catégorie, genre et mois.
               </li>
               <li>
-                <strong>Découverte</strong> : tous les concerts en base,
-                filtrables par département.
+                <strong>Découverte</strong> : tous les concerts de vos
+                départements, même ceux d'artistes que vous ne suivez pas.
               </li>
             </ul>
           </div>
@@ -136,17 +137,21 @@
             </h2>
             <ul>
               <li>
-                Données collectées : nom, identifiant, email, préférences et
-                sessions. Utilisées uniquement pour le fonctionnement de
-                l'application, jamais partagées.
+                Données collectées : identifiant, email, préférences, appareils
+                connectés (navigateur, système) et, dans le journal technique,
+                adresse IP des connexions. Utilisées uniquement pour le
+                fonctionnement de l'application, jamais partagées.
               </li>
               <li>
-                Hébergement sur serveur privé en France. Données conservées tant
-                que le compte est actif.
+                Hébergement sur serveur privé en France. Un compte inutilisé
+                pendant 6 mois reçoit un email, puis est supprimé avec toutes
+                ses données 15 jours plus tard s'il reste inutilisé.
               </li>
               <li>
                 Export intégral et suppression de compte depuis
-                <RouterLink to="/parametres">Paramètres → Compte</RouterLink>.
+                <RouterLink to="/parametres#donnees"
+                  >Paramètres → Données</RouterLink
+                >.
               </li>
             </ul>
           </div>

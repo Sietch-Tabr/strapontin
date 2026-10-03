@@ -80,7 +80,9 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
       ).toBeVisible();
       await page.keyboard.press("Escape");
     } else {
-      await expect(page.locator(".barre-laterale a[href='/changelog']")).toBeVisible();
+      await expect(
+        page.locator(".barre-laterale a[href='/changelog']"),
+      ).toBeVisible();
     }
   });
 
@@ -129,7 +131,16 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
       "sur demande à l'administrateur",
     );
     await expect(
-      page.getByRole("link", { name: "Paramètres → Compte" }),
-    ).toBeVisible();
+      page.getByRole("link", { name: "Paramètres → Données" }),
+    ).toHaveAttribute("href", "/parametres#donnees");
+  });
+
+  test("aide_donneesPersonnelles_annonceLaSuppressionPourInactivite", async ({
+    page,
+  }) => {
+    await page.goto("/aide");
+    await expect(page.locator("body")).toContainText(
+      "Un compte inutilisé pendant 6 mois",
+    );
   });
 });

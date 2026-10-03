@@ -19,6 +19,7 @@ export const versionsChangelog = [
         items: [
           "Un compte utilisé régulièrement n'est plus considéré comme inactif : l'utilisation de l'application compte, pas seulement la connexion.",
           "Une invitation relancée reste valable jusqu'à la date indiquée dans l'email de relance : elle n'est plus annulée dès le lendemain.",
+          "La page Aide précise les données conservées et la suppression d'un compte inutilisé pendant 6 mois.",
         ],
       },
       {
