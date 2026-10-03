@@ -958,6 +958,8 @@ class TicketmasterSourceTest {
     assertEquals(TicketmasterSource.StatutIdTM.INDETERMINE, source.verifierAttraction("K1"));
     assertTrue(source.quotaEpuise());
     assertEquals(0, source.obtenirQuota().dispo());
+    // Une date de nouvel essai est toujours fixée : sans elle, les cycles restaient suspendus.
+    assertTrue(source.obtenirQuota().reset() > System.currentTimeMillis());
     serveur.verify();
   }
 

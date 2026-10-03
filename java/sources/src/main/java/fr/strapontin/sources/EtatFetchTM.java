@@ -23,6 +23,7 @@ import org.springframework.web.client.HttpClientErrorException;
 final class EtatFetchTM {
 
   private static final int HTTP_TROP_DE_REQUETES = 429;
+  private static final long DELAI_NOUVEL_ESSAI_MS = 3_600_000;
 
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
   private final AtomicBoolean refusPourQuota = new AtomicBoolean();
@@ -81,12 +82,15 @@ final class EtatFetchTM {
   void signalerQuotaEpuise() {
     refusPourQuota.set(true);
     final QuotaTM precedent = dernierQuota.get();
+    // Sans remise à zéro connue et à venir, nouvel essai dans une heure : sinon
+    // les cycles resteraient suspendus sans jamais rappeler Ticketmaster.
+    final long maintenant = System.currentTimeMillis();
+    final long reset =
+        precedent != null && precedent.reset() > maintenant
+            ? precedent.reset()
+            : maintenant + DELAI_NOUVEL_ESSAI_MS;
     dernierQuota.set(
-        new QuotaTM(
-            0,
-            precedent != null ? precedent.total() : 0,
-            precedent != null ? precedent.reset() : 0,
-            Instant.now().toString()));
+        new QuotaTM(0, precedent != null ? precedent.total() : 0, reset, Instant.now().toString()));
   }
 
   /**

@@ -373,9 +373,22 @@ public class WorkerFetchCommun {
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   void sauvegarderQuota() {
     final QuotaTM quota = tm.obtenirQuota();
-    if (quota != null) {
-      gestionQuotaTM.ecrireQuota(quota);
+    if (quota == null) {
+      return;
     }
+    // Quota épuisé signalé sans réponse complète depuis le démarrage : total
+    // inconnu, celui déjà enregistré est conservé.
+    final QuotaTM complet =
+        quota.total() > 0
+            ? quota
+            : gestionQuotaTM
+                .lireQuota()
+                .map(
+                    precedent ->
+                        new QuotaTM(
+                            quota.dispo(), precedent.total(), quota.reset(), quota.misAJour()))
+                .orElse(quota);
+    gestionQuotaTM.ecrireQuota(complet);
   }
 
   /* package-private : appelé par les exécuteurs de fetch (même package). */
