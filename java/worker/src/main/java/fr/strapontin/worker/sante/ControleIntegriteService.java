@@ -181,10 +181,13 @@ public class ControleIntegriteService {
               AND NOT (
                 (sm.entite_type = 'artiste' AND EXISTS (
                     SELECT 1 FROM artiste_sources s WHERE s.artiste_id = sm.entite_id
-                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id = s.artiste_id)))
+                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id = s.artiste_id)
+                      AND NOT EXISTS (SELECT 1 FROM user_artistes u
+                                      WHERE u.artiste_id = s.artiste_id)))
                 OR (sm.entite_type = 'salle' AND EXISTS (
                     SELECT 1 FROM salle_sources s WHERE s.salle_id = sm.entite_id
-                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id))))
+                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)
+                      AND NOT EXISTS (SELECT 1 FROM user_salles u WHERE u.salle_id = s.salle_id))))
             """,
             Map.of());
     if (fermes > 0) {
@@ -201,10 +204,13 @@ public class ControleIntegriteService {
           case ARTISTE ->
               "SELECT artiste_id AS entite_id, source, identifiant_externe FROM artiste_sources s"
                   + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id ="
+                  + " s.artiste_id)"
+                  + " AND NOT EXISTS (SELECT 1 FROM user_artistes u WHERE u.artiste_id ="
                   + " s.artiste_id)";
           case SALLE ->
               "SELECT salle_id AS entite_id, source, identifiant_externe FROM salle_sources s"
-                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)";
+                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)"
+                  + " AND NOT EXISTS (SELECT 1 FROM user_salles u WHERE u.salle_id = s.salle_id)";
         };
     final String entiteType = type == TypeEntiteSource.ARTISTE ? "artiste" : "salle";
 
