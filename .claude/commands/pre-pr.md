@@ -11,10 +11,12 @@ Compléter avec `detect_changes` (code-review-graph) pour identifier le blast-ra
 ## 2. Wiki
 
 Lire les pages wiki dans `strapontin-wiki/` potentiellement impactées par les changements :
-Architecture.md, Authentification.md, Design-et-navigation.md, Déploiement.md,
-Développement-local.md, Exploitation.md, Routes.md, Schéma-de-base-de-données.md,
-Sources-de-données.md, Notifications-email.md, Notifications-push.md,
-Préférences-export-import.md, Manuel-utilisateur.md.
+Home.md, Manuel-utilisateur.md, Préférences-export-import.md, Administration.md,
+Spécifications.md, Limitations.md, Glossaire.md, ADR.md, Architecture.md,
+Sources-de-données.md, Schéma-de-base-de-données.md, Routes.md, Design-et-navigation.md,
+Authentification.md, Sécurité.md, Notifications-email.md, Notifications-push.md,
+Déploiement.md, Exploitation.md, Développement-local.md. Roadmap.md : une section par
+version, reprise de `front/src/pages/changelogVersions.js`.
 
 Pour chaque page concernée : comparer avec l'implémentation réelle, proposer les mises à jour, attendre validation, éditer.
 

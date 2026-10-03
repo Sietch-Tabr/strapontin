@@ -169,10 +169,6 @@ Seul l'outillage partagé de `.claude/` est versionné (liste blanche dans `.git
 | `/cloture-jalon`    | Lancé par l'utilisateur uniquement : merge de la PR, pipeline, vérification prod, tag et release lisible, fermeture du jalon, nettoyage, wiki et mémoire                                                            |
 | `/restauration-dev` | Base du dev remplacée par une copie de la prod, configuration du dev conservée (jamais `restore.sh`)                                                                                                                |
 
-## Migration Vue 2.2.0
-
-Migration terminée (Epics A–F), historique complet : [wiki Migration-Vue-2.2.0](https://codeberg.org/Kwaite/strapontin/wiki/Migration-Vue-2.2.0).
-
 ## Outils Claude Code
 
 - **code-review-graph** (MCP) — **IMPORTANT : toujours l'utiliser AVANT Grep/Glob/Read** pour explorer le code (plus rapide, moins de tokens, contexte structurel — appelants, dépendants, couverture de tests). `semantic_search_nodes`/`query_graph` au lieu de Grep, `get_impact_radius` au lieu de tracer les imports à la main, `detect_changes`+`get_review_context` pour une revue de code, `get_architecture_overview` pour une vue d'ensemble. Ne se rabattre sur Grep/Glob/Read que si le graphe ne couvre pas le besoin — le graphe se met à jour automatiquement (hooks).
