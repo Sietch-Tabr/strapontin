@@ -12,14 +12,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Invariants objectifs des données : tout résultat est une anomalie, sans jugement à porter.
- * Contrôlés chaque nuit, ils remontent dans les signalements (onglet « À traiter ») et se
- * referment d'eux-mêmes une fois la donnée corrigée.
- *
- * <p>Une anomalie globale (non rattachée à une entité) est identifiée par un UUID dérivé de son
- * type ; un utilisateur (identifiant texte) ou une valeur d'identifiant externe, par un UUID
- * dérivé de cette valeur, reprise dans les détails.
- *
+ * Invariants objectifs des données, contrôlés chaque nuit et publiés dans les
+ * signalements, clos d'eux-mêmes une fois corrigés. Anomalie globale ou
+ * valeur texte : UUID dérivé du type ou de la valeur (reprise en détail).
  * @since 3.0.2
  * @author Kwaite
  */
@@ -31,6 +26,7 @@ final class ControleInvariantsDonnees {
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
 
+  /* package-private : instancié par ControleIntegriteService. */
   ControleInvariantsDonnees(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
@@ -40,6 +36,7 @@ final class ControleInvariantsDonnees {
   /**
    * @return nombre d'anomalies constatées, tous invariants confondus
    */
+  /* package-private : appelé par ControleIntegriteService. */
   int verifier() {
     return publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
         + publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
@@ -98,8 +95,8 @@ final class ControleInvariantsDonnees {
     return globale("orphelins_fk", comptes);
   }
 
-  // Une session vient de s'ouvrir sans encore d'appel API : l'appareil n'est enregistré qu'à ce
-  // premier appel, d'où le délai d'une heure.
+  // L'appareil n'est enregistré qu'au premier appel API après connexion,
+  // d'où le délai d'une heure.
   private Map<UUID, Map<String, Object>> sessionsSansAppareil() {
     final List<String> comptes =
         jdbc.queryForList(
@@ -117,8 +114,8 @@ final class ControleInvariantsDonnees {
         : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
-  // Match éligible (préférence email ou push active, artiste ou salle suivi) jamais notifié un
-  // jour après l'apparition du concert : digest bloqué pour cet utilisateur.
+  // Match éligible (préférence active, suivi) jamais notifié un jour après
+  // l'apparition du concert : digest bloqué pour cet utilisateur.
   private Map<UUID, Map<String, Object>> notificationsNonEnvoyees() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -158,8 +155,8 @@ final class ControleInvariantsDonnees {
     return anomalies;
   }
 
-  // Événements d'une même salle dans plusieurs départements, quel que soit le nombre de ses
-  // lieux sources : une résolution floue erronée rattache directement, sans second mapping.
+  // Événements d'une salle sur plusieurs départements : une résolution floue
+  // erronée rattache directement, sans second mapping.
   private Map<UUID, Map<String, Object>> sallesMultiDepartements() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -178,8 +175,8 @@ final class ControleInvariantsDonnees {
     return anomalies;
   }
 
-  // Salle suivie par au moins un utilisateur et déjà reconnue contaminée (plusieurs départements,
-  // contamination signalée ou lieux sources dispersés) : impact utilisateur direct.
+  // Salle suivie déjà reconnue contaminée (départements multiples,
+  // contamination ou dispersion) : impact utilisateur direct.
   private Map<UUID, Map<String, Object>> sallesSuiviesContaminees() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -213,7 +210,7 @@ final class ControleInvariantsDonnees {
         : globale("migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
   }
 
-  // Un compte activé a exactement un identifiant de connexion, au mot de passe haché en bcrypt.
+  // Compte activé : un seul identifiant de connexion, mot de passe bcrypt.
   private Map<UUID, Map<String, Object>> comptesIncoherents() {
     final Map<String, Object> comptes = new LinkedHashMap<>();
     jdbc.query(

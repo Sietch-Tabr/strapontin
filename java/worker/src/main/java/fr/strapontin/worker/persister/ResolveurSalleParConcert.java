@@ -6,15 +6,12 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.ClientNominatim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -47,11 +44,10 @@ class ResolveurSalleParConcert {
           + " AND c.dept IS NOT NULL LIMIT 1))";
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final ClientNominatim clientNominatim;
   private final RaccrocheurSallesParNomNorm raccrocheur;
-  private final ResolveurSalleParProximiteGps resolveurGps;
-  private final CreateurSalle createur;
+  private final CreationSalleDernierRecours dernierRecours;
   private final ResolveurSallePosition parPosition;
+  private final ResolveurSalleParCleForte parCleForte;
   private boolean resolutionParPosition = true;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
@@ -59,21 +55,20 @@ class ResolveurSalleParConcert {
   ResolveurSalleParConcert(
       final NamedParameterJdbcTemplate jdbc, final ClientNominatim clientNominatim) {
     this.jdbc = jdbc;
-    this.clientNominatim = clientNominatim;
     this.raccrocheur = new RaccrocheurSallesParNomNorm(jdbc);
-    this.resolveurGps = new ResolveurSalleParProximiteGps(jdbc);
-    this.createur = new CreateurSalle(jdbc, this::deptsConnus);
+    this.dernierRecours = new CreationSalleDernierRecours(jdbc, clientNominatim, this::deptsConnus);
     this.parPosition = new ResolveurSallePosition(jdbc);
+    this.parCleForte = new ResolveurSalleParCleForte(jdbc, this::deptsConnus);
   }
 
   /**
-   * Active (par défaut) la résolution par position du lieu ({@link ResolveurSallePosition}) :
-   * recherche d'abord une salle au même endroit, écarte toute salle trouvée
-   * par son nom mais distante du lieu, et crée une salle à la position
-   * publiée plutôt que de géocoder son nom.
+   * Active la résolution par position ({@link ResolveurSallePosition}) : salle
+   * au même endroit d'abord, veto d'une salle distante, création à la
+   * position publiée plutôt que géocodée.
    * @param active valeur de {@code strapontin.resolution-salles.par-position}
    */
   @Autowired
+  /* package-private : injection Spring et tests du package. */
   void setResolutionParPosition(
       @Value("${strapontin.resolution-salles.par-position:true}") final boolean active) {
     this.resolutionParPosition = active;
@@ -125,55 +120,44 @@ class ResolveurSalleParConcert {
   }
 
   private UUID resoudreOuCreerSalleId(final ValeurConcert concert) {
-    final PositionLieu position = concert.position();
-    if (resolutionParPosition) {
-      final ResolveurSallePosition.SalleProche proche =
-          parPosition.chercher(concert.salle(), concert.dept(), position);
-      if (proche != null) {
-        LOG.info(
-            "salle résolue par position salle={} uuid={} distance={}m",
-            concert.salle(),
-            proche.id(),
-            Math.round(proche.distance()));
-        return proche.id();
-      }
+    final UUID parPosition = resolutionParPosition ? chercherParPosition(concert) : null;
+    if (parPosition != null) {
+      return parPosition;
     }
+    final UUID parNom = chercherParNom(concert);
+    return parNom != null
+        ? parNom
+        : dernierRecours.resoudre(
+            concert, resolutionParPosition && concert.position().estGeolocalisee());
+  }
 
+  private UUID chercherParPosition(final ValeurConcert concert) {
+    final ResolveurSallePosition.SalleProche proche =
+        parPosition.chercher(concert.salle(), concert.dept(), concert.position());
+    if (proche == null) {
+      return null;
+    }
+    LOG.info(
+        "salle résolue par position salle={} uuid={} distance={}m",
+        concert.salle(),
+        proche.id(),
+        Math.round(proche.distance()));
+    return proche.id();
+  }
+
+  // Étapes par nom, de la plus sûre à la plus permissive, sous veto de position.
+  private UUID chercherParNom(final ValeurConcert concert) {
     UUID salleId = retenir(chercherSalleParNomExact(concert.salle(), concert.dept()), concert);
-
     if (salleId == null) {
       salleId = retenir(chercherSalleParTokens(concert.salle(), concert.dept()), concert);
     }
-
     if (salleId == null) {
       salleId = retenir(resoudreSousSalle(concert.salle(), concert.dept()), concert);
     }
-
-    if (salleId == null) {
-      salleId = retenir(chercherSalleParCleForte(concert), concert);
-    }
-
-    // Créée sans coordonnées : l'enregistrement des positions y pose celle publiée par la source.
-    if (salleId == null && resolutionParPosition && position.estGeolocalisee()) {
-      return createur.creer(concert, Optional.empty());
-    }
-
-    Optional<ClientNominatim.Coordonnees> coordsGeocodees = Optional.empty();
-    if (salleId == null) {
-      // Un nom générique ("Palais des Congrès") se géocode n'importe où en France
-      // sans la ville.
-      coordsGeocodees =
-          clientNominatim.geocoder(
-              concert.ville() != null ? concert.salle() + ", " + concert.ville() : concert.salle());
-      if (coordsGeocodees.isPresent()) {
-        salleId = resolveurGps.chercher(coordsGeocodees.get(), concert.salle(), concert.dept());
-      }
-    }
-
-    return salleId != null ? salleId : createur.creer(concert, coordsGeocodees);
+    return salleId != null ? salleId : retenir(chercherSalleParCleForte(concert), concert);
   }
 
-  // Écarte une salle trouvée par son nom mais géolocalisée loin du lieu publié (homonyme).
+  // Écarte une salle trouvée par son nom mais loin du lieu publié (homonyme).
   private UUID retenir(final UUID candidat, final ValeurConcert concert) {
     if (resolutionParPosition && parPosition.incompatible(candidat, concert.position())) {
       LOG.warn(
@@ -360,77 +344,13 @@ class ResolveurSalleParConcert {
   }
 
   /**
-   * Recherche la salle d'un concert existant à même artiste/date/heure/dept
-   * — dernier repli quand deux sources désignent le même évènement sous des
-   * noms sans rapport (ex. Eventim "Ed&n"/TM "Espace Dollfus Noack").
-   * @param concert concert dont la salle reste à résoudre
-   * @return UUID de la salle du concert existant correspondant, ou {@code null}
+   * Salle d'un concert existant à même artiste, date, heure et département
+   * ({@link ResolveurSalleParCleForte}).
+   * @return UUID de la salle, ou {@code null}
    */
   /* package-private : appelé par ReconciliateurSalles (même package). */
   UUID chercherSalleParCleForte(final ValeurConcert concert) {
-    if (concert.heure() == null || concert.dept() == null || concert.artisteNorm() == null) {
-      return null;
-    }
-    final List<UUID> candidats =
-        jdbc.query(
-            "SELECT DISTINCT salle_id FROM concerts"
-                + " WHERE artiste_norm = :artisteNorm AND date = :date AND heure = :heure"
-                + " AND dept = :dept AND salle_id IS NOT NULL"
-                + " ORDER BY salle_id"
-                + " LIMIT 20",
-            Map.of(
-                "artisteNorm",
-                concert.artisteNorm(),
-                "date",
-                concert.date(),
-                "heure",
-                concert.heure(),
-                CLE_DEPT,
-                concert.dept()),
-            (rs, _) -> rs.getObject("salle_id", UUID.class));
-    if (candidats.isEmpty()) {
-      return null;
-    }
-
-    final UUID salleId = premierCandidatGeographiquementCoherent(candidats, concert.dept());
-    if (salleId == null) {
-      LOG.warn(
-          "clé forte (artiste+date+heure+dept) sans candidat géographiquement cohérent"
-              + " artiste={} date={} candidats={}",
-          concert.artiste(),
-          concert.date(),
-          candidats);
-      return null;
-    }
-
-    LOG.info(
-        "salle rattachée par clé forte (artiste+date+heure+dept) artiste={} date={} salle={}"
-            + " uuid={}",
-        concert.artiste(),
-        concert.date(),
-        concert.salle(),
-        salleId);
-    return salleId;
-  }
-
-  /**
-   * Retient, parmi les candidats de la clé forte, le premier dont le
-   * département connu ne contredit pas le concert entrant (évite qu'un
-   * concert mal rattaché reconfirme son propre mauvais rattachement).
-   * @param candidats identifiants candidats, dans un ordre déterministe
-   * @param deptEntrant département du concert à résoudre
-   * @return premier candidat géographiquement cohérent, ou {@code null}
-   */
-  private UUID premierCandidatGeographiquementCoherent(
-      final List<UUID> candidats, final String deptEntrant) {
-    final Map<UUID, String> depts = deptsConnus(new HashSet<>(candidats));
-    for (final UUID candidat : candidats) {
-      final String deptConnu = depts.get(candidat);
-      if (deptConnu == null || deptConnu.equals(deptEntrant)) {
-        return candidat;
-      }
-    }
-    return null;
+    return parCleForte.chercher(concert);
   }
 
   /**

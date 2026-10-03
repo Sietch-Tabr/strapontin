@@ -4,13 +4,8 @@
  */
 package fr.strapontin.worker.persister;
 
-import fr.strapontin.core.CorrespondanceArtiste;
-import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
-import java.sql.Time;
 import java.sql.Types;
-import java.time.Duration;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,19 +26,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class PersisteurConcertsDb {
 
-  // Tolérance sur l'écart d'heure entre deux observations d'un même événement
-  // réel (fiches TM de types différents pour le même évènement) — très en
-  // dessous de tout écart matinée/soirée réel.
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
   private static final String CLE_SALLE = "salle";
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
-  private static final String PREFIXE_EVENTIM = "eventim:";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurArtisteParUrl resolveurArtisteParUrl;
   private final AlignementReportTM alignementReportTM;
   private final EnregistreurPositionsLieux enregistreurPositions;
+  private final RepriseIdentifiantsEventim repriseIdentifiantsEventim;
+  private final RechercheEvenementExistant rechercheEvenement;
 
   private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
@@ -57,6 +49,8 @@ public class PersisteurConcertsDb {
     this.resolveurArtisteParUrl = resolveurArtisteParUrl;
     this.alignementReportTM = new AlignementReportTM(jdbc);
     this.enregistreurPositions = new EnregistreurPositionsLieux(jdbc);
+    this.repriseIdentifiantsEventim = new RepriseIdentifiantsEventim(jdbc);
+    this.rechercheEvenement = new RechercheEvenementExistant(jdbc);
   }
 
   /**
@@ -72,68 +66,14 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Rattache un lieu Eventim publié sous un identifiant qualifié par code
-   * postal encore inconnu à la salle de son identifiant historique (nom
-   * seul), si cette salle est dans le même département : un mapping qualifié
-   * est alors créé. Les lieux homonymes d'autres départements, qui
-   * partageaient l'identifiant historique, en restent écartés.
-   * @param concerts concerts du lot
-   * @param cachesSalles identifiant source préfixé → salle, complété en place
+   * Rattache un lieu Eventim qualifié par code postal, encore inconnu, à la
+   * salle de son identifiant historique du même département
+   * ({@link RepriseIdentifiantsEventim}).
    */
   /* package-private : appelé par PersisterConcerts (même package). */
   void reprendreIdentifiantsEventimHistoriques(
       final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
-    final Map<String, ValeurConcert> qualifiesInconnus = new HashMap<>();
-    for (final ValeurConcert c : concerts) {
-      final String id = c.salleSourceId();
-      if (id != null
-          && id.startsWith(PREFIXE_EVENTIM)
-          && !cachesSalles.containsKey(id)
-          && !IdentifiantLieuEventim.historique(id).equals(id)) {
-        qualifiesInconnus.putIfAbsent(id, c);
-      }
-    }
-    if (qualifiesInconnus.isEmpty()) {
-      return;
-    }
-    final List<String> historiques =
-        qualifiesInconnus.keySet().stream()
-            .map(id -> IdentifiantLieuEventim.historique(id.substring(PREFIXE_EVENTIM.length())))
-            .distinct()
-            .toList();
-    final Map<String, Map<String, Object>> parHistorique = new HashMap<>();
-    for (final Map<String, Object> ligne :
-        jdbc.queryForList(
-            """
-            SELECT ss.identifiant_externe AS identifiant, ss.salle_id AS salle_id, s.dept AS dept
-            FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
-            WHERE ss.source = 'eventim' AND ss.identifiant_externe IN (:ids)
-            """,
-            Map.of("ids", historiques))) {
-      parHistorique.put((String) ligne.get("identifiant"), ligne);
-    }
-    for (final Map.Entry<String, ValeurConcert> entree : qualifiesInconnus.entrySet()) {
-      final String qualifie = entree.getKey().substring(PREFIXE_EVENTIM.length());
-      final Map<String, Object> historique =
-          parHistorique.get(IdentifiantLieuEventim.historique(qualifie));
-      if (historique == null) {
-        continue;
-      }
-      final String deptSalle = (String) historique.get("dept");
-      final String deptEntrant = entree.getValue().dept();
-      if (deptSalle != null && deptEntrant != null && !deptSalle.equals(deptEntrant)) {
-        continue;
-      }
-      final UUID salleId = (UUID) historique.get("salle_id");
-      jdbc.update(
-          """
-          INSERT INTO salle_sources (salle_id, source, identifiant_externe)
-          VALUES (CAST(:salleId AS uuid), 'eventim', :identifiant)
-          ON CONFLICT (source, identifiant_externe) DO NOTHING
-          """,
-          Map.of("salleId", salleId.toString(), "identifiant", qualifie));
-      cachesSalles.put(entree.getKey(), salleId);
-    }
+    repriseIdentifiantsEventim.reprendre(concerts, cachesSalles);
   }
 
   /**
@@ -204,109 +144,24 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais
-   * accessible à un achat de billetterie standard, ne doit jamais empêcher le
-   * rapprochement avec la fiche normale du même événement réel.
-   */
-  private static boolean estPackage(final String url) {
-    return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
-  }
-
-  private static boolean heuresCompatibles(
-      final LocalTime existante,
-      final LocalTime entrante,
-      final boolean packageExistant,
-      final boolean packageEntrant) {
-    if (packageExistant || packageEntrant) {
-      return true;
-    }
-    if (existante == null || entrante == null) {
-      return true;
-    }
-    final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
-    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
-  }
-
-  /**
    * Résout l'événement canonique d'un concert entrant, ou en crée un
-   * nouveau (#1192) : correspondance exacte (artiste_norm/date/heure/salle_id),
-   * sinon repli flou même salle/date ({@link #heuresCompatibles}, {@link
-   * CorrespondanceArtiste#estDoublonArtiste}), sinon création.
+   * nouveau : correspondance exacte, sinon repli flou même salle et même
+   * date ({@link RechercheEvenementExistant}), sinon création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
-    final UUID exactId = chercherEvenementExact(concert);
+    final UUID exactId = rechercheEvenement.exact(concert);
     if (exactId != null) {
       return new ResolutionEvenement(exactId, false);
     }
 
     if (concert.salleId() != null) {
-      final UUID candidatId = chercherEvenementParSalleEtDate(concert);
+      final UUID candidatId = rechercheEvenement.parSalleEtDate(concert);
       if (candidatId != null) {
         return new ResolutionEvenement(candidatId, false);
       }
     }
 
     return new ResolutionEvenement(creerNouvelEvenement(concert), true);
-  }
-
-  private UUID chercherEvenementExact(final ValeurConcert concert) {
-    final MapSqlParameterSource paramsExact =
-        new MapSqlParameterSource()
-            .addValue("artisteNorm", concert.artisteNorm())
-            .addValue(CLE_DATE, concert.date(), Types.DATE)
-            .addValue(CLE_HEURE, concert.heure(), Types.TIME)
-            .addValue(
-                "salleId",
-                concert.salleId() != null ? concert.salleId().toString() : null,
-                Types.VARCHAR);
-    final List<UUID> exact =
-        jdbc.query(
-            "SELECT id FROM evenements WHERE artiste_norm = :artisteNorm AND date = :date"
-                + " AND heure IS NOT DISTINCT FROM :heure"
-                + " AND salle_id IS NOT DISTINCT FROM CAST(:salleId AS uuid)",
-            paramsExact,
-            (rs, _) -> rs.getObject("id", UUID.class));
-    return exact.isEmpty() ? null : exact.get(0);
-  }
-
-  // return en dernière position de boucle nécessaire : arrête la recherche au
-  // premier candidat compatible plutôt que de poursuivre l'itération sans effet
-  // utile.
-  @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
-  private UUID chercherEvenementParSalleEtDate(final ValeurConcert concert) {
-    final List<Map<String, Object>> candidats =
-        jdbc.queryForList(
-            """
-            SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
-                   e.heure AS heure,
-                   EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
-                          AND o.url ~* '/pack/') AS a_observation_package
-            FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
-            """,
-            Map.of("salleId", concert.salleId().toString(), CLE_DATE, concert.date()));
-    final boolean entrantPackage = estPackage(concert.url());
-    for (final Map<String, Object> c : candidats) {
-      final UUID candArtisteId = (UUID) c.get("artiste_id");
-      final String candArtisteNorm = (String) c.get("artiste_norm");
-      final boolean artisteCorrespond =
-          concert.artisteId() != null
-              ? concert.artisteId().equals(candArtisteId)
-              : candArtisteId == null
-                  && CorrespondanceArtiste.estDoublonArtiste(
-                      candArtisteNorm, concert.artisteNorm());
-      if (!artisteCorrespond) {
-        continue;
-      }
-      final Object heureBrute = c.get(CLE_HEURE);
-      final LocalTime heureExistante =
-          heureBrute != null ? ((Time) heureBrute).toLocalTime() : null;
-      final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
-      if (!heuresCompatibles(heureExistante, concert.heure(), candidatPackage, entrantPackage)) {
-        continue;
-      }
-      return (UUID) c.get("id");
-    }
-    return null;
   }
 
   private UUID creerNouvelEvenement(final ValeurConcert concert) {

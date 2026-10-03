@@ -19,23 +19,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Détecte et fusionne en cycle nocturne des paires d'événements déjà
- * persistés séparément : dont l'{@code artiste_norm} converge après coup —
- * {@link ReconciliateurArtistes} ne dédoublonne qu'à la création — ou dont
- * l'un n'est plus qu'une fiche périmée de l'autre (même fiche source, l'une
- * n'étant plus observée, l'autre l'étant encore).
+ * Fusion nocturne d'événements persistés séparément : artiste_norm convergé
+ * après coup (la réconciliation ne dédoublonne qu'à la création), ou fiche
+ * périmée d'un événement encore observé.
  * @since 3.0.0
  * @author Kwaite
  */
 @Service
 public class FusionEvenementsArtisteService {
 
+  private static final long VIVANT_UNIQUE = 1;
   private static final Logger LOG = LoggerFactory.getLogger(FusionEvenementsArtisteService.class);
   private static final String CLE_CIBLE = "cible";
   private static final String CLE_SOURCE = "source";
   private static final int NB_EVENEMENTS_PAIRE = 2;
-  // Absences consécutives au-delà desquelles un événement n'est plus une fiche vivante : écarte
-  // un cycle de fetch manqué ponctuellement.
+  // Absences au-delà desquelles une fiche n'est plus vivante (un cycle de
+  // fetch manqué ponctuellement ne suffit pas).
   /* package-private : visibilité élargie pour les tests (même package). */
   static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
 
@@ -81,15 +80,9 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Fusionne chaque événement périmé dans l'événement vivant qui porte la
-   * même fiche source : même observation {@code (source, url)}, ou même
-   * manifestation Ticketmaster ({@code idmanif}) à la même date. Couvre une
-   * fiche rattachée à la mauvaise salle puis recréée correctement, et un
-   * report publié sous une autre URL ; sans fusion, la ligne figée reste
-   * suivie et visible jusqu'à sa purge, avec ses informations obsolètes. Un
-   * événement périmé rapproché de plusieurs événements vivants est ignoré
-   * (ambigu). À exécuter avant la fusion de salles par clé forte, que ces
-   * doublons fausseraient.
+   * Fusionne chaque événement périmé dans l'unique événement vivant de même
+   * fiche (même url, ou même idmanif TM à la même date) ; ambigu : ignoré.
+   * À exécuter avant la fusion de salles par clé forte, qu'il fausserait.
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimees() {
@@ -119,7 +112,7 @@ public class FusionEvenementsArtisteService {
     int fusions = 0;
     for (final Map<String, Object> ligne : lignes) {
       final UUID perime = (UUID) ligne.get("perime");
-      if (((Number) ligne.get("nb_vivants")).longValue() != 1) {
+      if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
         LOG.warn("fiche périmée {} rapprochée de plusieurs événements vivants — ignorée", perime);
         continue;
       }
@@ -223,10 +216,9 @@ public class FusionEvenementsArtisteService {
     fusionner(cibleId, sourceId, "artiste_norm convergent");
   }
 
-  private void fusionner(final UUID cibleId, final UUID sourceId, final String motif) {
-    final Map<String, Object> ids =
-        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
-
+  // Observations et user_matches reportés sur la cible (doublons écartés),
+  // jamais laissés au CASCADE de la source, qui perdrait un match notifié.
+  private void reporterObservationsEtCorrespondances(final Map<String, Object> ids) {
     // 1. Observations en conflit supprimées, le reste réassigné à la
     // cible.
     jdbc.update(
@@ -257,6 +249,13 @@ public class FusionEvenementsArtisteService {
         "UPDATE user_matches SET concert_id = CAST(:cible AS uuid)"
             + " WHERE concert_id = CAST(:source AS uuid)",
         ids);
+  }
+
+  private void fusionner(final UUID cibleId, final UUID sourceId, final String motif) {
+    final Map<String, Object> ids =
+        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
+
+    reporterObservationsEtCorrespondances(ids);
 
     // 3. artiste_id manquant récupéré depuis la source si la cible ne l'a pas déjà.
     jdbc.update(

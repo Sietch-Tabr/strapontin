@@ -22,7 +22,7 @@ Pattern 3-couches : `XxxController` (HTTP) → `XxxService` (`@Transactional`) �
 
 **Bean Validation, piège `@ModelAttribute`/record primitif** : détail dans [`java/web/src/main/java/fr/strapontin/web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md). **Onboarding** (`ModaleEtapes.vue`) : détail dans [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md).
 
-**okhttp/Resend (Kotlin Multiplatform)** : l'artefact `com.squareup.okhttp3:okhttp` est vide côté JVM depuis okhttp 5.0.0 — exclusion + dépendance `okhttp-jvm` requise dans **les deux** `java/web/pom.xml` **et** `java/worker/pom.xml` (l'oubli côté worker a déjà causé un `NoClassDefFoundError` silencieux sur tout email worker).
+**okhttp/Resend (Kotlin Multiplatform)** : l'artefact `com.squareup.okhttp3:okhttp` est vide côté JVM depuis okhttp 5.0.0 ; resend-java (≥ 4.28.0) dépend directement de `okhttp-jvm`, dont la version est seulement gérée dans le pom parent. Revérifier par `dependency:tree` à chaque montée de Resend qu'aucun `okhttp` vide n'est tiré (un oubli côté worker a déjà causé un `NoClassDefFoundError` silencieux sur tout email worker). **Jackson 3 uniquement** (`tools.jackson`, `JsonMapper` autoconfiguré par Spring Boot, aucun bean maison) : les `RestClient` des sources retiennent Jackson 3 dans le runtime web/worker, le module `sources` en dépend pour que ses tests désérialisent avec la même pile ; seules les annotations restent dans `com.fasterxml.jackson.annotation`.
 
 Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapontin/wiki/Roadmap). Détails par domaine : [wiki Architecture](https://codeberg.org/Kwaite/strapontin/wiki/Architecture), [wiki Sources-de-données](https://codeberg.org/Kwaite/strapontin/wiki/Sources-de-données), [wiki Sécurité](https://codeberg.org/Kwaite/strapontin/wiki/Sécurité).
 
@@ -151,7 +151,7 @@ Deux passes : exacte sur `(artiste_norm, date, ville_norm)`, fuzzy Levenshtein n
 
 UI/Vue, schéma SQL, style Java, tests E2E — scopées par type de fichier, chargées automatiquement en travaillant dessus plutôt que dupliquées ici : [`.claude/rules/frontend-vue.md`](.claude/rules/frontend-vue.md), [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md), [`.claude/rules/backend-java.md`](.claude/rules/backend-java.md), [`.claude/rules/e2e-testing.md`](.claude/rules/e2e-testing.md).
 
-Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI depuis v2.9.1) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
+Commandes de test (à connaître même hors édition d'un fichier) : `mvn -f java/pom.xml clean test -pl core,sources,web,worker -am` (Docker requis, Testcontainers) ; `cd front && npm run test:unit` (Vitest, fonctions pures) ; `cd e2e && npx playwright test` (jamais `--project`, 5 navigateurs). Analyse statique (bloquante en CI depuis v2.9.1) : `PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests` ; `cd front && npm run lint && npm run lint:css`.
 
 ## Skills projet (`.claude/commands/`, `.claude/skills/`)
 

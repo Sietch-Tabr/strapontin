@@ -5,11 +5,8 @@
 package fr.strapontin.core;
 
 /**
- * Statut de vente d'un concert tel que publié par une source.
- *
- * @param statut statut de vente (ex. {@code onsale}, {@code presale}), null si inconnu
- * @param presaleDebut début de la prévente (ISO 8601), null si aucune
- * @param presaleNom nom de la prévente, null si aucune
+ * Statut de vente publié par une source ({@code onsale}, {@code presale}…)
+ * et prévente éventuelle (début ISO 8601, nom) ; chaque champ peut être null.
  * @since 3.0.2
  * @author Kwaite
  */

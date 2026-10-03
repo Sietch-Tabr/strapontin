@@ -14,13 +14,9 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Jeton authentifiant les appels du module web vers l'API interne du worker ({@code /trigger}).
- *
- * <p>L'écoute sur {@code 127.0.0.1} ne suffit pas : une requête émise par le serveur web lui-même
- * (ex. URL fournie par un utilisateur) y parvient aussi. Le jeton est dérivé par HMAC-SHA256 de
- * {@code APP_CONFIG_SECRET}, déjà connu des deux processus : aucun secret supplémentaire à
- * provisionner, et une rotation de ce secret renouvelle le jeton des deux côtés à la fois.
- *
+ * Jeton des appels web vers l'API interne du worker : écouter sur 127.0.0.1
+ * ne suffit pas, une requête émise par le web lui-même y parvient. Dérivé de
+ * APP_CONFIG_SECRET (HMAC-SHA256), sans secret de plus à provisionner.
  * @since 3.0.2
  * @author Kwaite
  */

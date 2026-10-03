@@ -7,14 +7,9 @@ package fr.strapontin.core;
 import java.util.Objects;
 
 /**
- * Identifiant d'un lieu Eventim dans {@code salle_sources} ({@code internal:<nom normalisé>}).
- *
- * <p>Eventim n'expose aucun identifiant de lieu stable : le nom seul confondait des homonymes de
- * villes différentes (« Centre des Congrès », « Palais des Congrès »). Le code postal publié sur
- * chaque produit qualifie désormais l'identifiant ({@code internal:<nom>@<code postal>}). La
- * forme historique, sans code postal, reste reconnue : ancien mapping, ou lieu saisi en admin
- * par son seul libellé.
- *
+ * Identifiant de lieu Eventim ({@code internal:<nom>@<code postal>}) : sans
+ * identifiant stable chez Eventim, le code postal distingue les homonymes.
+ * La forme historique sans code postal reste reconnue (lieu saisi en admin).
  * @since 3.0.2
  * @author Kwaite
  */
@@ -28,7 +23,7 @@ public final class IdentifiantLieuEventim {
   private IdentifiantLieuEventim() {}
 
   /**
-   * @param nomNormalise nom du lieu normalisé ({@link Normalisation#normaliserTexte})
+   * @param nomNormalise nom normalisé ({@link Normalisation#normaliserTexte})
    * @param codePostal code postal publié, peut être null
    * @return l'identifiant, qualifié par le code postal s'il est connu
    */

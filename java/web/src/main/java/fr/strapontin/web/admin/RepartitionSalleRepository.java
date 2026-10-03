@@ -7,6 +7,7 @@ package fr.strapontin.web.admin;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -28,10 +29,12 @@ class RepartitionSalleRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
 
+  /* package-private : réservé à RepartitionSalleService. */
   RepartitionSalleRepository(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
 
+  /* package-private : réservé à RepartitionSalleService. */
   List<RepartitionSalleService.LibelleSource> listerLibelles(final UUID salleId) {
     return jdbc.query(
         """
@@ -46,14 +49,17 @@ class RepartitionSalleRepository {
             new RepartitionSalleService.LibelleSource(rs.getString("libelle"), rs.getLong("nb")));
   }
 
-  Map<String, Object> lireSalle(final UUID salleId) {
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
+  /* package-private : réservé à RepartitionSalleService. */
+  Optional<Map<String, Object>> lireSalle(final UUID salleId) {
+    return jdbc
+        .queryForList(
             "SELECT id, nom, dept FROM salles WHERE id = CAST(:salle AS uuid)",
-            Map.of(CLE_SALLE, salleId.toString()));
-    return lignes.isEmpty() ? null : lignes.get(0);
+            Map.of(CLE_SALLE, salleId.toString()))
+        .stream()
+        .findFirst();
   }
 
+  /* package-private : réservé à RepartitionSalleService. */
   UUID creerSalle(final String nom, final String nomNorm, final String dept) {
     final boolean cleLibre =
         jdbc.queryForList(
@@ -74,6 +80,7 @@ class RepartitionSalleRepository {
   }
 
   /** Événements de la salle dont toutes les observations portent l'un des libellés. */
+  /* package-private : réservé à RepartitionSalleService. */
   List<UUID> evenementsEntierementLibelles(final UUID salleId, final List<String> libelles) {
     return jdbc.queryForList(
         """
@@ -88,7 +95,8 @@ class RepartitionSalleRepository {
         UUID.class);
   }
 
-  /** Événements de la salle dont une partie seulement des observations porte ces libellés. */
+  /** Événements dont une partie seulement des observations porte ces libellés. */
+  /* package-private : réservé à RepartitionSalleService. */
   int compterEvenementsMixtes(final UUID salleId, final List<String> libelles) {
     final Integer nb =
         jdbc.queryForObject(
@@ -106,11 +114,11 @@ class RepartitionSalleRepository {
   }
 
   /**
-   * Fusionne dans la cible les événements déjà présents chez elle (même artiste/date/heure) :
-   * observations et correspondances utilisateurs reportées, événement source supprimé.
-   *
+   * Fusionne dans la cible les événements qu'elle a déjà (artiste, date,
+   * heure) : observations et correspondances reportées, source supprimée.
    * @return nombre d'événements fusionnés
    */
+  /* package-private : réservé à RepartitionSalleService. */
   int fusionnerEvenementsEnDoublon(final List<UUID> evenements, final UUID cibleId) {
     final MapSqlParameterSource params =
         new MapSqlParameterSource()
@@ -153,6 +161,7 @@ class RepartitionSalleRepository {
         params);
   }
 
+  /* package-private : réservé à RepartitionSalleService. */
   int deplacerEvenements(final List<UUID> evenements, final UUID cibleId) {
     return jdbc.update(
         "UPDATE evenements SET salle_id = CAST(:cible AS uuid) WHERE id IN (:ids)",
@@ -161,6 +170,7 @@ class RepartitionSalleRepository {
             .addValue(CLE_CIBLE, cibleId.toString()));
   }
 
+  /* package-private : réservé à RepartitionSalleService. */
   List<Map<String, Object>> mappingsEventim(final UUID salleId) {
     return jdbc.queryForList(
         "SELECT identifiant_externe, libelle_source FROM salle_sources"
@@ -168,6 +178,7 @@ class RepartitionSalleRepository {
         Map.of(CLE_SALLE, salleId.toString()));
   }
 
+  /* package-private : réservé à RepartitionSalleService. */
   void deplacerMapping(final String identifiant, final UUID cibleId) {
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid)"
@@ -175,7 +186,8 @@ class RepartitionSalleRepository {
         Map.of(CLE_CIBLE, cibleId.toString(), "identifiant", identifiant));
   }
 
-  // Coordonnées et code postal du premier lieu déplacé, pour une salle qui n'en a pas.
+  // Position du premier lieu déplacé, pour une salle qui n'en a pas.
+  /* package-private : réservé à RepartitionSalleService. */
   void completerPositionDepuisMappings(final UUID cibleId) {
     jdbc.update(
         """
@@ -189,6 +201,7 @@ class RepartitionSalleRepository {
         Map.of(CLE_CIBLE, cibleId.toString()));
   }
 
+  /* package-private : réservé à RepartitionSalleService. */
   void leverContamination(final UUID salleId) {
     jdbc.update(
         "UPDATE salles SET contamination_signalee = NULL WHERE id = CAST(:salle AS uuid)",

@@ -85,16 +85,10 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Repère les paires de salle_id distincts partageant exactement même
-   * artiste/date/heure/dept (clé forte, appliquée rétroactivement). Un
-   * concert coïncidant ne suffit jamais : la paire doit aussi avoir des noms
-   * doublons sans qualificatif de sous-salle divergent, le même département,
-   * des coordonnées connues des deux côtés à moins de {@value
-   * #DISTANCE_MAX_FUSION_METRES} m, et ne pas être un complexe et sa
-   * sous-salle ni une paire déclarée distincte par un admin. Sans
-   * coordonnées, la fusion attend : des homonymes de villes différentes
-   * (« Palais des Congrès ») ou deux halls d'un même complexe ont été
-   * fusionnés à tort sur la seule coïncidence d'un concert.
+   * Paires de salles partageant un concert (artiste, date, heure, dept), aux
+   * noms doublons, de même département, à moins de
+   * {@value #DISTANCE_MAX_FUSION_METRES} m (coordonnées connues des deux
+   * côtés), hors complexe/sous-salle et paires déclarées distinctes.
    */
   private List<PaireSalles> detecterPaires() {
     final List<Map<String, Object>> lignes =

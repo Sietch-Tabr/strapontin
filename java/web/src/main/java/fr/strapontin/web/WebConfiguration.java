@@ -10,10 +10,12 @@ import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +32,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfiguration implements WebMvcConfigurer {
 
   private static final int PORT_WORKER = 8081;
+  private static final Set<String> HOTES_LOCAUX =
+      Set.of("localhost", InetAddress.getLoopbackAddress().getHostAddress());
 
   private final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor;
   private final ActiviteUtilisateurInterceptor activiteUtilisateurInterceptor;
@@ -66,13 +70,8 @@ public class WebConfiguration implements WebMvcConfigurer {
   }
 
   /**
-   * RestClient partagé pour les appels HTTP vers des API externes (ex.
-   * Ticketmaster).
-   *
-   * <p>Timeout connexion : 5 s — timeout lecture : 10 s. Les requêtes vers
-   * l'API interne du worker ({@code localhost:8081}) reçoivent le jeton qui
-   * l'authentifie ({@link JetonInterneWorker}), jamais les autres.
-   *
+   * RestClient des API externes (connexion 5 s, lecture 10 s) ; seules les
+   * requêtes vers l'API interne du worker portent son jeton.
    * @param secret valeur de {@code APP_CONFIG_SECRET}
    * @return client partagé
    */
@@ -102,8 +101,7 @@ public class WebConfiguration implements WebMvcConfigurer {
 
   /* package-private : visibilité élargie pour WebConfigurationTest (même package). */
   static boolean estApiInterneWorker(final URI uri) {
-    return uri.getPort() == PORT_WORKER
-        && ("localhost".equals(uri.getHost()) || "127.0.0.1".equals(uri.getHost()));
+    return uri.getPort() == PORT_WORKER && HOTES_LOCAUX.contains(uri.getHost());
   }
 
   /**

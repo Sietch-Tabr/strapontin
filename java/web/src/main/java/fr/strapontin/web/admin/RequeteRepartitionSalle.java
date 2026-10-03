@@ -12,12 +12,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Répartition d'une salle : libellés source à déplacer, vers une salle existante ou une salle à
- * créer (exactement l'une des deux).
- *
- * @param libelles libellés source dont les événements changent de salle
- * @param cibleId salle existante qui les reçoit, ou null
- * @param nouvelleSalleNom nom de la salle à créer pour les recevoir, ou null
+ * Libellés source à déplacer, vers une salle existante ({@code cibleId}) ou
+ * à créer ({@code nouvelleSalleNom}) : exactement l'une des deux.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -32,6 +28,7 @@ public record RequeteRepartitionSalle(
   @AssertTrue(message = "Choisir une salle existante ou le nom d'une salle à créer.")
   public boolean isDestinationUnique() {
     final boolean nouvelle = nouvelleSalleNom != null && !nouvelleSalleNom.isBlank();
-    return (cibleId != null) != nouvelle;
+    final boolean existante = cibleId != null;
+    return existante != nouvelle;
   }
 }

@@ -27,14 +27,13 @@ import org.springframework.stereotype.Service;
 public class AlerteLogsAdminService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AlerteLogsAdminService.class);
-  // Ancien curseur temporel (ms) : relu une seule fois pour initialiser le curseur d'identifiant.
+  // Ancien curseur temporel (ms), relu une fois pour initialiser l'identifiant.
   private static final String CLE_CURSEUR_TS = "ALERTE_LOGS_ADMIN_CURSEUR";
   private static final String CLE_CURSEUR_ID = "ALERTE_LOGS_ADMIN_CURSEUR_ID";
   private static final String CLE_ENVOIS_JOUR = "ALERTE_LOGS_ADMIN_ENVOIS_JOUR";
-  // Plafond d'emails d'alerte par jour : le quota Resend (100/jour) doit rester disponible pour
-  // les emails fonctionnels, quel que soit le volume d'erreurs. Au-delà, les erreurs attendent
-  // le digest du lendemain, agrégées.
-  /* package-private : visibilité élargie pour AlerteLogsAdminServiceTest (même package). */
+  // Plafond journalier : le quota Resend (100/jour) reste aux emails
+  // fonctionnels ; au-delà, les erreurs attendent le digest du lendemain.
+  /* package-private : élargi pour AlerteLogsAdminServiceTest. */
   static final int MAX_DIGESTS_PAR_JOUR = 8;
 
   private final LogAdminService logAdminService;
@@ -61,13 +60,9 @@ public class AlerteLogsAdminService {
   }
 
   /**
-   * Vérifie les nouvelles erreurs toutes les 15 minutes et envoie un digest
-   * agrégé.
-   *
-   * <p>Le curseur (identifiant de la dernière entrée notifiée) n'avance
-   * qu'après envoi réussi — un échec temporaire de Resend, l'absence de
-   * destinataire ou le plafond de {@value #MAX_DIGESTS_PAR_JOUR} digests par
-   * jour laissent les erreurs disponibles pour un cycle suivant.
+   * Digest des nouvelles erreurs toutes les 15 minutes. Le curseur n'avance
+   * qu'après envoi réussi : échec Resend, destinataire absent ou plafond de
+   * {@value #MAX_DIGESTS_PAR_JOUR} digests par jour reportent les erreurs.
    */
   @Scheduled(cron = "0 */15 * * * *")
   public void verifier() {

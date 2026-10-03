@@ -17,7 +17,7 @@ Lance toute la suite de tests du projet et résume les résultats. Un run n'est 
 3. **Analyse statique** (bloquante en CI) :
 
    ```
-   PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check -DskipTests
+   PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests
    cd front && npm run lint && npm run lint:css
    ```
 

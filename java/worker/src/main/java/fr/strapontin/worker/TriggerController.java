@@ -53,7 +53,7 @@ public class TriggerController {
 
   /**
    * @param scheduler planificateur Quartz portant les jobs déclenchables
-   * @param simulationResolutionSalles mesure de la résolution des salles par position
+   * @param simulationResolutionSalles simulation de la résolution par position
    */
   public TriggerController(
       final Scheduler scheduler, final SimulationResolutionSalles simulationResolutionSalles) {
@@ -62,8 +62,8 @@ public class TriggerController {
   }
 
   /**
-   * Simule, sans rien écrire, la résolution des salles par position du lieu sur les données
-   * actuelles et en rapporte les écarts avec le rattachement en base.
+   * Simule, sans écrire, la résolution des salles par position sur les
+   * données actuelles et en rapporte les écarts avec le rattachement en base.
    * @return effectifs par catégorie et exemples
    */
   @GetMapping("/simulation-salles")

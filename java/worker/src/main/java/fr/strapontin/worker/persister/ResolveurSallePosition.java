@@ -16,37 +16,31 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Résolution d'une salle par la position publiée de son lieu, signal indépendant du nom.
- *
- * <ul>
- *   <li>Recherche : une salle géolocalisée à moins de {@value #RAYON_MEME_LIEU_METRES} m, dans le
- *       même département, au nom doublon et sans qualificatif de sous-salle divergent. Le nom
- *       reste exigé : deux salles mitoyennes (« Théâtre Montparnasse » / « Théâtre de Poche
- *       Montparnasse ») sont distinctes.
- *   <li>Veto : une salle retenue par son nom est écartée si sa position connue est à plus de
- *       {@value #DISTANCE_INCOMPATIBLE_METRES} m de celle du lieu — homonymes de villes
- *       différentes.
- * </ul>
- *
+ * Salle d'un lieu par sa position publiée : à moins de
+ * {@value #RAYON_MEME_LIEU_METRES} m, même département, nom doublon (deux
+ * salles mitoyennes restent distinctes). Veto d'une salle trouvée par son nom
+ * à plus de {@value #DISTANCE_INCOMPATIBLE_METRES} m (homonyme).
  * @since 3.0.2
  * @author Kwaite
  */
 final class ResolveurSallePosition {
 
-  /* package-private : visibilité élargie pour les tests et la simulation (même package). */
+  /* package-private : élargi pour les tests et la simulation. */
   static final double RAYON_MEME_LIEU_METRES = 300;
-  // Les positions publiées s'écartent du lieu réel de quelques kilomètres (centre-ville publié
-  // pour une salle de périphérie, mesuré jusqu'à 7 km) : seul un autre lieu urbain est exclu.
+  /* package-private : positions publiées décalées jusqu'à 7 km (centre-ville
+   * pour une salle de périphérie) : seul un autre lieu urbain est exclu. */
   static final double DISTANCE_INCOMPATIBLE_METRES = 20_000;
-  // Approximation du rayon en degrés pour le préfiltre SQL (au plus ~0,005° en latitude
-  // et longitude en France métropolitaine pour 300 m).
+  // Rayon en degrés du préfiltre SQL (au plus ~0,005° pour 300 m en
+  // France métropolitaine).
   private static final double DEGRES_PREFILTRE = 0.005;
 
   private final NamedParameterJdbcTemplate jdbc;
 
   /** Salle candidate et sa distance au lieu, en mètres. */
+  /* package-private : résultat de chercher(). */
   record SalleProche(UUID id, double distance) {}
 
+  /* package-private : instancié par ResolveurSalleParConcert et la simulation. */
   ResolveurSallePosition(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
@@ -57,6 +51,7 @@ final class ResolveurSallePosition {
    * @param position position publiée du lieu
    * @return la salle la plus proche désignant le même lieu, ou null
    */
+  /* package-private : appelé par ResolveurSalleParConcert et la simulation. */
   SalleProche chercher(final String nom, final String dept, final PositionLieu position) {
     if (!position.estGeolocalisee()) {
       return null;
@@ -97,10 +92,10 @@ final class ResolveurSallePosition {
 
   /**
    * @param salleId salle candidate, peut être null
-   * @param position position publiée du lieu
-   * @return true si la salle et le lieu sont tous deux géolocalisés et trop éloignés pour être
-   *     le même lieu
+   * @return true si salle et lieu sont géolocalisés et trop éloignés pour
+   *     être le même lieu
    */
+  /* package-private : appelé par ResolveurSalleParConcert et la simulation. */
   boolean incompatible(final UUID salleId, final PositionLieu position) {
     if (salleId == null || !position.estGeolocalisee()) {
       return false;
@@ -110,14 +105,12 @@ final class ResolveurSallePosition {
             "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)"
                 + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
             Map.of("id", salleId.toString()));
-    if (lignes.isEmpty()) {
-      return false;
-    }
-    return DistanceGeo.metres(
-            position.latitude(),
-            position.longitude(),
-            (Double) lignes.get(0).get("latitude"),
-            (Double) lignes.get(0).get("longitude"))
-        > DISTANCE_INCOMPATIBLE_METRES;
+    return !lignes.isEmpty()
+        && DistanceGeo.metres(
+                position.latitude(),
+                position.longitude(),
+                (Double) lignes.get(0).get("latitude"),
+                (Double) lignes.get(0).get("longitude"))
+            > DISTANCE_INCOMPATIBLE_METRES;
   }
 }

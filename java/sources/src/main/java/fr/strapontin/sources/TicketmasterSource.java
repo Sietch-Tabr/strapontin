@@ -390,7 +390,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * Lit la position (coordonnées, code postal) d'un lieu Ticketmaster.
    *
    * @param venueId identifiant TM du lieu, sans préfixe
-   * @return la position, {@link PositionLieu#INCONNUE} si illisible ou en cas d'erreur
+   * @return la position, {@link PositionLieu#INCONNUE} si illisible ou erreur
    */
   public PositionLieu lirePositionVenue(final String venueId) {
     return healthCheck.lirePositionVenue(venueId);

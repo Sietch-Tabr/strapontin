@@ -14,12 +14,9 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Enregistre la position publiée de chaque lieu source (coordonnées, code postal) sur son mapping
- * {@code salle_sources}, et la reporte sur la salle tant qu'elle n'a ni position Wikidata ni
- * position de source (une position géocodée est remplacée) : sans position, les
- * garde-fous géographiques (fusion, résolution, dispersion) restaient inopérants pour la plupart
- * des salles.
- *
+ * Enregistre la position publiée de chaque lieu sur son mapping et la reporte
+ * sur la salle sans position Wikidata ni de source (un géocodage est remplacé)
+ * : sans elle, les garde-fous géographiques restaient inopérants.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -40,10 +37,10 @@ final class EnregistreurPositionsLieux {
   void enregistrer(final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
     final Map<String, ValeurConcert> parMapping = new LinkedHashMap<>();
     for (final ValeurConcert c : concerts) {
-      final PositionLieu p = c.position();
+      final PositionLieu position = c.position();
       if (c.salleSourceId() != null
           && cachesSalles.containsKey(c.salleSourceId())
-          && (p.estGeolocalisee() || p.codePostal() != null)) {
+          && (position.estGeolocalisee() || position.codePostal() != null)) {
         parMapping.putIfAbsent(c.salleSourceId(), c);
       }
     }
@@ -52,17 +49,7 @@ final class EnregistreurPositionsLieux {
     }
     final MapSqlParameterSource[] params =
         parMapping.values().stream()
-            .map(
-                c -> {
-                  final int separateur = c.salleSourceId().indexOf(':');
-                  return new MapSqlParameterSource()
-                      .addValue("source", c.salleSourceId().substring(0, separateur))
-                      .addValue("identifiant", c.salleSourceId().substring(separateur + 1))
-                      .addValue("salleId", cachesSalles.get(c.salleSourceId()).toString())
-                      .addValue("latitude", c.position().latitude(), Types.DOUBLE)
-                      .addValue("longitude", c.position().longitude(), Types.DOUBLE)
-                      .addValue("codePostal", c.position().codePostal(), Types.VARCHAR);
-                })
+            .map(concert -> parametres(concert, cachesSalles))
             .toArray(MapSqlParameterSource[]::new);
     jdbc.batchUpdate(
         """
@@ -79,7 +66,7 @@ final class EnregistreurPositionsLieux {
         WHERE id = CAST(:salleId AS uuid)
         """,
         params);
-    // Position publiée par la source, à défaut de Wikidata : remplace un géocodage du nom.
+    // Position de la source, à défaut de Wikidata : remplace un géocodage.
     jdbc.batchUpdate(
         """
         UPDATE salles
@@ -88,5 +75,18 @@ final class EnregistreurPositionsLieux {
           AND (origine_position IS NULL OR origine_position = 'geocodage')
         """,
         params);
+  }
+
+  private static MapSqlParameterSource parametres(
+      final ValeurConcert concert, final Map<String, UUID> cachesSalles) {
+    final String salleSourceId = concert.salleSourceId();
+    final int separateur = salleSourceId.indexOf(':');
+    return new MapSqlParameterSource()
+        .addValue("source", salleSourceId.substring(0, separateur))
+        .addValue("identifiant", salleSourceId.substring(separateur + 1))
+        .addValue("salleId", cachesSalles.get(salleSourceId).toString())
+        .addValue("latitude", concert.position().latitude(), Types.DOUBLE)
+        .addValue("longitude", concert.position().longitude(), Types.DOUBLE)
+        .addValue("codePostal", concert.position().codePostal(), Types.VARCHAR);
   }
 }

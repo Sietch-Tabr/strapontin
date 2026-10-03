@@ -150,12 +150,9 @@ public class AdminService {
   }
 
   /**
-   * Valide et met à jour les champs d'un utilisateur — une rétrogradation
-   * d'admin est refusée, elle passe par {@link
-   * AdminRevocationService#initierRevocationAdmin}.
-   * @param userId identifiant de l'utilisateur cible
-   * @param requete champs à modifier (nom, email, role — tous optionnels)
-   * @param adminId identifiant de l'admin demandeur
+   * Met à jour un utilisateur ; une rétrogradation d'admin est refusée (voir
+   * {@link AdminRevocationService#initierRevocationAdmin}).
+   * @param requete champs à modifier (nom, email, rôle, tous optionnels)
    * @throws ErreurMetier si invalide, email pris, ou rétrogradation d'admin
    */
   public void modifierUtilisateur(

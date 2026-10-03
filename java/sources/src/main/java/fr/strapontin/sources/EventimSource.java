@@ -369,15 +369,10 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Comme {@link #fetchArtiste(String, String, String)}, avec les autres noms
-   * connus de l'artiste : pour une identité confirmée, un nom Eventim
-   * contenant le nom suivi n'est retenu que si le reste est l'un d'eux (nom
-   * de scène « -M- » publié « -M- Matthieu Chedid »).
-   * @param nom nom de l'artiste
-   * @param deezerId identifiant Deezer déjà connu, ou {@code null}
-   * @param wikidataId identifiant Wikidata déjà connu, ou {@code null}
+   * Identité confirmée : un nom Eventim contenant le nom suivi n'est retenu
+   * que si le reste est un autre nom connu (« -M- Matthieu Chedid »).
    * @param autresNomsConnus libellé et alias Wikidata de l'artiste
-   * @return liste des concerts trouvés, vide si non référencé
+   * @return concerts trouvés, vide si non référencé
    */
   @Override
   public List<ConcertBrut> fetchArtiste(

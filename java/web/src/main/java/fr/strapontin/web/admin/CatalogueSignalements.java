@@ -9,14 +9,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Nom lisible et explication de chaque type de signalement, pour qu'une ligne de l'onglet « À
- * traiter » se comprenne sans connaissance technique. Un type absent est affiché sous son
- * identifiant, comme « à qualifier ».
- *
+ * Nom et explication de chaque type de signalement, pour qu'une ligne de
+ * l'onglet « À traiter » se comprenne sans connaissance technique.
  * @since 3.0.2
  * @author Kwaite
  */
 public final class CatalogueSignalements {
+
+  private static final Map<String, TypeSignalement> TYPES = new LinkedHashMap<>();
 
   /**
    * Description d'un type de signalement.
@@ -26,8 +26,6 @@ public final class CatalogueSignalements {
    * @param explication ce que signifie le signalement et comment le traiter
    */
   public record TypeSignalement(String type, String libelle, String explication) {}
-
-  private static final Map<String, TypeSignalement> TYPES = new LinkedHashMap<>();
 
   static {
     ajouter(

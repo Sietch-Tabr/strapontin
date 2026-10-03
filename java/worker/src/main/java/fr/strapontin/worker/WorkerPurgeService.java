@@ -56,8 +56,8 @@ public class WorkerPurgeService {
   private static final int DELAI_GRACE_JOURS = 15;
   private static final int SEUIL_JOURS_RELANCE_INVITATION = 6;
   private static final int SEUIL_JOURS_EXPIRATION_INVITATION = 7;
-  // Au-delà, une seule exécution touche assez de comptes pour signer une anomalie de
-  // référence (date de dernière activité manquante ou faussée) plutôt qu'une inactivité réelle.
+  // Au-delà, une seule exécution signe une anomalie de référence (dernière
+  // activité manquante ou faussée) plutôt qu'une inactivité réelle.
   /* package-private : visibilité élargie pour WorkerPurgeServiceTest (même package). */
   static final int SEUIL_VAGUE_COMPTES = 3;
   private static final String CLE_ID = "id";
@@ -279,14 +279,10 @@ public class WorkerPurgeService {
   }
 
   /**
-   * Relance les comptes activés inactifs (email + délai de grâce, {@code
-   * users.purge_le}), puis supprime ceux dont le délai est dépassé sans
-   * activité — {@code derniere_connexion_le} est tenue à jour et {@code
-   * purge_le} remis à {@code NULL} par le module web à chaque connexion et à
-   * chaque journée d'activité, annulant la purge. Un compte sans date de
-   * dernière activité n'est jamais relancé. Chaque relance ou suppression est
-   * signalée dans {@code logs_admin}, en {@code warn} au-delà de {@link
-   * #SEUIL_VAGUE_COMPTES}.
+   * Relance les comptes inactifs (email, délai de grâce) puis supprime ceux
+   * restés inactifs ; le web tient la dernière activité à jour et annule la
+   * purge. Sans date d'activité, jamais relancé. Chaque action est journalisée,
+   * en warn au-delà de {@link #SEUIL_VAGUE_COMPTES}.
    */
   public void executerGererComptesInactifs() {
     LOG.info("gerer:comptes-inactifs démarré");

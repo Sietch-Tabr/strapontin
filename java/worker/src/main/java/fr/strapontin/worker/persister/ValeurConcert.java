@@ -13,17 +13,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Concert prêt pour l'upsert en base : le concert brut de la source, et ses champs résolus au fil
- * de la persistance (noms normalisés, date et heure typées, salle et artiste du référentiel). Les
- * champs bruts restent accessibles directement ({@link #salle()}, {@link #statut()}…).
- *
- * @param brut concert tel que publié par la source
- * @param artisteNorm nom d'artiste normalisé, éventuellement réconcilié
- * @param date date du concert
- * @param heure heure du concert, null si inconnue
- * @param salleNorm nom de salle normalisé, éventuellement réconcilié
- * @param salleId salle du référentiel, null tant que non résolue
- * @param artisteId artiste du référentiel, null tant que non résolu
+ * Concert prêt pour l'upsert : le concert brut de la source et ses champs
+ * résolus (noms normalisés, date et heure typées, salle et artiste du
+ * référentiel, null tant que non résolus) ; champs bruts accessibles.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -195,11 +187,7 @@ public record ValeurConcert(
   }
 
   /**
-   * Retourne un nouveau concert avec le {@code salleId} et l'{@code artisteId} remplacés.
-   *
-   * @param nouvelleSalleId nouveau UUID de salle
-   * @param nouvelArtisteId nouveau UUID d'artiste
-   * @return nouveau record avec les champs modifiés
+   * @return copie avec {@code salleId} et {@code artisteId} remplacés
    */
   public ValeurConcert avecUuids(final UUID nouvelleSalleId, final UUID nouvelArtisteId) {
     return new ValeurConcert(
@@ -207,11 +195,7 @@ public record ValeurConcert(
   }
 
   /**
-   * Retourne un nouveau concert avec l'{@code artisteNorm} et l'{@code artisteId} remplacés.
-   *
-   * @param nouvelArtisteNorm nouveau nom d'artiste normalisé
-   * @param nouvelArtisteId nouveau UUID d'artiste
-   * @return nouveau record avec les champs modifiés
+   * @return copie avec {@code artisteNorm} et {@code artisteId} remplacés
    */
   public ValeurConcert avecArtisteNormEtId(
       final String nouvelArtisteNorm, final UUID nouvelArtisteId) {

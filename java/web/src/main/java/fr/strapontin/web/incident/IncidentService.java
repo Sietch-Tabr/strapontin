@@ -91,16 +91,9 @@ public class IncidentService {
   }
 
   /**
-   * Publie une communication d'incident (remplace la précédente) et la
-   * diffuse sur les canaux demandés. Si un nouveau mot de passe est exigé,
-   * toutes les sessions sont révoquées sauf celle de l'admin qui publie, et
-   * la connexion est refusée jusqu'à réinitialisation par email ({@code
-   * VerificationMotDePasseExige}).
-   * @param requete contenu et canaux de diffusion
-   * @param adminId administrateur à l'origine de la publication
-   * @param sessionConservee identifiant de la session de l'admin qui publie,
-   *     null pour révoquer toutes les sessions
-   * @return la communication publiée, avec le nombre d'envois effectifs
+   * Publie une communication (remplace la précédente) sur les canaux voulus.
+   * Nouveau mot de passe exigé : sessions révoquées sauf {@code
+   * sessionConservee} (null : toutes), connexion refusée jusqu'au reset.
    * @throws ErreurMetier 409 si le quota email ne couvre pas tous les comptes
    */
   public CommunicationIncident publier(

@@ -59,15 +59,9 @@ class AdminModificationUtilisateurService {
   }
 
   /**
-   * Modifie le nom, l'email et/ou le rôle. Une rétrogradation d'admin est
-   * toujours refusée : elle passe par la révocation différée dédiée ({@link
-   * AdminRevocationService#initierRevocationAdmin}), qui ouvre sa propre
-   * transaction {@code REQUIRES_NEW} + {@code SERIALIZABLE} — appelée depuis
-   * cette méthode transactionnelle, elle attendrait le verrou posé ici sur la
-   * même ligne {@code users}.
-   * @param userId identifiant de l'utilisateur cible
-   * @param requete champs à modifier (nom, email, role — tous optionnels)
-   * @param adminId identifiant de l'admin demandeur
+   * Modifie nom, email ou rôle. Rétrogradation d'admin refusée : elle passe
+   * par la révocation différée, transaction REQUIRES_NEW qui attendrait ici
+   * le verrou posé sur la même ligne {@code users}.
    * @throws ErreurMetier si invalide, email pris, ou rétrogradation d'admin
    */
   @Transactional

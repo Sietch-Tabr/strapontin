@@ -7,14 +7,8 @@ package fr.strapontin.core;
 import java.util.Objects;
 
 /**
- * Lieu d'un concert tel que publié par une source.
- *
- * @param salle nom de la salle, obligatoire
- * @param ville ville, peut être null
- * @param dept département, peut être null
- * @param salleSourceId identifiant préfixé du lieu chez la source (ex. {@code "ticketmaster:Z1"}),
- *     peut être null
- * @param position position publiée, {@link PositionLieu#INCONNUE} à défaut
+ * Lieu d'un concert publié par une source : salle obligatoire, identifiant
+ * préfixé chez la source (ex. {@code ticketmaster:Z1}), position publiée.
  * @since 3.0.2
  * @author Kwaite
  */

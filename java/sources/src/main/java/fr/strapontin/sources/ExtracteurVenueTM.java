@@ -37,7 +37,7 @@ final class ExtracteurVenueTM {
         extrairePositionTM(venue));
   }
 
-  // location.latitude/longitude sont publiées sous forme de texte par l'API Discovery.
+  // L'API Discovery publie location.latitude/longitude en texte.
   /* package-private : réutilisé par TicketmasterHealthCheck (même package). */
   static PositionLieu extrairePositionTM(final Map<String, Object> venue) {
     if (venue == null) {

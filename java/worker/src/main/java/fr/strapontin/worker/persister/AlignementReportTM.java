@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker.persister;
 
-import java.sql.Date;
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -22,16 +20,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Aligne la date et l'heure d'un événement Ticketmaster déjà en base sur celles
- * d'un report entrant — extrait de {@link PersisteurConcertsDb} pour rester sous
- * le seuil de complexité cyclomatique de classe (50).
- *
- * <p>Le rapprochement se fait par manifestation ({@code idmanif} de l'URL,
- * à défaut l'URL exacte) et non par URL exacte seule : Ticketmaster republie un report sous une autre URL
- * ({@code idseance} au lieu d'{@code idtier}). Sans alignement, le report
- * créerait un second événement, et l'utilisateur qui suit le premier garderait
- * l'horaire obsolète.
- *
+ * Aligne date et heure d'un événement Ticketmaster sur un report entrant de
+ * la même manifestation (idmanif, à défaut URL) : TM republie un report sous
+ * une autre URL, qui créerait sinon un second événement à l'horaire obsolète.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -51,6 +42,8 @@ final class AlignementReportTM {
   private static final String CLE_HEURE = "heure";
   private static final String CLE_ID = "id";
 
+  private static final int UNIQUE = 1;
+
   private final NamedParameterJdbcTemplate jdbc;
 
   private record Representation(UUID id, LocalDate date, LocalTime heure) {}
@@ -62,12 +55,9 @@ final class AlignementReportTM {
   }
 
   /**
-   * Aligne un événement TM déjà en base sur un report entrant de la même
-   * manifestation : à la même date, l'heure, si une seule heure y est connue
-   * (plusieurs heures : séances distinctes d'une même production, ambigu) ;
-   * sans représentation à cette date, la date et l'heure, si la manifestation
-   * n'a qu'un seul événement. Jamais vers une date/heure déjà occupée par un
-   * autre événement du même artiste dans la même salle.
+   * Même date : heure alignée si une seule y est connue. Autre date : date et
+   * heure alignées si la manifestation n'a qu'un événement. Jamais vers un
+   * créneau déjà occupé par le même artiste dans la même salle.
    * @param concerts concerts après réconciliation, avant upsert
    */
   /* package-private : appelé par PersisteurConcertsDb (même package). */
@@ -102,22 +92,22 @@ final class AlignementReportTM {
     if (url == null) {
       return null;
     }
-    final Matcher m = MOTIF_IDMANIF.matcher(url);
-    return m.find() ? m.group(1) : null;
+    final Matcher correspondance = MOTIF_IDMANIF.matcher(url);
+    return correspondance.find() ? correspondance.group(1) : null;
   }
 
-  // Manifestation si l'URL en porte une, sinon l'URL exacte (autres formats d'URL Ticketmaster).
+  // Manifestation si l'URL en porte une, sinon l'URL exacte.
   private static String cleFiche(final String url) {
     final String idmanif = extraireIdmanif(url);
     return idmanif != null ? "idmanif:" + idmanif : "url:" + url;
   }
 
-  // Les fiches « package » (VIP, /pack/) partagent l'idmanif sans être une représentation.
+  // Les fiches « package » (/pack/) partagent l'idmanif sans être une séance.
   private Map<String, List<Representation>> chargerRepresentations(final List<String> cles) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT DISTINCT e.id AS id, e.date AS date, e.heure AS heure,
+            SELECT DISTINCT e.id AS id, e.date::text AS date, e.heure::text AS heure,
                    COALESCE('idmanif:' || substring(o.url FROM '/idmanif/([0-9]+)'),
                             'url:' || o.url) AS cle
             FROM observations o JOIN evenements e ON e.id = o.evenement_id
@@ -129,32 +119,35 @@ final class AlignementReportTM {
             Map.of("cles", cles));
     final Map<String, List<Representation>> parIdmanif = new HashMap<>();
     for (final Map<String, Object> ligne : lignes) {
-      final Time heure = (Time) ligne.get(CLE_HEURE);
+      final String heure = (String) ligne.get(CLE_HEURE);
       parIdmanif
           .computeIfAbsent((String) ligne.get("cle"), _ -> new ArrayList<>())
           .add(
               new Representation(
                   (UUID) ligne.get(CLE_ID),
-                  ((Date) ligne.get(CLE_DATE)).toLocalDate(),
-                  heure != null ? heure.toLocalTime() : null));
+                  LocalDate.parse((String) ligne.get(CLE_DATE)),
+                  heure != null ? LocalTime.parse(heure) : null));
     }
     return parIdmanif;
+  }
+
+  // Même date : une seule heure distincte (sinon séances multiples, ambigu) ;
+  // autre date : une seule représentation connue de la manifestation.
+  private static Representation choisirCible(
+      final List<Representation> memeDate, final List<Representation> candidats) {
+    if (memeDate.isEmpty()) {
+      return candidats.size() == UNIQUE ? candidats.get(0) : null;
+    }
+    final Set<LocalTime> heures =
+        memeDate.stream().map(Representation::heure).collect(Collectors.toSet());
+    return heures.size() == UNIQUE ? memeDate.get(0) : null;
   }
 
   private void aligner(final ValeurConcert report, final List<Representation> candidats) {
     final List<Representation> memeDate =
         candidats.stream().filter(r -> r.date().equals(report.date())).toList();
-    final Representation cible;
-    if (!memeDate.isEmpty()) {
-      final Set<LocalTime> heures =
-          memeDate.stream().map(Representation::heure).collect(Collectors.toSet());
-      if (heures.size() != 1) {
-        return;
-      }
-      cible = memeDate.get(0);
-    } else if (candidats.size() == 1) {
-      cible = candidats.get(0);
-    } else {
+    final Representation cible = choisirCible(memeDate, candidats);
+    if (cible == null) {
       return;
     }
     if (cible.date().equals(report.date()) && report.heure().equals(cible.heure())) {

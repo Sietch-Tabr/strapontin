@@ -15,11 +15,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Contrôle de la dispersion géographique des lieux sources, indépendant de leurs noms : une salle
- * dont les lieux sources sont éloignés en mélange plusieurs (contamination), deux salles dont des
- * lieux sources coïncident désignent probablement le même lieu (doublon). Consolide d'abord la
- * position de chaque salle sur celle de ses lieux sources.
- *
+ * Dispersion géographique des lieux sources, indépendante des noms : lieux
+ * éloignés d'une salle (contamination), lieux de deux salles qui coïncident
+ * (doublon). Consolide d'abord la position des salles sur leurs lieux.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -27,8 +25,10 @@ final class ControleDispersionGeo {
 
   /* package-private : visibilité élargie pour les tests (même package). */
   static final double DISTANCE_DISPERSION_METRES = 1000;
-  // Au-delà, deux positions désignent des villes différentes quels que soient les codes postaux.
+  /* package-private : au-delà, deux positions désignent deux villes, quels
+   * que soient les codes postaux. */
   static final double DISTANCE_AUTRE_VILLE_METRES = 20_000;
+  /* package-private : visibilité élargie pour les tests (même package). */
   static final double DISTANCE_MEME_LIEU_METRES = 50;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -37,6 +37,7 @@ final class ControleDispersionGeo {
   private record LieuSource(
       UUID salleId, String identifiant, double latitude, double longitude, String codePostal) {}
 
+  /* package-private : instancié par ControleIntegriteService. */
   ControleDispersionGeo(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
@@ -46,6 +47,7 @@ final class ControleDispersionGeo {
   /**
    * @return nombre de signalements posés
    */
+  /* package-private : appelé par ControleIntegriteService. */
   int verifier() {
     consoliderPositions();
     final List<LieuSource> lieux = chargerLieux();
@@ -54,8 +56,8 @@ final class ControleDispersionGeo {
         + verifierPositionsWikidata();
   }
 
-  // Une position Wikidata éloignée de tous les lieux sources signe un élément Wikidata d'un
-  // homonyme (« Espace des Arts » de Chalon-sur-Saône pour celui de Pavillons-sous-Bois).
+  // Position Wikidata loin de tous les lieux sources : élément d'un homonyme
+  // (« Espace des Arts » de Chalon pour celui de Pavillons-sous-Bois).
   private int verifierPositionsWikidata() {
     final Map<UUID, Map<String, Object>> incoherentes = new LinkedHashMap<>();
     jdbc.query(
@@ -92,7 +94,7 @@ final class ControleDispersionGeo {
     return incoherentes.size();
   }
 
-  // Un mapping déjà accepté par un admin (contamination déclarée faux positif) est ignoré.
+  // Mapping accepté par un admin (faux positif de contamination) : ignoré.
   private List<LieuSource> chargerLieux() {
     return jdbc.query(
         """
@@ -115,7 +117,8 @@ final class ControleDispersionGeo {
 
   private int verifierDispersionParSalle(final List<LieuSource> lieux) {
     final Map<UUID, List<LieuSource>> parSalle = new LinkedHashMap<>();
-    lieux.forEach(l -> parSalle.computeIfAbsent(l.salleId(), _ -> new ArrayList<>()).add(l));
+    lieux.forEach(
+        lieu -> parSalle.computeIfAbsent(lieu.salleId(), _ -> new ArrayList<>()).add(lieu));
     final Set<UUID> dispersees = new HashSet<>();
     for (final Map.Entry<UUID, List<LieuSource>> entree : parSalle.entrySet()) {
       final List<LieuSource> sources = entree.getValue();
@@ -124,9 +127,9 @@ final class ControleDispersionGeo {
       String identifiantB = null;
       for (int i = 0; i < sources.size(); i++) {
         for (int j = i + 1; j < sources.size(); j++) {
-          final double d = distance(sources.get(i), sources.get(j));
-          if (d > distanceMax && lieuxDistincts(sources.get(i), sources.get(j), d)) {
-            distanceMax = d;
+          final double ecart = distance(sources.get(i), sources.get(j));
+          if (ecart > distanceMax && lieuxDistincts(sources.get(i), sources.get(j), ecart)) {
+            distanceMax = ecart;
             identifiantA = sources.get(i).identifiant();
             identifiantB = sources.get(j).identifiant();
           }
@@ -155,35 +158,42 @@ final class ControleDispersionGeo {
     final Set<UUID> entites = new HashSet<>();
     for (int i = 0; i < lieux.size(); i++) {
       for (int j = i + 1; j < lieux.size(); j++) {
-        final LieuSource a = lieux.get(i);
-        final LieuSource b = lieux.get(j);
-        if (a.salleId().equals(b.salleId()) || distance(a, b) > DISTANCE_MEME_LIEU_METRES) {
-          continue;
+        final LieuSource premier = lieux.get(i);
+        final LieuSource second = lieux.get(j);
+        if (deuxSallesAuMemeLieu(premier, second)
+            && !exclues.contains(cle(premier.salleId(), second.salleId()))
+            && signalees.add(cle(premier.salleId(), second.salleId()))) {
+          entites.add(signalerMemeLieu(premier, second));
         }
-        final String paire = cle(a.salleId(), b.salleId());
-        if (exclues.contains(paire) || !signalees.add(paire)) {
-          continue;
-        }
-        final boolean aPremier = a.salleId().toString().compareTo(b.salleId().toString()) < 0;
-        signalements.signaler(
-            "meme_lieu_salles",
-            "salle",
-            aPremier ? a.salleId() : b.salleId(),
-            "moyenne",
-            Map.of(
-                "autreSalleId",
-                (aPremier ? b.salleId() : a.salleId()).toString(),
-                "distanceMetres",
-                Math.round(distance(a, b))));
-        entites.add(aPremier ? a.salleId() : b.salleId());
       }
     }
     signalements.clore("meme_lieu_salles", entites);
     return entites.size();
   }
 
-  // Complexe et sous-salle partagent une adresse ; une paire déclarée distincte par un admin
-  // n'est plus signalée.
+  private static boolean deuxSallesAuMemeLieu(final LieuSource premier, final LieuSource second) {
+    return !premier.salleId().equals(second.salleId())
+        && distance(premier, second) <= DISTANCE_MEME_LIEU_METRES;
+  }
+
+  // Signalement porté par la salle d'UUID le plus petit, l'autre en détail.
+  private UUID signalerMemeLieu(final LieuSource premier, final LieuSource second) {
+    final boolean ordre = premier.salleId().toString().compareTo(second.salleId().toString()) < 0;
+    final UUID porteuse = ordre ? premier.salleId() : second.salleId();
+    final UUID autre = ordre ? second.salleId() : premier.salleId();
+    signalements.signaler(
+        "meme_lieu_salles",
+        "salle",
+        porteuse,
+        "moyenne",
+        Map.of(
+            "autreSalleId", autre.toString(),
+            "distanceMetres", Math.round(distance(premier, second))));
+    return porteuse;
+  }
+
+  // Complexe et sous-salle partagent une adresse ; une paire déclarée
+  // distincte par un admin n'est plus signalée.
   private Set<String> chargerPairesExclues() {
     final Set<String> exclues = new HashSet<>();
     jdbc.query(
@@ -199,24 +209,23 @@ final class ControleDispersionGeo {
     return exclues;
   }
 
-  // Une position publiée peut s'écarter de quelques kilomètres du lieu réel : deux positions
-  // éloignées ne désignent des lieux distincts que si leurs codes postaux diffèrent aussi, ou
-  // si elles sont dans des villes différentes.
-  private static boolean lieuxDistincts(final LieuSource a, final LieuSource b, final double d) {
-    if (d > DISTANCE_AUTRE_VILLE_METRES) {
-      return true;
-    }
-    return d > DISTANCE_DISPERSION_METRES
-        && a.codePostal() != null
-        && b.codePostal() != null
-        && !a.codePostal().equals(b.codePostal());
+  // Une position publiée s'écarte de quelques km : lieux distincts si les
+  // codes postaux diffèrent aussi, ou s'ils sont dans deux villes.
+  private static boolean lieuxDistincts(
+      final LieuSource premier, final LieuSource second, final double ecart) {
+    return ecart > DISTANCE_AUTRE_VILLE_METRES
+        || ecart > DISTANCE_DISPERSION_METRES
+            && premier.codePostal() != null
+            && second.codePostal() != null
+            && !premier.codePostal().equals(second.codePostal());
   }
 
   /**
-   * Aligne la position de chaque salle sans position Wikidata sur la médiane des positions de ses
-   * lieux sources : remplace un géocodage de son nom, parfois celui d'un homonyme lointain.
+   * Position des salles sans Wikidata alignée sur la médiane de leurs lieux
+   * sources (remplace un géocodage, parfois celui d'un homonyme lointain).
    * @return nombre de salles repositionnées
    */
+  /* package-private : appelé par verifier() et les tests. */
   int consoliderPositions() {
     return jdbc.update(
         """
@@ -236,11 +245,14 @@ final class ControleDispersionGeo {
         Map.of());
   }
 
-  private static String cle(final UUID a, final UUID b) {
-    return a.toString().compareTo(b.toString()) < 0 ? a + "|" + b : b + "|" + a;
+  private static String cle(final UUID salleA, final UUID salleB) {
+    return salleA.toString().compareTo(salleB.toString()) < 0
+        ? salleA + "|" + salleB
+        : salleB + "|" + salleA;
   }
 
-  private static double distance(final LieuSource a, final LieuSource b) {
-    return DistanceGeo.metres(a.latitude(), a.longitude(), b.latitude(), b.longitude());
+  private static double distance(final LieuSource premier, final LieuSource second) {
+    return DistanceGeo.metres(
+        premier.latitude(), premier.longitude(), second.latitude(), second.longitude());
   }
 }

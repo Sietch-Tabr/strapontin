@@ -21,27 +21,10 @@ import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Protection contre les requêtes forgées depuis une autre origine, y compris un sous-domaine
- * voisin de {@code kwaite.fr}, pour lequel {@code SameSite=Lax} ne protège pas (requête same-site).
- *
- * <p>Toute requête modifiante ({@code POST}/{@code PUT}/{@code PATCH}/{@code DELETE}) sur {@code
- * /api/**} est refusée (403) si :
- *
- * <ul>
- *   <li>{@code Sec-Fetch-Site} est présent et ne vaut ni {@code same-origin} ni {@code none} ;
- *   <li>{@code Origin} est présent et diffère de l'origine de l'application ;
- *   <li>l'en-tête applicatif {@value #ENTETE_APPLICATION} posé par le front ({@code
- *       utils/api.js}) est absent — un en-tête personnalisé impose un preflight CORS qu'aucune
- *       autre origine ne peut satisfaire.
- * </ul>
- *
- * <p>Volontairement hors {@code @Component} : instancié dans la seule chaîne Spring Security, après
- * l'autorisation (un appel non authentifié reste un 401), et jamais enregistré en amont comme
- * filtre servlet autonome.
- *
- * <p>Exclus : les endpoints appelés de serveur à serveur, authentifiés par signature ou secret
- * ({@code /api/webhooks/}, {@code /api/interne/}).
- *
+ * Refuse (403) une requête modifiante sur /api/** venue d'une autre origine,
+ * sous-domaine voisin compris : Sec-Fetch-Site, Origin, et en-tête applicatif
+ * (preflight CORS impossible ailleurs). Hors @Component : placé après
+ * l'autorisation. Exclus : /api/webhooks/ et /api/interne/ (serveur à serveur).
  * @since 3.0.2
  * @author Kwaite
  */
@@ -61,7 +44,7 @@ public class ProtectionCsrfFilter extends OncePerRequestFilter {
   private final ConfigService configService;
 
   /**
-   * @param configService lecture de {@code PUBLIC_BASE_URL} (origine publique de l'application)
+   * @param configService lecture de {@code PUBLIC_BASE_URL}
    */
   public ProtectionCsrfFilter(final ConfigService configService) {
     super();
@@ -116,17 +99,15 @@ public class ProtectionCsrfFilter extends OncePerRequestFilter {
     if (normalisee == null) {
       return false;
     }
-    if (normalisee.equals(origineRequete(request))) {
-      return true;
-    }
-    return configService
-        .lireConfig("PUBLIC_BASE_URL")
-        .map(ProtectionCsrfFilter::normaliserOrigine)
-        .filter(normalisee::equals)
-        .isPresent();
+    return normalisee.equals(origineRequete(request))
+        || configService
+            .lireConfig("PUBLIC_BASE_URL")
+            .map(ProtectionCsrfFilter::normaliserOrigine)
+            .filter(normalisee::equals)
+            .isPresent();
   }
 
-  // Derrière le reverse proxy, schéma/hôte/port reflètent X-Forwarded-* (forward-headers native).
+  // Derrière le proxy, schéma, hôte et port reflètent X-Forwarded-*.
   private static String origineRequete(final HttpServletRequest request) {
     return normaliserOrigine(
         request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort());

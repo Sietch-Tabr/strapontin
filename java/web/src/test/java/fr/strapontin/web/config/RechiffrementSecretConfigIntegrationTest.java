@@ -6,7 +6,6 @@ package fr.strapontin.web.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.ConfigCipher;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.admin.LogAdminService;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test d'intégration de {@link RechiffrementSecretConfig} avec PostgreSQL réel : rotation de
@@ -68,11 +68,13 @@ class RechiffrementSecretConfigIntegrationTest extends AbstractWebIntegrationTes
         "INSERT INTO app_config (cle, valeur_chiffree) VALUES ('TEST_ROTATION_CLE', :v)",
         Map.of("v", ancien.chiffrer("cle-api-tm")));
     jdbc.update(
-        "INSERT INTO app_config (cle, valeur_chiffree) VALUES ('TEST_ROTATION_QUOTA', '{\"dispo\":5}')",
+        "INSERT INTO app_config (cle, valeur_chiffree) VALUES ('TEST_ROTATION_QUOTA',"
+            + " '{\"dispo\":5}')",
         Map.of());
     jdbc.update(
-        "INSERT INTO users (id, email, role, display_username, two_factor_secret)"
-            + " VALUES ('rotation-1', 'rotation@test.fr', CAST('user' AS role_utilisateur), 'rotation', :s)",
+        "INSERT INTO users (id, email, role, display_username, two_factor_secret) VALUES"
+            + " ('rotation-1', 'rotation@test.fr', CAST('user' AS role_utilisateur), 'rotation',"
+            + " :s)",
         Map.of("s", ancien.chiffrer("JBSWY3DPEHPK3PXP")));
 
     runner(NOUVEAU, ANCIEN).run(null);

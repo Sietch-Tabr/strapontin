@@ -10,11 +10,8 @@ import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
-import java.sql.Array;
-import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,6 +28,8 @@ import org.slf4j.LoggerFactory;
  */
 class FetchArtistesBatchExecutor {
 
+  // Séparateur des alias dans array_to_string, absent de tout nom réel.
+  private static final String SEPARATEUR_ALIAS = "\u001f";
   private static final Logger LOG = LoggerFactory.getLogger(FetchArtistesBatchExecutor.class);
   private static final int TAILLE_LOT_TM = 20;
   private static final int NB_IDS_DISTINCTS_NON_AMBIGU = 1;
@@ -99,17 +98,14 @@ class FetchArtistesBatchExecutor {
     return commun
         .obtenirJdbc()
         .queryForList(
-            "SELECT ua.artiste_id::text AS artiste_id_str,"
-                + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-                + " MAX(asm.identifiant_externe) AS attraction_id,"
-                + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
-                + " MAX(a.deezer_id) AS deezer_id,"
-                + " MAX(a.wikidata_id) AS wikidata_id,"
-                + " a.nom_affiche AS nom_affiche, a.alias_wikidata AS alias_wikidata"
-                + " FROM user_artistes ua"
-                + " JOIN artistes a ON a.id = ua.artiste_id"
-                + " LEFT JOIN artiste_sources asm"
-                + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
+            "SELECT ua.artiste_id::text AS artiste_id_str, MAX(ua.artiste_affiche) AS"
+                + " artiste_affiche, MAX(asm.identifiant_externe) AS attraction_id, COUNT(DISTINCT"
+                + " asm.identifiant_externe) AS nb_ids_distincts, MAX(a.deezer_id) AS deezer_id,"
+                + " MAX(a.wikidata_id) AS wikidata_id, a.nom_affiche AS nom_affiche,"
+                + " array_to_string(a.alias_wikidata, E'\\x1f') AS alias_wikidata FROM"
+                + " user_artistes ua JOIN artistes a ON a.id = ua.artiste_id LEFT JOIN"
+                + " artiste_sources asm   ON asm.artiste_id = ua.artiste_id AND asm.source ="
+                + " 'ticketmaster'"
                 + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
                 + " GROUP BY ua.artiste_id, a.id",
             retry ? Map.of("ids", artisteIdsCibles) : Map.of());
@@ -337,19 +333,15 @@ class FetchArtistesBatchExecutor {
     return resultats;
   }
 
-  // Libellé et alias Wikidata : permettent de reconnaître un nom de scène publié sous une forme
-  // longue par une source (« -M- Matthieu Chedid »).
+  // Libellé et alias Wikidata : reconnaissent un nom de scène publié sous une
+  // forme longue par une source (« -M- Matthieu Chedid »).
   private static List<String> autresNomsConnus(final Map<String, Object> row) {
     final List<String> noms = new ArrayList<>();
     if (row.get("nom_affiche") instanceof String nomAffiche) {
       noms.add(nomAffiche);
     }
-    if (row.get("alias_wikidata") instanceof Array alias) {
-      try {
-        noms.addAll(Arrays.asList((String[]) alias.getArray()));
-      } catch (SQLException e) {
-        LOG.warn("alias Wikidata illisibles : {}", e.getMessage());
-      }
+    if (row.get("alias_wikidata") instanceof String alias && !alias.isEmpty()) {
+      noms.addAll(List.of(alias.split(SEPARATEUR_ALIAS)));
     }
     return noms;
   }

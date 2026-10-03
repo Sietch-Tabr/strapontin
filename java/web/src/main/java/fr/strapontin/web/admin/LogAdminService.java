@@ -4,8 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
@@ -16,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de journalisation admin — remplace la liste Redis {@code
@@ -43,13 +43,8 @@ public class LogAdminService {
   }
 
   /**
-   * Entrée de log admin.
-   * @param id identifiant séquentiel, ordre d'insertion
-   * @param ts horodatage Unix en millisecondes
-   * @param niveau niveau de log (debug/info/warn/error)
-   * @param source module source
-   * @param message message
-   * @param meta métadonnées JSON brut (peut être null)
+   * Entrée de log admin : identifiant séquentiel (ordre d'insertion),
+   * horodatage en ms, niveau, source, message et métadonnées JSON (null).
    */
   public record EntreeLogAdmin(
       long id, long ts, String niveau, String source, String message, String meta) {}
@@ -97,7 +92,7 @@ public class LogAdminService {
           """,
           params);
 
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("Erreur sérialisation meta log admin", e);
     } catch (Exception e) {
       LOG.warn("Erreur insertion log admin", e);
@@ -130,12 +125,9 @@ public class LogAdminService {
   }
 
   /**
-   * Retourne les entrées {@code error} d'identifiant supérieur à {@code
-   * idDepuis}, plafonnées à {@value #LIMITE_ERREURS_DEPUIS} — un retard
-   * (destinataire absent plusieurs cycles) est absorbé sur plusieurs digests.
-   * L'identifiant, contrairement à l'horodatage, ne perd aucune précision
-   * et départage deux erreurs de la même milliseconde.
-   * @param idDepuis identifiant de la dernière entrée déjà traitée, exclusif
+   * Erreurs d'identifiant supérieur à {@code idDepuis}, plafonnées à
+   * {@value #LIMITE_ERREURS_DEPUIS} : l'identifiant départage deux erreurs
+   * de la même milliseconde, et un retard se résorbe sur plusieurs digests.
    * @return les entrées d'erreur, dans l'ordre d'insertion
    */
   public List<EntreeLogAdmin> lireErreursDepuis(final long idDepuis) {

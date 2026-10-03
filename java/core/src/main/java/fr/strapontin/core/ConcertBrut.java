@@ -7,20 +7,8 @@ package fr.strapontin.core;
 import java.util.Objects;
 
 /**
- * Concert brut tel que renvoyé par une source (TM, Eventim), avant dédoublonnage/résolution du
- * référentiel. Artiste, date, lieu et source sont obligatoires ; se construit par {@link
- * #nouveau()}.
- *
- * @param artiste nom de l'artiste
- * @param artisteSourceId identifiant préfixé de l'artiste chez la source, peut être null
- * @param date date ISO ({@code yyyy-MM-dd})
- * @param heure heure ({@code HH:mm}), peut être null
- * @param lieu lieu publié
- * @param url fiche de l'événement, peut être null
- * @param source source ({@code ticketmaster}, {@code eventim})
- * @param classification classification normalisée, peut être null
- * @param genre genre, peut être null
- * @param vente statut de vente, {@link InfosVente#INCONNUE} à défaut
+ * Concert brut renvoyé par une source, avant dédoublonnage et résolution.
+ * Artiste, date, lieu et source obligatoires ; construit par {@link #nouveau()}.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -132,22 +120,20 @@ public record ConcertBrut(
   /** Construction d'un {@link ConcertBrut} par champs nommés. */
   public static final class Constructeur {
 
-    private String artiste;
-    private String artisteSourceId;
-    private String date;
-    private String heure;
-    private String salle;
-    private String ville;
-    private String dept;
-    private String salleSourceId;
-    private PositionLieu position;
-    private String url;
-    private String source;
-    private String classification;
-    private String genre;
-    private String statut;
-    private String presaleDebut;
-    private String presaleNom;
+    private String nomArtiste;
+    private String idArtisteSource;
+    private String dateConcert;
+    private String heureConcert;
+    private String nomSalle;
+    private String villeLieu;
+    private String deptLieu;
+    private String idLieuSource;
+    private PositionLieu positionLieu;
+    private String urlFiche;
+    private String nomSource;
+    private String classificationConcert;
+    private String genreConcert;
+    private InfosVente infosVente = InfosVente.INCONNUE;
 
     private Constructeur() {}
 
@@ -156,7 +142,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur artiste(final String valeur) {
-      this.artiste = valeur;
+      this.nomArtiste = valeur;
       return this;
     }
 
@@ -165,7 +151,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur artisteSourceId(final String valeur) {
-      this.artisteSourceId = valeur;
+      this.idArtisteSource = valeur;
       return this;
     }
 
@@ -174,7 +160,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur date(final String valeur) {
-      this.date = valeur;
+      this.dateConcert = valeur;
       return this;
     }
 
@@ -183,7 +169,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur heure(final String valeur) {
-      this.heure = valeur;
+      this.heureConcert = valeur;
       return this;
     }
 
@@ -192,7 +178,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur salle(final String valeur) {
-      this.salle = valeur;
+      this.nomSalle = valeur;
       return this;
     }
 
@@ -201,7 +187,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur ville(final String valeur) {
-      this.ville = valeur;
+      this.villeLieu = valeur;
       return this;
     }
 
@@ -210,7 +196,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur dept(final String valeur) {
-      this.dept = valeur;
+      this.deptLieu = valeur;
       return this;
     }
 
@@ -219,7 +205,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur salleSourceId(final String valeur) {
-      this.salleSourceId = valeur;
+      this.idLieuSource = valeur;
       return this;
     }
 
@@ -228,7 +214,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur position(final PositionLieu valeur) {
-      this.position = valeur;
+      this.positionLieu = valeur;
       return this;
     }
 
@@ -237,7 +223,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur url(final String valeur) {
-      this.url = valeur;
+      this.urlFiche = valeur;
       return this;
     }
 
@@ -246,7 +232,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur source(final String valeur) {
-      this.source = valeur;
+      this.nomSource = valeur;
       return this;
     }
 
@@ -255,7 +241,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur classification(final String valeur) {
-      this.classification = valeur;
+      this.classificationConcert = valeur;
       return this;
     }
 
@@ -264,7 +250,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur genre(final String valeur) {
-      this.genre = valeur;
+      this.genreConcert = valeur;
       return this;
     }
 
@@ -273,7 +259,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur statut(final String valeur) {
-      this.statut = valeur;
+      this.infosVente = new InfosVente(valeur, infosVente.presaleDebut(), infosVente.presaleNom());
       return this;
     }
 
@@ -282,7 +268,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur presaleDebut(final String valeur) {
-      this.presaleDebut = valeur;
+      this.infosVente = new InfosVente(infosVente.statut(), valeur, infosVente.presaleNom());
       return this;
     }
 
@@ -291,7 +277,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur presaleNom(final String valeur) {
-      this.presaleNom = valeur;
+      this.infosVente = new InfosVente(infosVente.statut(), infosVente.presaleDebut(), valeur);
       return this;
     }
 
@@ -300,9 +286,7 @@ public record ConcertBrut(
      * @return ce constructeur
      */
     public Constructeur vente(final InfosVente valeur) {
-      this.statut = valeur.statut();
-      this.presaleDebut = valeur.presaleDebut();
-      this.presaleNom = valeur.presaleNom();
+      this.infosVente = valeur;
       return this;
     }
 
@@ -312,16 +296,16 @@ public record ConcertBrut(
      */
     public ConcertBrut construire() {
       return new ConcertBrut(
-          artiste,
-          artisteSourceId,
-          date,
-          heure,
-          new LieuBrut(salle, ville, dept, salleSourceId, position),
-          url,
-          source,
-          classification,
-          genre,
-          new InfosVente(statut, presaleDebut, presaleNom));
+          nomArtiste,
+          idArtisteSource,
+          dateConcert,
+          heureConcert,
+          new LieuBrut(nomSalle, villeLieu, deptLieu, idLieuSource, positionLieu),
+          urlFiche,
+          nomSource,
+          classificationConcert,
+          genreConcert,
+          infosVente);
     }
   }
 }

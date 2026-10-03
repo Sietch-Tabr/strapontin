@@ -60,11 +60,8 @@ public class ReferentielSallesController {
   }
 
   /**
-   * Répartit une salle : les événements publiés sous les libellés choisis passent à une salle
-   * existante ou créée.
-   *
-   * @param uuid UUID de la salle à répartir
-   * @param requete libellés et destination
+   * Déplace vers une salle existante ou créée les événements publiés sous
+   * les libellés choisis.
    * @return 200 avec le bilan, 400 si invalide, 404 si salle inconnue
    */
   @PostMapping("/salles/{uuid}/repartir")

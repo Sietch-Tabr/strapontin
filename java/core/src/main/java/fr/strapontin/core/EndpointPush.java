@@ -10,18 +10,15 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Validation de l'URL d'un abonnement push, fournie par le navigateur de l'utilisateur et appelée
- * ensuite par le serveur : seuls les services de push des navigateurs sont acceptés, en HTTPS sur
- * le port standard. Une liste de domaines plutôt qu'un filtre d'adresses IP : aucune adresse
- * interne n'est atteignable, y compris par un nom de domaine qui y résoudrait après validation.
- *
+ * URL d'abonnement push acceptée : services de push des navigateurs, HTTPS,
+ * port standard. Liste de domaines plutôt que filtre d'IP : aucune adresse
+ * interne n'est atteignable, même par un nom qui y résoudrait ensuite.
  * @since 3.0.2
  * @author Kwaite
  */
 public final class EndpointPush {
 
-  // Chrome, Edge (Chromium), Opera, Brave : FCM ; Firefox : Mozilla autopush ; Safari : Apple ;
-  // Edge historique : WNS.
+  // FCM (Chromium), autopush (Firefox), Apple (Safari), WNS (ancien Edge).
   private static final List<String> DOMAINES_SERVICES_PUSH =
       List.of(
           "fcm.googleapis.com",
@@ -34,11 +31,9 @@ public final class EndpointPush {
   private EndpointPush() {}
 
   /**
-   * Indique si l'URL désigne un service de push de navigateur.
-   *
    * @param endpoint URL de l'abonnement, peut être null
-   * @return true si l'URL est en HTTPS, sans identifiants, sur le port standard, et que son hôte
-   *     est l'un des domaines de services de push ou l'un de leurs sous-domaines
+   * @return true si HTTPS, sans identifiants, port standard, et hôte égal à
+   *     un domaine de service de push ou à l'un de ses sous-domaines
    */
   public static boolean estAutorise(final String endpoint) {
     if (endpoint == null) {

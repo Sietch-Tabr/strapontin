@@ -10,14 +10,14 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Catalogue des jobs du worker : nom lisible, rôle et thème de chaque identifiant écrit dans
- * {@code fetch_jobs}, pour le tableau de bord admin. Un job ajouté sans entrée ici est signalé à
- * l'exécution et affiché comme « à classer ».
- *
+ * Nom, rôle et thème de chaque job ({@code fetch_jobs}) pour le tableau de
+ * bord admin ; un job absent est signalé et affiché « à classer ».
  * @since 3.0.2
  * @author Kwaite
  */
 public final class CatalogueJobs {
+
+  private static final Map<String, Job> JOBS = new LinkedHashMap<>();
 
   /** Thème métier d'un job, dans l'ordre d'affichage. */
   public enum Theme {
@@ -32,17 +32,17 @@ public final class CatalogueJobs {
     /** Suppression des données périmées. */
     PURGES("Purges");
 
-    private final String libelle;
+    private final String nomAffiche;
 
-    Theme(final String libelle) {
-      this.libelle = libelle;
+    Theme(final String nomAffiche) {
+      this.nomAffiche = nomAffiche;
     }
 
     /**
      * @return nom affiché du thème
      */
     public String libelle() {
-      return libelle;
+      return nomAffiche;
     }
   }
 
@@ -55,8 +55,6 @@ public final class CatalogueJobs {
    * @param theme thème métier
    */
   public record Job(String type, String libelle, String description, Theme theme) {}
-
-  private static final Map<String, Job> JOBS = new LinkedHashMap<>();
 
   static {
     ajouter(

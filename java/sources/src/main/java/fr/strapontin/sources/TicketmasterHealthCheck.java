@@ -28,6 +28,7 @@ final class TicketmasterHealthCheck {
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
   private static final String CLE_EMBEDDED = "_embedded";
   private static final String PARAM_APIKEY = "apikey";
+  private static final String SUFFIXE_JSON = ".json";
 
   private final String apiKey;
   private final RestClient restClient;
@@ -44,20 +45,15 @@ final class TicketmasterHealthCheck {
 
   /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierVenue(final String venueId) {
-    return verifierRessource("/venues/" + venueId + ".json");
+    return verifierRessource("/venues/" + venueId + SUFFIXE_JSON);
   }
 
   /* package-private : appelé par TicketmasterSource (même package). */
-  @SuppressWarnings("unchecked")
   PositionLieu lirePositionVenue(final String venueId) {
-    final URI uri =
-        UriSources.encoder(
-            UriComponentsBuilder.fromUriString(BASE_URL + "/venues/" + venueId + ".json")
-                .queryParam(PARAM_APIKEY, apiKey));
+    final URI uri = uriRessource("/venues/" + venueId);
     cadenceur.attendre();
     try {
-      final Map<String, Object> venue = restClient.get().uri(uri).retrieve().body(Map.class);
-      return ExtracteurVenueTM.extrairePositionTM(venue);
+      return ExtracteurVenueTM.extrairePositionTM(lireObjet(uri));
     } catch (Exception e) {
       LOG.warn(
           "lirePositionVenue TM échoué venueId={} : {}",
@@ -69,7 +65,7 @@ final class TicketmasterHealthCheck {
 
   /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierAttraction(final String attractionId) {
-    return verifierRessource("/attractions/" + attractionId + ".json");
+    return verifierRessource("/attractions/" + attractionId + SUFFIXE_JSON);
   }
 
   private StatutIdTM verifierRessource(final String chemin) {
@@ -92,17 +88,13 @@ final class TicketmasterHealthCheck {
     }
   }
 
-  @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   String recupererNomAttraction(final String attractionId) {
-    final URI uri =
-        UriSources.encoder(
-            UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
-                .queryParam(PARAM_APIKEY, apiKey));
+    final URI uri = uriRessource("/attractions/" + attractionId);
 
     cadenceur.attendre();
     try {
-      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = lireObjet(uri);
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
       LOG.warn(
@@ -177,5 +169,16 @@ final class TicketmasterHealthCheck {
           TicketmasterSource.redigerApiKey(e.getMessage()));
       return 0;
     }
+  }
+
+  private URI uriRessource(final String chemin) {
+    return UriSources.encoder(
+        UriComponentsBuilder.fromUriString(BASE_URL + chemin + SUFFIXE_JSON)
+            .queryParam(PARAM_APIKEY, apiKey));
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> lireObjet(final URI uri) {
+    return restClient.get().uri(uri).retrieve().body(Map.class);
   }
 }

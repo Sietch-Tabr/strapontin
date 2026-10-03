@@ -153,12 +153,6 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Retourne 401 pour les exceptions d'authentification Spring Security.
-   *
-   * @param ex l'exception d'authentification
-   * @return {@code {"erreur": "Authentification requise."}}
-   */
-  /**
    * Retourne 403 quand le mot de passe est correct mais qu'un nouveau mot de
    * passe est exigé : il ne se définit que par réinitialisation par email.
    *
@@ -175,6 +169,12 @@ public class GlobalExceptionHandler {
         "reinitialisation_requise");
   }
 
+  /**
+   * Retourne 401 pour les exceptions d'authentification Spring Security.
+   *
+   * @param ex l'exception d'authentification
+   * @return {@code {"erreur": "Authentification requise."}}
+   */
   @ExceptionHandler(AuthenticationException.class)
   @ResponseStatus(HttpStatus.UNAUTHORIZED)
   public Map<String, Object> gererErreurAuthentification(final AuthenticationException ex) {

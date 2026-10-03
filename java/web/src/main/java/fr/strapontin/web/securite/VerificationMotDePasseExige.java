@@ -12,11 +12,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 
 /**
- * Contrôle postérieur à la vérification du mot de passe : refuse la connexion d'un compte dont un
- * nouveau mot de passe est exigé (communication d'incident, {@code
- * users.changement_mdp_force_le}). Le mot de passe actuel a pu fuiter : seule la réinitialisation
- * par email, qui prouve la possession de la boîte, lève l'exigence.
- *
+ * Refuse, après vérification du mot de passe, un compte dont un nouveau mot
+ * de passe est exigé : l'actuel a pu fuiter, seul le reset par email (preuve
+ * de possession de la boîte) lève l'exigence.
  * @since 3.0.2
  * @author Kwaite
  */

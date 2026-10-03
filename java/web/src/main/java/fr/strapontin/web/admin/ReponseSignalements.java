@@ -7,14 +7,8 @@ package fr.strapontin.web.admin;
 import java.util.List;
 
 /**
- * Réponse paginée de l'endpoint GET /api/admin/signalements.
- *
- * @param signalements page de signalements actifs
- * @param page numéro de page (0-indexé)
- * @param totalPages nombre total de pages
- * @param total nombre total de signalements actifs
- * @param catalogue nom et explication de chaque type de signalement
- *
+ * Page de signalements actifs de GET /api/admin/signalements, avec le
+ * catalogue des types pour leur affichage en clair.
  * @since 2.9.0
  * @author Kwaite
  */

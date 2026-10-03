@@ -65,13 +65,10 @@ class SourcesSallesListingService {
     final long[] total = {0};
     final List<SalleSourceAdmin> salles =
         jdbc.query(
-            "SELECT s.id, s.nom, s.ville, s.dept,"
-                + " string_agg(ss.libelle_source, ' | ' ORDER BY ss.libelle_source) AS lieu_eventim,"
-                + " COUNT(*) OVER() AS total_filtre"
-                + " FROM salles s"
-                + " JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'eventim'"
-                + " AND ss.libelle_source IS NOT NULL"
-                + " WHERE 1=1 "
+            "SELECT s.id, s.nom, s.ville, s.dept, string_agg(ss.libelle_source, ' | ' ORDER BY"
+                + " ss.libelle_source) AS lieu_eventim, COUNT(*) OVER() AS total_filtre FROM salles"
+                + " s JOIN salle_sources ss ON ss.salle_id = s.id AND ss.source = 'eventim' AND"
+                + " ss.libelle_source IS NOT NULL WHERE 1=1 "
                 + where
                 + " GROUP BY s.id, s.nom, s.ville, s.dept"
                 + " ORDER BY lower(s.nom) LIMIT :taille OFFSET :offset",

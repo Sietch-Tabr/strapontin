@@ -17,12 +17,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * Tient à jour {@code users.derniere_connexion_le} sur l'activité réelle et non sur la seule
- * connexion : une session reste valide 30 jours, prolongée à chaque requête, sans jamais repasser
- * par le formulaire de connexion. Une activité annule aussi toute purge d'inactivité en cours.
- *
- * <p>Écriture au plus une fois par jour et par session (horodatage mémorisé en session).
- *
+ * Tient {@code users.derniere_connexion_le} à jour sur l'activité réelle (une
+ * session dure 30 jours sans reconnexion), au plus une fois par jour et par
+ * session ; une activité annule aussi une purge d'inactivité en cours.
  * @since 3.0.2
  * @author Kwaite
  */

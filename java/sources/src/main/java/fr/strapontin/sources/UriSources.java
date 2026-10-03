@@ -12,15 +12,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
 /**
- * Construction des URI d'appel aux API des sources.
- *
- * <p>Chaque nom et valeur de paramètre de requête est encodé comme composant de requête, {@code +}
- * compris : un nom d'artiste contenant {@code &}, {@code #}, {@code +} ou {@code =} reste une
- * seule valeur de paramètre. {@code UriComponents.encode()} laisse passer
- * {@code +}, lu comme une espace côté serveur, et une chaîne passée à {@code RestClient.uri(String)}
- * n'encode ni {@code &} ni {@code #}. Le résultat est un {@link URI} déjà encodé, que {@code
- * RestClient.uri(URI)} transmet tel quel.
- *
+ * URI d'appel aux sources, paramètres encodés en composant de requête,
+ * {@code +} compris (que {@code encode()} laisse passer) : un nom contenant
+ * {@code & # + =} reste une seule valeur. URI déjà encodée, transmise telle
+ * quelle par {@code RestClient.uri(URI)}.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -31,9 +26,10 @@ final class UriSources {
   /**
    * Construit l'URI encodée d'une requête.
    *
-   * @param builder requête non encodée (schéma, hôte, chemin ASCII statique, paramètres bruts)
+   * @param builder requête non encodée (chemin ASCII statique, paramètres bruts)
    * @return l'URI dont chaque paramètre est encodé
    */
+  /* package-private : utilitaire des clients du package. */
   static URI encoder(final UriComponentsBuilder builder) {
     Objects.requireNonNull(builder, "builder");
     final UriComponents brut = builder.build();

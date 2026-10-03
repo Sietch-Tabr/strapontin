@@ -7,12 +7,8 @@ package fr.strapontin.core;
 import java.util.regex.Pattern;
 
 /**
- * Position d'un lieu telle que publiée par une source (coordonnées et code postal), signal
- * d'identité indépendant de son nom.
- *
- * @param latitude latitude WGS84, null si inconnue
- * @param longitude longitude WGS84, null si inconnue
- * @param codePostal code postal français à 5 chiffres, null si inconnu ou invalide
+ * Position publiée d'un lieu (WGS84, code postal à 5 chiffres, chacun null si
+ * inconnu) : signal d'identité indépendant de son nom.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -27,22 +23,33 @@ public record PositionLieu(Double latitude, Double longitude, String codePostal)
 
   /** Écarte un code postal mal formé et des coordonnées hors bornes ou nulles (0,0). */
   public PositionLieu {
-    codePostal =
-        codePostal != null && CODE_POSTAL.matcher(codePostal.strip()).matches()
-            ? codePostal.strip()
-            : null;
-    if (latitude == null
-        || longitude == null
-        || Math.abs(latitude) > LATITUDE_MAX
-        || Math.abs(longitude) > LONGITUDE_MAX
-        || (latitude == 0 && longitude == 0)) {
-      latitude = null;
-      longitude = null;
+    codePostal = codePostalValide(codePostal);
+    final boolean valides = coordonneesValides(latitude, longitude);
+    latitude = conserverSi(valides, latitude);
+    longitude = conserverSi(valides, longitude);
+  }
+
+  private static Double conserverSi(final boolean valide, final Double valeur) {
+    return valide ? valeur : null;
+  }
+
+  private static String codePostalValide(final String codePostal) {
+    if (codePostal == null || !CODE_POSTAL.matcher(codePostal.strip()).matches()) {
+      return null;
     }
+    return codePostal.strip();
+  }
+
+  private static boolean coordonneesValides(final Double latitude, final Double longitude) {
+    return latitude != null
+        && longitude != null
+        && Math.abs(latitude) <= LATITUDE_MAX
+        && Math.abs(longitude) <= LONGITUDE_MAX
+        && !(latitude == 0 && longitude == 0);
   }
 
   /**
-   * Construit une position depuis des valeurs publiées sous forme de texte ou de nombre.
+   * Position depuis des valeurs publiées en texte ou en nombre.
    *
    * @param latitude latitude ({@link Number} ou texte décimal), peut être null
    * @param longitude longitude ({@link Number} ou texte décimal), peut être null

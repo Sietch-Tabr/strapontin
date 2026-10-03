@@ -24,12 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint de remontée des erreurs JavaScript côté client — permet aux
- * navigateurs des utilisateurs authentifiés de signaler erreurs JS et
- * rejections de promesses non catchées, stockées dans {@code logs_admin}
- * (source {@code client-js}). Volume borné par utilisateur (débit et
- * dédoublonnage d'un même message) : chaque entrée {@code error} alimente le
- * digest d'alerte admin, donc le quota d'emails.
+ * Remontée des erreurs JavaScript des utilisateurs dans {@code logs_admin}.
+ * Volume borné par utilisateur (débit, dédoublonnage) : chaque erreur
+ * alimente le digest d'alerte admin, donc le quota d'emails.
  * @since 2.1.2
  * @author Kwaite
  */
@@ -49,7 +46,7 @@ public class ClientController {
 
   private final Cache<String, Bucket> bucketsParUtilisateur =
       Caffeine.newBuilder().expireAfterWrite(FENETRE.plusMinutes(1)).maximumSize(10_000).build();
-  // Une erreur JavaScript récurrente (boucle, polling) remonte le même message en rafale.
+  // Une erreur récurrente (boucle, polling) remonte le même message en rafale.
   private final Cache<String, Boolean> messagesRecents =
       Caffeine.newBuilder().expireAfterWrite(FENETRE).maximumSize(10_000).build();
 
@@ -61,14 +58,9 @@ public class ClientController {
   }
 
   /**
-   * Signale une erreur JavaScript depuis le navigateur.
-   *
-   * @param corps corps JSON de l'erreur
    * @param auth contexte d'authentification (clé de limitation)
-   * @param request requête HTTP (pour récupérer le User-Agent)
-   * @return 201 Created avec {@code {"succes": true}} (y compris pour un
-   *     message déjà signalé dans l'heure, non rejournalisé), 429 au-delà de
-   *     {@value #MAX_ERREURS_PAR_HEURE} signalements par heure
+   * @return 201 (même pour un message déjà signalé dans l'heure, non
+   *     rejournalisé), 429 au-delà de {@value #MAX_ERREURS_PAR_HEURE} par heure
    */
   @PostMapping("/erreur")
   public ResponseEntity<Map<String, Object>> signalerErreur(

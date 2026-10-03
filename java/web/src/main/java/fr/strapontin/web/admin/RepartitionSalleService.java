@@ -16,15 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Répartition d'une salle qui mélange plusieurs lieux réels : les événements publiés sous les
- * libellés choisis passent à une autre salle, existante ou créée, avec les lieux Eventim
- * correspondants.
- *
- * <p>Seuls les événements dont toutes les observations portent ces libellés sont déplacés ; un
- * événement observé aussi sous un autre libellé (mixte) reste en place et est compté. Un
- * événement déjà présent dans la salle cible y est fusionné. Les lieux Ticketmaster ne sont pas
- * déplacés (aucun libellé conservé pour eux).
- *
+ * Répartition d'une salle mélangeant plusieurs lieux : les événements dont
+ * toutes les observations portent les libellés choisis passent à une autre
+ * salle avec leurs lieux Eventim ; un événement mixte reste en place.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -43,13 +37,8 @@ public class RepartitionSalleService {
   public record LibelleSource(String libelle, long nbEvenements) {}
 
   /**
-   * Bilan d'une répartition.
-   *
-   * @param cibleId salle ayant reçu les événements
-   * @param evenementsDeplaces événements déplacés vers la cible
-   * @param evenementsFusionnes événements fusionnés dans un événement déjà présent dans la cible
-   * @param evenementsMixtes événements laissés en place, observés aussi sous un autre libellé
-   * @param lieuxEventimDeplaces lieux Eventim rattachés à la cible
+   * Bilan : événements déplacés, fusionnés dans un événement existant de la
+   * cible, laissés en place (mixtes), et lieux Eventim rattachés.
    */
   public record ResultatRepartition(
       UUID cibleId,
@@ -77,19 +66,16 @@ public class RepartitionSalleService {
   }
 
   /**
-   * Déplace vers une salle cible les événements publiés sous les libellés choisis.
-   *
-   * @param salleId salle à répartir
-   * @param requete libellés, et salle cible existante ou nom de la salle à créer
+   * @param requete libellés, et salle cible existante ou nom à créer
    * @return bilan de la répartition
-   * @throws ErreurMetier si la salle est inconnue, la cible invalide ou aucun libellé choisi
+   * @throws ErreurMetier salle inconnue, cible invalide ou aucun libellé
    */
   @Transactional
   public ResultatRepartition repartir(final UUID salleId, final RequeteRepartitionSalle requete) {
-    final Map<String, Object> salle = repository.lireSalle(salleId);
-    if (salle == null) {
-      throw new ErreurMetier("Salle introuvable.", 404);
-    }
+    final Map<String, Object> salle =
+        repository
+            .lireSalle(salleId)
+            .orElseThrow(() -> new ErreurMetier("Salle introuvable.", 404));
     final UUID cibleId = resoudreCible(salleId, salle, requete);
     final List<String> libelles = requete.libelles();
 
@@ -126,7 +112,7 @@ public class RepartitionSalleService {
   private UUID resoudreCible(
       final UUID salleId, final Map<String, Object> salle, final RequeteRepartitionSalle requete) {
     if (requete.cibleId() != null) {
-      if (requete.cibleId().equals(salleId) || repository.lireSalle(requete.cibleId()) == null) {
+      if (requete.cibleId().equals(salleId) || repository.lireSalle(requete.cibleId()).isEmpty()) {
         throw new ErreurMetier("Salle cible invalide.");
       }
       return requete.cibleId();

@@ -40,6 +40,7 @@ public class WorkerStatsService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerStatsService.class);
   private static final String SOURCE_WORKER = "worker";
+  private static final String NIVEAU_WARN = "warn";
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
@@ -98,13 +99,13 @@ public class WorkerStatsService {
     }
   }
 
-  // Un job absent du catalogue s'afficherait sous son identifiant technique dans le tableau de
-  // bord admin : signalé à chaque exécution tant qu'il n'y est pas ajouté.
+  // Un job hors catalogue s'afficherait sous son identifiant technique :
+  // signalé à chaque exécution tant qu'il n'y est pas ajouté.
   private void signalerJobNonRepertorie(final String typeJob) {
     if (CatalogueJobs.decrire(typeJob).isEmpty()) {
       LOG.warn("job absent de CatalogueJobs : {}", typeJob);
       logsAdminWorker.inserer(
-          "warn",
+          NIVEAU_WARN,
           SOURCE_WORKER,
           "job sans libellé dans le catalogue des jobs : " + typeJob,
           Map.of("typeJob", typeJob));
@@ -298,7 +299,7 @@ public class WorkerStatsService {
       return false;
     }
     logsAdminWorker.inserer(
-        "warn",
+        NIVEAU_WARN,
         SOURCE_WORKER,
         typeJob + " — " + concertsManques + " concert(s) TM non récupéré(s) (pagination plafonnée)",
         Map.of("manques", concertsManques));
@@ -319,7 +320,7 @@ public class WorkerStatsService {
       return false;
     }
     logsAdminWorker.inserer(
-        "warn",
+        NIVEAU_WARN,
         SOURCE_WORKER,
         typeJob
             + " — "
@@ -342,7 +343,7 @@ public class WorkerStatsService {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
       params.put("ts", Timestamp.from(execLe));
-      params.put("niveau", "warn");
+      params.put("niveau", NIVEAU_WARN);
       params.put("source", SOURCE_WORKER);
       params.put("message", typeJob + " — 0 concert inséré ou mis à jour (résultat vide)");
       params.put("meta", "{}");

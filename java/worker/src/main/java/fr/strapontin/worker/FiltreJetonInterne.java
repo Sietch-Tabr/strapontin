@@ -15,9 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Refuse (403) tout appel à l'API interne {@code /trigger} sans jeton valide ({@link
- * JetonInterneWorker}) : seul le module web, qui connaît le secret, peut déclencher un job.
- *
+ * Refuse (403) un appel à l'API interne /trigger sans jeton valide
+ * ({@link JetonInterneWorker}) : seul le web, qui connaît le secret, déclenche.
  * @since 3.0.2
  * @author Kwaite
  */

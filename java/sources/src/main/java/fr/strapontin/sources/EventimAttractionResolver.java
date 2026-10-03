@@ -97,12 +97,8 @@ final class EventimAttractionResolver {
   }
 
   /**
-   * Recherche l'attractionId Eventim correspondant à un terme de recherche.
-   * @param terme nom de l'artiste cherché
-   * @param identiteConfirmee true restreint le repli par containment aux
-   *     candidats dont le reste du nom est un autre nom connu de l'artiste
-   * @param autresNomsConnus libellé et alias de l'artiste (Wikidata), hors
-   *     terme
+   * @param identiteConfirmee true : repli par containment limité aux noms
+   *     dont le reste est un autre nom connu (libellé, alias Wikidata)
    * @return attractionId trouvé, ou null si aucune correspondance
    */
   @SuppressWarnings("unchecked")
@@ -149,12 +145,8 @@ final class EventimAttractionResolver {
   }
 
   /**
-   * Sélectionne la meilleure correspondance : égalité exacte en priorité,
-   * repli sur containment si l'identité n'est pas déjà confirmée.
-   * @param attractions résultats bruts de l'API attractions Eventim
-   * @param terme terme recherché
-   * @param identiteConfirmee restreint le repli par containment si vrai
-   * @param autresNomsConnus libellé et alias connus de l'artiste
+   * Meilleure correspondance : égalité exacte d'abord, puis containment,
+   * restreint aux autres noms connus si l'identité est confirmée.
    * @return l'attraction retenue, ou null si aucune correspondance
    */
   // La map représente une attraction unique (un enregistrement), pas une

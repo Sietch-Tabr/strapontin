@@ -48,13 +48,9 @@ public class SessionSecurityConfiguration {
   }
 
   /**
-   * Gestionnaire d'authentification avec chargement depuis la
-   * base de données (détail : CLAUDE.md, Authentification).
-   * @param userDetailsService le service de chargement des utilisateurs
-   * @param passwordEncoder l'encodeur de mots de passe
-   * @param eventPublisher l'éditeur d'événements applicatif Spring
-   * @param jdbc accès JDBC (refus d'un compte dont un nouveau mot de passe
-   *     est exigé, {@link VerificationMotDePasseExige})
+   * Gestionnaire d'authentification sur la base (CLAUDE.md, Authentification)
+   * ; refuse un compte dont un nouveau mot de passe est exigé.
+   * @param jdbc accès JDBC ({@link VerificationMotDePasseExige})
    * @return l'AuthenticationManager configuré
    */
   /* package-private : Bean Spring, jamais appelé directement hors du

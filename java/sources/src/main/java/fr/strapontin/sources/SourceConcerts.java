@@ -49,12 +49,8 @@ public interface SourceConcerts {
   }
 
   /**
-   * Recherche par nom, identité confirmée et autres noms connus (libellé et
-   * alias Wikidata) — délègue par défaut à {@link #fetchArtiste(String,
-   * String, String)} en ignorant ces noms.
-   * @param nom nom de l'artiste
-   * @param deezerId identifiant Deezer déjà connu, ou null si non confirmé
-   * @param wikidataId identifiant Wikidata déjà connu, ou null si non confirmé
+   * Recherche avec les autres noms connus (libellé, alias Wikidata) ; par
+   * défaut ignorés, délégation à {@link #fetchArtiste(String, String, String)}.
    * @param autresNomsConnus libellé et alias connus de l'artiste
    * @return concerts trouvés, ou liste vide si non supporté
    */

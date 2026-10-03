@@ -53,13 +53,9 @@ public class ControleIntegriteService {
   }
 
   /**
-   * Exécute les invariants (dont la dispersion géographique des lieux
-   * sources, {@link ControleDispersionGeo}, et les invariants objectifs des
-   * données, {@link ControleInvariantsDonnees}) et retourne le nombre total de
-   * signalements nouvellement posés.
-   *
+   * Exécute les invariants, dont {@link ControleDispersionGeo} et
+   * {@link ControleInvariantsDonnees}.
    * @return nombre de signalements nouvellement posés, tous invariants
-   *     confondus
    */
   public int verifier() {
     int signales = 0;
