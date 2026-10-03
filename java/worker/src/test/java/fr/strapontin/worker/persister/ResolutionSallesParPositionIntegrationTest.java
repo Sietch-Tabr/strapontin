@@ -55,8 +55,9 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
   private UUID creerSalle(final String nom, final String dept, final PositionLieu position) {
     final UUID id = UUID.randomUUID();
     jdbc.update(
-        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept, latitude, longitude)"
-            + " VALUES (CAST(:id AS uuid), :cle, :nom, :nomNorm, :dept, :lat, :lon)",
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept, latitude, longitude,"
+            + " origine_position) VALUES (CAST(:id AS uuid), :cle, :nom, :nomNorm, :dept, :lat,"
+            + " :lon, 'sources')",
         new MapSqlParameterSource()
             .addValue("id", id.toString())
             .addValue("cle", nom.toLowerCase() + " " + dept)
@@ -111,6 +112,25 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
     assertTrue(parPosition.incompatible(vittel, "Palais des Congrès", PERPIGNAN));
     assertFalse(parPosition.incompatible(vittel, "Palais des Congrès", VITTEL));
     assertFalse(parPosition.incompatible(vittel, "Palais des Congrès", PositionLieu.INCONNUE));
+  }
+
+  // Le Minotaure (Vendôme) portait la position Wikidata d'un homonyme normand, sans aucun lieu
+  // publié pour la confirmer : le veto créait une seconde salle « Le Minotaure Vendome ».
+  @Test
+  void incompatible_positionSalleNonConfirmee_neVetoPas() {
+    final UUID minotaure =
+        creerSalle("Le Minotaure", "41", new PositionLieu(49.29525, -0.30654, "14000"));
+    final PositionLieu vendome = new PositionLieu(47.79186, 1.07223, "41100");
+
+    jdbc.update(
+        "UPDATE salles SET origine_position = 'wikidata' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", minotaure.toString()));
+    assertFalse(parPosition.incompatible(minotaure, "Le Minotaure Vendome", vendome));
+
+    jdbc.update(
+        "UPDATE salles SET origine_position = 'geocodage' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", minotaure.toString()));
+    assertFalse(parPosition.incompatible(minotaure, "Le Minotaure Vendome", vendome));
   }
 
   // Élysée Montmartre à 818 m d'une salle Galabru : seul le mot « montmartre » est commun.

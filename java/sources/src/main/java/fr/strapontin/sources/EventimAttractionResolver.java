@@ -231,7 +231,8 @@ final class EventimAttractionResolver {
   private void journaliserAucuneCorrespondance(
       final String terme, final List<Map<String, Object>> attractions) {
     final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
-    LOG.warn(
+    // Refus protecteur attendu (homonyme, hommage) : information, pas anomalie.
+    LOG.info(
         "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",
         terme,
         nomRetourne);

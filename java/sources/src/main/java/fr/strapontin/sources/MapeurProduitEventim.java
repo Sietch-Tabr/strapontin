@@ -70,7 +70,7 @@ final class MapeurProduitEventim {
     }
 
     if (SALLES_VILLE_NON_CORRIGEE.add(salle)) {
-      LOG.warn(
+      LOG.info(
           "Eventim ville incohérente non corrigée salle={} dept={} ville={}", salle, dept, ville);
     }
     return null;

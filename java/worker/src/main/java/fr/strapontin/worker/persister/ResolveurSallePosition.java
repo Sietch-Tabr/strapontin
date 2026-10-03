@@ -107,8 +107,17 @@ final class ResolveurSallePosition {
     }
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT latitude, longitude, nom_norm FROM salles WHERE id = CAST(:id AS uuid)"
-                + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
+            // Position fiable seulement : tirée des lieux publiés, ou Wikidata
+            // confirmée par un lieu positionné. Un géocodage du nom ou un
+            // élément Wikidata homonyme écartait la bonne salle du département.
+            """
+            SELECT latitude, longitude, nom_norm FROM salles s
+            WHERE s.id = CAST(:id AS uuid) AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+              AND (s.origine_position = 'sources'
+                   OR s.origine_position = 'wikidata' AND EXISTS (
+                       SELECT 1 FROM salle_sources ss
+                       WHERE ss.salle_id = s.id AND ss.latitude IS NOT NULL))
+            """,
             Map.of("id", salleId.toString()));
     if (lignes.isEmpty()) {
       return false;
