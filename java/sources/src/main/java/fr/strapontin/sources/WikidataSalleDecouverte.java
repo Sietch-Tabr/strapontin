@@ -382,7 +382,6 @@ final class WikidataSalleDecouverte {
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL { ?item wdt:P625 ?coordValue }
       %s
-      OPTIONAL { ?commune wdt:P281 ?cp }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }
     GROUP BY ?item ?itemLabel ?communeLabel ?num

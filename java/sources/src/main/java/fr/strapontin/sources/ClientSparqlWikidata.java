@@ -37,16 +37,22 @@ final class ClientSparqlWikidata {
    * (même package). */
   static final String BASE_URL = "https://query.wikidata.org/sparql";
 
-  /* package-private : commune (code INSEE P374) de ?item, hors arrondissement
-   * municipal ; P131 désigne souvent un quartier ou une intercommunalité. */
+  /* package-private : commune (code INSEE P374) de ?item et son code
+   * postal, hors arrondissement municipal. Libellé lié dans chaque
+   * branche : non lié, il parcourait toute la base Wikidata. */
   static final String MOTIF_COMMUNE =
       """
             OPTIONAL { ?item wdt:P131 ?communeDirecte . ?communeDirecte wdt:P374 [] .
-              FILTER NOT EXISTS { ?communeDirecte wdt:P31 wd:Q702842 } }
-            OPTIONAL { ?item wdt:P131/wdt:P131+ ?communeAncetre . ?communeAncetre wdt:P374 [] .
-              FILTER NOT EXISTS { ?communeAncetre wdt:P31 wd:Q702842 } }
-            BIND(COALESCE(?communeDirecte, ?communeAncetre) AS ?commune)
-            OPTIONAL { ?commune rdfs:label ?communeLabel . FILTER(LANG(?communeLabel) = "fr") }
+              FILTER NOT EXISTS { ?communeDirecte wdt:P31 wd:Q702842 }
+              ?communeDirecte rdfs:label ?libelleDirect . FILTER(LANG(?libelleDirect) = "fr")
+              OPTIONAL { ?communeDirecte wdt:P281 ?cpDirect } }
+            OPTIONAL { ?item wdt:P131/wdt:P131/wdt:P131? ?communeAncetre .
+              ?communeAncetre wdt:P374 [] .
+              FILTER NOT EXISTS { ?communeAncetre wdt:P31 wd:Q702842 }
+              ?communeAncetre rdfs:label ?libelleAncetre . FILTER(LANG(?libelleAncetre) = "fr")
+              OPTIONAL { ?communeAncetre wdt:P281 ?cpAncetre } }
+            BIND(COALESCE(?libelleDirect, ?libelleAncetre) AS ?communeLabel)
+            BIND(COALESCE(?cpDirect, ?cpAncetre) AS ?cp)
       """;
 
   private static final String USER_AGENT =
