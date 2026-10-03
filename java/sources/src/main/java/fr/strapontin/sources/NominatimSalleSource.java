@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +33,7 @@ public class NominatimSalleSource implements SourceEnrichissementSalle, SourceAv
 
   // Rayon d'un même lieu à la résolution des salles par position.
   private static final double RAYON_MEME_LIEU_METRES = 300;
+  private static final Pattern SEPARATEUR_NOM = Pattern.compile("\\s[-–(]\\s?");
 
   private final ClientNominatim client;
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
@@ -66,10 +68,20 @@ public class NominatimSalleSource implements SourceEnrichissementSalle, SourceAv
     return resultats;
   }
 
+  // Nom complet, puis tronqué au séparateur (« LA SIRENE - Espace Musiques
+  // Actuelles » n'est connu d'OpenStreetMap que comme « La Sirène »).
   private Optional<EnrichissementSalle> chercher(final SalleAEnrichir salle) {
+    final Optional<EnrichissementSalle> complet = chercher(salle, salle.nom());
+    final String tronque = SEPARATEUR_NOM.split(salle.nom(), 2)[0].strip();
+    return complet.isPresent() || tronque.equals(salle.nom()) || tronque.isEmpty()
+        ? complet
+        : chercher(salle, tronque);
+  }
+
+  private Optional<EnrichissementSalle> chercher(final SalleAEnrichir salle, final String nom) {
     final ClientNominatim.Coordonnees position =
         new ClientNominatim.Coordonnees(salle.latitude(), salle.longitude());
-    final String requete = salle.ville() != null ? salle.nom() + ", " + salle.ville() : salle.nom();
+    final String requete = salle.ville() != null ? nom + ", " + salle.ville() : nom;
     compteurBilan.enregistrerAppel();
     final ClientNominatim.ResultatRecherche resultat = client.rechercherLieux(requete, position);
     if (!resultat.succes()) {

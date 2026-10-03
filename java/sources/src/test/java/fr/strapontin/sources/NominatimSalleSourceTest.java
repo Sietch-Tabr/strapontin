@@ -89,4 +89,27 @@ class NominatimSalleSourceTest {
 
     assertEquals(1, source.preleverBilan().erreursHttp());
   }
+
+  @Test
+  void enrichirLot_nomCompletInconnu_retenteAvecLeNomTronque() {
+    final SalleAEnrichir sirene =
+        new SalleAEnrichir(
+            ID,
+            "LA SIRENE - Espace Musiques Actuelles",
+            "la sirene",
+            null,
+            "17",
+            null,
+            46.15,
+            -1.17);
+    when(client.rechercherLieux(
+            org.mockito.ArgumentMatchers.eq("LA SIRENE - Espace Musiques Actuelles"), any()))
+        .thenReturn(new ClientNominatim.ResultatRecherche(List.of(), true));
+    when(client.rechercherLieux(org.mockito.ArgumentMatchers.eq("LA SIRENE"), any()))
+        .thenReturn(
+            new ClientNominatim.ResultatRecherche(
+                List.of(lieu("La Sirène", 46.15005, -1.17005, "Q3209460")), true));
+
+    assertEquals("Q3209460", source.enrichirLot(List.of(sirene)).get(ID).wikidataId());
+  }
 }
