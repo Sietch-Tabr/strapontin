@@ -126,7 +126,8 @@ public class FusionEvenementsArtisteService {
    * Repère les paires d'{@code evenement_id} distincts partageant
    * exactement même salle/date/heure, filtrées par
    * {@link CorrespondanceArtiste#estDoublonArtiste} sur les
-   * {@code artiste_norm} — la contrainte unique {@code uq_evenements}
+   * {@code artiste_norm}, ou par {@link CorrespondanceArtiste#estMemeAffiche}
+   * quand l'heure est connue et qu'aucun artiste n'est rattaché — la contrainte unique {@code uq_evenements}
    * garantit déjà qu'aucune paire ne partage un {@code artiste_norm}
    * strictement identique.
    */
@@ -135,7 +136,9 @@ public class FusionEvenementsArtisteService {
         jdbc.queryForList(
             """
             SELECT DISTINCT e1.id AS evt_a, e2.id AS evt_b,
-                   e1.artiste_norm AS artiste_a, e2.artiste_norm AS artiste_b
+                   e1.artiste_norm AS artiste_a, e2.artiste_norm AS artiste_b,
+                   e1.heure IS NOT NULL AND e1.artiste_id IS NULL AND e2.artiste_id IS NULL
+                     AS affiche_comparable
             FROM evenements e1
             JOIN evenements e2
               ON e1.salle_id = e2.salle_id
@@ -151,7 +154,11 @@ public class FusionEvenementsArtisteService {
     for (final Map<String, Object> ligne : lignes) {
       final String artisteA = (String) ligne.get("artiste_a");
       final String artisteB = (String) ligne.get("artiste_b");
-      if (!CorrespondanceArtiste.estDoublonArtiste(artisteA, artisteB)) {
+      // Deux artistes suivis séparément gardent chacun leur événement.
+      final boolean memeAffiche =
+          Boolean.TRUE.equals(ligne.get("affiche_comparable"))
+              && CorrespondanceArtiste.estMemeAffiche(artisteA, artisteB);
+      if (!memeAffiche && !CorrespondanceArtiste.estDoublonArtiste(artisteA, artisteB)) {
         continue;
       }
       paires.add(new PaireEvenements((UUID) ligne.get("evt_a"), (UUID) ligne.get("evt_b")));

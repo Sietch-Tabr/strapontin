@@ -61,6 +61,14 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     return id;
   }
 
+  private UUID creerArtiste(final String nom) {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
+        Map.of("id", id.toString(), "nom", nom, "nomNorm", nom.toLowerCase() + " " + id));
+    return id;
+  }
+
   private UUID creerEvenement(final String artisteNorm, final UUID artisteId) {
     final UUID evenementId =
         jdbc.queryForObject(
@@ -96,6 +104,24 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     final Long nbEvenements =
         jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class);
     assertEquals(1L, nbEvenements, "un seul événement doit subsister après fusion");
+  }
+
+  // Paire réelle de la prod : une billetterie publie la tête d'affiche, l'autre « + 1ère partie ».
+  @Test
+  void fusionner_memeAfficheAvecSuffixePremierePartie_fusionneLesDeuxEvenements() {
+    creerEvenement("meryl", null);
+    creerEvenement("meryl 1ere partie", null);
+
+    assertEquals(1, fusionEvenementsArtiste.fusionner());
+  }
+
+  // Deux têtes d'affiche suivies séparément gardent chacune leur événement.
+  @Test
+  void fusionner_coPlateauAvecArtistesRattaches_conserveLesDeuxEvenements() {
+    creerEvenement("behemoth", creerArtiste("Behemoth"));
+    creerEvenement("behemoth and dimmu borgir", creerArtiste("Dimmu Borgir"));
+
+    assertEquals(0, fusionEvenementsArtiste.fusionner());
   }
 
   // Second cas réel documenté (#1240) : "dexys midnight runners" / "dexy s midnight runners"

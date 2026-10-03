@@ -4,7 +4,10 @@
  */
 package fr.strapontin.core;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Détermine si deux noms d'artiste normalisés désignent le
@@ -23,7 +26,65 @@ public final class CorrespondanceArtiste {
   private static final int LONGUEUR_MIN_CONTAINMENT_ARTISTE = 4;
   private static final double RATIO_MIN_CONTAINMENT_ARTISTE = 0.65;
 
+  // Mots qu'une billetterie ajoute au nom de la tête d'affiche sans changer de
+  // concert : première partie, invités, tournée, liaisons de co-plateau.
+  private static final Set<String> MOTS_ACCESSOIRES_AFFICHE =
+      Set.of(
+          "1ere",
+          "premiere",
+          "partie",
+          "support",
+          "guest",
+          "guests",
+          "invite",
+          "invites",
+          "tour",
+          "tournee",
+          "en",
+          "and",
+          "feat",
+          "featuring",
+          "avec",
+          "x",
+          "presents");
+  private static final Pattern ANNEE = Pattern.compile("(19|20)\\d{2}");
+  private static final int LONGUEUR_MIN_MOT_AFFICHE = 3;
+
   private CorrespondanceArtiste() {}
+
+  /**
+   * Indique si deux noms normalisés désignent la même affiche, à n'employer
+   * qu'entre deux événements de même salle, date et heure : tous les mots
+   * significatifs de l'un figurent dans l'autre ("meryl" / "meryl 1ere
+   * partie", "behemoth" / "behemoth and dimmu borgir", "le sserafim" / "2026
+   * le sserafim tour"). Hors de ce contexte, la règle est trop large.
+   * @param nomA premier nom normalisé
+   * @param nomB deuxième nom normalisé
+   * @return {@code true} si l'un des noms est contenu, mot à mot, dans l'autre
+   */
+  public static boolean estMemeAffiche(final String nomA, final String nomB) {
+    Objects.requireNonNull(nomA, "nomA");
+    Objects.requireNonNull(nomB, "nomB");
+    final Set<String> motsA = motsSignificatifs(nomA);
+    final Set<String> motsB = motsSignificatifs(nomB);
+    final Set<String> court = motsA.size() <= motsB.size() ? motsA : motsB;
+    final Set<String> plusLong = motsA.size() <= motsB.size() ? motsB : motsA;
+    final boolean motDistinctif =
+        court.stream().anyMatch(m -> m.length() >= LONGUEUR_MIN_MOT_AFFICHE);
+    return motDistinctif && plusLong.containsAll(court);
+  }
+
+  private static Set<String> motsSignificatifs(final String nom) {
+    final Set<String> mots = new HashSet<>();
+    for (final String mot : nom.split(" ")) {
+      if (!mot.isEmpty()
+          && !MOTS_ACCESSOIRES_AFFICHE.contains(mot)
+          && !ANNEE.matcher(mot).matches()) {
+        mots.add(mot);
+      }
+    }
+    return mots;
+  }
 
   /**
    * Vérifie si deux noms d'artiste normalisés désignent le

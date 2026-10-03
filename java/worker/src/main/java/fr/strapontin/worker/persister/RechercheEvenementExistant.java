@@ -76,20 +76,12 @@ final class RechercheEvenementExistant {
             Map.of("salleId", concert.salleId().toString(), CLE_DATE, concert.date()));
     final boolean entrantPackage = estPackage(concert.url());
     for (final Map<String, Object> c : candidats) {
-      final UUID candArtisteId = (UUID) c.get("artiste_id");
-      final String candArtisteNorm = (String) c.get("artiste_norm");
-      final boolean artisteCorrespond =
-          concert.artisteId() != null
-              ? concert.artisteId().equals(candArtisteId)
-              : candArtisteId == null
-                  && CorrespondanceArtiste.estDoublonArtiste(
-                      candArtisteNorm, concert.artisteNorm());
-      if (!artisteCorrespond) {
-        continue;
-      }
       final Object heureBrute = c.get(CLE_HEURE);
       final LocalTime heureExistante =
           heureBrute != null ? ((Time) heureBrute).toLocalTime() : null;
+      if (!artisteCorrespond(concert, c, heureExistante)) {
+        continue;
+      }
       final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
       if (!heuresCompatibles(heureExistante, concert.heure(), candidatPackage, entrantPackage)) {
         continue;
@@ -97,6 +89,34 @@ final class RechercheEvenementExistant {
       return (UUID) c.get("id");
     }
     return null;
+  }
+
+  /**
+   * Même artiste : même {@code artiste_id} s'il est résolu ; sinon nom
+   * doublon, ou même affiche quand l'heure est la même (co-plateau, suffixe
+   * « 1ère partie » ajouté par une seule billetterie).
+   */
+  private static boolean artisteCorrespond(
+      final ValeurConcert concert, final Map<String, Object> candidat, final LocalTime heure) {
+    final UUID candArtisteId = (UUID) candidat.get("artiste_id");
+    if (concert.artisteId() != null) {
+      return concert.artisteId().equals(candArtisteId);
+    }
+    if (candArtisteId != null) {
+      return false;
+    }
+    final String candArtisteNorm = (String) candidat.get("artiste_norm");
+    if (CorrespondanceArtiste.estDoublonArtiste(candArtisteNorm, concert.artisteNorm())) {
+      return true;
+    }
+    return memeHeure(heure, concert.heure())
+        && CorrespondanceArtiste.estMemeAffiche(candArtisteNorm, concert.artisteNorm());
+  }
+
+  private static boolean memeHeure(final LocalTime existante, final LocalTime entrante) {
+    return existante != null
+        && entrante != null
+        && Math.abs(Duration.between(existante, entrante).toMinutes()) <= TOLERANCE_HEURE_MINUTES;
   }
 
   /**
