@@ -216,11 +216,14 @@ public final class HealthCheckArtistesTM {
    * événement à venir pour l'instant — la vérification active de cette phase
    * fait autorité et doit effacer ce faux positif dès qu'elle confirme que
    * l'identifiant TM est toujours vivant, plutôt que de laisser le statut
-   * "suspect" perdurer jusqu'à expiration (24h).
+   * "suspect" perdurer jusqu'à expiration (24h). La date de vérification
+   * évite de le revérifier chaque nuit (délai de
+   * {@link SuiviSanteSourcesService#DELAI_REVERIFICATION_VIVACITE_JOURS} jours).
    */
   private void reinitialiserSuspect(final UUID artisteId) {
     jdbc.update(
-        "UPDATE artiste_sources SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
+        "UPDATE artiste_sources SET nb_zero_consecutifs = 0, suspect_depuis = NULL,"
+            + " vivacite_verifiee_le = now()"
             + " WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'",
         Map.of("id", artisteId.toString()));
   }
