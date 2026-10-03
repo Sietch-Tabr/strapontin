@@ -36,6 +36,19 @@ final class ClientSparqlWikidata {
   /* package-private : réutilisée par WikidataSalleSource/WikidataArtisteSource
    * (même package). */
   static final String BASE_URL = "https://query.wikidata.org/sparql";
+
+  /* package-private : commune (code INSEE P374) de ?item, hors arrondissement
+   * municipal ; P131 désigne souvent un quartier ou une intercommunalité. */
+  static final String MOTIF_COMMUNE =
+      """
+            OPTIONAL { ?item wdt:P131 ?communeDirecte . ?communeDirecte wdt:P374 [] .
+              FILTER NOT EXISTS { ?communeDirecte wdt:P31 wd:Q702842 } }
+            OPTIONAL { ?item wdt:P131/wdt:P131+ ?communeAncetre . ?communeAncetre wdt:P374 [] .
+              FILTER NOT EXISTS { ?communeAncetre wdt:P31 wd:Q702842 } }
+            BIND(COALESCE(?communeDirecte, ?communeAncetre) AS ?commune)
+            OPTIONAL { ?commune rdfs:label ?communeLabel . FILTER(LANG(?communeLabel) = "fr") }
+      """;
+
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   // 502 (nginx en amont de l'endpoint SPARQL) et un content-type inattendu

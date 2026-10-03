@@ -84,7 +84,7 @@ public class CoherenceWikidataSalleService {
 
   /**
    * @param jdbc accès JDBC
-   * @param wikidata résolution de la commune Wikidata (P131) pour la
+   * @param wikidata résolution de la commune Wikidata (code INSEE) pour la
    *     revalidation
    * @param logsAdminWorker journalisation des incohérences détectées
    */
@@ -272,7 +272,7 @@ public class CoherenceWikidataSalleService {
    * Évalue la cohérence contre concerts.ville (prioritaire) ou salles.ville
    * en repli — contamination partielle journalisée distinctement du total.
    * @param salle salle candidate
-   * @param communeWikidata commune Wikidata (P131) du wikidata_id associé
+   * @param communeWikidata commune Wikidata (code INSEE) du wikidata_id associé
    * @param villesConcertsReelles villes réelles des concerts, ou vide
    * @return la classification de cohérence
    */
@@ -324,7 +324,7 @@ public class CoherenceWikidataSalleService {
 
   /**
    * @param salle salle candidate
-   * @param communeWikidata commune Wikidata (P131) du wikidata_id associé
+   * @param communeWikidata commune Wikidata (code INSEE) du wikidata_id associé
    * @param partielle {@code true} si seule une partie des concerts est
    *     incohérente (message distinct pour ne pas induire en erreur sur
    *     l'ampleur réelle)

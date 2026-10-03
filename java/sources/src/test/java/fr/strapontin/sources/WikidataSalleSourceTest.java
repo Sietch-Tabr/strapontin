@@ -58,6 +58,8 @@ class WikidataSalleSourceTest {
             MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P17")))
         .andExpect(
             MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("Q142")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P374")))
         .andRespond(
             withSuccess(
                 """
@@ -892,8 +894,11 @@ class WikidataSalleSourceTest {
     final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
+    // Commune par code INSEE : P131 désigne souvent un quartier ou un arrondissement.
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P374")))
         .andRespond(
             withSuccess(
                 """
