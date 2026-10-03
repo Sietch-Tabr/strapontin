@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.NominatimSalleSource;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.TicketmasterSource;
@@ -118,5 +119,26 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     verify(nominatimSalleSource).enrichirLot(captor.capture());
     final SalleAEnrichir candidat = captor.getValue().getFirst();
     assertEquals("87", candidat.dept());
+  }
+
+  // Source sans coordonnées (Nominatim ne transmet que les étiquettes OSM) : le paramètre
+  // nul de latitude, non typé, faisait échouer toute la réconciliation nocturne.
+  @Test
+  void enrichir_enrichissementSansCoordonnees_estPersiste() {
+    final UUID salleId = insererSalle("La Cigale", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    when(nominatimSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                salleId,
+                new EnrichissementSalle("Q3207410", null, null, "https://lacigale.fr/", null)));
+
+    service.enrichir();
+
+    assertEquals(
+        "Q3207410",
+        jdbc.queryForObject(
+            "SELECT wikidata_id FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()),
+            String.class));
   }
 }

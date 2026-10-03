@@ -308,10 +308,10 @@ public class EnrichissementSallesService {
             wikidata_id = COALESCE(wikidata_id, :wikidataId),
             nom_affiche = COALESCE(nom_affiche, :nomAffiche),
             ville       = COALESCE(ville, :ville),
-            latitude    = COALESCE(:latitude, latitude),
-            longitude   = COALESCE(:longitude, longitude),
-            origine_position = CASE WHEN :latitude IS NOT NULL THEN 'wikidata'
-                                    ELSE origine_position END
+            latitude    = COALESCE(CAST(:latitude AS double precision), latitude),
+            longitude   = COALESCE(CAST(:longitude AS double precision), longitude),
+            origine_position = CASE WHEN CAST(:latitude AS double precision) IS NOT NULL
+                                    THEN 'wikidata' ELSE origine_position END
           WHERE id = CAST(:id AS uuid)
           """,
           params);
