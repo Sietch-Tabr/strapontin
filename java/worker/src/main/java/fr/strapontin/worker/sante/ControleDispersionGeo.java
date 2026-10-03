@@ -19,7 +19,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /**
  * Dispersion géographique des lieux sources : lieux éloignés d'une salle
  * (contamination ; entre 300 m et 1 km, seulement si leurs noms ne sont pas
- * des doublons forts), lieux de deux salles qui coïncident (doublon). Consolide
+ * des doublons forts), lieux de deux salles qui coïncident sous des noms
+ * compatibles (doublon). Consolide
  * d'abord la position des salles sur leurs lieux.
  * @since 3.0.2
  * @author Kwaite
@@ -187,9 +188,13 @@ final class ControleDispersionGeo {
     return entites.size();
   }
 
+  // Même position et noms compatibles : des salles voisines (La Cigale, La Boule
+  // Noire) et la position par défaut d'une billetterie (centre d'un parc, d'une
+  // ville) rapprochent sinon des lieux distincts.
   private static boolean deuxSallesAuMemeLieu(final LieuSource premier, final LieuSource second) {
     return !premier.salleId().equals(second.salleId())
-        && distance(premier, second) <= DISTANCE_MEME_LIEU_METRES;
+        && distance(premier, second) <= DISTANCE_MEME_LIEU_METRES
+        && NomsDeLieu.designentLeMemeLieu(premier.nom(), second.nom());
   }
 
   // Signalement porté par la salle d'UUID le plus petit, l'autre en détail.

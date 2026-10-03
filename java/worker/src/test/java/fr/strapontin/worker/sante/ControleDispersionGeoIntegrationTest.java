@@ -102,16 +102,27 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     assertEquals(0, controle.verifier());
   }
 
-  // Parc des Expos Hermione / Parc des Expositions Brézillet : même lieu, noms sans rapport.
+  // L'Européen publié sous deux noms (« Leuropeen Paris 17 ») : même lieu, deux salles.
   @Test
-  void verifier_deuxSallesAuMemeLieu_signaleUnDoublonSansDependreDesNoms() {
-    final UUID hermione = creerSalle("parc des expos hermione");
-    final UUID brezillet = creerSalle("parc des expositions brezillet");
-    lieu(hermione, "internal:hermione@22000", 48.5120, -2.7480);
-    lieu(brezillet, "internal:brezillet@22000", 48.5121, -2.7481);
+  void verifier_deuxSallesAuMemeLieuAuxNomsCompatibles_signaleUnDoublon() {
+    final UUID europeen = creerSalle("l europeen");
+    final UUID leuropeen = creerSalle("leuropeen paris 17");
+    lieu(europeen, "internal:l europeen@75017", 48.88370, 2.32720);
+    lieu(leuropeen, "internal:leuropeen paris 17@75017", 48.88390, 2.32740);
 
     assertEquals(1, controle.verifier());
     assertEquals(List.of("meme_lieu_salles"), typesSignales());
+  }
+
+  // La Cigale et La Boule Noire : même bâtiment, deux salles distinctes.
+  @Test
+  void verifier_deuxSallesVoisinesAuxNomsDistincts_neSignalePas() {
+    final UUID cigale = creerSalle("la cigale");
+    final UUID bouleNoire = creerSalle("la boule noire");
+    lieu(cigale, "internal:la cigale@75018", 48.88220, 2.34040);
+    lieu(bouleNoire, "internal:la boule noire paris 18@75018", 48.88225, 2.34045);
+
+    assertEquals(0, controle.verifier());
   }
 
   @Test
