@@ -51,10 +51,16 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
   test("aide_signalement_soumissionReussie_afficheAlerteAvantFermeture", async ({
     page,
   }, testInfo) => {
-    test.skip(testInfo.project.name !== "chromium");
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "quota de signalements partagé par IP",
+    );
     await page.goto("/aide");
     const bouton = page.locator("#btn-ouvrir-signalement");
-    if (!(await bouton.isVisible())) test.skip();
+    test.skip(
+      !(await bouton.isVisible()),
+      "Resend non configuré sur cet environnement",
+    );
     await bouton.click();
     const dialog = page.locator("#dialog-signaler");
     await expect(dialog).toBeVisible();

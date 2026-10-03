@@ -55,7 +55,9 @@ test.describe("Scénario: réponse non JSON du serveur", () => {
       }),
     );
     await page.goto("/reset-password?token=jeton-de-test");
-    await page.getByLabel("Nouveau mot de passe").fill("un-mot-de-passe-solide");
+    await page
+      .getByLabel("Nouveau mot de passe")
+      .fill("un-mot-de-passe-solide");
     await page.getByRole("button", { name: "Enregistrer" }).click();
 
     await expect(

@@ -150,9 +150,7 @@ test.describe("Scénario: API paramètres — stats et TOTP", () => {
     expect(typeof corps.nbSalles).toBe("number");
   });
 
-  test("api_parametres_stats_sans_session_retourne401", async ({
-    browser,
-  }) => {
+  test("api_parametres_stats_sans_session_retourne401", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.get("/api/parametres/stats");
     expect(rep.status()).toBe(401);
@@ -293,9 +291,9 @@ test.describe("Scénario: Préférences — thème", () => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
     await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Sombre" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Sombre" }),
+    ).toHaveClass(/actif/);
     await expect(
       page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
@@ -312,9 +310,9 @@ test.describe("Scénario: Préférences — thème", () => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
     await page.locator(".bouton-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Clair" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Clair" }),
+    ).toHaveClass(/actif/);
     await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 
@@ -326,9 +324,9 @@ test.describe("Scénario: Préférences — thème", () => {
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
     await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Sombre" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Sombre" }),
+    ).toHaveClass(/actif/);
     await expect(
       page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
@@ -343,9 +341,9 @@ test.describe("Scénario: Préférences — thème", () => {
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
     await page.locator(".bouton-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Clair" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Clair" }),
+    ).toHaveClass(/actif/);
     await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 });

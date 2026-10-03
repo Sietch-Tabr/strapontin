@@ -169,7 +169,9 @@ test.describe("Bannière système overlay", () => {
     await expect(page.locator("section#communication")).toContainText(
       "Test onglet admin publié",
     );
-    await expect(page.locator("section#communication")).toContainText("warning");
+    await expect(page.locator("section#communication")).toContainText(
+      "warning",
+    );
   });
 
   test("admin_banniere_onglet_affiche_aucune_banniere_publiee", async ({
