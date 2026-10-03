@@ -1,4 +1,16 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+// La carte de signalement dépend de la configuration chargée après l'affichage : un des
+// trois canaux est visible une fois celle-ci arrivée.
+async function attendreCanalDeContact(page: Page) {
+  await expect(
+    page
+      .locator("#btn-ouvrir-signalement")
+      .or(page.locator("a[href^='mailto:']"))
+      .or(page.getByText("Aucun moyen de contact configuré actuellement."))
+      .first(),
+  ).toBeVisible();
+}
 
 test.describe("Scénario: aide — contenu et formulaire de signalement", () => {
   test("aide_h1_visible", async ({ page }) => {
@@ -25,6 +37,7 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
   test("aide_formulaire_signalement_present", async ({ page }) => {
     await page.goto("/aide");
     const bouton = page.locator("#btn-ouvrir-signalement");
+    await attendreCanalDeContact(page);
     if (!(await bouton.isVisible())) {
       // Resend non configuré : soit un lien mailto (CONTACT_EMAIL configuré), soit le message
       // de repli #842 si aucun canal de contact n'est configuré du tout.
@@ -57,6 +70,7 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     );
     await page.goto("/aide");
     const bouton = page.locator("#btn-ouvrir-signalement");
+    await attendreCanalDeContact(page);
     test.skip(
       !(await bouton.isVisible()),
       "Resend non configuré sur cet environnement",

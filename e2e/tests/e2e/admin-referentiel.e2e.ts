@@ -19,6 +19,12 @@ async function ouvrirReferentiel(
     .getByRole("group", { name: "Référentiel affiché" })
     .getByRole("button", { name: entite })
     .click();
+  // Lignes de données ou ligne « aucun résultat » : le tableau est chargé, un comptage
+  // fait avant serait faux.
+  const section = entite === "Salles" ? "salles" : "artistes";
+  await expect(
+    page.locator(`section#${section} table tbody tr`).first(),
+  ).toBeVisible({ timeout: 15000 });
 }
 
 test.describe("Scénario: admin — onglet Référentiel (salles et artistes)", () => {
