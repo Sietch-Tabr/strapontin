@@ -40,7 +40,9 @@ public class LogsAdminWorker {
 
   /**
    * Insère une entrée dans {@code logs_admin} — échoue silencieusement
-   * (log SLF4J local), un log manqué ne doit jamais faire échouer le job.
+   * (log SLF4J local), un log manqué ne doit jamais faire échouer le job. Un
+   * avertissement identique (source et texte) déjà écrit dans les dernières
+   * 24 heures n'est pas réécrit.
    * @param niveau "info", "warn" ou "error"
    * @param source source technique (ex. "reconciliation-nocturne")
    * @param message message lisible
@@ -53,10 +55,16 @@ public class LogsAdminWorker {
       final Map<String, Object> meta) {
     try {
       final String metaJson = meta != null ? objectMapper.writeValueAsString(meta) : "{}";
+      // Un avertissement identique déjà écrit dans les dernières 24 h n'apprend
+      // rien de plus : répété à chaque cycle, il noyait le journal.
       jdbc.update(
           """
           INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
+          SELECT :ts, :niveau, :source, :message, CAST(:meta AS jsonb)
+          WHERE :niveau <> 'warn' OR NOT EXISTS (
+              SELECT 1 FROM logs_admin
+              WHERE niveau = 'warn' AND source = :source AND message = :message
+                AND ts > now() - interval '24 hours')
           """,
           Map.of(
               "ts", Timestamp.from(Instant.now()),
