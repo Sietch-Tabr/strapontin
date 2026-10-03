@@ -33,6 +33,7 @@ export const versionsChangelog = [
           "Un même concert publié par deux billetteries sous deux affiches (« Meryl » et « Meryl + 1ère partie », co-plateaux) n'apparaît plus qu'une fois.",
           "Un festival ne vous signale plus les dates des autres artistes de l'affiche : seules celles où votre artiste joue sont retenues.",
           "Un concert déplacé dans une autre salle rejoint sa nouvelle fiche au lieu de rester en double.",
+          "Une billetterie momentanément indisponible ne fait plus passer ses concerts pour disparus, et deux séances d'un même spectacle le même jour ne sont plus confondues.",
           "Les dates Eventim continuent d'arriver quand Ticketmaster limite ses réponses pour la journée.",
           "Les spectacles toujours programmés ne sont plus proposés à tort à la suppression.",
         ],
