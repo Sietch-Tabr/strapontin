@@ -114,6 +114,9 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     creerEvenement("meryl 1ere partie", null);
 
     assertEquals(1, fusionEvenementsArtiste.fusionner());
+    assertEquals(
+        "meryl",
+        jdbc.queryForObject("SELECT artiste_norm FROM evenements", Map.of(), String.class));
   }
 
   // Deux têtes d'affiche suivies séparément gardent chacune leur événement.

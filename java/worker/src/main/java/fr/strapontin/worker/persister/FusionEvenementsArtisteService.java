@@ -7,6 +7,7 @@ package fr.strapontin.worker.persister;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -207,9 +208,8 @@ public class FusionEvenementsArtisteService {
   /**
    * Choisit l'événement à conserver (cible) entre les deux membres de la
    * paire : priorité à l'{@code artiste_id} déjà résolu (donnée coûteuse
-   * à reconstituer), puis au nombre d'observations déjà rattachées, puis
-   * à l'UUID le plus petit pour un résultat déterministe entre deux
-   * cycles.
+   * à reconstituer), puis au nombre d'observations, puis au nom d'artiste le
+   * plus court, puis à l'UUID le plus petit (résultat déterministe).
    * @return [cible, source], ou {@code null} si l'un des deux n'existe plus
    */
   // Le tableau représente une paire cible/source, pas une collection à agréger
@@ -220,7 +220,7 @@ public class FusionEvenementsArtisteService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT e.id AS id, e.artiste_id AS artiste_id,
+            SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
                    (SELECT COUNT(*) FROM observations o WHERE o.evenement_id = e.id) AS nb_obs
             FROM evenements e WHERE e.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
             """,
@@ -229,24 +229,17 @@ public class FusionEvenementsArtisteService {
       return null;
     }
 
-    final Map<String, Object> la =
-        lignes.get(0).get("id").equals(idA) ? lignes.get(0) : lignes.get(1);
-    final Map<String, Object> lb =
-        lignes.get(0).get("id").equals(idA) ? lignes.get(1) : lignes.get(0);
-
-    final boolean aArtisteId = la.get("artiste_id") != null;
-    final boolean bArtisteId = lb.get("artiste_id") != null;
-    if (aArtisteId != bArtisteId) {
-      return aArtisteId ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
-    }
-
-    final long nbA = ((Number) la.get("nb_obs")).longValue();
-    final long nbB = ((Number) lb.get("nb_obs")).longValue();
-    if (nbA != nbB) {
-      return nbA > nbB ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
-    }
-
-    return idA.compareTo(idB) <= 0 ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
+    // Le nom de la tête d'affiche plutôt que « orelsan premiere partie » : c'est
+    // lui qui rattachera l'événement à l'artiste s'il est suivi plus tard.
+    final List<Map<String, Object>> parPriorite =
+        lignes.stream()
+            .sorted(
+                Comparator.comparing((Map<String, Object> l) -> l.get("artiste_id") == null)
+                    .thenComparing(l -> -((Number) l.get("nb_obs")).longValue())
+                    .thenComparingInt(l -> ((String) l.get("artiste_norm")).length())
+                    .thenComparing(l -> (UUID) l.get("id")))
+            .toList();
+    return new UUID[] {(UUID) parPriorite.get(0).get("id"), (UUID) parPriorite.get(1).get("id")};
   }
 
   /**
