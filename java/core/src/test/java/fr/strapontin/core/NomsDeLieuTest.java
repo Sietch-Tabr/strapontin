@@ -48,4 +48,12 @@ class NomsDeLieuTest {
         NomsDeLieu.designentFortementLeMemeLieu(
             "la grande halle de la villette", "la petite halle de la villette"));
   }
+
+  @Test
+  void designentLeMemeLieu_articleEliseAuMilieuDuNom_vrai() {
+    assertTrue(NomsDeLieu.designentLeMemeLieu("le palais d auron", "le palais dauron bourges"));
+    assertTrue(
+        NomsDeLieu.designentLeMemeLieu("salle de l etoile", "salle de letoile chateaurenard"));
+    assertTrue(NomsDeLieu.designentLeMemeLieu("theatre de l eden", "theatre de leden senas"));
+  }
 }

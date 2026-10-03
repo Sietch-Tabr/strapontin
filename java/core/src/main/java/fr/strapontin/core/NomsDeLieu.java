@@ -5,6 +5,7 @@
 package fr.strapontin.core;
 
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Noms de lieux publiés par les billetteries : deux noms désignent-ils un
@@ -21,6 +22,8 @@ public final class NomsDeLieu {
   // Longueur minimale pour éviter un containment trivial sur un nom déjà très
   // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
+
+  private static final Pattern ARTICLE_ELIDE = Pattern.compile("\\b([a-z]) (?=[a-z])");
 
   private NomsDeLieu() {}
 
@@ -64,7 +67,15 @@ public final class NomsDeLieu {
    */
   private static boolean estApostropheElideeContenue(final String nomNormA, final String nomNormB) {
     return contientToken(fusionnerApostropheElidee(nomNormA), nomNormB)
-        || contientToken(fusionnerApostropheElidee(nomNormB), nomNormA);
+        || contientToken(fusionnerApostropheElidee(nomNormB), nomNormA)
+        || nomContenuDansLAutre(
+            fusionnerArticlesElides(nomNormA), fusionnerArticlesElides(nomNormB));
+  }
+
+  // Au milieu du nom aussi : « le palais d auron » / « le palais dauron bourges »,
+  // « salle de l etoile » / « salle de letoile chateaurenard ».
+  private static String fusionnerArticlesElides(final String nomNorm) {
+    return ARTICLE_ELIDE.matcher(nomNorm).replaceAll("$1");
   }
 
   // article élidé fusionné avec le mot suivant ("l astrada" -> "lastrada") —
