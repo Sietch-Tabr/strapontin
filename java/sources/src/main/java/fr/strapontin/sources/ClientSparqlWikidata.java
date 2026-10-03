@@ -37,16 +37,22 @@ final class ClientSparqlWikidata {
    * (même package). */
   static final String BASE_URL = "https://query.wikidata.org/sparql";
 
-  /* package-private : commune (code INSEE P374) de ?item et son code
-   * postal, hors arrondissement municipal. Libellé lié dans chaque
-   * branche : non lié, il parcourait toute la base Wikidata. */
+  /* package-private : commune actuelle (code INSEE P374, déclaration sans
+   * date de fin) de ?item et son code postal, hors arrondissement municipal.
+   * Libellé lié par branche : non lié, il parcourait toute la base. */
   static final String MOTIF_COMMUNE =
       """
-            OPTIONAL { ?item wdt:P131 ?communeDirecte . ?communeDirecte wdt:P374 [] .
+            OPTIONAL { ?item p:P131 ?declarationDirecte . ?declarationDirecte ps:P131 ?communeDirecte .
+              FILTER NOT EXISTS { ?declarationDirecte pq:P582 [] }
+              FILTER NOT EXISTS { ?declarationDirecte wikibase:rank wikibase:DeprecatedRank }
+              ?communeDirecte wdt:P374 [] .
               FILTER NOT EXISTS { ?communeDirecte wdt:P31 wd:Q702842 }
               ?communeDirecte rdfs:label ?libelleDirect . FILTER(LANG(?libelleDirect) = "fr")
               OPTIONAL { ?communeDirecte wdt:P281 ?cpDirect } }
-            OPTIONAL { ?item wdt:P131/wdt:P131/wdt:P131? ?communeAncetre .
+            OPTIONAL { ?item p:P131 ?declarationParent . ?declarationParent ps:P131 ?parent .
+              FILTER NOT EXISTS { ?declarationParent pq:P582 [] }
+              FILTER NOT EXISTS { ?declarationParent wikibase:rank wikibase:DeprecatedRank }
+              ?parent wdt:P131/wdt:P131? ?communeAncetre .
               ?communeAncetre wdt:P374 [] .
               FILTER NOT EXISTS { ?communeAncetre wdt:P31 wd:Q702842 }
               ?communeAncetre rdfs:label ?libelleAncetre . FILTER(LANG(?libelleAncetre) = "fr")

@@ -894,11 +894,14 @@ class WikidataSalleSourceTest {
     final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
-    // Commune par code INSEE : P131 désigne souvent un quartier ou un arrondissement.
+    // Commune actuelle par code INSEE : P131 désigne souvent un quartier, un
+    // arrondissement, ou une ancienne commune (Le Bikini, à Toulouse jusqu'en 2001).
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
         .andExpect(
             MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P374")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P582")))
         .andRespond(
             withSuccess(
                 """
