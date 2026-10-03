@@ -530,11 +530,27 @@ test.describe("Scénario: notifications push sans appareil abonné", () => {
           })
         : route.continue(),
     );
+    // Fréquence et cases réelles servies par la configuration : sans clé Resend
+    // (dev), les boutons de fréquence sont désactivés et ne se cochent pas.
+    await page.route("**/api/user/config", async (route) => {
+      if (route.request().method() !== "GET") {
+        return route.continue();
+      }
+      const reponse = await route.fetch();
+      const config = await reponse.json();
+      return route.fulfill({
+        response: reponse,
+        json: {
+          ...config,
+          resendDisponible: true,
+          frequenceNotifications: "quotidien",
+          notifArtistesPush: true,
+        },
+      });
+    });
     await page.goto("/parametres#notifications");
     const section = page.locator("section#notifications");
     await expect(section).toBeVisible();
-    await section.locator('input[type="radio"][value="quotidien"]').check();
-    await section.getByLabel("Push — artistes suivis").check();
 
     await expect(
       section.getByText("Aucun appareil n'est abonné aux notifications push"),
