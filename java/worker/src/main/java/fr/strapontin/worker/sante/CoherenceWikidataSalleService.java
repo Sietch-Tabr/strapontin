@@ -71,6 +71,13 @@ public class CoherenceWikidataSalleService {
   // évite un containment trivial sur un token court.
   private static final int LONGUEUR_MIN_CONTAINMENT = 5;
 
+  // Position Wikidata comparable aux lieux publiés : le contrôle de position
+  // (20 km) tranche ; les noms de communes signalaient à tort une agglomération
+  // (Le Pin Galant à Mérignac pour des concerts annoncés à Bordeaux).
+  private static final String POSITION_COMPARABLE =
+      "(s.origine_position = 'wikidata' AND EXISTS (SELECT 1 FROM salle_sources ss"
+          + " WHERE ss.salle_id = s.id AND ss.latitude IS NOT NULL))";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
   private final LogsAdminWorker logsAdminWorker;
@@ -98,6 +105,11 @@ public class CoherenceWikidataSalleService {
    * @return nombre d'incohérences détectées
    */
   public int verifier() {
+    jdbc.update(
+        "UPDATE salles s SET coherence_wikidata_signalee = NULL"
+            + " WHERE coherence_wikidata_signalee IS NOT NULL AND "
+            + POSITION_COMPARABLE,
+        Map.of());
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
       LOG.info("coherence:wikidata — aucun candidat");
@@ -358,11 +370,10 @@ public class CoherenceWikidataSalleService {
 
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
-        """
-        SELECT id, nom, nom_norm, ville, dept, wikidata_id
-        FROM salles
-        WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''
-        """,
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id FROM salles s"
+            + " WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''"
+            + " AND NOT "
+            + POSITION_COMPARABLE,
         Map.of(),
         (rs, _) ->
             new SalleAEnrichir(
