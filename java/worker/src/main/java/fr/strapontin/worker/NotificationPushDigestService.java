@@ -140,6 +140,15 @@ class NotificationPushDigestService {
     return nbEnvoyes > 0;
   }
 
+  /**
+   * @param userId utilisateur
+   * @return {@code true} si au moins un appareil de l'utilisateur est abonné
+   */
+  /* package-private : appelé par NotificationDigestService (même package). */
+  boolean aUnAbonnement(final String userId) {
+    return !chargerAbonnementsPush(userId).isEmpty();
+  }
+
   private List<Map<String, Object>> chargerAbonnementsPush(final String userId) {
     return jdbc.queryForList(
         "SELECT id, endpoint, p256dh, auth FROM push_abonnements WHERE user_id = :userId",

@@ -52,6 +52,9 @@ public class EnrichissementSallesService {
   // indéfiniment sous le seuil. Un taux de réussite est requis, pas seulement
   // une absence totale de résultat.
   private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
+  private static final String MOTIF_ALERTE_TAUX_BAS =
+      "enrichissement:salles — taux de réussite chronique trop bas";
+  private static final int JOURS_ENTRE_ALERTES_TAUX_BAS = 7;
   private static final String CLE_WIKIDATA_ID = "wikidataId";
   private static final String CLE_LATITUDE = "latitude";
   private static final String CLE_LONGITUDE = "longitude";
@@ -130,15 +133,39 @@ public class EnrichissementSallesService {
     if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) {
       return;
     }
+    // Les salles restant à enrichir sont souvent les cas difficiles : rappel
+    // hebdomadaire plutôt que chaque nuit.
+    if (alerteTauxBasRecente()) {
+      LOG.info(
+          "enrichissement:salles — taux bas {}/{}, déjà signalé cette semaine",
+          nbEnrichis,
+          nbCandidats);
+      return;
+    }
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",
-        "enrichissement:salles — taux de réussite chronique trop bas ("
+        MOTIF_ALERTE_TAUX_BAS
+            + " ("
             + nbEnrichis
             + "/"
             + nbCandidats
             + ") — vérifier que les sources d'enrichissement répondent réellement",
         Map.of("candidats", nbCandidats, "enrichis", nbEnrichis));
+  }
+
+  private boolean alerteTauxBasRecente() {
+    final Boolean recente =
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS (SELECT 1 FROM logs_admin
+                           WHERE source = 'reconciliation-nocturne' AND niveau = 'warn'
+                             AND message LIKE :motif
+                             AND ts > now() - make_interval(days => :jours))
+            """,
+            Map.of("motif", MOTIF_ALERTE_TAUX_BAS + "%", "jours", JOURS_ENTRE_ALERTES_TAUX_BAS),
+            Boolean.class);
+    return Boolean.TRUE.equals(recente);
   }
 
   /**

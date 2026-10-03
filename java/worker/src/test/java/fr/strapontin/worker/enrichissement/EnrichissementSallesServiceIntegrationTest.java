@@ -141,4 +141,29 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
             Map.of("id", salleId.toString()),
             String.class));
   }
+
+  private long alertesTauxBas() {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM logs_admin WHERE niveau = 'warn'"
+            + " AND message LIKE 'enrichissement:salles — taux de réussite%'",
+        Map.of(), Long.class);
+  }
+
+  // Les salles restant à enrichir sont les cas difficiles : l'alerte tombait chaque nuit.
+  @Test
+  void enrichir_tauxBasDejaSignaleCetteSemaine_neRepetePasLAlerte() {
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    for (int i = 0; i < 25; i++) {
+      insererSalle("Salle Difficile " + i, "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    }
+    jdbc.update(
+        "INSERT INTO logs_admin (ts, niveau, source, message) VALUES (now() - interval '2 days',"
+            + " 'warn', 'reconciliation-nocturne',"
+            + " 'enrichissement:salles — taux de réussite chronique trop bas (0/25)')",
+        Map.of());
+
+    service.enrichir();
+
+    assertEquals(1L, alertesTauxBas());
+  }
 }

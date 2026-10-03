@@ -143,7 +143,14 @@ public class NotificationDigestService {
       boolean emailOk,
       boolean pushOk,
       List<ConcertNotif> concertsEmail,
-      List<ConcertNotif> concertsPush) {}
+      List<ConcertNotif> concertsPush) {
+
+    // Rien à envoyer par email, et des push sans appareil abonné : ce n'est pas
+    // un échec, l'utilisateur n'a aucun canal (Paramètres le lui signale).
+    boolean sansCanal(final boolean abonnePush) {
+      return concertsEmail.isEmpty() && (concertsPush.isEmpty() || !abonnePush);
+    }
+  }
 
   /* package-private : type de retour interne, utilisé par
    * NotificationPushDigestService (même package). */
@@ -220,6 +227,7 @@ public class NotificationDigestService {
     boolean emailOk = false;
     boolean pushOk = false;
     boolean erreur = false;
+    boolean sansCanal = false;
     try {
       final ResultatDigest res =
           envoyerDigest(
@@ -229,6 +237,7 @@ public class NotificationDigestService {
               groupes.configsUtilisateurs().get(userId));
       emailOk = res.emailOk();
       pushOk = res.pushOk();
+      sansCanal = res.sansCanal(pushDigestService.aUnAbonnement(userId));
       // Seuls les concerts du canal effectivement en succès sont marqués
       // notifiés : un digest mixte email+push où un seul canal échoue ne doit
       // pas marquer à tort les concerts du canal en échec comme notifiés.
@@ -243,7 +252,10 @@ public class NotificationDigestService {
       LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
     }
     final int matchesNotifies;
-    if (concertIdsNotifies.isEmpty()) {
+    if (concertIdsNotifies.isEmpty() && sansCanal) {
+      LOG.info("notifier:digest — aucun canal joignable pour user={}", userId);
+      matchesNotifies = 0;
+    } else if (concertIdsNotifies.isEmpty()) {
       LOG.warn(
           "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
               + " à jour",
