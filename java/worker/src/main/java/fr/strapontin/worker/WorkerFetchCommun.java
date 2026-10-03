@@ -11,6 +11,7 @@ import fr.strapontin.core.Dedoublonner;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.EligibiliteResolutionDeezer;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
@@ -262,6 +263,15 @@ public class WorkerFetchCommun {
                     ? List.of(CLASSEMENT_AUCUN)
                     : List.copyOf(classementsTicketmaster));
     jdbc.update(SQL_ABSENCES_SALLE, params);
+  }
+
+  /**
+   * @param sources sources de récupération
+   * @return les sources hors Ticketmaster, pour un cycle à quota bas
+   */
+  /* package-private : appelé par les exécuteurs de fetch (même package). */
+  static List<SourceConcerts> sansTicketmaster(final List<SourceConcerts> sources) {
+    return sources.stream().filter(s -> !"ticketmaster".equals(s.nom())).toList();
   }
 
   /**

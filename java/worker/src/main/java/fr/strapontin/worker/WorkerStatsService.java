@@ -225,9 +225,15 @@ public class WorkerStatsService {
      */
     public static final String MOTIF_QUOTA_INSUFFISANT = "quota insuffisant";
 
-    /** @return un résultat vide marqué comme suspendu pour quota */
-    public static ResultatJob quotaInsuffisant() {
-      return new ResultatJob(new ResultatPersistance(0, 0), MOTIF_QUOTA_INSUFFISANT);
+    /**
+     * @param resultat bilan des sources effectivement interrogées
+     * @param ticketmasterAutorise {@code false} si Ticketmaster a été sauté
+     *     faute de quota
+     * @return un succès, ou le bilan marqué du motif de quota insuffisant
+     */
+    public static ResultatJob selonQuota(
+        final ResultatPersistance resultat, final boolean ticketmasterAutorise) {
+      return new ResultatJob(resultat, ticketmasterAutorise ? null : MOTIF_QUOTA_INSUFFISANT);
     }
 
     /**

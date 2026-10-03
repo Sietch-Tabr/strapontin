@@ -14,10 +14,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.LieuEventim;
 import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Autowired private WorkerFetchService fetchService;
   @Autowired private NamedParameterJdbcTemplate jdbc;
+  @Autowired private GestionQuotaTM gestionQuotaTM;
 
   @BeforeEach
   void nettoyerBase() {
@@ -433,5 +436,32 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             Map.of(),
             Integer.class);
     assertEquals(0, dernier);
+  }
+
+  // Quota Ticketmaster sous le seuil des cycles : Ticketmaster est sauté, Eventim (sans quota)
+  // continue ; jusqu'ici tout le job s'arrêtait, dates Eventim comprises.
+  @Test
+  void executerFetchRegion_quotaTicketmasterBas_interrogeQuandMemeEventim() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    gestionQuotaTM.ecrireQuota(
+        new QuotaTM(
+            100, 5000, System.currentTimeMillis() + 3_600_000, java.time.Instant.now().toString()));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
+    try {
+      fetchService.executerFetchRegion();
+
+      verify(eventimSource).fetchRegionCouverte(any(), any());
+      verify(ticketmasterSource, never()).fetchRegionCouverte(any(), any());
+      assertEquals(
+          "quota insuffisant",
+          jdbc.queryForObject(
+              "SELECT erreur FROM fetch_jobs WHERE type_job = 'fetch:region'",
+              Map.of(),
+              String.class));
+    } finally {
+      jdbc.update("DELETE FROM app_config WHERE cle = 'TM_QUOTA_JSON'", Map.of());
+    }
   }
 }

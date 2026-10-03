@@ -162,13 +162,11 @@ class FetchSallesExecutor {
             LOG,
             "fetch:salles:all",
             () -> {
-              if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
-                LOG.warn("fetch:salles:all suspendu — quota TM insuffisant");
-                return WorkerStatsService.ResultatJob.quotaInsuffisant();
-              }
-
+              // Quota Ticketmaster bas : ses identifiants seuls sont écartés.
+              final boolean ticketmasterAutorise = commun.obtenirGestionQuotaTM().cronAutorise();
               final List<SalleAFetcher> sallesAFetcher =
-                  recupererIdentifiantsSallesSuivies(salleIdsCibles);
+                  sansTicketmasterSi(
+                      !ticketmasterAutorise, recupererIdentifiantsSallesSuivies(salleIdsCibles));
               if (sallesAFetcher.isEmpty()) {
                 LOG.info("fetch:salles:all — aucune salle suivie avec source configurée");
                 return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
@@ -179,7 +177,7 @@ class FetchSallesExecutor {
               recalculerMatchesService.recalculerMatches(null);
               rapportage.notificationDigestService().executerDigest("temps_reel");
               LOG.info("fetch:salles:all terminé");
-              return WorkerStatsService.ResultatJob.succes(resultat);
+              return WorkerStatsService.ResultatJob.selonQuota(resultat, ticketmasterAutorise);
             });
   }
 
@@ -200,6 +198,24 @@ class FetchSallesExecutor {
    * @param identifiants identifiants de la salle chez chaque source
    */
   private record SalleAFetcher(String salleId, List<IdentifiantSalle> identifiants) {}
+
+  private static List<SalleAFetcher> sansTicketmasterSi(
+      final boolean exclure, final List<SalleAFetcher> salles) {
+    if (!exclure) {
+      return salles;
+    }
+    final String prefixe = TicketmasterSource.PREFIXE_IDENTIFIANT + ":";
+    return salles.stream()
+        .map(
+            salle ->
+                new SalleAFetcher(
+                    salle.salleId(),
+                    salle.identifiants().stream()
+                        .filter(id -> !id.identifiant().startsWith(prefixe))
+                        .toList()))
+        .filter(salle -> !salle.identifiants().isEmpty())
+        .toList();
+  }
 
   // Le préfixe émis ici doit correspondre à celui attendu par
   // TicketmasterSource.accepteIdentifiantSalle ("tm", pas la valeur canonique

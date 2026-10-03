@@ -71,10 +71,8 @@ class FetchArtistesBatchExecutor {
 
   private WorkerStatsService.ResultatJob executerCycle(
       final boolean retry, final List<String> artisteIdsCibles) {
-    if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
-      LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
-      return WorkerStatsService.ResultatJob.quotaInsuffisant();
-    }
+    // Quota Ticketmaster bas : seule cette source est suspendue, pas Eventim.
+    final boolean ticketmasterAutorise = commun.obtenirGestionQuotaTM().cronAutorise();
 
     final List<Map<String, Object>> rows = chargerArtistesSuivisBatch(retry, artisteIdsCibles);
     if (rows.isEmpty()) {
@@ -84,13 +82,13 @@ class FetchArtistesBatchExecutor {
 
     final List<SourceConcerts> sourcesSimples =
         sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
-    final ResultatPersistance resultat = traiterLots(rows, sourcesSimples);
+    final ResultatPersistance resultat = traiterLots(rows, sourcesSimples, ticketmasterAutorise);
 
     commun.sauvegarderQuota();
     recalculerMatchesService.recalculerMatches(null);
     rapportage.notificationDigestService().executerDigest("temps_reel");
     LOG.info("fetch:artistes:batch terminé");
-    return WorkerStatsService.ResultatJob.succes(resultat);
+    return WorkerStatsService.ResultatJob.selonQuota(resultat, ticketmasterAutorise);
   }
 
   private List<Map<String, Object>> chargerArtistesSuivisBatch(
@@ -112,7 +110,9 @@ class FetchArtistesBatchExecutor {
   }
 
   private ResultatPersistance traiterLots(
-      final List<Map<String, Object>> rows, final List<SourceConcerts> sourcesSimples) {
+      final List<Map<String, Object>> rows,
+      final List<SourceConcerts> sourcesSimples,
+      final boolean ticketmasterAutorise) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
     final List<String> echecsLots = new ArrayList<>();
     final List<String> idsEnEchec = new ArrayList<>();
@@ -121,7 +121,7 @@ class FetchArtistesBatchExecutor {
       final List<Map<String, Object>> lot =
           rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
       try {
-        final ResultatLot resultatLot = traiterLot(lot, sourcesSimples);
+        final ResultatLot resultatLot = traiterLot(lot, sourcesSimples, ticketmasterAutorise);
         resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
         if (resultatLot.echecReseauTransitoire()) {
           LOG.warn(
@@ -153,14 +153,17 @@ class FetchArtistesBatchExecutor {
    * Fetch + dédoublonnage + persistance d'un lot ({@value TAILLE_LOT_TM})
    * — persistance par lot pour ne pas perdre le quota TM déjà consommé.
    * @param lot sous-ensemble de lignes artiste
-   * @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch
-   *     individuel par artiste)
+   * @param sourcesSimples sources interrogées artiste par artiste
+   * @param ticketmasterAutorise {@code false} si le quota Ticketmaster est bas
    * @return bilan de persistance du lot
    */
   private ResultatLot traiterLot(
-      final List<Map<String, Object>> lot, final List<SourceConcerts> sourcesSimples) {
+      final List<Map<String, Object>> lot,
+      final List<SourceConcerts> sourcesSimples,
+      final boolean ticketmasterAutorise) {
     final AtomicBoolean echecReseau = new AtomicBoolean(false);
-    final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot, echecReseau);
+    final List<ConcertBrut> concertsTM =
+        ticketmasterAutorise ? fetchTMParArtistes(lot, echecReseau) : List.of();
 
     final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
     for (final SourceConcerts source : sourcesSimples) {
@@ -194,8 +197,10 @@ class FetchArtistesBatchExecutor {
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     rapportage.enregistreurLieuxEventim().enregistrer();
-    // Un concert non revu faute de réponse de la source n'est pas absent.
-    if (!echecReseau.get()) {
+    // Un concert non revu faute de réponse ou d'interrogation de la source
+    // (Ticketmaster sauté) n'est pas absent : le comptage par artiste ne
+    // distingue pas les sources.
+    if (!echecReseau.get() && ticketmasterAutorise) {
       final List<String> artisteIds =
           lot.stream().map(row -> (String) row.get(CLE_ARTISTE_ID_STR)).toList();
       commun.mettreAJourAbsencesArtistes(artisteIds, debutLot);
