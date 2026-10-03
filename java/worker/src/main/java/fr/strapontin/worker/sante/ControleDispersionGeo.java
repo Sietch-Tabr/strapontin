@@ -17,11 +17,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Dispersion géographique des lieux sources : lieux éloignés d'une salle
- * (contamination ; entre 300 m et 1 km, seulement si leurs noms ne sont pas
- * des doublons forts), lieux de deux salles qui coïncident sous des noms
- * compatibles (doublon). Consolide
- * d'abord la position des salles sur leurs lieux.
+ * Dispersion des lieux sources : lieux éloignés d'une salle (contamination),
+ * lieux de deux salles qui coïncident sous des noms compatibles (doublon).
+ * Consolide d'abord la position des salles sur leurs lieux.
  * @since 3.0.2
  * @author Kwaite
  */
