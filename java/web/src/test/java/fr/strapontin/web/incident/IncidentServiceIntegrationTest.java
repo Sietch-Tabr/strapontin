@@ -16,7 +16,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
@@ -30,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test d'intégration de {@link IncidentService} avec PostgreSQL réel.

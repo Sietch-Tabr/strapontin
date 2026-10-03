@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
@@ -13,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Écriture dans {@code logs_admin} depuis le worker — le module n'a pas
@@ -64,7 +64,7 @@ public class LogsAdminWorker {
               "source", source,
               "message", message,
               "meta", metaJson));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("Erreur sérialisation meta log admin source={} : {}", source, e.getMessage());
     } catch (Exception e) {
       LOG.warn("Erreur insertion log admin source={} : {}", source, e.getMessage());

@@ -16,7 +16,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
@@ -37,6 +36,7 @@ import org.mockito.InOrder;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link EnrichissementSallesService} (dépendances mockées).

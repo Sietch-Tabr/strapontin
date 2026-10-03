@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker.quota;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -17,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Gestion du quota journalier Ticketmaster ({@code app_config})
@@ -75,7 +75,7 @@ public class GestionQuotaTM {
       return Optional.of(quota);
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
@@ -96,7 +96,7 @@ public class GestionQuotaTM {
           ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
           """,
           Map.of("cle", CLE_QUOTA, "json", json));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le quota TM", e);
     }
   }
@@ -174,7 +174,7 @@ public class GestionQuotaTM {
           VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
           """,
           params);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
     } catch (Exception _) {
       LOG.warn("Impossible d'insérer log quota admin");

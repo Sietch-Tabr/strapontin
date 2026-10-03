@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.EventimSource;
@@ -19,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de gestion de l'onglet admin « Sources » — agrège les statuts

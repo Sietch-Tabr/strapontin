@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.artiste;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.FiltreArtiste;
@@ -32,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de gestion des artistes suivis (recherche en base + API Deezer,

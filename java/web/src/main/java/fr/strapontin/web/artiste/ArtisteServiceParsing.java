@@ -4,13 +4,13 @@
  */
 package fr.strapontin.web.artiste;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Analyse des réponses JSON brutes Wikidata/Deezer Search en suggestions

@@ -92,7 +92,7 @@ Résumé structuré par dépendance : version actuelle → disponible, résumé 
 
 ## 10. Pièges connus à revérifier systématiquement
 
-- **`okhttp`** (dépendance transitive Resend) : artefact Maven générique vide depuis okhttp 5.0.0 (module Kotlin Multiplatform) → exclusion `com.squareup.okhttp3:okhttp` + dépendance explicite `okhttp-jvm` **dans `java/web/pom.xml` ET `java/worker/pom.xml`** (le worker avait été oublié une fois, v2.7.0 lot 4 — bug de prod silencieux jusqu'à investigation). Vérifier les deux à chaque montée touchant Resend/okhttp.
+- **`okhttp`** (dépendance transitive Resend) : artefact Maven générique vide depuis okhttp 5.0.0 (module Kotlin Multiplatform). resend-java ≥ 4.28.0 dépend directement de `okhttp-jvm`, version gérée dans le pom parent : à chaque montée de Resend, vérifier par `mvn dependency:tree -pl web,worker` qu'aucun `com.squareup.okhttp3:okhttp` vide n'est tiré (le worker avait été oublié une fois, v2.7.0 lot 4, bug de prod silencieux).
 - Le plugin Maven `versions` peut suggérer une **rétrogradation fausse** (`resend-java` → 4.13.0 déjà rencontré) — toujours vérifier `maven-metadata.xml` sur Maven Central directement avant de conclure qu'une version plus récente n'existe pas.
 - `npm audit` sur la chaîne `vite-plugin-pwa`→`workbox-build`→... peut être non actionable sans `--force` (qui rétrograderait `vite-plugin-pwa`) — documenter plutôt que forcer, sauf si `npm audit fix` (sans `--force`) résout proprement (déjà arrivé, v2.7.9).
 - Montée majeure de Spring Boot : vérifier les packages déplacés (ex. `Health`/`HealthIndicator` → `org.springframework.boot.health.contributor` depuis Spring Boot 4).

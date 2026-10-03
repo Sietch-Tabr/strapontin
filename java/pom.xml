@@ -28,24 +28,22 @@
         <revision>3.0.2</revision>
         <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Override BOM : Spring Boot 4.1.0 tire Flyway 12.4.0 ; on requiert 12.9.0+. -->
+        <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
         <flyway.version>13.8.1</flyway.version>
         <caffeine.version>3.3.0</caffeine.version>
-        <postgresql.version>42.7.13</postgresql.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.86</bouncycastle.version>
         <webpush.version>5.1.2</webpush.version>
-        <!-- v4.15.0/v4.16.0 tirent com.squareup.okhttp3:okhttp:5.4.0, dont l'artefact Maven
-             publié est volontairement vide côté JVM depuis okhttp 5.0.0 (square/okhttp#8913) :
-             okhttp est désormais un module Kotlin Multiplatform, Gradle résout la bonne variante
-             automatiquement mais Maven doit choisir explicitement okhttp-jvm. Exclu ci-dessous
-             et remplacé par une dépendance directe sur okhttp-jvm (jar JVM complet, contient
-             bien okhttp3.RequestBody). -->
-        <!-- À partir de 4.19.0, publication sur Maven Central sans le préfixe "v" -->
+        <!-- Dépendances de compilation de web-push, qui ne les tire qu'au runtime -->
+        <httpclient.version>4.5.14</httpclient.version>
+        <jose4j.version>0.9.7</jose4j.version>
+        <okapibarcode.version>0.5.6</okapibarcode.version>
         <resend.version>4.28.0</resend.version>
+        <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
+             Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.1</springdoc.version>
-        <bucket4j.version>8.20.0</bucket4j.version>
+        <bucket4j.version>8.21.0</bucket4j.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
@@ -161,11 +159,12 @@
                     </executions>
                 </plugin>
                 <plugin>
-                    <!-- Formatage Google Java Style vérifié via Maven (télécharge google-java-format
-                         depuis Maven Central), indépendant d'un binaire local installé — le hook
-                         d'écriture (google-java-format en CLI) peut être absent sur une autre machine
-                         ou en CI. Pas d'exécution liée pour l'instant : mesure manuelle d'abord
-                         (mvn spotless:check), avant de décider du binding à verify. -->
+                    <!-- Formatage Google Java Style vérifié en CI (spotless:check, step static-analysis),
+                         indépendamment du hook d'écriture local. google-java-format 1.37.0 échoue
+                         dans Spotless 3.10.3 (exception au chargement du formateur) : 1.36.1.
+                         Les exports du compilateur requis par le formateur sont posés dans
+                         .mvn/jvm.config : sans eux, Spotless les force via sun.misc.Unsafe
+                         (avertissement JDK, diffplug/spotless#2808). -->
                     <groupId>com.diffplug.spotless</groupId>
                     <artifactId>spotless-maven-plugin</artifactId>
                     <version>${spotless.version}</version>
@@ -254,13 +253,6 @@
                 <groupId>com.resend</groupId>
                 <artifactId>resend-java</artifactId>
                 <version>${resend.version}</version>
-                <exclusions>
-                    <!-- Coquille vide côté JVM (square/okhttp#8913) — voir okhttp-jvm ci-dessous -->
-                    <exclusion>
-                        <groupId>com.squareup.okhttp3</groupId>
-                        <artifactId>okhttp</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>
@@ -275,11 +267,35 @@
                 <version>${springdoc.version}</version>
             </dependency>
 
-            <!-- Rate limiting login (5 tentatives / 15 min) -->
+            <!-- Limitation de débit (connexion, réinitialisation, journalisation client) -->
             <dependency>
                 <groupId>com.bucket4j</groupId>
                 <artifactId>bucket4j_jdk17-core</artifactId>
                 <version>${bucket4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bitbucket.b_c</groupId>
+                <artifactId>jose4j</artifactId>
+                <version>${jose4j.version}</version>
+            </dependency>
+
+            <!-- QR code SVG de l'enrôlement TOTP -->
+            <dependency>
+                <groupId>uk.org.okapibarcode</groupId>
+                <artifactId>okapibarcode</artifactId>
+                <version>${okapibarcode.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.beust</groupId>
+                        <artifactId>jcommander</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
         </dependencies>

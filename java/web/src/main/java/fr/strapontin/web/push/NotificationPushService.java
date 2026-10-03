@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.push;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
@@ -20,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de notifications Web Push VAPID — envoie des notifications aux

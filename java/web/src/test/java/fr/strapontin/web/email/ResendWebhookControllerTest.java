@@ -11,7 +11,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Map;
@@ -21,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires de {@link ResendWebhookController}.

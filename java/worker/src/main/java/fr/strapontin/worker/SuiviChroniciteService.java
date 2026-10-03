@@ -4,9 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -14,6 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Suit, par clé (ex. "fetch:salles:all|Ticketmaster"), le nombre de
@@ -98,7 +98,7 @@ public class SuiviChroniciteService {
       return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashMap<>();
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("streaks de chronicité malformés en base — réinitialisés : {}", e.getMessage());
       return new HashMap<>();
     }
@@ -114,7 +114,7 @@ public class SuiviChroniciteService {
           ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
           """,
           Map.of("cle", CLE_CONFIG, "json", json));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.error("impossible de sérialiser les streaks de chronicité", e);
     }
   }

@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker.quota;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.worker.LogsAdminWorker;
@@ -23,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Garde-fou quota d'envoi Resend jour/mois côté worker (détail :
@@ -85,7 +85,7 @@ public class GestionQuotaResendWorker {
       return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
@@ -98,7 +98,7 @@ public class GestionQuotaResendWorker {
           "INSERT INTO app_config (cle, valeur_chiffree) VALUES (:cle, :json)"
               + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()",
           Map.of("cle", CLE_QUOTA, "json", json));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le compteur Resend", e);
     }
   }

@@ -4,7 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.EventimSource;
@@ -31,20 +30,7 @@ public class WorkerConfiguration {
   public WorkerConfiguration() {}
 
   /**
-   * Sérialiseur JSON (quota TM dans {@code app_config}).
-   *
-   * @return instance partagée
-   */
-  /* package-private : Bean Spring, jamais appelé directement hors du
-   * conteneur. */
-  @Bean
-  ObjectMapper objectMapper() {
-    return new ObjectMapper();
-  }
-
-  /**
-   * Authentifie l'API interne {@code /trigger} par jeton ({@link FiltreJetonInterne}).
-   *
+   * Authentifie l'API interne /trigger par jeton ({@link FiltreJetonInterne}).
    * @param secret valeur de {@code APP_CONFIG_SECRET}
    * @return l'enregistrement du filtre, limité à {@code /trigger/*}
    */

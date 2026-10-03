@@ -14,10 +14,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.sql.Date;
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -90,9 +89,9 @@ class PersisteurConcertsDbTest {
         "cle",
         "idmanif:661370",
         "date",
-        Date.valueOf(date),
+        date.toString(),
         "heure",
-        Time.valueOf(heure));
+        heure.format(DateTimeFormatter.ISO_LOCAL_TIME));
   }
 
   private static PersisteurConcertsDb db(

@@ -17,7 +17,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
@@ -41,6 +40,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.web.client.ResourceAccessException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link WorkerFetchService} (extrait de {@code WorkerService}).

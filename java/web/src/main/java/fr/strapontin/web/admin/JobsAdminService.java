@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CatalogueJobs;
 import fr.strapontin.core.QuotaTM;
 import java.time.Instant;
@@ -20,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Statistiques des jobs Quartz et quota Ticketmaster pour l'onglet

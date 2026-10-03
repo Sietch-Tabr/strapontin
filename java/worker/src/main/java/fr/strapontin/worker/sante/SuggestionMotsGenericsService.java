@@ -4,9 +4,6 @@
  */
 package fr.strapontin.worker.sante;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
@@ -19,6 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Détecte des tokens de {@code salles.nom_norm} suggérant un mot-type
@@ -118,7 +118,7 @@ public class SuggestionMotsGenericsService {
       return objectMapper.readValue(json, new TypeReference<>() {});
     } catch (EmptyResultDataAccessException e) {
       return new HashSet<>();
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn(
           "liste des mots génériques suggérés malformée en base — réinitialisée : {}",
           e.getMessage());
@@ -136,7 +136,7 @@ public class SuggestionMotsGenericsService {
           ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
           """,
           Map.of("cle", CLE_CONFIG, "json", json));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.error("impossible de sérialiser les mots génériques suggérés", e);
     }
   }

@@ -15,7 +15,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
@@ -27,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link WorkerPurgeService} (extrait de {@code WorkerService}).

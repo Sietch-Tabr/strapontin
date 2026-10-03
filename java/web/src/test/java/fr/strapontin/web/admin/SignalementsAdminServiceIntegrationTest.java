@@ -7,7 +7,6 @@ package fr.strapontin.web.admin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test d'intégration de {@link SignalementsAdminService} avec PostgreSQL réel (Testcontainers) —

@@ -14,7 +14,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.time.LocalDate;
@@ -23,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires de {@link GestionQuotaResendWorker} (suite de l'incident).

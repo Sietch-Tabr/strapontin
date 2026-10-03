@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.services.emails.Emails;
 import com.resend.services.emails.model.CreateEmailOptions;
@@ -31,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires de [NotificationDigestService] avec mocks Mockito.

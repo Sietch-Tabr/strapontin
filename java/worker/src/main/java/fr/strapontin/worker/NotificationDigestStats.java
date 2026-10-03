@@ -4,7 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -17,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Journalisation du bilan de cycle ({@code logs_admin}) et des

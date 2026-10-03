@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.utilisateur;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.WorkerTriggerUtils;
@@ -27,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service d'import/export des préférences utilisateur.

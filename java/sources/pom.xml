@@ -28,8 +28,10 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <!-- Jackson 3, celui que les RestClient retiennent dans le runtime web/worker : les tests
+             désérialisent les réponses des sources avec la même pile qu'en prod. -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 

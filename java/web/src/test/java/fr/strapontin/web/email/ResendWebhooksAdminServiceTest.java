@@ -12,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.suppressions.Suppressions;
@@ -26,6 +25,7 @@ import fr.strapontin.web.config.ConfigService;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link ResendWebhooksAdminService}.

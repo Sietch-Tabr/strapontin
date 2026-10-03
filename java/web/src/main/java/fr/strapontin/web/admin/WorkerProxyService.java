@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.admin;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Proxy HTTP vers le worker (port 8081) pour les opérations admin —
