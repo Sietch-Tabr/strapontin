@@ -33,7 +33,7 @@ public class SuiviChroniciteService {
    * Nombre de cycles consécutifs en échec à partir duquel un message est
    * qualifié de chronique plutôt que traité comme un warn isolé — 3 couvre
    * aussi bien une cadence à 11 cycles/jour (Ticketmaster) qu'une cadence à 1
-   * cycle/nuit (Overpass, réconciliation nocturne).
+   * cycle/nuit (enrichissement, réconciliation nocturne).
    */
   public static final int SEUIL_CYCLES_CHRONIQUE = 3;
 

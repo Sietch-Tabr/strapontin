@@ -18,7 +18,7 @@ import java.util.UUID;
 public interface SourceEnrichissementSalle {
 
   /**
-   * Identifiant technique de la source (ex. {@code "overpass"} ,
+   * Identifiant technique de la source (ex. {@code "nominatim"} ,
    * {@code "wikidata"} ).
    *
    * @return identifiant de la source

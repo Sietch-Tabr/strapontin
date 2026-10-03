@@ -34,8 +34,8 @@ class WikidataSalleSourceTest {
     assertEquals("wikidata", new WikidataSalleSource().nom());
   }
 
-  // Régression : Overpass n'est plus un passage obligé pour les salles (instance publique
-  // surchargée, cf. OverpassSalleSource) — sans wikidataId connu, la recherche par nom mwapi
+  // Régression : la découverte par OpenStreetMap n'est pas un passage obligé pour les salles
+  // — sans wikidataId connu, la recherche par nom mwapi
   // doit être tentée, pas une simple mise de côté silencieuse.
   @Test
   void enrichirLot_salleSansWikidataId_utiliseDecouverteMwapi() {

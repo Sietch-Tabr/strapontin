@@ -71,8 +71,8 @@ public class ReconciliationNocturneService {
   }
 
   /**
-   * Exécute les deux phases du job nocturne — artistes avant salles
-   * (Overpass, infrastructure partagée, timeouts fréquents, ne doit
+   * Exécute les deux phases du job nocturne — artistes avant salles (les
+   * services publics interrogés pour les salles, plus lents, ne doivent
    * pas retarder un enrichissement indépendant).
    * @return bilan agrégé de l'exécution
    */

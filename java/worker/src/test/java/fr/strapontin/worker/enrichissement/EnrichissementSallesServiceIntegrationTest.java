@@ -10,7 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.OverpassSalleSource;
+import fr.strapontin.sources.NominatimSalleSource;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.WikidataSalleSource;
@@ -37,7 +37,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  */
 class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
-  @MockitoBean private OverpassSalleSource overpassSalleSource;
+  @MockitoBean private NominatimSalleSource nominatimSalleSource;
   @MockitoBean private WikidataSalleSource wikidataSalleSource;
 
   @MockitoBean private TicketmasterSource ticketmasterSource;
@@ -48,11 +48,11 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @BeforeEach
   void nettoyerBaseEtStubberSources() {
     jdbc.update("DELETE FROM salles", Map.of());
-    when(overpassSalleSource.enrichirLot(any())).thenReturn(Map.of());
+    when(nominatimSalleSource.enrichirLot(any())).thenReturn(Map.of());
     when(wikidataSalleSource.enrichirLot(any())).thenReturn(Map.of());
-    when(overpassSalleSource.nom()).thenReturn("overpass");
+    when(nominatimSalleSource.nom()).thenReturn("nominatim");
     when(wikidataSalleSource.nom()).thenReturn("wikidata");
-    when(overpassSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
+    when(nominatimSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
     when(wikidataSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
   }
 
@@ -75,7 +75,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     service.enrichir();
 
     final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
-    verify(overpassSalleSource).enrichirLot(captor.capture());
+    verify(nominatimSalleSource).enrichirLot(captor.capture());
     final List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
     assertTrue(idsTraites.contains(salleAujourdhui));
     assertEquals(1, idsTraites.size());
@@ -89,7 +89,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
 
     service.enrichir();
 
-    verify(overpassSalleSource, org.mockito.Mockito.never()).enrichirLot(any());
+    verify(nominatimSalleSource, org.mockito.Mockito.never()).enrichirLot(any());
   }
 
   // #1188 : salles.dept n'est jamais mis à jour après création — une salle candidate sans dept
@@ -115,7 +115,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     service.enrichir();
 
     final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
-    verify(overpassSalleSource).enrichirLot(captor.capture());
+    verify(nominatimSalleSource).enrichirLot(captor.capture());
     final SalleAEnrichir candidat = captor.getValue().getFirst();
     assertEquals("87", candidat.dept());
   }

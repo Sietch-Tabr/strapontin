@@ -8,13 +8,12 @@ import java.util.Map;
 
 /**
  * Correspondance département → centre géographique (Nominatim/OSM, stable),
- * utilisée pour les requêtes par région de {@link TicketmasterSource} et
- * {@link OverpassSalleSource} .
+ * utilisée pour les requêtes par région de {@link TicketmasterSource}.
  */
 final class CentresDepartement {
 
   /* package-private : réutilisé par
-   * OverpassSalleSource/TicketmasterRegionFetcher (même package). */
+   * TicketmasterRegionFetcher (même package). */
   static final Map<String, CentreDept> PAR_DEPT =
       Map.ofEntries(
           Map.entry("01", new CentreDept(46.0654, 5.4489, 76)),

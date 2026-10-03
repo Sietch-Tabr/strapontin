@@ -46,8 +46,7 @@ final class ClientSparqlWikidata {
   private static final int RETRY_TRANSITOIRE_MAX = 3;
   private static final int RETRY_TOTAL_MAX = 5;
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
-  // espacement proactif entre appels, sur le même principe que
-  // OverpassSalleSource.DELAI_MIN_ENTRE_APPELS_MS — le retry réactif sur 429
+  // espacement proactif entre appels — le retry réactif sur 429
   // (Retry-After 120s constaté) a fait perdre ~4 des 5 minutes d'un cycle
   // nocturne. Aucune politique de rate-limit publiée par Wikidata pour
   // l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte de temps

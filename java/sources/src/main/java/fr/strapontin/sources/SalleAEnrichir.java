@@ -8,9 +8,9 @@ import java.util.UUID;
 
 /**
  * Salle candidate à l'enrichissement Wikidata/OSM — {@code latitude}/
- * {@code longitude} portent les coordonnées déjà connues (Nominatim ou
- * Overpass), pour valider un candidat de découverte contre un GPS déjà
- * établi.
+ * {@code longitude} portent les coordonnées déjà connues (lieux publiés,
+ * Wikidata ou géocodage), pour valider un candidat de découverte contre un
+ * GPS déjà établi.
  * @since 2.6.0
  * @author Kwaite
  */

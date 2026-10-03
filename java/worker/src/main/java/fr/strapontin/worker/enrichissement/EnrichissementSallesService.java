@@ -38,9 +38,8 @@ public class EnrichissementSallesService {
 
   private static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source
-  // (500ms/appel côté OverpassSalleSource et WikidataSalleSource) — laisse
-  // Overpass et Wikidata respirer entre deux lots plutôt que d'enchaîner
-  // immédiatement, sur des instances publiques déjà sous tension.
+  // (cadenceurs de Nominatim et de WikidataSalleSource) — laisse ces services
+  // publics respirer entre deux lots plutôt que d'enchaîner immédiatement.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
   // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de
   // réussite déclenche une alerte — évite un faux positif sur un tout petit lot
@@ -147,7 +146,7 @@ public class EnrichissementSallesService {
    * source implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de
    * se terminer — même mécanisme générique que
    * {@code WorkerStatsService.remonterBilan} , absent jusqu'ici sur les sources
-   * d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré
+   * d'enrichissement : la panne d'une source publique de 3+ mois n'avait ainsi jamais généré
    * la moindre entrée {@code logs_admin}.
    */
   private void remonterBilans() {

@@ -84,7 +84,8 @@ class EnrichissementSallesServiceTest {
   }
 
   // Un bilan d'appels/erreurs à 0 échec ne détecte pas une source qui répond systématiquement
-  // "200 OK, aucun résultat" (ex. panne géographique silencieuse d'Overpass) — un cycle avec un
+  // "200 OK, aucun résultat" (ex. panne géographique silencieuse d'une instance publique) — un
+  // cycle avec un
   // nombre significatif de candidats et 0 salle enrichie doit être journalisé séparément.
   @Test
   void enrichir_vingtCandidatsZeroEnrichis_journaliseUneAlerte() {
@@ -227,14 +228,14 @@ class EnrichissementSallesServiceTest {
   }
 
   @Test
-  void enrichir_overpassTrouveWikidataId_wikidataUtiliseLeQidPropage() {
+  void enrichir_premiereSourceTrouveWikidataId_wikidataUtiliseLeQidPropage() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
         new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
-    final SourceEnrichissementSalle overpass = mock(SourceEnrichissementSalle.class);
-    when(overpass.enrichirLot(List.of(candidat)))
+    final SourceEnrichissementSalle nominatim = mock(SourceEnrichissementSalle.class);
+    when(nominatim.enrichirLot(List.of(candidat)))
         .thenReturn(Map.of(salleId, new EnrichissementSalle("Q123", null, null, null, null)));
 
     final SourceEnrichissementSalle wikidata = mock(SourceEnrichissementSalle.class);
@@ -247,7 +248,7 @@ class EnrichissementSallesServiceTest {
     final EnrichissementSallesService service =
         new EnrichissementSallesService(
             jdbc,
-            List.of(overpass, wikidata),
+            List.of(nominatim, wikidata),
             logsAdminWorkerMock(),
             suiviChronicite(jdbc),
             mock(FusionSallesClePorteeService.class),
@@ -490,7 +491,8 @@ class EnrichissementSallesServiceTest {
         .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
-  // bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne Overpass de
+  // bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne d'une source publique
+  // de
   // 3+ mois jamais remontée dans logs_admin. Panne totale (3 appels, 3 erreurs) doit escalader en
   // niveau error.
   @Test
@@ -505,7 +507,7 @@ class EnrichissementSallesServiceTest {
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
     when(source.enrichirLot(any())).thenReturn(Map.of());
-    when(source.nom()).thenReturn("overpass");
+    when(source.nom()).thenReturn("nominatim");
     when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(3, 3));
     final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
@@ -534,7 +536,7 @@ class EnrichissementSallesServiceTest {
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
     when(source.enrichirLot(any())).thenReturn(Map.of());
-    when(source.nom()).thenReturn("overpass");
+    when(source.nom()).thenReturn("nominatim");
     when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(0, 0));
     final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
@@ -586,10 +588,10 @@ class EnrichissementSallesServiceTest {
   }
 
   // le streak de chronicité (persisté dans app_config) doit survivre entre deux cycles
-  // enrichir() distincts sur la même instance — un taux d'échec Overpass élevé répété à chaque
+  // enrichir() distincts sur la même instance — un taux d'échec élevé répété à chaque
   // nuit doit finir par être qualifié de chronique, pas traité comme un warn isolé à chaque fois.
   @Test
-  void enrichir_echecOverpassPersistantSurTroisCycles_qualifieLeMessageDeChronique() {
+  void enrichir_echecSourcePersistantSurTroisCycles_qualifieLeMessageDeChronique() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
         new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
@@ -614,7 +616,7 @@ class EnrichissementSallesServiceTest {
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
     when(source.enrichirLot(any())).thenReturn(Map.of());
-    when(source.nom()).thenReturn("overpass");
+    when(source.nom()).thenReturn("nominatim");
     when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(5, 2));
     final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 

@@ -90,9 +90,9 @@ class SuiviChroniciteServiceTest {
   void enregistrerCycle_clesDistinctes_streaksIndependants() {
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
-    final int streakOverpass = service.enregistrerCycle("reconciliation:nocturne|Overpass", true);
+    final int streakNominatim = service.enregistrerCycle("reconciliation:nocturne|nominatim", true);
 
-    assertEquals(1, streakOverpass);
+    assertEquals(1, streakNominatim);
   }
 
   @Test
