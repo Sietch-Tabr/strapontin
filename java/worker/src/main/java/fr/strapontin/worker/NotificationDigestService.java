@@ -147,6 +147,7 @@ public class NotificationDigestService {
 
     // Rien à envoyer par email, et des push sans appareil abonné : ce n'est pas
     // un échec, l'utilisateur n'a aucun canal (Paramètres le lui signale).
+    /* package-private : appelé par traiterDigestUtilisateur (même classe). */
     boolean sansCanal(final boolean abonnePush) {
       return concertsEmail.isEmpty() && (concertsPush.isEmpty() || !abonnePush);
     }
