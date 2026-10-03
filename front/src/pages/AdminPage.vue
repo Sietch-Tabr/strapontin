@@ -84,13 +84,6 @@ const onglets = [
   { ancre: "#communication", label: "Communication" },
   { ancre: "#utilisateurs", label: "Utilisateurs" },
 ];
-// Anciennes ancres (favoris, liens d'emails d'alerte) vers l'onglet qui les regroupe.
-const ANCRES_HISTORIQUES = {
-  "#signalements": { hash: "#a-traiter" },
-  "#concerts": { hash: "#a-traiter" },
-  "#salles": { hash: "#referentiel", query: { entite: "salle" } },
-  "#artistes": { hash: "#referentiel", query: { entite: "artiste" } },
-};
 const ongletActif = ref("#jobs");
 
 function naviguerVers(ancre) {
@@ -101,11 +94,6 @@ function naviguerVers(ancre) {
 watch(
   () => route.hash,
   (hash) => {
-    const redirection = ANCRES_HISTORIQUES[hash];
-    if (redirection) {
-      router.replace(redirection);
-      return;
-    }
     const ancre = hash || "#jobs";
     ongletActif.value = onglets.some((o) => o.ancre === ancre)
       ? ancre

@@ -234,6 +234,9 @@ onMounted(async () => {
 .contenu-principal {
   margin-left: 0;
   flex: 1;
+
+  /* Élément flex : sans cela, la largeur minimale de son contenu l'élargit au-delà de l'écran. */
+  min-width: 0;
   padding: 1rem;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
   max-width: 1100px;

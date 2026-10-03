@@ -5,6 +5,7 @@ import {
   sessionErreurReseau,
 } from "../composables/useSession.js";
 import { scrollBehavior } from "../utils/scrollBehavior.js";
+import { redirectionAncreAdmin } from "../utils/ancresAdmin.js";
 import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
@@ -70,6 +71,9 @@ router.beforeEach((to) => {
     !sessionErreurReseau.value
   )
     return "/login";
+  // Dans la navigation elle-même, avant le chargement de la page : l'onglet visé est
+  // déterminé dès l'arrivée, sans seconde navigation.
+  return redirectionAncreAdmin(to) ?? true;
 });
 
 export default router;

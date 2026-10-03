@@ -7,9 +7,18 @@
       <p class="param-aide">
         Télécharge un fichier JSON avec vos artistes, salles et configuration.
       </p>
-      <EtatChargement v-if="chargement" />
-      <p v-else-if="stats" class="param-aide">
-        {{ stats.nbArtistes }}/500 artistes — {{ stats.nbSalles }}/200 salles
+      <!-- Même gabarit en chargement et chargé : un bloc plus haut décalait les boutons suivants. -->
+      <p
+        v-if="chargement || stats"
+        class="param-aide"
+        role="status"
+        :aria-busy="chargement"
+      >
+        <template v-if="chargement">Chargement des compteurs…</template>
+        <template v-else
+          >{{ stats.nbArtistes }}/500 artistes — {{ stats.nbSalles }}/200
+          salles</template
+        >
       </p>
       <a href="/api/preferences" class="bouton bouton-secondaire"
         >Télécharger (JSON)</a
@@ -146,7 +155,6 @@ import { ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
-import EtatChargement from "../EtatChargement.vue";
 
 const router = useRouter();
 const { afficherToast } = useToasts();
