@@ -45,6 +45,7 @@ export const versionsChangelog = [
           "Le nom d'une salle ne change plus d'une mise à jour à l'autre.",
           "Deux salles voisines aux noms différents (comme l'Élysée Montmartre et le Théâtre Montmartre-Galabru) ne sont plus réunies.",
           "La ville d'une salle est sa commune : « Paris » au lieu d'un arrondissement ou d'un quartier comme « Saint-Thomas-d'Aquin ».",
+          "Une salle n'est plus placée sur la carte chez un homonyme d'une autre région, et une salle étrangère n'est plus rangée dans un département français.",
         ],
       },
       {
