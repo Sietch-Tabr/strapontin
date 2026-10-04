@@ -143,6 +143,53 @@ class EventimSourceTest {
             "Suzane"));
   }
 
+  // Titre tronqué par Eventim : la suite reste un préfixe du festival.
+  @Test
+  void concerneArtiste_titreTronque_dateDUnAutreArtisteEcartee() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("PI JA MA & La Chorale du Normandy + Marianne Perrudin - Les Rendez.."),
+            "Suzane"));
+  }
+
+  // Produits réels relevés le 04/10/2026 : le titre nomme l'événement, que l'artiste joue.
+  @Test
+  void concerneArtiste_titreDeLEvenementLuiMeme_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Les Voix de Carmen",
+                "attractions",
+                List.of(
+                    Map.of("name", "Les Voix de Carmen"),
+                    Map.of("name", "Camelia Jordana"),
+                    Map.of("name", "Estelle Meyer"))),
+            "Camélia Jordana"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Firemaster Convention - Billet 1 Jour",
+                "attractions",
+                List.of(
+                    Map.of("name", "Firemaster Convention"),
+                    Map.of("name", "Ultra Vomit"),
+                    Map.of("name", "Bukowski"))),
+            "Ultra Vomit"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Ensemble !!!",
+                "attractions",
+                List.of(
+                    Map.of("name", "Ensemble !!!"),
+                    Map.of("name", "Sinsemilia"),
+                    Map.of("name", "Tryo"))),
+            "Tryo"));
+  }
+
   @Test
   void concerneArtiste_dateOuLArtisteJoue_estGardee() {
     assertTrue(

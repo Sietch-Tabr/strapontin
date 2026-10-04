@@ -21,6 +21,7 @@ final class ProduitsDeLArtiste {
 
   private static final Logger LOG = LoggerFactory.getLogger(ProduitsDeLArtiste.class);
   private static final String CLE_NOM = "name";
+  private static final int LONGUEUR_MIN_TRONQUE = 5;
 
   private ProduitsDeLArtiste() {}
 
@@ -44,9 +45,8 @@ final class ProduitsDeLArtiste {
   }
 
   /**
-   * Faux seulement si la partie artiste du titre (« Artistes - Festival »)
-   * nomme un autre artiste du produit, mais pas celui recherché ; gardé sans
-   * nom reconnaissable (gala, nom de festival seul).
+   * Faux pour « Autres artistes - Festival » sans l'artiste recherché ; vrai
+   * si le titre nomme l'événement lui-même (« Les Voix de Carmen »).
    * @param produit produit Eventim sous forme de Map imbriquée
    * @param artiste nom de l'artiste recherché
    * @return {@code false} si le titre désigne un autre artiste
@@ -64,7 +64,32 @@ final class ProduitsDeLArtiste {
       return true;
     }
     return !(produit.get("attractions") instanceof List<?> attractions)
-        || !nommeUnAutreArtiste(partieArtiste, recherche, attractions);
+        || !nommeUnAutreArtiste(partieArtiste, recherche, attractions)
+        || !suiteNommeUneAttraction(titre, recherche, attractions);
+  }
+
+  // Suite du titre après « - » ; Eventim tronque parfois (« Les Rendez.. »).
+  private static boolean suiteNommeUneAttraction(
+      final String titre, final String recherche, final List<?> attractions) {
+    final String artiste = MapeurProduitEventim.extraireNomArtiste(titre);
+    if (artiste.length() >= titre.length()) {
+      return false;
+    }
+    final String suite =
+        Normalisation.normaliserTexte(
+            titre.substring(titre.indexOf(artiste) + artiste.length()).replace("..", ""));
+    for (final Object attraction : attractions) {
+      if (attraction instanceof Map<?, ?> donnees && donnees.get(CLE_NOM) instanceof String nom) {
+        final String autre = Normalisation.normaliserTexte(nom);
+        final boolean nommee =
+            (" " + suite + " ").contains(" " + autre + " ")
+                || suite.length() >= LONGUEUR_MIN_TRONQUE && autre.startsWith(suite);
+        if (!autre.isEmpty() && !autre.equals(recherche) && nommee) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private static boolean nommeUnAutreArtiste(
