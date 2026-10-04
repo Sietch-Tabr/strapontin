@@ -80,7 +80,7 @@ public class CoherenceMultiSalleService {
       if (evaluerContaminationSalle(
           salleId,
           entree.getValue(),
-          donnees.nomNormParSalle().get(salleId),
+          donnees.salleParId().get(salleId),
           donnees.signaleeParSalle().get(salleId))) {
         signalees++;
       }
@@ -112,7 +112,7 @@ public class CoherenceMultiSalleService {
     return jdbc.queryForList(
         """
         SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
-               s.nom_norm AS nom_norm, s.contamination_signalee AS signalee,
+               s.nom_norm AS nom_norm, s.ville AS ville, s.contamination_signalee AS signalee,
                ss.latitude AS lat_source, ss.longitude AS lon_source,
                s.latitude AS lat_salle, s.longitude AS lon_salle
         FROM salle_sources ss
@@ -122,14 +122,16 @@ public class CoherenceMultiSalleService {
         Map.of("prefixe", PREFIXE_INTERNAL + "%"));
   }
 
+  private record SalleConnue(String nomNorm, String ville) {}
+
   private record DonneesSourcesInternes(
       Map<UUID, List<String>> nomsExtraitsParSalle,
-      Map<UUID, String> nomNormParSalle,
+      Map<UUID, SalleConnue> salleParId,
       Map<UUID, String> signaleeParSalle) {}
 
   private DonneesSourcesInternes regrouperParSalle(final List<Map<String, Object>> lignes) {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
-    final Map<UUID, String> nomNormParSalle = new HashMap<>();
+    final Map<UUID, SalleConnue> salleParId = new HashMap<>();
     final Map<UUID, String> signaleeParSalle = new HashMap<>();
     for (final Map<String, Object> ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
@@ -144,10 +146,11 @@ public class CoherenceMultiSalleService {
           noms.add(nom);
         }
       }
-      nomNormParSalle.put(salleId, (String) ligne.get("nom_norm"));
+      salleParId.put(
+          salleId, new SalleConnue((String) ligne.get("nom_norm"), (String) ligne.get("ville")));
       signaleeParSalle.put(salleId, (String) ligne.get("signalee"));
     }
-    return new DonneesSourcesInternes(nomsExtraitsParSalle, nomNormParSalle, signaleeParSalle);
+    return new DonneesSourcesInternes(nomsExtraitsParSalle, salleParId, signaleeParSalle);
   }
 
   private static boolean estMemePosition(final Map<String, Object> ligne) {
@@ -168,11 +171,11 @@ public class CoherenceMultiSalleService {
   private boolean evaluerContaminationSalle(
       final UUID salleId,
       final List<String> nomsExtraits,
-      final String nomNormSalle,
+      final SalleConnue salle,
       final String signaleePrecedente) {
     final List<String> mesententes =
         nomsExtraits.stream()
-            .filter(nomExtrait -> estContaminationReelle(nomExtrait, nomNormSalle))
+            .filter(nomExtrait -> estContaminationReelle(nomExtrait, salle))
             .distinct()
             .sorted()
             .toList();
@@ -207,12 +210,12 @@ public class CoherenceMultiSalleService {
 
   /**
    * Un identifiant source synthétique n'est pas une contamination réelle
-   * quand il n'est que le nom complété d'une ville ou un sigle de ses
-   * initiales (détail : CLAUDE.md, Hiérarchie des salles).
+   * quand il n'est que le nom complété d'une ville, un sigle de ses initiales
+   * ou un nom sans mot distinctif hors la ville (détail : CLAUDE.md).
    */
-  private static boolean estContaminationReelle(
-      final String nomExtrait, final String nomNormSalle) {
-    return !NomsDeLieu.designentLeMemeLieu(nomExtrait, nomNormSalle);
+  private static boolean estContaminationReelle(final String nomExtrait, final SalleConnue salle) {
+    return !NomsDeLieu.designentLeMemeLieu(nomExtrait, salle.nomNorm())
+        && !NomsDeLieu.sansMotDistinctif(nomExtrait, salle.ville());
   }
 
   /**

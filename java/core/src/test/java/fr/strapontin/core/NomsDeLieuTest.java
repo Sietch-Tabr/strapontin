@@ -56,4 +56,22 @@ class NomsDeLieuTest {
         NomsDeLieu.designentLeMemeLieu("salle de l etoile", "salle de letoile chateaurenard"));
     assertTrue(NomsDeLieu.designentLeMemeLieu("theatre de l eden", "theatre de leden senas"));
   }
+
+  // Palais des Congrès Atlantia : Eventim le publie « Palais des Congrès - La Baule Escoublac ».
+  @Test
+  void sansMotDistinctif_motsGeneriquesEtVille_vrai() {
+    assertTrue(
+        NomsDeLieu.sansMotDistinctif(
+            "palais des congres la baule escoublac", "La Baule-Escoublac"));
+  }
+
+  @Test
+  void sansMotDistinctif_autreLieuDeLaVille_faux() {
+    assertFalse(NomsDeLieu.sansMotDistinctif("eglise saint louis en lile", "Paris"));
+  }
+
+  @Test
+  void sansMotDistinctif_villeInconnue_garderLaVille() {
+    assertFalse(NomsDeLieu.sansMotDistinctif("palais des congres la baule escoublac", null));
+  }
 }

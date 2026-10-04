@@ -4,6 +4,7 @@
  */
 package fr.strapontin.core;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -24,6 +25,9 @@ public final class NomsDeLieu {
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
 
   private static final Pattern ARTICLE_ELIDE = Pattern.compile("\\b([a-z]) (?=[a-z])");
+
+  // Mots de liaison de trois lettres, que tokensSignificatifs conserve.
+  private static final Set<String> MOTS_DE_LIAISON = Set.of("des", "les", "aux", "sur", "une");
 
   private NomsDeLieu() {}
 
@@ -50,6 +54,24 @@ public final class NomsDeLieu {
   public static boolean designentFortementLeMemeLieu(final String nomNormA, final String nomNormB) {
     return CorrespondanceSalle.estDoublonSalleParMots(nomNormA, nomNormB)
         || variantesDUnMemeNom(nomNormA, nomNormB);
+  }
+
+  /**
+   * Un nom réduit à des mots génériques et à sa ville ne désigne aucun lieu
+   * précis (« palais des congres la baule escoublac » pour l'Atlantia).
+   * @param nomNorm nom normalisé
+   * @param ville ville du lieu, null si inconnue
+   * @return {@code true} si aucun mot distinctif ne reste
+   * @since 3.0.2
+   */
+  public static boolean sansMotDistinctif(final String nomNorm, final String ville) {
+    final Set<String> mots = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nomNorm));
+    mots.removeAll(CorrespondanceSalle.MOTS_GENERIQUES_SALLE);
+    mots.removeAll(MOTS_DE_LIAISON);
+    if (ville != null) {
+      mots.removeAll(CorrespondanceSalle.tokensSignificatifs(Normalisation.normaliserTexte(ville)));
+    }
+    return mots.isEmpty();
   }
 
   private static boolean variantesDUnMemeNom(final String nomNormA, final String nomNormB) {

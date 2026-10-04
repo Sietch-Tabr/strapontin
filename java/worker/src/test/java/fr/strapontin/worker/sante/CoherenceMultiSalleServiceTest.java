@@ -53,6 +53,23 @@ class CoherenceMultiSalleServiceTest {
     return ligne;
   }
 
+  // Palais des Congrès Atlantia, publié par Eventim « Palais des Congrès - La Baule Escoublac » :
+  // mots génériques et ville seulement, rien ne désigne un autre lieu.
+  @Test
+  void detecterContamination_nomGeneriqueEtVilleDeLaSalle_neJournalisePas() {
+    final Map<String, Object> ligne =
+        ligneContamination(
+            UUID.randomUUID(),
+            "internal:palais des congres la baule escoublac",
+            "palais des congres atlantia",
+            null);
+    ligne.put("ville", "La Baule-Escoublac");
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+
+    assertEquals(0, service.detecterContamination());
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
+  }
+
   @Test
   void detecterContamination_aucuneSourceInterne_retourneZero() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
