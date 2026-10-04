@@ -154,4 +154,76 @@ class ReconciliateurArtistesTest {
 
     verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
   }
+
+  private static Map<String, Object> existant(final String artisteNorm) {
+    final Map<String, Object> ligne = new HashMap<>();
+    ligne.put("url", "https://tm.example/damien-gillard-billet");
+    ligne.put("artiste_norm", artisteNorm);
+    ligne.put("artiste_id", null);
+    ligne.put("date", "2026-12-12");
+    ligne.put("salle_norm", "salle");
+    return ligne;
+  }
+
+  // Ticketmaster publie « Damien Gillard », Eventim « Damien Gillard « Rude » » : deux formes
+  // d'un même nom, pas une corruption à corriger par l'url.
+  @Test
+  void corrigerParUrl_nomExistantVarianteDuNomEntrant_neCorrigePas() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(existant("damien gillard rude")));
+
+    reconciliateur.corrigerParUrl(
+        List.of(
+            concertAvecUrlEtClassification(
+                "Damien Gillard",
+                "https://tm.example/damien-gillard-billet",
+                "theatre",
+                "ticketmaster")));
+
+    verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
+  }
+
+  // Un job qui ne reçoit que la forme courte ne ramène plus l'intitulé complet à son début.
+  @Test
+  void reconcilierArtistes_entrantIneligibleDebutDuNomExistant_adopteLeNomExistant() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(existant("damien gillard rude")));
+
+    final List<ValeurConcert> resultat =
+        reconciliateur.reconcilierArtistes(
+            List.of(
+                concertAvecUrlEtClassification(
+                    "Damien Gillard",
+                    "https://tm.example/damien-gillard-billet",
+                    "theatre",
+                    "ticketmaster")));
+
+    assertEquals("damien gillard rude", resultat.get(0).artisteNorm());
+    verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
+  }
+
+  @Test
+  void reconcilierArtistes_entrantIneligibleIntituleComplet_corrigeLaLigneExistante() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(existant("damien gillard")));
+
+    reconciliateur.reconcilierArtistes(
+        List.of(
+            concertAvecUrlEtClassification(
+                "Damien Gillard Rude",
+                "https://tm.example/damien-gillard-billet",
+                "theatre",
+                "ticketmaster")));
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("UPDATE evenements"),
+            org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
+                params -> "damien gillard rude".equals(params.getValue("nouvelArtisteNorm"))));
+  }
 }

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.CorrespondanceArtiste;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,9 @@ final class CorrecteurArtisteParUrl {
 
   /**
    * Corrige un artiste corrompu en s'ancrant sur l'URL de
-   * l'événement (détail : CLAUDE.md, Fiches package/VIP).
+   * l'événement (détail : CLAUDE.md, Fiches package/VIP). Un nom existant
+   * qui n'est qu'une variante du nom entrant n'est pas corrompu : il est
+   * laissé à {@link ReconciliateurArtistes}.
    * @param lot concerts après résolution des identités sources
    */
   /* package-private : appelé par ReconciliateurArtistes (même package). */
@@ -63,7 +66,11 @@ final class CorrecteurArtisteParUrl {
 
     for (final ValeurConcert c : candidats) {
       final String artisteNormExistant = artisteNormParUrl.get(c.url());
-      if (artisteNormExistant == null || artisteNormExistant.equals(c.artisteNorm())) {
+      // Deux formes d'un même nom (« damien gillard rude ») relèvent de
+      // ReconciliateurArtistes : corrigées ici aussi, le nom oscillait.
+      if (artisteNormExistant == null
+          || artisteNormExistant.equals(c.artisteNorm())
+          || CorrespondanceArtiste.estDoublonArtiste(artisteNormExistant, c.artisteNorm())) {
         continue;
       }
       corrigerArtisteParUrl(c);

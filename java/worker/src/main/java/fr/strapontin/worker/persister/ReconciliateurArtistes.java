@@ -253,7 +253,10 @@ public class ReconciliateurArtistes {
       // (l'existant l'emporte) : la résolution Deezer reste sujette à un
       // mauvais rapprochement futur (cf. Van Halen, #770), qu'il ne faut pas
       // laisser écraser une valeur déjà correcte en base.
-      if (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())) {
+      // L'intitulé complet (« damien gillard rude ») n'est pas ramené à son
+      // début : le lot retient déjà le plus long, sinon le nom oscillerait.
+      if (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())
+          && !existant.artisteNorm().startsWith(concert.artisteNorm() + " ")) {
         corrigerArtisteExistantEnBase(existant, concert);
         return concert.avecArtisteId(artisteIdPropague);
       }
