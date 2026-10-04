@@ -146,6 +146,52 @@ public class FusionEvenementsArtisteService {
     return fusionnerSiVivantUnique(lignes, "concert déplacé");
   }
 
+  /**
+   * Même spectacle publié sous deux intitulés (« Lady Macbeth de Mzensk » /
+   * « of Mtsensk », « Ballet Preljocaj » / « Le Lac des cygnes ») : seuls
+   * événements de leur salle au même créneau, l'un Ticketmaster seul, l'autre
+   * Eventim seul, sans artiste reconnu, dans une salle non signalée comme
+   * mélangeant plusieurs lieux. À appeler après les contrôles d'intégrité.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerMemeCreneauDeuxSources() {
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            """
+            WITH ev AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_id,
+                     bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+              GROUP BY e.id),
+            creneaux AS (
+              SELECT salle_id, date, heure FROM ev GROUP BY salle_id, date, heure
+              HAVING count(*) = 2
+                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
+                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1
+                 AND count(*) FILTER (WHERE artiste_id IS NOT NULL) = 0)
+            SELECT t.id AS cible, v.id AS source
+            FROM creneaux c
+            JOIN salles s ON s.id = c.salle_id
+            JOIN ev t ON t.salle_id = c.salle_id AND t.date = c.date AND t.heure = c.heure
+                     AND t.tm AND NOT t.evt
+            JOIN ev v ON v.salle_id = c.salle_id AND v.date = c.date AND v.heure = c.heure
+                     AND v.evt AND NOT v.tm
+            WHERE s.contamination_signalee IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM signalements_matching sm
+                  WHERE sm.entite_id = c.salle_id AND sm.resolu_le IS NULL
+                    AND sm.type IN ('dispersion_sources_salle', 'salle_multi_departements',
+                                    'salle_suivie_contaminee'))
+            """,
+            Map.of());
+    for (final Map<String, Object> paire : paires) {
+      fusionner(
+          (UUID) paire.get("cible"), (UUID) paire.get("source"), "même créneau, deux sources");
+    }
+    return paires.size();
+  }
+
   // Plusieurs vivants (même adresse pour plusieurs séances) : aucun choix sûr.
   private int fusionnerSiVivantUnique(final List<Map<String, Object>> lignes, final String motif) {
     int fusions = 0;

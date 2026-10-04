@@ -99,6 +99,8 @@ public class ReconciliationNocturneService {
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
     final int integriteSignalements = controleIntegrite.verifier();
+    // Après les contrôles : une salle mélangeant deux lieux y est signalée et exclue.
+    final int memeCreneau = fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources();
 
     return new ResultatReconciliation(
         bilanSalles[0],
@@ -111,7 +113,7 @@ public class ReconciliationNocturneService {
         nomsIncoherentsTM,
         sallesOrphelinesResolues,
         sallesFusionnees,
-        evenementsFusionnes,
+        evenementsFusionnes + memeCreneau,
         contaminationsSignalees,
         doublonsSignales,
         motsGenericsSuggeres,

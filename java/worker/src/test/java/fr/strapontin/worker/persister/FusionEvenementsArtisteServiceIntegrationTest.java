@@ -46,6 +46,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
     salle = creerSalle("Zenith Test");
   }
 
@@ -421,5 +422,67 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
 
     assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
     assertTrue(existe(recente));
+  }
+
+  // --- fusionnerMemeCreneauDeuxSources ---
+
+  private UUID evenementSource(final UUID salleId, final String titre, final String source) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id) VALUES"
+                + " (:titre, CAST(:date AS date), CAST('19:30' AS time), 'opera bastille',"
+                + " CAST(:salleId AS uuid)) RETURNING id",
+            Map.of("titre", titre, "date", DATE_FUTURE, "salleId", salleId.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), CAST(:source AS source_concert), :url, :titre, 'Opera"
+            + " Bastille')",
+        Map.of(
+            "id",
+            id.toString(),
+            "source",
+            source,
+            "url",
+            "https://" + source + "/" + id,
+            "titre",
+            titre));
+    return id;
+  }
+
+  // Lady Macbeth de Mzensk : « of Mtsensk » chez Ticketmaster, « de Mzensk » chez Eventim.
+  @Test
+  void fusionnerMemeCreneauDeuxSources_memeSpectacleDeuxIntitules_fusionne() {
+    final UUID bastille = creerSalle("Opera Bastille");
+    final UUID tm = evenementSource(bastille, "lady macbeth of mtsensk", "ticketmaster");
+    final UUID ev = evenementSource(bastille, "lady macbeth de mzensk", "eventim");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertTrue(existe(tm));
+    assertFalse(existe(ev));
+  }
+
+  // Théâtre Montparnasse : « Bouvard et Pécuchet » vient du Poche-Montparnasse, mal rattaché.
+  @Test
+  void fusionnerMemeCreneauDeuxSources_salleSignaleeEnDispersion_neFusionnePas() {
+    final UUID salle = creerSalle("Theatre Montparnasse");
+    evenementSource(salle, "suzanne", "ticketmaster");
+    evenementSource(salle, "bouvard et pecuchet", "eventim");
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance) VALUES"
+            + " ('dispersion_sources_salle', 'salle', CAST(:id AS uuid), 'haute')",
+        Map.of("id", salle.toString()));
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+  }
+
+  @Test
+  void fusionnerMemeCreneauDeuxSources_troisEvenementsAuCreneau_neFusionnePas() {
+    final UUID salle = creerSalle("Salle Gaveau");
+    evenementSource(salle, "antonio vivaldi", "ticketmaster");
+    evenementSource(salle, "bebe concert", "eventim");
+    evenementSource(salle, "gloria de vivaldi", "eventim");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
   }
 }
