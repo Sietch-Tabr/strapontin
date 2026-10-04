@@ -268,4 +268,18 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     assertEquals(1, controle.verifier());
     assertEquals(List.of("position_wikidata_incoherente"), typesSignales());
   }
+
+  // Église luthérienne de la Trinité (13e) rattachée à l'église luthérienne Saint-Pierre, 5,5 km.
+  @Test
+  void verifier_positionWikidataDUnLieuVoisin_signaleLIncoherence() {
+    final UUID salle = creerSalle("eglise lutherienne de la trinite paris 13");
+    jdbc.update(
+        "UPDATE salles SET latitude = 48.8826, longitude = 2.3826, origine_position = 'wikidata',"
+            + " wikidata_id = 'Q60384798' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    lieu(salle, "internal:eglise lutherienne de la trinite paris 13@75013", 48.8336, 2.3618);
+
+    assertEquals(1, controle.verifier());
+    assertEquals(List.of("position_wikidata_incoherente"), typesSignales());
+  }
 }

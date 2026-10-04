@@ -72,8 +72,8 @@ final class ControleDispersionGeo {
         + horsDepartementSignalees;
   }
 
-  // Position Wikidata loin de tous les lieux sources : élément d'un homonyme
-  // (« Espace des Arts » de Chalon pour celui de Pavillons-sous-Bois).
+  // Position Wikidata loin des lieux sources : élément d'un homonyme (« Espace
+  // des Arts » de Chalon) ou d'un lieu voisin (église luthérienne Saint-Pierre).
   private int verifierPositionsWikidata() {
     final Map<UUID, Map<String, Object>> incoherentes = new LinkedHashMap<>();
     jdbc.query(
@@ -94,7 +94,7 @@ final class ControleDispersionGeo {
                   rs.getDouble("longitude"),
                   rs.getDouble("latitude_sources"),
                   rs.getDouble("longitude_sources"));
-          if (distance > DISTANCE_AUTRE_VILLE_METRES) {
+          if (distance > EvaluationCoherenceWikidata.DISTANCE_AUTRE_LIEU_METRES) {
             incoherentes.put(
                 rs.getObject("id", UUID.class),
                 Map.of(

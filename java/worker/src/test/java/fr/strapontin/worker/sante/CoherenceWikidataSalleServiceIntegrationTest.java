@@ -89,8 +89,8 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
             String.class));
   }
 
-  // Le Pin Galant positionné par ses lieux publiés : l'élément Wikidata (Mérignac) est à moins
-  // de 20 km de la salle, des concerts annoncés à « Bordeaux » n'en font pas un homonyme.
+  // Le Pin Galant positionné par ses lieux publiés : l'élément Wikidata (Mérignac) est proche
+  // de la salle, des concerts annoncés à « Bordeaux » n'en font pas un homonyme.
   @Test
   void verifier_positionDesLieuxProcheDeLElement_nEstPasSignalee() {
     final UUID id = UUID.randomUUID();
@@ -113,5 +113,31 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
             "SELECT coherence_wikidata_signalee FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", id.toString()),
             String.class));
+  }
+
+  // Salle Paul Fort (Nantes) rattachée à la salle Paul Bouin de Basse-Goulaine, à 7 km.
+  @Test
+  void verifier_elementDUnAutreLieuAQuelquesKilometres_estSignale() {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id, latitude,"
+            + " longitude, origine_position) VALUES (CAST(:id AS uuid), 'salle paul fort', 'Salle"
+            + " Paul Fort', 'salle paul fort', 'Basse-Goulaine', '44', 'Q105714379', 47.22080,"
+            + " -1.55840, 'sources')",
+        Map.of("id", id.toString()));
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q105714379",
+                    "salle Paul Bouin",
+                    "Basse-Goulaine",
+                    null,
+                    null,
+                    47.21865,
+                    -1.46460)));
+
+    assertEquals(1, coherence.verifier());
   }
 }

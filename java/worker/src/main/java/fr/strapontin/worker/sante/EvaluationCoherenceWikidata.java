@@ -62,6 +62,11 @@ final class EvaluationCoherenceWikidata {
   // évite un containment trivial sur un token court.
   private static final int LONGUEUR_MIN_CONTAINMENT = 5;
 
+  /* package-private : partagé avec ControleDispersionGeo. Mesuré sur 163
+   * salles : élément juste à 2,4 km au plus de ses lieux publiés, élément d'un
+   * autre lieu à 5,5 km au moins (Paul Fort / Paul Bouin). */
+  static final double DISTANCE_AUTRE_LIEU_METRES = 4_000;
+
   private EvaluationCoherenceWikidata() {}
 
   /**
@@ -99,7 +104,7 @@ final class EvaluationCoherenceWikidata {
                 salle.longitude(),
                 enrichissement.latitude(),
                 enrichissement.longitude())
-            <= ControleDispersionGeo.DISTANCE_AUTRE_VILLE_METRES
+            <= DISTANCE_AUTRE_LIEU_METRES
         ? Coherence.COHERENTE
         : Coherence.INCOHERENTE_TOTALE;
   }
