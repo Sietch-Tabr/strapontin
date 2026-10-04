@@ -47,7 +47,8 @@ final class ControleDispersionGeo {
       String nom,
       double latitude,
       double longitude,
-      String codePostal) {}
+      String codePostal,
+      String contexte) {}
 
   /* package-private : instancié par ControleIntegriteService. */
   ControleDispersionGeo(
@@ -118,7 +119,8 @@ final class ControleDispersionGeo {
                         CASE WHEN ss.identifiant_externe LIKE 'internal:%'
                              THEN split_part(substr(ss.identifiant_externe, 10), '@', 1) END,
                         s.nom) AS nom,
-               ss.latitude, ss.longitude, ss.code_postal
+               ss.latitude, ss.longitude, ss.code_postal,
+               concat_ws(' ', s.ville, ss.ville_source, s.nom) AS contexte
         FROM salle_sources ss JOIN salles s ON s.id = ss.salle_id
         WHERE ss.latitude IS NOT NULL AND ss.longitude IS NOT NULL
           AND ss.contamination_acceptee_le IS NULL
@@ -132,7 +134,8 @@ final class ControleDispersionGeo {
                 Normalisation.normaliserTexte(rs.getString("nom")),
                 rs.getDouble("latitude"),
                 rs.getDouble("longitude"),
-                rs.getString("code_postal")));
+                rs.getString("code_postal"),
+                rs.getString("contexte")));
   }
 
   private int verifierDispersionParSalle(final List<LieuSource> lieux) {
@@ -247,7 +250,8 @@ final class ControleDispersionGeo {
         || ecart > DISTANCE_DISPERSION_METRES && codesPostauxDifferents
         || ecart > DISTANCE_LIEUX_VOISINS_METRES
             && ecart <= DISTANCE_DISPERSION_METRES
-            && !NomsDeLieu.designentFortementLeMemeLieu(premier.nom(), second.nom());
+            && !NomsDeLieu.designentFortementLeMemeLieu(
+                premier.nom(), second.nom(), premier.contexte() + " " + second.contexte());
   }
 
   /**

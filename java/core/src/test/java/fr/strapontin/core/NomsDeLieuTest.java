@@ -20,33 +20,42 @@ class NomsDeLieuTest {
   @Test
   void designentFortementLeMemeLieu_nomCompleteDeSaVille_vrai() {
     assertTrue(
-        NomsDeLieu.designentFortementLeMemeLieu("theatre galli", "theatre galli sanary sur mer"));
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "theatre galli", "theatre galli sanary sur mer", "Sanary-sur-Mer"));
+  }
+
+  // « Poche » n'est ni la ville ni un terme générique : un autre théâtre, à 470 m.
+  @Test
+  void designentFortementLeMemeLieu_nomCompleteDUnMotDistinctif_faux() {
+    assertFalse(
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "theatre montparnasse", "theatre de poche montparnasse paris", "Paris"));
   }
 
   @Test
   void designentFortementLeMemeLieu_sigleDesInitiales_vrai() {
-    assertTrue(NomsDeLieu.designentFortementLeMemeLieu("ed n", "espace dollfus noack"));
+    assertTrue(NomsDeLieu.designentFortementLeMemeLieu("ed n", "espace dollfus noack", null));
   }
 
   @Test
   void designentFortementLeMemeLieu_seulMotPivotCommunSansPivot_faux() {
     assertFalse(
         NomsDeLieu.designentFortementLeMemeLieu(
-            "elysee montmartre paris 18", "theatre montmartre galabru paris 18"));
+            "elysee montmartre paris 18", "theatre montmartre galabru paris 18", null));
   }
 
   @Test
   void designentFortementLeMemeLieu_deuxEglisesDistinctes_faux() {
     assertFalse(
         NomsDeLieu.designentFortementLeMemeLieu(
-            "eglise saint ephrem paris 05", "eglise saint sulpice paris 06"));
+            "eglise saint ephrem paris 05", "eglise saint sulpice paris 06", null));
   }
 
   @Test
   void designentFortementLeMemeLieu_hallsDistinctsDUnMemeSite_faux() {
     assertFalse(
         NomsDeLieu.designentFortementLeMemeLieu(
-            "la grande halle de la villette", "la petite halle de la villette"));
+            "la grande halle de la villette", "la petite halle de la villette", null));
   }
 
   @Test

@@ -98,10 +98,27 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
   @Test
   void verifier_memeLieuNomCompleteDeSaVille_neSignalePas() {
     final UUID salle = creerSalle("theatre galli");
+    jdbc.update(
+        "UPDATE salles SET ville = 'Sanary-sur-Mer' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
     lieu(salle, "internal:theatre galli@83110", 43.11880, 5.80140);
     lieu(salle, "internal:theatre galli sanary sur mer@83110", 43.12190, 5.80310);
 
     assertEquals(0, controle.verifier());
+  }
+
+  // Théâtre de Poche-Montparnasse rattaché au Théâtre Montparnasse : « poche » n'est ni la
+  // ville ni un mot du nom de la salle, deux lieux à 477 m.
+  @Test
+  void verifier_nomCompleteDUnMotDistinctif_signaleUneDispersion() {
+    final UUID salle = creerSalle("theatre montparnasse");
+    jdbc.update(
+        "UPDATE salles SET ville = 'Paris' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    lieu(salle, "internal:theatre montparnasse@75014", 48.839567, 2.323496);
+    lieu(salle, "internal:theatre de poche montparnasse paris@75006", 48.843734, 2.325072);
+
+    assertEquals(1, controle.verifier());
   }
 
   // L'Européen publié sous deux noms (« Leuropeen Paris 17 ») : même lieu, deux salles.

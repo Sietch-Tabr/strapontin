@@ -44,16 +44,36 @@ public final class NomsDeLieu {
   }
 
   /**
-   * Variante stricte pour deux lieux déjà proches : seuls les mots du nom
-   * comptent, ni similarité de caractères ni mot pivot, qui rapprochent deux
-   * lieux voisins (« elysee montmartre » / « theatre montmartre galabru »).
+   * Variante stricte pour deux lieux proches : mots du nom seulement, sans
+   * similarité de caractères ni pivot (Élysée Montmartre / Montmartre-Galabru).
    * @param nomNormA premier nom normalisé
    * @param nomNormB second nom normalisé
+   * @param contexteLieu villes et nom connus du lieu, mots sans portée ici
    * @return {@code true} si les mots désignent sans ambiguïté le même lieu
    */
-  public static boolean designentFortementLeMemeLieu(final String nomNormA, final String nomNormB) {
+  public static boolean designentFortementLeMemeLieu(
+      final String nomNormA, final String nomNormB, final String contexteLieu) {
     return CorrespondanceSalle.estDoublonSalleParMots(nomNormA, nomNormB)
-        || variantesDUnMemeNom(nomNormA, nomNormB);
+        || estSigleDe(nomNormA, nomNormB)
+        || nomComplete(nomNormA, nomNormB, contexteLieu)
+        || nomComplete(fusionnerApostropheElidee(nomNormA), nomNormB, contexteLieu)
+        || nomComplete(nomNormA, fusionnerApostropheElidee(nomNormB), contexteLieu)
+        || nomComplete(
+            fusionnerArticlesElides(nomNormA), fusionnerArticlesElides(nomNormB), contexteLieu);
+  }
+
+  // Contenu dans l'autre, complété de mots sans portée seulement (villes, nom de
+  // la salle, génériques) : « theatre de poche montparnasse » est un autre lieu.
+  private static boolean nomComplete(
+      final String nomNormA, final String nomNormB, final String contexteLieu) {
+    if (!nomContenuDansLAutre(nomNormA, nomNormB)) {
+      return false;
+    }
+    final Set<String> motsEnPlus = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nomNormA));
+    motsEnPlus.addAll(CorrespondanceSalle.tokensSignificatifs(nomNormB));
+    final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
+    motsEnPlus.removeAll(CorrespondanceSalle.tokensSignificatifs(court));
+    return sansMotDistinctif(String.join(" ", motsEnPlus), contexteLieu);
   }
 
   /**

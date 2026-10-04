@@ -104,7 +104,8 @@ public class NominatimSalleSource implements SourceEnrichissementSalle, SourceAv
     final String nomNorm = Normalisation.normaliserTexte(lieu.nom());
     final boolean memeNom =
         nomNorm.equals(salle.nomNorm())
-            || NomsDeLieu.designentFortementLeMemeLieu(nomNorm, salle.nomNorm());
+            || NomsDeLieu.designentFortementLeMemeLieu(
+                nomNorm, salle.nomNorm(), salle.ville() + " " + salle.nom());
     return memeNom
         && DistanceGeo.metres(
                 lieu.position().latitude(),

@@ -111,7 +111,7 @@ final class ResolveurSallePosition {
             // confirmée par un lieu positionné. Un géocodage du nom ou un
             // élément Wikidata homonyme écartait la bonne salle du département.
             """
-            SELECT latitude, longitude, nom_norm FROM salles s
+            SELECT latitude, longitude, nom_norm, concat_ws(' ', ville, nom) AS contexte FROM salles s
             WHERE s.id = CAST(:id AS uuid) AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
               AND (s.origine_position = 'sources'
                    OR s.origine_position = 'wikidata' AND EXISTS (
@@ -132,6 +132,8 @@ final class ResolveurSallePosition {
         || distance > RAYON_MEME_LIEU_METRES
             && distance <= DISTANCE_LIEUX_VOISINS_MAX_METRES
             && !NomsDeLieu.designentFortementLeMemeLieu(
-                Normalisation.normaliserTexte(nom), (String) lignes.get(0).get("nom_norm"));
+                Normalisation.normaliserTexte(nom),
+                (String) lignes.get(0).get("nom_norm"),
+                (String) lignes.get(0).get("contexte"));
   }
 }
