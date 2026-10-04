@@ -168,6 +168,21 @@ class NormalisationTest {
     assertEquals("75", Normalisation.extraireDeptFrancais("  75012  "));
   }
 
+  // Rockhal (Esch-sur-Alzette, « 4361 ») et Casino 2000 (« L-5618 ») rangés dans le 43 et le
+  // « L5 » : Eventim ne dit pas le pays du lieu.
+  @Test
+  void extraireDeptFrancais_codePostalEtranger_retourneNull() {
+    assertNull(Normalisation.extraireDeptFrancais("4361"));
+    assertNull(Normalisation.extraireDeptFrancais("L-5618"));
+    assertNull(Normalisation.extraireDeptFrancais("1000"));
+    assertNull(Normalisation.extraireDeptFrancais("123456"));
+  }
+
+  @Test
+  void extraireDeptFrancais_plageDeCodesPostaux_retourneLeDepartement() {
+    assertEquals("93", Normalisation.extraireDeptFrancais("93200–93380"));
+  }
+
   // --- normaliserCasse (ex-TicketmasterSource.normaliserCasse) ---
 
   @Test

@@ -28,6 +28,8 @@ public final class Normalisation {
   private static final Pattern ESPACES_MULTIPLES = Pattern.compile("\\s+");
   private static final Pattern SEP_NORMALISER_CASSE = Pattern.compile("\\s+|-");
   private static final Pattern NON_ALPHANUM_STRICT = Pattern.compile("[^a-z0-9]");
+  // Cinq chiffres en tête (« 93200–93380 » compris), ou un département seul.
+  private static final Pattern CODE_POSTAL_FRANCAIS = Pattern.compile("^(\\d{5}(?!\\d)|\\d{2}$)");
   private static final Set<String> ARTICLES_FR =
       Set.of(
           "de", "du", "des", "d'", "le", "la", "les", "l'", "en", "au", "aux", "et", "à", "sur",
@@ -108,10 +110,11 @@ public final class Normalisation {
    * Extrait le code département depuis un code postal français
    * (DOM-TOM 97x sur 3 chiffres, Corse 2A/2B déjà en "20").
    * @param codePostal peut être null, vide, avec espaces superflus
-   * @return code département à 2 ou 3 chiffres, ou null si absent
+   * @return code département à 2 ou 3 chiffres, ou null si absent ou étranger
+   *     (Rockhal, « 4361 », rangée dans le 43)
    */
   public static String extraireDeptFrancais(final String codePostal) {
-    if (codePostal == null || codePostal.isBlank()) {
+    if (codePostal == null || !CODE_POSTAL_FRANCAIS.matcher(codePostal.trim()).find()) {
       return null;
     }
     final String cp = codePostal.trim();
