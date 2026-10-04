@@ -88,7 +88,8 @@ public class FusionSallesClePorteeService {
    * Paires de salles partageant un concert (artiste, date, heure, dept), aux
    * noms doublons, de même département, à moins de
    * {@value #DISTANCE_MAX_FUSION_METRES} m (coordonnées connues des deux
-   * côtés), hors complexe/sous-salle et paires déclarées distinctes.
+   * côtés), hors complexe/sous-salle, paires déclarées distinctes et salles
+   * signalées contaminées.
    */
   private List<PaireSalles> detecterPaires() {
     final List<Map<String, Object>> lignes =
@@ -118,24 +119,31 @@ public class FusionSallesClePorteeService {
                 SELECT 1 FROM salles_paires_distinctes d
                 WHERE d.salle_a = LEAST(sa.id, sb.id)
                   AND d.salle_b = GREATEST(sa.id, sb.id))
-            """,
+              AND\
+            """
+                + SalleFiable.condition("sa")
+                + " AND "
+                + SalleFiable.condition("sb"),
             Map.of());
     final List<PaireSalles> paires = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
-      if (!CorrespondanceSalle.estDoublonSalle(
-              (String) ligne.get("nom_a"), (String) ligne.get("nom_b"))
-          || CorrespondanceSalle.qualificatifsDivergents(
-              (String) ligne.get("brut_a"), (String) ligne.get("brut_b"))
-          || !coordonneesConnuesEtProches(
-              (Double) ligne.get("lat_a"),
-              (Double) ligne.get("lon_a"),
-              (Double) ligne.get("lat_b"),
-              (Double) ligne.get("lon_b"))) {
-        continue;
+      if (memeLieu(ligne)) {
+        paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
       }
-      paires.add(new PaireSalles((UUID) ligne.get("salle_a"), (UUID) ligne.get("salle_b")));
     }
     return paires;
+  }
+
+  private static boolean memeLieu(final Map<String, Object> ligne) {
+    return CorrespondanceSalle.estDoublonSalle(
+            (String) ligne.get("nom_a"), (String) ligne.get("nom_b"))
+        && !CorrespondanceSalle.qualificatifsDivergents(
+            (String) ligne.get("brut_a"), (String) ligne.get("brut_b"))
+        && coordonneesConnuesEtProches(
+            (Double) ligne.get("lat_a"),
+            (Double) ligne.get("lon_a"),
+            (Double) ligne.get("lat_b"),
+            (Double) ligne.get("lon_b"));
   }
 
   /**

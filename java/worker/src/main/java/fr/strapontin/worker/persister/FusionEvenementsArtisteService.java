@@ -177,13 +177,9 @@ public class FusionEvenementsArtisteService {
                      AND t.tm AND NOT t.evt
             JOIN ev v ON v.salle_id = c.salle_id AND v.date = c.date AND v.heure = c.heure
                      AND v.evt AND NOT v.tm
-            WHERE s.contamination_signalee IS NULL
-              AND NOT EXISTS (
-                  SELECT 1 FROM signalements_matching sm
-                  WHERE sm.entite_id = c.salle_id AND sm.resolu_le IS NULL
-                    AND sm.type IN ('dispersion_sources_salle', 'salle_multi_departements',
-                                    'salle_suivie_contaminee'))
-            """,
+            WHERE\
+            """
+                + SalleFiable.condition("s"),
             Map.of());
     for (final Map<String, Object> paire : paires) {
       fusionner(

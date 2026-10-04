@@ -416,40 +416,102 @@ class EnrichissementSallesServiceTest {
         .inserer(eq("warn"), eq("enrichissement-wikidata"), anyString(), anyMap());
   }
 
-  // #1189 : une collision wikidata_id est un signal plus fort qu'une simple coïncidence de
-  // concert — fusion automatique si les deux salles ont des coordonnées connues et proches.
-  @Test
-  void enrichir_collisionWikidataIdCoordonneesProches_fusionneAutomatiquement() {
-    final UUID salleId = UUID.randomUUID();
-    final UUID porteuseId = UUID.randomUUID();
+  private record IssueCollision(
+      FusionSallesClePorteeService fusion, SignalementMatchingService signalement) {}
+
+  // Collision entre « salle » (positionnée près de la porteuse) et une porteuse donnée.
+  private IssueCollision enrichirAvecCollision(
+      final UUID salleId, final String nomSalle, final Map<String, Object> porteuse) {
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
+        new SalleAEnrichir(salleId, nomSalle, nomSalle, null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
     when(jdbc.update(anyString(), anyMap())).thenThrow(new DuplicateKeyException("idx"));
     when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE wikidata_id"), anyMap()))
-        .thenReturn(List.of(Map.of("id", porteuseId, "latitude", 45.8336, "longitude", 1.2611)));
+        .thenReturn(List.of(porteuse));
+    final Map<String, Object> salle = new HashMap<>();
+    salle.put("nom_norm", nomSalle);
+    salle.put("ville", "Paris");
+    salle.put("latitude", 48.84374);
+    salle.put("longitude", 2.32508);
     when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE id ="), anyMap()))
-        .thenReturn(List.of(new HashMap<>(Map.of("latitude", 45.8337, "longitude", 1.2612))));
+        .thenReturn(List.of(salle));
 
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
     when(source.enrichirLot(any()))
         .thenReturn(Map.of(salleId, new EnrichissementSalle("Q1", null, null, null, null)));
     final FusionSallesClePorteeService fusion = mock(FusionSallesClePorteeService.class);
     final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
-
-    final EnrichissementSallesService service =
-        new EnrichissementSallesService(
+    new EnrichissementSallesService(
             jdbc,
             List.of(source),
             logsAdminWorkerMock(),
             suiviChronicite(jdbc),
             fusion,
-            signalement);
-    final int nb = service.enrichir();
+            signalement)
+        .enrichir();
+    return new IssueCollision(fusion, signalement);
+  }
 
-    assertEquals(1, nb);
-    verify(fusion).fusionnerUnePaire(porteuseId, salleId);
-    verify(signalement, never()).signaler(anyString(), anyString(), any(), anyString(), any());
+  private static Map<String, Object> porteuse(
+      final UUID id, final String nomNorm, final String originePosition) {
+    final Map<String, Object> porteuse = new HashMap<>();
+    porteuse.put("id", id);
+    porteuse.put("nom_norm", nomNorm);
+    porteuse.put("ville", "Paris");
+    porteuse.put("latitude", 48.84375);
+    porteuse.put("longitude", 2.32509);
+    porteuse.put("origine_position", originePosition);
+    return porteuse;
+  }
+
+  // Une collision wikidata_id est un signal plus fort qu'une simple coïncidence de concert :
+  // fusion automatique si noms compatibles et porteuse positionnée par ses lieux publiés.
+  @Test
+  void enrichir_collisionWikidataIdMemeLieu_fusionneAutomatiquement() {
+    final UUID salleId = UUID.randomUUID();
+    final UUID porteuseId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(porteuseId, "theatre de poche montparnasse paris", "sources"));
+
+    verify(issue.fusion()).fusionnerUnePaire(porteuseId, salleId);
+    verify(issue.signalement(), never())
+        .signaler(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  // Théâtre Montparnasse porteur à tort de l'élément du Théâtre de Poche : la position de la
+  // porteuse est celle de l'élément, la proximité ne prouve rien.
+  @Test
+  void enrichir_collisionPorteusePositionneeParWikidata_signaleSansFusionner() {
+    final UUID salleId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(UUID.randomUUID(), "theatre de poche montparnasse paris", "wikidata"));
+
+    verify(issue.fusion(), never()).fusionnerUnePaire(any(), any());
+    verify(issue.signalement())
+        .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
+  }
+
+  @Test
+  void enrichir_collisionNomsDeDeuxLieuxVoisins_signaleSansFusionner() {
+    final UUID salleId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(UUID.randomUUID(), "theatre montparnasse", "sources"));
+
+    verify(issue.fusion(), never()).fusionnerUnePaire(any(), any());
+    verify(issue.signalement())
+        .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
   // #1189 : sans coordonnées connues des deux côtés, aucune preuve positive ne justifie une

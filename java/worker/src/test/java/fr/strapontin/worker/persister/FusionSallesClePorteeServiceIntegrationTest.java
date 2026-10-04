@@ -45,6 +45,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
     jdbc.update("DELETE FROM salle_sources", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
   }
 
   private UUID creerSalle(final String nom, final String dept, final String wikidataId) {
@@ -303,6 +304,21 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
             + " VALUES (LEAST(CAST(:a AS uuid), CAST(:b AS uuid)),"
             + " GREATEST(CAST(:a AS uuid), CAST(:b AS uuid)))",
         Map.of("a", a.toString(), "b", b.toString()));
+
+    assertEquals(0, fusionSallesClePortee.fusionner());
+  }
+
+  // Un concert partagé avec une salle mélangeant plusieurs lieux ne prouve pas le même lieu.
+  @Test
+  void fusionner_salleSignaleeContaminee_neFusionnePas() {
+    final UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null, LAT, LON);
+    final UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551", LAT, LON);
+    creerConcert("laurent voulzy", "20:30", "87", grandTheatre);
+    creerConcert("laurent voulzy", "20:30", "87", operaLimoges);
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
+            + " VALUES ('dispersion_sources_salle', 'salle', CAST(:id AS uuid), 'haute')",
+        Map.of("id", operaLimoges.toString()));
 
     assertEquals(0, fusionSallesClePortee.fusionner());
   }

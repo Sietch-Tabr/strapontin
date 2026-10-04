@@ -5,6 +5,7 @@
 package fr.strapontin.worker.enrichissement;
 
 import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecAmbiguitesDecouverte;
@@ -17,6 +18,7 @@ import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,8 @@ public class EnrichissementSallesService {
   private static final String CLE_WIKIDATA_ID = "wikidataId";
   private static final String CLE_LATITUDE = "latitude";
   private static final String CLE_LONGITUDE = "longitude";
+  private static final String CLE_VILLE = "ville";
+  private static final String CLE_NOM_NORM = "nom_norm";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
@@ -274,8 +278,8 @@ public class EnrichissementSallesService {
             new SalleAEnrichir(
                 rs.getObject("id", UUID.class),
                 rs.getString("nom"),
-                rs.getString("nom_norm"),
-                rs.getString("ville"),
+                rs.getString(CLE_NOM_NORM),
+                rs.getString(CLE_VILLE),
                 rs.getString("dept_effectif"),
                 null,
                 (Double) rs.getObject(CLE_LATITUDE),
@@ -330,7 +334,7 @@ public class EnrichissementSallesService {
     final Map<String, Object> params = new HashMap<>();
     params.put(CLE_WIKIDATA_ID, enrichissement.wikidataId());
     params.put("nomAffiche", enrichissement.nomAffiche());
-    params.put("ville", enrichissement.ville());
+    params.put(CLE_VILLE, enrichissement.ville());
     params.put(CLE_LATITUDE, enrichissement.latitude());
     params.put(CLE_LONGITUDE, enrichissement.longitude());
     params.put("id", salleId.toString());
@@ -355,9 +359,10 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * Collision {@code wikidata_id} : signal plus fort qu'une coïncidence de
-   * concert — fusion automatique seulement si coordonnées connues et
-   * proches, sinon signalement seul (CLAUDE.md, signalements_matching).
+   * Collision {@code wikidata_id} : fusion automatique seulement si les noms
+   * désignent fortement le même lieu et si la salle porteuse est positionnée
+   * par ses lieux publiés, proche de la nôtre ; sinon signalement seul
+   * (CLAUDE.md, signalements_matching).
    */
   private boolean gererCollisionWikidataId(
       final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
@@ -401,26 +406,36 @@ public class EnrichissementSallesService {
   private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT id, latitude, longitude FROM salles WHERE wikidata_id = :wikidataId",
+            "SELECT id, nom_norm, ville, latitude, longitude, origine_position FROM salles"
+                + " WHERE wikidata_id = :wikidataId",
             Map.of(CLE_WIKIDATA_ID, wikidataId));
     return lignes.isEmpty() ? null : lignes.get(0);
   }
 
+  // Une porteuse positionnée par Wikidata est toujours proche de la salle qui
+  // reçoit le même élément : le Théâtre Montparnasse, porteur à tort de
+  // l'élément du Théâtre de Poche, a absorbé ce dernier.
   private boolean tenterFusionParCoordonnees(
       final UUID salleId, final Map<String, Object> porteuse) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
+            "SELECT nom_norm, ville, latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()));
-    if (lignes.isEmpty()) {
+    if (lignes.isEmpty() || !"sources".equals(porteuse.get("origine_position"))) {
       return false;
     }
-    final Double latSalle = (Double) lignes.get(0).get(CLE_LATITUDE);
-    final Double lonSalle = (Double) lignes.get(0).get(CLE_LONGITUDE);
-    final Double latPorteuse = (Double) porteuse.get(CLE_LATITUDE);
-    final Double lonPorteuse = (Double) porteuse.get(CLE_LONGITUDE);
-    if (!FusionSallesClePorteeService.coordonneesConnuesEtProches(
-        latSalle, lonSalle, latPorteuse, lonPorteuse)) {
+    final Map<String, Object> salle = lignes.get(0);
+    final String contexteVilles =
+        Objects.toString(salle.get(CLE_VILLE), "")
+            + " "
+            + Objects.toString(porteuse.get(CLE_VILLE), "");
+    if (!NomsDeLieu.designentFortementLeMemeLieu(
+            (String) salle.get(CLE_NOM_NORM), (String) porteuse.get(CLE_NOM_NORM), contexteVilles)
+        || !FusionSallesClePorteeService.coordonneesConnuesEtProches(
+            (Double) salle.get(CLE_LATITUDE),
+            (Double) salle.get(CLE_LONGITUDE),
+            (Double) porteuse.get(CLE_LATITUDE),
+            (Double) porteuse.get(CLE_LONGITUDE))) {
       return false;
     }
     fusionSallesClePortee.fusionnerUnePaire((UUID) porteuse.get("id"), salleId);
