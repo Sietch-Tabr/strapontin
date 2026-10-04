@@ -19,7 +19,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 /**
  * Dispersion des lieux sources : lieux éloignés d'une salle (contamination),
  * lieux de deux salles qui coïncident sous des noms compatibles (doublon).
- * Consolide d'abord la position des salles sur leurs lieux.
+ * Consolide d'abord la position des salles sur leurs lieux, puis écarte celles
+ * hors de leur département.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -38,6 +39,7 @@ final class ControleDispersionGeo {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
+  private final PositionsHorsDepartement horsDepartement;
 
   private record LieuSource(
       UUID salleId,
@@ -52,6 +54,7 @@ final class ControleDispersionGeo {
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
     this.signalements = signalements;
+    this.horsDepartement = new PositionsHorsDepartement(jdbc, signalements);
   }
 
   /**
@@ -60,10 +63,12 @@ final class ControleDispersionGeo {
   /* package-private : appelé par ControleIntegriteService. */
   int verifier() {
     consoliderPositions();
+    final int horsDepartementSignalees = horsDepartement.verifier();
     final List<LieuSource> lieux = chargerLieux();
     return verifierDispersionParSalle(lieux)
         + verifierSallesAuMemeLieu(lieux)
-        + verifierPositionsWikidata();
+        + verifierPositionsWikidata()
+        + horsDepartementSignalees;
   }
 
   // Position Wikidata loin de tous les lieux sources : élément d'un homonyme

@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.PositionDepartement;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -14,8 +15,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Dernier recours quand aucune salle n'est reconnue : création à la position
- * publiée par la source, sinon géocodage « nom, ville » puis salle connue la
- * plus proche, sinon création aux coordonnées géocodées.
+ * publiée par la source, sinon géocodage « nom, ville » (point retenu s'il est
+ * dans le département du concert) puis salle connue la plus proche, sinon
+ * création aux coordonnées géocodées.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -46,9 +48,17 @@ final class CreationSalleDernierRecours {
       return createur.creer(concert, Optional.empty());
     }
     // Sans la ville, un nom générique se géocode n'importe où en France.
+    // Un point hors du département du concert est un homonyme : écarté.
     final Optional<ClientNominatim.Coordonnees> coordonnees =
-        clientNominatim.geocoder(
-            concert.ville() != null ? concert.salle() + ", " + concert.ville() : concert.salle());
+        clientNominatim
+            .geocoder(
+                concert.ville() != null
+                    ? concert.salle() + ", " + concert.ville()
+                    : concert.salle())
+            .filter(
+                position ->
+                    PositionDepartement.plausible(
+                        concert.dept(), position.latitude(), position.longitude()));
     final UUID proche =
         coordonnees
             .map(position -> resolveurGps.chercher(position, concert.salle(), concert.dept()))

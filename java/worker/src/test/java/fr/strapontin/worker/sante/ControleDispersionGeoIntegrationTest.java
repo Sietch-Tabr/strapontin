@@ -5,6 +5,8 @@
 package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -167,6 +169,62 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
             Map.of("id", salle.toString()),
             Double.class),
         1e-9);
+  }
+
+  private void positionner(
+      final UUID salle,
+      final String dept,
+      final double lat,
+      final double lon,
+      final String origine) {
+    jdbc.update(
+        "UPDATE salles SET dept = :dept, latitude = :lat, longitude = :lon,"
+            + " origine_position = :origine WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString(), "dept", dept, "lat", lat, "lon", lon, "origine", origine));
+  }
+
+  // « Grand Palais » (75) géocodé en Charente : la position d'un homonyme s'efface.
+  @Test
+  void verifier_positionGeocodeeHorsDepartement_estEffacee() {
+    final UUID salle = creerSalle("grand palais");
+    positionner(salle, "75", 45.1388794, -0.155064, "geocodage");
+
+    controle.verifier();
+
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Double.class));
+    assertTrue(typesSignales().isEmpty());
+  }
+
+  // Rockhal (Esch-sur-Alzette) rangée dans le 43 : la position est juste, le département non.
+  @Test
+  void verifier_positionSourcesHorsDepartement_estSignalee() {
+    final UUID salle = creerSalle("rockhal");
+    positionner(salle, "43", 49.5014, 5.9481, "sources");
+
+    controle.verifier();
+
+    assertEquals(List.of("position_hors_departement"), typesSignales());
+  }
+
+  @Test
+  void verifier_positionDansSonDepartement_nEstNiEffaceeNiSignalee() {
+    final UUID salle = creerSalle("le balajo");
+    positionner(salle, "75", 48.8540169, 2.3721601, "geocodage");
+
+    controle.verifier();
+
+    assertEquals(
+        48.8540169,
+        jdbc.queryForObject(
+            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Double.class),
+        1e-9);
+    assertTrue(typesSignales().isEmpty());
   }
 
   @Test

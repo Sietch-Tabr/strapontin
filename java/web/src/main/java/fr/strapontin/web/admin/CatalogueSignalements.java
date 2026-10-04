@@ -63,6 +63,11 @@ public final class CatalogueSignalements {
         "La position Wikidata de cette salle est loin de ses lieux sources : réinitialiser son"
             + " enrichissement depuis le référentiel.");
     ajouter(
+        "position_hors_departement",
+        "Salle hors de son département",
+        "La position de cette salle est loin de son département : corriger son département ou"
+            + " réinitialiser son enrichissement depuis le référentiel.");
+    ajouter(
         "necessite_intervention",
         "Artiste Ticketmaster douteux",
         "Le nom de l'artiste chez Ticketmaster ne correspond plus à l'artiste suivi : corriger son"

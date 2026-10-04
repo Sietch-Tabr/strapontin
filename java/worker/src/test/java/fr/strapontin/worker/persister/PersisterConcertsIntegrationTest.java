@@ -302,6 +302,29 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertNull(salleCreee.get("longitude"));
   }
 
+  // « Grand Palais » géocodé en Charente pour un concert du 75 : homonyme, point écarté.
+  @Test
+  void persisterConcerts_geocodageHorsDuDepartement_creeLaSalleSansCoordonnees() {
+    when(clientNominatim.geocoder("Zenith Homonyme Lointain, Paris"))
+        .thenReturn(Optional.of(new ClientNominatim.Coordonnees(45.1388794, -0.155064)));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste GPS 4",
+                "2098-09-23",
+                "Zenith Homonyme Lointain",
+                "ticketmaster:venue-gps-4",
+                null)));
+
+    final Map<String, Object> salleCreee =
+        jdbc.queryForMap(
+            "SELECT latitude, origine_position FROM salles WHERE nom = 'Zenith Homonyme Lointain'",
+            Map.of());
+    assertNull(salleCreee.get("latitude"));
+    assertNull(salleCreee.get("origine_position"));
+  }
+
   @Test
   void persisterConcerts_upsertConflitMemeArtisteDateSalleHeure_metsAJourPasInsertion() {
     // Même artiste, date, heure et salle → conflit → mise à jour (pas doublon)
