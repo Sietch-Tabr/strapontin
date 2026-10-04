@@ -4,20 +4,16 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -36,40 +32,6 @@ import org.springframework.stereotype.Service;
 public class CoherenceWikidataSalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoherenceWikidataSalleService.class);
-
-  // une comparaison texte-à-texte stricte ville/commune Wikidata génère du
-  // bruit quasi systématique sur toute salle parisienne/lyonnaise/marseillaise
-  // (arrondissement ≠ ville mère), en zone urbaine dense (quartiers/districts
-  // informels sans commune propre, ex. Bercy, La Défense) ou sur une commune
-  // fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom d'une des
-  // communes d'origine, ou référence l'intercommunalité). Cette normalisation
-  // est volontairement locale à ce contrôle *a posteriori* : {@link
-  // WikidataSalleSource#villeIncompatible} reste inchangé, il bloque le
-  // matching *au moment de l'enrichissement* où une comparaison plus permissive
-  // réduirait la couverture.
-  private static final Pattern ARRONDISSEMENT =
-      Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
-
-  // Quartiers/districts informels ne correspondant à aucune commune
-  // administrative, rattachés à une ou plusieurs communes possibles (ex. La
-  // Défense chevauche Nanterre/Puteaux/Courbevoie).
-  private static final String VILLE_PARIS = "paris";
-  private static final Map<String, Set<String>> QUARTIERS_EQUIVALENTS =
-      Map.of(
-          "bercy", Set.of(VILLE_PARIS),
-          "la defense", Set.of("nanterre", "puteaux", "courbevoie", VILLE_PARIS),
-          "st germain l auxerrois", Set.of(VILLE_PARIS),
-          "notre dame", Set.of(VILLE_PARIS),
-          "chaussee d antin", Set.of(VILLE_PARIS),
-          // Quartier administratif du 12e arrondissement de Paris où se trouve
-          // l'Opéra Bastille.
-          "quinze vingts", Set.of(VILLE_PARIS));
-
-  // Longueur minimale pour le repli par containment (commune
-  // fusionnée/intercommunalité, ex. « Pierre-Bénite » ⊂ « Oullins-Pierre-Bénite
-  // », « Orange » ⊂ « communauté de communes du Pays d'Orange en Provence ») —
-  // évite un containment trivial sur un token court.
-  private static final int LONGUEUR_MIN_CONTAINMENT = 5;
 
   // Position Wikidata comparable aux lieux publiés : le contrôle de position
   // (20 km) tranche ; les noms de communes signalaient à tort une agglomération
@@ -124,33 +86,49 @@ public class CoherenceWikidataSalleService {
     int incoherences = 0;
     for (final SalleAEnrichir salle : candidats) {
       final EnrichissementSalle enrichissement = resultats.get(salle.id());
-      if (enrichissement == null) {
-        continue;
+      if (enrichissement != null
+          && traiterSalle(
+              salle,
+              enrichissement,
+              villesConcertsReelles.get(salle.id()),
+              signaturesDejaSignalees.get(salle.id()))) {
+        incoherences++;
       }
-      final String communeWikidata = enrichissement.ville();
-      if (communeWikidata == null || communeWikidata.isBlank()) {
-        continue;
-      }
-      final Coherence coherence =
-          evaluerCoherence(salle, communeWikidata, villesConcertsReelles.get(salle.id()));
-      final String signatureConnue = signaturesDejaSignalees.get(salle.id());
-      if (coherence == Coherence.COHERENTE) {
-        if (signatureConnue != null) {
-          memoriserSignature(salle.id(), null);
-        }
-        continue;
-      }
-      incoherences++;
-      final boolean partielle = coherence == Coherence.INCOHERENTE_PARTIELLE;
-      final String signature = communeWikidata + "|" + partielle;
-      if (signature.equals(signatureConnue)) {
-        continue;
-      }
-      memoriserSignature(salle.id(), signature);
-      loggerIncoherence(salle, communeWikidata, partielle, villesConcertsReelles.get(salle.id()));
     }
     LOG.info("coherence:wikidata candidats={} incoherences={}", candidats.size(), incoherences);
     return incoherences;
+  }
+
+  // true si la salle est incohérente ; journalisée seulement si la signature change.
+  private boolean traiterSalle(
+      final SalleAEnrichir salle,
+      final EnrichissementSalle enrichissement,
+      final List<String> villesConcertsReelles,
+      final String signatureConnue) {
+    final String communeWikidata =
+        enrichissement.ville() != null
+            ? enrichissement.ville()
+            : EvaluationCoherenceWikidata.COMMUNE_INCONNUE;
+    final EvaluationCoherenceWikidata.Coherence coherence =
+        EvaluationCoherenceWikidata.evaluer(
+            salle, enrichissement, communeWikidata, villesConcertsReelles);
+    if (coherence == null) {
+      return false;
+    }
+    if (coherence == EvaluationCoherenceWikidata.Coherence.COHERENTE) {
+      if (signatureConnue != null) {
+        memoriserSignature(salle.id(), null);
+      }
+      return false;
+    }
+    final boolean partielle =
+        coherence == EvaluationCoherenceWikidata.Coherence.INCOHERENTE_PARTIELLE;
+    final String signature = communeWikidata + "|" + partielle;
+    if (!signature.equals(signatureConnue)) {
+      memoriserSignature(salle.id(), signature);
+      loggerIncoherence(salle, communeWikidata, partielle, villesConcertsReelles);
+    }
+    return true;
   }
 
   /**
@@ -256,73 +234,6 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Résultat de {@link #evaluerCoherence} : distingue une contamination
-   * *partielle* (certains concerts cohérents, d'autres non — une minorité de
-   * concerts mal rattachée à une salle par ailleurs correctement enrichie)
-   * d'une incohérence *totale* (aucun concert cohérent, signe classique d'un
-   * mauvais rapprochement Wikidata complet).
-   */
-  private enum Coherence {
-    COHERENTE,
-    INCOHERENTE_PARTIELLE,
-    INCOHERENTE_TOTALE
-  }
-
-  /**
-   * Évalue la cohérence contre concerts.ville (prioritaire) ou salles.ville
-   * en repli — contamination partielle journalisée distinctement du total.
-   * @param salle salle candidate
-   * @param communeWikidata commune Wikidata (code INSEE) du wikidata_id associé
-   * @param villesConcertsReelles villes réelles des concerts, ou vide
-   * @return la classification de cohérence
-   */
-  private static Coherence evaluerCoherence(
-      final SalleAEnrichir salle,
-      final String communeWikidata,
-      final List<String> villesConcertsReelles) {
-    if (villesConcertsReelles != null && !villesConcertsReelles.isEmpty()) {
-      final long nbCoherentes =
-          villesConcertsReelles.stream().filter(v -> villesCoherentes(v, communeWikidata)).count();
-      if (nbCoherentes == villesConcertsReelles.size()) {
-        return Coherence.COHERENTE;
-      }
-      return nbCoherentes > 0 ? Coherence.INCOHERENTE_PARTIELLE : Coherence.INCOHERENTE_TOTALE;
-    }
-    return villesCoherentes(salle.ville(), communeWikidata)
-        ? Coherence.COHERENTE
-        : Coherence.INCOHERENTE_TOTALE;
-  }
-
-  private static boolean villesCoherentes(final String villeSalle, final String communeWikidata) {
-    final String villeSalleNorm = Normalisation.normaliserVille(villeSalle);
-    final String communeNorm = Normalisation.normaliserVille(communeWikidata);
-    if (villeSalleNorm.equals(communeNorm)) {
-      return true;
-    }
-    return !Collections.disjoint(canonicaliser(villeSalleNorm), canonicaliser(communeNorm))
-        || containmentCoherent(villeSalleNorm, communeNorm);
-  }
-
-  private static Set<String> canonicaliser(final String villeNorm) {
-    final Matcher matcher = ARRONDISSEMENT.matcher(villeNorm);
-    if (matcher.matches()) {
-      return Set.of(matcher.group(2));
-    }
-    final Set<String> quartier = QUARTIERS_EQUIVALENTS.get(villeNorm);
-    if (quartier != null) {
-      return quartier;
-    }
-    return Set.of(villeNorm);
-  }
-
-  private static boolean containmentCoherent(final String nomA, final String nomB) {
-    if (nomA.length() < LONGUEUR_MIN_CONTAINMENT || nomB.length() < LONGUEUR_MIN_CONTAINMENT) {
-      return false;
-    }
-    return nomA.contains(nomB) || nomB.contains(nomA);
-  }
-
-  /**
    * @param salle salle candidate
    * @param communeWikidata commune Wikidata (code INSEE) du wikidata_id associé
    * @param partielle {@code true} si seule une partie des concerts est
@@ -368,9 +279,13 @@ public class CoherenceWikidataSalleService {
             partielle));
   }
 
+  // Position des lieux publiés seulement : comparable à celle de l'élément.
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
-        "SELECT id, nom, nom_norm, ville, dept, wikidata_id FROM salles s"
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id,"
+            + " CASE WHEN origine_position = 'sources' THEN latitude END AS latitude,"
+            + " CASE WHEN origine_position = 'sources' THEN longitude END AS longitude"
+            + " FROM salles s"
             + " WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''"
             + " AND NOT "
             + POSITION_COMPARABLE,
@@ -383,7 +298,7 @@ public class CoherenceWikidataSalleService {
                 rs.getString("ville"),
                 rs.getString("dept"),
                 rs.getString("wikidata_id"),
-                null,
-                null));
+                (Double) rs.getObject("latitude"),
+                (Double) rs.getObject("longitude")));
   }
 }

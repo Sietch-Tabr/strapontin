@@ -5,10 +5,12 @@
 package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.WikidataSalleSource;
@@ -84,6 +86,32 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
         jdbc.queryForObject(
             "SELECT coherence_wikidata_signalee FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", pinGalant.toString()),
+            String.class));
+  }
+
+  // Le Pin Galant positionné par ses lieux publiés : l'élément Wikidata (Mérignac) est à moins
+  // de 20 km de la salle, des concerts annoncés à « Bordeaux » n'en font pas un homonyme.
+  @Test
+  void verifier_positionDesLieuxProcheDeLElement_nEstPasSignalee() {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id, latitude,"
+            + " longitude, origine_position) VALUES (CAST(:id AS uuid), 'le pin galant', 'Le Pin"
+            + " Galant', 'le pin galant', 'Mérignac', '33', 'Q61854714', 44.8409, -0.6481,"
+            + " 'sources')",
+        Map.of("id", id.toString()));
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q61854714", "Le Pin Galant", "Bordeaux", null, null, 44.8404, -0.6475)));
+
+    assertEquals(0, coherence.verifier());
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT coherence_wikidata_signalee FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
             String.class));
   }
 }
