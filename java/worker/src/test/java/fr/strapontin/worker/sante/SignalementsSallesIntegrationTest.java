@@ -202,6 +202,32 @@ class SignalementsSallesIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(0L, actifs);
   }
 
+  // Une salle suivie sans événement annoncé est le cas normal (on la suit pour être prévenu) :
+  // signalée, elle encombrait la file de revue ; le signalement déjà posé est clos.
+  @Test
+  void verifier_sourceSansEvenementDUneSalleSuivie_neSignalePas() {
+    final UUID salle = insererSalle("salle suivie", null, null);
+    insererSourceInterne(salle, "salle suivie", null, null);
+    controleIntegrite.verifier();
+    jdbc.update(
+        "INSERT INTO users (id, email) VALUES ('u-orph', 'u-orph@test.fr')"
+            + " ON CONFLICT DO NOTHING",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_salles (user_id, salle_id) VALUES ('u-orph', CAST(:id AS uuid))",
+        Map.of("id", salle.toString()));
+
+    controleIntegrite.verifier();
+
+    final Long actifs =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching"
+                + " WHERE type = 'source_orpheline' AND resolu_le IS NULL",
+            Map.of(),
+            Long.class);
+    assertEquals(0L, actifs);
+  }
+
   // Un flag de suppression posé puis dont la condition ne tient plus (concert reconfirmé)
   // restait indéfiniment dans la file de revue manuelle.
   @Test

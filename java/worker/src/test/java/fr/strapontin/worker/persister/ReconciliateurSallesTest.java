@@ -44,26 +44,14 @@ class ReconciliateurSallesTest {
   }
 
   private static ValeurConcert concert() {
-    return new ValeurConcert(
-        "Artiste",
-        "artiste",
-        LocalDate.of(2026, 9, 1),
-        null,
-        "Salle",
-        "salle",
-        null,
-        null,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm("artiste")
+        .date(LocalDate.of(2026, 9, 1))
+        .salle("Salle")
+        .salleNorm("salle")
+        .source("ticketmaster")
+        .construire();
   }
 
   @Test

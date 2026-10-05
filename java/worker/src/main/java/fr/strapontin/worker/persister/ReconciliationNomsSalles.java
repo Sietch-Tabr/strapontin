@@ -5,7 +5,6 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
-import fr.strapontin.core.Normalisation;
 import java.text.Normalizer;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -38,11 +37,13 @@ class ReconciliationNomsSalles {
   private static final int NB_NOMS_SANS_DOUBLON = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final AbsorptionRenommagesSalles absorption;
 
   /* package-private : instancié uniquement par PersisterConcerts (même
    * package). */
   ReconciliationNomsSalles(final NamedParameterJdbcTemplate jdbc) {
     this.jdbc = jdbc;
+    this.absorption = new AbsorptionRenommagesSalles(jdbc);
   }
 
   /**
@@ -54,7 +55,8 @@ class ReconciliationNomsSalles {
   // equalsIgnoreCase ne convient pas ici : le test porte sur le nom lui-même
   // (déjà entièrement majuscule ou non), pas sur une comparaison insensible à
   // la casse entre deux chaînes distinctes.
-  private static int scoreSalle(final String salle) {
+  /* package-private : partagé avec AbsorptionRenommagesSalles. */
+  static int scoreSalle(final String salle) {
     final int diacr = Normalizer.normalize(salle, Normalizer.Form.NFD).length() - salle.length();
     final int casseMixte = salle.equals(salle.toUpperCase(Locale.ROOT)) ? 0 : 1;
     return diacr + casseMixte;
@@ -227,10 +229,8 @@ class ReconciliationNomsSalles {
   }
 
   /**
-   * Absorbe les renommages de salle ({@code salles.nom}) — un mapping
-   * géographiquement incohérent ne doit jamais renommer à tort la salle
-   * qu'il désigne, avant même son rejet en aval.
-   * @param concerts concerts avec {@code salleSourceId} résolus
+   * Absorbe les renommages de salle depuis sa source de référence
+   * ({@link AbsorptionRenommagesSalles}).
    * @param cachesSalles map sourceId → UUID
    * @param deptsConnus départements déjà connus par salle
    */
@@ -239,39 +239,6 @@ class ReconciliationNomsSalles {
       final List<ValeurConcert> concerts,
       final Map<String, UUID> cachesSalles,
       final Map<UUID, String> deptsConnus) {
-    final Map<UUID, String> meilleurNom = new HashMap<>();
-    final Map<UUID, Integer> meilleurScore = new HashMap<>();
-    for (final ValeurConcert c : concerts) {
-      if (c.salleSourceId() == null) {
-        continue;
-      }
-      final UUID salleId = cachesSalles.get(c.salleSourceId());
-      if (salleId == null
-          || PersisterConcerts.mappingSalleIncoherent(salleId, c.dept(), deptsConnus)) {
-        continue;
-      }
-      final int score = scoreSalle(c.salle());
-      if (!meilleurNom.containsKey(salleId) || score > meilleurScore.get(salleId)) {
-        meilleurNom.put(salleId, c.salle());
-        meilleurScore.put(salleId, score);
-      }
-    }
-    for (final Map.Entry<UUID, String> entree : meilleurNom.entrySet()) {
-      final String nouveauNom = entree.getValue();
-      final int modifies =
-          jdbc.update(
-              "UPDATE salles SET nom = :nom, nom_norm = :nomNorm"
-                  + " WHERE id = CAST(:uuid AS uuid) AND nom <> :nom",
-              Map.of(
-                  "nom",
-                  nouveauNom,
-                  "nomNorm",
-                  Normalisation.normaliserTexte(nouveauNom),
-                  "uuid",
-                  entree.getKey().toString()));
-      if (modifies > 0) {
-        LOG.info("renommage salle absorbé salleId={} nouveauNom={}", entree.getKey(), nouveauNom);
-      }
-    }
+    absorption.absorber(concerts, cachesSalles, deptsConnus);
   }
 }

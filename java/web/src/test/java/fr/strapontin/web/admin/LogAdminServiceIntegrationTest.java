@@ -7,7 +7,6 @@ package fr.strapontin.web.admin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -19,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test d'intégration de {@link LogAdminService} avec PostgreSQL réel (Testcontainers).
@@ -73,25 +73,48 @@ class LogAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
-  void lireErreursDepuis_filtreCorrectementSurLeSeuilTemporel() {
-    // ts explicites (écart 1 minute), pas Instant.now() successifs — la résolution de l'horloge
-    // système ne garantit pas deux valeurs distinctes entre deux appels rapprochés.
-    final long tsAvant = Instant.now().minusSeconds(120).toEpochMilli();
-    final long seuil = Instant.now().minusSeconds(60).toEpochMilli();
-    final long tsApres = Instant.now().toEpochMilli();
-    inserer(tsAvant, "erreur avant seuil");
-    inserer(tsApres, "erreur après seuil");
+  void lireErreursDepuis_horodatageMicroseconde_neRenvoiePasUneErreurDejaNotifiee() {
+    inserer(Instant.parse("2026-09-29T07:43:31.247604Z"), "erreur à la microseconde");
+    final List<LogAdminService.EntreeLogAdmin> premierLot = service.lireErreursDepuis(0L);
 
-    final List<LogAdminService.EntreeLogAdmin> entrees = service.lireErreursDepuis(seuil);
+    final List<LogAdminService.EntreeLogAdmin> secondLot =
+        service.lireErreursDepuis(premierLot.get(0).id());
 
-    assertEquals(1, entrees.size());
-    assertEquals("erreur après seuil", entrees.get(0).message());
+    assertEquals(1, premierLot.size());
+    assertEquals(List.of(), secondLot);
   }
 
-  private void inserer(final long tsEpochMs, final String message) {
+  @Test
+  void lireErreursDepuis_deuxErreursDansLaMemeMilliseconde_renvoieLesDeux() {
+    inserer(Instant.parse("2026-09-29T07:43:31.247100Z"), "première");
+    inserer(Instant.parse("2026-09-29T07:43:31.247900Z"), "seconde");
+
+    final List<LogAdminService.EntreeLogAdmin> entrees = service.lireErreursDepuis(0L);
+
+    assertEquals(
+        List.of("première", "seconde"),
+        entrees.stream().map(LogAdminService.EntreeLogAdmin::message).toList());
+  }
+
+  @Test
+  void idMaxJusquA_ancienCurseurTronqueALaMilliseconde_couvreLErreurDejaNotifiee() {
+    inserer(Instant.parse("2026-09-29T07:43:31.247604Z"), "déjà notifiée");
+    inserer(Instant.parse("2026-09-29T07:43:31.248100Z"), "nouvelle");
+    final long ancienCurseur = Instant.parse("2026-09-29T07:43:31.247Z").toEpochMilli();
+
+    final long id = service.idMaxJusquA(ancienCurseur);
+
+    assertEquals(
+        List.of("nouvelle"),
+        service.lireErreursDepuis(id).stream()
+            .map(LogAdminService.EntreeLogAdmin::message)
+            .toList());
+  }
+
+  private void inserer(final Instant ts, final String message) {
     jdbc.update(
         "INSERT INTO logs_admin (ts, niveau, source, message) VALUES (:ts, 'error', 'test',"
             + " :message)",
-        Map.of("ts", Timestamp.from(Instant.ofEpochMilli(tsEpochMs)), "message", message));
+        Map.of("ts", Timestamp.from(ts), "message", message));
   }
 }

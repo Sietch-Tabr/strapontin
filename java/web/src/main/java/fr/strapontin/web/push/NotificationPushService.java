@@ -4,7 +4,7 @@
  */
 package fr.strapontin.web.push;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.strapontin.core.EndpointPush;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de notifications Web Push VAPID — envoie des notifications aux
@@ -66,6 +67,9 @@ public class NotificationPushService {
       final PushService pushService,
       final String userId,
       final String payload) {
+    if (!estAutoriseSinonSupprime(ab, userId)) {
+      return 0;
+    }
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
@@ -123,7 +127,7 @@ public class NotificationPushService {
                 LIMIT 1
                 """,
                 Map.of("userId", userId));
-    if (abonnements.isEmpty()) {
+    if (abonnements.isEmpty() || !estAutoriseSinonSupprime(abonnements.get(0), userId)) {
       return false;
     }
 
@@ -189,6 +193,15 @@ public class NotificationPushService {
     }
     LOG.info("communication d'incident envoyée par push : {}", envoyes);
     return envoyes;
+  }
+
+  // Un abonnement enregistré avant la validation des endpoints n'est jamais appelé.
+  private boolean estAutoriseSinonSupprime(final Map<String, Object> ab, final String userId) {
+    if (EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
+      return true;
+    }
+    supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
+    return false;
   }
 
   private void supprimerAbonnement(final UUID id, final String userId, final String endpoint) {

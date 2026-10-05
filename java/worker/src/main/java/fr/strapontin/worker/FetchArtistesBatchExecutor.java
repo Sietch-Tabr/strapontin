@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts;
@@ -12,6 +13,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,6 +30,8 @@ import org.slf4j.LoggerFactory;
  */
 class FetchArtistesBatchExecutor {
 
+  // Séparateur des alias dans array_to_string, absent de tout nom réel.
+  private static final String SEPARATEUR_ALIAS = "\u001f";
   private static final Logger LOG = LoggerFactory.getLogger(FetchArtistesBatchExecutor.class);
   private static final int TAILLE_LOT_TM = 20;
   private static final int NB_IDS_DISTINCTS_NON_AMBIGU = 1;
@@ -64,17 +68,29 @@ class FetchArtistesBatchExecutor {
     rapportage
         .workerStatsService()
         .executerAvecStatsToleretErreur(
-            LOG, "fetch:artistes:batch", () -> executerCycle(retry, artisteIdsCibles));
+            LOG, "fetch:artistes:batch", () -> executerCycle(artisteIdsCibles));
   }
 
-  private WorkerStatsService.ResultatJob executerCycle(
-      final boolean retry, final List<String> artisteIdsCibles) {
-    if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
-      LOG.warn("fetch:artistes:batch suspendu — quota TM insuffisant");
-      return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
-    }
+  /**
+   * Traite un lot hors cycle (ajout d'un artiste) : ni statistiques, ni
+   * remontée d'échec de lot — voir {@link FetchUnArtisteExecutor}.
+   * @param lot lignes artiste ({@link #chargerArtistesSuivis})
+   * @param ticketmasterAutorise {@code false} si le quota Ticketmaster est bas
+   */
+  /* package-private : appelé par FetchUnArtisteExecutor (même package). */
+  void traiterLotHorsCycle(
+      final List<Map<String, Object>> lot, final boolean ticketmasterAutorise) {
+    traiterLot(
+        lot,
+        sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList(),
+        ticketmasterAutorise);
+  }
 
-    final List<Map<String, Object>> rows = chargerArtistesSuivisBatch(retry, artisteIdsCibles);
+  private WorkerStatsService.ResultatJob executerCycle(final List<String> artisteIdsCibles) {
+    // Quota Ticketmaster bas : seule cette source est suspendue, pas Eventim.
+    final boolean ticketmasterAutorise = commun.obtenirGestionQuotaTM().cronAutorise();
+
+    final List<Map<String, Object>> rows = chargerArtistesSuivis(artisteIdsCibles);
     if (rows.isEmpty()) {
       LOG.info("fetch:artistes:batch — aucun artiste suivi");
       return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
@@ -82,37 +98,42 @@ class FetchArtistesBatchExecutor {
 
     final List<SourceConcerts> sourcesSimples =
         sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
-    final ResultatPersistance resultat = traiterLots(rows, sourcesSimples);
+    final ResultatPersistance resultat = traiterLots(rows, sourcesSimples, ticketmasterAutorise);
 
     commun.sauvegarderQuota();
     recalculerMatchesService.recalculerMatches(null);
     rapportage.notificationDigestService().executerDigest("temps_reel");
     LOG.info("fetch:artistes:batch terminé");
-    return WorkerStatsService.ResultatJob.succes(resultat);
+    return WorkerStatsService.ResultatJob.selonQuota(resultat, ticketmasterAutorise);
   }
 
-  private List<Map<String, Object>> chargerArtistesSuivisBatch(
-      final boolean retry, final List<String> artisteIdsCibles) {
+  /**
+   * @param artisteIdsCibles identifiants ({@code artistes.id}, texte), ou
+   *     {@code null} pour tous les artistes suivis
+   * @return une ligne par artiste suivi
+   */
+  /* package-private : partagé avec FetchUnArtisteExecutor (même package). */
+  List<Map<String, Object>> chargerArtistesSuivis(final List<String> artisteIdsCibles) {
     return commun
         .obtenirJdbc()
         .queryForList(
-            "SELECT ua.artiste_id::text AS artiste_id_str,"
-                + " MAX(ua.artiste_affiche) AS artiste_affiche,"
-                + " MAX(asm.identifiant_externe) AS attraction_id,"
-                + " COUNT(DISTINCT asm.identifiant_externe) AS nb_ids_distincts,"
-                + " MAX(a.deezer_id) AS deezer_id,"
-                + " MAX(a.wikidata_id) AS wikidata_id"
-                + " FROM user_artistes ua"
-                + " JOIN artistes a ON a.id = ua.artiste_id"
-                + " LEFT JOIN artiste_sources asm"
-                + "   ON asm.artiste_id = ua.artiste_id AND asm.source = 'ticketmaster'"
-                + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
-                + " GROUP BY ua.artiste_id",
-            retry ? Map.of("ids", artisteIdsCibles) : Map.of());
+            "SELECT ua.artiste_id::text AS artiste_id_str, MAX(ua.artiste_affiche) AS"
+                + " artiste_affiche, MAX(asm.identifiant_externe) AS attraction_id, COUNT(DISTINCT"
+                + " asm.identifiant_externe) AS nb_ids_distincts, MAX(a.deezer_id) AS deezer_id,"
+                + " MAX(a.wikidata_id) AS wikidata_id, a.nom_affiche AS nom_affiche,"
+                + " array_to_string(a.alias_wikidata, E'\\x1f') AS alias_wikidata FROM"
+                + " user_artistes ua JOIN artistes a ON a.id = ua.artiste_id LEFT JOIN"
+                + " artiste_sources asm   ON asm.artiste_id = ua.artiste_id AND asm.source ="
+                + " 'ticketmaster'"
+                + (artisteIdsCibles != null ? " WHERE ua.artiste_id::text IN (:ids)" : "")
+                + " GROUP BY ua.artiste_id, a.id",
+            Collections.singletonMap("ids", artisteIdsCibles));
   }
 
   private ResultatPersistance traiterLots(
-      final List<Map<String, Object>> rows, final List<SourceConcerts> sourcesSimples) {
+      final List<Map<String, Object>> rows,
+      final List<SourceConcerts> sourcesSimples,
+      final boolean ticketmasterAutorise) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
     final List<String> echecsLots = new ArrayList<>();
     final List<String> idsEnEchec = new ArrayList<>();
@@ -121,7 +142,7 @@ class FetchArtistesBatchExecutor {
       final List<Map<String, Object>> lot =
           rows.subList(i, Math.min(i + TAILLE_LOT_TM, rows.size()));
       try {
-        final ResultatLot resultatLot = traiterLot(lot, sourcesSimples);
+        final ResultatLot resultatLot = traiterLot(lot, sourcesSimples, ticketmasterAutorise);
         resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
         if (resultatLot.echecReseauTransitoire()) {
           LOG.warn(
@@ -150,35 +171,41 @@ class FetchArtistesBatchExecutor {
   private record ResultatLot(ResultatPersistance persistance, boolean echecReseauTransitoire) {}
 
   /**
+   * Échecs absorbés pendant le fetch d'un lot : panne réseau transitoire
+   * (retentée) ou réponse incomplète d'une source (non retentée).
+   */
+  private record EchecsLot(AtomicBoolean reseau, AtomicBoolean incomplet) {
+    /* package-private : un état neuf par lot. */
+    EchecsLot() {
+      this(new AtomicBoolean(false), new AtomicBoolean(false));
+    }
+
+    /* package-private : concerts reçus gardés ; un concert non reçu n'est
+     * pas absent pour autant. */
+    List<ConcertBrut> noterIncomplete(final ReponseIncompleteException incomplete) {
+      LOG.warn("{} : réponse incomplète", incomplete.getMessage());
+      incomplet.set(true);
+      return incomplete.concertsRecus();
+    }
+  }
+
+  /**
    * Fetch + dédoublonnage + persistance d'un lot ({@value TAILLE_LOT_TM})
    * — persistance par lot pour ne pas perdre le quota TM déjà consommé.
    * @param lot sous-ensemble de lignes artiste
-   * @param sourcesSimples sources hors {@link SourceAvecFetchLot} (fetch
-   *     individuel par artiste)
+   * @param sourcesSimples sources interrogées artiste par artiste
+   * @param ticketmasterAutorise {@code false} si le quota Ticketmaster est bas
    * @return bilan de persistance du lot
    */
   private ResultatLot traiterLot(
-      final List<Map<String, Object>> lot, final List<SourceConcerts> sourcesSimples) {
-    final AtomicBoolean echecReseau = new AtomicBoolean(false);
-    final List<ConcertBrut> concertsTM = fetchTMParArtistes(lot, echecReseau);
+      final List<Map<String, Object>> lot,
+      final List<SourceConcerts> sourcesSimples,
+      final boolean ticketmasterAutorise) {
+    final EchecsLot echecs = new EchecsLot();
+    final List<ConcertBrut> concertsTM =
+        ticketmasterAutorise ? fetchTMParArtistes(lot, echecs) : List.of();
 
-    final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
-    for (final SourceConcerts source : sourcesSimples) {
-      for (final Map<String, Object> row : lot) {
-        final String nom = (String) row.get("artiste_affiche");
-        final String deezerId = (String) row.get("deezer_id");
-        final String wikidataId = (String) row.get("wikidata_id");
-        try {
-          concertsAutresSources.addAll(source.fetchArtiste(nom, deezerId, wikidataId));
-        } catch (Exception e) {
-          LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
-          if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
-            echecReseau.set(true);
-          }
-        }
-        commun.attendreRateLimit();
-      }
-    }
+    final List<ConcertBrut> concertsAutresSources = fetchAutresSources(lot, sourcesSimples, echecs);
 
     final List<ConcertBrut> tous = new ArrayList<>(concertsTM);
     tous.addAll(concertsAutresSources);
@@ -193,13 +220,43 @@ class FetchArtistesBatchExecutor {
     final String debutLot = OffsetDateTime.now().toString();
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     rapportage.enregistreurLieuxEventim().enregistrer();
-    // Un concert non revu faute de réponse de la source n'est pas absent.
-    if (!echecReseau.get()) {
+    // Un concert non revu faute de réponse ou d'interrogation de la source
+    // (Ticketmaster sauté) n'est pas absent : le comptage par artiste ne
+    // distingue pas les sources.
+    if (!echecs.reseau().get() && !echecs.incomplet().get() && ticketmasterAutorise) {
       final List<String> artisteIds =
           lot.stream().map(row -> (String) row.get(CLE_ARTISTE_ID_STR)).toList();
       commun.mettreAJourAbsencesArtistes(artisteIds, debutLot);
     }
-    return new ResultatLot(resultat, echecReseau.get());
+    return new ResultatLot(resultat, echecs.reseau().get());
+  }
+
+  // Sources interrogées artiste par artiste (Eventim).
+  private List<ConcertBrut> fetchAutresSources(
+      final List<Map<String, Object>> lot,
+      final List<SourceConcerts> sourcesSimples,
+      final EchecsLot echecs) {
+    final List<ConcertBrut> concertsAutresSources = new ArrayList<>();
+    for (final SourceConcerts source : sourcesSimples) {
+      for (final Map<String, Object> row : lot) {
+        final String nom = (String) row.get("artiste_affiche");
+        final String deezerId = (String) row.get("deezer_id");
+        final String wikidataId = (String) row.get("wikidata_id");
+        try {
+          concertsAutresSources.addAll(
+              source.fetchArtiste(nom, deezerId, wikidataId, autresNomsConnus(row)));
+        } catch (ReponseIncompleteException e) {
+          concertsAutresSources.addAll(echecs.noterIncomplete(e));
+        } catch (Exception e) {
+          LOG.warn("{} fetchArtiste échoué artiste={} : {}", source.nom(), nom, e.getMessage());
+          if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
+            echecs.reseau().set(true);
+          }
+        }
+        commun.attendreRateLimit();
+      }
+    }
+    return concertsAutresSources;
   }
 
   /**
@@ -213,11 +270,11 @@ class FetchArtistesBatchExecutor {
   private record ResolutionAttractionIds(List<String> attractionIds, List<String> nomsSansTmId) {}
 
   private List<ConcertBrut> fetchTMParArtistes(
-      final List<Map<String, Object>> rows, final AtomicBoolean echecReseau) {
+      final List<Map<String, Object>> rows, final EchecsLot echecs) {
     final ResolutionAttractionIds resolution = resoudreAttractionIds(rows);
     final List<ConcertBrut> resultats =
-        new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds(), echecReseau));
-    resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId(), echecReseau));
+        new ArrayList<>(fetchParLotsAttractionIds(resolution.attractionIds(), echecs));
+    resultats.addAll(fetchParNomsSansAttractionId(resolution.nomsSansTmId(), echecs));
     return resultats;
   }
 
@@ -296,7 +353,7 @@ class FetchArtistesBatchExecutor {
   }
 
   private List<ConcertBrut> fetchParLotsAttractionIds(
-      final List<String> attractionIds, final AtomicBoolean echecReseau) {
+      final List<String> attractionIds, final EchecsLot echecs) {
     final List<ConcertBrut> resultats = new ArrayList<>();
     for (int i = 0; i < attractionIds.size(); i += TAILLE_LOT_TM) {
       final List<String> lot =
@@ -305,10 +362,12 @@ class FetchArtistesBatchExecutor {
         final List<ConcertBrut> concertsLot = commun.obtenirTm().fetchArtistesLot(lot);
         resultats.addAll(concertsLot);
         rapportage.suiviSanteSourcesService().enregistrerResultatArtistesLot(lot, concertsLot);
+      } catch (ReponseIncompleteException e) {
+        resultats.addAll(echecs.noterIncomplete(e));
       } catch (Exception e) {
         LOG.warn("TM fetchArtistesLot lot={} échoué : {}", lot.size(), e.getMessage());
         if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
-          echecReseau.set(true);
+          echecs.reseau().set(true);
         }
       }
     }
@@ -316,19 +375,34 @@ class FetchArtistesBatchExecutor {
   }
 
   private List<ConcertBrut> fetchParNomsSansAttractionId(
-      final List<String> nomsSansTmId, final AtomicBoolean echecReseau) {
+      final List<String> nomsSansTmId, final EchecsLot echecs) {
     final List<ConcertBrut> resultats = new ArrayList<>();
     for (final String nom : nomsSansTmId) {
       try {
         resultats.addAll(commun.obtenirTm().fetchArtiste(nom));
+      } catch (ReponseIncompleteException e) {
+        resultats.addAll(echecs.noterIncomplete(e));
       } catch (Exception e) {
         LOG.warn("TM fetchArtiste échoué artiste={} : {}", nom, e.getMessage());
         if (WorkerFetchCommun.estEchecReseauTransitoire(e)) {
-          echecReseau.set(true);
+          echecs.reseau().set(true);
         }
       }
       commun.attendreRateLimit();
     }
     return resultats;
+  }
+
+  // Libellé et alias Wikidata : reconnaissent un nom de scène publié sous une
+  // forme longue par une source (« -M- Matthieu Chedid »).
+  private static List<String> autresNomsConnus(final Map<String, Object> row) {
+    final List<String> noms = new ArrayList<>();
+    if (row.get("nom_affiche") instanceof String nomAffiche) {
+      noms.add(nomAffiche);
+    }
+    if (row.get("alias_wikidata") instanceof String alias && !alias.isEmpty()) {
+      noms.addAll(List.of(alias.split(SEPARATEUR_ALIAS)));
+    }
+    return noms;
   }
 }

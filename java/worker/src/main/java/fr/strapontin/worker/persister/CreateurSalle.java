@@ -68,8 +68,10 @@ final class CreateurSalle {
                 "longitude",
                 coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
     jdbc.update(
-        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude)"
-            + " VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude, :longitude)"
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude,"
+            + " origine_position) VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude,"
+            + " :longitude, CASE WHEN CAST(:latitude AS double precision) IS NOT NULL"
+            + " THEN 'geocodage' END)"
             + " ON CONFLICT (salle_cle) DO NOTHING",
         params);
     return jdbc.queryForObject(

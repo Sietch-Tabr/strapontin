@@ -33,7 +33,6 @@ class AdminModificationUtilisateurServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
   private LogAdminService logAdminService;
-  private AdminRevocationService adminRevocationService;
   private EmailServiceAdmin emailServiceAdmin;
   private AdminModificationUtilisateurService service;
 
@@ -41,11 +40,8 @@ class AdminModificationUtilisateurServiceTest {
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     logAdminService = mock(LogAdminService.class);
-    adminRevocationService = mock(AdminRevocationService.class);
     emailServiceAdmin = mock(EmailServiceAdmin.class);
-    service =
-        new AdminModificationUtilisateurService(
-            jdbc, logAdminService, adminRevocationService, emailServiceAdmin);
+    service = new AdminModificationUtilisateurService(jdbc, logAdminService, emailServiceAdmin);
   }
 
   @Test
@@ -120,31 +116,25 @@ class AdminModificationUtilisateurServiceTest {
     verify(emailServiceAdmin, never()).envoyerPreavisRevocationAdmin(anyString(), anyString());
   }
 
-  // PATCH modifierUtilisateur ne rétrograde plus jamais un admin immédiatement — délègue à
-  // AdminRevocationService.initierRevocationAdmin (même délai différé 7 jours, même garde dernier
-  // admin, testés directement dans AdminRevocationServiceTest) plutôt que d'exécuter un UPDATE
-  // role='user' direct.
+  // La rétrogradation passe par AdminRevocationService (REQUIRES_NEW + SERIALIZABLE) : appelée
+  // depuis cette transaction, elle attendrait le verrou posé sur la même ligne users.
   @Test
-  void modifierUtilisateur_retrogradeAdminActuel_delegueAInitierRevocationAdmin() {
-    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
+  void modifierUtilisateur_retrogradationSeule_leveErreurMetierSansEcrire() {
     final Map<String, Object> ligneAdminCible = new HashMap<>();
     ligneAdminCible.put("role", "admin");
-    ligneAdminCible.put("email", "admin-cible@exemple.fr");
+    when(jdbc.queryForList(anyString(), anyMap(), eq(Integer.class))).thenReturn(List.of());
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneAdminCible));
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     final RequeteModifierUtilisateur requete = new RequeteModifierUtilisateur(null, null, "user");
-    service.modifierUtilisateur("admin-cible", requete, "admin-1");
+    final ErreurMetier ex =
+        assertThrows(
+            ErreurMetier.class,
+            () -> service.modifierUtilisateur("admin-cible", requete, "admin-1"));
 
-    verify(adminRevocationService).initierRevocationAdmin("admin-cible", "admin-1");
-    verify(logAdminService, never())
-        .logAdmin(eq("warn"), eq("admin"), eq("rôle modifié"), anyMap());
-    verify(emailServiceAdmin, never()).envoyerPromotionAdmin(anyString());
+    assertEquals(400, ex.getStatus());
+    verify(jdbc, never()).update(anyString(), anyMap());
   }
 
-  // combiner une rétrogradation admin avec nom/email en un seul PATCH imbriquerait un
-  // appel REQUIRES_NEW+SERIALIZABLE (initierRevocationAdminTransactionnel) dans la transaction
-  // déjà ouverte de modifierUtilisateur — risque d'épuisement du pool HikariCP (incident v2.6.4).
   @Test
   void modifierUtilisateur_nomEtRetrogradationCombines_leveErreurMetierSansAppelerJdbcUpdate() {
     final Map<String, Object> ligneAdminCible = new HashMap<>();

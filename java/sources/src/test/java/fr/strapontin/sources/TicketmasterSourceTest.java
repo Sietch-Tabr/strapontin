@@ -53,7 +53,8 @@ class TicketmasterSourceTest {
         List.of(
             Map.of(
                 "segment", Map.of("name", "Music"),
-                "genre", Map.of("name", "Pop"))));
+                "genre", Map.of("name", "Pop"),
+                "subGenre", Map.of("name", "Pop Rock"))));
     base.put("priceRanges", List.of(Map.of("min", 39.9, "max", 99.9)));
     base.put("url", "https://example.com");
     base.putAll(surcharge);
@@ -81,6 +82,35 @@ class TicketmasterSourceTest {
   }
 
   // --- parseDateTM ---
+
+  // La position du lieu (venue.location, publiée sous forme de texte) et son code postal sont
+  // conservés pour l'identification géographique de la salle.
+  @Test
+  void mapper_venueAvecLocation_conserveLaPositionDuLieu() {
+    final Map<String, Object> evt =
+        evenementTMRaw(
+            Map.of(
+                "_embedded",
+                Map.of(
+                    "attractions", List.of(Map.of("name", "Julien Clerc")),
+                    "venues",
+                        List.of(
+                            Map.of(
+                                "name",
+                                "ACCOR ARENA",
+                                "city",
+                                Map.of("name", "Paris"),
+                                "postalCode",
+                                "75012",
+                                "location",
+                                Map.of("latitude", "48.83861", "longitude", "2.37861"))))));
+
+    final ConcertBrut resultat = MapeurEvenementTM.mapper(evt, null);
+
+    assertEquals(48.83861, resultat.position().latitude(), 1e-9);
+    assertEquals(2.37861, resultat.position().longitude(), 1e-9);
+    assertEquals("75012", resultat.position().codePostal());
+  }
 
   @Test
   void parseDateTM_dateEtHeureValides_retourneDateEtHeure() {
@@ -125,6 +155,7 @@ class TicketmasterSourceTest {
     assertEquals("ticketmaster", resultat.source());
     assertEquals("music", resultat.classification());
     assertEquals("Pop", resultat.genre());
+    assertEquals("Pop Rock", resultat.sousGenre());
     assertEquals("onsale", resultat.statut());
   }
 
@@ -513,10 +544,10 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
-  // Un échec HTTP (contrairement à une salle réellement sans concert, testé ci-dessus) doit
-  // rester distinguable après coup — voir ResultatPage#succes, propagé jusqu'au log de fetchSalle.
+  // Un échec HTTP, contrairement à une salle réellement sans concert (testé ci-dessus), lève
+  // une réponse incomplète : le worker ne compte alors aucune absence.
   @Test
-  void fetchSalle_erreurHttp_retourneListeVideSansLeverDException() {
+  void fetchSalle_erreurHttp_leveReponseIncompleteSansConcert() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -526,9 +557,11 @@ class TicketmasterSourceTest {
         .andRespond(withServerError());
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    final List<ConcertBrut> resultats = source.fetchSalle("tm:venue-en-echec");
+    final ReponseIncompleteException incomplete =
+        assertThrows(
+            ReponseIncompleteException.class, () -> source.fetchSalle("tm:venue-en-echec"));
 
-    assertTrue(resultats.isEmpty());
+    assertTrue(incomplete.concertsRecus().isEmpty());
     serveur.verify();
   }
 
@@ -902,6 +935,77 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
+  private static final String CORPS_QUOTA_EPUISE =
+      """
+      {"fault":{"faultstring":"Rate limit quota violation. Quota limit exceeded.",
+      "detail":{"errorcode":"policies.ratelimit.QuotaViolation"}}}
+      """;
+
+  // Une vérification en échec ne prouve pas que l'identifiant est vivant : le croire
+  // effaçait la suspicion et la date de vérification bloquait la suivante pendant 7 jours.
+  @Test
+  void verifierAttraction_quotaEpuise_retourneIndetermineEtSignaleLeQuota() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions/K1.json")))
+        .andRespond(
+            withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                .body(CORPS_QUOTA_EPUISE)
+                .contentType(MediaType.APPLICATION_JSON));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertEquals(TicketmasterSource.StatutIdTM.INDETERMINE, source.verifierAttraction("K1"));
+    assertTrue(source.quotaEpuise());
+    assertEquals(0, source.obtenirQuota().dispo());
+    // Une date de nouvel essai est toujours fixée : sans elle, les cycles restaient suspendus.
+    assertTrue(source.obtenirQuota().reset() > System.currentTimeMillis());
+    serveur.verify();
+  }
+
+  // Quota épuisé : plus aucun appel jusqu'au nouvel essai, et ce refus n'est pas une panne
+  // (il déclenchait l'alerte « Ticketmaster intégralement en échec »).
+  @Test
+  void fetchArtiste_apresQuotaEpuise_nAppellePlusEtNeCompteAucuneErreur() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.once(),
+            requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(
+            withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                .body(CORPS_QUOTA_EPUISE)
+                .contentType(MediaType.APPLICATION_JSON));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Zazie"));
+
+    serveur.verify();
+    assertEquals(0, source.preleverBilan().erreursHttp());
+  }
+
+  @Test
+  void fetchArtiste_spikeArrest_neSignalePasLeQuotaEpuise() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
+
+    assertFalse(source.quotaEpuise());
+  }
+
   @Test
   void rechercherVenuesParNom_reponseValide_retourneCandidats() {
     final RestClient.Builder builder = RestClient.builder();
@@ -1011,7 +1115,7 @@ class TicketmasterSourceTest {
         .andRespond(withServerError());
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
     final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
@@ -1032,9 +1136,8 @@ class TicketmasterSourceTest {
         .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS));
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
-    assertTrue(resultats.isEmpty());
     final BilanFetch bilan = source.preleverBilan();
     assertEquals(1, bilan.appels());
     assertEquals(1, bilan.erreursHttp());
@@ -1051,7 +1154,7 @@ class TicketmasterSourceTest {
         .andRespond(withServerError());
 
     final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
     source.preleverBilan();
 
     final BilanFetch second = source.preleverBilan();
@@ -1173,6 +1276,25 @@ class TicketmasterSourceTest {
     assertEquals(7, resultat.concerts().size());
     assertEquals(
         java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(179), resultat.horizon());
+  }
+
+  // Page en échec (quota refusé) : l'horizon complet faisait gagner une absence à chaque concert
+  // du département que Ticketmaster n'avait pas renvoyé.
+  @Test
+  void fetchRegionCouverte_pageEnEchec_neCouvrePasLaFenetreEntiere() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/events.json")))
+        .andRespond(withServerError());
+
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("75"), null);
+
+    serveur.verify();
+    assertTrue(resultat.concerts().isEmpty());
+    assertNull(resultat.horizon());
   }
 
   @Test

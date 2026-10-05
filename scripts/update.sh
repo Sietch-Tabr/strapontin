@@ -31,7 +31,31 @@ FICHIERS_DEPLOIEMENT=(
     "$APP_DIR/scripts/restore.sh"
     "$APP_DIR/scripts/update.sh"
     "$APP_DIR/scripts/rotation-secrets.sh"
+    "$APP_DIR/scripts/backup-local.sh"
+    "$APP_DIR/scripts/declencher-job.sh"
 )
+# Chemins réellement modifiés selon le rapport AIDE : ajoutés, supprimés, ou changés dans leur
+# contenu ou leurs droits. Un fichier recopié à l'identique (step Woodpecker backup) ne change
+# que de dates (Mtime/Ctime/Atime/Inode) et n'est pas une modification.
+chemins_modifies() {
+    awk '
+        /^(Added|Removed) entries:/ { section = "ajout" ; next }
+        /^Changed entries:/ { section = "" ; next }
+        /^Detailed information about changes:/ { section = "detail" ; next }
+        /^The attributes of the/ { section = "" ; next }
+        section == "ajout" && match($0, /: (\/opt\/strapontin|\/etc\/systemd)[^ ]*/) {
+            print substr($0, RSTART + 2, RLENGTH - 2) ; next
+        }
+        section == "detail" && /^(File|Directory|Link): / { chemin = $2 ; next }
+        section == "detail" && chemin != "" && match($0, /^ [A-Za-z0-9\/_-]+ *:/) {
+            attribut = substr($0, 2, RLENGTH - 2) ; gsub(/ /, "", attribut)
+            if (attribut !~ /^(Mtime|Ctime|Atime|Inode)$/ && chemin ~ /^(\/opt\/strapontin|\/etc\/systemd)/) {
+                print chemin
+            }
+        }
+    ' | sort -u
+}
+
 AIDE_ACTIF=false
 command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ] && AIDE_ACTIF=true
 
@@ -51,7 +75,7 @@ if [ "$AIDE_ACTIF" = true ]; then
                 [ "$chemin" = "$fichier" ] && attendu=true
             done
             [ "$attendu" = false ] && CHANGEMENTS_EXTERNES+="$chemin"$'\n'
-        done < <(echo "$SORTIE_AIDE" | grep -oE ': (/opt/strapontin|/etc/systemd)[^ ]*' | sed 's/^: //' | sort -u)
+        done < <(echo "$SORTIE_AIDE" | chemins_modifies)
     fi
     if [ -n "$CHANGEMENTS_EXTERNES" ]; then
         echo "[update] AVERTISSEMENT : changement(s) hors déploiement détecté(s) :" >&2

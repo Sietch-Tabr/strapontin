@@ -89,6 +89,12 @@
             </div>
           </fieldset>
 
+          <p v-if="pushSansAppareil" class="alerte alerte-avertissement">
+            Aucun appareil n'est abonné aux notifications push : celles de vos
+            artistes et salles ne vous parviennent pas. Activez-les ci-dessous
+            sur au moins un appareil.
+          </p>
+
           <button type="submit" class="bouton bouton-secondaire">
             Enregistrer
           </button>
@@ -157,12 +163,12 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresNotifications" });
 
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 
@@ -179,6 +185,15 @@ const pushSupporte = ref(false);
 const vapidDisponible = ref(false);
 const pushPermission = ref("default");
 const pushAbonne = ref(false);
+// Abonnements push du compte, tous appareils confondus (null : inconnu).
+const nbAppareilsAbonnes = ref(null);
+const pushSansAppareil = computed(
+  () =>
+    nbAppareilsAbonnes.value === 0 &&
+    vapidDisponible.value &&
+    frequenceNotifications.value !== "jamais" &&
+    (notifArtistesPush.value || notifSallesPush.value),
+);
 const pushEnCours = ref(false);
 const testEnCours = ref(false);
 let swRegistration = null;
@@ -188,11 +203,12 @@ const controleur = new AbortController();
 async function charger() {
   try {
     const [repConfig, repPush] = await Promise.all([
-      fetch("/api/user/config", { signal: controleur.signal }),
-      fetch("/api/push", { signal: controleur.signal }),
+      appelApi("/api/user/config", { signal: controleur.signal }),
+      appelApi("/api/push", { signal: controleur.signal }),
+      compterAppareilsAbonnes(),
     ]);
     if (repConfig.ok) {
-      const config = await repConfig.json();
+      const config = await lireJson(repConfig);
       resendDisponible.value = config.resendDisponible ?? false;
       frequenceNotifications.value = config.frequenceNotifications ?? "jamais";
       notifArtistes.value = config.notifArtistes ?? false;
@@ -202,7 +218,7 @@ async function charger() {
       notifNouvelleVersion.value = config.notifNouvelleVersion ?? false;
     }
     if (repPush.ok) {
-      const vapid = await repPush.json();
+      const vapid = await lireJson(repPush);
       vapidDisponible.value = vapid.disponible ?? false;
       cleVapidPublique = vapid.clePublique ?? null;
     }
@@ -213,6 +229,18 @@ async function charger() {
     }
   } finally {
     chargement.value = false;
+  }
+}
+
+async function compterAppareilsAbonnes() {
+  const rep = await appelApi("/api/push/abonnements", {
+    signal: controleur.signal,
+  });
+  if (rep.ok) {
+    const abonnements = await lireJson(rep);
+    nbAppareilsAbonnes.value = Array.isArray(abonnements)
+      ? abonnements.length
+      : null;
   }
 }
 
@@ -244,7 +272,7 @@ function urlBase64VersUint8Array(base64) {
 
 async function sauvegarderNotifications() {
   try {
-    const rep = await fetch("/api/user/config/notifications", {
+    const rep = await appelApi("/api/user/config/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -260,7 +288,7 @@ async function sauvegarderNotifications() {
     if (rep.ok) {
       afficherToast("Préférences de notification enregistrées.", "succes");
     } else {
-      const corps = await corpsJsonOuVide(rep);
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Erreur.", "erreur");
     }
   } catch (e) {
@@ -282,7 +310,7 @@ async function abonnerPush() {
       applicationServerKey: urlBase64VersUint8Array(cleVapidPublique),
     });
 
-    const rep = await fetch("/api/push", {
+    const rep = await appelApi("/api/push", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -297,6 +325,7 @@ async function abonnerPush() {
 
     if (rep.ok) {
       pushAbonne.value = true;
+      await compterAppareilsAbonnes();
       document.cookie =
         "push_opt_in=1; path=/; max-age=" +
         365 * 24 * 3600 +
@@ -304,7 +333,7 @@ async function abonnerPush() {
       afficherToast("Notifications push activées.", "succes");
     } else {
       await abonnement.unsubscribe();
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Erreur lors de l'abonnement.", "erreur");
     }
   } catch (_) {
@@ -325,7 +354,7 @@ async function testerPush() {
       const abonnement = await swRegistration.pushManager.getSubscription();
       endpoint = abonnement?.endpoint ?? null;
     }
-    const rep = await fetch("/api/push/tester", {
+    const rep = await appelApi("/api/push/tester", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint }),
@@ -334,7 +363,7 @@ async function testerPush() {
     if (rep.ok) {
       afficherToast("Notification de test envoyée.", "succes");
     } else {
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Erreur lors du test.", "erreur");
     }
   } catch (_) {
@@ -350,7 +379,7 @@ async function desabonnerPush() {
   try {
     const abonnement = await swRegistration.pushManager.getSubscription();
     if (abonnement) {
-      await fetch("/api/push", {
+      await appelApi("/api/push", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: abonnement.endpoint }),
@@ -359,6 +388,7 @@ async function desabonnerPush() {
       await abonnement.unsubscribe();
     }
     pushAbonne.value = false;
+    await compterAppareilsAbonnes();
     document.cookie = "push_opt_in=; path=/; max-age=0; SameSite=Strict";
     afficherToast("Notifications push désactivées.", "succes");
   } catch (_) {

@@ -211,7 +211,10 @@
           endpoint).
         </p>
         <EtatChargement v-if="chargementWebhooks" />
-        <div v-else-if="evenementsWebhook.length" class="table-conteneur">
+        <div
+          v-else-if="evenementsWebhook.length"
+          class="table-conteneur table-cartes"
+        >
           <table id="table-webhooks-resend">
             <thead>
               <tr>
@@ -267,7 +270,10 @@
           Aucune adresse sur la liste de suppression.
         </p>
         <EtatChargement v-if="chargementSuppressions" />
-        <div v-else-if="suppressions.length" class="table-conteneur">
+        <div
+          v-else-if="suppressions.length"
+          class="table-conteneur table-cartes"
+        >
           <table id="table-suppressions-resend">
             <thead>
               <tr>
@@ -374,8 +380,15 @@
     </template>
   </section>
 
-  <dialog id="dialog-notifier-version" ref="dialogNotifierVersionRef">
-    <p class="dialog-titre">Notifier la nouvelle version ?</p>
+  <dialog
+    id="dialog-notifier-version"
+    ref="dialogNotifierVersionRef"
+    aria-labelledby="titre-dialog-notifier-version"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-notifier-version" class="dialog-titre">
+      Notifier la nouvelle version ?
+    </h2>
     <p class="dialog-corps">
       Une notification push sera envoyée à tous les utilisateurs ayant activé «
       Nouvelle version de l'application » — vérifiez au préalable qu'une entrée
@@ -402,8 +415,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-vapid" ref="dialogVapidRef">
-    <p class="dialog-titre">Régénérer les clés VAPID ?</p>
+  <dialog
+    id="dialog-vapid"
+    ref="dialogVapidRef"
+    aria-labelledby="titre-dialog-vapid"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-vapid" class="dialog-titre">
+      Régénérer les clés VAPID ?
+    </h2>
     <p class="dialog-corps">
       Tous les abonnements push existants seront invalidés. Les utilisateurs
       devront se réabonner aux notifications.
@@ -428,8 +448,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-tentatives" ref="dialogTentativesRef">
-    <p class="dialog-titre">Tentatives de livraison</p>
+  <dialog
+    id="dialog-tentatives"
+    ref="dialogTentativesRef"
+    aria-labelledby="titre-dialog-tentatives"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-tentatives" class="dialog-titre">
+      Tentatives de livraison
+    </h2>
     <EtatChargement v-if="chargementTentatives" />
     <p v-else-if="!tentatives.length" class="etat-vide-texte">
       Aucune tentative trouvée.
@@ -454,6 +481,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminConfig" });
 
 import { shallowRef, ref, computed, onMounted } from "vue";
@@ -527,12 +555,12 @@ const descriptionWebhookSecret = computed(() => {
 async function charger() {
   try {
     const [repConfig, repInfo] = await Promise.all([
-      fetch("/api/admin/config"),
-      fetch("/api/admin/info"),
+      appelApi("/api/admin/config"),
+      appelApi("/api/admin/info"),
     ]);
-    if (repConfig.ok) configs.value = await repConfig.json();
+    if (repConfig.ok) configs.value = await lireJson(repConfig);
     if (repInfo.ok) {
-      const info = await repInfo.json();
+      const info = await lireJson(repInfo);
       appConfigSecretPresente.value = info.appConfigSecretPresente ?? false;
       versionApplication.value = info.version ?? "";
     }
@@ -550,9 +578,9 @@ async function charger() {
 async function chargerWebhooks() {
   chargementWebhooks.value = true;
   try {
-    const rep = await fetch("/api/admin/webhooks/resend/evenements");
+    const rep = await appelApi("/api/admin/webhooks/resend/evenements");
     if (rep.ok) {
-      evenementsWebhook.value = await rep.json();
+      evenementsWebhook.value = await lireJson(rep);
     } else {
       afficherToast(
         "Erreur lors du chargement des événements webhook.",
@@ -572,14 +600,14 @@ async function chargerWebhooks() {
 async function rejouerEvenementWebhook(id) {
   rejeuEnCours.value = id;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/webhooks/resend/evenements/${id}/rejouer`,
       { method: "POST" },
     );
     if (rep.ok) {
       afficherToast("Événement rejoué.", "succes");
     } else {
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Rejeu impossible.", "erreur");
     }
   } catch (_) {
@@ -592,14 +620,14 @@ async function rejouerEvenementWebhook(id) {
 async function rotationSecretWebhook() {
   rotationEnCours.value = true;
   try {
-    const rep = await fetch("/api/admin/webhooks/resend/rotation-secret", {
+    const rep = await appelApi("/api/admin/webhooks/resend/rotation-secret", {
       method: "POST",
     });
     if (rep.ok) {
       afficherToast("Secret de signature renouvelé.", "succes");
       await charger();
     } else {
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Rotation impossible.", "erreur");
     }
   } catch (_) {
@@ -614,11 +642,11 @@ async function ouvrirTentatives(eventId) {
   chargementTentatives.value = true;
   ouvrirDialogTentativesModal();
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/webhooks/resend/evenements/${eventId}/tentatives`,
     );
     if (rep.ok) {
-      tentatives.value = await rep.json();
+      tentatives.value = await lireJson(rep);
     } else {
       afficherToast("Erreur lors du chargement des tentatives.", "erreur");
     }
@@ -632,9 +660,9 @@ async function ouvrirTentatives(eventId) {
 async function chargerSuppressions() {
   chargementSuppressions.value = true;
   try {
-    const rep = await fetch("/api/admin/webhooks/resend/suppressions");
+    const rep = await appelApi("/api/admin/webhooks/resend/suppressions");
     if (rep.ok) {
-      suppressions.value = await rep.json();
+      suppressions.value = await lireJson(rep);
     } else {
       afficherToast("Erreur lors du chargement des suppressions.", "erreur");
     }
@@ -652,7 +680,9 @@ async function testerTm() {
   testTmEnCours.value = true;
   etatTm.value = null;
   try {
-    const rep = await fetch("/api/admin/config/tester-tm", { method: "POST" });
+    const rep = await appelApi("/api/admin/config/tester-tm", {
+      method: "POST",
+    });
     etatTm.value = rep.ok ? "valide" : "invalide";
     if (!rep.ok) afficherToast("Clé Ticketmaster invalide.", "erreur");
   } catch (_) {
@@ -667,7 +697,7 @@ async function testerEmail() {
   testEmailEnCours.value = true;
   etatEmail.value = null;
   try {
-    const rep = await fetch("/api/admin/config/tester-email", {
+    const rep = await appelApi("/api/admin/config/tester-email", {
       method: "POST",
     });
     if (rep.ok) {
@@ -675,7 +705,7 @@ async function testerEmail() {
       afficherToast("Email de test envoyé.", "succes");
     } else {
       etatEmail.value = "erreur";
-      const corps = await rep.json();
+      const corps = await lireJson(rep);
       afficherToast(corps.erreur || "Envoi impossible.", "erreur");
     }
   } catch (_) {
@@ -689,18 +719,18 @@ async function testerEmail() {
 async function sauvegarderConfig(cle, event) {
   const valeur = event.target.querySelector("[name=valeur]")?.value ?? "";
   try {
-    const rep = await fetch("/api/admin/config", {
+    const rep = await appelApi("/api/admin/config", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cle, valeur }),
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast("Configuration sauvegardée.", "succes");
       if (cle === "TICKETMASTER_API_KEY") etatTm.value = null;
       if (cle === "RESEND_API_KEY") etatEmail.value = null;
-      const repConfig = await fetch("/api/admin/config");
-      if (repConfig.ok) configs.value = await repConfig.json();
+      const repConfig = await appelApi("/api/admin/config");
+      if (repConfig.ok) configs.value = await lireJson(repConfig);
     } else {
       afficherToast(corps.erreur || "Erreur.", "erreur");
     }
@@ -720,16 +750,16 @@ function fermerDialogVapid() {
 async function confirmerVapid() {
   fermerDialogVapid();
   try {
-    const rep = await fetch("/api/admin/vapid/generer", { method: "POST" });
-    const corps = await rep.json();
+    const rep = await appelApi("/api/admin/vapid/generer", { method: "POST" });
+    const corps = await lireJson(rep);
     if (rep.ok) {
       const nb = corps.nbAbonnementsSupprimes ?? 0;
       afficherToast(
         `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? "s" : ""} push invalidé${nb !== 1 ? "s" : ""}.`,
         "succes",
       );
-      const repConfig = await fetch("/api/admin/config");
-      if (repConfig.ok) configs.value = await repConfig.json();
+      const repConfig = await appelApi("/api/admin/config");
+      if (repConfig.ok) configs.value = await lireJson(repConfig);
     } else {
       afficherToast(corps.erreur || "Erreur lors de la génération.", "erreur");
     }
@@ -750,8 +780,10 @@ async function confirmerNotifierVersion() {
   fermerDialogNotifierVersion();
   notifierVersionEnCours.value = true;
   try {
-    const rep = await fetch("/api/admin/notifier-version", { method: "POST" });
-    const corps = await rep.json();
+    const rep = await appelApi("/api/admin/notifier-version", {
+      method: "POST",
+    });
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast(
         `Notification envoyée pour la version ${corps.version}.`,

@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.sources.ArtisteAEnrichir;
 import fr.strapontin.sources.DeezerArtisteSource;
+import fr.strapontin.sources.EnrichissementArtiste;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.WikidataArtisteSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -86,5 +87,36 @@ class EnrichissementArtistesServiceIntegrationTest extends AbstractWorkerIntegra
     service.enrichir();
 
     verify(wikidataArtisteSource, never()).enrichirLot(any());
+  }
+
+  private Object[] alias(final UUID artisteId) {
+    return jdbc.queryForObject(
+        "SELECT alias_wikidata FROM artistes WHERE id = CAST(:id AS uuid)",
+        Map.of("id", artisteId.toString()),
+        (rs, _) -> rs.getArray(1) == null ? null : (Object[]) rs.getArray(1).getArray());
+  }
+
+  // Artistes identifiés avant l'ajout des alias : jamais relus, aucun alias (« -M- » pour
+  // Matthieu Chedid) n'était connu, et les noms de scène n'étaient jamais reconnus.
+  @Test
+  void enrichir_artisteIdentifieSansAliasLus_estRelu() {
+    final UUID m = insererArtiste("-M-", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    final UUID sansAlias = insererArtiste("Sans Alias", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    jdbc.update(
+        "UPDATE artistes SET wikidata_id = CASE WHEN id = CAST(:m AS uuid) THEN 'Q2365459'"
+            + " ELSE 'Q1' END",
+        Map.of("m", m.toString()));
+    when(wikidataArtisteSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                m,
+                new EnrichissementArtiste("Q2365459", null, null, null, List.of("Matthieu Chedid")),
+                sansAlias,
+                new EnrichissementArtiste("Q1", null, null, null, List.of())));
+
+    service.enrichir();
+
+    assertEquals(List.of("Matthieu Chedid"), List.of(alias(m)));
+    assertEquals(0, alias(sansAlias).length);
   }
 }

@@ -27,10 +27,10 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "ChecklistPremiersPas" });
 
 import { computed, onMounted, ref } from "vue";
-import { corpsJsonOuVide } from "../utils/reponseJson.js";
 
 const departementsConfigures = ref(false);
 const artisteOuSalleSuivi = ref(false);
@@ -62,11 +62,11 @@ const visible = computed(
 onMounted(async () => {
   try {
     const [repConfig, repStats] = await Promise.all([
-      fetch("/api/user/config"),
-      fetch("/api/parametres/stats"),
+      appelApi("/api/user/config"),
+      appelApi("/api/parametres/stats"),
     ]);
     if (repConfig.ok) {
-      const config = await corpsJsonOuVide(repConfig);
+      const config = await lireJson(repConfig);
       departementsConfigures.value = (config.departements?.length ?? 0) > 0;
       notificationActive.value = !!(
         config.notifArtistes ||
@@ -76,7 +76,7 @@ onMounted(async () => {
       );
     }
     if (repStats.ok) {
-      const stats = await corpsJsonOuVide(repStats);
+      const stats = await lireJson(repStats);
       artisteOuSalleSuivi.value =
         (stats.nbArtistes ?? 0) + (stats.nbSalles ?? 0) > 0;
     }

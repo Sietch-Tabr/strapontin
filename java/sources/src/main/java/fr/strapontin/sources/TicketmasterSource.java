@@ -7,6 +7,7 @@ package fr.strapontin.sources;
 import com.github.benmanes.caffeine.cache.Cache;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.core.QuotaTM;
 import java.time.Duration;
 import java.util.List;
@@ -180,7 +181,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     Objects.requireNonNull(
         avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
     this.cadenceur = Objects.requireNonNull(cadenceur, "cadenceur");
-    this.healthCheck = new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur);
+    this.healthCheck =
+        new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur, etatFetch);
     this.pageFetcher =
         new TicketmasterPageFetcher(
             this.restClient, this.apiKey, this.cadenceur, etatFetch, TAILLE_PAGE_REGION);
@@ -201,6 +203,14 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    */
   public QuotaTM obtenirQuota() {
     return etatFetch.quota();
+  }
+
+  /**
+   * @return {@code true} si Ticketmaster a refusé un appel faute de quota du
+   *     jour, depuis la dernière réponse portant un quota disponible
+   */
+  public boolean quotaEpuise() {
+    return etatFetch.quotaEpuise();
   }
 
   /**
@@ -266,6 +276,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    *
    * @param nom nom de l'artiste recherché
    * @return liste des concerts trouvés
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchArtiste(final String nom) {
@@ -282,11 +293,10 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
     if (resultat.quota() != null) {
       etatFetch.mettreAJourQuota(resultat.quota());
     }
-    if (resultat.succes()) {
-      LOG.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
-    } else {
-      LOG.warn("TM fetchArtiste artiste={} échoué (voir erreur HTTP ci-dessus)", nom);
+    if (!resultat.succes()) {
+      throw new ReponseIncompleteException("TM fetchArtiste artiste=" + nom, List.of(), null);
     }
+    LOG.info("TM fetchArtiste artiste={} total={}", nom, resultat.total());
     return resultat.concerts();
   }
 
@@ -295,6 +305,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * "tm:rZFSnyZdFvA"}) ou brut ({@code "rZFSnyZdFvA"}).
    * @param identifiant identifiant de la salle (préfixé "tm:" ou brut)
    * @return liste des concerts à venir dans cette salle
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchSalle(final String identifiant) {
@@ -313,11 +324,11 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     final TicketmasterPageFetcher.ResultatMultiPage resultat =
         pageFetcher.fetchToutesPages(uriBase, null, "salle=" + venueId);
-    if (resultat.succes()) {
-      LOG.info("TM fetchSalle venueId={} total={}", venueId, resultat.concerts().size());
-    } else {
-      LOG.warn("TM fetchSalle venueId={} échoué (voir erreur HTTP ci-dessus)", venueId);
+    if (!resultat.succes()) {
+      throw new ReponseIncompleteException(
+          "TM fetchSalle venueId=" + venueId, resultat.concerts(), null);
     }
+    LOG.info("TM fetchSalle venueId={} total={}", venueId, resultat.concerts().size());
     return resultat.concerts();
   }
 
@@ -337,6 +348,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    *
    * @param attractionIds liste d'identifiants TM d'attractions
    * @return liste des concerts trouvés pour tous les artistes du lot
+   * @throws ReponseIncompleteException si une page a échoué, avec les concerts reçus
    */
   @Override
   public List<ConcertBrut> fetchArtistesLot(final List<String> attractionIds) {
@@ -357,16 +369,13 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
     final TicketmasterPageFetcher.ResultatMultiPage resultat =
         pageFetcher.fetchToutesPages(uriBase, null, "lot");
-    if (resultat.succes()) {
-      if (etatFetch.quota() != null) {
-        LOG.info(
-            "TM fetchArtistesLot ids={} total={}",
-            attractionIds.size(),
-            resultat.concerts().size());
-      }
-    } else {
-      LOG.warn(
-          "TM fetchArtistesLot ids={} échoué (voir erreur HTTP ci-dessus)", attractionIds.size());
+    if (!resultat.succes()) {
+      throw new ReponseIncompleteException(
+          "TM fetchArtistesLot ids=" + attractionIds.size(), resultat.concerts(), null);
+    }
+    if (etatFetch.quota() != null) {
+      LOG.info(
+          "TM fetchArtistesLot ids={} total={}", attractionIds.size(), resultat.concerts().size());
     }
     return resultat.concerts();
   }
@@ -374,7 +383,9 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
   /** Statut de vivacité d'un identifiant TM (phase 1). */
   public enum StatutIdTM {
     VIVANT,
-    MORT
+    MORT,
+    /** Vérification impossible (quota épuisé, panne) : rien n'est conclu. */
+    INDETERMINE
   }
 
   /**
@@ -384,6 +395,16 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * @param nom nom de la salle chez TM
    */
   public record CandidatVenueTM(String id, String nom) {}
+
+  /**
+   * Lit la position (coordonnées, code postal) d'un lieu Ticketmaster.
+   *
+   * @param venueId identifiant TM du lieu, sans préfixe
+   * @return la position, {@link PositionLieu#INCONNUE} si illisible ou erreur
+   */
+  public PositionLieu lirePositionVenue(final String venueId) {
+    return healthCheck.lirePositionVenue(venueId);
+  }
 
   /**
    * Vérifie qu'un venueId TM existe toujours.

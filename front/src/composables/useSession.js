@@ -1,3 +1,4 @@
+import { appelApi, lireJson } from "../utils/api.js";
 import { ref, readonly } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
@@ -19,7 +20,7 @@ export function useSession() {
     if (chargement.value) return;
     chargement.value = true;
     try {
-      const rep = await fetch("/api/session");
+      const rep = await appelApi("/api/session");
       if (rep.status === 401) {
         session.value = null;
         sessionErreurReseau.value = false;
@@ -28,15 +29,8 @@ export function useSession() {
         }
         return;
       }
-      session.value = await rep.json();
+      session.value = await lireJson(rep);
       sessionErreurReseau.value = false;
-      // La garde du routeur ne voit pas encore la session au premier chargement.
-      if (
-        session.value.changementMotDePasseExige &&
-        route.path !== "/parametres"
-      ) {
-        router.push({ path: "/parametres", hash: "#compte" });
-      }
     } catch (_) {
       // une exception ici (réseau coupé, DNS, etc.) ne signifie pas que la session est
       // invalide côté serveur — contrairement à un 401 confirmé ci-dessus. Réinitialiser

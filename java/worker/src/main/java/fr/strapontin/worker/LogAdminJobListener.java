@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.HashMap;
@@ -17,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Listener Quartz global : alimente {@code logs_admin} à chaque
@@ -92,7 +92,7 @@ public class LogAdminJobListener implements JobListener {
           VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
           """,
           params);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("Erreur sérialisation meta log admin : {}", e.getMessage());
     } catch (Exception e) {
       LOG.warn("Impossible d'insérer log admin : {}", e.getMessage());

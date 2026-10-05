@@ -65,8 +65,8 @@ public class EnrichissementArtistesService {
   }
 
   /**
-   * Enrichit les artistes sans {@code wikidata_id} du jour_batch
-   * courant (détail : CLAUDE.md, Enrichissement Wikidata/OSM/Deezer).
+   * Enrichit les artistes du jour_batch courant sans {@code wikidata_id}, ou
+   * dont les alias Wikidata n'ont jamais été lus.
    * @return nombre d'artistes effectivement mis à jour
    */
   public int enrichir() {
@@ -163,11 +163,12 @@ public class EnrichissementArtistesService {
   private List<ArtisteAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
-        SELECT a.id, a.nom, a.nom_norm, a.deezer_id
+        SELECT a.id, a.nom, a.nom_norm, a.deezer_id, a.wikidata_id
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id AND c.date >= CURRENT_DATE
-        WHERE a.wikidata_id IS NULL AND a.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
-        GROUP BY a.id, a.nom, a.nom_norm, a.deezer_id
+        WHERE (a.wikidata_id IS NULL OR a.alias_wikidata IS NULL)
+          AND a.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
+        GROUP BY a.id, a.nom, a.nom_norm, a.deezer_id, a.wikidata_id
         ORDER BY COUNT(c.id) DESC
         """,
         Map.of(),
@@ -176,7 +177,7 @@ public class EnrichissementArtistesService {
                 rs.getObject("id", UUID.class),
                 rs.getString("nom"),
                 rs.getString("nom_norm"),
-                null,
+                rs.getString("wikidata_id"),
                 rs.getString("deezer_id")));
   }
 
@@ -223,9 +224,11 @@ public class EnrichissementArtistesService {
     params.put("wikidataId", enrichissement.wikidataId());
     params.put("nomAffiche", enrichissement.nomAffiche());
     params.put("deezerId", enrichissement.deezerId());
+    // Liste vide une fois l'élément Wikidata lu : sans alias, l'artiste n'est
+    // plus relu ; null tant qu'aucun élément n'est connu.
     params.put(
         "aliasWikidata",
-        enrichissement.aliasWikidata().isEmpty()
+        enrichissement.wikidataId() == null && enrichissement.aliasWikidata().isEmpty()
             ? null
             : enrichissement.aliasWikidata().toArray(String[]::new));
     params.put("id", artisteId.toString());

@@ -7,7 +7,9 @@ package fr.strapontin.sources;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -30,6 +32,10 @@ public final class ClientNominatim {
   private static final String USER_AGENT =
       "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
   private static final long DELAI_MIN_ENTRE_APPELS_MS = 1000;
+  // Environ 2 km de côté à nos latitudes : une position publiée peut s'écarter
+  // de quelques centaines de mètres de l'objet OSM.
+  private static final double DEMI_COTE_ZONE_DEGRES = 0.01;
+  private static final int TAILLE_URL_RECHERCHE = 256;
 
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
@@ -88,6 +94,79 @@ public final class ClientNominatim {
     } catch (Exception e) {
       LOG.warn("Nominatim géocodage échoué nom={} : {}", nom, e.getMessage());
       return Optional.empty();
+    }
+  }
+
+  /**
+   * Objet OpenStreetMap trouvé par une recherche : nom, position et étiquettes
+   * ({@code wikidata}, {@code website}, {@code capacity}…).
+   * @param nom nom de l'objet
+   * @param position position de l'objet
+   * @param etiquettes étiquettes OSM complémentaires, jamais null
+   */
+  public record LieuOsm(String nom, Coordonnees position, Map<String, String> etiquettes) {}
+
+  /**
+   * Résultat d'une recherche : lieux trouvés, et succès de l'appel (un échec
+   * n'est pas une absence de lieu).
+   * @param lieux lieux trouvés, du plus pertinent au moins pertinent
+   * @param succes {@code false} si l'appel a échoué
+   */
+  public record ResultatRecherche(List<LieuOsm> lieux, boolean succes) {}
+
+  /**
+   * Recherche des lieux par nom, avec leurs étiquettes OSM, dans un carré
+   * d'environ 2 km autour d'une position quand elle est connue.
+   * @param requete texte recherché (ex. « nom, ville »)
+   * @param centre position autour de laquelle chercher, ou null
+   * @return lieux trouvés et succès de l'appel
+   */
+  @SuppressWarnings("unchecked")
+  public ResultatRecherche rechercherLieux(final String requete, final Coordonnees centre) {
+    cadenceur.attendre();
+    try {
+      final StringBuilder url =
+          new StringBuilder(TAILLE_URL_RECHERCHE)
+              .append(BASE_URL)
+              .append("?q=")
+              .append(URLEncoder.encode(requete, StandardCharsets.UTF_8))
+              .append("&format=jsonv2&extratags=1&limit=5&countrycodes=fr");
+      if (centre != null) {
+        url.append("&bounded=1&viewbox=")
+            .append(
+                String.format(
+                    Locale.ROOT,
+                    "%.5f,%.5f,%.5f,%.5f",
+                    centre.longitude() - DEMI_COTE_ZONE_DEGRES,
+                    centre.latitude() + DEMI_COTE_ZONE_DEGRES,
+                    centre.longitude() + DEMI_COTE_ZONE_DEGRES,
+                    centre.latitude() - DEMI_COTE_ZONE_DEGRES));
+      }
+      final List<Map<String, Object>> resultats =
+          restClient
+              .get()
+              .uri(url.toString())
+              .header("User-Agent", USER_AGENT)
+              .retrieve()
+              .body(List.class);
+      final List<LieuOsm> lieux = new ArrayList<>();
+      for (final Map<String, Object> r :
+          resultats != null ? resultats : List.<Map<String, Object>>of()) {
+        extraireCoordonnees(List.of(r))
+            .ifPresent(
+                position ->
+                    lieux.add(
+                        new LieuOsm(
+                            (String) r.get("name"),
+                            position,
+                            r.get("extratags") instanceof Map<?, ?> tags
+                                ? (Map<String, String>) tags
+                                : Map.of())));
+      }
+      return new ResultatRecherche(lieux, true);
+    } catch (Exception e) {
+      LOG.warn("Nominatim recherche échouée requete={} : {}", requete, e.getMessage());
+      return new ResultatRecherche(List.of(), false);
     }
   }
 

@@ -6,6 +6,7 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -87,8 +88,12 @@ final class TicketmasterPageFetcher {
   /* package-private : appelé par TicketmasterSource (même package). */
   ResultatPage fetchPage(
       final UriComponentsBuilder uriBase, final int numPage, final String artisteFallback) {
+    // Quota du jour épuisé : rien n'est demandé jusqu'à la date de nouvel essai.
+    if (etatFetch.quotaEpuise()) {
+      return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
+    }
     cadenceur.attendre();
-    final String uri = construireUriFetchPage(uriBase, numPage);
+    final URI uri = construireUriFetchPage(uriBase, numPage);
 
     etatFetch.enregistrerAppel();
     final Instant avantAppelHttp = Instant.now();
@@ -99,7 +104,12 @@ final class TicketmasterPageFetcher {
     } catch (HttpClientErrorException httpEx) {
       // Diagnostic 429 (Spike Arrest) : la durée réelle de l'appel objective un
       // rejet après une latence réseau anormale plutôt qu'immédiat.
-      if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
+      // Refus pour quota : ni panne ni erreur de la source, pas compté au bilan.
+      if (EtatFetchTM.estQuotaEpuise(httpEx)) {
+        LOG.warn("Ticketmaster : quota du jour épuisé url={}", uriMasquee(uri));
+        etatFetch.signalerQuotaEpuise();
+        return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
+      } else if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
         LOG.warn(
             "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}",
             uriMasquee(uri),
@@ -131,21 +141,20 @@ final class TicketmasterPageFetcher {
     }
   }
 
-  private static String uriMasquee(final String uri) {
-    return uri.replaceAll("apikey=[^&]+", "apikey=***");
+  private static String uriMasquee(final URI uri) {
+    return uri.toString().replaceAll("apikey=[^&]+", "apikey=***");
   }
 
-  private String construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
-    return uriBase
-        .cloneBuilder()
-        .queryParam("apikey", apiKey)
-        .queryParam("locale", "fr,en,*")
-        .queryParam("countryCode", "FR")
-        .queryParam("includeTBA", "no")
-        .queryParam("includeTBD", "no")
-        .queryParam("page", numPage)
-        .build()
-        .toUriString();
+  private URI construireUriFetchPage(final UriComponentsBuilder uriBase, final int numPage) {
+    return UriSources.encoder(
+        uriBase
+            .cloneBuilder()
+            .queryParam("apikey", apiKey)
+            .queryParam("locale", "fr,en,*")
+            .queryParam("countryCode", "FR")
+            .queryParam("includeTBA", "no")
+            .queryParam("includeTBD", "no")
+            .queryParam("page", numPage));
   }
 
   private static QuotaTM extraireQuotaTm(final HttpHeaders headers) {

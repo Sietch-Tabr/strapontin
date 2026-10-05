@@ -4,12 +4,8 @@
  */
 package fr.strapontin.worker.persister;
 
-import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Normalisation;
-import java.sql.Time;
 import java.sql.Types;
-import java.time.Duration;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,10 +26,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class PersisteurConcertsDb {
 
-  // Tolérance sur l'écart d'heure entre deux observations d'un même événement
-  // réel (fiches TM de types différents pour le même évènement) — très en
-  // dessous de tout écart matinée/soirée réel.
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
   private static final String CLE_SALLE = "salle";
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
@@ -41,6 +33,9 @@ public class PersisteurConcertsDb {
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurArtisteParUrl resolveurArtisteParUrl;
   private final AlignementReportTM alignementReportTM;
+  private final EnregistreurPositionsLieux enregistreurPositions;
+  private final RepriseIdentifiantsEventim repriseIdentifiantsEventim;
+  private final RechercheEvenementExistant rechercheEvenement;
 
   private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
@@ -53,6 +48,32 @@ public class PersisteurConcertsDb {
     this.jdbc = jdbc;
     this.resolveurArtisteParUrl = resolveurArtisteParUrl;
     this.alignementReportTM = new AlignementReportTM(jdbc);
+    this.enregistreurPositions = new EnregistreurPositionsLieux(jdbc);
+    this.repriseIdentifiantsEventim = new RepriseIdentifiantsEventim(jdbc);
+    this.rechercheEvenement = new RechercheEvenementExistant(jdbc);
+  }
+
+  /**
+   * Enregistre la position publiée de chaque lieu sur son mapping et sa
+   * salle ({@link EnregistreurPositionsLieux}).
+   * @param concerts concerts dont l'identifiant source de salle est résolu
+   * @param cachesSalles identifiant source préfixé → salle
+   */
+  /* package-private : appelé par PersisterConcerts (même package). */
+  void enregistrerPositions(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    enregistreurPositions.enregistrer(concerts, cachesSalles);
+  }
+
+  /**
+   * Rattache un lieu Eventim qualifié par code postal, encore inconnu, à la
+   * salle de son identifiant historique du même département
+   * ({@link RepriseIdentifiantsEventim}).
+   */
+  /* package-private : appelé par PersisterConcerts (même package). */
+  void reprendreIdentifiantsEventimHistoriques(
+      final List<ValeurConcert> concerts, final Map<String, UUID> cachesSalles) {
+    repriseIdentifiantsEventim.reprendre(concerts, cachesSalles);
   }
 
   /**
@@ -123,43 +144,18 @@ public class PersisteurConcertsDb {
   }
 
   /**
-   * Motif d'URL Ticketmaster signant un événement "package"/VIP — jamais
-   * accessible à un achat de billetterie standard, ne doit jamais empêcher le
-   * rapprochement avec la fiche normale du même événement réel.
-   */
-  private static boolean estPackage(final String url) {
-    return url != null && url.matches("(?i).*\\Q/pack/\\E.*");
-  }
-
-  private static boolean heuresCompatibles(
-      final LocalTime existante,
-      final LocalTime entrante,
-      final boolean packageExistant,
-      final boolean packageEntrant) {
-    if (packageExistant || packageEntrant) {
-      return true;
-    }
-    if (existante == null || entrante == null) {
-      return true;
-    }
-    final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
-    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
-  }
-
-  /**
    * Résout l'événement canonique d'un concert entrant, ou en crée un
-   * nouveau (#1192) : correspondance exacte (artiste_norm/date/heure/salle_id),
-   * sinon repli flou même salle/date ({@link #heuresCompatibles}, {@link
-   * CorrespondanceArtiste#estDoublonArtiste}), sinon création.
+   * nouveau : correspondance exacte, sinon repli flou même salle et même
+   * date ({@link RechercheEvenementExistant}), sinon création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
-    final UUID exactId = chercherEvenementExact(concert);
+    final UUID exactId = rechercheEvenement.exact(concert);
     if (exactId != null) {
       return new ResolutionEvenement(exactId, false);
     }
 
     if (concert.salleId() != null) {
-      final UUID candidatId = chercherEvenementParSalleEtDate(concert);
+      final UUID candidatId = rechercheEvenement.parSalleEtDate(concert);
       if (candidatId != null) {
         return new ResolutionEvenement(candidatId, false);
       }
@@ -168,74 +164,14 @@ public class PersisteurConcertsDb {
     return new ResolutionEvenement(creerNouvelEvenement(concert), true);
   }
 
-  private UUID chercherEvenementExact(final ValeurConcert concert) {
-    final MapSqlParameterSource paramsExact =
-        new MapSqlParameterSource()
-            .addValue("artisteNorm", concert.artisteNorm())
-            .addValue(CLE_DATE, concert.date(), Types.DATE)
-            .addValue(CLE_HEURE, concert.heure(), Types.TIME)
-            .addValue(
-                "salleId",
-                concert.salleId() != null ? concert.salleId().toString() : null,
-                Types.VARCHAR);
-    final List<UUID> exact =
-        jdbc.query(
-            "SELECT id FROM evenements WHERE artiste_norm = :artisteNorm AND date = :date"
-                + " AND heure IS NOT DISTINCT FROM :heure"
-                + " AND salle_id IS NOT DISTINCT FROM CAST(:salleId AS uuid)",
-            paramsExact,
-            (rs, _) -> rs.getObject("id", UUID.class));
-    return exact.isEmpty() ? null : exact.get(0);
-  }
-
-  // return en dernière position de boucle nécessaire : arrête la recherche au
-  // premier candidat compatible plutôt que de poursuivre l'itération sans effet
-  // utile.
-  @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")
-  private UUID chercherEvenementParSalleEtDate(final ValeurConcert concert) {
-    final List<Map<String, Object>> candidats =
-        jdbc.queryForList(
-            """
-            SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
-                   e.heure AS heure,
-                   EXISTS(SELECT 1 FROM observations o WHERE o.evenement_id = e.id
-                          AND o.url ~* '/pack/') AS a_observation_package
-            FROM evenements e WHERE e.salle_id = CAST(:salleId AS uuid) AND e.date = :date
-            """,
-            Map.of("salleId", concert.salleId().toString(), CLE_DATE, concert.date()));
-    final boolean entrantPackage = estPackage(concert.url());
-    for (final Map<String, Object> c : candidats) {
-      final UUID candArtisteId = (UUID) c.get("artiste_id");
-      final String candArtisteNorm = (String) c.get("artiste_norm");
-      final boolean artisteCorrespond =
-          concert.artisteId() != null
-              ? concert.artisteId().equals(candArtisteId)
-              : candArtisteId == null
-                  && CorrespondanceArtiste.estDoublonArtiste(
-                      candArtisteNorm, concert.artisteNorm());
-      if (!artisteCorrespond) {
-        continue;
-      }
-      final Object heureBrute = c.get(CLE_HEURE);
-      final LocalTime heureExistante =
-          heureBrute != null ? ((Time) heureBrute).toLocalTime() : null;
-      final boolean candidatPackage = Boolean.TRUE.equals(c.get("a_observation_package"));
-      if (!heuresCompatibles(heureExistante, concert.heure(), candidatPackage, entrantPackage)) {
-        continue;
-      }
-      return (UUID) c.get("id");
-    }
-    return null;
-  }
-
   private UUID creerNouvelEvenement(final ValeurConcert concert) {
     return jdbc.queryForObject(
         """
         INSERT INTO evenements
             (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
-             genre, statut, presale_debut, presale_nom, artiste_id)
+             genre, sous_genre, statut, presale_debut, presale_nom, artiste_id)
         VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
-                :classification, :genre, :statut, CAST(:presaleDebut AS timestamptz),
+                :classification, :genre, :sousGenre, :statut, CAST(:presaleDebut AS timestamptz),
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
         """,
@@ -255,6 +191,7 @@ public class PersisteurConcertsDb {
         .addValue("dept", concert.dept())
         .addValue("classification", concert.classification())
         .addValue("genre", concert.genre())
+        .addValue("sousGenre", concert.sousGenre())
         .addValue("statut", concert.statut())
         .addValue("presaleDebut", concert.presaleDebut())
         .addValue("presaleNom", concert.presaleNom())
@@ -280,6 +217,7 @@ public class PersisteurConcertsDb {
             dept           = COALESCE(:dept, dept),
             classification = COALESCE(:classification, classification),
             genre          = COALESCE(:genre, genre),
+            sous_genre     = COALESCE(:sousGenre, sous_genre),
             statut         = CASE
                                WHEN statut IN ('cancelled', 'rescheduled', 'postponed') THEN statut
                                ELSE COALESCE(:statut, statut) END,

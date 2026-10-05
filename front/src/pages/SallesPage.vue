@@ -238,13 +238,13 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "SallesPage" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
-import { corpsJsonOuVide } from "../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 
@@ -264,11 +264,11 @@ const controleur = new AbortController();
 async function charger(recherche = "") {
   const params =
     recherche.trim().length >= 2 ? "?q=" + encodeURIComponent(recherche) : "";
-  const rep = await fetch("/api/salles" + params, {
+  const rep = await appelApi("/api/salles" + params, {
     signal: controleur.signal,
   });
   if (!rep.ok) throw new Error();
-  return rep.json();
+  return lireJson(rep);
 }
 
 async function rechercher() {
@@ -288,9 +288,9 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
   // lui-même comme preuve d'un compte déjà actif.
   let premierAjout = false;
   try {
-    const repStats = await fetch("/api/parametres/stats");
+    const repStats = await appelApi("/api/parametres/stats");
     if (repStats.ok) {
-      const stats = await corpsJsonOuVide(repStats);
+      const stats = await lireJson(repStats);
       premierAjout = (stats.nbArtistes ?? 0) + (stats.nbSalles ?? 0) === 0;
     }
   } catch (_) {
@@ -298,7 +298,7 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
   }
 
   try {
-    const rep = await fetch("/api/salles", {
+    const rep = await appelApi("/api/salles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -314,7 +314,7 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
       return;
     }
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors de l'ajout.", "erreur");
       return;
     }
@@ -346,7 +346,7 @@ async function confirmerSuppression() {
   fermerDialog();
   if (!salleASupprimer.value) return;
   try {
-    const rep = await fetch("/api/salles/" + salleASupprimer.value.id, {
+    const rep = await appelApi("/api/salles/" + salleASupprimer.value.id, {
       method: "DELETE",
       signal: controleur.signal,
     });
@@ -374,7 +374,7 @@ function ouvrirSignalement() {
 async function envoyerSignalement() {
   signalementEnCours.value = true;
   try {
-    const rep = await fetch("/api/salles/signaler", {
+    const rep = await appelApi("/api/salles/signaler", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(signalement.value),
@@ -388,7 +388,7 @@ async function envoyerSignalement() {
       return;
     }
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors du signalement.", "erreur");
       return;
     }

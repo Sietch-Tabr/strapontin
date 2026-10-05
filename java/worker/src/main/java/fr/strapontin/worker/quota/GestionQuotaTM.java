@@ -4,12 +4,9 @@
  */
 package fr.strapontin.worker.quota;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.QuotaTM;
-import java.sql.Timestamp;
+import fr.strapontin.worker.LogsAdminWorker;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -17,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Gestion du quota journalier Ticketmaster ({@code app_config})
@@ -39,20 +38,27 @@ public class GestionQuotaTM {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
+  private final LogsAdminWorker logsAdmin;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper sérialisation du quota en JSON
+   * @param logsAdmin journal d'administration
    */
-  public GestionQuotaTM(final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
+  public GestionQuotaTM(
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final LogsAdminWorker logsAdmin) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.logsAdmin = logsAdmin;
   }
 
   /**
    * Lit le quota courant depuis {@code app_config} (détail :
    * CLAUDE.md, Jobs background).
-   * @return quota lu, ou vide si absent ou malformé
+   * @return quota en vigueur (renouvelé après la remise à zéro), ou vide si
+   *     absent, malformé ou de total inconnu
    */
   public Optional<QuotaTM> lireQuota() {
     try {
@@ -65,17 +71,21 @@ public class GestionQuotaTM {
         return Optional.empty();
       }
       final QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
-      if (quota.reset() > 0 && quota.reset() <= Instant.now().toEpochMilli()) {
-        final QuotaTM renouvele =
-            new QuotaTM(quota.total(), quota.total(), 0L, Instant.now().toString());
-        ecrireQuota(renouvele);
-        LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", renouvele.dispo());
-        return Optional.of(renouvele);
+      final QuotaTM enVigueur = quota.enVigueur(Instant.now());
+      if (enVigueur == null) {
+        // Total inconnu : le prochain appel Ticketmaster réécrira le vrai quota.
+        jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of("cle", CLE_QUOTA));
+        LOG.info("quota TM inconnu après reset — repris au prochain appel Ticketmaster");
+        return Optional.empty();
       }
-      return Optional.of(quota);
+      if (!enVigueur.equals(quota)) {
+        ecrireQuota(enVigueur);
+        LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", enVigueur.dispo());
+      }
+      return Optional.of(enVigueur);
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
@@ -96,7 +106,7 @@ public class GestionQuotaTM {
           ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
           """,
           Map.of("cle", CLE_QUOTA, "json", json));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le quota TM", e);
     }
   }
@@ -160,24 +170,6 @@ public class GestionQuotaTM {
   }
 
   private void logAdmin(final String niveau, final String message, final Map<String, Object> meta) {
-    try {
-      final String metaJson = objectMapper.writeValueAsString(meta);
-      final Map<String, Object> params = new HashMap<>();
-      params.put("ts", Timestamp.from(Instant.now()));
-      params.put("niveau", niveau);
-      params.put("source", "worker");
-      params.put("message", message);
-      params.put("meta", metaJson);
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-    } catch (JsonProcessingException e) {
-      LOG.warn("Erreur sérialisation meta log quota : {}", e.getMessage());
-    } catch (Exception _) {
-      LOG.warn("Impossible d'insérer log quota admin");
-    }
+    logsAdmin.inserer(niveau, "worker", message, meta);
   }
 }

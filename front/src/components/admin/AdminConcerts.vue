@@ -2,11 +2,15 @@
   <section id="concerts" class="admin-section">
     <div class="param-bloc">
       <h3 class="param-libelle">Concerts à confirmer</h3>
+      <p class="param-aide">
+        Concerts absents des billetteries depuis plusieurs passages : annulés ou
+        simplement retirés de la vente. Gardez-les ou supprimez-les.
+      </p>
       <p v-if="!chargement && !concerts.length" class="etat-vide-texte">
         Aucun concert flagué pour suppression pour l'instant.
       </p>
       <EtatChargement v-if="chargement" />
-      <div v-else-if="concerts.length" class="table-conteneur">
+      <div v-else-if="concerts.length" class="table-conteneur table-cartes">
         <table id="table-concerts-a-confirmer">
           <thead>
             <tr>
@@ -113,6 +117,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminConcerts" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
@@ -144,12 +149,12 @@ const enCoursSuppression = ref(false);
 async function charger() {
   chargement.value = true;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/concerts-a-confirmer?page=${page.value}`,
       { signal: controleur.signal },
     );
     if (rep.ok) {
-      const data = await rep.json();
+      const data = await lireJson(rep);
       concerts.value = data.concerts ?? [];
       page.value = data.page ?? 0;
       totalPages.value = data.totalPages ?? 1;
@@ -179,7 +184,7 @@ function allerPage(n) {
 
 async function annuler(concert) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/concerts-a-confirmer/${concert.id}/annuler`,
       {
         method: "POST",
@@ -209,7 +214,7 @@ async function confirmerSuppression() {
   if (!concertASupprimer.value || enCoursSuppression.value) return;
   enCoursSuppression.value = true;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/concerts-a-confirmer/${concertASupprimer.value.id}/confirmer`,
       { method: "POST", signal: controleur.signal },
     );

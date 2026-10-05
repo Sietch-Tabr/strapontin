@@ -143,7 +143,7 @@ final class MapeurEvenementTM {
   private static String[] extraireClassificationTM(
       final List<Map<String, Object>> classificationsData) {
     if (classificationsData == null || classificationsData.isEmpty()) {
-      return new String[] {null, null};
+      return new String[] {null, null, null};
     }
     final Map<String, String> segment =
         (Map<String, String>) classificationsData.get(0).get("segment");
@@ -154,7 +154,10 @@ final class MapeurEvenementTM {
     final Map<String, String> genreMap =
         (Map<String, String>) classificationsData.get(0).get("genre");
     final String genre = genreMap != null ? genreMap.get(CLE_NAME) : null;
-    return new String[] {segmentNom, genre};
+    final Map<String, String> sousGenreMap =
+        (Map<String, String>) classificationsData.get(0).get("subGenre");
+    final String sousGenre = sousGenreMap != null ? sousGenreMap.get(CLE_NAME) : null;
+    return new String[] {segmentNom, genre, sousGenre};
   }
 
   @SuppressWarnings(UNCHECKED)
@@ -192,21 +195,24 @@ final class MapeurEvenementTM {
         (List<Map<String, Object>>) evt.get("classifications");
     final String[] segmentGenre = extraireClassificationTM(classificationsData);
 
-    return new ConcertBrut(
-        artiste,
-        datHeure[0],
-        datHeure[1],
-        infosVenue.salle(),
-        infosVenue.ville(),
-        infosVenue.dept(),
-        url,
-        "ticketmaster",
-        normaliserClassification(segmentGenre[0]),
-        segmentGenre[1],
-        infosVente.statut(),
-        infosVente.presaleDebut(),
-        infosVente.presaleNom(),
-        infosVenue.salleSourceId(),
-        artisteSourceId);
+    return ConcertBrut.nouveau()
+        .artiste(artiste)
+        .date(datHeure[0])
+        .heure(datHeure[1])
+        .salle(infosVenue.salle())
+        .ville(infosVenue.ville())
+        .dept(infosVenue.dept())
+        .url(url)
+        .source("ticketmaster")
+        .classification(normaliserClassification(segmentGenre[0]))
+        .genre(segmentGenre[1])
+        .sousGenre(segmentGenre[2])
+        .statut(infosVente.statut())
+        .presaleDebut(infosVente.presaleDebut())
+        .presaleNom(infosVente.presaleNom())
+        .salleSourceId(infosVenue.salleSourceId())
+        .artisteSourceId(artisteSourceId)
+        .position(infosVenue.position())
+        .construire();
   }
 }

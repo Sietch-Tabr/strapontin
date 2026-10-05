@@ -5,12 +5,14 @@
 package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.worker.WorkerStatsService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
@@ -80,6 +83,24 @@ class SourcesHealthIndicatorTest {
     final Map<String, Object> sourcesEnErreur =
         (Map<String, Object>) health.getDetails().get("sourcesEnErreur");
     assertEquals("Worker inaccessible", sourcesEnErreur.get("fetch:region"));
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void health_cycleSuspenduPourQuota_nEstPasUneSourceEnErreur() {
+    when(gestionQuotaTM.lireQuota())
+        .thenReturn(Optional.of(new QuotaTM(474, 5000, 0L, "2026-07-17T00:00:00Z")));
+    final ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+    final ArgumentCaptor<Map<String, Object>> params = ArgumentCaptor.forClass(Map.class);
+    when(jdbc.queryForList(sql.capture(), params.capture())).thenReturn(List.of());
+
+    final Health health = indicator.health();
+
+    assertEquals(Health.up().build().getStatus(), health.getStatus());
+    assertTrue(sql.getValue().contains("erreur <> :motifQuota"));
+    assertEquals(
+        WorkerStatsService.ResultatJob.MOTIF_QUOTA_INSUFFISANT,
+        params.getValue().get("motifQuota"));
   }
 
   @Test

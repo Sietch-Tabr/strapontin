@@ -12,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.core.Normalisation;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
@@ -20,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -42,26 +40,16 @@ class ReconciliationNomsSallesTest {
       final LocalTime heure,
       final String salleNorm,
       final String dept) {
-    return new ValeurConcert(
-        "Artiste",
-        artisteNorm,
-        date,
-        heure,
-        "Salle",
-        salleNorm,
-        null,
-        dept,
-        null,
-        "ticketmaster",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null);
+    return FabriqueValeurConcert.nouveau()
+        .artiste("Artiste")
+        .artisteNorm(artisteNorm)
+        .date(date)
+        .heure(heure)
+        .salle("Salle")
+        .salleNorm(salleNorm)
+        .dept(dept)
+        .source("ticketmaster")
+        .construire();
   }
 
   // Cas réel documenté (wiki Sources-de-données, tick) : "zenith europe strasbourg" /
@@ -97,49 +85,6 @@ class ReconciliationNomsSallesTest {
     assertEquals("zenith de strasbourg europe", resultat.get(0).salleNorm());
   }
 
-  // absorberRenommagesSalles mettait à jour salles.nom sans jamais recalculer nom_norm,
-  // désynchronisant les deux colonnes avec le temps et cassant le matching Wikidata (comparaison
-  // calibrée sur un nom_norm déjà normalisé — voir CorrespondanceSalle).
-  @Test
-  void absorberRenommagesSalles_renommageAbsorbe_recalculeNomNorm() {
-    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    final ReconciliationNomsSalles reconciliateur = new ReconciliationNomsSalles(jdbc);
-    final UUID salleId = UUID.randomUUID();
-
-    final ValeurConcert entrant =
-        new ValeurConcert(
-            "Coldplay",
-            "coldplay",
-            LocalDate.of(2026, 9, 1),
-            null,
-            "L'Olympia",
-            "l olympia",
-            null,
-            null,
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "tm:venue1",
-            null,
-            null,
-            null);
-
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
-
-    reconciliateur.absorberRenommagesSalles(
-        List.of(entrant), Map.of("tm:venue1", salleId), Map.of());
-
-    @SuppressWarnings("unchecked")
-    final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
-    verify(jdbc).update(anyString(), paramsCaptor.capture());
-    assertEquals(
-        Normalisation.normaliserTexte("L'Olympia"), paramsCaptor.getValue().get("nomNorm"));
-  }
-
   // Cas réel documenté en production (#1217) : un venueId TM déjà mappé vers une salle d'un
   // autre département ne doit pas renommer cette salle avec le nom du concert entrant — le
   // renommage court-circuiterait sinon le garde-fou géographique appliqué en aval.
@@ -150,26 +95,16 @@ class ReconciliationNomsSallesTest {
     final UUID salleQuimperId = UUID.randomUUID();
 
     final ValeurConcert entrant =
-        new ValeurConcert(
-            "Chimene Badi",
-            "chimene badi",
-            LocalDate.of(2027, 12, 18),
-            null,
-            "Parc Des Expositions Brezillet",
-            "parc des expositions brezillet",
-            null,
-            "22",
-            null,
-            "ticketmaster",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "ticketmaster:rZFSnyZAv1F",
-            null,
-            null,
-            null);
+        FabriqueValeurConcert.nouveau()
+            .artiste("Chimene Badi")
+            .artisteNorm("chimene badi")
+            .date(LocalDate.of(2027, 12, 18))
+            .salle("Parc Des Expositions Brezillet")
+            .salleNorm("parc des expositions brezillet")
+            .dept("22")
+            .source("ticketmaster")
+            .salleSourceId("ticketmaster:rZFSnyZAv1F")
+            .construire();
 
     reconciliateur.absorberRenommagesSalles(
         List.of(entrant),

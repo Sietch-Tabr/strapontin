@@ -110,4 +110,39 @@ class CorrespondanceArtisteTest {
     assertThrows(
         NullPointerException.class, () -> CorrespondanceArtiste.estDoublonArtiste("x", null));
   }
+
+  // Paires réelles de la prod : même salle, date et heure, une fiche par billetterie.
+  @Test
+  void estMemeAffiche_suffixesEtCoPlateaux_retourneTrue() {
+    for (final String[] paire :
+        new String[][] {
+          {"meryl", "meryl 1ere partie"},
+          {"fredz", "fredz premiere partie"},
+          {"celkilt", "celkilt support"},
+          {"onslaught", "onslaught guest"},
+          {"vivaldi", "antonio vivaldi"},
+          {"behemoth", "behemoth and dimmu borgir"},
+          {"le sserafim", "2026 le sserafim tour"},
+          {"saez", "damien saez"},
+          {
+            "young thug",
+            "young stoner life records and young thug presents the new generation tour"
+          }
+        }) {
+      assertTrue(CorrespondanceArtiste.estMemeAffiche(paire[0], paire[1]), paire[0]);
+      assertTrue(CorrespondanceArtiste.estMemeAffiche(paire[1], paire[0]), paire[1]);
+    }
+  }
+
+  @Test
+  void estMemeAffiche_motsDifferents_retourneFalse() {
+    assertFalse(CorrespondanceArtiste.estMemeAffiche("mozart", "beethoven"));
+    assertFalse(CorrespondanceArtiste.estMemeAffiche("les miserables", "casse noisette"));
+  }
+
+  @Test
+  void estMemeAffiche_seulsDesMotsCourtsOuAccessoires_retourneFalse() {
+    assertFalse(CorrespondanceArtiste.estMemeAffiche("d", "d and m"));
+    assertFalse(CorrespondanceArtiste.estMemeAffiche("1ere partie", "dosseh 1ere partie"));
+  }
 }

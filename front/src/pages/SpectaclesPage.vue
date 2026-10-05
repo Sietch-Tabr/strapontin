@@ -171,7 +171,7 @@
       v-if="donnees && donnees.concerts.length > 0"
       class="spectacles-conteneur"
     >
-      <div class="table-conteneur">
+      <div class="table-conteneur table-cartes">
         <table>
           <thead>
             <tr>
@@ -293,6 +293,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "SpectaclesPage" });
 
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
@@ -374,11 +375,11 @@ async function charger() {
     sources.value.forEach((s) => params.append("source", s));
     if (indisponiblesActive.value) params.set("indisponibles", "1");
     if (route.query.page) params.set("page", route.query.page);
-    const rep = await fetch("/api/spectacles?" + params, {
+    const rep = await appelApi("/api/spectacles?" + params, {
       signal: controleur.signal,
     });
     if (!rep.ok) throw new Error();
-    donnees.value = await rep.json();
+    donnees.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger les spectacles.", "erreur");
@@ -457,7 +458,7 @@ function changerPage(page) {
 
 async function demasquerConcert(concert) {
   try {
-    const rep = await fetch(`/api/spectacles/matches/${concert.id}`, {
+    const rep = await appelApi(`/api/spectacles/matches/${concert.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ masquer: false }),
@@ -503,63 +504,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.spectacles-conteneur {
-  container-type: inline-size;
-  container-name: spectacles;
-}
-
-@container spectacles (max-width: 600px) {
-  .spectacles-conteneur table,
-  .spectacles-conteneur tbody {
-    display: block;
-  }
-
-  .spectacles-conteneur thead {
-    display: none;
-  }
-
-  .spectacles-conteneur tr {
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-card);
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-  }
-
-  .spectacles-conteneur td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.875rem;
-  }
-
-  .spectacles-conteneur td:last-child {
-    border-bottom: none;
-  }
-
-  .spectacles-conteneur td::before {
-    content: attr(data-label);
-    font-weight: 500;
-    color: var(--fg-muted);
-    font-size: 0.75rem;
-    flex-shrink: 0;
-  }
-
-  .spectacles-conteneur td[data-label=""]::before {
-    display: none;
-  }
-
-  .spectacles-conteneur td[data-label=""] {
-    justify-content: flex-end;
-    padding-top: 0.625rem;
-    padding-bottom: 0.625rem;
-  }
-}
-
 .badge-a-verifier {
   background: #f3f4f6;
   color: #4b5563;

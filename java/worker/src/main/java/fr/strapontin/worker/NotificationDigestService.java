@@ -4,7 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
 import java.time.Instant;
@@ -20,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de notification digest (email + push VAPID) pour le worker —
@@ -143,7 +143,15 @@ public class NotificationDigestService {
       boolean emailOk,
       boolean pushOk,
       List<ConcertNotif> concertsEmail,
-      List<ConcertNotif> concertsPush) {}
+      List<ConcertNotif> concertsPush) {
+
+    // Rien à envoyer par email, et des push sans appareil abonné : ce n'est pas
+    // un échec, l'utilisateur n'a aucun canal (Paramètres le lui signale).
+    /* package-private : appelé par traiterDigestUtilisateur (même classe). */
+    boolean sansCanal(final boolean abonnePush) {
+      return concertsEmail.isEmpty() && (concertsPush.isEmpty() || !abonnePush);
+    }
+  }
 
   /* package-private : type de retour interne, utilisé par
    * NotificationPushDigestService (même package). */
@@ -220,6 +228,7 @@ public class NotificationDigestService {
     boolean emailOk = false;
     boolean pushOk = false;
     boolean erreur = false;
+    boolean sansCanal = false;
     try {
       final ResultatDigest res =
           envoyerDigest(
@@ -229,6 +238,7 @@ public class NotificationDigestService {
               groupes.configsUtilisateurs().get(userId));
       emailOk = res.emailOk();
       pushOk = res.pushOk();
+      sansCanal = res.sansCanal(pushDigestService.aUnAbonnement(userId));
       // Seuls les concerts du canal effectivement en succès sont marqués
       // notifiés : un digest mixte email+push où un seul canal échoue ne doit
       // pas marquer à tort les concerts du canal en échec comme notifiés.
@@ -243,7 +253,10 @@ public class NotificationDigestService {
       LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
     }
     final int matchesNotifies;
-    if (concertIdsNotifies.isEmpty()) {
+    if (concertIdsNotifies.isEmpty() && sansCanal) {
+      LOG.info("notifier:digest — aucun canal joignable pour user={}", userId);
+      matchesNotifies = 0;
+    } else if (concertIdsNotifies.isEmpty()) {
       LOG.warn(
           "notifier:digest — notification échouée pour user={}, notification_envoyee_le non mis"
               + " à jour",
@@ -280,9 +293,10 @@ public class NotificationDigestService {
       final String email,
       final List<ConcertNotif> concerts,
       final ConfigNotifUser config) {
-    final boolean emailActif = !"jamais".equals(config.frequenceNotifications());
+    // « Jamais » coupe emails et push.
+    final boolean notificationsActives = !"jamais".equals(config.frequenceNotifications());
     final List<ConcertNotif> concertsEmail =
-        emailActif
+        notificationsActives
             ? concerts.stream()
                 .filter(
                     c ->
@@ -291,12 +305,14 @@ public class NotificationDigestService {
                 .toList()
             : List.of();
     final List<ConcertNotif> concertsPush =
-        concerts.stream()
-            .filter(
-                c ->
-                    ("ARTISTE".equals(c.source()) && config.notifArtistesPush())
-                        || ("SALLE".equals(c.source()) && config.notifSallesPush()))
-            .toList();
+        notificationsActives
+            ? concerts.stream()
+                .filter(
+                    c ->
+                        ("ARTISTE".equals(c.source()) && config.notifArtistesPush())
+                            || ("SALLE".equals(c.source()) && config.notifSallesPush()))
+                .toList()
+            : List.of();
     final boolean emailOk = envoyerEmail(email, concertsEmail);
     final boolean pushOk = pushDigestService.envoyerPush(userId, concertsPush);
     return new ResultatDigest(emailOk, pushOk, concertsEmail, concertsPush);

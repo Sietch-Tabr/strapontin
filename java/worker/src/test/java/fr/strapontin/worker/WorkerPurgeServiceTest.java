@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -15,7 +16,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link WorkerPurgeService} (extrait de {@code WorkerService}).
@@ -60,7 +61,8 @@ class WorkerPurgeServiceTest {
     purgeCompteEmailService = mock(PurgeCompteEmailService.class);
     configService = mock(ConfigServiceWorker.class);
     service =
-        new WorkerPurgeService(jdbc, workerStatsService, purgeCompteEmailService, configService);
+        new WorkerPurgeService(
+            jdbc, workerStatsService, purgeCompteEmailService, configService, logsAdminWorker);
   }
 
   @Test
@@ -272,7 +274,7 @@ class WorkerPurgeServiceTest {
         .thenReturn(java.util.Optional.of("https://strapontin.fr"));
     when(jdbc.queryForList(contains("must_change_credentials = true"), anyMap()))
         .thenReturn(List.of(Map.of("id", "u1", "email", "b@test.fr")));
-    when(purgeCompteEmailService.envoyerRelanceInvitation(anyString(), anyString()))
+    when(purgeCompteEmailService.envoyerRelanceInvitation(anyString(), anyString(), any()))
         .thenReturn(true);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
@@ -282,9 +284,10 @@ class WorkerPurgeServiceTest {
     verify(purgeCompteEmailService)
         .envoyerRelanceInvitation(
             org.mockito.ArgumentMatchers.eq("b@test.fr"),
-            contains("https://strapontin.fr/reset-password?token="));
+            contains("https://strapontin.fr/reset-password?token="),
+            org.mockito.ArgumentMatchers.eq(java.time.LocalDate.now().plusDays(7)));
     verify(jdbc).update(contains("relance_invitation_envoyee_le = now()"), anyMap());
-    verify(jdbc).update(contains("DELETE FROM users WHERE must_change_credentials"), anyMap());
+    verify(jdbc).update(contains("DELETE FROM users u WHERE u.must_change_credentials"), anyMap());
   }
 
   @Test
@@ -295,6 +298,7 @@ class WorkerPurgeServiceTest {
 
     service.executerGererInvitesExpires();
 
-    verify(purgeCompteEmailService, never()).envoyerRelanceInvitation(anyString(), anyString());
+    verify(purgeCompteEmailService, never())
+        .envoyerRelanceInvitation(anyString(), anyString(), any());
   }
 }

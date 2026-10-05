@@ -14,7 +14,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -23,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link LogAdminService}.
@@ -56,7 +56,7 @@ class LogAdminServiceTest {
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
                 p ->
                     Integer.valueOf(1000).equals(p.get("limite"))
-                        && p.get("tsDepuis").equals(Timestamp.from(Instant.ofEpochMilli(1000L)))),
+                        && Long.valueOf(1000L).equals(p.get("idDepuis"))),
             any(RowMapper.class));
   }
 

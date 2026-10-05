@@ -4,6 +4,9 @@
  */
 package fr.strapontin.web.admin;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +25,36 @@ import org.springframework.transaction.annotation.Transactional;
 public class SignalementsAdminService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
+  // Quatre mécanismes réunis, entité nommée par jointure selon son type.
+  private static final String SQL_LISTE =
+      """
+      SELECT t.*, COALESCE(s.nom_affiche, s.nom, a.nom_affiche, a.nom, u.username)
+               AS entite_nom
+      FROM (
+        SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
+               sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
+               sm.confiance AS confiance, sm.detecte_le AS detecte_le,
+               sm.details::text AS details
+        FROM signalements_matching sm WHERE sm.resolu_le IS NULL
+        UNION ALL
+        SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
+               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL
+        FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
+        UNION ALL
+        SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
+               s.id::text, 'moyenne', NULL, s.contamination_signalee
+        FROM salles s WHERE s.contamination_signalee IS NOT NULL
+        UNION ALL
+        SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
+               NULL, s.doublon_signale::text
+        FROM salles s WHERE s.doublon_signale IS NOT NULL
+      ) t
+      LEFT JOIN salles s ON t.entite_type = 'salle' AND s.id::text = t.entite_id
+      LEFT JOIN artistes a ON t.entite_type = 'artiste' AND a.id::text = t.entite_id
+      LEFT JOIN users u ON t.entite_type = 'utilisateur' AND u.id::text = t.entite_id
+      ORDER BY t.detecte_le DESC NULLS LAST
+      LIMIT :taille OFFSET :offset
+      """;
   private static final String CLE_ID = "id";
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -49,47 +82,25 @@ public class SignalementsAdminService {
     final Map<String, Object> paramsPage =
         Map.of("taille", TAILLE_PAGE_DEFAUT, "offset", pageNum * TAILLE_PAGE_DEFAUT);
     final List<EntreeSignalement> signalements =
-        jdbc.query(
-            """
-            SELECT * FROM (
-              SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
-                     sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
-                     sm.confiance AS confiance, sm.detecte_le AS detecte_le,
-                     sm.details::text AS details
-              FROM signalements_matching sm WHERE sm.resolu_le IS NULL
-              UNION ALL
-              SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
-                     'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL
-              FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
-              UNION ALL
-              SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
-                     s.id::text, 'moyenne', NULL, s.contamination_signalee
-              FROM salles s WHERE s.contamination_signalee IS NOT NULL
-              UNION ALL
-              SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
-                     NULL, s.doublon_signale::text
-              FROM salles s WHERE s.doublon_signale IS NOT NULL
-            ) t
-            ORDER BY t.detecte_le DESC NULLS LAST
-            LIMIT :taille OFFSET :offset
-            """,
-            paramsPage,
-            (rs, _) -> {
-              final Object detecteLeBrut = rs.getObject("detecte_le");
-              return new EntreeSignalement(
-                  rs.getString("categorie"),
-                  rs.getString("id"),
-                  rs.getString("type"),
-                  rs.getString("entite_type"),
-                  rs.getString("entite_id"),
-                  rs.getString("confiance"),
-                  detecteLeBrut != null ? ((java.sql.Timestamp) detecteLeBrut).toInstant() : null,
-                  rs.getString("details"));
-            });
+        jdbc.query(SQL_LISTE, paramsPage, (rs, _) -> lireEntree(rs));
 
     final long total = totalActifs();
     final int totalPages = Math.max(1, (int) Math.ceil((double) total / TAILLE_PAGE_DEFAUT));
-    return new ReponseSignalements(signalements, pageNum, totalPages, total);
+    return new ReponseSignalements(
+        signalements, pageNum, totalPages, total, CatalogueSignalements.tous());
+  }
+
+  private static EntreeSignalement lireEntree(final ResultSet rs) throws SQLException {
+    final OffsetDateTime detecteLe = rs.getObject("detecte_le", OffsetDateTime.class);
+    return new EntreeSignalement(
+        rs.getString("categorie"),
+        rs.getString("id"),
+        rs.getString("type"),
+        new EntreeSignalement.EntiteSignalee(
+            rs.getString("entite_type"), rs.getString("entite_id"), rs.getString("entite_nom")),
+        rs.getString("confiance"),
+        detecteLe != null ? detecteLe.toInstant() : null,
+        rs.getString("details"));
   }
 
   private long totalActifs() {
@@ -145,12 +156,13 @@ public class SignalementsAdminService {
     if (signatures.isEmpty()) {
       return false;
     }
-    final List<String> identifiants =
-        Arrays.stream(signatures.get(0).split("\\|")).map(nom -> "internal:" + nom).toList();
+    // Nom du lieu sans préfixe ni code postal : formes historique et qualifiée.
+    final List<String> noms = Arrays.asList(signatures.get(0).split("\\|"));
     jdbc.update(
         "UPDATE salle_sources SET contamination_acceptee_le = now()"
-            + " WHERE salle_id = CAST(:id AS uuid) AND identifiant_externe IN (:identifiants)",
-        Map.of(CLE_ID, salleId.toString(), "identifiants", identifiants));
+            + " WHERE salle_id = CAST(:id AS uuid) AND identifiant_externe LIKE 'internal:%'"
+            + " AND split_part(substring(identifiant_externe FROM 10), '@', 1) IN (:noms)",
+        Map.of(CLE_ID, salleId.toString(), "noms", noms));
     jdbc.update(
         "UPDATE salles SET contamination_signalee = NULL WHERE id = CAST(:id AS uuid)",
         Map.of(CLE_ID, salleId.toString()));
@@ -158,7 +170,7 @@ public class SignalementsAdminService {
         "info",
         "admin",
         "contamination de salle déclarée faux positif",
-        Map.of("salleId", salleId.toString(), "sources", String.join(", ", identifiants)));
+        Map.of("salleId", salleId.toString(), "sources", String.join(", ", noms)));
     return true;
   }
 

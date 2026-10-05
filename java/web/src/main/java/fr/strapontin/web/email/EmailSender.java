@@ -134,7 +134,8 @@ class EmailSender {
       }
       gestionQuotaResend.recalerSurUsageReel(
           valeurOuZero(emails.getDaily().getUsed()), valeurOuZero(emails.getMonthly().getUsed()));
-    } catch (ResendException e) {
+    } catch (ResendException | RuntimeException e) {
+      // Délai dépassé enveloppé par le SDK : le compteur local reste la référence.
       LOG.warn("usage Resend indisponible, compteur local conservé : {}", e.getMessage());
     }
   }

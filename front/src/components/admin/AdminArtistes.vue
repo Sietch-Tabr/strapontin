@@ -47,7 +47,7 @@
       <EtatChargement v-if="chargement" />
       <template v-else>
         <div class="artistes-conteneur">
-          <div class="table-conteneur">
+          <div class="table-conteneur table-cartes">
             <table aria-label="Référentiel artistes">
               <thead>
                 <tr>
@@ -168,7 +168,7 @@
                   </td>
                 </tr>
                 <tr v-if="items.length === 0">
-                  <td colspan="8" class="etat-vide-texte">
+                  <td colspan="8" class="etat-vide-texte" data-label="">
                     Aucun artiste ne correspond aux filtres.
                   </td>
                 </tr>
@@ -347,7 +347,12 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminArtistes" });
+
+const props = defineProps({
+  rechercheInitiale: { type: String, default: "" },
+});
 
 import { reactive, ref } from "vue";
 import EtatChargement from "../EtatChargement.vue";
@@ -355,7 +360,6 @@ import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
 import { classeStatut, libelleStatut } from "../../utils/statutReferentiel.js";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const {
   chargement,
@@ -387,6 +391,7 @@ const {
   fermerEdition,
   fermerFusion,
 } = useReferentielAdmin({
+  rechercheInitiale: props.rechercheInitiale,
   endpoint: "artistes",
   cleListe: "artistes",
   cleTotal: "totalArtistes",
@@ -400,7 +405,7 @@ const { afficherToast } = useToasts();
 // — implémentées localement plutôt que dans useReferentielAdmin.js, partagé avec AdminSalles.vue.
 async function ignorerIntervention(artiste) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/artistes/${artiste.id}/ignorer-intervention`,
       {
         method: "POST",
@@ -435,7 +440,7 @@ async function sauvegarderIdentifiantTm() {
   if (enCoursIdentifiantTm.value || !identifiantTm.valeur.trim()) return;
   enCoursIdentifiantTm.value = true;
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       `/api/admin/artistes/${identifiantTm.artisteId}/identifiant-tm`,
       {
         method: "PATCH",
@@ -448,7 +453,7 @@ async function sauvegarderIdentifiantTm() {
       afficherToast("Identifiant Ticketmaster corrigé.", "succes");
       await charger();
     } else {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors de la correction.", "erreur");
     }
   } catch {
@@ -459,60 +464,3 @@ async function sauvegarderIdentifiantTm() {
 }
 </script>
 
-<style scoped>
-.artistes-conteneur {
-  container-name: artistes;
-}
-
-@container artistes (max-width: 700px) {
-  .artistes-conteneur table,
-  .artistes-conteneur tbody {
-    display: block;
-  }
-
-  .artistes-conteneur thead {
-    display: none;
-  }
-
-  .artistes-conteneur tr {
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-card);
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-  }
-
-  .artistes-conteneur td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.875rem;
-  }
-
-  .artistes-conteneur td:last-child {
-    border-bottom: none;
-  }
-
-  .artistes-conteneur td::before {
-    content: attr(data-label);
-    font-weight: 500;
-    color: var(--fg-muted);
-    font-size: 0.75rem;
-    flex-shrink: 0;
-  }
-
-  .artistes-conteneur td[data-label=""]::before {
-    display: none;
-  }
-
-  .artistes-conteneur td[data-label=""] {
-    justify-content: flex-end;
-    padding-top: 0.625rem;
-    padding-bottom: 0.625rem;
-  }
-}
-</style>

@@ -276,7 +276,7 @@ final class WikidataSalleDecouverte {
    * Vérifie que la commune du candidat Wikidata ne contredit pas la ville
    * connue (rejette seulement si les deux sont connues et diffèrent).
    * @param villeSalle ville connue de la salle Strapontin, ou {@code null}
-   * @param communeLabel commune du candidat Wikidata (P131), ou {@code null}
+   * @param communeLabel commune du candidat Wikidata (code INSEE), ou {@code null}
    * @return {@code true} si les deux villes sont connues et diffèrent
    */
   private static boolean villeIncompatible(final String villeSalle, final String communeLabel) {
@@ -381,18 +381,16 @@ final class WikidataSalleDecouverte {
       }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL { ?item wdt:P625 ?coordValue }
-      OPTIONAL {
-        ?item wdt:P131 ?commune .
-        ?commune rdfs:label ?communeLabel .
-        FILTER(LANG(?communeLabel) = "fr")
-        OPTIONAL { ?commune wdt:P281 ?cp }
-      }
+      %s
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }
     GROUP BY ?item ?itemLabel ?communeLabel ?num
     ORDER BY ?num
     LIMIT 5
     """
-        .formatted(ClientSparqlWikidata.echapperLitteral(nom), typesExclusSparql);
+        .formatted(
+            ClientSparqlWikidata.echapperLitteral(nom),
+            typesExclusSparql,
+            ClientSparqlWikidata.MOTIF_COMMUNE);
   }
 }

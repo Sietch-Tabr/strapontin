@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import com.resend.Resend;
 import com.resend.services.emails.model.CreateEmailOptions;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -71,13 +72,15 @@ public class PurgeCompteEmailService {
    *
    * @param email destinataire
    * @param lienActivation lien d'activation (nouveau token, valable 7 jours)
+   * @param dateLimite dernier jour de validité du lien, annoncé dans l'email
    * @return {@code true} si l'email a été envoyé
    */
-  public boolean envoyerRelanceInvitation(final String email, final String lienActivation) {
+  public boolean envoyerRelanceInvitation(
+      final String email, final String lienActivation, final LocalDate dateLimite) {
     return envoyer(
         email,
         "Votre invitation Strapontin expire bientôt",
-        baseUrl -> PurgeCompteEmailTemplate.relanceInvitation(lienActivation, baseUrl));
+        baseUrl -> PurgeCompteEmailTemplate.relanceInvitation(lienActivation, dateLimite, baseUrl));
   }
 
   private boolean envoyer(

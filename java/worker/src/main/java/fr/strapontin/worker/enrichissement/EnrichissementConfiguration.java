@@ -4,8 +4,9 @@
  */
 package fr.strapontin.worker.enrichissement;
 
+import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.DeezerArtisteSource;
-import fr.strapontin.sources.OverpassSalleSource;
+import fr.strapontin.sources.NominatimSalleSource;
 import fr.strapontin.sources.WikidataArtisteSource;
 import fr.strapontin.sources.WikidataSalleSource;
 import org.springframework.context.annotation.Bean;
@@ -25,15 +26,18 @@ public class EnrichissementConfiguration {
   public EnrichissementConfiguration() {}
 
   /**
-   * Client Overpass (OSM) pour la découverte initiale des salles par nom.
+   * Identifiant Wikidata d'une salle lu sur l'objet OpenStreetMap trouvé par
+   * Nominatim autour de sa position ; déclaré avant {@link
+   * #wikidataSalleSource()}, qui reprend le Q-ID découvert.
    *
-   * @return instance avec RestClient par défaut
+   * @param clientNominatim client partagé, cadencé à une requête par seconde
+   * @return instance
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  OverpassSalleSource overpassSalleSource() {
-    return new OverpassSalleSource();
+  NominatimSalleSource nominatimSalleSource(final ClientNominatim clientNominatim) {
+    return new NominatimSalleSource(clientNominatim);
   }
 
   /**

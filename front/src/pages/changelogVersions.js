@@ -4,7 +4,81 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
-    entete: "v 3.0.1 — 28 septembre 2026",
+    entete: "v 3.0.2 — 3 octobre 2026",
+    categories: [
+      {
+        categorie: "Sécurité",
+        items: [
+          "Les notifications push ne peuvent plus être envoyées qu'aux services de push des navigateurs.",
+          "Quand un nouveau mot de passe est exigé après un incident, la connexion est refusée tant qu'il n'a pas été défini par « Mot de passe oublié », et les autres sessions sont fermées.",
+          "Protection renforcée contre les actions déclenchées à votre insu depuis un autre site.",
+        ],
+      },
+      {
+        categorie: "Compte",
+        items: [
+          "Un compte utilisé régulièrement n'est plus considéré comme inactif : l'utilisation de l'application compte, pas seulement la connexion.",
+          "Une invitation relancée reste valable jusqu'à la date indiquée dans l'email de relance : elle n'est plus annulée dès le lendemain.",
+          "La page Aide précise les données conservées et la suppression d'un compte inutilisé pendant 6 mois.",
+        ],
+      },
+      {
+        categorie: "Concerts",
+        items: [
+          "Un concert reporté par Ticketmaster n'apparaît plus en double : sa date et son heure sont mises à jour.",
+          "Un concert republié par une billetterie remplace l'ancienne fiche au lieu de s'y ajouter.",
+          "Les artistes dont le nom contient &, # ou + sont de nouveau trouvés.",
+          "Un artiste connu sous un nom de scène (comme -M-) est reconnu chez Eventim.",
+          "Les concerts déjà passés ne sont plus ajoutés.",
+          "Un même concert publié par deux billetteries sous deux affiches (« Meryl » et « Meryl + 1ère partie », co-plateaux) n'apparaît plus qu'une fois.",
+          "Un festival ne vous signale plus les dates des autres artistes de l'affiche : seules celles où votre artiste joue sont retenues.",
+          "Un concert déplacé dans une autre salle rejoint sa nouvelle fiche au lieu de rester en double.",
+          "Un spectacle annoncé sous deux titres différents selon la billetterie (« Lady Macbeth de Mzensk » / « of Mtsensk ») n'apparaît plus qu'une fois.",
+          "Une billetterie momentanément indisponible ne fait plus passer ses concerts pour disparus, et deux séances d'un même spectacle le même jour ne sont plus confondues.",
+          "Les dates Eventim continuent d'arriver quand Ticketmaster limite ses réponses pour la journée.",
+          "Les spectacles toujours programmés ne sont plus proposés à tort à la suppression.",
+          "Le nom d'un spectacle ne change plus d'une mise à jour à l'autre quand deux billetteries l'écrivent différemment.",
+          "Ajouter un artiste ne recherche plus que ses concerts : les concerts de tous les artistes suivis n'étaient plus mis à jour à temps, faute de quota Ticketmaster.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "Les salles sont reconnues grâce à l'adresse publiée par la billetterie : deux salles homonymes de villes différentes ne sont plus confondues.",
+          "Le nom d'une salle ne change plus d'une mise à jour à l'autre.",
+          "Deux salles voisines aux noms différents (comme l'Élysée Montmartre et le Théâtre Montmartre-Galabru, ou le Théâtre Montparnasse et le Théâtre de Poche) ne sont plus réunies.",
+          "La ville d'une salle est sa commune : « Paris » au lieu d'un arrondissement ou d'un quartier comme « Saint-Thomas-d'Aquin ».",
+          "Une salle n'est plus placée sur la carte chez un homonyme d'une autre région, et une salle étrangère n'est plus rangée dans un département français.",
+        ],
+      },
+      {
+        categorie: "Notifications",
+        items: [
+          "Paramètres signale des notifications push activées sans aucun appareil abonné, qui ne vous parvenaient pas.",
+          "La fréquence « Jamais » coupe aussi les notifications push, comme l'indique la page Paramètres.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Nouvel onglet « À traiter » : les anomalies sont décrites en clair, avec la salle ou l'artiste concerné, et se traitent sur place, comme les concerts à confirmer.",
+          "Nouvel onglet « Référentiel » réunissant salles et artistes, avec la répartition des concerts d'une salle qui mélange plusieurs lieux.",
+          "Tableau de bord : les tâches automatiques sont présentées en cartes par thème, avec leur rôle.",
+          "Des contrôles automatiques vérifient chaque nuit la cohérence des données ; les signalements sans anomalie réelle (artiste suivi sans date annoncée, salles voisines, communes d'une même agglomération) ont disparu.",
+          "L'onglet Bannière devient « Communication », avec un modèle de message d'incident.",
+          "Les tableaux de l'administration sont lisibles sur mobile.",
+        ],
+      },
+      {
+        categorie: "Accessibilité",
+        items: [
+          "Les fenêtres de confirmation et le champ des départements sont correctement annoncés par les lecteurs d'écran.",
+        ],
+      },
+    ],
+  },
+  {
+    entete: "v 3.0.1 — 29 septembre 2026",
     categories: [
       {
         categorie: "Sécurité",
@@ -72,7 +146,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.9.1 — 15 septembre 2026",
+    entete: "v 2.9.1 — 18 septembre 2026",
     categories: [
       {
         categorie: "Concerts",
@@ -115,7 +189,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.8.8 — 8 septembre 2026",
+    entete: "v 2.8.8 — 9 septembre 2026",
     categories: [
       {
         categorie: "Apparence",
@@ -222,7 +296,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.7.7 — 30 juillet 2026",
+    entete: "v 2.7.7 — 31 juillet 2026",
     categories: [
       {
         categorie: "Application installée (PWA)",
@@ -328,7 +402,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.7.0 — 8 juillet 2026",
+    entete: "v 2.7.0 — 17 juillet 2026",
     categories: [
       {
         categorie: "Administration",
@@ -479,7 +553,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.6.2 — 2 juillet 2026",
+    entete: "v 2.6.2 — 3 juillet 2026",
     categories: [
       {
         categorie: "Salles",
@@ -555,7 +629,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.6.0 — 1er juillet 2026",
+    entete: "v 2.6.0 — 2 juillet 2026",
     categories: [
       {
         categorie: "Qualité des données",
@@ -587,7 +661,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.6 — 27 juillet 2026",
+    entete: "v 2.5.6 — 30 juin 2026",
     categories: [
       {
         categorie: "Sécurité",
@@ -598,7 +672,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.5 — 22 juillet 2026",
+    entete: "v 2.5.5 — 30 juin 2026",
     categories: [
       {
         categorie: "Performances",
@@ -609,7 +683,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.4 — 15 juillet 2026",
+    entete: "v 2.5.4 — 29 juin 2026",
     categories: [
       {
         categorie: "Notifications",
@@ -620,7 +694,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.5.3 — 12 juillet 2026",
+    entete: "v 2.5.3 — 29 juin 2026",
     categories: [
       {
         categorie: "Accessibilité",
@@ -685,7 +759,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.4.0 — 25 juin 2026",
+    entete: "v 2.4.0 — 28 juin 2026",
     categories: [
       {
         categorie: "Concerts",
@@ -722,7 +796,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.3.0 — 23 juin 2026",
+    entete: "v 2.3.0 — 25 juin 2026",
     categories: [
       {
         categorie: "Interface",
@@ -979,7 +1053,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.1.1 — 2 juin 2026",
+    entete: "v 2.1.1 — 1er juin 2026",
     categories: [
       {
         categorie: "Performance",
@@ -999,7 +1073,7 @@ export const versionsChangelog = [
     ],
   },
   {
-    entete: "v 2.1.0 — 29 mai 2026",
+    entete: "v 2.1.0 — 30 mai 2026",
     categories: [
       {
         categorie: "Interface",

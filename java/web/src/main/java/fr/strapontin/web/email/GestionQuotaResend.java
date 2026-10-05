@@ -4,8 +4,6 @@
  */
 package fr.strapontin.web.email;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CompteurEnvoisResend;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -15,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Garde-fou quota d'envoi Resend jour/mois (détail : CLAUDE.md,
@@ -56,7 +56,7 @@ class GestionQuotaResend {
       return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
     } catch (EmptyResultDataAccessException e) {
       return Optional.empty();
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
     }
@@ -71,7 +71,7 @@ class GestionQuotaResend {
           CLE_QUOTA,
           json,
           json);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le compteur Resend", e);
     }
   }

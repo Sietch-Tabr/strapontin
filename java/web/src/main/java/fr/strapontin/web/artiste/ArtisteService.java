@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.artiste;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.FiltreArtiste;
@@ -32,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de gestion des artistes suivis (recherche en base + API Deezer,
@@ -203,7 +203,7 @@ public class ArtisteService {
           if (wikidataId != null && !wikidataId.isBlank()) {
             resoudreEtPersisterWikidata(artisteId, nom, wikidataId);
           }
-          declencherWorkerArtiste();
+          declencherWorkerArtiste(artisteId);
         };
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
@@ -423,11 +423,12 @@ public class ArtisteService {
     return ArtisteServiceParsing.parseDeezerResultats(objectMapper, json);
   }
 
-  private void declencherWorkerArtiste() {
+  // Seul l'artiste ajouté est récupéré, le cycle complet reste au cron.
+  private void declencherWorkerArtiste(final UUID artisteId) {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient,
         LOG,
-        "http://localhost:8081/trigger/artiste",
+        "http://localhost:8081/trigger/artiste?artisteId=" + artisteId,
         "Déclenchement worker artiste impossible");
   }
 }

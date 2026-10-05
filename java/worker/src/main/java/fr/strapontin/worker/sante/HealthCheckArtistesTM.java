@@ -74,6 +74,9 @@ public final class HealthCheckArtistesTM {
 
     int incoherences = 0;
     for (final Map<String, Object> ligne : lies) {
+      if (quotaEpuise("vérification des noms")) {
+        break;
+      }
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String attractionId = (String) ligne.get("identifiant_externe");
       final String nom = (String) ligne.get("nom");
@@ -199,28 +202,40 @@ public final class HealthCheckArtistesTM {
             Map.of());
 
     for (final Map<String, Object> ligne : suspects) {
+      if (quotaEpuise("vérification de vivacité")) {
+        break;
+      }
       final UUID artisteId = (UUID) ligne.get("artiste_id");
       final String ancienAttractionId = (String) ligne.get("identifiant_externe");
-      final String nom = (String) ligne.get("nom");
-      if (tm.verifierAttraction(ancienAttractionId) != StatutIdTM.MORT) {
+      final StatutIdTM statut = tm.verifierAttraction(ancienAttractionId);
+      // Indéterminé (appel en échec) : rien n'est conclu, l'artiste reste suspect.
+      if (statut == StatutIdTM.VIVANT) {
         reinitialiserSuspect(artisteId);
-        continue;
+      } else if (statut == StatutIdTM.MORT) {
+        redecouvrirArtiste(artisteId, ancienAttractionId, (String) ligne.get("nom"));
       }
-      redecouvrirArtiste(artisteId, ancienAttractionId, nom);
     }
   }
 
+  // Quota du jour épuisé : poursuivre ne ferait qu'accumuler des refus.
+  private boolean quotaEpuise(final String etape) {
+    if (tm.quotaEpuise()) {
+      LOG.info("reconciliation:nocturne — {} interrompue : quota Ticketmaster épuisé", etape);
+      return true;
+    }
+    return false;
+  }
+
   /**
-   * Le compteur passif ({@code nb_zero_consecutifs}) peut signaler à tort un
-   * identifiant suspect alors qu'il s'agit simplement d'un artiste sans
-   * événement à venir pour l'instant — la vérification active de cette phase
-   * fait autorité et doit effacer ce faux positif dès qu'elle confirme que
-   * l'identifiant TM est toujours vivant, plutôt que de laisser le statut
-   * "suspect" perdurer jusqu'à expiration (24h).
+   * Identifiant confirmé vivant : le compteur passif signalait à tort un
+   * artiste simplement sans date annoncée. La date de vérification évite de
+   * le revérifier chaque nuit (voir
+   * {@link SuiviSanteSourcesService#DELAI_REVERIFICATION_VIVACITE_JOURS}).
    */
   private void reinitialiserSuspect(final UUID artisteId) {
     jdbc.update(
-        "UPDATE artiste_sources SET nb_zero_consecutifs = 0, suspect_depuis = NULL"
+        "UPDATE artiste_sources SET nb_zero_consecutifs = 0, suspect_depuis = NULL,"
+            + " vivacite_verifiee_le = now()"
             + " WHERE artiste_id = CAST(:id AS uuid) AND source = 'ticketmaster'",
         Map.of("id", artisteId.toString()));
   }

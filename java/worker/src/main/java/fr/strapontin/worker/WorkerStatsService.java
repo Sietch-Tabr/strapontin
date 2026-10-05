@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.CatalogueJobs;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecBilanFetch;
@@ -13,7 +14,6 @@ import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -39,6 +39,7 @@ public class WorkerStatsService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WorkerStatsService.class);
   private static final String SOURCE_WORKER = "worker";
+  private static final String NIVEAU_WARN = "warn";
 
   private final List<SourceConcerts> sources;
   private final TicketmasterSource tm;
@@ -89,10 +90,24 @@ public class WorkerStatsService {
       final ResultatPersistance resultat,
       final String erreur) {
     final Instant maintenant = Instant.now();
+    signalerJobNonRepertorie(typeJob);
     enregistrerMetriqueDuree(typeJob, dureeMs);
     enregistrerLignesFetchJobs(typeJob, maintenant, dureeMs, resultat, erreur);
     if (typeJob.startsWith("fetch:")) {
       remonterBilansFetch(typeJob, resultat, erreur, maintenant);
+    }
+  }
+
+  // Un job hors catalogue s'afficherait sous son identifiant technique :
+  // signalé à chaque exécution tant qu'il n'y est pas ajouté.
+  private void signalerJobNonRepertorie(final String typeJob) {
+    if (CatalogueJobs.decrire(typeJob).isEmpty()) {
+      LOG.warn("job absent de CatalogueJobs : {}", typeJob);
+      logsAdminWorker.inserer(
+          NIVEAU_WARN,
+          SOURCE_WORKER,
+          "job sans libellé dans le catalogue des jobs : " + typeJob,
+          Map.of("typeJob", typeJob));
     }
   }
 
@@ -163,7 +178,7 @@ public class WorkerStatsService {
     bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
     bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
     if (!bilanLoggue && erreur == null && resultat.nbInseres() == 0 && resultat.nbMisAJour() == 0) {
-      remonterResultatVide(typeJob, maintenant);
+      remonterResultatVide(typeJob);
     }
     if (erreur == null) {
       deriveVolumeFetchService.verifier(
@@ -203,6 +218,23 @@ public class WorkerStatsService {
    * @param erreur message d'erreur, ou {@code null} si succès réel
    */
   public record ResultatJob(ResultatPersistance resultat, String erreur) {
+    /**
+     * Motif d'un cycle suspendu volontairement faute de quota Ticketmaster :
+     * une protection, pas une panne de source.
+     */
+    public static final String MOTIF_QUOTA_INSUFFISANT = "quota insuffisant";
+
+    /**
+     * @param resultat bilan des sources effectivement interrogées
+     * @param ticketmasterAutorise {@code false} si Ticketmaster a été sauté
+     *     faute de quota
+     * @return un succès, ou le bilan marqué du motif de quota insuffisant
+     */
+    public static ResultatJob selonQuota(
+        final ResultatPersistance resultat, final boolean ticketmasterAutorise) {
+      return new ResultatJob(resultat, ticketmasterAutorise ? null : MOTIF_QUOTA_INSUFFISANT);
+    }
+
     /**
      * @param resultat bilan de persistance d'un job réellement réussi
      * @return un résultat sans erreur
@@ -283,7 +315,7 @@ public class WorkerStatsService {
       return false;
     }
     logsAdminWorker.inserer(
-        "warn",
+        NIVEAU_WARN,
         SOURCE_WORKER,
         typeJob + " — " + concertsManques + " concert(s) TM non récupéré(s) (pagination plafonnée)",
         Map.of("manques", concertsManques));
@@ -304,7 +336,7 @@ public class WorkerStatsService {
       return false;
     }
     logsAdminWorker.inserer(
-        "warn",
+        NIVEAU_WARN,
         SOURCE_WORKER,
         typeJob
             + " — "
@@ -321,24 +353,12 @@ public class WorkerStatsService {
    * aucun concert persisté.
    *
    * @param typeJob le type de job de fetch
-   * @param execLe l'horodatage de l'exécution
    */
-  private void remonterResultatVide(final String typeJob, final Instant execLe) {
-    try {
-      final Map<String, Object> params = new LinkedHashMap<>();
-      params.put("ts", Timestamp.from(execLe));
-      params.put("niveau", "warn");
-      params.put("source", SOURCE_WORKER);
-      params.put("message", typeJob + " — 0 concert inséré ou mis à jour (résultat vide)");
-      params.put("meta", "{}");
-      jdbc.update(
-          """
-          INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
-          """,
-          params);
-    } catch (Exception e) {
-      LOG.warn("Impossible de remonter le résultat vide pour {} : {}", typeJob, e.getMessage());
-    }
+  private void remonterResultatVide(final String typeJob) {
+    logsAdminWorker.inserer(
+        NIVEAU_WARN,
+        SOURCE_WORKER,
+        typeJob + " — 0 concert inséré ou mis à jour (résultat vide)",
+        null);
   }
 }

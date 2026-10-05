@@ -18,6 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,10 +71,10 @@ class FetchRegionExecutor {
 
   private WorkerStatsService.ResultatJob executerCycle(
       final boolean retry, final List<String> deptsCibles) {
-    if (!commun.obtenirGestionQuotaTM().cronAutorise()) {
-      LOG.warn("fetch:region suspendu — quota TM insuffisant");
-      return new WorkerStatsService.ResultatJob(new ResultatPersistance(0, 0), "quota insuffisant");
-    }
+    // Quota Ticketmaster bas : seule cette source est suspendue, pas Eventim.
+    final boolean ticketmasterAutorise = commun.obtenirGestionQuotaTM().cronAutorise();
+    final List<SourceConcerts> actives =
+        ticketmasterAutorise ? sources : WorkerFetchCommun.sansTicketmaster(sources);
 
     final List<String> deptsListe = retry ? deptsCibles : deptsConfigures();
     if (deptsListe.isEmpty()) {
@@ -81,12 +82,12 @@ class FetchRegionExecutor {
       return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
     }
 
-    final ResultatPersistance resultat = traiterLots(deptsListe);
+    final ResultatPersistance resultat = traiterLots(deptsListe, actives);
     commun.sauvegarderQuota();
     recalculerMatchesService.recalculerMatches(null);
     rapportage.notificationDigestService().executerDigest("temps_reel");
     LOG.info("fetch:region terminé");
-    return WorkerStatsService.ResultatJob.succes(resultat);
+    return WorkerStatsService.ResultatJob.selonQuota(resultat, ticketmasterAutorise);
   }
 
   private List<String> deptsConfigures() {
@@ -114,7 +115,8 @@ class FetchRegionExecutor {
     return tousLesDepts;
   }
 
-  private ResultatPersistance traiterLots(final List<String> deptsListe) {
+  private ResultatPersistance traiterLots(
+      final List<String> deptsListe, final List<SourceConcerts> actives) {
     ResultatPersistance resultat = new ResultatPersistance(0, 0);
     final List<String> echecsLots = new ArrayList<>();
     final List<String> deptsEnEchec = new ArrayList<>();
@@ -123,7 +125,7 @@ class FetchRegionExecutor {
       final List<String> lotDepts =
           deptsListe.subList(i, Math.min(i + TAILLE_LOT_DEPTS, deptsListe.size()));
       try {
-        final ResultatLotDepartements resultatLot = traiterLotDepartements(lotDepts);
+        final ResultatLotDepartements resultatLot = traiterLotDepartements(lotDepts, actives);
         resultat = WorkerFetchCommun.accumuler(resultat, resultatLot.persistance());
         if (resultatLot.sourceInjoignable()) {
           echecsLots.add("depts=" + lotDepts + " : panne réseau transitoire");
@@ -140,18 +142,18 @@ class FetchRegionExecutor {
   }
 
   /**
-   * Fetch + dédoublonnage + persistance d'un lot de départements ({@value
-   * TAILLE_LOT_DEPTS}) — met à jour les absences des salles du lot
-   * indépendamment de tout suivi utilisateur (détail : CLAUDE.md, Jobs
-   * background).
+   * Fetch, dédoublonnage et persistance d'un lot de départements, puis
+   * absences des salles du lot, suivies ou non.
    * @param lotDepts sous-ensemble de départements
+   * @param actives sources interrogées (Ticketmaster retiré si quota bas)
    * @return bilan du lot
    */
-  private ResultatLotDepartements traiterLotDepartements(final List<String> lotDepts) {
+  private ResultatLotDepartements traiterLotDepartements(
+      final List<String> lotDepts, final List<SourceConcerts> actives) {
     final List<ConcertBrut> tous = new ArrayList<>();
     final Map<String, LocalDate> horizons = new HashMap<>();
     boolean sourceInjoignable = false;
-    for (final SourceConcerts source : sources) {
+    for (final SourceConcerts source : actives) {
       try {
         final ResultatRegion resultatSource = source.fetchRegionCouverte(lotDepts, null);
         tous.addAll(resultatSource.concerts());
@@ -176,9 +178,23 @@ class FetchRegionExecutor {
     rapportage.enregistreurLieuxEventim().enregistrer();
     // Un concert non revu faute de réponse d'une source n'est pas absent.
     if (!sourceInjoignable) {
-      commun.mettreAJourAbsencesSalles(sallesConnuesDesDepartements(lotDepts), debutLot, horizons);
+      commun.mettreAJourAbsencesSalles(
+          sallesConnuesDesDepartements(lotDepts),
+          debutLot,
+          horizons,
+          classementsRenvoyes(tous, "ticketmaster"));
     }
     return new ResultatLotDepartements(resultat, sourceInjoignable);
+  }
+
+  // Ticketmaster ne renvoie que les classifications demandées : un spectacle
+  // d'humour venu d'une salle autrefois suivie n'y apparaîtra jamais.
+  private static Set<String> classementsRenvoyes(
+      final List<ConcertBrut> concerts, final String source) {
+    return concerts.stream()
+        .filter(c -> source.equals(c.source()))
+        .map(c -> c.classement().cle())
+        .collect(Collectors.toSet());
   }
 
   /**

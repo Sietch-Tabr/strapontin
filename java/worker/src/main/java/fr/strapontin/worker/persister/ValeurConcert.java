@@ -4,64 +4,153 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.PositionLieu;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Valeurs normalisées d'un concert prêtes pour l'upsert en base
- * (noms de champs auto-descriptifs ; {@code disponible} exclu,
- * colonne {@code GENERATED ALWAYS}).
+ * Concert prêt pour l'upsert : le concert brut de la source et ses champs
+ * résolus (noms normalisés, date et heure typées, salle et artiste du
+ * référentiel, null tant que non résolus) ; champs bruts accessibles.
  * @since 2.0.0
  * @author Kwaite
  */
 public record ValeurConcert(
-    String artiste,
+    ConcertBrut brut,
     String artisteNorm,
     LocalDate date,
     LocalTime heure,
-    String salle,
     String salleNorm,
-    String ville,
-    String dept,
-    String url,
-    String source,
-    String classification,
-    String genre,
-    String statut,
-    String presaleDebut,
-    String presaleNom,
-    String salleSourceId,
-    String artisteSourceId,
     UUID salleId,
     UUID artisteId) {
 
-  // Seul point de reconstruction du record — les méthodes avecXxx ci-dessous ne
-  // varient que sur ces quatre champs (les seuls jamais modifiés après la
-  // résolution des identités sources) ; l'ajout d'un futur champ au record ne
-  // demande de mettre à jour que cette seule méthode.
-  private ValeurConcert avec(
-      final String artisteNorm, final String salleNorm, final UUID salleId, final UUID artisteId) {
+  /** Valide la présence du concert brut. */
+  public ValeurConcert {
+    Objects.requireNonNull(brut, "brut");
+  }
+
+  /**
+   * @param concert concert brut d'une source
+   * @return les valeurs initiales du concert, avant toute résolution
+   */
+  public static ValeurConcert depuis(final ConcertBrut concert) {
     return new ValeurConcert(
-        artiste,
-        artisteNorm,
-        date,
-        heure,
-        salle,
-        salleNorm,
-        ville,
-        dept,
-        url,
-        source,
-        classification,
-        genre,
-        statut,
-        presaleDebut,
-        presaleNom,
-        salleSourceId,
-        artisteSourceId,
-        salleId,
-        artisteId);
+        concert,
+        Normalisation.normaliserTexte(concert.artiste()),
+        LocalDate.parse(concert.date()),
+        concert.heure() != null ? LocalTime.parse(concert.heure()) : null,
+        Normalisation.normaliserTexte(concert.salle()),
+        null,
+        null);
+  }
+
+  /**
+   * @return nom d'artiste publié
+   */
+  public String artiste() {
+    return brut.artiste();
+  }
+
+  /**
+   * @return nom de salle publié
+   */
+  public String salle() {
+    return brut.salle();
+  }
+
+  /**
+   * @return ville publiée, peut être null
+   */
+  public String ville() {
+    return brut.ville();
+  }
+
+  /**
+   * @return département publié, peut être null
+   */
+  public String dept() {
+    return brut.dept();
+  }
+
+  /**
+   * @return fiche de l'événement, peut être null
+   */
+  public String url() {
+    return brut.url();
+  }
+
+  /**
+   * @return source du concert
+   */
+  public String source() {
+    return brut.source();
+  }
+
+  /**
+   * @return classification, peut être null
+   */
+  public String classification() {
+    return brut.classification();
+  }
+
+  /**
+   * @return genre, peut être null
+   */
+  public String genre() {
+    return brut.genre();
+  }
+
+  /**
+   * @return sous-genre, peut être null
+   */
+  public String sousGenre() {
+    return brut.sousGenre();
+  }
+
+  /**
+   * @return statut de vente, peut être null
+   */
+  public String statut() {
+    return brut.statut();
+  }
+
+  /**
+   * @return début de prévente, peut être null
+   */
+  public String presaleDebut() {
+    return brut.presaleDebut();
+  }
+
+  /**
+   * @return nom de la prévente, peut être null
+   */
+  public String presaleNom() {
+    return brut.presaleNom();
+  }
+
+  /**
+   * @return identifiant préfixé du lieu chez la source, peut être null
+   */
+  public String salleSourceId() {
+    return brut.salleSourceId();
+  }
+
+  /**
+   * @return identifiant préfixé de l'artiste chez la source, peut être null
+   */
+  public String artisteSourceId() {
+    return brut.artisteSourceId();
+  }
+
+  /**
+   * @return position publiée du lieu
+   */
+  public PositionLieu position() {
+    return brut.position();
   }
 
   /**
@@ -71,7 +160,7 @@ public record ValeurConcert(
    * @return nouveau record avec le champ modifié
    */
   public ValeurConcert avecSalleNorm(final String nouvelleSalleNorm) {
-    return avec(artisteNorm, nouvelleSalleNorm, salleId, artisteId);
+    return new ValeurConcert(brut, artisteNorm, date, heure, nouvelleSalleNorm, salleId, artisteId);
   }
 
   /**
@@ -81,7 +170,7 @@ public record ValeurConcert(
    * @return nouveau record avec le champ modifié
    */
   public ValeurConcert avecSalleId(final UUID nouvelleSalleId) {
-    return avec(artisteNorm, salleNorm, nouvelleSalleId, artisteId);
+    return new ValeurConcert(brut, artisteNorm, date, heure, salleNorm, nouvelleSalleId, artisteId);
   }
 
   /**
@@ -91,7 +180,7 @@ public record ValeurConcert(
    * @return nouveau record avec le champ modifié
    */
   public ValeurConcert avecArtisteNorm(final String nouvelArtisteNorm) {
-    return avec(nouvelArtisteNorm, salleNorm, salleId, artisteId);
+    return new ValeurConcert(brut, nouvelArtisteNorm, date, heure, salleNorm, salleId, artisteId);
   }
 
   /**
@@ -101,31 +190,23 @@ public record ValeurConcert(
    * @return nouveau record avec le champ modifié
    */
   public ValeurConcert avecArtisteId(final UUID nouvelArtisteId) {
-    return avec(artisteNorm, salleNorm, salleId, nouvelArtisteId);
+    return new ValeurConcert(brut, artisteNorm, date, heure, salleNorm, salleId, nouvelArtisteId);
   }
 
   /**
-   * Retourne un nouveau concert avec le {@code salleId} et l'{@code artisteId}
-   * remplacés.
-   *
-   * @param nouvelleSalleId nouveau UUID de salle (null conserve l'existant)
-   * @param nouvelArtisteId nouveau UUID d'artiste (null conserve l'existant)
-   * @return nouveau record avec les champs modifiés
+   * @return copie avec {@code salleId} et {@code artisteId} remplacés
    */
   public ValeurConcert avecUuids(final UUID nouvelleSalleId, final UUID nouvelArtisteId) {
-    return avec(artisteNorm, salleNorm, nouvelleSalleId, nouvelArtisteId);
+    return new ValeurConcert(
+        brut, artisteNorm, date, heure, salleNorm, nouvelleSalleId, nouvelArtisteId);
   }
 
   /**
-   * Retourne un nouveau concert avec l'{@code artisteNorm} et l'{@code
-   * artisteId} remplacés.
-   *
-   * @param nouvelArtisteNorm nouveau nom d'artiste normalisé
-   * @param nouvelArtisteId nouveau UUID d'artiste
-   * @return nouveau record avec les champs modifiés
+   * @return copie avec {@code artisteNorm} et {@code artisteId} remplacés
    */
   public ValeurConcert avecArtisteNormEtId(
       final String nouvelArtisteNorm, final UUID nouvelArtisteId) {
-    return avec(nouvelArtisteNorm, salleNorm, salleId, nouvelArtisteId);
+    return new ValeurConcert(
+        brut, nouvelArtisteNorm, date, heure, salleNorm, salleId, nouvelArtisteId);
   }
 }

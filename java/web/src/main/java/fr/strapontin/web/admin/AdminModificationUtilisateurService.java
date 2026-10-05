@@ -39,7 +39,6 @@ class AdminModificationUtilisateurService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
-  private final AdminRevocationService adminRevocationService;
   private final EmailServiceAdmin emailServiceAdmin;
 
   private record ChampsModification(String nom, String email, String role) {}
@@ -47,53 +46,37 @@ class AdminModificationUtilisateurService {
   /**
    * @param jdbc accès JDBC
    * @param logAdminService journalisation des modifications
-   * @param adminRevocationService révocation admin différée
    * @param emailServiceAdmin notification email de promotion admin
    */
   /* package-private : instancié uniquement par AdminService (même package). */
   AdminModificationUtilisateurService(
       final NamedParameterJdbcTemplate jdbc,
       final LogAdminService logAdminService,
-      final AdminRevocationService adminRevocationService,
       final EmailServiceAdmin emailServiceAdmin) {
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
-    this.adminRevocationService = adminRevocationService;
     this.emailServiceAdmin = emailServiceAdmin;
   }
 
   /**
-   * Modifie le nom, l'email et/ou le rôle — rétrogradation jamais combinée
-   * avec nom/email (voir {@link AdminService#modifierUtilisateur}).
-   * @param userId identifiant de l'utilisateur cible
-   * @param requete champs à modifier (nom, email, role — tous optionnels)
-   * @param adminId identifiant de l'admin demandeur
-   * @throws ErreurMetier si invalide, email pris, ou combinaison interdite
+   * Modifie nom, email ou rôle. Rétrogradation d'admin refusée : elle passe
+   * par la révocation différée, transaction REQUIRES_NEW qui attendrait ici
+   * le verrou posé sur la même ligne {@code users}.
+   * @throws ErreurMetier si invalide, email pris, ou rétrogradation d'admin
    */
   @Transactional
   /* package-private : appelé par AdminService (même package). */
   void modifierUtilisateur(
       final String userId, final RequeteModifierUtilisateur requete, final String adminId) {
     final ChampsModification champs = validerEtNormaliser(requete, userId);
-    final boolean retrogradationAdmin = detecterRetrogradationAdmin(userId, champs.role());
-    // initierRevocationAdmin délègue à initierRevocationAdminTransactionnel
-    // (REQUIRES_NEW + SERIALIZABLE) — appelée depuis cette méthode déjà
-    // @Transactional, elle consommerait une seconde connexion HikariCP
-    // suspendue. Rejeter la combinaison en un seul PATCH force l'appelant à
-    // séquencer deux requêtes distinctes (déjà fait côté front depuis
-    // l'incident v2.6.4), plutôt que de rendre
-    // initierRevocationAdminTransactionnel sûr en imbrication : NESTED perdrait
-    // l'isolation SERIALIZABLE nécessaire à la garde anti-concurrence la
-    // transaction imbriquée héritant de l'isolation de la transaction
-    // englobante.
-    if (retrogradationAdmin && (!champs.nom().isEmpty() || !champs.email().isEmpty())) {
+    if (estRetrogradationAdmin(userId, champs.role())) {
       throw new ErreurMetier(
-          "Impossible de combiner une rétrogradation admin avec une modification de nom/email en"
-              + " une seule requête. Envoyer deux requêtes distinctes.");
+          "La rétrogradation d'un administrateur passe par l'action « Révoquer admin », avec"
+              + " préavis.");
     }
 
-    appliquerModification(userId, champs, retrogradationAdmin);
-    notifierModification(userId, adminId, champs, retrogradationAdmin);
+    appliquerModification(userId, champs);
+    notifierModification(userId, adminId, champs);
   }
 
   private ChampsModification validerEtNormaliser(
@@ -140,7 +123,7 @@ class AdminModificationUtilisateurService {
         .isEmpty();
   }
 
-  private boolean detecterRetrogradationAdmin(final String userId, final String role) {
+  private boolean estRetrogradationAdmin(final String userId, final String role) {
     if (role.isEmpty()) {
       return false;
     }
@@ -152,8 +135,7 @@ class AdminModificationUtilisateurService {
     return "user".equals(role) && ROLE_ADMIN.equals(roleActuel);
   }
 
-  private void appliquerModification(
-      final String userId, final ChampsModification champs, final boolean retrogradationAdmin) {
+  private void appliquerModification(final String userId, final ChampsModification champs) {
     final Map<String, Object> miseAJour = new HashMap<>();
     miseAJour.put("updatedAt", Timestamp.from(Instant.now()));
     miseAJour.put(CLE_USER_ID, userId);
@@ -163,7 +145,7 @@ class AdminModificationUtilisateurService {
     if (!champs.email().isEmpty()) {
       miseAJour.put(CLE_EMAIL, champs.email());
     }
-    if (!champs.role().isEmpty() && !retrogradationAdmin) {
+    if (!champs.role().isEmpty()) {
       miseAJour.put("role", champs.role());
     }
 
@@ -174,17 +156,14 @@ class AdminModificationUtilisateurService {
     if (!champs.email().isEmpty()) {
       setClauses.append(", email = :email");
     }
-    if (!champs.role().isEmpty() && !retrogradationAdmin) {
+    if (!champs.role().isEmpty()) {
       setClauses.append(", role = CAST(:role AS role_utilisateur)");
     }
     jdbc.update("UPDATE users SET " + setClauses + " WHERE id = :userId", miseAJour);
   }
 
   private void notifierModification(
-      final String userId,
-      final String adminId,
-      final ChampsModification champs,
-      final boolean retrogradationAdmin) {
+      final String userId, final String adminId, final ChampsModification champs) {
     if (!champs.nom().isEmpty()) {
       logAdminService.logAdmin(
           "info", SOURCE_ADMIN, "nom modifié", Map.of(CLE_USER_ID, userId, CLE_PAR_ADMIN, adminId));
@@ -197,10 +176,6 @@ class AdminModificationUtilisateurService {
           Map.of(CLE_USER_ID, userId, "nouvelEmail", champs.email(), CLE_PAR_ADMIN, adminId));
     }
     if (champs.role().isEmpty()) {
-      return;
-    }
-    if (retrogradationAdmin) {
-      adminRevocationService.initierRevocationAdmin(userId, adminId);
       return;
     }
     logAdminService.logAdmin(

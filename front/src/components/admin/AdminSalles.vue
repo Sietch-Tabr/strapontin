@@ -65,7 +65,7 @@
       <EtatChargement v-if="chargement" />
       <template v-else>
         <div class="salles-conteneur">
-          <div class="table-conteneur">
+          <div class="table-conteneur table-cartes">
             <table aria-label="Référentiel salles">
               <thead>
                 <tr>
@@ -150,6 +150,20 @@
                       Éditer
                     </button>
                     <button
+                      v-if="salle.nbConcerts > 0"
+                      type="button"
+                      class="bouton bouton-secondaire bouton-petit"
+                      title="Déplacer vers une autre salle les concerts publiés sous certains noms de lieu"
+                      @click="
+                        repartition.ouvrir({
+                          id: salle.id,
+                          nom: salle.nomAffiche || salle.nom,
+                        })
+                      "
+                    >
+                      Répartir
+                    </button>
+                    <button
                       v-if="salle.wikidataId"
                       type="button"
                       class="bouton bouton-danger bouton-petit"
@@ -161,7 +175,7 @@
                   </td>
                 </tr>
                 <tr v-if="items.length === 0">
-                  <td colspan="8" class="etat-vide-texte">
+                  <td colspan="8" class="etat-vide-texte" data-label="">
                     Aucune salle ne correspond aux filtres.
                   </td>
                 </tr>
@@ -288,16 +302,23 @@
       </button>
     </div>
   </dialog>
+  <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
 </template>
 
 <script setup>
 defineOptions({ name: "AdminSalles" });
 
+const props = defineProps({
+  rechercheInitiale: { type: String, default: "" },
+});
+
 import { ref } from "vue";
 import EtatChargement from "../EtatChargement.vue";
+import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
 import { classeStatut, libelleStatut } from "../../utils/statutReferentiel.js";
 
+const repartition = ref(null);
 const filtreVille = ref("");
 const filtreDept = ref("");
 
@@ -319,6 +340,7 @@ const {
   itemB,
   cibleChoisie,
   enCoursFusion,
+  charger,
   rechargerPage0,
   allerPage,
   basculerSelection,
@@ -330,6 +352,7 @@ const {
   fermerEdition,
   fermerFusion,
 } = useReferentielAdmin({
+  rechercheInitiale: props.rechercheInitiale,
   endpoint: "salles",
   cleListe: "salles",
   cleTotal: "totalSalles",
@@ -339,60 +362,3 @@ const {
 });
 </script>
 
-<style scoped>
-.salles-conteneur {
-  container-name: salles;
-}
-
-@container salles (max-width: 700px) {
-  .salles-conteneur table,
-  .salles-conteneur tbody {
-    display: block;
-  }
-
-  .salles-conteneur thead {
-    display: none;
-  }
-
-  .salles-conteneur tr {
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-card);
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-  }
-
-  .salles-conteneur td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.875rem;
-  }
-
-  .salles-conteneur td:last-child {
-    border-bottom: none;
-  }
-
-  .salles-conteneur td::before {
-    content: attr(data-label);
-    font-weight: 500;
-    color: var(--fg-muted);
-    font-size: 0.75rem;
-    flex-shrink: 0;
-  }
-
-  .salles-conteneur td[data-label=""]::before {
-    display: none;
-  }
-
-  .salles-conteneur td[data-label=""] {
-    justify-content: flex-end;
-    padding-top: 0.625rem;
-    padding-bottom: 0.625rem;
-  }
-}
-</style>

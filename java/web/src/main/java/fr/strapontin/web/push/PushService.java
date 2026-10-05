@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
@@ -113,6 +114,9 @@ public class PushService {
         || requete.keys().p256dh().length() > 256
         || requete.keys().auth().length() > 256) {
       throw new ErreurMetier("Données d'abonnement invalides.");
+    }
+    if (!EndpointPush.estAutorise(requete.endpoint())) {
+      throw new ErreurMetier("Service de notification du navigateur non reconnu.");
     }
   }
 

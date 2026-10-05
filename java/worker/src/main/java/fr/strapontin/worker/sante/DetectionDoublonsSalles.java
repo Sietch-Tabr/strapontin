@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -127,7 +128,7 @@ final class DetectionDoublonsSalles {
     if (deptA != null && deptB != null && !deptA.equals(deptB)) {
       return false;
     }
-    return CoherenceMultiSalleService.nomContenuDansLAutre(
+    return NomsDeLieu.nomContenuDansLAutre(
         (String) salleA.get("nom_norm"), (String) salleB.get("nom_norm"));
   }
 

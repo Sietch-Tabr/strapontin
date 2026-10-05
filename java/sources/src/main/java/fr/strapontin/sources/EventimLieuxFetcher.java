@@ -16,8 +16,6 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -28,8 +26,6 @@ import org.springframework.web.util.UriComponentsBuilder;
  * @author Kwaite
  */
 final class EventimLieuxFetcher {
-
-  private static final Logger LOG = LoggerFactory.getLogger(EventimLieuxFetcher.class);
 
   private static final int NB_FENETRES_MAX = 20;
   // Au-delà de 10 valeurs city_names, l'API répond 400 « Invalid search parameter ».
@@ -73,11 +69,12 @@ final class EventimLieuxFetcher {
     this.attente = attente;
   }
 
-
   /**
    * Concerts à venir d'un lieu Eventim, toutes catégories confondues.
    * @param libelle nom exact du lieu chez Eventim
    * @return concerts trouvés
+   * @throws ReponseIncompleteException si la couverture est tronquée (échec
+   *     HTTP ou volume hors norme), avec les concerts reçus
    */
   /* package-private : appelé par LieuxEventim (même package). */
   List<ConcertBrut> fetchLieu(final String libelle) {
@@ -87,9 +84,9 @@ final class EventimLieuxFetcher {
             debut -> requete(debut, fin).queryParam("venue_names", libelle), fin, Set.of());
     // Même borne que la requête : un fetch à cheval sur minuit reste complet.
     if (resultat.horizon() == null || resultat.horizon().isBefore(fin.minusDays(1))) {
-      LOG.warn(
-          "Eventim lieu={} : couverture tronquée au {} (volume hors norme)",
-          libelle,
+      throw new ReponseIncompleteException(
+          "Eventim lieu=" + libelle + " : couverture tronquée au " + resultat.horizon(),
+          resultat.concerts(),
           resultat.horizon());
     }
     return resultat.concerts();
@@ -116,8 +113,7 @@ final class EventimLieuxFetcher {
       CODES_POSTAUX_PARIS.forEach(
           code ->
               filtres.add(
-                  requete ->
-                      requete.queryParam("postal_code", code).queryParam(PARAM_TOP, TOP)));
+                  requete -> requete.queryParam("postal_code", code).queryParam(PARAM_TOP, TOP)));
     }
     final LocalDate fin = LocalDate.now().plusMonths(MOIS_HORIZON_REGION);
     final List<ConcertBrut> concerts = new ArrayList<>();
@@ -150,13 +146,11 @@ final class EventimLieuxFetcher {
     final LocalDate aujourdHui = LocalDate.now();
     final PageProduitsEventim page =
         chargeur.apply(
-            requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
-                .queryParam(PARAM_TOP, 1)
-                .queryParam("venue_names", libelle)
-                .queryParam("page", 1)
-                .build()
-                .encode()
-                .toUri());
+            UriSources.encoder(
+                requete(aujourdHui, aujourdHui.plusMonths(MOIS_HORIZON_SALLE))
+                    .queryParam(PARAM_TOP, 1)
+                    .queryParam("venue_names", libelle)
+                    .queryParam("page", 1)));
     return page.succes() ? page.total() : -1;
   }
 
@@ -217,7 +211,7 @@ final class EventimLieuxFetcher {
   // Avec top, page est ignoré : une seule requête, plafonnée si elle revient pleine.
   private Parcours parcourirPages(final UriComponentsBuilder requete) {
     if (requete.build().getQueryParams().containsKey(PARAM_TOP)) {
-      final PageProduitsEventim resultat = chargeur.apply(requete.build().encode().toUri());
+      final PageProduitsEventim resultat = chargeur.apply(UriSources.encoder(requete));
       return resultat.succes()
           ? new Parcours(
               resultat.concerts(),
@@ -233,7 +227,7 @@ final class EventimLieuxFetcher {
         return new Parcours(concerts, false, false, null);
       }
       final PageProduitsEventim resultat =
-          chargeur.apply(requete.cloneBuilder().queryParam("page", page).build().encode().toUri());
+          chargeur.apply(UriSources.encoder(requete.cloneBuilder().queryParam("page", page)));
       if (!resultat.succes()) {
         return new Parcours(concerts, false, false, null);
       }
@@ -246,8 +240,6 @@ final class EventimLieuxFetcher {
     return new Parcours(
         concerts, true, totalPages >= EventimSource.PLAFOND_PAGES, derniereDate(concerts));
   }
-
-
 
   private static LocalDate derniereDate(final List<ConcertBrut> concerts) {
     return concerts.stream()

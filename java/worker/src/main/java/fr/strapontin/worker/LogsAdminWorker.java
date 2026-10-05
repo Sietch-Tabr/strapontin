@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
@@ -13,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Écriture dans {@code logs_admin} depuis le worker — le module n'a pas
@@ -39,8 +39,8 @@ public class LogsAdminWorker {
   }
 
   /**
-   * Insère une entrée dans {@code logs_admin} — échoue silencieusement
-   * (log SLF4J local), un log manqué ne doit jamais faire échouer le job.
+   * Insère une entrée dans {@code logs_admin}, sans jamais faire échouer le
+   * job ; un avertissement identique écrit depuis moins de 24 h est ignoré.
    * @param niveau "info", "warn" ou "error"
    * @param source source technique (ex. "reconciliation-nocturne")
    * @param message message lisible
@@ -53,10 +53,16 @@ public class LogsAdminWorker {
       final Map<String, Object> meta) {
     try {
       final String metaJson = meta != null ? objectMapper.writeValueAsString(meta) : "{}";
+      // Un avertissement identique déjà écrit dans les dernières 24 h n'apprend
+      // rien de plus : répété à chaque cycle, il noyait le journal.
       jdbc.update(
           """
           INSERT INTO logs_admin (ts, niveau, source, message, meta)
-          VALUES (:ts, :niveau, :source, :message, CAST(:meta AS jsonb))
+          SELECT :ts, :niveau, :source, :message, CAST(:meta AS jsonb)
+          WHERE :niveau <> 'warn' OR NOT EXISTS (
+              SELECT 1 FROM logs_admin
+              WHERE niveau = 'warn' AND source = :source AND message = :message
+                AND ts > now() - interval '24 hours')
           """,
           Map.of(
               "ts", Timestamp.from(Instant.now()),
@@ -64,7 +70,7 @@ public class LogsAdminWorker {
               "source", source,
               "message", message,
               "meta", metaJson));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("Erreur sérialisation meta log admin source={} : {}", source, e.getMessage());
     } catch (Exception e) {
       LOG.warn("Erreur insertion log admin source={} : {}", source, e.getMessage());

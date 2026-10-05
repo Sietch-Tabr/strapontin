@@ -4,14 +4,15 @@
  */
 package fr.strapontin.worker;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -29,15 +30,19 @@ public class WorkerConfiguration {
   public WorkerConfiguration() {}
 
   /**
-   * Sérialiseur JSON (quota TM dans {@code app_config}).
-   *
-   * @return instance partagée
+   * Authentifie l'API interne /trigger par jeton ({@link FiltreJetonInterne}).
+   * @param secret valeur de {@code APP_CONFIG_SECRET}
+   * @return l'enregistrement du filtre, limité à {@code /trigger/*}
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  ObjectMapper objectMapper() {
-    return new ObjectMapper();
+  FilterRegistrationBean<FiltreJetonInterne> filtreJetonInterne(
+      @Value("${app.config.secret}") final String secret) {
+    final FilterRegistrationBean<FiltreJetonInterne> enregistrement =
+        new FilterRegistrationBean<>(new FiltreJetonInterne(secret));
+    enregistrement.addUrlPatterns("/trigger/*");
+    return enregistrement;
   }
 
   /**

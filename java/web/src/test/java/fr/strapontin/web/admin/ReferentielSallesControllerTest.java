@@ -33,7 +33,7 @@ class ReferentielSallesControllerTest {
   @BeforeEach
   void setUp() {
     service = mock(ReferentielSallesService.class);
-    controller = new ReferentielSallesController(service);
+    controller = new ReferentielSallesController(service, mock(RepartitionSalleService.class));
   }
 
   @Test

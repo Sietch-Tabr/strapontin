@@ -4,7 +4,6 @@
  */
 package fr.strapontin.web.salle;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
@@ -18,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Recherche de salles par nom via Nominatim (OSM), sans clé API — extrait de

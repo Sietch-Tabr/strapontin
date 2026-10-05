@@ -54,22 +54,12 @@ class SourceConcertsTest {
           @Override
           public List<ConcertBrut> fetchArtiste(final String nom) {
             return List.of(
-                new ConcertBrut(
-                    nom,
-                    "2026-01-01",
-                    null,
-                    "salle",
-                    null,
-                    null,
-                    null,
-                    "test",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null));
+                ConcertBrut.nouveau()
+                    .artiste(nom)
+                    .date("2026-01-01")
+                    .salle("salle")
+                    .source("test")
+                    .construire());
           }
         };
 

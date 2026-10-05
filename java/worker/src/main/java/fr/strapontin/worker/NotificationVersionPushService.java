@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class NotificationVersionPushService {
 
+  private static final String CLE_ENDPOINT = "endpoint";
   private static final Logger LOG = LoggerFactory.getLogger(NotificationVersionPushService.class);
 
   private final ConfigServiceWorker configService;
@@ -149,11 +151,15 @@ public class NotificationVersionPushService {
 
   private boolean envoyerAUnAbonnement(
       final PushService pushService, final Map<String, Object> ab, final String payload) {
+    if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
+      LOG.warn("Notification nouvelle version : endpoint hors services de push ignoré");
+      return false;
+    }
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
-          new Subscription((String) ab.get("endpoint"), new Subscription.Keys(p256dh, auth));
+          new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
       final Notification notification = new Notification(subscription, payload);
       final HttpResponse response = pushService.send(notification);
       final int status = response.getStatusLine().getStatusCode();
@@ -161,10 +167,10 @@ public class NotificationVersionPushService {
         return true;
       }
       LOG.warn(
-          "Notification nouvelle version : statut inattendu {} — {}", status, ab.get("endpoint"));
+          "Notification nouvelle version : statut inattendu {} — {}", status, ab.get(CLE_ENDPOINT));
       return false;
     } catch (Exception e) {
-      LOG.warn("Notification nouvelle version : échec envoi — {}", ab.get("endpoint"), e);
+      LOG.warn("Notification nouvelle version : échec envoi — {}", ab.get(CLE_ENDPOINT), e);
       return false;
     }
   }

@@ -4,8 +4,6 @@
  */
 package fr.strapontin.worker.persister;
 
-import java.sql.Date;
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -14,16 +12,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Aligne l'heure d'un événement Ticketmaster déjà en base sur celle d'un report
- * entrant — extrait de {@link PersisteurConcertsDb} pour rester sous le seuil
- * de complexité cyclomatique de classe (50).
- *
+ * Aligne date et heure d'un événement Ticketmaster sur un report entrant de
+ * la même manifestation (idmanif, à défaut URL) : TM republie un report sous
+ * une autre URL, qui créerait sinon un second événement à l'horaire obsolète.
  * @since 2.9.1
  * @author Kwaite
  */
@@ -38,13 +37,16 @@ final class AlignementReportTM {
   private static final Set<String> STATUTS_REPORT_TM =
       Set.of("rescheduled", "cancelled", "postponed");
 
+  private static final Pattern MOTIF_IDMANIF = Pattern.compile("/idmanif/(\\d+)");
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
-  private static final int NB_HEURES_DISTINCTES_NON_AMBIGU = 1;
+  private static final String CLE_ID = "id";
+
+  private static final int UNIQUE = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
 
-  private record CleUrlDate(String url, LocalDate date) {}
+  private record Representation(UUID id, LocalDate date, LocalTime heure) {}
 
   /* package-private : instancié uniquement par PersisteurConcertsDb (même
    * package). */
@@ -53,8 +55,9 @@ final class AlignementReportTM {
   }
 
   /**
-   * Aligne l'heure d'un événement TM déjà en base sur celle d'un
-   * report entrant (détail : CLAUDE.md, section resoudreParUrl).
+   * Même date : heure alignée si une seule y est connue. Autre date : date et
+   * heure alignées si la manifestation n'a qu'un événement. Jamais vers un
+   * créneau déjà occupé par le même artiste dans la même salle.
    * @param concerts concerts après réconciliation, avant upsert
    */
   /* package-private : appelé par PersisteurConcertsDb (même package). */
@@ -73,61 +76,109 @@ final class AlignementReportTM {
       return;
     }
 
-    final List<String> urls = reports.stream().map(ValeurConcert::url).distinct().toList();
-    final Map<CleUrlDate, List<Map<String, Object>>> parCle = chargerEvenementsTmParUrlDate(urls);
+    final List<String> cles = reports.stream().map(c -> cleFiche(c.url())).distinct().toList();
+    final Map<String, List<Representation>> parCle = chargerRepresentations(cles);
 
     for (final ValeurConcert c : reports) {
-      alignerHeureSiReport(c, parCle);
+      final List<Representation> candidats = parCle.get(cleFiche(c.url()));
+      if (candidats != null) {
+        aligner(c, candidats);
+      }
     }
   }
 
-  private Map<CleUrlDate, List<Map<String, Object>>> chargerEvenementsTmParUrlDate(
-      final List<String> urls) {
-    final List<Map<String, Object>> existants =
+  /* package-private : visibilité élargie pour AlignementReportTMTest (même package). */
+  static String extraireIdmanif(final String url) {
+    if (url == null) {
+      return null;
+    }
+    final Matcher correspondance = MOTIF_IDMANIF.matcher(url);
+    return correspondance.find() ? correspondance.group(1) : null;
+  }
+
+  // Manifestation si l'URL en porte une, sinon l'URL exacte.
+  private static String cleFiche(final String url) {
+    final String idmanif = extraireIdmanif(url);
+    return idmanif != null ? "idmanif:" + idmanif : "url:" + url;
+  }
+
+  // Les fiches « package » (/pack/) partagent l'idmanif sans être une séance.
+  private Map<String, List<Representation>> chargerRepresentations(final List<String> cles) {
+    final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT e.id AS id, o.url AS url, e.date AS date, e.heure AS heure
+            SELECT DISTINCT e.id AS id, e.date::text AS date, e.heure::text AS heure,
+                   COALESCE('idmanif:' || substring(o.url FROM '/idmanif/([0-9]+)'),
+                            'url:' || o.url) AS cle
             FROM observations o JOIN evenements e ON e.id = o.evenement_id
-            WHERE o.source = 'ticketmaster' AND o.url IN (:urls)
+            WHERE o.source = 'ticketmaster'
+              AND o.url NOT LIKE '%/pack/%'
+              AND COALESCE('idmanif:' || substring(o.url FROM '/idmanif/([0-9]+)'),
+                           'url:' || o.url) IN (:cles)
             """,
-            Map.of("urls", urls));
-
-    final Map<CleUrlDate, List<Map<String, Object>>> parCle = new HashMap<>();
-    for (final Map<String, Object> ligne : existants) {
-      final CleUrlDate cle =
-          new CleUrlDate((String) ligne.get("url"), ((Date) ligne.get(CLE_DATE)).toLocalDate());
-      parCle.computeIfAbsent(cle, _ -> new ArrayList<>()).add(ligne);
+            Map.of("cles", cles));
+    final Map<String, List<Representation>> parIdmanif = new HashMap<>();
+    for (final Map<String, Object> ligne : lignes) {
+      final String heure = (String) ligne.get(CLE_HEURE);
+      parIdmanif
+          .computeIfAbsent((String) ligne.get("cle"), _ -> new ArrayList<>())
+          .add(
+              new Representation(
+                  (UUID) ligne.get(CLE_ID),
+                  LocalDate.parse((String) ligne.get(CLE_DATE)),
+                  heure != null ? LocalTime.parse(heure) : null));
     }
-    return parCle;
+    return parIdmanif;
   }
 
-  private void alignerHeureSiReport(
-      final ValeurConcert concert, final Map<CleUrlDate, List<Map<String, Object>>> parCle) {
-    final List<Map<String, Object>> candidats =
-        parCle.get(new CleUrlDate(concert.url(), concert.date()));
-    if (candidats == null) {
+  // Même date : une seule heure distincte (sinon séances multiples, ambigu) ;
+  // autre date : une seule représentation connue de la manifestation.
+  private static Representation choisirCible(
+      final List<Representation> memeDate, final List<Representation> candidats) {
+    if (memeDate.isEmpty()) {
+      return candidats.size() == UNIQUE ? candidats.get(0) : null;
+    }
+    final Set<LocalTime> heures =
+        memeDate.stream().map(Representation::heure).collect(Collectors.toSet());
+    return heures.size() == UNIQUE ? memeDate.get(0) : null;
+  }
+
+  private void aligner(final ValeurConcert report, final List<Representation> candidats) {
+    final List<Representation> memeDate =
+        candidats.stream().filter(r -> r.date().equals(report.date())).toList();
+    final Representation cible = choisirCible(memeDate, candidats);
+    if (cible == null) {
       return;
     }
-    final Set<LocalTime> heuresDistinctes =
-        candidats.stream()
-            .map(l -> ((Time) l.get(CLE_HEURE)).toLocalTime())
-            .collect(Collectors.toSet());
-    if (heuresDistinctes.size() != NB_HEURES_DISTINCTES_NON_AMBIGU) {
+    if (cible.date().equals(report.date()) && report.heure().equals(cible.heure())) {
       return;
     }
-    final LocalTime heureExistante = heuresDistinctes.iterator().next();
-    if (heureExistante.equals(concert.heure())) {
-      return;
+    final int modifies =
+        jdbc.update(
+            """
+            UPDATE evenements e SET date = CAST(:date AS date), heure = CAST(:heure AS time)
+            WHERE e.id = CAST(:id AS uuid)
+              AND NOT EXISTS (
+                SELECT 1 FROM evenements x
+                WHERE x.id <> e.id AND x.artiste_norm = e.artiste_norm
+                  AND x.salle_id IS NOT DISTINCT FROM e.salle_id
+                  AND x.date = CAST(:date AS date) AND x.heure = CAST(:heure AS time))
+            """,
+            Map.of(
+                CLE_DATE,
+                report.date().toString(),
+                CLE_HEURE,
+                report.heure().toString(),
+                CLE_ID,
+                cible.id().toString()));
+    if (modifies > 0) {
+      LOG.info(
+          "report Ticketmaster aligné url={} {} {} -> {} {}",
+          report.url(),
+          cible.date(),
+          cible.heure(),
+          report.date(),
+          report.heure());
     }
-    final UUID idExistant = (UUID) candidats.get(0).get("id");
-    jdbc.update(
-        "UPDATE evenements SET heure = CAST(:heure AS time) WHERE id = CAST(:id AS uuid)",
-        Map.of(CLE_HEURE, concert.heure(), "id", idExistant.toString()));
-    LOG.info(
-        "report Ticketmaster aligné url={} date={} heure {}->{}",
-        concert.url(),
-        concert.date(),
-        heureExistante,
-        concert.heure());
   }
 }

@@ -4,6 +4,10 @@
  */
 package fr.strapontin.worker;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 /**
  * Corps HTML des emails de relance avant purge de compte (inactivité,
  * invitation jamais activée) — même gabarit visuel qu'{@link
@@ -12,6 +16,9 @@ package fr.strapontin.worker;
  * @author Kwaite
  */
 final class PurgeCompteEmailTemplate {
+
+  private static final DateTimeFormatter DATE_LIMITE =
+      DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.FRENCH);
 
   private static final String GABARIT =
       """
@@ -49,11 +56,14 @@ final class PurgeCompteEmailTemplate {
   }
 
   /* package-private : appelé par PurgeCompteEmailService (même package). */
-  static String relanceInvitation(final String lienActivation, final String baseUrl) {
+  static String relanceInvitation(
+      final String lienActivation, final LocalDate dateLimite, final String baseUrl) {
     final String sujet = "Votre invitation Strapontin expire bientôt";
     final String corps =
         "Vous avez été invité sur Strapontin mais votre compte n'a jamais été activé."
-            + " Sans activation dans les prochains jours, l'invitation sera annulée.";
+            + " Ce nouveau lien est valable jusqu'au %s inclus ; passé cette date,"
+                .formatted(DATE_LIMITE.format(dateLimite))
+            + " l'invitation sera annulée.";
     return GABARIT.formatted(sujet, sujet, corps, lienActivation, "Activer mon compte", baseUrl);
   }
 }

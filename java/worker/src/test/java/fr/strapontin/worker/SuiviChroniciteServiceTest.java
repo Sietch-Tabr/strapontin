@@ -12,12 +12,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link SuiviChroniciteService}.
@@ -90,9 +90,9 @@ class SuiviChroniciteServiceTest {
   void enregistrerCycle_clesDistinctes_streaksIndependants() {
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
     service.enregistrerCycle("fetch:salles:all|Ticketmaster", true);
-    final int streakOverpass = service.enregistrerCycle("reconciliation:nocturne|Overpass", true);
+    final int streakNominatim = service.enregistrerCycle("reconciliation:nocturne|nominatim", true);
 
-    assertEquals(1, streakOverpass);
+    assertEquals(1, streakNominatim);
   }
 
   @Test

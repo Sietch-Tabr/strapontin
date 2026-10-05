@@ -34,7 +34,10 @@ async function loginEtSauvegarder(
   motDePasse: string,
   fichier: string,
 ): Promise<void> {
-  const contexte = await request.newContext({ baseURL });
+  const contexte = await request.newContext({
+    baseURL,
+    extraHTTPHeaders: { "X-Requested-With": "strapontin" },
+  });
   const rep = await contexte.post("/api/auth/login", {
     data: { identifiant, motDePasse },
   });
@@ -53,6 +56,7 @@ async function reinitialiserRateLimits(): Promise<void> {
   const contexte = await request.newContext({
     baseURL: BASE_URL,
     storageState: FICHIER_AUTH_ADMIN,
+    extraHTTPHeaders: { "X-Requested-With": "strapontin" },
   });
   try {
     const rep = await contexte.delete("/api/salles/rate-limits/signalement");

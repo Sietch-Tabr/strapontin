@@ -16,6 +16,7 @@
       </span>
       <span v-else class="synchro-info">Jamais synchronisé</span>
       <button
+        v-if="estAdmin"
         type="button"
         class="bouton bouton-petit bouton-secondaire"
         @click="actualiser"
@@ -188,7 +189,7 @@
       v-if="donnees && donnees.concerts.length > 0"
       class="decouverte-conteneur"
     >
-      <div class="table-conteneur">
+      <div class="table-conteneur table-cartes">
         <table>
           <thead>
             <tr>
@@ -288,12 +289,14 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "DecouvertePage" });
 
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { formaterAvecHeure, formaterInstant } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
+import { sessionRef } from "../composables/useSession.js";
 import EtatChargement from "../components/EtatChargement.vue";
 
 const route = useRoute();
@@ -367,11 +370,11 @@ async function charger() {
     if (triLocal.value && triLocal.value !== "date")
       params.set("tri", triLocal.value);
     if (route.query.page) params.set("page", route.query.page);
-    const rep = await fetch("/api/decouverte?" + params, {
+    const rep = await appelApi("/api/decouverte?" + params, {
       signal: controleur.signal,
     });
     if (!rep.ok) throw new Error();
-    donnees.value = await rep.json();
+    donnees.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger les concerts.", "erreur");
@@ -415,9 +418,12 @@ function changerPage(page) {
   router.push({ query: { ...route.query, page: String(page) } });
 }
 
+// La récupération d'un département coûte du quota Ticketmaster : réservée aux admins.
+const estAdmin = computed(() => sessionRef.value?.role === "admin");
+
 async function actualiser() {
   try {
-    const rep = await fetch("/api/decouverte/fetcher", {
+    const rep = await appelApi("/api/decouverte/fetcher", {
       method: "POST",
       signal: controleurComposant.signal,
     });
@@ -453,61 +459,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.decouverte-conteneur {
-  container-type: inline-size;
-  container-name: decouverte;
-}
-
-@container decouverte (max-width: 700px) {
-  .decouverte-conteneur table,
-  .decouverte-conteneur tbody {
-    display: block;
-  }
-
-  .decouverte-conteneur thead {
-    display: none;
-  }
-
-  .decouverte-conteneur tr {
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-card);
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-  }
-
-  .decouverte-conteneur td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.875rem;
-  }
-
-  .decouverte-conteneur td:last-child {
-    border-bottom: none;
-  }
-
-  .decouverte-conteneur td::before {
-    content: attr(data-label);
-    font-weight: 500;
-    color: var(--fg-muted);
-    font-size: 0.75rem;
-    flex-shrink: 0;
-  }
-
-  .decouverte-conteneur td[data-label=""]::before {
-    display: none;
-  }
-
-  .decouverte-conteneur td[data-label=""] {
-    justify-content: flex-end;
-  }
-}
-
 .decouverte-entete {
   display: flex;
   align-items: center;

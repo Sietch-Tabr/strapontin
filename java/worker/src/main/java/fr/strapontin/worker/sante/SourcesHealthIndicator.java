@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.worker.WorkerStatsService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,8 +62,9 @@ public class SourcesHealthIndicator implements HealthIndicator {
             """
             SELECT type_job, erreur FROM fetch_jobs
             WHERE type_job LIKE 'fetch:%' AND erreur IS NOT NULL
+              AND erreur <> :motifQuota
             """,
-            Map.of());
+            Map.of("motifQuota", WorkerStatsService.ResultatJob.MOTIF_QUOTA_INSUFFISANT));
     if (!jobsEnErreur.isEmpty()) {
       final Map<String, Object> details = new LinkedHashMap<>();
       for (final Map<String, Object> ligne : jobsEnErreur) {

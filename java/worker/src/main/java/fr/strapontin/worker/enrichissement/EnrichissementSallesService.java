@@ -5,6 +5,7 @@
 package fr.strapontin.worker.enrichissement;
 
 import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecAmbiguitesDecouverte;
@@ -17,6 +18,7 @@ import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,9 +40,8 @@ public class EnrichissementSallesService {
 
   private static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source
-  // (500ms/appel côté OverpassSalleSource et WikidataSalleSource) — laisse
-  // Overpass et Wikidata respirer entre deux lots plutôt que d'enchaîner
-  // immédiatement, sur des instances publiques déjà sous tension.
+  // (cadenceurs de Nominatim et de WikidataSalleSource) — laisse ces services
+  // publics respirer entre deux lots plutôt que d'enchaîner immédiatement.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
   // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de
   // réussite déclenche une alerte — évite un faux positif sur un tout petit lot
@@ -53,9 +54,14 @@ public class EnrichissementSallesService {
   // indéfiniment sous le seuil. Un taux de réussite est requis, pas seulement
   // une absence totale de résultat.
   private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
+  private static final String MOTIF_ALERTE_TAUX_BAS =
+      "enrichissement:salles — taux de réussite chronique trop bas";
+  private static final int JOURS_ENTRE_ALERTES_TAUX_BAS = 7;
   private static final String CLE_WIKIDATA_ID = "wikidataId";
   private static final String CLE_LATITUDE = "latitude";
   private static final String CLE_LONGITUDE = "longitude";
+  private static final String CLE_VILLE = "ville";
+  private static final String CLE_NOM_NORM = "nom_norm";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final List<SourceEnrichissementSalle> sources;
@@ -131,10 +137,20 @@ public class EnrichissementSallesService {
     if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) {
       return;
     }
+    // Les salles restant à enrichir sont souvent les cas difficiles : rappel
+    // hebdomadaire plutôt que chaque nuit.
+    if (alerteTauxBasRecente()) {
+      LOG.info(
+          "enrichissement:salles — taux bas {}/{}, déjà signalé cette semaine",
+          nbEnrichis,
+          nbCandidats);
+      return;
+    }
     logsAdminWorker.inserer(
         "warn",
         "reconciliation-nocturne",
-        "enrichissement:salles — taux de réussite chronique trop bas ("
+        MOTIF_ALERTE_TAUX_BAS
+            + " ("
             + nbEnrichis
             + "/"
             + nbCandidats
@@ -142,13 +158,26 @@ public class EnrichissementSallesService {
         Map.of("candidats", nbCandidats, "enrichis", nbEnrichis));
   }
 
+  private boolean alerteTauxBasRecente() {
+    final Boolean recente =
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS (SELECT 1 FROM logs_admin
+                           WHERE source = 'reconciliation-nocturne' AND niveau = 'warn'
+                             AND message LIKE :motif
+                             AND ts > now() - make_interval(days => :jours))
+            """,
+            Map.of("motif", MOTIF_ALERTE_TAUX_BAS + "%", "jours", JOURS_ENTRE_ALERTES_TAUX_BAS),
+            Boolean.class);
+    return Boolean.TRUE.equals(recente);
+  }
+
   /**
    * Remonte dans {@code logs_admin} le bilan agrégé d'appels/erreurs de chaque
    * source implémentant {@link SourceAvecBilanFetch} pour le cycle qui vient de
-   * se terminer — même mécanisme générique que
-   * {@code WorkerStatsService.remonterBilan} , absent jusqu'ici sur les sources
-   * d'enrichissement : la panne Overpass de 3+ mois n'avait ainsi jamais généré
-   * la moindre entrée {@code logs_admin}.
+   * se terminer — même mécanisme que {@code WorkerStatsService.remonterBilan}
+   * : une panne de plus de 3 mois d'une source publique n'avait laissé
+   * aucune trace dans {@code logs_admin}.
    */
   private void remonterBilans() {
     for (final SourceEnrichissementSalle source : sources) {
@@ -225,17 +254,23 @@ public class EnrichissementSallesService {
   // vide — même pattern que ResolveurSalleParConcert (module worker.persister),
   // sans quoi une salle sans ville ni dept renseignés n'a aucun signal de
   // localisation pour écarter un homonyme Wikidata d'une autre ville (#1188).
+  // Position géocodée exclue : celle d'un homonyme rejetait les bons candidats.
   private List<SalleAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
-        SELECT s.id, s.nom, s.nom_norm, s.ville, s.latitude, s.longitude,
+        SELECT s.id, s.nom, s.nom_norm, s.ville,
+               CASE WHEN s.origine_position = 'geocodage' THEN NULL ELSE s.latitude END
+                 AS latitude,
+               CASE WHEN s.origine_position = 'geocodage' THEN NULL ELSE s.longitude END
+                 AS longitude,
                COALESCE(s.dept, (SELECT c2.dept FROM concerts c2
                                  WHERE c2.salle_id = s.id AND c2.dept IS NOT NULL
                                  LIMIT 1)) AS dept_effectif
         FROM salles s
         LEFT JOIN concerts c ON c.salle_id = s.id AND c.date >= CURRENT_DATE
         WHERE s.wikidata_id IS NULL AND s.jour_batch = EXTRACT(ISODOW FROM CURRENT_DATE)
-        GROUP BY s.id, s.nom, s.nom_norm, s.ville, s.dept, s.latitude, s.longitude
+        GROUP BY s.id, s.nom, s.nom_norm, s.ville, s.dept, s.latitude, s.longitude,
+                 s.origine_position
         ORDER BY COUNT(c.id) DESC
         """,
         Map.of(),
@@ -243,8 +278,8 @@ public class EnrichissementSallesService {
             new SalleAEnrichir(
                 rs.getObject("id", UUID.class),
                 rs.getString("nom"),
-                rs.getString("nom_norm"),
-                rs.getString("ville"),
+                rs.getString(CLE_NOM_NORM),
+                rs.getString(CLE_VILLE),
                 rs.getString("dept_effectif"),
                 null,
                 (Double) rs.getObject(CLE_LATITUDE),
@@ -299,7 +334,7 @@ public class EnrichissementSallesService {
     final Map<String, Object> params = new HashMap<>();
     params.put(CLE_WIKIDATA_ID, enrichissement.wikidataId());
     params.put("nomAffiche", enrichissement.nomAffiche());
-    params.put("ville", enrichissement.ville());
+    params.put(CLE_VILLE, enrichissement.ville());
     params.put(CLE_LATITUDE, enrichissement.latitude());
     params.put(CLE_LONGITUDE, enrichissement.longitude());
     params.put("id", salleId.toString());
@@ -310,8 +345,10 @@ public class EnrichissementSallesService {
             wikidata_id = COALESCE(wikidata_id, :wikidataId),
             nom_affiche = COALESCE(nom_affiche, :nomAffiche),
             ville       = COALESCE(ville, :ville),
-            latitude    = COALESCE(latitude, :latitude),
-            longitude   = COALESCE(longitude, :longitude)
+            latitude    = COALESCE(CAST(:latitude AS double precision), latitude),
+            longitude   = COALESCE(CAST(:longitude AS double precision), longitude),
+            origine_position = CASE WHEN CAST(:latitude AS double precision) IS NOT NULL
+                                    THEN 'wikidata' ELSE origine_position END
           WHERE id = CAST(:id AS uuid)
           """,
           params);
@@ -322,9 +359,10 @@ public class EnrichissementSallesService {
   }
 
   /**
-   * Collision {@code wikidata_id} : signal plus fort qu'une coïncidence de
-   * concert — fusion automatique seulement si coordonnées connues et
-   * proches, sinon signalement seul (CLAUDE.md, signalements_matching).
+   * Collision {@code wikidata_id} : fusion automatique seulement si les noms
+   * désignent fortement le même lieu et si la salle porteuse est positionnée
+   * par ses lieux publiés, proche de la nôtre ; sinon signalement seul
+   * (CLAUDE.md, signalements_matching).
    */
   private boolean gererCollisionWikidataId(
       final UUID salleId, final String nom, final EnrichissementSalle enrichissement) {
@@ -368,26 +406,36 @@ public class EnrichissementSallesService {
   private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT id, latitude, longitude FROM salles WHERE wikidata_id = :wikidataId",
+            "SELECT id, nom_norm, ville, latitude, longitude, origine_position FROM salles"
+                + " WHERE wikidata_id = :wikidataId",
             Map.of(CLE_WIKIDATA_ID, wikidataId));
     return lignes.isEmpty() ? null : lignes.get(0);
   }
 
+  // Une porteuse positionnée par Wikidata est toujours proche de la salle qui
+  // reçoit le même élément : le Théâtre Montparnasse, porteur à tort de
+  // l'élément du Théâtre de Poche, a absorbé ce dernier.
   private boolean tenterFusionParCoordonnees(
       final UUID salleId, final Map<String, Object> porteuse) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
+            "SELECT nom_norm, ville, latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
             Map.of("id", salleId.toString()));
-    if (lignes.isEmpty()) {
+    if (lignes.isEmpty() || !"sources".equals(porteuse.get("origine_position"))) {
       return false;
     }
-    final Double latSalle = (Double) lignes.get(0).get(CLE_LATITUDE);
-    final Double lonSalle = (Double) lignes.get(0).get(CLE_LONGITUDE);
-    final Double latPorteuse = (Double) porteuse.get(CLE_LATITUDE);
-    final Double lonPorteuse = (Double) porteuse.get(CLE_LONGITUDE);
-    if (!FusionSallesClePorteeService.coordonneesConnuesEtProches(
-        latSalle, lonSalle, latPorteuse, lonPorteuse)) {
+    final Map<String, Object> salle = lignes.get(0);
+    final String contexteVilles =
+        Objects.toString(salle.get(CLE_VILLE), "")
+            + " "
+            + Objects.toString(porteuse.get(CLE_VILLE), "");
+    if (!NomsDeLieu.designentFortementLeMemeLieu(
+            (String) salle.get(CLE_NOM_NORM), (String) porteuse.get(CLE_NOM_NORM), contexteVilles)
+        || !FusionSallesClePorteeService.coordonneesConnuesEtProches(
+            (Double) salle.get(CLE_LATITUDE),
+            (Double) salle.get(CLE_LONGITUDE),
+            (Double) porteuse.get(CLE_LATITUDE),
+            (Double) porteuse.get(CLE_LONGITUDE))) {
       return false;
     }
     fusionSallesClePortee.fusionnerUnePaire((UUID) porteuse.get("id"), salleId);

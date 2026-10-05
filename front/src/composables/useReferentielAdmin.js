@@ -1,3 +1,4 @@
+import { appelApi, lireJson } from "../utils/api.js";
 import { ref, shallowRef, reactive, onMounted, onUnmounted } from "vue";
 import { useToasts } from "./useToasts.js";
 import { useDialog } from "./useDialog.js";
@@ -12,6 +13,7 @@ import { useDialog } from "./useDialog.js";
 /// @param libellePluriel  libellé pluriel pour les messages génériques (`artistes`/`salles`)
 /// @param filtresExtra    callback retournant les filtres additionnels propres au composant
 ///                        appelant (ex. ville/dept pour les salles)
+/// @param rechercheInitiale nom recherché à l'ouverture (lien depuis « À traiter »)
 export function useReferentielAdmin({
   endpoint,
   cleListe,
@@ -19,6 +21,7 @@ export function useReferentielAdmin({
   messageFusionne,
   libellePluriel,
   filtresExtra = () => ({}),
+  rechercheInitiale = "",
 }) {
   const { afficherToast } = useToasts();
 
@@ -27,7 +30,7 @@ export function useReferentielAdmin({
   const page = ref(0);
   const totalPages = ref(1);
   const total = ref(0);
-  const filtreNom = ref("");
+  const filtreNom = ref(rechercheInitiale);
   const filtreStatut = ref("");
   const filtreWikidataManquant = ref(false);
   const selection = reactive([]);
@@ -74,11 +77,11 @@ export function useReferentielAdmin({
         if (valeur) params.set(cle, valeur);
       }
 
-      const rep = await fetch(`/api/admin/${endpoint}?${params}`, {
+      const rep = await appelApi(`/api/admin/${endpoint}?${params}`, {
         signal: controleurCourant.signal,
       });
       if (!rep.ok) return;
-      const data = await rep.json();
+      const data = await lireJson(rep);
       items.value = data[cleListe] ?? [];
       page.value = data.page ?? 0;
       totalPages.value = data.totalPages ?? 1;
@@ -144,7 +147,7 @@ export function useReferentielAdmin({
     if (enCoursEdition.value) return;
     enCoursEdition.value = true;
     try {
-      const rep = await fetch(`/api/admin/${endpoint}/${edition.id}`, {
+      const rep = await appelApi(`/api/admin/${endpoint}/${edition.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nomAffiche: edition.nomAffiche || null }),
@@ -166,7 +169,7 @@ export function useReferentielAdmin({
 
   async function reinitialiserEnrichissement(item) {
     try {
-      const rep = await fetch(
+      const rep = await appelApi(
         `/api/admin/${endpoint}/${item.id}/reinitialiser-enrichissement`,
         {
           method: "POST",
@@ -201,7 +204,7 @@ export function useReferentielAdmin({
     const source = cible === itemA.value.id ? itemB.value.id : itemA.value.id;
     enCoursFusion.value = true;
     try {
-      const rep = await fetch(
+      const rep = await appelApi(
         `/api/admin/${endpoint}/${source}/fusionner/${cible}`,
         {
           method: "POST",
@@ -214,7 +217,7 @@ export function useReferentielAdmin({
         selection.splice(0, selection.length);
         await charger();
       } else {
-        const data = await rep.json().catch(() => ({}));
+        const data = await lireJson(rep);
         afficherToast(data.erreur || "Erreur lors de la fusion.", "erreur");
       }
     } catch (e) {

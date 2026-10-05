@@ -10,7 +10,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.OverpassSalleSource;
+import fr.strapontin.sources.EnrichissementSalle;
+import fr.strapontin.sources.NominatimSalleSource;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.sources.WikidataSalleSource;
@@ -37,7 +38,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  */
 class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
-  @MockitoBean private OverpassSalleSource overpassSalleSource;
+  @MockitoBean private NominatimSalleSource nominatimSalleSource;
   @MockitoBean private WikidataSalleSource wikidataSalleSource;
 
   @MockitoBean private TicketmasterSource ticketmasterSource;
@@ -48,11 +49,11 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
   @BeforeEach
   void nettoyerBaseEtStubberSources() {
     jdbc.update("DELETE FROM salles", Map.of());
-    when(overpassSalleSource.enrichirLot(any())).thenReturn(Map.of());
+    when(nominatimSalleSource.enrichirLot(any())).thenReturn(Map.of());
     when(wikidataSalleSource.enrichirLot(any())).thenReturn(Map.of());
-    when(overpassSalleSource.nom()).thenReturn("overpass");
+    when(nominatimSalleSource.nom()).thenReturn("nominatim");
     when(wikidataSalleSource.nom()).thenReturn("wikidata");
-    when(overpassSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
+    when(nominatimSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
     when(wikidataSalleSource.preleverBilan()).thenReturn(new fr.strapontin.core.BilanFetch(0, 0));
   }
 
@@ -75,7 +76,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     service.enrichir();
 
     final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
-    verify(overpassSalleSource).enrichirLot(captor.capture());
+    verify(nominatimSalleSource).enrichirLot(captor.capture());
     final List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
     assertTrue(idsTraites.contains(salleAujourdhui));
     assertEquals(1, idsTraites.size());
@@ -89,7 +90,7 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
 
     service.enrichir();
 
-    verify(overpassSalleSource, org.mockito.Mockito.never()).enrichirLot(any());
+    verify(nominatimSalleSource, org.mockito.Mockito.never()).enrichirLot(any());
   }
 
   // #1188 : salles.dept n'est jamais mis à jour après création — une salle candidate sans dept
@@ -115,8 +116,54 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     service.enrichir();
 
     final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
-    verify(overpassSalleSource).enrichirLot(captor.capture());
+    verify(nominatimSalleSource).enrichirLot(captor.capture());
     final SalleAEnrichir candidat = captor.getValue().getFirst();
     assertEquals("87", candidat.dept());
+  }
+
+  // Source sans coordonnées (Nominatim ne transmet que les étiquettes OSM) : le paramètre
+  // nul de latitude, non typé, faisait échouer toute la réconciliation nocturne.
+  @Test
+  void enrichir_enrichissementSansCoordonnees_estPersiste() {
+    final UUID salleId = insererSalle("La Cigale", "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    when(nominatimSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                salleId,
+                new EnrichissementSalle("Q3207410", null, null, "https://lacigale.fr/", null)));
+
+    service.enrichir();
+
+    assertEquals(
+        "Q3207410",
+        jdbc.queryForObject(
+            "SELECT wikidata_id FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()),
+            String.class));
+  }
+
+  private long alertesTauxBas() {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM logs_admin WHERE niveau = 'warn'"
+            + " AND message LIKE 'enrichissement:salles — taux de réussite%'",
+        Map.of(), Long.class);
+  }
+
+  // Les salles restant à enrichir sont les cas difficiles : l'alerte tombait chaque nuit.
+  @Test
+  void enrichir_tauxBasDejaSignaleCetteSemaine_neRepetePasLAlerte() {
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    for (int i = 0; i < 25; i++) {
+      insererSalle("Salle Difficile " + i, "EXTRACT(ISODOW FROM CURRENT_DATE)");
+    }
+    jdbc.update(
+        "INSERT INTO logs_admin (ts, niveau, source, message) VALUES (now() - interval '2 days',"
+            + " 'warn', 'reconciliation-nocturne',"
+            + " 'enrichissement:salles — taux de réussite chronique trop bas (0/25)')",
+        Map.of());
+
+    service.enrichir();
+
+    assertEquals(1L, alertesTauxBas());
   }
 }

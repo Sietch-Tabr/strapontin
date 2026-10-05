@@ -201,8 +201,15 @@
     </div>
   </section>
 
-  <dialog id="dialog-supprimer-user" ref="dialogSupprimerUserRef">
-    <p class="dialog-titre">Supprimer ce compte ?</p>
+  <dialog
+    id="dialog-supprimer-user"
+    ref="dialogSupprimerUserRef"
+    aria-labelledby="titre-dialog-supprimer-user"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-supprimer-user" class="dialog-titre">
+      Supprimer ce compte ?
+    </h2>
     <p id="dialog-supprimer-user-nom" class="dialog-corps">
       {{ userASupprimer?.email }}
     </p>
@@ -226,8 +233,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-reinit-mdp" ref="dialogReinitMdpRef">
-    <p class="dialog-titre">Réinitialiser le mot de passe ?</p>
+  <dialog
+    id="dialog-reinit-mdp"
+    ref="dialogReinitMdpRef"
+    aria-labelledby="titre-dialog-reinit-mdp"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-reinit-mdp" class="dialog-titre">
+      Réinitialiser le mot de passe ?
+    </h2>
     <p class="dialog-corps">
       Un email de réinitialisation sera envoyé à
       <strong>{{ userAReinitMdp?.email }}</strong
@@ -253,8 +267,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-reinit-totp" ref="dialogReinitTotpRef">
-    <p class="dialog-titre">Désactiver la 2FA ?</p>
+  <dialog
+    id="dialog-reinit-totp"
+    ref="dialogReinitTotpRef"
+    aria-labelledby="titre-dialog-reinit-totp"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-reinit-totp" class="dialog-titre">
+      Désactiver la 2FA ?
+    </h2>
     <p class="dialog-corps">
       La double authentification de
       <strong>{{ userAReinitTotp?.email }}</strong> sera désactivée.
@@ -279,8 +300,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-revoquer-sessions" ref="dialogRevoquerSessionsRef">
-    <p class="dialog-titre">Révoquer toutes les sessions ?</p>
+  <dialog
+    id="dialog-revoquer-sessions"
+    ref="dialogRevoquerSessionsRef"
+    aria-labelledby="titre-dialog-revoquer-sessions"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-revoquer-sessions" class="dialog-titre">
+      Révoquer toutes les sessions ?
+    </h2>
     <p class="dialog-corps">
       Toutes les sessions actives de
       <strong>{{ userARevoquerSessions?.email }}</strong> seront déconnectées.
@@ -305,8 +333,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-verrouiller-compte" ref="dialogVerrouillerCompteRef">
-    <p class="dialog-titre">Verrouiller ce compte ?</p>
+  <dialog
+    id="dialog-verrouiller-compte"
+    ref="dialogVerrouillerCompteRef"
+    aria-labelledby="titre-dialog-verrouiller-compte"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-verrouiller-compte" class="dialog-titre">
+      Verrouiller ce compte ?
+    </h2>
     <p class="dialog-corps">
       <strong>{{ userAVerrouiller?.email }}</strong> ne pourra plus se connecter
       et toutes ses sessions actives seront déconnectées.
@@ -331,8 +366,15 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-confirmer-role" ref="dialogConfirmerRoleRef">
-    <p class="dialog-titre">Confirmer le changement de rôle ?</p>
+  <dialog
+    id="dialog-confirmer-role"
+    ref="dialogConfirmerRoleRef"
+    aria-labelledby="titre-dialog-confirmer-role"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-confirmer-role" class="dialog-titre">
+      Confirmer le changement de rôle ?
+    </h2>
     <p id="dialog-confirmer-role-texte" class="dialog-corps">
       {{ texteConfirmationRole }}
     </p>
@@ -356,9 +398,16 @@
     </div>
   </dialog>
 
-  <dialog id="dialog-invitation" ref="dialogInvitationRef">
+  <dialog
+    id="dialog-invitation"
+    ref="dialogInvitationRef"
+    aria-labelledby="titre-dialog-invitation"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-invitation" class="dialog-titre">
+      {{ lienInvitation ? "Compte créé" : "Invitation envoyée" }}
+    </h2>
     <template v-if="lienInvitation">
-      <p class="dialog-titre">Compte créé</p>
       <p class="dialog-corps">
         Aucun service email n'est configuré : transmettez ce lien à
         <strong>{{ inviteEmail }}</strong> pour qu'il finalise son inscription.
@@ -382,7 +431,6 @@
       </div>
     </template>
     <template v-else>
-      <p class="dialog-titre">Invitation envoyée</p>
       <p class="dialog-corps">
         Un email d'invitation a été envoyé à <strong>{{ inviteEmail }}</strong
         >. Le lien est valable 7 jours.
@@ -402,6 +450,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminUtilisateurs" });
 
 import { ref, shallowRef, reactive, onMounted, computed } from "vue";
@@ -409,7 +458,6 @@ import EtatChargement from "../EtatChargement.vue";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant } from "../../composables/useDates.js";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const { afficherToast } = useToasts();
 const {
@@ -486,11 +534,11 @@ function joursAvantRevocation(revocationAdminLe) {
 async function charger() {
   try {
     const [repUsers, repProfil] = await Promise.all([
-      fetch(`/api/admin/utilisateurs?page=${page.value}`),
-      fetch("/api/user/profile"),
+      appelApi(`/api/admin/utilisateurs?page=${page.value}`),
+      appelApi("/api/user/profile"),
     ]);
     if (repUsers.ok) {
-      const data = await repUsers.json();
+      const data = await lireJson(repUsers);
       utilisateurs.value = data.utilisateurs ?? [];
       page.value = data.page ?? 0;
       totalPages.value = data.totalPages ?? 1;
@@ -498,7 +546,7 @@ async function charger() {
       initialiserModifData();
     }
     if (repProfil.ok) {
-      const profil = await repProfil.json();
+      const profil = await lireJson(repProfil);
       utilisateurCourantId.value = profil.id ?? null;
     }
   } catch (_) {
@@ -529,12 +577,12 @@ async function creerUtilisateur() {
   const email = nouvelEmail.value.trim();
   if (!email) return;
   try {
-    const rep = await fetch("/api/admin/utilisateurs", {
+    const rep = await appelApi("/api/admin/utilisateurs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok || rep.status === 201) {
       nouvelEmail.value = "";
       inviteEmail.value = corps.email ?? "";
@@ -609,12 +657,12 @@ async function envoyerPatch(u, d, messageSucces = "Utilisateur modifié.") {
   }
 
   try {
-    const rep = await fetch("/api/admin/utilisateurs/" + u.id, {
+    const rep = await appelApi("/api/admin/utilisateurs/" + u.id, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(corps),
     });
-    const repCorps = await rep.json();
+    const repCorps = await lireJson(rep);
     if (rep.ok) {
       fermerModif(u.id);
       await rechargerUtilisateurs();
@@ -653,23 +701,23 @@ async function confirmerChangementRole() {
     if (d.nom !== (u.displayUsername ?? "")) corpsNomEmail.nom = d.nom;
     if (d.email !== u.email) corpsNomEmail.email = d.email;
     if (Object.keys(corpsNomEmail).length > 0) {
-      const repNomEmail = await fetch("/api/admin/utilisateurs/" + u.id, {
+      const repNomEmail = await appelApi("/api/admin/utilisateurs/" + u.id, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(corpsNomEmail),
       });
       if (!repNomEmail.ok) {
-        const corpsErreur = await corpsJsonOuVide(repNomEmail);
+        const corpsErreur = await lireJson(repNomEmail);
         modifErreurs[u.id] = corpsErreur.erreur || "Erreur.";
         return;
       }
     }
 
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + u.id + "/revoquer-admin",
       { method: "POST" },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       fermerModif(u.id);
       await rechargerUtilisateurs();
@@ -687,11 +735,11 @@ async function confirmerChangementRole() {
 
 async function annulerRevocation(u) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + u.id + "/revoquer-admin",
       { method: "DELETE" },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       await rechargerUtilisateurs();
       afficherToast("Révocation annulée.", "succes");
@@ -705,9 +753,11 @@ async function annulerRevocation(u) {
 
 async function rechargerUtilisateurs() {
   try {
-    const repUsers = await fetch(`/api/admin/utilisateurs?page=${page.value}`);
+    const repUsers = await appelApi(
+      `/api/admin/utilisateurs?page=${page.value}`,
+    );
     if (repUsers.ok) {
-      const data = await repUsers.json();
+      const data = await lireJson(repUsers);
       utilisateurs.value = data.utilisateurs ?? [];
       page.value = data.page ?? 0;
       totalPages.value = data.totalPages ?? 1;
@@ -734,11 +784,11 @@ async function confirmerReinitMdp() {
   const userId = userAReinitMdp.value.id;
   fermerDialogReinitMdp();
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + userId + "/reset-mdp",
       { method: "POST" },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) afficherToast("Email de réinitialisation envoyé.", "succes");
     else afficherToast(corps.erreur || "Erreur.", "erreur");
   } catch {
@@ -761,11 +811,11 @@ async function confirmerReinitTotp() {
   const userId = userAReinitTotp.value.id;
   fermerDialogReinitTotp();
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + userId + "/reset-totp",
       { method: "POST" },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok)
       afficherToast(
         "2FA réinitialisée. L'utilisateur pourra se reconnecter sans code.",
@@ -792,11 +842,11 @@ async function confirmerRevoquerSessions() {
   const userId = userARevoquerSessions.value.id;
   fermerDialogRevoquerSessions();
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + userId + "/revoquer-sessions",
       { method: "POST" },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) afficherToast("Sessions révoquées.", "succes");
     else afficherToast(corps.erreur || "Erreur.", "erreur");
   } catch {
@@ -819,13 +869,13 @@ async function confirmerVerrouillerCompte() {
   const userId = userAVerrouiller.value.id;
   fermerDialogVerrouillerCompte();
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + userId + "/verrouiller",
       {
         method: "POST",
       },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       await rechargerUtilisateurs();
       afficherToast("Compte verrouillé.", "succes");
@@ -839,13 +889,13 @@ async function confirmerVerrouillerCompte() {
 
 async function deverrouillerCompte(u) {
   try {
-    const rep = await fetch(
+    const rep = await appelApi(
       "/api/admin/utilisateurs/" + u.id + "/verrouiller",
       {
         method: "DELETE",
       },
     );
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       await rechargerUtilisateurs();
       afficherToast("Compte déverrouillé.", "succes");
@@ -872,10 +922,10 @@ async function confirmerSuppression() {
   const userId = userASupprimer.value.id;
   fermerDialogSupprimer();
   try {
-    const rep = await fetch("/api/admin/utilisateurs/" + userId, {
+    const rep = await appelApi("/api/admin/utilisateurs/" + userId, {
       method: "DELETE",
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       // recharge plutôt qu'un simple filtre local : total/totalPages doivent rester
       // cohérents avec le serveur (pagination), pas seulement la page affichée.

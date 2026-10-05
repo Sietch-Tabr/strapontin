@@ -1,14 +1,37 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 import { creerContexteAdmin, creerSalleReferentiel } from "./helpers/admin.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
-test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () => {
+// Salles et artistes partagent l'onglet Référentiel, une bascule choisit l'entité affichée.
+async function ouvrirReferentiel(
+  page: Page,
+  entite: "Salles" | "Artistes",
+  mobile = false,
+) {
+  if (mobile) {
+    await page.selectOption("select.param-onglets-mobile", "#referentiel");
+  } else {
+    await page.locator('a[href="#referentiel"]').click();
+  }
+  await page
+    .getByRole("group", { name: "Référentiel affiché" })
+    .getByRole("button", { name: entite })
+    .click();
+  // Lignes de données ou ligne « aucun résultat » : le tableau est chargé, un comptage
+  // fait avant serait faux.
+  const section = entite === "Salles" ? "salles" : "artistes";
+  await expect(
+    page.locator(`section#${section} table tbody tr`).first(),
+  ).toBeVisible({ timeout: 15000 });
+}
+
+test.describe("Scénario: admin — onglet Référentiel (salles et artistes)", () => {
   test("admin_desktop_section_salles_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#salles"]').click();
+    await ouvrirReferentiel(page, "Salles");
     await expect(page.locator("section#salles")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
@@ -16,7 +39,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   test("admin_mobile_select_navigation_salles", async ({ page, isMobile }) => {
     if (!isMobile) test.skip();
     await page.goto("/admin");
-    await page.selectOption("select.param-onglets-mobile", "#salles");
+    await ouvrirReferentiel(page, "Salles", true);
     await expect(page.locator("section#salles")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
@@ -24,7 +47,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   test("admin_desktop_section_artistes_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#artistes"]').click();
+    await ouvrirReferentiel(page, "Artistes");
     await expect(page.locator("section#artistes")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
@@ -35,7 +58,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (!isMobile) test.skip();
     await page.goto("/admin");
-    await page.selectOption("select.param-onglets-mobile", "#artistes");
+    await ouvrirReferentiel(page, "Artistes", true);
     await expect(page.locator("section#artistes")).toBeVisible();
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
@@ -43,7 +66,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   test("admin_salles_table_ou_etatVide_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#salles"]').click();
+    await ouvrirReferentiel(page, "Salles");
     await expect(page.locator("section#salles")).toBeVisible();
     await expect(
       page.locator("section#salles table, section#salles p.etat-vide-texte"),
@@ -56,7 +79,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#artistes"]').click();
+    await ouvrirReferentiel(page, "Artistes");
     await expect(page.locator("section#artistes")).toBeVisible();
     await expect(
       page.locator(
@@ -71,7 +94,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#salles"]').click();
+    await ouvrirReferentiel(page, "Salles");
     const premierLien = page.locator("section#salles table tbody a").first();
     if (await premierLien.count()) {
       await expect(premierLien).toHaveAttribute(
@@ -89,7 +112,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#salles"]').click();
+    await ouvrirReferentiel(page, "Salles");
     const checkbox = page.locator(
       "section#salles .source-filtre-checkbox input",
     );
@@ -104,7 +127,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#artistes"]').click();
+    await ouvrirReferentiel(page, "Artistes");
     const checkbox = page.locator(
       "section#artistes .source-filtre-checkbox input",
     );
@@ -119,7 +142,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#salles"]').click();
+    await ouvrirReferentiel(page, "Salles");
     const premierLien = page.locator("section#salles table tbody a").first();
     if (await premierLien.count()) {
       const ligne = premierLien.locator("xpath=ancestor::tr");
@@ -138,7 +161,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
   }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
-    await page.locator('a[href="#salles"]').click();
+    await ouvrirReferentiel(page, "Salles");
     const premiereCheckbox = page
       .locator("section#salles table tbody tr")
       .first()
@@ -176,7 +199,7 @@ test.describe("Scénario: admin — onglets référentiel Salles/Artistes", () =
       await creerSalleReferentiel(ctx, nomB);
 
       await page.goto("/admin");
-      await page.locator('a[href="#salles"]').click();
+      await ouvrirReferentiel(page, "Salles");
       // Recherche par le suffixe partagé (timestamp) — présent dans les deux noms de test.
       // La saisie déclenche un fetch asynchrone (rechargerPage0) vers /api/admin/salles —
       // attendre cette réponse avant de vérifier les lignes filtrées, plutôt qu'un simple
@@ -511,5 +534,22 @@ test.describe("Scénario: admin — API référentiel salles", () => {
       }
       await ctx.dispose();
     }
+  });
+});
+
+test.describe("Scénario: admin — anciennes ancres du référentiel", () => {
+  test("admin_ancreHistoriqueArtistes_ouvreLeReferentielArtistes", async ({
+    page,
+  }) => {
+    await page.goto("/admin#artistes");
+    await expect(page).toHaveURL(/entite=artiste/);
+    await expect(page.locator("section#artistes")).toBeVisible();
+  });
+
+  test("admin_lienRecherche_preRemplitLaRecherche", async ({ page }) => {
+    await page.goto("/admin?entite=salle&recherche=Zenith#referentiel");
+    await expect(
+      page.locator('section#salles input[aria-label="Rechercher une salle"]'),
+    ).toHaveValue("Zenith");
   });
 });

@@ -14,10 +14,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.LieuEventim;
+import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +50,7 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @Autowired private WorkerFetchService fetchService;
   @Autowired private NamedParameterJdbcTemplate jdbc;
+  @Autowired private GestionQuotaTM gestionQuotaTM;
 
   @BeforeEach
   void nettoyerBase() {
@@ -171,6 +175,23 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, absences);
   }
 
+  // Concert renvoyé par la recherche par département, dans la salle déjà connue.
+  private static ConcertBrut concertRegion(
+      final String salle, final String classification, final String genre) {
+    return ConcertBrut.nouveau()
+        .artiste("Autre Artiste")
+        .date(LocalDate.now().plusMonths(2).toString())
+        .heure("20:00")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .source("ticketmaster")
+        .url("https://www.ticketmaster.fr/fr/manifestation/autre/idmanif/1")
+        .classification(classification)
+        .genre(genre)
+        .construire();
+  }
+
   private void insererConcertAncienSurSalle(final UUID salleId) {
     final UUID evenementId =
         jdbc.queryForObject(
@@ -210,6 +231,49 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, absences);
   }
 
+  // Le Roi Lion (dev, 03/10/2026) : quota Ticketmaster refusé, la salle semblait vide et chaque
+  // séance gagnait une absence jusqu'à être fusionnée à tort dans une autre.
+  @Test
+  void executerFetchSallesAll_reponseIncomplete_neCompteAucuneAbsence() {
+    insererUser("u1");
+    final UUID salleSuivie = insererSalleAvecSourceTm("salle-suivie", "venue-suivie");
+    insererUserSalle("u1", salleSuivie);
+    insererConcertAncienSurSalle(salleSuivie);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenThrow(new ReponseIncompleteException("quota", List.of(), null));
+    when(ticketmasterSource.joursCouvertsParSalle()).thenReturn(180);
+
+    fetchService.executerFetchSallesAll();
+
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salleSuivie.toString()),
+            Integer.class));
+  }
+
+  @Test
+  void executerFetchArtistesBatch_reponseIncomplete_neCompteAucuneAbsence() {
+    insererUser("u1");
+    final UUID artisteId = insererArtisteSuivi("u1", "Indila");
+    insererConcertAncien(artisteId, "Indila");
+    when(ticketmasterSource.rechercherAttractionId(anyString())).thenReturn(null);
+    when(ticketmasterSource.fetchArtiste(anyString()))
+        .thenThrow(new ReponseIncompleteException("quota", List.of(), null));
+    when(eventimSource.fetchArtiste(anyString(), any(), any())).thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchArtistesBatch();
+
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE artiste_id = CAST(:id AS uuid)",
+            Map.of("id", artisteId.toString()),
+            Integer.class));
+  }
+
   private void insererUserConfigDept(final String userId, final String dept) {
     jdbc.update(
         "INSERT INTO user_config (user_id, departements) VALUES (:userId, ARRAY[:dept]::text[])",
@@ -232,7 +296,10 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
         "UPDATE evenements SET dept = '75' WHERE salle_id = CAST(:id AS uuid)",
         Map.of("id", salleNonSuivie.toString()));
     when(ticketmasterSource.fetchRegionCouverte(any(), any()))
-        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusMonths(6)));
+        .thenReturn(
+            new ResultatRegion(
+                List.of(concertRegion("salle-decouverte", null, null)),
+                LocalDate.now().plusMonths(6)));
     when(eventimSource.fetchRegionCouverte(any(), any()))
         .thenReturn(new ResultatRegion(List.of(), null));
 
@@ -240,10 +307,45 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
     final Integer absences =
         jdbc.queryForObject(
-            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)",
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)"
+                + " AND artiste_norm = 'artiste salle'",
             Map.of("id", salleNonSuivie.toString()),
             Integer.class);
     assertEquals(1, absences);
+  }
+
+  // Spectacle d'humour entré par une salle autrefois suivie : la recherche par département,
+  // limitée à la musique, ne le renverra jamais et ne doit pas le croire disparu.
+  @Test
+  void executerFetchRegion_classementJamaisRenvoyeParLaRecherche_neCompteAucuneAbsence() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salleNonSuivie = insererSalleAvecSourceTm("salle-humour", "venue-humour");
+    jdbc.update(
+        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    insererConcertAncienSurSalle(salleNonSuivie);
+    jdbc.update(
+        "UPDATE evenements SET dept = '75', classification = 'theatre', genre = 'Humour'"
+            + " WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("id", salleNonSuivie.toString()));
+    when(ticketmasterSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(
+            new ResultatRegion(
+                List.of(concertRegion("salle-humour", "music", "Rock")),
+                LocalDate.now().plusMonths(6)));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
+
+    fetchService.executerFetchRegion();
+
+    final Integer absences =
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM concerts WHERE salle_id = CAST(:id AS uuid)"
+                + " AND artiste_norm = 'artiste salle'",
+            Map.of("id", salleNonSuivie.toString()),
+            Integer.class);
+    assertEquals(0, absences);
   }
 
   // Un concert au-delà de la dernière date couverte par la requête (plafond de pagination,
@@ -355,7 +457,8 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     final UUID salle = insererSalleAvecSourceTm("salle-chute", "venue-chute");
     insererUserSalle("u1", salle);
     jdbc.update(
-        "UPDATE salle_sources SET dernier_nb_resultats = 11 WHERE identifiant_externe = 'venue-chute'",
+        "UPDATE salle_sources SET dernier_nb_resultats = 11 WHERE identifiant_externe ="
+            + " 'venue-chute'",
         Map.of());
     when(ticketmasterSource.nom()).thenReturn("ticketmaster");
     when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
@@ -372,9 +475,37 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1, signalements);
     final Integer dernier =
         jdbc.queryForObject(
-            "SELECT dernier_nb_resultats FROM salle_sources WHERE identifiant_externe = 'venue-chute'",
+            "SELECT dernier_nb_resultats FROM salle_sources WHERE identifiant_externe ="
+                + " 'venue-chute'",
             Map.of(),
             Integer.class);
     assertEquals(0, dernier);
+  }
+
+  // Quota Ticketmaster sous le seuil des cycles : Ticketmaster est sauté, Eventim (sans quota)
+  // continue ; jusqu'ici tout le job s'arrêtait, dates Eventim comprises.
+  @Test
+  void executerFetchRegion_quotaTicketmasterBas_interrogeQuandMemeEventim() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    gestionQuotaTM.ecrireQuota(
+        new QuotaTM(
+            100, 5000, System.currentTimeMillis() + 3_600_000, java.time.Instant.now().toString()));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), null));
+    try {
+      fetchService.executerFetchRegion();
+
+      verify(eventimSource).fetchRegionCouverte(any(), any());
+      verify(ticketmasterSource, never()).fetchRegionCouverte(any(), any());
+      assertEquals(
+          "quota insuffisant",
+          jdbc.queryForObject(
+              "SELECT erreur FROM fetch_jobs WHERE type_job = 'fetch:region'",
+              Map.of(),
+              String.class));
+    } finally {
+      jdbc.update("DELETE FROM app_config WHERE cle = 'TM_QUOTA_JSON'", Map.of());
+    }
   }
 }

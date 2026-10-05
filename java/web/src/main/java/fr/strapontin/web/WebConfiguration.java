@@ -4,12 +4,19 @@
  */
 package fr.strapontin.web;
 
+import fr.strapontin.core.JetonInterneWorker;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
+import java.net.InetAddress;
+import java.net.URI;
 import java.net.http.HttpClient;
+import java.time.Clock;
 import java.time.Duration;
+import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -24,27 +31,49 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfiguration implements WebMvcConfigurer {
 
+  private static final int PORT_WORKER = 8081;
+  private static final Set<String> HOTES_LOCAUX =
+      Set.of("localhost", InetAddress.getLoopbackAddress().getHostAddress());
+
   private final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor;
+  private final ActiviteUtilisateurInterceptor activiteUtilisateurInterceptor;
 
   /**
    * @param appareilEnregistrementInterceptor intercepteur d'enregistrement
    *     d'appareil
+   * @param activiteUtilisateurInterceptor suivi de la dernière activité
+   *     (référence de la purge d'inactivité)
    */
   public WebConfiguration(
-      final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor) {
+      final AppareilEnregistrementInterceptor appareilEnregistrementInterceptor,
+      final ActiviteUtilisateurInterceptor activiteUtilisateurInterceptor) {
     this.appareilEnregistrementInterceptor = appareilEnregistrementInterceptor;
+    this.activiteUtilisateurInterceptor = activiteUtilisateurInterceptor;
   }
 
   @Override
   public void addInterceptors(final InterceptorRegistry registry) {
     registry.addInterceptor(appareilEnregistrementInterceptor).addPathPatterns("/api/**");
+    registry.addInterceptor(activiteUtilisateurInterceptor).addPathPatterns("/api/**");
   }
 
   /**
-   * RestClient partagé pour les appels HTTP vers des API externes (ex.
-   * Ticketmaster).
+   * Horloge système, injectable pour figer le temps en test.
    *
-   * <p>Timeout connexion : 5 s — timeout lecture : 10 s.
+   * @return horloge du fuseau par défaut de la JVM
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  Clock horloge() {
+    return Clock.systemDefaultZone();
+  }
+
+  /**
+   * RestClient des API externes (connexion 5 s, lecture 10 s) ; seules les
+   * requêtes vers l'API interne du worker portent son jeton.
+   * @param secret valeur de {@code APP_CONFIG_SECRET}
+   * @return client partagé
    */
   // HttpClient jamais fermé : bean Spring singleton, pool de connexions
   // réutilisé pour toute la durée de vie de l'application.
@@ -52,12 +81,27 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  RestClient restClient() {
+  RestClient restClient(@Value("${app.config.secret}") final String secret) {
     final HttpClient httpClient =
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     final JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
     factory.setReadTimeout(Duration.ofSeconds(10));
-    return RestClient.builder().requestFactory(factory).build();
+    final String jeton = JetonInterneWorker.calculer(secret);
+    return RestClient.builder()
+        .requestFactory(factory)
+        .requestInterceptor(
+            (requete, corps, execution) -> {
+              if (estApiInterneWorker(requete.getURI())) {
+                requete.getHeaders().set(JetonInterneWorker.ENTETE, jeton);
+              }
+              return execution.execute(requete, corps);
+            })
+        .build();
+  }
+
+  /* package-private : visibilité élargie pour WebConfigurationTest (même package). */
+  static boolean estApiInterneWorker(final URI uri) {
+    return uri.getPort() == PORT_WORKER && HOTES_LOCAUX.contains(uri.getHost());
   }
 
   /**

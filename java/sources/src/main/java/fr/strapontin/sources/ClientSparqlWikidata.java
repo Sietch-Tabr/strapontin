@@ -36,6 +36,31 @@ final class ClientSparqlWikidata {
   /* package-private : réutilisée par WikidataSalleSource/WikidataArtisteSource
    * (même package). */
   static final String BASE_URL = "https://query.wikidata.org/sparql";
+
+  /* package-private : commune actuelle (code INSEE P374, déclaration sans
+   * date de fin) de ?item et son code postal, hors arrondissement municipal.
+   * Libellé lié par branche : non lié, il parcourait toute la base. */
+  static final String MOTIF_COMMUNE =
+      """
+            OPTIONAL { ?item p:P131 ?declarationDirecte . ?declarationDirecte ps:P131 ?communeDirecte .
+              FILTER NOT EXISTS { ?declarationDirecte pq:P582 [] }
+              FILTER NOT EXISTS { ?declarationDirecte wikibase:rank wikibase:DeprecatedRank }
+              ?communeDirecte wdt:P374 [] .
+              FILTER NOT EXISTS { ?communeDirecte wdt:P31 wd:Q702842 }
+              ?communeDirecte rdfs:label ?libelleDirect . FILTER(LANG(?libelleDirect) = "fr")
+              OPTIONAL { ?communeDirecte wdt:P281 ?cpDirect } }
+            OPTIONAL { ?item p:P131 ?declarationParent . ?declarationParent ps:P131 ?parent .
+              FILTER NOT EXISTS { ?declarationParent pq:P582 [] }
+              FILTER NOT EXISTS { ?declarationParent wikibase:rank wikibase:DeprecatedRank }
+              ?parent wdt:P131/wdt:P131? ?communeAncetre .
+              ?communeAncetre wdt:P374 [] .
+              FILTER NOT EXISTS { ?communeAncetre wdt:P31 wd:Q702842 }
+              ?communeAncetre rdfs:label ?libelleAncetre . FILTER(LANG(?libelleAncetre) = "fr")
+              OPTIONAL { ?communeAncetre wdt:P281 ?cpAncetre } }
+            BIND(COALESCE(?libelleDirect, ?libelleAncetre) AS ?communeLabel)
+            BIND(COALESCE(?cpDirect, ?cpAncetre) AS ?cp)
+      """;
+
   private static final String USER_AGENT =
       "Strapontin/2.6.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr) SpringBoot/4.1";
   // 502 (nginx en amont de l'endpoint SPARQL) et un content-type inattendu
@@ -46,8 +71,7 @@ final class ClientSparqlWikidata {
   private static final int RETRY_TRANSITOIRE_MAX = 3;
   private static final int RETRY_TOTAL_MAX = 5;
   private static final Duration TIMEOUT_LECTURE = Duration.ofSeconds(60);
-  // espacement proactif entre appels, sur le même principe que
-  // OverpassSalleSource.DELAI_MIN_ENTRE_APPELS_MS — le retry réactif sur 429
+  // espacement proactif entre appels — le retry réactif sur 429
   // (Retry-After 120s constaté) a fait perdre ~4 des 5 minutes d'un cycle
   // nocturne. Aucune politique de rate-limit publiée par Wikidata pour
   // l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte de temps

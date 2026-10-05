@@ -1,74 +1,105 @@
 <template>
   <section id="signalements" class="admin-section">
     <div class="param-bloc">
-      <h3 class="param-libelle">Signalements de matching</h3>
+      <h3 class="param-libelle">Anomalies détectées</h3>
+      <p class="param-aide">
+        Incohérences relevées par les contrôles automatiques. Chacune se traite
+        ici ou depuis la fiche de la salle ou de l'artiste concerné.
+      </p>
       <p v-if="!chargement && !signalements.length" class="etat-vide-texte">
-        Aucun signalement actif pour l'instant.
+        Aucune anomalie en attente.
       </p>
       <EtatChargement v-if="chargement" />
-      <div v-else-if="signalements.length" class="table-conteneur">
-        <table id="table-signalements">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Entité</th>
-              <th>Confiance</th>
-              <th>Détecté le</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="s in signalements" :key="s.categorie + s.id">
-              <td data-label="Type">{{ s.type }}</td>
-              <td data-label="Entité">
-                {{ s.entiteType }} — {{ s.entiteId }}
-                <span v-if="s.details" class="signalement-details">{{
-                  s.details
-                }}</span>
-              </td>
-              <td data-label="Confiance">{{ s.confiance }}</td>
-              <td data-label="Détecté le">
-                {{ s.detecteLe ? formaterInstant(s.detecteLe) : "—" }}
-              </td>
-              <td data-label="Actions" class="source-actions">
-                <button
-                  v-if="s.categorie === 'nouveau'"
-                  type="button"
-                  class="bouton bouton-secondaire bouton-petit"
-                  @click="resoudre(s)"
-                >
-                  Résoudre
-                </button>
-                <button
-                  v-else-if="s.categorie === 'contamination_salle'"
-                  type="button"
-                  class="bouton bouton-secondaire bouton-petit"
-                  :aria-label="
-                    'Déclarer faux positif la contamination de ' + s.entiteId
-                  "
-                  @click="decider(s, 'contamination', 'accepter')"
-                >
-                  Faux positif
-                </button>
-                <button
-                  v-else-if="s.categorie === 'doublon_salle'"
-                  type="button"
-                  class="bouton bouton-secondaire bouton-petit"
-                  :aria-label="
-                    'Déclarer distinctes les salles de ' + s.entiteId
-                  "
-                  @click="decider(s, 'doublon', 'distinctes')"
-                >
-                  Salles distinctes
-                </button>
-                <span v-else class="etat-vide-texte">
-                  Depuis l'onglet Artistes
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ul v-else-if="signalements.length" class="liste-signalements">
+        <li
+          v-for="s in signalements"
+          :key="s.categorie + s.id"
+          class="signalement"
+        >
+          <div class="signalement-entete">
+            <strong class="signalement-titre">{{
+              decrireType(catalogue, s.type).libelle
+            }}</strong>
+            <span class="signalement-entite">{{
+              libelleEntite(s.entite)
+            }}</span>
+            <span v-if="s.detecteLe" class="signalement-date">
+              {{ formaterInstant(s.detecteLe) }}
+            </span>
+          </div>
+          <p class="signalement-explication">
+            {{ decrireType(catalogue, s.type).explication }}
+          </p>
+          <dl
+            v-if="formaterDetails(s.details).length"
+            class="signalement-details"
+          >
+            <template v-for="(d, i) in formaterDetails(s.details)" :key="i">
+              <dt v-if="d.cle">{{ d.cle }}</dt>
+              <dd>{{ d.valeur }}</dd>
+            </template>
+          </dl>
+          <div class="source-actions">
+            <template v-for="action in actionsSignalement(s)" :key="action">
+              <button
+                v-if="action === 'repartir'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                @click="
+                  repartition.ouvrir({ id: s.entite.id, nom: s.entite.nom })
+                "
+              >
+                Répartir les concerts
+              </button>
+              <button
+                v-else-if="action === 'fauxPositif'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                :aria-label="
+                  'Déclarer faux positif : ' + libelleEntite(s.entite)
+                "
+                @click="decider(s, 'contamination', 'accepter')"
+              >
+                Faux positif
+              </button>
+              <button
+                v-else-if="action === 'sallesDistinctes'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                :aria-label="'Déclarer distinctes : ' + libelleEntite(s.entite)"
+                @click="decider(s, 'doublon', 'distinctes')"
+              >
+                Salles distinctes
+              </button>
+              <button
+                v-else-if="action === 'ignorerEcart'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                title="Le nom publié par Ticketmaster est accepté : il ne sera plus signalé tant qu'il ne change pas"
+                @click="ignorerEcart(s)"
+              >
+                Accepter le nom publié
+              </button>
+              <button
+                v-else-if="action === 'resoudre'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                @click="resoudre(s)"
+              >
+                Marquer comme traité
+              </button>
+              <button
+                v-else-if="action === 'voirFiche'"
+                type="button"
+                class="bouton bouton-texte bouton-petit"
+                @click="emit('voir-fiche', s.entite)"
+              >
+                Voir la fiche
+              </button>
+            </template>
+          </div>
+        </li>
+      </ul>
 
       <div v-if="totalPages > 1" class="pagination">
         <button
@@ -80,10 +111,7 @@
           ← Précédent
         </button>
         <span
-          >Page {{ page + 1 }} / {{ totalPages }} ({{
-            total
-          }}
-          signalements)</span
+          >Page {{ page + 1 }} / {{ totalPages }} ({{ total }} anomalies)</span
         >
         <button
           type="button"
@@ -95,45 +123,61 @@
         </button>
       </div>
     </div>
+
+    <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
   </section>
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminSignalements" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant } from "../../composables/useDates.js";
+import {
+  actionsSignalement,
+  decrireType,
+  formaterDetails,
+  libelleEntite,
+} from "../../utils/signalements.js";
 import EtatChargement from "../EtatChargement.vue";
+import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
+
+const emit = defineEmits(["voir-fiche", "total"]);
 
 const { afficherToast } = useToasts();
 
 const chargement = ref(true);
 const signalements = shallowRef([]);
+const catalogue = shallowRef([]);
 const page = ref(0);
 const totalPages = ref(1);
 const total = ref(0);
+const repartition = ref(null);
 const controleur = new AbortController();
 
 async function charger() {
   chargement.value = true;
   try {
-    const rep = await fetch(`/api/admin/signalements?page=${page.value}`, {
+    const rep = await appelApi(`/api/admin/signalements?page=${page.value}`, {
       signal: controleur.signal,
     });
     if (rep.ok) {
-      const data = await rep.json();
+      const data = await lireJson(rep);
       signalements.value = data.signalements ?? [];
+      catalogue.value = data.catalogue ?? [];
       page.value = data.page ?? 0;
       totalPages.value = data.totalPages ?? 1;
       total.value = data.total ?? 0;
+      emit("total", total.value);
     } else {
-      afficherToast("Erreur lors du chargement des signalements.", "erreur");
+      afficherToast("Erreur lors du chargement des anomalies.", "erreur");
     }
   } catch (e) {
     if (e.name !== "AbortError") {
       afficherToast(
-        "Erreur réseau lors du chargement des signalements.",
+        "Erreur réseau lors du chargement des anomalies.",
         "erreur",
       );
     }
@@ -147,16 +191,14 @@ function allerPage(n) {
   charger();
 }
 
-// Décision mémorisée côté serveur : le signalement ne réapparaîtra plus au
-// prochain contrôle nocturne.
-async function decider(signalement, categorie, action) {
+async function poster(url, messageSucces) {
   try {
-    const rep = await fetch(
-      `/api/admin/signalements/${categorie}/${signalement.entiteId}/${action}`,
-      { method: "POST", signal: controleur.signal },
-    );
+    const rep = await appelApi(url, {
+      method: "POST",
+      signal: controleur.signal,
+    });
     if (rep.ok) {
-      afficherToast("Décision enregistrée.", "succes");
+      afficherToast(messageSucces, "succes");
       await charger();
     } else {
       afficherToast(
@@ -169,24 +211,27 @@ async function decider(signalement, categorie, action) {
   }
 }
 
-async function resoudre(signalement) {
-  try {
-    const rep = await fetch(
-      `/api/admin/signalements/${signalement.id}/resoudre`,
-      {
-        method: "POST",
-        signal: controleur.signal,
-      },
-    );
-    if (rep.ok) {
-      afficherToast("Signalement résolu.", "succes");
-      await charger();
-    } else {
-      afficherToast("Erreur lors de la résolution.", "erreur");
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
-  }
+// Décision mémorisée côté serveur : le signalement ne réapparaîtra plus au
+// prochain contrôle nocturne.
+function decider(signalement, categorie, action) {
+  return poster(
+    `/api/admin/signalements/${categorie}/${signalement.entite.id}/${action}`,
+    "Décision enregistrée.",
+  );
+}
+
+function ignorerEcart(signalement) {
+  return poster(
+    `/api/admin/artistes/${signalement.entite.id}/ignorer-intervention`,
+    "Nom publié accepté.",
+  );
+}
+
+function resoudre(signalement) {
+  return poster(
+    `/api/admin/signalements/${signalement.id}/resoudre`,
+    "Anomalie marquée comme traitée.",
+  );
 }
 
 onMounted(charger);
@@ -194,10 +239,52 @@ onUnmounted(() => controleur.abort());
 </script>
 
 <style scoped>
-.signalement-details {
-  display: block;
-  font-size: 0.78rem;
-  color: var(--fg-muted);
+.liste-signalements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.signalement {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.signalement-entete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+
+.signalement-entite {
   overflow-wrap: anywhere;
+}
+
+.signalement-date,
+.signalement-explication,
+.signalement-details {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+
+.signalement-explication {
+  margin: 0.25rem 0;
+}
+
+.signalement-details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.75rem;
+  margin: 0.25rem 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.signalement-details dd {
+  margin: 0;
 }
 </style>

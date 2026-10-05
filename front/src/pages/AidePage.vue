@@ -30,12 +30,13 @@
             <ul>
               <li>Recherchez et ajoutez les artistes et salles à suivre.</li>
               <li>
-                Les concerts sont mis à jour automatiquement toutes les 2 heures
-                depuis Ticketmaster et Eventim.
+                Les concerts sont mis à jour automatiquement depuis Ticketmaster
+                et Eventim, toutes les deux heures en journée.
               </li>
               <li>
-                Le badge <strong>Nouveau</strong> signale les concerts apparus
-                depuis votre dernière notification.
+                Le badge <strong>Nouveau</strong> signale les concerts que vous
+                n'avez pas encore vus ; il disparaît après votre passage sur
+                l'accueil.
               </li>
             </ul>
           </div>
@@ -113,11 +114,11 @@
             <ul>
               <li>
                 <strong>Mes spectacles</strong> : vos prochains concerts
-                filtrables par catégorie et mois. Paginé par 100.
+                filtrables par catégorie, genre et mois.
               </li>
               <li>
-                <strong>Découverte</strong> : tous les concerts en base,
-                filtrables par département.
+                <strong>Découverte</strong> : tous les concerts de vos
+                départements, même ceux d'artistes que vous ne suivez pas.
               </li>
             </ul>
           </div>
@@ -136,17 +137,21 @@
             </h2>
             <ul>
               <li>
-                Données collectées : nom, identifiant, email, préférences et
-                sessions. Utilisées uniquement pour le fonctionnement de
-                l'application, jamais partagées.
+                Données collectées : identifiant, email, préférences, appareils
+                connectés (navigateur, système) et, dans le journal technique,
+                adresse IP des connexions. Utilisées uniquement pour le
+                fonctionnement de l'application, jamais partagées.
               </li>
               <li>
-                Hébergement sur serveur privé en France. Données conservées tant
-                que le compte est actif.
+                Hébergement sur serveur privé en France. Un compte inutilisé
+                pendant 6 mois reçoit un email, puis est supprimé avec toutes
+                ses données 15 jours plus tard s'il reste inutilisé.
               </li>
               <li>
                 Export intégral et suppression de compte depuis
-                <RouterLink to="/parametres">Paramètres → Compte</RouterLink>.
+                <RouterLink to="/parametres#donnees"
+                  >Paramètres → Données</RouterLink
+                >.
               </li>
             </ul>
           </div>
@@ -269,7 +274,11 @@
       >
         <div class="form-groupe">
           <label for="type-signalement">Type</label>
-          <select id="type-signalement" v-model="typeSignalement" autofocus>
+          <select
+            id="type-signalement"
+            ref="typeSignalementRef"
+            v-model="typeSignalement"
+          >
             <option value="bug">Bug</option>
             <option value="suggestion">Amélioration</option>
             <option value="question">Question</option>
@@ -309,11 +318,11 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "AidePage" });
 
 import { ref, shallowRef, onMounted } from "vue";
 import { useToasts } from "../composables/useToasts.js";
-import { corpsJsonOuVide } from "../utils/reponseJson.js";
 import { useOnboarding } from "../composables/useOnboarding.js";
 import ChecklistPremiersPas from "../components/ChecklistPremiersPas.vue";
 
@@ -322,6 +331,7 @@ const { ouvrir: revoirOnboarding } = useOnboarding();
 
 const config = shallowRef(null);
 const dialogRef = ref(null);
+const typeSignalementRef = ref(null);
 const typeSignalement = ref("bug");
 const messageSignalement = ref("");
 const erreurSignalement = ref("");
@@ -333,13 +343,14 @@ function ouvrirSignalement() {
   erreurSignalement.value = "";
   messageSignalement.value = "";
   dialogRef.value?.showModal();
+  typeSignalementRef.value?.focus();
 }
 
 async function envoyerSignalement() {
   erreurSignalement.value = "";
   envoiEnCours.value = true;
   try {
-    const rep = await fetch("/api/aide/signalement", {
+    const rep = await appelApi("/api/aide/signalement", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -353,7 +364,7 @@ async function envoyerSignalement() {
       return;
     }
     if (!rep.ok) {
-      const data = await corpsJsonOuVide(rep);
+      const data = await lireJson(rep);
       erreurSignalement.value = data.erreur || "Une erreur est survenue.";
       return;
     }
@@ -373,8 +384,8 @@ async function envoyerSignalement() {
 
 onMounted(async () => {
   try {
-    const rep = await fetch("/api/aide/config");
-    if (rep.ok) config.value = await rep.json();
+    const rep = await appelApi("/api/aide/config");
+    if (rep.ok) config.value = await lireJson(rep);
   } catch (e) {
     console.error("Échec chargement config aide", e);
   }

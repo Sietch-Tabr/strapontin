@@ -7,6 +7,7 @@ package fr.strapontin.worker.persister;
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,19 +20,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Détecte et fusionne en cycle nocturne des paires d'événements déjà
- * persistés séparément dont l'{@code artiste_norm} converge après coup —
- * {@link ReconciliateurArtistes} ne dédoublonne qu'à la création.
+ * Fusion nocturne d'événements persistés séparément : artiste_norm convergé
+ * après coup (la réconciliation ne dédoublonne qu'à la création), ou fiche
+ * périmée d'un événement encore observé.
  * @since 3.0.0
  * @author Kwaite
  */
 @Service
 public class FusionEvenementsArtisteService {
 
+  private static final long VIVANT_UNIQUE = 1;
   private static final Logger LOG = LoggerFactory.getLogger(FusionEvenementsArtisteService.class);
   private static final String CLE_CIBLE = "cible";
   private static final String CLE_SOURCE = "source";
   private static final int NB_EVENEMENTS_PAIRE = 2;
+  // Absences au-delà desquelles une fiche n'est plus vivante (un cycle de
+  // fetch manqué ponctuellement ne suffit pas).
+  /* package-private : visibilité élargie pour les tests (même package). */
+  static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -75,19 +81,148 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Repère les paires d'{@code evenement_id} distincts partageant
-   * exactement même salle/date/heure, filtrées par
-   * {@link CorrespondanceArtiste#estDoublonArtiste} sur les
-   * {@code artiste_norm} — la contrainte unique {@code uq_evenements}
-   * garantit déjà qu'aucune paire ne partage un {@code artiste_norm}
-   * strictement identique.
+   * Fusionne chaque événement périmé dans l'unique événement vivant de même
+   * fiche (même url, ou même idmanif TM à la même date, apparue plus d'une
+   * heure après la dernière vue de la périmée : deux séances vues au même
+   * passage restent distinctes) ; ambigu : ignoré. Avant la fusion de salles.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerFichesPerimees() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            WITH obs AS (
+              SELECT o.evenement_id, o.source, o.url, e.date, e.absences_consecutives,
+                     o.first_seen, o.updated_at,
+                     CASE WHEN o.source = 'ticketmaster'
+                          THEN substring(o.url FROM '/idmanif/([0-9]+)') END AS idmanif
+              FROM observations o
+              JOIN evenements e ON e.id = o.evenement_id
+              WHERE o.url IS NOT NULL AND e.date >= CURRENT_DATE
+            )
+            SELECT p.evenement_id AS perime, min(v.evenement_id::text) AS vivant,
+                   count(DISTINCT v.evenement_id) AS nb_vivants
+            FROM obs p
+            JOIN obs v
+              ON v.evenement_id <> p.evenement_id
+             AND v.source = p.source
+             AND (v.url = p.url OR (p.idmanif IS NOT NULL AND v.idmanif = p.idmanif
+                                    AND v.date = p.date
+                                    AND p.updated_at < v.first_seen - interval '1 hour'))
+            WHERE p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+            GROUP BY p.evenement_id
+            """,
+            Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+    return fusionnerSiVivantUnique(lignes, "fiche source périmée");
+  }
+
+  /**
+   * Concert déplacé : la fiche de l'ancienne salle, absente, rejoint l'unique
+   * événement vivant de même artiste, date, heure, département et source dans
+   * une autre salle ; ambigu : ignoré.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerConcertsDeplaces() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT p.id AS perime, min(v.id::text) AS vivant, count(DISTINCT v.id) AS nb_vivants
+            FROM evenements p
+            JOIN evenements v
+              ON v.id <> p.id
+             AND v.artiste_norm = p.artiste_norm
+             AND v.date = p.date
+             AND v.heure = p.heure
+             AND v.dept = p.dept
+             AND v.salle_id IS DISTINCT FROM p.salle_id
+            WHERE p.date >= CURRENT_DATE
+              AND p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+              AND EXISTS (SELECT 1 FROM observations op JOIN observations ov
+                            ON ov.source = op.source
+                          WHERE op.evenement_id = p.id AND ov.evenement_id = v.id)
+            GROUP BY p.id
+            """,
+            Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+    return fusionnerSiVivantUnique(lignes, "concert déplacé");
+  }
+
+  /**
+   * Même spectacle publié sous deux intitulés (« Lady Macbeth de Mzensk » /
+   * « of Mtsensk », « Ballet Preljocaj » / « Le Lac des cygnes ») : seuls
+   * événements de leur salle au même créneau, l'un Ticketmaster seul, l'autre
+   * Eventim seul, sans artiste reconnu, dans une salle non signalée comme
+   * mélangeant plusieurs lieux. À appeler après les contrôles d'intégrité.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerMemeCreneauDeuxSources() {
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            """
+            WITH ev AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_id,
+                     bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+              GROUP BY e.id),
+            creneaux AS (
+              SELECT salle_id, date, heure FROM ev GROUP BY salle_id, date, heure
+              HAVING count(*) = 2
+                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
+                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1
+                 AND count(*) FILTER (WHERE artiste_id IS NOT NULL) = 0)
+            SELECT t.id AS cible, v.id AS source
+            FROM creneaux c
+            JOIN salles s ON s.id = c.salle_id
+            JOIN ev t ON t.salle_id = c.salle_id AND t.date = c.date AND t.heure = c.heure
+                     AND t.tm AND NOT t.evt
+            JOIN ev v ON v.salle_id = c.salle_id AND v.date = c.date AND v.heure = c.heure
+                     AND v.evt AND NOT v.tm
+            WHERE\
+            """
+                + SalleFiable.condition("s"),
+            Map.of());
+    for (final Map<String, Object> paire : paires) {
+      fusionner(
+          (UUID) paire.get("cible"), (UUID) paire.get("source"), "même créneau, deux sources");
+    }
+    return paires.size();
+  }
+
+  // Plusieurs vivants (même adresse pour plusieurs séances) : aucun choix sûr.
+  private int fusionnerSiVivantUnique(final List<Map<String, Object>> lignes, final String motif) {
+    int fusions = 0;
+    int ambigues = 0;
+    for (final Map<String, Object> ligne : lignes) {
+      if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
+        ambigues++;
+        continue;
+      }
+      fusionner(UUID.fromString((String) ligne.get("vivant")), (UUID) ligne.get("perime"), motif);
+      fusions++;
+    }
+    if (ambigues > 0) {
+      LOG.info(
+          "{} : {} fiche(s) rapprochée(s) de plusieurs événements vivants, ignorée(s)",
+          motif,
+          ambigues);
+    }
+    return fusions;
+  }
+
+  /**
+   * Paires d'événements de même salle, date et heure aux artistes doublons
+   * ({@link CorrespondanceArtiste#estDoublonArtiste}), ou de même affiche
+   * ({@link CorrespondanceArtiste#estMemeAffiche}) sans artiste rattaché et à
+   * heure connue ; {@code uq_evenements} exclut déjà un nom identique.
    */
   private List<PaireEvenements> detecterPaires() {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
             SELECT DISTINCT e1.id AS evt_a, e2.id AS evt_b,
-                   e1.artiste_norm AS artiste_a, e2.artiste_norm AS artiste_b
+                   e1.artiste_norm AS artiste_a, e2.artiste_norm AS artiste_b,
+                   e1.heure IS NOT NULL AND e1.artiste_id IS NULL AND e2.artiste_id IS NULL
+                     AS affiche_comparable
             FROM evenements e1
             JOIN evenements e2
               ON e1.salle_id = e2.salle_id
@@ -103,7 +238,11 @@ public class FusionEvenementsArtisteService {
     for (final Map<String, Object> ligne : lignes) {
       final String artisteA = (String) ligne.get("artiste_a");
       final String artisteB = (String) ligne.get("artiste_b");
-      if (!CorrespondanceArtiste.estDoublonArtiste(artisteA, artisteB)) {
+      // Deux artistes suivis séparément gardent chacun leur événement.
+      final boolean memeAffiche =
+          Boolean.TRUE.equals(ligne.get("affiche_comparable"))
+              && CorrespondanceArtiste.estMemeAffiche(artisteA, artisteB);
+      if (!memeAffiche && !CorrespondanceArtiste.estDoublonArtiste(artisteA, artisteB)) {
         continue;
       }
       paires.add(new PaireEvenements((UUID) ligne.get("evt_a"), (UUID) ligne.get("evt_b")));
@@ -114,9 +253,8 @@ public class FusionEvenementsArtisteService {
   /**
    * Choisit l'événement à conserver (cible) entre les deux membres de la
    * paire : priorité à l'{@code artiste_id} déjà résolu (donnée coûteuse
-   * à reconstituer), puis au nombre d'observations déjà rattachées, puis
-   * à l'UUID le plus petit pour un résultat déterministe entre deux
-   * cycles.
+   * à reconstituer), puis au nombre d'observations, puis au nom d'artiste le
+   * plus court, puis à l'UUID le plus petit (résultat déterministe).
    * @return [cible, source], ou {@code null} si l'un des deux n'existe plus
    */
   // Le tableau représente une paire cible/source, pas une collection à agréger
@@ -127,7 +265,7 @@ public class FusionEvenementsArtisteService {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT e.id AS id, e.artiste_id AS artiste_id,
+            SELECT e.id AS id, e.artiste_id AS artiste_id, e.artiste_norm AS artiste_norm,
                    (SELECT COUNT(*) FROM observations o WHERE o.evenement_id = e.id) AS nb_obs
             FROM evenements e WHERE e.id IN (CAST(:a AS uuid), CAST(:b AS uuid))
             """,
@@ -136,24 +274,17 @@ public class FusionEvenementsArtisteService {
       return null;
     }
 
-    final Map<String, Object> la =
-        lignes.get(0).get("id").equals(idA) ? lignes.get(0) : lignes.get(1);
-    final Map<String, Object> lb =
-        lignes.get(0).get("id").equals(idA) ? lignes.get(1) : lignes.get(0);
-
-    final boolean aArtisteId = la.get("artiste_id") != null;
-    final boolean bArtisteId = lb.get("artiste_id") != null;
-    if (aArtisteId != bArtisteId) {
-      return aArtisteId ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
-    }
-
-    final long nbA = ((Number) la.get("nb_obs")).longValue();
-    final long nbB = ((Number) lb.get("nb_obs")).longValue();
-    if (nbA != nbB) {
-      return nbA > nbB ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
-    }
-
-    return idA.compareTo(idB) <= 0 ? new UUID[] {idA, idB} : new UUID[] {idB, idA};
+    // Le nom de la tête d'affiche plutôt que « orelsan premiere partie » : c'est
+    // lui qui rattachera l'événement à l'artiste s'il est suivi plus tard.
+    final List<Map<String, Object>> parPriorite =
+        lignes.stream()
+            .sorted(
+                Comparator.comparing((Map<String, Object> l) -> l.get("artiste_id") == null)
+                    .thenComparing(l -> -((Number) l.get("nb_obs")).longValue())
+                    .thenComparingInt(l -> ((String) l.get("artiste_norm")).length())
+                    .thenComparing(l -> (UUID) l.get("id")))
+            .toList();
+    return new UUID[] {(UUID) parPriorite.get(0).get("id"), (UUID) parPriorite.get(1).get("id")};
   }
 
   /**
@@ -165,9 +296,12 @@ public class FusionEvenementsArtisteService {
    */
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
-    final Map<String, Object> ids =
-        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
+    fusionner(cibleId, sourceId, "artiste_norm convergent");
+  }
 
+  // Observations et user_matches reportés sur la cible (doublons écartés),
+  // jamais laissés au CASCADE de la source, qui perdrait un match notifié.
+  private void reporterObservationsEtCorrespondances(final Map<String, Object> ids) {
     // 1. Observations en conflit supprimées, le reste réassigné à la
     // cible.
     jdbc.update(
@@ -198,6 +332,13 @@ public class FusionEvenementsArtisteService {
         "UPDATE user_matches SET concert_id = CAST(:cible AS uuid)"
             + " WHERE concert_id = CAST(:source AS uuid)",
         ids);
+  }
+
+  private void fusionner(final UUID cibleId, final UUID sourceId, final String motif) {
+    final Map<String, Object> ids =
+        Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
+
+    reporterObservationsEtCorrespondances(ids);
 
     // 3. artiste_id manquant récupéré depuis la source si la cible ne l'a pas déjà.
     jdbc.update(
@@ -213,18 +354,26 @@ public class FusionEvenementsArtisteService {
     jdbc.update("DELETE FROM evenements WHERE id = CAST(:source AS uuid)", ids);
 
     LOG.info(
-        "reconciliation:nocturne — événements fusionnés (artiste_norm convergent) cible={}"
-            + " source={}",
+        "reconciliation:nocturne — événements fusionnés ({}) cible={} source={}",
+        motif,
         cibleId,
         sourceId);
     // Fusion automatique et destructive : jamais silencieuse.
     logsAdminWorker.inserer(
         "info",
         "reconciliation-nocturne",
-        "événements fusionnés automatiquement (artiste_norm convergent) cible="
+        "événements fusionnés automatiquement ("
+            + motif
+            + ") cible="
             + cibleId
             + " source="
             + sourceId,
-        Map.of("evenementCible", cibleId.toString(), "evenementSource", sourceId.toString()));
+        Map.of(
+            "evenementCible",
+            cibleId.toString(),
+            "evenementSource",
+            sourceId.toString(),
+            "motif",
+            motif));
   }
 }

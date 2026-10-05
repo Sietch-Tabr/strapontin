@@ -7,8 +7,11 @@ package fr.strapontin.sources;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.QuotaTM;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * État mutable partagé entre {@link TicketmasterSource} et {@link
@@ -19,7 +22,11 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 final class EtatFetchTM {
 
+  private static final int HTTP_TROP_DE_REQUETES = 429;
+  private static final long DELAI_NOUVEL_ESSAI_MS = 3_600_000;
+
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
+  private final AtomicBoolean refusPourQuota = new AtomicBoolean();
   private final AtomicInteger concertsManquesCumules = new AtomicInteger();
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
 
@@ -49,7 +56,51 @@ final class EtatFetchTM {
   void mettreAJourQuota(final QuotaTM quota) {
     if (quota != null) {
       dernierQuota.set(quota);
+      if (quota.dispo() > 0) {
+        refusPourQuota.set(false);
+      }
     }
+  }
+
+  /**
+   * @param erreur erreur d'un appel Ticketmaster
+   * @return {@code true} si Ticketmaster refuse l'appel parce que le quota du
+   *     jour est épuisé (429 {@code QuotaViolation}, distinct du Spike Arrest)
+   */
+  /* package-private : appelé par TicketmasterPageFetcher/TicketmasterHealthCheck. */
+  static boolean estQuotaEpuise(final Exception erreur) {
+    return erreur instanceof HttpClientErrorException http
+        && http.getStatusCode().value() == HTTP_TROP_DE_REQUETES
+        && http.getResponseBodyAsString().contains("QuotaViolation");
+  }
+
+  /**
+   * Quota du jour épuisé : disponible ramené à zéro, ce que les jobs lisent
+   * avant d'appeler Ticketmaster (dernier total et remise à zéro conservés).
+   */
+  /* package-private : appelé par TicketmasterPageFetcher/TicketmasterHealthCheck. */
+  void signalerQuotaEpuise() {
+    refusPourQuota.set(true);
+    final QuotaTM precedent = dernierQuota.get();
+    // Sans remise à zéro connue et à venir, nouvel essai dans une heure : sinon
+    // les cycles resteraient suspendus sans jamais rappeler Ticketmaster.
+    final long maintenant = System.currentTimeMillis();
+    final long reset =
+        precedent != null && precedent.reset() > maintenant
+            ? precedent.reset()
+            : maintenant + DELAI_NOUVEL_ESSAI_MS;
+    dernierQuota.set(
+        new QuotaTM(0, precedent != null ? precedent.total() : 0, reset, Instant.now().toString()));
+  }
+
+  /**
+   * @return {@code true} si Ticketmaster a signalé le quota du jour épuisé,
+   *     jusqu'à la date de nouvel essai
+   */
+  /* package-private : appelé par TicketmasterSource (même package). */
+  boolean quotaEpuise() {
+    final QuotaTM quota = dernierQuota.get();
+    return refusPourQuota.get() && quota != null && System.currentTimeMillis() < quota.reset();
   }
 
   /**

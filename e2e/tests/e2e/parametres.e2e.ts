@@ -150,9 +150,7 @@ test.describe("Scénario: API paramètres — stats et TOTP", () => {
     expect(typeof corps.nbSalles).toBe("number");
   });
 
-  test("api_parametres_stats_sans_session_retourne401", async ({
-    browser,
-  }) => {
+  test("api_parametres_stats_sans_session_retourne401", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: undefined });
     const rep = await ctx.request.get("/api/parametres/stats");
     expect(rep.status()).toBe(401);
@@ -293,9 +291,9 @@ test.describe("Scénario: Préférences — thème", () => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
     await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Sombre" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Sombre" }),
+    ).toHaveClass(/actif/);
     await expect(
       page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
@@ -312,9 +310,9 @@ test.describe("Scénario: Préférences — thème", () => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
     await page.locator(".bouton-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Clair" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Clair" }),
+    ).toHaveClass(/actif/);
     await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 
@@ -326,9 +324,9 @@ test.describe("Scénario: Préférences — thème", () => {
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
     await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Sombre" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Sombre" }),
+    ).toHaveClass(/actif/);
     await expect(
       page.locator(".bouton-theme", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
@@ -343,9 +341,9 @@ test.describe("Scénario: Préférences — thème", () => {
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
     await page.locator(".bouton-theme", { hasText: "Clair" }).click();
-    await expect(page.locator(".bouton-theme", { hasText: "Clair" })).toHaveClass(
-      /actif/,
-    );
+    await expect(
+      page.locator(".bouton-theme", { hasText: "Clair" }),
+    ).toHaveClass(/actif/);
     await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
   });
 });
@@ -508,6 +506,55 @@ test.describe("Scénario: API compte — mot de passe", () => {
     expect(rep.status()).toBe(400);
     const corps = await rep.json();
     expect(corps).toHaveProperty("erreur");
+  });
+});
+
+test.describe("Scénario: notifications push sans appareil abonné", () => {
+  // Push activés, aucun appareil abonné : l'utilisateur ne reçoit rien sans le savoir.
+  test("notifications_pushSansAppareil_afficheUnAvertissement", async ({
+    page,
+  }) => {
+    await page.route("**/api/push/abonnements", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "[]",
+      }),
+    );
+    await page.route("**/api/push", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ disponible: true, clePublique: "cle" }),
+          })
+        : route.continue(),
+    );
+    // Fréquence et cases réelles servies par la configuration : sans clé Resend
+    // (dev), les boutons de fréquence sont désactivés et ne se cochent pas.
+    await page.route("**/api/user/config", async (route) => {
+      if (route.request().method() !== "GET") {
+        return route.continue();
+      }
+      const reponse = await route.fetch();
+      const config = await reponse.json();
+      return route.fulfill({
+        response: reponse,
+        json: {
+          ...config,
+          resendDisponible: true,
+          frequenceNotifications: "quotidien",
+          notifArtistesPush: true,
+        },
+      });
+    });
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+    await expect(section).toBeVisible();
+
+    await expect(
+      section.getByText("Aucun appareil n'est abonné aux notifications push"),
+    ).toBeVisible();
   });
 });
 

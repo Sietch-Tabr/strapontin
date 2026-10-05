@@ -16,7 +16,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
@@ -37,6 +36,7 @@ import org.mockito.InOrder;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Tests unitaires pour {@link EnrichissementSallesService} (dépendances mockées).
@@ -84,7 +84,8 @@ class EnrichissementSallesServiceTest {
   }
 
   // Un bilan d'appels/erreurs à 0 échec ne détecte pas une source qui répond systématiquement
-  // "200 OK, aucun résultat" (ex. panne géographique silencieuse d'Overpass) — un cycle avec un
+  // "200 OK, aucun résultat" (ex. panne géographique silencieuse d'une instance publique) — un
+  // cycle avec un
   // nombre significatif de candidats et 0 salle enrichie doit être journalisé séparément.
   @Test
   void enrichir_vingtCandidatsZeroEnrichis_journaliseUneAlerte() {
@@ -227,14 +228,14 @@ class EnrichissementSallesServiceTest {
   }
 
   @Test
-  void enrichir_overpassTrouveWikidataId_wikidataUtiliseLeQidPropage() {
+  void enrichir_premiereSourceTrouveWikidataId_wikidataUtiliseLeQidPropage() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
         new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
-    final SourceEnrichissementSalle overpass = mock(SourceEnrichissementSalle.class);
-    when(overpass.enrichirLot(List.of(candidat)))
+    final SourceEnrichissementSalle nominatim = mock(SourceEnrichissementSalle.class);
+    when(nominatim.enrichirLot(List.of(candidat)))
         .thenReturn(Map.of(salleId, new EnrichissementSalle("Q123", null, null, null, null)));
 
     final SourceEnrichissementSalle wikidata = mock(SourceEnrichissementSalle.class);
@@ -247,7 +248,7 @@ class EnrichissementSallesServiceTest {
     final EnrichissementSallesService service =
         new EnrichissementSallesService(
             jdbc,
-            List.of(overpass, wikidata),
+            List.of(nominatim, wikidata),
             logsAdminWorkerMock(),
             suiviChronicite(jdbc),
             mock(FusionSallesClePorteeService.class),
@@ -415,40 +416,102 @@ class EnrichissementSallesServiceTest {
         .inserer(eq("warn"), eq("enrichissement-wikidata"), anyString(), anyMap());
   }
 
-  // #1189 : une collision wikidata_id est un signal plus fort qu'une simple coïncidence de
-  // concert — fusion automatique si les deux salles ont des coordonnées connues et proches.
-  @Test
-  void enrichir_collisionWikidataIdCoordonneesProches_fusionneAutomatiquement() {
-    final UUID salleId = UUID.randomUUID();
-    final UUID porteuseId = UUID.randomUUID();
+  private record IssueCollision(
+      FusionSallesClePorteeService fusion, SignalementMatchingService signalement) {}
+
+  // Collision entre « salle » (positionnée près de la porteuse) et une porteuse donnée.
+  private IssueCollision enrichirAvecCollision(
+      final UUID salleId, final String nomSalle, final Map<String, Object> porteuse) {
     final SalleAEnrichir candidat =
-        new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
+        new SalleAEnrichir(salleId, nomSalle, nomSalle, null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
     when(jdbc.update(anyString(), anyMap())).thenThrow(new DuplicateKeyException("idx"));
     when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE wikidata_id"), anyMap()))
-        .thenReturn(List.of(Map.of("id", porteuseId, "latitude", 45.8336, "longitude", 1.2611)));
+        .thenReturn(List.of(porteuse));
+    final Map<String, Object> salle = new HashMap<>();
+    salle.put("nom_norm", nomSalle);
+    salle.put("ville", "Paris");
+    salle.put("latitude", 48.84374);
+    salle.put("longitude", 2.32508);
     when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("WHERE id ="), anyMap()))
-        .thenReturn(List.of(new HashMap<>(Map.of("latitude", 45.8337, "longitude", 1.2612))));
+        .thenReturn(List.of(salle));
 
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
     when(source.enrichirLot(any()))
         .thenReturn(Map.of(salleId, new EnrichissementSalle("Q1", null, null, null, null)));
     final FusionSallesClePorteeService fusion = mock(FusionSallesClePorteeService.class);
     final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
-
-    final EnrichissementSallesService service =
-        new EnrichissementSallesService(
+    new EnrichissementSallesService(
             jdbc,
             List.of(source),
             logsAdminWorkerMock(),
             suiviChronicite(jdbc),
             fusion,
-            signalement);
-    final int nb = service.enrichir();
+            signalement)
+        .enrichir();
+    return new IssueCollision(fusion, signalement);
+  }
 
-    assertEquals(1, nb);
-    verify(fusion).fusionnerUnePaire(porteuseId, salleId);
-    verify(signalement, never()).signaler(anyString(), anyString(), any(), anyString(), any());
+  private static Map<String, Object> porteuse(
+      final UUID id, final String nomNorm, final String originePosition) {
+    final Map<String, Object> porteuse = new HashMap<>();
+    porteuse.put("id", id);
+    porteuse.put("nom_norm", nomNorm);
+    porteuse.put("ville", "Paris");
+    porteuse.put("latitude", 48.84375);
+    porteuse.put("longitude", 2.32509);
+    porteuse.put("origine_position", originePosition);
+    return porteuse;
+  }
+
+  // Une collision wikidata_id est un signal plus fort qu'une simple coïncidence de concert :
+  // fusion automatique si noms compatibles et porteuse positionnée par ses lieux publiés.
+  @Test
+  void enrichir_collisionWikidataIdMemeLieu_fusionneAutomatiquement() {
+    final UUID salleId = UUID.randomUUID();
+    final UUID porteuseId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(porteuseId, "theatre de poche montparnasse paris", "sources"));
+
+    verify(issue.fusion()).fusionnerUnePaire(porteuseId, salleId);
+    verify(issue.signalement(), never())
+        .signaler(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  // Théâtre Montparnasse porteur à tort de l'élément du Théâtre de Poche : la position de la
+  // porteuse est celle de l'élément, la proximité ne prouve rien.
+  @Test
+  void enrichir_collisionPorteusePositionneeParWikidata_signaleSansFusionner() {
+    final UUID salleId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(UUID.randomUUID(), "theatre de poche montparnasse paris", "wikidata"));
+
+    verify(issue.fusion(), never()).fusionnerUnePaire(any(), any());
+    verify(issue.signalement())
+        .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
+  }
+
+  @Test
+  void enrichir_collisionNomsDeDeuxLieuxVoisins_signaleSansFusionner() {
+    final UUID salleId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(UUID.randomUUID(), "theatre montparnasse", "sources"));
+
+    verify(issue.fusion(), never()).fusionnerUnePaire(any(), any());
+    verify(issue.signalement())
+        .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
   // #1189 : sans coordonnées connues des deux côtés, aucune preuve positive ne justifie une
@@ -490,7 +553,8 @@ class EnrichissementSallesServiceTest {
         .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
-  // bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne Overpass de
+  // bilan de panne absent jusqu'ici sur les sources d'enrichissement — panne d'une source publique
+  // de
   // 3+ mois jamais remontée dans logs_admin. Panne totale (3 appels, 3 erreurs) doit escalader en
   // niveau error.
   @Test
@@ -505,7 +569,7 @@ class EnrichissementSallesServiceTest {
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
     when(source.enrichirLot(any())).thenReturn(Map.of());
-    when(source.nom()).thenReturn("overpass");
+    when(source.nom()).thenReturn("nominatim");
     when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(3, 3));
     final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
@@ -534,7 +598,7 @@ class EnrichissementSallesServiceTest {
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
     when(source.enrichirLot(any())).thenReturn(Map.of());
-    when(source.nom()).thenReturn("overpass");
+    when(source.nom()).thenReturn("nominatim");
     when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(0, 0));
     final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 
@@ -586,10 +650,10 @@ class EnrichissementSallesServiceTest {
   }
 
   // le streak de chronicité (persisté dans app_config) doit survivre entre deux cycles
-  // enrichir() distincts sur la même instance — un taux d'échec Overpass élevé répété à chaque
+  // enrichir() distincts sur la même instance — un taux d'échec élevé répété à chaque
   // nuit doit finir par être qualifié de chronique, pas traité comme un warn isolé à chaque fois.
   @Test
-  void enrichir_echecOverpassPersistantSurTroisCycles_qualifieLeMessageDeChronique() {
+  void enrichir_echecSourcePersistantSurTroisCycles_qualifieLeMessageDeChronique() {
     final UUID salleId = UUID.randomUUID();
     final SalleAEnrichir candidat =
         new SalleAEnrichir(salleId, "Zenith", "zenith", null, null, null, null, null);
@@ -614,7 +678,7 @@ class EnrichissementSallesServiceTest {
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings().extraInterfaces(SourceAvecBilanFetch.class));
     when(source.enrichirLot(any())).thenReturn(Map.of());
-    when(source.nom()).thenReturn("overpass");
+    when(source.nom()).thenReturn("nominatim");
     when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(5, 2));
     final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
 

@@ -284,12 +284,14 @@ pct push "$VMID" "$(dirname "$0")/backup.sh"        "$APP_DIR/scripts/backup.sh"
 pct push "$VMID" "$(dirname "$0")/backup-local.sh"  "$APP_DIR/scripts/backup-local.sh"
 pct push "$VMID" "$(dirname "$0")/restore.sh"       "$APP_DIR/scripts/restore.sh"
 pct push "$VMID" "$(dirname "$0")/aide-check.sh"    "$APP_DIR/scripts/aide-check.sh"
+pct push "$VMID" "$(dirname "$0")/declencher-job.sh" "$APP_DIR/scripts/declencher-job.sh"
 pct exec "$VMID" -- chmod +x \
     "$APP_DIR/scripts/update.sh" \
     "$APP_DIR/scripts/backup.sh" \
     "$APP_DIR/scripts/backup-local.sh" \
     "$APP_DIR/scripts/restore.sh" \
-    "$APP_DIR/scripts/aide-check.sh"
+    "$APP_DIR/scripts/aide-check.sh" \
+    "$APP_DIR/scripts/declencher-job.sh"
 
 echo "[7] Fichier de configuration .env..."
 if [ "$PROFIL" = "dev" ]; then

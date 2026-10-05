@@ -125,7 +125,7 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
       await expect(dialog).toContainText("Suivi artistes et salles");
 
       await dialog.getByRole("button", { name: "Suivant" }).click();
-      await expect(dialog).toContainText("Filtre par département");
+      await expect(dialog).toContainText("Vos départements");
 
       await dialog.getByRole("button", { name: "Précédent" }).click();
       await expect(dialog).toContainText("Suivi artistes et salles");

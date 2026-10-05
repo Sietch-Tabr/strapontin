@@ -1,0 +1,108 @@
+---
+name: Vérification dépendances
+description: >
+  Vérifie les mises à jour disponibles pour les dépendances Maven (java/pom.xml,
+  4 modules), npm (front/package.json) et la stack infra (PostgreSQL, Java/Temurin,
+  Node, template LXC dans provision.sh/.woodpecker), analyse les changelogs pour
+  repérer breaking changes et nouveautés exploitables.
+when_to_use: >
+  Invoquer automatiquement dès qu'un message utilisateur commence par
+  "Tickets du jalon X.Y.Z à implémenter" (mode jalon : mises à jour sûres
+  appliquées et intégrées au jalon en cours, jamais de ticket de bruit) ;
+  sinon invocation ad-hoc explicite (mode hors-jalon : résumé + proposition
+  de ticket constat-only, aucune modification appliquée).
+---
+
+## 1. Détecter le mode
+
+- **Mode jalon** : le message qui déclenche cette session commence par `"Tickets du jalon X.Y.Z à implémenter :"`.
+- **Mode hors-jalon** : toute autre invocation (ad-hoc, explicite).
+
+Le mode ne change que l'étape 8 (application) — la collecte et l'analyse (étapes 2 à 7) sont identiques dans les deux cas.
+
+## 2. Scanner Maven
+
+```bash
+mvn -f java/pom.xml versions:display-property-updates
+mvn -f java/pom.xml versions:display-dependency-updates
+```
+
+Le projet épingle la plupart de ses versions via des propriétés dans le pom parent (`<revision>` excepté — jamais touché ici, cf. étape 11) : c'est `display-property-updates` qui reflète le mécanisme réellement modifié à chaque jalon d'après l'historique CLAUDE.md. `display-dependency-updates` complète pour les dépendances non gérées par propriété.
+
+Vérifier aussi séparément si une version plus récente du parent Spring Boot (BOM) est disponible.
+
+## 3. Scanner npm
+
+```bash
+cd front && npm outdated
+```
+
+Lister current/wanted/latest par paquet.
+
+## 4. Scanner la stack infra
+
+Informatif uniquement — jamais appliqué automatiquement, un changement d'OS/PostgreSQL/Java majeur dépasse le cadre d'un jalon applicatif.
+
+Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template Debian LXC, Temurin/Java) et `.woodpecker/` (image de build, version Node) ; comparer aux dernières versions stables publiées (WebSearch/WebFetch).
+
+## 5. Analyser le changelog de chaque dépendance obsolète
+
+Pour chaque ligne remontée aux étapes 2-4 : WebFetch/WebSearch vers le changelog réel (GitHub releases, page Maven Central, changelog npm/GitHub du paquet). Classer :
+
+- **Sûr** (patch/mineur, pas de breaking change identifié dans le changelog) → applicable directement en mode jalon.
+- **À risque** (majeur, ou changelog mentionnant explicitement un breaking change) → jamais appliqué automatiquement, remonté comme point de décision.
+
+Repérer aussi, même sur une mise à jour sûre, les **nouveautés/optimisations** potentiellement pertinentes pour ce projet (même démarche que les revues historiques de `flyway` 13 ou `resend-java` déjà faites manuellement) — chacune devient un point de décision explicite (cf. étape 8), jamais une simple mention noyée dans le rapport qui n'engage à rien.
+
+⚠️ **Ne jamais grouper plusieurs bumps de dépendances dans un seul commit sans que chacune ait individuellement traversé cette étape** — un message `"chore: bump X, Y, Z"` en une ligne masque l'oubli de cette analyse pour une dépendance particulière (déjà arrivé : `resend-java` 4.23.0→4.24.0 groupé avec 3 autres dépendances le 11/09/2026, `feat(webhooks): add signing secret rotation endpoint` jamais repéré ni remonté, cf. `feedback_bump_groupe_sans_changelog`).
+
+## 6. Vétusté et CVE (chaque dépendance pinnée, pas seulement celles avec une mise à jour disponible)
+
+Une dépendance déjà à sa dernière version publiée peut quand même être un risque si le projet amont est mort ou vulnérable — l'étape 5 ne le détecte pas (elle ne s'intéresse qu'aux dépendances *en retard*).
+
+Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dépendance npm épinglée : vérifier la date de dernière publication (`maven-metadata.xml` → `<lastUpdated>`, ou `npm view <paquet> time` / registre npm) et rechercher une CVE connue (WebSearch `"<paquet>" CVE <année>`, ou base OSV/GitHub Advisory).
+
+- **Silencieux dans le rapport si RAS** : dernière publication < 12 mois et aucune CVE ouverte.
+- **Signalé** (mode jalon : mentionné sans bloquer le jalon ; mode hors-jalon : dans le rapport, avec proposition de ticket constat-only si pertinent) : aucune publication depuis 12+ mois, projet visiblement à l'arrêt, ou CVE trouvée sans version corrigée disponible.
+- Ne jamais rétrograder ou remplacer une dépendance vétuste par une alternative de son propre chef — même règle que l'étape 11 : constat, jamais de piste d'implémentation imposée.
+
+## 7. Audit périodique des fonctionnalités inexploitées (dépendances déjà à jour)
+
+L'étape 5 n'analyse que le *delta* entre la version épinglée et la dernière disponible — une fonctionnalité déjà présente dans une version qu'on utilise **depuis longtemps**, jamais adoptée dans le code, ne remonte plus jamais dans aucun scan futur (la dépendance n'est plus "en retard" sur elle). Trouvé le 18/09/2026 : le module `Suppressions` de `resend-java`, disponible depuis la v4.18.0 (bien avant tous les bumps tracés dans l'historique du pom), jamais repéré par aucune invocation de ce skill.
+
+- Ne pas auditer ça à chaque invocation (coût disproportionné pour un projet perso, cf. `feedback_proportionnalite_ingenierie`) — seulement à la demande explicite de l'utilisateur sur une dépendance donnée ("on a implémenté les dernières nouveautés de X ?"), ou en mode jalon si le jalon touche déjà une fonctionnalité liée à cette dépendance.
+- Démarche : lister les classes/méthodes du SDK réellement utilisées dans le code (grep) vs. celles exposées par la version actuellement installée (décompilation du jar en cache local `~/.m2`, `javap -classpath <jar> <classe>` — jamais deviner une signature). Comparer au changelog complet du projet amont (pas seulement le delta courant) pour retrouver depuis quelle version chaque capacité inexploitée existe.
+- Chaque capacité pertinente trouvée suit le même traitement qu'une nouveauté de l'étape 5 : point de décision explicite (étape 8), jamais une mention seule.
+
+## 8. Application (mode jalon uniquement)
+
+- Bumper les propriétés/versions concernées. **Ne jamais toucher `<revision>`** (version applicative du pom parent) — décision utilisateur explicite requise, cf. mémoire `feedback_version_bump`.
+- Recompiler/tester avant de considérer la mise à jour intégrée :
+  ```bash
+  mvn -pl core,sources,web test
+  mvn -pl worker test -am
+  cd front && npm run test:unit
+  ```
+- Toute mise à jour "à risque" **ou nouveauté/optimisation repérée jugée pertinente** (étape 5) : poser la question précise **dans le même tour** — implémentation immédiate / ticket dédié / ignoré pour une nouveauté, à appliquer ou non pour une mise à jour à risque — jamais noter "en attente de décision" ou "à mentionner" sans la poser (cf. mémoire `feedback_question_doit_etre_posee`). Seule une réponse explicite ferme le point ; ne bloque pas le reste du jalon si elle n'est pas immédiate — continuer sur les tickets du jalon en parallèle.
+- Le bump de dépendances rejoint le commit/la PR du jalon en cours, jamais une PR séparée.
+
+## 9. Rapport (mode hors-jalon)
+
+Résumé structuré par dépendance : version actuelle → disponible, résumé du changelog, sûr/à risque, nouveauté notable. Si quelque chose mérite un suivi, proposer un ticket — **constat/analyse uniquement, jamais de piste d'implémentation** (cf. mémoire `feedback_ticket_pas_de_solution`). Aucune modification de fichier sans validation explicite de l'utilisateur.
+
+## 10. Pièges connus à revérifier systématiquement
+
+- **`okhttp`** (dépendance transitive Resend) : artefact Maven générique vide depuis okhttp 5.0.0 (module Kotlin Multiplatform). resend-java ≥ 4.28.0 dépend directement de `okhttp-jvm`, version gérée dans le pom parent : à chaque montée de Resend, vérifier par `mvn dependency:tree -pl web,worker` qu'aucun `com.squareup.okhttp3:okhttp` vide n'est tiré (le worker avait été oublié une fois, v2.7.0 lot 4, bug de prod silencieux).
+- Le plugin Maven `versions` peut suggérer une **rétrogradation fausse** (`resend-java` → 4.13.0 déjà rencontré) — toujours vérifier `maven-metadata.xml` sur Maven Central directement avant de conclure qu'une version plus récente n'existe pas.
+- `npm audit` sur la chaîne `vite-plugin-pwa`→`workbox-build`→... peut être non actionable sans `--force` (qui rétrograderait `vite-plugin-pwa`) — documenter plutôt que forcer, sauf si `npm audit fix` (sans `--force`) résout proprement (déjà arrivé, v2.7.9).
+- Montée majeure de Spring Boot : vérifier les packages déplacés (ex. `Health`/`HealthIndicator` → `org.springframework.boot.health.contributor` depuis Spring Boot 4).
+- Montée majeure de `flyway` : toujours vérifier le changelog de la version majeure pour les breaking changes avant d'appliquer (déjà fait pour 12→13, aucun breaking change identifié).
+
+## 11. Ne jamais
+
+- Bumper `<revision>` (version applicative) sans demande explicite.
+- Créer un ticket contenant une piste d'implémentation.
+- Appliquer une mise à jour majeure/breaking sans avoir posé la question de décision dans le tour où elle est identifiée.
+- Rétrograder ou remplacer une dépendance vétuste par une alternative de son propre chef.
+- Mentionner une nouveauté/optimisation dans le rapport sans la poser comme point de décision explicite (étape 8) — une mention seule se perd et n'est jamais suivie d'effet.
+- Grouper plusieurs bumps de dépendances dans un seul commit sans que chacune ait individuellement traversé l'étape 5 (changelog) — cf. `feedback_bump_groupe_sans_changelog`.

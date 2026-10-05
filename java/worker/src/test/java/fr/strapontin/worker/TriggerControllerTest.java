@@ -5,20 +5,26 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.worker.jobs.FetchArtisteJob;
+import fr.strapontin.worker.persister.SimulationResolutionSalles;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
+import org.quartz.Trigger;
 import org.springframework.http.ResponseEntity;
 
 /**
@@ -34,7 +40,8 @@ class TriggerControllerTest {
   @Test
   void relancerJob_typeJobInconnu_retourne400() {
     final Scheduler scheduler = mock(Scheduler.class);
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("job:inexistant");
 
@@ -45,7 +52,8 @@ class TriggerControllerTest {
   void relancerJob_reconciliationNocturne_aucuneInstanceEnCours_declenche() throws Exception {
     final Scheduler scheduler = mock(Scheduler.class);
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
@@ -59,7 +67,8 @@ class TriggerControllerTest {
   void relancerJob_purgerSalles_declenche() throws Exception {
     final Scheduler scheduler = mock(Scheduler.class);
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.relancerJob("purger:salles");
 
@@ -77,7 +86,8 @@ class TriggerControllerTest {
             .build();
     when(ctxEnCours.getJobDetail()).thenReturn(jobDetail);
     when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of(ctxEnCours));
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
@@ -92,7 +102,8 @@ class TriggerControllerTest {
     final Scheduler scheduler = mock(Scheduler.class);
     when(scheduler.getCurrentlyExecutingJobs())
         .thenThrow(new org.quartz.SchedulerException("boom"));
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse =
         controller.relancerJob("reconciliation:nocturne");
@@ -103,7 +114,8 @@ class TriggerControllerTest {
   @Test
   void notifierVersion_succes_planifieLeJobEtRetourne200() throws Exception {
     final Scheduler scheduler = mock(Scheduler.class);
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.notifierVersion("3.0.0");
 
@@ -122,10 +134,57 @@ class TriggerControllerTest {
             org.mockito.ArgumentMatchers.any(JobDetail.class),
             org.mockito.ArgumentMatchers.any(org.quartz.Trigger.class)))
         .thenThrow(new org.quartz.SchedulerException("boom"));
-    final TriggerController controller = new TriggerController(scheduler);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
 
     final ResponseEntity<Map<String, String>> reponse = controller.notifierVersion("3.0.0");
 
     assertEquals(500, reponse.getStatusCode().value());
+  }
+
+  // Un ajout ne récupère que l'artiste ajouté : le cycle complet vidait le quota Ticketmaster.
+  @Test
+  void relancerArtistes_avecIdentifiant_planifieLeSeulArtiste() throws Exception {
+    final Scheduler scheduler = mock(Scheduler.class);
+    when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
+    final String artisteId = "0f8fad5b-d9cb-469f-a165-70867728950e";
+
+    final ResponseEntity<Map<String, String>> reponse = controller.relancerArtistes(artisteId);
+
+    assertEquals(200, reponse.getStatusCode().value());
+    final ArgumentCaptor<JobDetail> captor = ArgumentCaptor.forClass(JobDetail.class);
+    verify(scheduler).scheduleJob(captor.capture(), any(Trigger.class));
+    assertEquals(FetchArtisteJob.class, captor.getValue().getJobClass());
+    assertEquals(
+        artisteId, captor.getValue().getJobDataMap().getString(FetchArtisteJob.CLE_ARTISTE_ID));
+    verify(scheduler, never()).triggerJob(any(JobKey.class));
+  }
+
+  @Test
+  void relancerArtistes_identifiantInvalide_retourne400() throws Exception {
+    final Scheduler scheduler = mock(Scheduler.class);
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
+
+    final ResponseEntity<Map<String, String>> reponse = controller.relancerArtistes("pas-un-uuid");
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(scheduler, never()).scheduleJob(any(JobDetail.class), any(Trigger.class));
+  }
+
+  // L'import de préférences, sans identifiant, garde le cycle complet.
+  @Test
+  void relancerArtistes_sansIdentifiant_declencheLeCycleComplet() throws Exception {
+    final Scheduler scheduler = mock(Scheduler.class);
+    when(scheduler.getCurrentlyExecutingJobs()).thenReturn(List.of());
+    final TriggerController controller =
+        new TriggerController(scheduler, mock(SimulationResolutionSalles.class));
+
+    final ResponseEntity<Map<String, String>> reponse = controller.relancerArtistes(null);
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(scheduler).triggerJob(eq(JobKey.jobKey("fetchArtistesBatch")));
   }
 }

@@ -2,7 +2,9 @@ target/
 *.class
 *.jar
 !**/src/main/**/*.jar
-.mvn/
+.mvn/*
+!.mvn/jvm.config
+!.mvn/maven.config
 .project
 .classpath
 .settings/

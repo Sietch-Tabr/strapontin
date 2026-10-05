@@ -52,9 +52,9 @@ test.describe("Scénario: accessibilité WCAG #742 — aria-current navigation",
     await expect(
       page.locator(".barre-laterale-nav a[href='/spectacles']"),
     ).toHaveAttribute("aria-current", "page");
-    await expect(page.locator(".barre-laterale-nav a[href='/']")).not.toHaveAttribute(
-      "aria-current",
-    );
+    await expect(
+      page.locator(".barre-laterale-nav a[href='/']"),
+    ).not.toHaveAttribute("aria-current");
   });
 
   test("bottom_nav_aria_current_page_sur_lien_actif", async ({
@@ -135,5 +135,16 @@ test.describe("Scénario: accessibilité WCAG #742 — drawer mobile", () => {
       await expect(liensInactifs.nth(i)).not.toHaveAttribute("aria-current");
     }
     await page.keyboard.press("Escape");
+  });
+});
+
+test.describe("Scénario: accessibilité — champs nommés", () => {
+  test.use({ storageState: FICHIER_AUTH_USER });
+
+  test("preferences_champDepartements_aUnNomAccessible", async ({ page }) => {
+    await page.goto("/parametres#preferences");
+    await expect(
+      page.getByRole("textbox", { name: "Départements de découverte" }),
+    ).toBeVisible();
   });
 });

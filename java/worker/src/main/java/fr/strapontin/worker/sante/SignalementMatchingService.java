@@ -4,8 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -13,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Point d'entrée unique pour les nouveaux signalements de matching
@@ -66,10 +67,30 @@ public class SignalementMatchingService {
               .addValue("entiteId", entiteId.toString())
               .addValue("confiance", confiance)
               .addValue("details", detailsJson));
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       LOG.warn("Erreur sérialisation details signalement type={} : {}", type, e.getMessage());
     } catch (Exception e) {
       LOG.warn("Erreur insertion signalement type={} : {}", type, e.getMessage());
     }
+  }
+
+  /**
+   * Clôt les signalements actifs d'un type dont l'entité n'est plus en
+   * anomalie : un contrôle périodique se referme de lui-même.
+   * @param entitesEncoreEnAnomalie entités toujours concernées
+   * @return nombre de signalements clos
+   */
+  public int clore(final String type, final Collection<UUID> entitesEncoreEnAnomalie) {
+    return jdbc.update(
+        """
+        UPDATE signalements_matching SET resolu_le = now()
+        WHERE type = :type AND resolu_le IS NULL
+          AND NOT (entite_id = ANY(CAST(:encore AS uuid[])))
+        """,
+        new MapSqlParameterSource()
+            .addValue("type", type)
+            .addValue(
+                "encore",
+                entitesEncoreEnAnomalie.stream().map(UUID::toString).toArray(String[]::new)));
   }
 }

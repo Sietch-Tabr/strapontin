@@ -7,9 +7,18 @@
       <p class="param-aide">
         Télécharge un fichier JSON avec vos artistes, salles et configuration.
       </p>
-      <EtatChargement v-if="chargement" />
-      <p v-else-if="stats" class="param-aide">
-        {{ stats.nbArtistes }}/500 artistes — {{ stats.nbSalles }}/200 salles
+      <!-- Même gabarit en chargement et chargé : un bloc plus haut décalait les boutons suivants. -->
+      <p
+        v-if="chargement || stats"
+        class="param-aide"
+        role="status"
+        :aria-busy="chargement"
+      >
+        <template v-if="chargement">Chargement des compteurs…</template>
+        <template v-else
+          >{{ stats.nbArtistes }}/500 artistes — {{ stats.nbSalles }}/200
+          salles</template
+        >
       </p>
       <a href="/api/preferences" class="bouton bouton-secondaire"
         >Télécharger (JSON)</a
@@ -92,7 +101,15 @@
     </div>
   </section>
 
-  <dialog id="dialog-supprimer-compte" ref="dialogSuppressionRef">
+  <dialog
+    id="dialog-supprimer-compte"
+    ref="dialogSuppressionRef"
+    aria-labelledby="titre-dialog-supprimer-compte"
+    aria-modal="true"
+  >
+    <h2 id="titre-dialog-supprimer-compte" class="dialog-titre">
+      Supprimer mon compte ?
+    </h2>
     <p>
       Supprime définitivement votre compte et toutes vos données. Cette action
       est irréversible.
@@ -131,14 +148,13 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresDonnees" });
 
 import { ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
-import EtatChargement from "../EtatChargement.vue";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const router = useRouter();
 const { afficherToast } = useToasts();
@@ -163,8 +179,8 @@ function majNomFichier() {
 
 async function charger() {
   try {
-    const rep = await fetch("/api/parametres/stats");
-    if (rep.ok) stats.value = await rep.json();
+    const rep = await appelApi("/api/parametres/stats");
+    if (rep.ok) stats.value = await lireJson(rep);
   } catch (_) {
     afficherToast("Erreur lors du chargement des statistiques.", "erreur");
   } finally {
@@ -182,11 +198,11 @@ async function importerPreferences() {
   formData.append("importerConfig", importerConfig.value ? "true" : "false");
 
   try {
-    const rep = await fetch("/api/preferences/importer", {
+    const rep = await appelApi("/api/preferences/importer", {
       method: "POST",
       body: formData,
     });
-    const corps = await corpsJsonOuVide(rep);
+    const corps = await lireJson(rep);
     if (rep.ok) {
       const a = corps.artistes ?? 0;
       const s = corps.salles ?? 0;
@@ -203,8 +219,8 @@ async function importerPreferences() {
         (r > 0 ? " (" + r + " rejeté" + (r > 1 ? "s" : "") + ")" : "") +
         ".";
       afficherToast(msg, "succes");
-      const repStats = await fetch("/api/parametres/stats");
-      if (repStats.ok) stats.value = await repStats.json();
+      const repStats = await appelApi("/api/parametres/stats");
+      if (repStats.ok) stats.value = await lireJson(repStats);
       fichierEl.value = "";
       nomFichier.value = "Aucun fichier sélectionné";
     } else {
@@ -227,14 +243,14 @@ function fermerDialogSuppression() {
 async function supprimerCompte() {
   if (confirmationSuppression.value !== "supprimer") return;
   try {
-    const rep = await fetch("/api/user", { method: "DELETE" });
+    const rep = await appelApi("/api/user", { method: "DELETE" });
     if (rep.ok || rep.status === 204) {
       fermerDialogSuppression();
       afficherToast("Compte supprimé.", "succes");
       router.push("/login");
     } else {
       fermerDialogSuppression();
-      const corps = await corpsJsonOuVide(rep);
+      const corps = await lireJson(rep);
       afficherToast(
         corps.erreur || "Erreur lors de la suppression du compte.",
         "erreur",

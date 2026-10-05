@@ -4,8 +4,6 @@
  */
 package fr.strapontin.web.salle;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.WorkerTriggerUtils;
@@ -21,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Recherche de salles par nom via l'API Ticketmaster (recherche interactive
@@ -115,8 +114,7 @@ class SalleRechercheTicketmasterService {
   }
 
   @SuppressWarnings("unchecked")
-  private List<Map<String, Object>> extraireVenuesTM(final String corps)
-      throws JsonProcessingException {
+  private List<Map<String, Object>> extraireVenuesTM(final String corps) {
     final Map<String, Object> root = objectMapper.readValue(corps, Map.class);
     final Map<String, Object> embedded = (Map<String, Object>) root.get("_embedded");
     final List<Map<String, Object>> venues =

@@ -4,13 +4,16 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.worker.jobs.FetchArtisteJob;
 import fr.strapontin.worker.jobs.FetchSalleJob;
 import fr.strapontin.worker.jobs.NotifierVersionJob;
+import fr.strapontin.worker.persister.SimulationResolutionSalles;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.JobExecutionContext;
@@ -48,12 +51,26 @@ public class TriggerController {
   private static final String PREFIXE_ERREUR_QUARTZ = "Erreur Quartz : ";
 
   private final Scheduler scheduler;
+  private final SimulationResolutionSalles simulationResolutionSalles;
 
   /**
    * @param scheduler planificateur Quartz portant les jobs déclenchables
+   * @param simulationResolutionSalles simulation de la résolution par position
    */
-  public TriggerController(final Scheduler scheduler) {
+  public TriggerController(
+      final Scheduler scheduler, final SimulationResolutionSalles simulationResolutionSalles) {
     this.scheduler = scheduler;
+    this.simulationResolutionSalles = simulationResolutionSalles;
+  }
+
+  /**
+   * Simule, sans écrire, la résolution des salles par position sur les
+   * données actuelles et en rapporte les écarts avec le rattachement en base.
+   * @return effectifs par catégorie et exemples
+   */
+  @GetMapping("/simulation-salles")
+  public ResponseEntity<Map<String, Object>> simulerResolutionSalles() {
+    return ResponseEntity.ok(simulationResolutionSalles.simuler());
   }
 
   /**
@@ -129,15 +146,18 @@ public class TriggerController {
   }
 
   /**
-   * Déclenche immédiatement {@code fetch:artistes:batch} uniquement si aucun
-   * n'est déjà en cours.
-   *
-   * <p>Appelé automatiquement par le web après l'ajout d'un artiste.
-   *
-   * @return 200 si déclenché ou déjà en cours, 500 en cas d'erreur Quartz
+   * Après l'ajout d'un artiste, ne récupère que lui ; sans identifiant
+   * (import), lance {@code fetch:artistes:batch} s'il n'est pas en cours.
+   * @param artisteId identifiant de l'artiste ajouté, ou {@code null}
+   * @return 200 déclenché ou déjà en cours, 400 identifiant invalide, 500
+   *     erreur Quartz
    */
   @PostMapping("/artiste")
-  public ResponseEntity<Map<String, String>> relancerArtistes() {
+  public ResponseEntity<Map<String, String>> relancerArtistes(
+      @RequestParam(required = false) final String artisteId) {
+    if (artisteId != null) {
+      return relancerUnArtiste(artisteId);
+    }
     try {
       if (jobEnCours(JOB_FETCH_ARTISTES_BATCH)) {
         LOG.debug("fetchArtistesBatch déjà en cours — ignoré");
@@ -176,6 +196,35 @@ public class TriggerController {
       return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
     } catch (SchedulerException e) {
       LOG.warn("Erreur déclenchement {} : {}", typeJob, e.getMessage());
+      return ResponseEntity.internalServerError()
+          .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
+    }
+  }
+
+  // Un ajout ne récupère que l'artiste ajouté : le cycle complet, lancé à
+  // chaque ajout, vidait le quota Ticketmaster.
+  private ResponseEntity<Map<String, String>> relancerUnArtiste(final String artisteId) {
+    try {
+      UUID.fromString(artisteId);
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(Map.of(CLE_ERREUR, "Identifiant d'artiste invalide"));
+    }
+    try {
+      final String cleJob = "fetchArtiste-" + artisteId;
+      if (jobEnCours(cleJob)) {
+        LOG.debug("fetchArtiste {} déjà en cours — ignoré", artisteId);
+        return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DEJA_EN_COURS));
+      }
+      final JobDetail jobDetail =
+          JobBuilder.newJob(FetchArtisteJob.class)
+              .withIdentity(cleJob, "on-demand")
+              .usingJobData(FetchArtisteJob.CLE_ARTISTE_ID, artisteId)
+              .build();
+      scheduler.scheduleJob(jobDetail, TriggerBuilder.newTrigger().startNow().build());
+      LOG.info("Déclenchement artiste : fetchArtiste artisteId={}", artisteId);
+      return ResponseEntity.ok(Map.of(CLE_STATUT, STATUT_DECLENCHE));
+    } catch (SchedulerException e) {
+      LOG.warn("Erreur déclenchement artiste : {}", e.getMessage());
       return ResponseEntity.internalServerError()
           .body(Map.of(CLE_ERREUR, PREFIXE_ERREUR_QUARTZ + e.getMessage()));
     }

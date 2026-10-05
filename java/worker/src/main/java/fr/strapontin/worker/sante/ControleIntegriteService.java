@@ -36,6 +36,8 @@ public class ControleIntegriteService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalementMatchingService;
+  private final ControleDispersionGeo dispersionGeo;
+  private final ControleInvariantsDonnees invariants;
 
   /**
    * @param jdbc accès JDBC
@@ -46,14 +48,14 @@ public class ControleIntegriteService {
       final SignalementMatchingService signalementMatchingService) {
     this.jdbc = jdbc;
     this.signalementMatchingService = signalementMatchingService;
+    this.dispersionGeo = new ControleDispersionGeo(jdbc, signalementMatchingService);
+    this.invariants = new ControleInvariantsDonnees(jdbc, signalementMatchingService);
   }
 
   /**
-   * Exécute les 4 invariants et retourne le nombre total de signalements
-   * nouvellement posés.
-   *
+   * Exécute les invariants, dont {@link ControleDispersionGeo} et
+   * {@link ControleInvariantsDonnees}.
    * @return nombre de signalements nouvellement posés, tous invariants
-   *     confondus
    */
   public int verifier() {
     int signales = 0;
@@ -61,6 +63,8 @@ public class ControleIntegriteService {
     signales += verifierCoherenceDeptSalle();
     signales += verifierEvenementsOrphelinsAnciens();
     signales += verifierSourcesOrphelines();
+    signales += dispersionGeo.verifier();
+    signales += invariants.verifier();
     LOG.info("controle:integrite signales={}", signales);
     return signales;
   }
@@ -177,10 +181,13 @@ public class ControleIntegriteService {
               AND NOT (
                 (sm.entite_type = 'artiste' AND EXISTS (
                     SELECT 1 FROM artiste_sources s WHERE s.artiste_id = sm.entite_id
-                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id = s.artiste_id)))
+                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id = s.artiste_id)
+                      AND NOT EXISTS (SELECT 1 FROM user_artistes u
+                                      WHERE u.artiste_id = s.artiste_id)))
                 OR (sm.entite_type = 'salle' AND EXISTS (
                     SELECT 1 FROM salle_sources s WHERE s.salle_id = sm.entite_id
-                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id))))
+                      AND NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)
+                      AND NOT EXISTS (SELECT 1 FROM user_salles u WHERE u.salle_id = s.salle_id))))
             """,
             Map.of());
     if (fermes > 0) {
@@ -197,10 +204,13 @@ public class ControleIntegriteService {
           case ARTISTE ->
               "SELECT artiste_id AS entite_id, source, identifiant_externe FROM artiste_sources s"
                   + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id ="
+                  + " s.artiste_id)"
+                  + " AND NOT EXISTS (SELECT 1 FROM user_artistes u WHERE u.artiste_id ="
                   + " s.artiste_id)";
           case SALLE ->
               "SELECT salle_id AS entite_id, source, identifiant_externe FROM salle_sources s"
-                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)";
+                  + " WHERE NOT EXISTS (SELECT 1 FROM evenements e WHERE e.salle_id = s.salle_id)"
+                  + " AND NOT EXISTS (SELECT 1 FROM user_salles u WHERE u.salle_id = s.salle_id)";
         };
     final String entiteType = type == TypeEntiteSource.ARTISTE ? "artiste" : "salle";
 

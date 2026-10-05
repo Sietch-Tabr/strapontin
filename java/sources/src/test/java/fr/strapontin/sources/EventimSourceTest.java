@@ -118,6 +118,114 @@ class EventimSourceTest {
     assertEquals("21:45", r[1]);
   }
 
+  // --- concerneArtiste (têtes d'affiche de festival attachées à tous les produits) ---
+
+  private static final List<Map<String, Object>> ARTISTES_FESTIVAL =
+      List.of(
+          Map.of("name", "Cascadeur"),
+          Map.of("name", "Pi Ja Ma"),
+          Map.of("name", "Les Rendez-Vous Soniques"),
+          Map.of("name", "Suzane"),
+          Map.of("name", "Benjamin Biolay"));
+
+  private static Map<String, Object> produitFestival(final String titre) {
+    return Map.of("name", titre, "attractions", ARTISTES_FESTIVAL);
+  }
+
+  @Test
+  void concerneArtiste_dateDUnAutreArtisteDuFestival_estEcartee() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("Cascadeur + Betty Pop - Les Rendez-Vous Soniques #17"), "Suzane"));
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("PI JA MA & La Chorale du Normandy - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+  }
+
+  // Titre tronqué par Eventim : la suite reste un préfixe du festival.
+  @Test
+  void concerneArtiste_titreTronque_dateDUnAutreArtisteEcartee() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("PI JA MA & La Chorale du Normandy + Marianne Perrudin - Les Rendez.."),
+            "Suzane"));
+  }
+
+  // Produits réels relevés le 04/10/2026 : le titre nomme l'événement, que l'artiste joue.
+  @Test
+  void concerneArtiste_titreDeLEvenementLuiMeme_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Les Voix de Carmen",
+                "attractions",
+                List.of(
+                    Map.of("name", "Les Voix de Carmen"),
+                    Map.of("name", "Camelia Jordana"),
+                    Map.of("name", "Estelle Meyer"))),
+            "Camélia Jordana"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Firemaster Convention - Billet 1 Jour",
+                "attractions",
+                List.of(
+                    Map.of("name", "Firemaster Convention"),
+                    Map.of("name", "Ultra Vomit"),
+                    Map.of("name", "Bukowski"))),
+            "Ultra Vomit"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Ensemble !!!",
+                "attractions",
+                List.of(
+                    Map.of("name", "Ensemble !!!"),
+                    Map.of("name", "Sinsemilia"),
+                    Map.of("name", "Tryo"))),
+            "Tryo"));
+  }
+
+  @Test
+  void concerneArtiste_dateOuLArtisteJoue_estGardee() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("Suzane + Marguerite + Sam Sauvage - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+  }
+
+  @Test
+  void concerneArtiste_titreSansArtisteReconnu_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("Pionnières par DeLaurentis - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Les 30 ans de Rêves de Gosse",
+                "attractions",
+                List.of(Map.of("name", "Shy'm"))),
+            "Shy'm"));
+  }
+
+  @Test
+  void concerneArtiste_nomDeLArtisteContenuDansUneAttraction_nEstPasUnAutreArtiste() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "-M- Matthieu Chedid - Tournée",
+                "attractions",
+                List.of(Map.of("name", "-M- Matthieu Chedid"))),
+            "-M-"));
+  }
+
   // --- extraireNomArtiste ---
 
   @Test
@@ -367,6 +475,56 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
+  // Nom de scène d'une identité confirmée publié sous une forme longue : « -M- » →
+  // « -M- Matthieu Chedid », reconnu car le reste du nom est le libellé Wikidata de l'artiste.
+  @Test
+  void fetchArtiste_identiteConfirmeeResteDuNomConnu_accepteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess("{\"products\":[],\"totalResults\":0}", MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("-M-", "867", "Q2365459", List.of("Matthieu Chedid", "M"));
+
+    serveur.verify();
+    assertEquals(1, source.preleverContainmentsAcceptes().size());
+  }
+
+  @Test
+  void fetchArtiste_identiteConfirmeeResteDuNomInconnu_rejetteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats =
+        source.fetchArtiste("Furies", "656219", null, List.of("The Furies"));
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
   // Symétrique côté wikidataId : même comportement attendu qu'avec un deezerId connu.
   @Test
   void fetchArtiste_identiteConfirmeeParWikidataId_rejetteLeContainment() {
@@ -590,8 +748,7 @@ class EventimSourceTest {
                     org.hamcrest.Matchers.containsString("date_from=" + LocalDate.now()))))
         .andRespond(
             withSuccess(
-                "{\"products\":[" + pleine + "],\"totalResults\":51}",
-                MediaType.APPLICATION_JSON));
+                "{\"products\":[" + pleine + "],\"totalResults\":51}", MediaType.APPLICATION_JSON));
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("date_from=" + jour)))
         .andRespond(
@@ -646,10 +803,9 @@ class EventimSourceTest {
   }
 
   // Contrairement à un artiste réellement absent d'Eventim (liste vide, succès), un échec HTTP
-  // sur le fetch des produits après une résolution d'identité réussie doit aussi retourner une
-  // liste vide sans lever d'exception — voir ResultatPageEventim#succes.
+  // sur les produits lève une réponse incomplète : aucune absence comptée.
   @Test
-  void fetchArtiste_erreurHttpSurFetchProduits_retourneListeVideSansLeverDException() {
+  void fetchArtiste_erreurHttpSurFetchProduits_leveReponseIncomplete() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -668,9 +824,10 @@ class EventimSourceTest {
         .andRespond(withServerError());
 
     final EventimSource source = new EventimSource(restClient);
-    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+    final ReponseIncompleteException incomplete =
+        assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
-    assertTrue(resultats.isEmpty());
+    assertTrue(incomplete.concertsRecus().isEmpty());
     serveur.verify();
   }
 
@@ -703,7 +860,7 @@ class EventimSourceTest {
         resultat.salleSourceId().startsWith("eventim:internal:"),
         "salleSourceId doit commencer par 'eventim:internal:' mais était : "
             + resultat.salleSourceId());
-    assertEquals("eventim:internal:accor arena", resultat.salleSourceId());
+    assertEquals("eventim:internal:accor arena@75012", resultat.salleSourceId());
   }
 
   @Test
@@ -782,7 +939,7 @@ class EventimSourceTest {
         .andRespond(withServerError());
 
     final EventimSource source = new EventimSource(restClient);
-    source.fetchArtiste("Julien Clerc");
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
 
     final BilanFetch bilan = source.preleverBilan();
     assertEquals(2, bilan.appels(), "un appel /attractions + un appel /products");
@@ -911,7 +1068,7 @@ class EventimSourceTest {
     assertEquals(1, concerts.size());
     final List<LieuEventim> lieux = source.preleverLieuxObserves();
     assertEquals(1, lieux.size());
-    assertEquals("internal:accor arena", lieux.get(0).identifiant());
+    assertEquals("internal:accor arena@75012", lieux.get(0).identifiant());
     assertEquals("Accor Arena", lieux.get(0).libelle());
     assertEquals("Paris", lieux.get(0).ville());
     assertEquals(48.8386, lieux.get(0).latitude());

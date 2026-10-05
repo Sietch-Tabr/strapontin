@@ -4,19 +4,24 @@
  */
 package fr.strapontin.web.email;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.resend.Resend;
 import com.resend.core.exception.ResendException;
 import com.resend.services.emails.Emails;
+import com.resend.services.usage.Usage;
 import fr.strapontin.web.config.ConfigService;
+import java.net.SocketTimeoutException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -116,5 +121,26 @@ class EmailSenderTest {
         ctx, "dest@exemple.fr", "contact@exemple.fr", "Sujet", "<p>corps</p>", "texte");
 
     verify(emails).send(org.mockito.ArgumentMatchers.any());
+  }
+
+  // Délai dépassé de Resend (01/10/2026) : le SDK l'enveloppe dans une RuntimeException, qui
+  // remontait en erreur de tâche planifiée et aurait bloqué les emails de sécurité.
+  @Test
+  void recalerQuotaSurUsageReel_delaiDepasse_conserveLeCompteurLocal() throws ResendException {
+    final Resend client = mock(Resend.class);
+    final Usage usage = mock(Usage.class);
+    when(client.usage()).thenReturn(usage);
+    when(usage.get()).thenThrow(new RuntimeException(new SocketTimeoutException("timeout")));
+    final EmailSender espion = spy(emailSender);
+    doReturn(
+            Optional.of(
+                new EmailSender.ContexteEmail(client, "contact@exemple.fr", "https://exemple.fr")))
+        .when(espion)
+        .obtenirContexte();
+
+    assertDoesNotThrow(espion::recalerQuotaSurUsageReel);
+    verify(gestionQuotaResend, never())
+        .recalerSurUsageReel(
+            org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
   }
 }

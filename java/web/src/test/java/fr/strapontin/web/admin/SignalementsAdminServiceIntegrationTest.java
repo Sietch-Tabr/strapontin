@@ -7,7 +7,6 @@ package fr.strapontin.web.admin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test d'intégration de {@link SignalementsAdminService} avec PostgreSQL réel (Testcontainers) —
@@ -93,19 +93,22 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
             .anyMatch(
                 e ->
                     "nouveau".equals(e.categorie())
-                        && artisteCollision.toString().equals(e.entiteId())));
+                        && artisteCollision.toString().equals(e.entite().id())));
     assertTrue(
         reponse.signalements().stream()
             .anyMatch(
                 e ->
                     "necessite_intervention".equals(e.categorie())
-                        && artisteIntervention.toString().equals(e.entiteId())));
+                        && artisteIntervention.toString().equals(e.entite().id())
+                        && "Jain".equals(e.entite().nom())));
     assertTrue(
         reponse.signalements().stream()
             .anyMatch(
                 e ->
                     "contamination_salle".equals(e.categorie())
-                        && salleContaminee.toString().equals(e.entiteId())));
+                        && salleContaminee.toString().equals(e.entite().id())
+                        && "Zenith Test".equals(e.entite().nom())));
+    assertTrue(reponse.catalogue().stream().anyMatch(t -> "contamination_salle".equals(t.type())));
   }
 
   @Test

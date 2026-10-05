@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +46,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
     salle = creerSalle("Zenith Test");
   }
 
@@ -58,6 +60,14 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
             .addValue("cle", nom.toLowerCase())
             .addValue("nom", nom)
             .addValue("nomNorm", nom.toLowerCase()));
+    return id;
+  }
+
+  private UUID creerArtiste(final String nom) {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES (CAST(:id AS uuid), :nom, :nomNorm)",
+        Map.of("id", id.toString(), "nom", nom, "nomNorm", nom.toLowerCase() + " " + id));
     return id;
   }
 
@@ -96,6 +106,77 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     final Long nbEvenements =
         jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class);
     assertEquals(1L, nbEvenements, "un seul événement doit subsister après fusion");
+  }
+
+  // Paire réelle de la prod : une billetterie publie la tête d'affiche, l'autre « + 1ère partie ».
+  @Test
+  void fusionner_memeAfficheAvecSuffixePremierePartie_fusionneLesDeuxEvenements() {
+    creerEvenement("meryl", null);
+    creerEvenement("meryl 1ere partie", null);
+
+    assertEquals(1, fusionEvenementsArtiste.fusionner());
+    assertEquals(
+        "meryl",
+        jdbc.queryForObject("SELECT artiste_norm FROM evenements", Map.of(), String.class));
+  }
+
+  // Deux têtes d'affiche suivies séparément gardent chacune leur événement.
+  @Test
+  void fusionner_coPlateauAvecArtistesRattaches_conserveLesDeuxEvenements() {
+    creerEvenement("behemoth", creerArtiste("Behemoth"));
+    creerEvenement("behemoth and dimmu borgir", creerArtiste("Dimmu Borgir"));
+
+    assertEquals(0, fusionEvenementsArtiste.fusionner());
+  }
+
+  private UUID creerEvenementDansSalle(
+      final UUID salleId, final String artisteNorm, final int absences, final String url) {
+    final UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept,"
+                + " absences_consecutives) VALUES (:artisteNorm, CAST(:date AS date),"
+                + " CAST('20:00' AS time), 'salle', CAST(:salleId AS uuid), '75', :absences)"
+                + " RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("artisteNorm", artisteNorm)
+                .addValue("date", DATE_FUTURE)
+                .addValue("salleId", salleId.toString())
+                .addValue("absences", absences),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :url,"
+            + " :artiste, 'salle')",
+        Map.of("id", evenementId.toString(), "url", url, "artiste", artisteNorm));
+    return evenementId;
+  }
+
+  // Father of Peace : publié à La Maroquinerie, republié à l'Alhambra sous un autre idmanif.
+  @Test
+  void fusionnerConcertsDeplaces_ancienneFicheAbsenteEtNouvelleVivante_fusionne() {
+    final UUID maroquinerie = creerSalle("La Maroquinerie");
+    final UUID alhambra = creerSalle("Alhambra");
+    creerEvenementDansSalle(maroquinerie, "father of peace", 32, "https://tm/idmanif/663875");
+    final UUID vivant =
+        creerEvenementDansSalle(alhambra, "father of peace", 0, "https://tm/idmanif/668351");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerConcertsDeplaces());
+    assertEquals(
+        List.of(vivant),
+        jdbc.queryForList(
+            "SELECT id FROM evenements WHERE artiste_norm = 'father of peace'",
+            Map.of(),
+            UUID.class));
+  }
+
+  @Test
+  void fusionnerConcertsDeplaces_aucunEvenementVivant_neFusionnePas() {
+    final UUID maroquinerie = creerSalle("La Maroquinerie");
+    final UUID alhambra = creerSalle("Alhambra");
+    creerEvenementDansSalle(maroquinerie, "zebrahead", 4, "https://tm/idmanif/642731");
+    creerEvenementDansSalle(alhambra, "zebrahead", 2, "https://tm/idmanif/668864");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerConcertsDeplaces());
   }
 
   // Second cas réel documenté (#1240) : "dexys midnight runners" / "dexy s midnight runners"
@@ -209,5 +290,199 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     final int fusions = fusionEvenementsArtiste.fusionner();
 
     assertEquals(0, fusions, "des salles différentes ne doivent jamais suffire à fusionner");
+  }
+
+  // --- fusionnerFichesPerimees ---
+
+  private static final String URL_TM =
+      "https://www.ticketmaster.fr/fr/manifestation/x/idmanif/613943";
+
+  private UUID creerFiche(
+      final UUID salleId,
+      final String date,
+      final String heure,
+      final int absences,
+      final String url) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id,"
+                + " absences_consecutives) VALUES ('tina arena', CAST(:date AS date),"
+                + " CAST(:heure AS time), 'palais des congres', CAST(:salleId AS uuid), :absences)"
+                + " RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("date", date)
+                .addValue("heure", heure)
+                .addValue("salleId", salleId == null ? null : salleId.toString())
+                .addValue("absences", absences),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert), :url,"
+            + " 'Tina Arena', 'Palais des Congres')",
+        Map.of("id", id.toString(), "url", url));
+    return id;
+  }
+
+  private boolean existe(final UUID id) {
+    return jdbc.queryForObject(
+            "SELECT count(*) FROM evenements WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
+            Integer.class)
+        == 1;
+  }
+
+  @Test
+  void
+      fusionnerFichesPerimees_ficheMalRattacheeFigeeEtFicheCorrecteVivante_fusionneDansLaVivante() {
+    final UUID mauvaiseSalle = creerSalle("Palais des Congres Vittel");
+    final UUID perimee = creerFiche(mauvaiseSalle, DATE_FUTURE, "20:00", 10, URL_TM);
+    final UUID vivante = creerFiche(salle, DATE_FUTURE, "20:00", 0, URL_TM);
+    jdbc.update(
+        "INSERT INTO users (id, username, email) VALUES ('u1', 'u1', 'u1@test.fr')", Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id) VALUES ('u1', CAST(:id AS uuid))",
+        Map.of("id", perimee.toString()));
+
+    final int fusions = fusionEvenementsArtiste.fusionnerFichesPerimees();
+
+    assertEquals(1, fusions);
+    assertFalse(existe(perimee));
+    assertTrue(existe(vivante));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM user_matches WHERE concert_id = CAST(:id AS uuid)",
+            Map.of("id", vivante.toString()),
+            Integer.class));
+  }
+
+  private void vueIlYA(final UUID evenementId, final int heures) {
+    jdbc.update(
+        "UPDATE observations SET first_seen = date_trunc('hour', now()) - make_interval(hours =>"
+            + " :heures), updated_at = date_trunc('hour', now()) - make_interval(hours => :heures)"
+            + " WHERE evenement_id = CAST(:id AS uuid)",
+        Map.of("id", evenementId.toString(), "heures", heures));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_reportSousUneAutreUrlMemeIdmanifMemeDate_fusionne() {
+    final UUID perimee = creerFiche(salle, DATE_FUTURE, "20:00", 10, URL_TM + "/idtier/18864121");
+    vueIlYA(perimee, 72);
+    final UUID vivante = creerFiche(salle, DATE_FUTURE, "19:30", 0, URL_TM + "/idseance/4350510");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertFalse(existe(perimee));
+    assertTrue(existe(vivante));
+  }
+
+  // Le Roi Lion à Mogador : séances de 13 h et 18 h sous un même idmanif, vues
+  // au même passage ; une absence de l'une ne fait pas d'elle un report.
+  @Test
+  void fusionnerFichesPerimees_deuxSeancesVuesEnsembleMemeIdmanif_neFusionnePas() {
+    final UUID soir = creerFiche(salle, DATE_FUTURE, "18:00", 10, URL_TM + "/idseance/4424739");
+    final UUID matinee = creerFiche(salle, DATE_FUTURE, "13:00", 0, URL_TM + "/idseance/4424738");
+    vueIlYA(soir, 72);
+    vueIlYA(matinee, 72);
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(soir));
+    assertTrue(existe(matinee));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_deuxFichesVivantes_neFusionnePas() {
+    final UUID a = creerFiche(salle, DATE_FUTURE, "15:00", 0, URL_TM + "/idseance/1");
+    final UUID b = creerFiche(salle, DATE_FUTURE, "20:00", 0, URL_TM + "/idseance/2");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(a));
+    assertTrue(existe(b));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_memeIdmanifAutreDateSansUrlCommune_neFusionnePas() {
+    final String autreDate = LocalDate.now().plusMonths(3).toString();
+    final UUID perimee = creerFiche(salle, DATE_FUTURE, "20:00", 10, URL_TM + "/idseance/1");
+    creerFiche(salle, autreDate, "20:00", 0, URL_TM + "/idseance/2");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(perimee));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_absencesSousLeSeuil_neFusionnePas() {
+    final UUID recente =
+        creerFiche(
+            salle,
+            DATE_FUTURE,
+            "20:00",
+            FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE - 1,
+            URL_TM);
+    creerFiche(creerSalle("Autre"), DATE_FUTURE, "20:00", 0, URL_TM);
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(recente));
+  }
+
+  // --- fusionnerMemeCreneauDeuxSources ---
+
+  private UUID evenementSource(final UUID salleId, final String titre, final String source) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id) VALUES"
+                + " (:titre, CAST(:date AS date), CAST('19:30' AS time), 'opera bastille',"
+                + " CAST(:salleId AS uuid)) RETURNING id",
+            Map.of("titre", titre, "date", DATE_FUTURE, "salleId", salleId.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), CAST(:source AS source_concert), :url, :titre, 'Opera"
+            + " Bastille')",
+        Map.of(
+            "id",
+            id.toString(),
+            "source",
+            source,
+            "url",
+            "https://" + source + "/" + id,
+            "titre",
+            titre));
+    return id;
+  }
+
+  // Lady Macbeth de Mzensk : « of Mtsensk » chez Ticketmaster, « de Mzensk » chez Eventim.
+  @Test
+  void fusionnerMemeCreneauDeuxSources_memeSpectacleDeuxIntitules_fusionne() {
+    final UUID bastille = creerSalle("Opera Bastille");
+    final UUID tm = evenementSource(bastille, "lady macbeth of mtsensk", "ticketmaster");
+    final UUID ev = evenementSource(bastille, "lady macbeth de mzensk", "eventim");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertTrue(existe(tm));
+    assertFalse(existe(ev));
+  }
+
+  // Théâtre Montparnasse : « Bouvard et Pécuchet » vient du Poche-Montparnasse, mal rattaché.
+  @Test
+  void fusionnerMemeCreneauDeuxSources_salleSignaleeEnDispersion_neFusionnePas() {
+    final UUID salle = creerSalle("Theatre Montparnasse");
+    evenementSource(salle, "suzanne", "ticketmaster");
+    evenementSource(salle, "bouvard et pecuchet", "eventim");
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance) VALUES"
+            + " ('dispersion_sources_salle', 'salle', CAST(:id AS uuid), 'haute')",
+        Map.of("id", salle.toString()));
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+  }
+
+  @Test
+  void fusionnerMemeCreneauDeuxSources_troisEvenementsAuCreneau_neFusionnePas() {
+    final UUID salle = creerSalle("Salle Gaveau");
+    evenementSource(salle, "antonio vivaldi", "ticketmaster");
+    evenementSource(salle, "bebe concert", "eventim");
+    evenementSource(salle, "gloria de vivaldi", "eventim");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
   }
 }

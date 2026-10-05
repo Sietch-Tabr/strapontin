@@ -4,8 +4,6 @@
  */
 package fr.strapontin.web.email;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.resend.Resend;
 import com.resend.services.webhooks.model.VerifyWebhookOptions;
 import fr.strapontin.web.admin.LogAdminService;
@@ -21,6 +19,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Endpoint de réception des webhooks Resend, public mais
@@ -119,8 +119,8 @@ public class ResendWebhookController {
   void traiterEvenement(final String corpsRaw, final String svixId) {
     try {
       final JsonNode racine = objectMapper.readTree(corpsRaw);
-      final String type = racine.path("type").asText("");
-      final String emailDestinataire = racine.path("data").path("to").path(0).asText("<inconnu>");
+      final String type = racine.path("type").asString("");
+      final String emailDestinataire = racine.path("data").path("to").path(0).asString("<inconnu>");
 
       // email.bounced et email.complained (plainte spam) reçoivent le même
       // traitement : une plainte spam menace la réputation d'envoi du domaine
@@ -133,7 +133,7 @@ public class ResendWebhookController {
         emailAlerteService.envoyerNotificationPlainteSpam(emailDestinataire);
       } else if (EVENEMENT_SUPPRESSION_AJOUTEE.equals(type)
           || EVENEMENT_SUPPRESSION_RETIREE.equals(type)) {
-        traiterEvenementSuppression(type, racine.path("data").path("email").asText("<inconnu>"));
+        traiterEvenementSuppression(type, racine.path("data").path("email").asString("<inconnu>"));
       }
     } catch (Exception e) {
       LOG.error("Erreur lors du traitement du webhook Resend", e);

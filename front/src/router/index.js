@@ -5,6 +5,7 @@ import {
   sessionErreurReseau,
 } from "../composables/useSession.js";
 import { scrollBehavior } from "../utils/scrollBehavior.js";
+import { redirectionAncreAdmin } from "../utils/ancresAdmin.js";
 import LoginPage from "../pages/auth/LoginPage.vue";
 import TotpChallengePage from "../pages/auth/TotpChallengePage.vue";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage.vue";
@@ -60,9 +61,6 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.meta.authPage && sessionRef.value) return "/";
-  // Communication d'incident : un nouveau mot de passe est exigé avant tout autre usage.
-  if (sessionRef.value?.changementMotDePasseExige && to.path !== "/parametres")
-    return { path: "/parametres", hash: "#compte" };
   // ne redirige vers /login que sur un 401 confirmé — pas quand la session n'a jamais pu
   // être vérifiée faute de réseau (redémarrage PWA hors-ligne depuis le cache SW), où le cookie
   // de session reste potentiellement valide.
@@ -73,6 +71,9 @@ router.beforeEach((to) => {
     !sessionErreurReseau.value
   )
     return "/login";
+  // Dans la navigation elle-même, avant le chargement de la page : l'onglet visé est
+  // déterminé dès l'arrivée, sans seconde navigation.
+  return redirectionAncreAdmin(to) ?? true;
 });
 
 export default router;

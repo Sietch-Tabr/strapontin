@@ -238,6 +238,70 @@ tr:last-child td {
 tr:hover td {
   background: var(--bg-muted);
 }
+/* Tableau affiché en cartes quand son conteneur est étroit : une carte par ligne, le
+   libellé de chaque cellule repris de son data-label (vide pour la cellule d'actions). */
+.table-cartes {
+  container-type: inline-size;
+  container-name: table-cartes;
+}
+@container table-cartes (max-width: 700px) {
+  .table-cartes table,
+  .table-cartes tbody {
+    display: block;
+  }
+  .table-cartes thead {
+    display: none;
+  }
+  .table-cartes tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+  .table-cartes td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .table-cartes td:last-child {
+    border-bottom: none;
+  }
+  .table-cartes td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: var(--fg-muted);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+  .table-cartes td[data-label=""]::before {
+    display: none;
+  }
+  .table-cartes td[data-label=""] {
+    justify-content: flex-end;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+  .table-cartes td.cel-vide {
+    display: none;
+  }
+  .table-cartes td.source-actions {
+    flex-direction: row;
+  }
+  .table-cartes td input,
+  .table-cartes td select {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
 /* ── Badge ───────────────────────────────────────────────── */
 .badge {
   display: inline-flex;

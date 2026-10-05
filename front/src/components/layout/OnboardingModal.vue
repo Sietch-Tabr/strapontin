@@ -32,13 +32,13 @@ const ETAPES = [
     icone: "icon-music",
     titre: "Suivi artistes et salles",
     texte:
-      "Ajoutez vos artistes et salles préférés : la surveillance des nouveaux concerts se fait automatiquement toutes les 2 heures.",
+      "Ajoutez vos artistes et salles préférés : leurs nouveaux concerts sont recherchés automatiquement, toutes les deux heures en journée.",
   },
   {
     icone: "icon-sliders-horizontal",
-    titre: "Filtre par département",
+    titre: "Vos départements",
     texte:
-      "Limitez la découverte à vos départements dans Paramètres pour ne voir que les concerts qui vous concernent.",
+      "Choisissez vos départements dans Paramètres : ils limitent les concerts de vos artistes et définissent la page Découverte.",
   },
   {
     icone: "icon-bell",
@@ -48,9 +48,9 @@ const ETAPES = [
   },
   {
     icone: "icon-smartphone",
-    titre: "Installation PWA",
+    titre: "Installer l'application",
     texte:
-      "Installez Strapontin sur votre appareil pour un accès rapide, même hors ligne.",
+      "Ajoutez Strapontin à l'écran d'accueil de votre appareil pour l'ouvrir comme une application.",
   },
 ];
 </script>

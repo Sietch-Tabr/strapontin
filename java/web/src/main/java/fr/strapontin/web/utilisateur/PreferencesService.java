@@ -4,13 +4,14 @@
  */
 package fr.strapontin.web.utilisateur;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.artiste.ArtisteService;
 import fr.strapontin.web.salle.SalleService;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service d'import/export des préférences utilisateur.
@@ -349,7 +351,12 @@ public class PreferencesService {
               .map(SalleExport::tmVenueId)
               .filter(venueId -> VENUE_ID_PATTERN.matcher(venueId).matches())
               .distinct()
-              .forEach(venueId -> envoyerPostWorker(WORKER_URL + "/salle/" + venueId));
+              .forEach(
+                  venueId ->
+                      envoyerPostWorker(
+                          WORKER_URL
+                              + "/salle?identifiants="
+                              + URLEncoder.encode("tm:" + venueId, StandardCharsets.UTF_8)));
         };
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(

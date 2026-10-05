@@ -16,12 +16,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailServiceSecurite;
 import fr.strapontin.web.push.NotificationPushService;
+import java.util.List;
 import java.util.Map;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test d'intégration de {@link IncidentService} avec PostgreSQL réel.
@@ -37,6 +38,9 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
  * @author Kwaite
  */
 class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
+
+  private static final String SESSION_ADMIN = "11111111-1111-1111-1111-111111111111";
+  private static final String SESSION_AUTRE = "22222222-2222-2222-2222-222222222222";
 
   private static NamedParameterJdbcTemplate jdbc;
 
@@ -58,6 +62,7 @@ class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
   @BeforeEach
   void setUp() {
     jdbc.update("DELETE FROM communications_incident", Map.of());
+    jdbc.update("DELETE FROM SPRING_SESSION", Map.of());
     jdbc.update("DELETE FROM users WHERE id LIKE 'incident-%'", Map.of());
     jdbc.update("UPDATE users SET changement_mdp_force_le = NULL", Map.of());
     jdbc.update(
@@ -78,8 +83,8 @@ class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void publier_nouvelleCommunication_remplaceLaPrecedenteEtResteSeuleActive() {
-    service.publier(requete(false, false, false), "admin");
-    service.publier(requete(false, false, false), "admin");
+    service.publier(requete(false, false, false), "admin", null);
+    service.publier(requete(false, false, false), "admin", null);
 
     final Integer actives =
         jdbc.queryForObject(
@@ -98,7 +103,8 @@ class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
         .thenReturn(3);
     when(pushService.envoyerATous(anyString(), anyString())).thenReturn(2);
 
-    final CommunicationIncident publiee = service.publier(requete(true, true, false), "admin");
+    final CommunicationIncident publiee =
+        service.publier(requete(true, true, false), "admin", null);
 
     assertEquals(3, publiee.nbEmails());
     assertEquals(2, publiee.nbPush());
@@ -111,7 +117,8 @@ class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
     when(emailService.envoisEmailRestants()).thenReturn(0);
 
     final ErreurMetier erreur =
-        assertThrows(ErreurMetier.class, () -> service.publier(requete(true, false, false), "a"));
+        assertThrows(
+            ErreurMetier.class, () -> service.publier(requete(true, false, false), "a", null));
 
     assertEquals(409, erreur.getStatus());
     assertFalse(service.lireActive().isPresent());
@@ -121,7 +128,7 @@ class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
 
   @Test
   void publier_changementMotDePasseForce_exigeUnNouveauMotDePasseDeTousLesComptes() {
-    service.publier(requete(false, false, true), "admin");
+    service.publier(requete(false, false, true), "admin", null);
 
     final Integer sansFlag =
         jdbc.queryForObject(
@@ -132,8 +139,39 @@ class IncidentServiceIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
+  void publier_changementMotDePasseForce_revoqueToutesLesSessionsSaufCelleDeLAdmin() {
+    for (final String sessionId : List.of(SESSION_ADMIN, SESSION_AUTRE)) {
+      jdbc.update(
+          "INSERT INTO SPRING_SESSION (PRIMARY_ID, SESSION_ID, CREATION_TIME, LAST_ACCESS_TIME,"
+              + " MAX_INACTIVE_INTERVAL, EXPIRY_TIME, PRINCIPAL_NAME)"
+              + " VALUES (:id, :id, 0, 0, 2592000, 9999999999999, 'quelquun')",
+          Map.of("id", sessionId));
+    }
+
+    service.publier(requete(false, false, true), "admin", SESSION_ADMIN);
+
+    assertEquals(
+        List.of(SESSION_ADMIN),
+        jdbc.queryForList("SELECT trim(SESSION_ID) FROM SPRING_SESSION", Map.of(), String.class));
+  }
+
+  @Test
+  void publier_sansChangementMotDePasse_neRevoqueAucuneSession() {
+    jdbc.update(
+        "INSERT INTO SPRING_SESSION (PRIMARY_ID, SESSION_ID, CREATION_TIME, LAST_ACCESS_TIME,"
+            + " MAX_INACTIVE_INTERVAL, EXPIRY_TIME, PRINCIPAL_NAME)"
+            + " VALUES (:id, :id, 0, 0, 2592000, 9999999999999, 'quelquun')",
+        Map.of("id", SESSION_AUTRE));
+
+    service.publier(requete(false, false, false), "admin", SESSION_ADMIN);
+
+    assertEquals(
+        1, jdbc.queryForObject("SELECT count(*) FROM SPRING_SESSION", Map.of(), Integer.class));
+  }
+
+  @Test
   void terminer_communicationActive_laClotEtNeLaPlusLire() {
-    service.publier(requete(false, false, false), "admin");
+    service.publier(requete(false, false, false), "admin", null);
 
     assertTrue(service.terminer());
     assertFalse(service.lireActive().isPresent());

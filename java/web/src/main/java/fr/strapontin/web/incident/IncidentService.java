@@ -8,10 +8,12 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailServiceSecurite;
 import fr.strapontin.web.push.NotificationPushService;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -89,17 +91,19 @@ public class IncidentService {
   }
 
   /**
-   * Publie une communication d'incident (remplace la précédente) et la
-   * diffuse sur les canaux demandés.
-   * @param requete contenu et canaux de diffusion
-   * @param adminId administrateur à l'origine de la publication
-   * @return la communication publiée, avec le nombre d'envois effectifs
+   * Publie une communication (remplace la précédente) sur les canaux voulus.
+   * Nouveau mot de passe exigé : sessions révoquées sauf {@code
+   * sessionConservee} (null : toutes), connexion refusée jusqu'au reset.
    * @throws ErreurMetier 409 si le quota email ne couvre pas tous les comptes
    */
   public CommunicationIncident publier(
-      final RequetePublicationIncident requete, final String adminId) {
+      final RequetePublicationIncident requete,
+      final String adminId,
+      final String sessionConservee) {
     final List<String> destinataires = destinatairesEmail(requete);
     final long id = enregistrer(requete);
+    final int sessionsRevoquees =
+        requete.changementMdpForce() ? revoquerSessions(sessionConservee) : 0;
     final int nbEmails =
         destinataires.isEmpty()
             ? 0
@@ -124,7 +128,8 @@ public class IncidentService {
             "adminId", adminId,
             "emails", nbEmails,
             "push", nbPush,
-            "changementMdpForce", requete.changementMdpForce()));
+            "changementMdpForce", requete.changementMdpForce(),
+            "sessionsRevoquees", sessionsRevoquees));
     return new CommunicationIncident(
         id,
         requete.titre().strip(),
@@ -155,6 +160,16 @@ public class IncidentService {
           409);
     }
     return destinataires;
+  }
+
+  // Le mot de passe a pu fuiter : une session ouverte avec lui ne doit plus servir.
+  private int revoquerSessions(final String sessionConservee) {
+    final MapSqlParameterSource params =
+        new MapSqlParameterSource().addValue("conservee", sessionConservee, Types.VARCHAR);
+    return jdbc.update(
+        "DELETE FROM SPRING_SESSION WHERE CAST(:conservee AS text) IS NULL"
+            + " OR SESSION_ID <> CAST(:conservee AS text)",
+        params);
   }
 
   // Remplace l'éventuelle communication active, exige le nouveau mot de passe.

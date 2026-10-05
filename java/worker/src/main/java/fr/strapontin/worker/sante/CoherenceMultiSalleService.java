@@ -4,15 +4,15 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.IdentifiantLieuEventim;
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class CoherenceMultiSalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoherenceMultiSalleService.class);
 
-  private static final String PREFIXE_INTERNAL = "internal:";
+  private static final String PREFIXE_INTERNAL = IdentifiantLieuEventim.PREFIXE;
 
   // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur
   // une seule lettre.
@@ -80,7 +80,7 @@ public class CoherenceMultiSalleService {
       if (evaluerContaminationSalle(
           salleId,
           entree.getValue(),
-          donnees.nomNormParSalle().get(salleId),
+          donnees.salleParId().get(salleId),
           donnees.signaleeParSalle().get(salleId))) {
         signalees++;
       }
@@ -112,7 +112,7 @@ public class CoherenceMultiSalleService {
     return jdbc.queryForList(
         """
         SELECT ss.salle_id AS salle_id, ss.identifiant_externe AS identifiant,
-               s.nom_norm AS nom_norm, s.contamination_signalee AS signalee,
+               s.nom_norm AS nom_norm, s.ville AS ville, s.contamination_signalee AS signalee,
                ss.latitude AS lat_source, ss.longitude AS lon_source,
                s.latitude AS lat_salle, s.longitude AS lon_salle
         FROM salle_sources ss
@@ -122,14 +122,16 @@ public class CoherenceMultiSalleService {
         Map.of("prefixe", PREFIXE_INTERNAL + "%"));
   }
 
+  private record SalleConnue(String nomNorm, String ville) {}
+
   private record DonneesSourcesInternes(
       Map<UUID, List<String>> nomsExtraitsParSalle,
-      Map<UUID, String> nomNormParSalle,
+      Map<UUID, SalleConnue> salleParId,
       Map<UUID, String> signaleeParSalle) {}
 
   private DonneesSourcesInternes regrouperParSalle(final List<Map<String, Object>> lignes) {
     final Map<UUID, List<String>> nomsExtraitsParSalle = new HashMap<>();
-    final Map<UUID, String> nomNormParSalle = new HashMap<>();
+    final Map<UUID, SalleConnue> salleParId = new HashMap<>();
     final Map<UUID, String> signaleeParSalle = new HashMap<>();
     for (final Map<String, Object> ligne : lignes) {
       final UUID salleId = (UUID) ligne.get("salle_id");
@@ -139,12 +141,16 @@ public class CoherenceMultiSalleService {
       // La source situe elle-même le lieu à la position de la salle : même lieu,
       // quel que soit le nom d'usage ou l'abréviation employés.
       if (!estMemePosition(ligne)) {
-        noms.add(identifiant.substring(PREFIXE_INTERNAL.length()));
+        final String nom = IdentifiantLieuEventim.nom(identifiant);
+        if (!noms.contains(nom)) {
+          noms.add(nom);
+        }
       }
-      nomNormParSalle.put(salleId, (String) ligne.get("nom_norm"));
+      salleParId.put(
+          salleId, new SalleConnue((String) ligne.get("nom_norm"), (String) ligne.get("ville")));
       signaleeParSalle.put(salleId, (String) ligne.get("signalee"));
     }
-    return new DonneesSourcesInternes(nomsExtraitsParSalle, nomNormParSalle, signaleeParSalle);
+    return new DonneesSourcesInternes(nomsExtraitsParSalle, salleParId, signaleeParSalle);
   }
 
   private static boolean estMemePosition(final Map<String, Object> ligne) {
@@ -165,11 +171,11 @@ public class CoherenceMultiSalleService {
   private boolean evaluerContaminationSalle(
       final UUID salleId,
       final List<String> nomsExtraits,
-      final String nomNormSalle,
+      final SalleConnue salle,
       final String signaleePrecedente) {
     final List<String> mesententes =
         nomsExtraits.stream()
-            .filter(nomExtrait -> estContaminationReelle(nomExtrait, nomNormSalle))
+            .filter(nomExtrait -> estContaminationReelle(nomExtrait, salle))
             .distinct()
             .sorted()
             .toList();
@@ -204,71 +210,12 @@ public class CoherenceMultiSalleService {
 
   /**
    * Un identifiant source synthétique n'est pas une contamination réelle
-   * quand il n'est que le nom complété d'une ville ou un sigle de ses
-   * initiales (détail : CLAUDE.md, Hiérarchie des salles).
+   * quand il n'est que le nom complété d'une ville, un sigle de ses initiales
+   * ou un nom sans mot distinctif hors la ville (détail : CLAUDE.md).
    */
-  private static boolean estContaminationReelle(
-      final String nomExtrait, final String nomNormSalle) {
-    if (CorrespondanceSalle.estDoublonSalle(nomExtrait, nomNormSalle)) {
-      return false;
-    }
-    return !nomContenuDansLAutre(nomExtrait, nomNormSalle)
-        && !estSigleDe(nomExtrait, nomNormSalle)
-        && !estApostropheElideeContenue(nomExtrait, nomNormSalle);
-  }
-
-  /**
-   * Généralise {@link #nomContenuDansLAutre} à un nom commençant par une
-   * apostrophe élidée (ex. "L'Astrada" → {@code nom_norm} "l astrada") face
-   * à un identifiant source collant le mot sans apostrophe (ex. "lastrada
-   * marciac") — sans fusion, le token d'une seule lettre "l" est filtré,
-   * aucun rapport n'est détecté malgré l'évidence.
-   */
-  private static boolean estApostropheElideeContenue(final String nomNormA, final String nomNormB) {
-    return contientToken(fusionnerApostropheElidee(nomNormA), nomNormB)
-        || contientToken(fusionnerApostropheElidee(nomNormB), nomNormA);
-  }
-
-  // article élidé fusionné avec le mot suivant ("l astrada" -> "lastrada") —
-  // le token d'une seule lettre est systématiquement filtré en amont.
-  private static String fusionnerApostropheElidee(final String nomNorm) {
-    return nomNorm.replaceFirst("^([a-z]) ", "$1");
-  }
-
-  private static boolean contientToken(final String tokenFusionne, final String nomNormAutre) {
-    return !tokenFusionne.isEmpty()
-        && !tokenFusionne.contains(" ")
-        && tokenFusionne.length() >= LONGUEUR_MIN_CONTAINMENT_DOUBLON
-        && nomNormAutre.contains(tokenFusionne);
-  }
-
-  /**
-   * Vérifie si la plus courte des deux chaînes est le sigle de la plus longue —
-   * les initiales de chaque mot de la plus longue, concaténées sans espace,
-   * égalent exactement la plus courte sans espace (ex. "ed n" pour "espace
-   * dollfus noack" → initiales e, d, n).
-   */
-  private static boolean estSigleDe(final String nomA, final String nomB) {
-    final String court = nomA.length() <= nomB.length() ? nomA : nomB;
-    final String sigleObserve = court.replace(" ", "");
-    if (sigleObserve.length() < LONGUEUR_MIN_SIGLE) {
-      return false;
-    }
-
-    final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;
-    final String[] mots = plusLong.split("\\s+");
-    if (mots.length != sigleObserve.length()) {
-      return false;
-    }
-
-    final StringBuilder initiales = new StringBuilder();
-    for (final String mot : mots) {
-      if (mot.isEmpty()) {
-        return false;
-      }
-      initiales.append(mot.charAt(0));
-    }
-    return initiales.toString().equals(sigleObserve);
+  private static boolean estContaminationReelle(final String nomExtrait, final SalleConnue salle) {
+    return !NomsDeLieu.designentLeMemeLieu(nomExtrait, salle.nomNorm())
+        && !NomsDeLieu.sansMotDistinctif(nomExtrait, salle.ville());
   }
 
   /**
@@ -278,22 +225,5 @@ public class CoherenceMultiSalleService {
    */
   public int detecterDoublons() {
     return detectionDoublons.detecter();
-  }
-
-  // Containment par token complet plutôt que sous-chaîne brute (#1203) : un
-  // containment de caractères validait à tort un article court ("les")
-  // trivialement présent dans un token du nom long ("lessaion") sans aucun
-  // rapport sémantique réel — même classe de faux positif que
-  // CorrespondanceSalle#estContainmentTokensPartiel.
-  /* package-private : partagé avec DetectionDoublonsSalles (même package). */
-  static boolean nomContenuDansLAutre(final String nomNormA, final String nomNormB) {
-    final String court = nomNormA.length() <= nomNormB.length() ? nomNormA : nomNormB;
-    if (court.length() < LONGUEUR_MIN_CONTAINMENT_DOUBLON) {
-      return false;
-    }
-    final String plusLong = nomNormA.length() <= nomNormB.length() ? nomNormB : nomNormA;
-    final Set<String> tokensCourt = CorrespondanceSalle.tokensSignificatifs(court);
-    final Set<String> tokensLong = CorrespondanceSalle.tokensSignificatifs(plusLong);
-    return !tokensCourt.isEmpty() && tokensLong.containsAll(tokensCourt);
   }
 }

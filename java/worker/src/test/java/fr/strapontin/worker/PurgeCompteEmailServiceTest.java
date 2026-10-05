@@ -16,6 +16,7 @@ import com.resend.Resend;
 import com.resend.services.emails.Emails;
 import com.resend.services.emails.model.CreateEmailOptions;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
+import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,7 +94,9 @@ class PurgeCompteEmailServiceTest {
 
     assertTrue(
         service.envoyerRelanceInvitation(
-            "b@test.fr", "https://strapontin.fr/reset-password?token=abc"));
+            "b@test.fr",
+            "https://strapontin.fr/reset-password?token=abc",
+            LocalDate.of(2026, 10, 10)));
 
     verify(emailsMock).send(any(CreateEmailOptions.class));
   }
@@ -112,6 +115,8 @@ class PurgeCompteEmailServiceTest {
     final PurgeCompteEmailService service =
         new PurgeCompteEmailService(configService, gestionQuotaResendWorker, cle -> resendMock);
 
-    assertFalse(service.envoyerRelanceInvitation("b@test.fr", "https://strapontin.fr/x"));
+    assertFalse(
+        service.envoyerRelanceInvitation(
+            "b@test.fr", "https://strapontin.fr/x", LocalDate.of(2026, 10, 10)));
   }
 }

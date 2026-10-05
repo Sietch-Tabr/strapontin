@@ -1,5 +1,5 @@
+import { appelApi, lireJson } from "../utils/api.js";
 import { ref } from "vue";
-import { corpsJsonOuVide } from "../utils/reponseJson.js";
 
 // état de module, singleton — même pattern que useBanniere.js.
 const ouvert = ref(false);
@@ -8,9 +8,9 @@ const ouvert = ref(false);
 /// échéant. Appelée au montage de App.vue.
 export async function verifierOnboarding() {
   try {
-    const rep = await fetch("/api/user/config/onboarding");
+    const rep = await appelApi("/api/user/config/onboarding");
     if (!rep.ok) return;
-    const data = await corpsJsonOuVide(rep);
+    const data = await lireJson(rep);
     ouvert.value = !!data.nonVu;
   } catch (_) {
     // échec ignoré : la modale reste simplement fermée
@@ -19,7 +19,7 @@ export async function verifierOnboarding() {
 
 async function marquerVu() {
   try {
-    await fetch("/api/user/config/onboarding-vu", { method: "POST" });
+    await appelApi("/api/user/config/onboarding-vu", { method: "POST" });
   } catch (_) {
     // échec ignoré : best-effort, la modale réapparaîtra simplement au prochain montage
   }

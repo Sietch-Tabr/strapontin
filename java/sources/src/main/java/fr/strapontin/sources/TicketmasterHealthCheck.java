@@ -4,8 +4,10 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.PositionLieu;
 import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,36 +28,63 @@ final class TicketmasterHealthCheck {
   private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
   private static final String CLE_EMBEDDED = "_embedded";
   private static final String PARAM_APIKEY = "apikey";
+  private static final String SUFFIXE_JSON = ".json";
 
   private final String apiKey;
   private final RestClient restClient;
   private final CadenceurAppels cadenceur;
+  private final EtatFetchTM etatFetch;
 
   /* package-private : instancié uniquement par TicketmasterSource (même
    * package). */
   TicketmasterHealthCheck(
-      final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
+      final String apiKey,
+      final RestClient restClient,
+      final CadenceurAppels cadenceur,
+      final EtatFetchTM etatFetch) {
     this.apiKey = apiKey;
     this.restClient = restClient;
     this.cadenceur = cadenceur;
+    this.etatFetch = etatFetch;
+  }
+
+  private void noterQuotaEpuise(final Exception erreur) {
+    if (EtatFetchTM.estQuotaEpuise(erreur)) {
+      etatFetch.signalerQuotaEpuise();
+    }
   }
 
   /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierVenue(final String venueId) {
-    return verifierRessource("/venues/" + venueId + ".json");
+    return verifierRessource("/venues/" + venueId + SUFFIXE_JSON);
+  }
+
+  /* package-private : appelé par TicketmasterSource (même package). */
+  PositionLieu lirePositionVenue(final String venueId) {
+    final URI uri = uriRessource("/venues/" + venueId);
+    cadenceur.attendre();
+    try {
+      return ExtracteurVenueTM.extrairePositionTM(lireObjet(uri));
+    } catch (Exception e) {
+      noterQuotaEpuise(e);
+      LOG.warn(
+          "lirePositionVenue TM échoué venueId={} : {}",
+          venueId,
+          TicketmasterSource.redigerApiKey(e.getMessage()));
+      return PositionLieu.INCONNUE;
+    }
   }
 
   /* package-private : appelé par TicketmasterSource (même package). */
   StatutIdTM verifierAttraction(final String attractionId) {
-    return verifierRessource("/attractions/" + attractionId + ".json");
+    return verifierRessource("/attractions/" + attractionId + SUFFIXE_JSON);
   }
 
   private StatutIdTM verifierRessource(final String chemin) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + chemin)
-            .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+    final URI uri =
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + chemin).queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       restClient.get().uri(uri).retrieve().toBodilessEntity();
@@ -63,27 +92,25 @@ final class TicketmasterHealthCheck {
     } catch (HttpClientErrorException.NotFound e) {
       return StatutIdTM.MORT;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "verifierRessource TM échoué chemin={} : {}",
           chemin,
           TicketmasterSource.redigerApiKey(e.getMessage()));
-      return StatutIdTM.VIVANT;
+      return StatutIdTM.INDETERMINE;
     }
   }
 
-  @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   String recupererNomAttraction(final String attractionId) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/attractions/" + attractionId + ".json")
-            .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+    final URI uri = uriRessource("/attractions/" + attractionId);
+
     cadenceur.attendre();
     try {
-      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data = lireObjet(uri);
       return data != null ? (String) data.get("name") : null;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "recupererNomAttraction TM échoué attractionId={} : {}",
           attractionId,
@@ -95,13 +122,13 @@ final class TicketmasterHealthCheck {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   List<CandidatVenueTM> rechercherVenuesParNom(final String nom) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
-            .queryParam("keyword", nom)
-            .queryParam("countryCode", "FR")
-            .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+    final URI uri =
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + "/venues.json")
+                .queryParam("keyword", nom)
+                .queryParam("countryCode", "FR")
+                .queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -123,6 +150,7 @@ final class TicketmasterHealthCheck {
       }
       return resultat;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "rechercherVenuesParNom TM échoué nom='{}' : {}",
           nom,
@@ -134,13 +162,13 @@ final class TicketmasterHealthCheck {
   @SuppressWarnings("unchecked")
   /* package-private : appelé par TicketmasterSource (même package). */
   int compterEventsVenue(final String venueId) {
-    final String uri =
-        UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
-            .queryParam("venueId", venueId)
-            .queryParam("size", 1)
-            .queryParam(PARAM_APIKEY, apiKey)
-            .build()
-            .toUriString();
+    final URI uri =
+        UriSources.encoder(
+            UriComponentsBuilder.fromUriString(BASE_URL + "/events.json")
+                .queryParam("venueId", venueId)
+                .queryParam("size", 1)
+                .queryParam(PARAM_APIKEY, apiKey));
+
     cadenceur.attendre();
     try {
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
@@ -150,11 +178,23 @@ final class TicketmasterHealthCheck {
       final Map<String, Object> page = (Map<String, Object>) data.get("page");
       return page != null ? ((Number) page.get("totalElements")).intValue() : 0;
     } catch (Exception e) {
+      noterQuotaEpuise(e);
       LOG.warn(
           "compterEventsVenue TM échoué venueId={} : {}",
           venueId,
           TicketmasterSource.redigerApiKey(e.getMessage()));
       return 0;
     }
+  }
+
+  private URI uriRessource(final String chemin) {
+    return UriSources.encoder(
+        UriComponentsBuilder.fromUriString(BASE_URL + chemin + SUFFIXE_JSON)
+            .queryParam(PARAM_APIKEY, apiKey));
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> lireObjet(final URI uri) {
+    return restClient.get().uri(uri).retrieve().body(Map.class);
   }
 }

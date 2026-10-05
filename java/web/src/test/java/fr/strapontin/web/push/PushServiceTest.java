@@ -47,7 +47,8 @@ class PushServiceTest {
   }
 
   private static RequeteAbonnement abonnementValide() {
-    return new RequeteAbonnement("https://exemple.test/push", new ClesAbonnement("p256dh", "auth"));
+    return new RequeteAbonnement(
+        "https://fcm.googleapis.com/fcm/send/test", new ClesAbonnement("p256dh", "auth"));
   }
 
   @Test
@@ -55,6 +56,18 @@ class PushServiceTest {
     assertThrows(
         ErreurMetier.class,
         () -> service.abonner("u1", new RequeteAbonnement(null, new ClesAbonnement("a", "b"))));
+  }
+
+  @Test
+  void abonner_endpointVersApiInterneDuWorker_leveErreurMetierSansInserer() {
+    final RequeteAbonnement requete =
+        new RequeteAbonnement(
+            "http://127.0.0.1:8081/trigger/job?typeJob=purger:concerts",
+            new ClesAbonnement("p256dh", "auth"));
+
+    assertThrows(ErreurMetier.class, () -> service.abonner("u1", requete));
+
+    verify(jdbc, never()).update(anyString(), anyMap());
   }
 
   @Test

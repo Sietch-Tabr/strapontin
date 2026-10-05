@@ -5,13 +5,7 @@
 package fr.strapontin.web.securite;
 
 import fr.strapontin.web.admin.LogAdminService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import fr.strapontin.web.config.ConfigService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,10 +17,9 @@ import org.springframework.security.config.annotation.web.configurers.ExceptionH
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
@@ -44,10 +37,14 @@ import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 @EnableWebSecurity
 public class SecurityConfiguration {
 
-  private static final Logger LOG = LoggerFactory.getLogger(SecurityConfiguration.class);
+  private final ConfigService configService;
 
-  /** Constructeur par défaut. */
-  public SecurityConfiguration() {}
+  /**
+   * @param configService origine publique ({@link ProtectionCsrfFilter})
+   */
+  public SecurityConfiguration(final ConfigService configService) {
+    this.configService = configService;
+  }
 
   /**
    * Registre de sessions persisté en JDBC — survit aux redémarrages.
@@ -89,8 +86,11 @@ public class SecurityConfiguration {
         .addFilterBefore(bloquerIpFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(totpGuardFilter, UsernamePasswordAuthenticationFilter.class)
+        // Après l'autorisation : un appel non authentifié reste un 401, pas un 403.
+        .addFilterAfter(new ProtectionCsrfFilter(configService), AuthorizationFilter.class)
         .authorizeHttpRequests(this::configurerAutorisations)
-        // CSRF désactivé : sessions SameSite=Lax + HttpOnly (identique v1)
+        // Jeton CSRF de Spring désactivé : protection assurée par ProtectionCsrfFilter
+        // (Fetch Metadata, Origin, en-tête applicatif), sans état côté serveur.
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(session -> configurerSessions(session, sessionRegistry))
         .exceptionHandling(ex -> configurerExceptions(ex, logAdminService));
@@ -193,60 +193,9 @@ public class SecurityConfiguration {
       final ExceptionHandlingConfigurer<HttpSecurity> ex, final LogAdminService logAdminService) {
     ex.authenticationEntryPoint(
             (request, response, authEx) ->
-                gererEchecAuthentification(request, response, logAdminService))
+                ReponsesAccesApi.echecAuthentification(request, response, logAdminService))
         .accessDeniedHandler(
-            (request, response, accessEx) -> gererAccesRefuse(request, response, logAdminService));
-  }
-
-  private void gererEchecAuthentification(
-      final HttpServletRequest request,
-      final HttpServletResponse response,
-      final LogAdminService logAdminService)
-      throws IOException {
-    if (request.getServletPath().startsWith("/api/")) {
-      try {
-        final Map<String, Object> meta = new HashMap<>();
-        meta.put("chemin", request.getServletPath());
-        meta.put("ip", request.getRemoteAddr());
-        final String ua = request.getHeader("User-Agent");
-        meta.put("userAgent", ua != null ? ua.substring(0, Math.min(ua.length(), 200)) : "");
-        logAdminService.logAdmin(
-            "warn", "web", "Accès API non authentifié : " + request.getServletPath(), meta);
-      } catch (Exception e) {
-        LOG.warn("échec de la journalisation d'un accès non authentifié", e);
-      }
-      response.setStatus(401);
-      response.setContentType("application/json;charset=UTF-8");
-      response.getWriter().write("{\"erreur\":\"Authentification requise\"}");
-    } else {
-      response.sendRedirect("/login");
-    }
-  }
-
-  private void gererAccesRefuse(
-      final HttpServletRequest request,
-      final HttpServletResponse response,
-      final LogAdminService logAdminService)
-      throws IOException {
-    if (request.getServletPath().startsWith("/api/")) {
-      try {
-        final Map<String, Object> meta = new HashMap<>();
-        meta.put("chemin", request.getServletPath());
-        meta.put("ip", request.getRemoteAddr());
-        final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null) {
-          meta.put("userId", auth.getName());
-        }
-        logAdminService.logAdmin(
-            "warn", "web", "Accès API refusé : " + request.getServletPath(), meta);
-      } catch (Exception e) {
-        LOG.warn("échec de la journalisation d'un accès refusé", e);
-      }
-      response.setStatus(403);
-      response.setContentType("application/json;charset=UTF-8");
-      response.getWriter().write("{\"erreur\":\"Accès refusé\"}");
-    } else {
-      response.sendRedirect("/login");
-    }
+            (request, response, accessEx) ->
+                ReponsesAccesApi.accesRefuse(request, response, logAdminService));
   }
 }

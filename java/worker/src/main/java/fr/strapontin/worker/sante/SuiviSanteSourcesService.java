@@ -28,6 +28,8 @@ public class SuiviSanteSourcesService {
   private static final Logger LOG = LoggerFactory.getLogger(SuiviSanteSourcesService.class);
 
   private static final int SEUIL_SUSPECT = 3;
+  /* package-private : délai partagé avec HealthCheckArtistesTM (même package). */
+  static final int DELAI_REVERIFICATION_VIVACITE_JOURS = 7;
   private static final String CLE_SOURCE = "source";
 
   // Chute brutale : un lieu qui change de billetterie ne tombe presque jamais à
@@ -177,12 +179,21 @@ public class SuiviSanteSourcesService {
             ? ", necessite_intervention_le = CASE WHEN :effacerIntervention THEN NULL ELSE"
                 + " necessite_intervention_le END"
             : "";
+    // Artiste confirmé vivant récemment : des résultats vides signifient
+    // seulement qu'il n'a pas de date annoncée.
+    final String vivaciteRecente =
+        estArtisteSources
+            ? " AND (vivacite_verifiee_le IS NULL"
+                + " OR vivacite_verifiee_le < now() - make_interval(days => :delaiVivacite))"
+            : "";
     final String sql =
         "UPDATE "
             + type.table()
             + " SET nb_zero_consecutifs = CASE WHEN :succes THEN 0 ELSE nb_zero_consecutifs + 1"
             + " END, suspect_depuis = CASE WHEN :succes THEN NULL WHEN nb_zero_consecutifs + 1 >="
-            + " :seuil AND suspect_depuis IS NULL THEN now() ELSE suspect_depuis END"
+            + " :seuil AND suspect_depuis IS NULL"
+            + vivaciteRecente
+            + " THEN now() ELSE suspect_depuis END"
             + colonneInterventionResolue
             + " WHERE source = :source AND identifiant_externe = :identifiant";
     try {
@@ -200,7 +211,9 @@ public class SuiviSanteSourcesService {
               "identifiant",
               identifiant,
               "effacerIntervention",
-              effacerIntervention));
+              effacerIntervention,
+              "delaiVivacite",
+              DELAI_REVERIFICATION_VIVACITE_JOURS));
     } catch (Exception e) {
       LOG.warn(
           "Impossible de mettre à jour la santé source={} identifiant={}", source, identifiant, e);

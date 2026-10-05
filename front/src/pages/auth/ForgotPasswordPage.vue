@@ -47,6 +47,7 @@
 </template>
 
 <script setup>
+import { appelApi } from "../../utils/api.js";
 defineOptions({ name: "ForgotPasswordPage" });
 
 import { ref, onMounted } from "vue";
@@ -70,7 +71,7 @@ async function soumettre() {
     // (anti-énumération) — seul un échec de la requête elle-même (hors ligne, timeout, avant
     // d'atteindre le serveur) doit être distingué du succès, sans jamais révéler l'existence
     // d'un compte.
-    await fetch("/api/auth/forgot-password", {
+    await appelApi("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email.value }),

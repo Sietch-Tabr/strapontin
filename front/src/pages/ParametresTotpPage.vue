@@ -66,7 +66,6 @@
                 pattern="[0-9]{6}"
                 maxlength="6"
                 autocomplete="one-time-code"
-                autofocus
                 required
               />
             </div>
@@ -93,9 +92,10 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../utils/api.js";
 defineOptions({ name: "ParametresTotpPage" });
 
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import EtatChargement from "../components/EtatChargement.vue";
 import { useRouter } from "vue-router";
 import { useToasts } from "../composables/useToasts.js";
@@ -123,12 +123,12 @@ async function chargerSetup() {
   chargement.value = true;
   erreurChargement.value = null;
   try {
-    const rep = await fetch("/api/totp/setup");
+    const rep = await appelApi("/api/totp/setup");
     if (!rep.ok) {
       erreurChargement.value = "Impossible de charger la configuration TOTP.";
       return;
     }
-    const donnees = await rep.json();
+    const donnees = await lireJson(rep);
     otpUri.value = donnees.otpUri ?? "";
     totpSecret.value = donnees.totpSecret ?? "";
     qrCodeSvg.value = donnees.qrCodeSvg ?? "";
@@ -137,18 +137,21 @@ async function chargerSetup() {
   } finally {
     chargement.value = false;
   }
+  // Le champ n'existe qu'une fois le chargement terminé : focus posé après son rendu.
+  await nextTick();
+  codeRef.value?.focus();
 }
 
 async function confirmer() {
   erreurCode.value = null;
   enCours.value = true;
   try {
-    const rep = await fetch("/api/totp/confirmer", {
+    const rep = await appelApi("/api/totp/confirmer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: code.value }),
     });
-    const corps = await rep.json();
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast("Authentification à deux facteurs activée.", "succes");
       router.push("/parametres#compte");

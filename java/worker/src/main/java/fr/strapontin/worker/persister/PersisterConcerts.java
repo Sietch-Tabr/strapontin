@@ -8,7 +8,7 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import java.text.Normalizer;
 import java.time.LocalDate;
-import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -193,6 +193,7 @@ public class PersisterConcerts {
    */
   private List<ValeurConcert> resoudreIdentitesSources(final List<ValeurConcert> concerts) {
     final Map<String, UUID> cachesSalles = db.resoudreUuidsParSource(concerts, "salle");
+    db.reprendreIdentifiantsEventimHistoriques(concerts, cachesSalles);
     final Map<String, UUID> cachesArtistes = db.resoudreUuidsParSource(concerts, "artiste");
     // Calculé avant absorberRenommagesSalles : un mapping incohérent ne doit
     // pas renommer la mauvaise salle avant validation géographique.
@@ -206,6 +207,7 @@ public class PersisterConcerts {
     final List<ValeurConcert> resolus =
         appliquerResolutionUuids(
             concerts, cachesSalles, cachesArtistes, cachesSallesParNom, deptsConnus);
+    db.enregistrerPositions(concerts, cachesSalles);
 
     return reconciliateurArtistes.resoudreArtisteParNomNorm(resolus);
   }
@@ -302,10 +304,22 @@ public class PersisterConcerts {
     }
 
     final List<ConcertBrut> apresDedup = deduplicerParCleConflit(liste);
+    final LocalDate aujourdHui = LocalDate.now();
     final List<ConcertBrut> listeFiltree =
         apresDedup.stream()
             .filter(
                 c -> {
+                  // Une source peut dater un produit sans séance réelle (billet à validité
+                  // longue, visite) : un événement déjà passé n'est jamais ingéré.
+                  if (estDejaPasse(c, aujourdHui)) {
+                    LOG.info(
+                        "concert ignoré — date déjà passée source={} artiste={} date={} url={}",
+                        c.source(),
+                        c.artiste(),
+                        c.date(),
+                        c.url());
+                    return false;
+                  }
                   if (Normalisation.normaliserTexte(c.artiste()).isBlank()) {
                     LOG.warn(
                         "concert rejeté — artiste_norm vide artiste={} date={} salle={}",
@@ -337,6 +351,14 @@ public class PersisterConcerts {
     return new ResultatPersistance(totalInserts, totalUpdates);
   }
 
+  private static boolean estDejaPasse(final ConcertBrut concert, final LocalDate aujourdHui) {
+    try {
+      return LocalDate.parse(concert.date()).isBefore(aujourdHui);
+    } catch (DateTimeParseException e) {
+      return false;
+    }
+  }
+
   /**
    * Partie transactionnelle et isolée d'un sous-lot de
    * {@link #persisterConcerts} .
@@ -348,31 +370,7 @@ public class PersisterConcerts {
   /* package-private : requis pour l'auto-invocation via le proxy self
    * (transaction dédiée par lot). */
   ResultatPersistance persisterLotTransactionnel(final List<ConcertBrut> lot) {
-    final List<ValeurConcert> valeursBrutes =
-        lot.stream()
-            .map(
-                c ->
-                    new ValeurConcert(
-                        c.artiste(),
-                        Normalisation.normaliserTexte(c.artiste()),
-                        LocalDate.parse(c.date()),
-                        c.heure() != null ? LocalTime.parse(c.heure()) : null,
-                        c.salle(),
-                        Normalisation.normaliserTexte(c.salle()),
-                        c.ville(),
-                        c.dept(),
-                        c.url(),
-                        c.source(),
-                        c.classification(),
-                        c.genre(),
-                        c.statut(),
-                        c.presaleDebut(),
-                        c.presaleNom(),
-                        c.salleSourceId(),
-                        c.artisteSourceId(),
-                        null,
-                        null))
-            .toList();
+    final List<ValeurConcert> valeursBrutes = lot.stream().map(ValeurConcert::depuis).toList();
 
     List<ValeurConcert> valeurs = resoudreIdentitesSources(valeursBrutes);
     valeurs = db.resoudreParUrl(valeurs);

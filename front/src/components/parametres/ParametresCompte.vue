@@ -100,8 +100,9 @@
           class="alerte alerte-avertissement"
           role="alert"
         >
-          Suite à un incident de sécurité, choisissez un nouveau mot de passe
-          avant de continuer.
+          Suite à un incident de sécurité, un nouveau mot de passe est exigé : à
+          votre prochaine connexion, définissez-le avec « Mot de passe oublié »
+          (lien envoyé par email).
         </p>
         <p class="param-aide">La session sera invalidée après le changement.</p>
         <form
@@ -211,6 +212,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresCompte" });
 
 import { ref, onMounted, onUnmounted } from "vue";
@@ -218,7 +220,6 @@ import { useRouter } from "vue-router";
 import { useToasts } from "../../composables/useToasts.js";
 import { sessionRef } from "../../composables/useSession.js";
 import EtatChargement from "../EtatChargement.vue";
-import { corpsJsonOuVide } from "../../utils/reponseJson.js";
 
 const router = useRouter();
 const { afficherToast } = useToasts();
@@ -255,10 +256,10 @@ function resumerUserAgent(userAgent) {
 
 async function chargerAppareils() {
   try {
-    const rep = await fetch("/api/user/appareils", {
+    const rep = await appelApi("/api/user/appareils", {
       signal: controleur.signal,
     });
-    if (rep.ok) appareils.value = await rep.json();
+    if (rep.ok) appareils.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger la liste des appareils.", "erreur");
@@ -267,10 +268,10 @@ async function chargerAppareils() {
 
 async function chargerAbonnementsPush() {
   try {
-    const rep = await fetch("/api/push/abonnements", {
+    const rep = await appelApi("/api/push/abonnements", {
       signal: controleur.signal,
     });
-    if (rep.ok) abonnementsPush.value = await rep.json();
+    if (rep.ok) abonnementsPush.value = await lireJson(rep);
   } catch (e) {
     if (e.name === "AbortError") return;
     afficherToast("Impossible de charger les abonnements push.", "erreur");
@@ -279,7 +280,7 @@ async function chargerAbonnementsPush() {
 
 async function revoquerAppareil(appareilId) {
   try {
-    const rep = await fetch(`/api/user/appareils/${appareilId}`, {
+    const rep = await appelApi(`/api/user/appareils/${appareilId}`, {
       method: "DELETE",
       signal: controleur.signal,
     });
@@ -299,7 +300,7 @@ async function revoquerAppareil(appareilId) {
 
 async function revoquerAbonnementPush(endpoint) {
   try {
-    const rep = await fetch("/api/push", {
+    const rep = await appelApi("/api/push", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint }),
@@ -321,9 +322,11 @@ async function revoquerAbonnementPush(endpoint) {
 
 async function charger() {
   try {
-    const rep = await fetch("/api/user/profile", { signal: controleur.signal });
+    const rep = await appelApi("/api/user/profile", {
+      signal: controleur.signal,
+    });
     if (rep.ok) {
-      profil.value = await rep.json();
+      profil.value = await lireJson(rep);
       email.value = profil.value.email ?? "";
       identifiant.value = profil.value.identifiant ?? "";
       deuxFacteursActif.value = profil.value.twoFactorActif ?? false;
@@ -343,13 +346,13 @@ async function sauvegarderProfil() {
   if (!emailChange) return;
 
   try {
-    const rep = await fetch("/api/parametres/email-change", {
+    const rep = await appelApi("/api/parametres/email-change", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email.value }),
       signal: controleur.signal,
     });
-    const corps = await corpsJsonOuVide(rep);
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast(
         "Un email de confirmation a été envoyé à " + email.value + ".",
@@ -370,13 +373,13 @@ async function sauvegarderProfil() {
 
 async function sauvegarderIdentifiant() {
   try {
-    const rep = await fetch("/api/user/identifiant", {
+    const rep = await appelApi("/api/user/identifiant", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identifiant: identifiant.value }),
       signal: controleur.signal,
     });
-    const corps = await corpsJsonOuVide(rep);
+    const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast("Identifiant modifié.", "succes");
     } else {
@@ -390,13 +393,13 @@ async function sauvegarderIdentifiant() {
 
 async function desactiverTotp() {
   try {
-    const rep = await fetch("/api/totp/desactiver", {
+    const rep = await appelApi("/api/totp/desactiver", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: totpDesactCode.value }),
       signal: controleur.signal,
     });
-    const corps = await corpsJsonOuVide(rep);
+    const corps = await lireJson(rep);
     if (rep.ok) {
       deuxFacteursActif.value = false;
       totpDesactCode.value = "";
@@ -412,7 +415,7 @@ async function desactiverTotp() {
 
 async function changerMotDePasse() {
   try {
-    const rep = await fetch("/api/user/password", {
+    const rep = await appelApi("/api/user/password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -428,7 +431,7 @@ async function changerMotDePasse() {
       sessionRef.value = null;
       router.push("/login?reset=true");
     } else {
-      const corps = await corpsJsonOuVide(rep);
+      const corps = await lireJson(rep);
       afficherToast(
         corps.erreur || "Erreur lors du changement de mot de passe.",
         "erreur",

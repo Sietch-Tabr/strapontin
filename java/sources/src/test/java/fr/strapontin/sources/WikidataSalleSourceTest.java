@@ -34,8 +34,8 @@ class WikidataSalleSourceTest {
     assertEquals("wikidata", new WikidataSalleSource().nom());
   }
 
-  // Régression : Overpass n'est plus un passage obligé pour les salles (instance publique
-  // surchargée, cf. OverpassSalleSource) — sans wikidataId connu, la recherche par nom mwapi
+  // Régression : la découverte par OpenStreetMap n'est pas un passage obligé pour les salles
+  // — sans wikidataId connu, la recherche par nom mwapi
   // doit être tentée, pas une simple mise de côté silencieuse.
   @Test
   void enrichirLot_salleSansWikidataId_utiliseDecouverteMwapi() {
@@ -58,6 +58,8 @@ class WikidataSalleSourceTest {
             MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P17")))
         .andExpect(
             MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("Q142")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P374")))
         .andRespond(
             withSuccess(
                 """
@@ -892,8 +894,14 @@ class WikidataSalleSourceTest {
     final SalleAEnrichir salle =
         new SalleAEnrichir(id, "Zenith", "zenith", null, null, "Q3550188", null, null);
 
+    // Commune actuelle par code INSEE : P131 désigne souvent un quartier, un
+    // arrondissement, ou une ancienne commune (Le Bikini, à Toulouse jusqu'en 2001).
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P374")))
+        .andExpect(
+            MockRestRequestMatchers.content().string(org.hamcrest.Matchers.containsString("P582")))
         .andRespond(
             withSuccess(
                 """

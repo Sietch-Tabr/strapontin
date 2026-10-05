@@ -1,3 +1,4 @@
+import { appelApi } from "./utils/api.js";
 import "./styles/base.css";
 import "./styles/layout.css";
 import "./styles/components.css";
@@ -20,7 +21,7 @@ window.afficherToast = afficherToast;
 // remonte les erreurs JS non catchées et les rejections de promesse vers
 // POST /api/client/erreur (endpoint jusque-là jamais câblé côté front, cf. ClientController).
 function signalerErreurClient(corps) {
-  fetch("/api/client/erreur", {
+  appelApi("/api/client/erreur", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(corps),

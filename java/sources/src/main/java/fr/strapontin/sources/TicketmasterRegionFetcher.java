@@ -95,6 +95,12 @@ final class TicketmasterRegionFetcher {
       final TicketmasterPageFetcher.ResultatParcours parcours =
           pageFetcher.parcourirPages(uriBase, null);
       concerts.addAll(parcours.concerts());
+      // Page en échec (quota, erreur HTTP) : couvert seulement jusqu'aux dates
+      // reçues, sinon tout concert du département gagnait une absence.
+      if (!parcours.succes()) {
+        LOG.warn("fetch région TM dept={} : page en échec, couverture partielle", dept);
+        return new ResultatRegion(concerts, couvertureRecue(concerts));
+      }
       if (!parcours.plafonne()) {
         return new ResultatRegion(concerts, finCouverte);
       }
@@ -113,8 +119,13 @@ final class TicketmasterRegionFetcher {
     }
 
     LOG.warn("fetch région TM dept={} : {} fenêtres atteintes", dept, NB_FENETRES_MAX);
+    return new ResultatRegion(concerts, couvertureRecue(concerts));
+  }
+
+  // Dernière date reçue, moins une marge : la borne TM est en UTC.
+  private static LocalDate couvertureRecue(final List<ConcertBrut> concerts) {
     final LocalDate derniere = derniereDate(concerts);
-    return new ResultatRegion(concerts, derniere != null ? derniere.minusDays(2) : null);
+    return derniere != null ? derniere.minusDays(2) : null;
   }
 
   private static LocalDate derniereDate(final List<ConcertBrut> concerts) {

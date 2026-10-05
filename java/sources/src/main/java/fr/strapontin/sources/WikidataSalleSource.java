@@ -139,16 +139,12 @@ public class WikidataSalleSource
     return """
     SELECT ?item ?itemLabel ?communeLabel ?coord WHERE {
       VALUES ?item { %s }
-      OPTIONAL {
-        ?item wdt:P131 ?commune .
-        ?commune rdfs:label ?communeLabel .
-        FILTER(LANG(?communeLabel) = "fr")
-      }
+      %s
       OPTIONAL { ?item wdt:P625 ?coord }
       SERVICE wikibase:label { bd:serviceParam wikibase:language "fr,en". }
     }
     """
-        .formatted(values);
+        .formatted(values, ClientSparqlWikidata.MOTIF_COMMUNE);
   }
 
   @SuppressWarnings("unchecked")

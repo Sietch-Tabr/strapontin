@@ -17,6 +17,7 @@
 </template>
 
 <script setup>
+import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "BanniereIncident" });
 
 import { ref, onMounted, onUnmounted } from "vue";
@@ -50,9 +51,9 @@ function marquerVue() {
 
 onMounted(async () => {
   try {
-    const rep = await fetch("/api/incident", { signal: controleur.signal });
+    const rep = await appelApi("/api/incident", { signal: controleur.signal });
     if (rep.status !== 200) return;
-    incident.value = await rep.json();
+    incident.value = await lireJson(rep);
     vue.value = lireVue(incident.value.id);
   } catch (e) {
     if (e.name !== "AbortError") console.error("Échec lecture incident", e);
