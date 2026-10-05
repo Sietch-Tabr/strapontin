@@ -22,7 +22,7 @@ Pour chaque page concernée : comparer avec l'implémentation réelle, proposer 
 
 ## 3. CLAUDE.md
 
-Mettre à jour `CLAUDE.md` si l'architecture, la stack, les commandes, les jobs Quartz, les sources de données ou les conventions ont changé.
+Mettre à jour `CLAUDE.md` si l'architecture, la stack, les commandes, les jobs Quartz, les sources de données ou les conventions ont changé. Le détail propre à un package va dans le `CLAUDE.md` imbriqué de son dossier (`persister/`, `sante/`, `core/`…), pas à la racine : la racine reste sous 20 Ko (`wc -c CLAUDE.md`).
 
 ## 4. Changelog utilisateur
 

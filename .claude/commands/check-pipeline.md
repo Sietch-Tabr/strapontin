@@ -1,6 +1,6 @@
 Vérifie l'état de la dernière pipeline Woodpecker sur la branche main et affiche les logs en cas d'échec.
 
-Le token API et l'URL du serveur sont dans `CLAUDE.local.md` (section Woodpecker CI).
+L'URL du serveur et la commande d'obtention du token API sont dans `CLAUDE.local.md` (section Woodpecker CI).
 Repo strapontin : ID 4 dans Woodpecker.
 
 1. Récupérer le dernier pipeline sur main :
