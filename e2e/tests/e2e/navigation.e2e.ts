@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 
 test.describe("Scénario: navigation et chargement des pages", () => {
@@ -310,6 +310,62 @@ test.describe("Scénario: navigation Vue Router sans rechargement complet", () =
   });
 });
 
+// Sous WebKit, une interception active fait passer toutes les requêtes de la page par
+// Playwright, qui attribue parfois à une URL la réponse d'une autre (CSS reçu en
+// text/javascript, navigation initiale jamais terminée : environ 1 fois sur 170, aucune sur
+// 600 sans interception). Les tests de l'indicateur ne l'activent donc qu'une fois
+// l'application et les modules de la page chargés, pour les seuls appels d'API.
+
+// Clic sur le lien de navigation de l'application (barre latérale sur ordinateur ; barre du
+// bas ou tiroir « Plus » sur mobile) : navigation du routeur, sans rechargement du document.
+async function naviguerEnInterne(
+  page: Page,
+  chemin: string,
+  isMobile: boolean,
+) {
+  if (!isMobile) {
+    await page.locator(`.barre-laterale a[href='${chemin}']`).first().click();
+  } else if ((await page.locator(`#nav-bas a[href='${chemin}']`).count()) > 0) {
+    await page.locator(`#nav-bas a[href='${chemin}']`).click();
+  } else {
+    await page.locator("#btn-nav-plus").click();
+    await page.locator(`#dialog-nav-plus a[href='${chemin}']`).click();
+  }
+  await expect(page).toHaveURL(new RegExp(`${chemin.replace("/", "\\/")}$`));
+}
+
+// Charge la page (modules mis en mémoire) puis la quitte vers l'accueil.
+async function prechargerPuisQuitter(
+  page: Page,
+  url: string,
+  indicateur: string,
+  isMobile: boolean,
+) {
+  await page.goto(url);
+  await expect(page.locator(indicateur).first()).not.toBeVisible({
+    timeout: 10000,
+  });
+  await naviguerEnInterne(page, "/", isMobile);
+}
+
+// Retarde de 1,5 s les appels d'API visés ; « interception » se résout à la première d'entre
+// elles (dans un objet : une promesse rendue par une fonction async serait attendue avec elle).
+async function retarderApi(
+  page: Page,
+  motif: string,
+): Promise<{ interception: Promise<void> }> {
+  let interceptee: () => void = () => {};
+  const interception = new Promise<void>((resolve) => {
+    interceptee = resolve;
+  });
+  await page.route(motif, async (route) => {
+    interceptee();
+    await new Promise<void>((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  return { interception };
+}
+
 test.describe("Scénario: indicateur de chargement (#644)", () => {
   test.use({ storageState: FICHIER_AUTH_USER });
 
@@ -321,29 +377,16 @@ test.describe("Scénario: indicateur de chargement (#644)", () => {
   ]) {
     test(`${nom}_etat_chargement_visible_pendant_fetch_puis_absent`, async ({
       page,
+      isMobile,
     }) => {
-      let requeteInterceptee: () => void;
-      const interception = new Promise<void>((resolve) => {
-        requeteInterceptee = resolve;
-      });
-      await page.route(`**${api}**`, async (route) => {
-        requeteInterceptee();
-        await new Promise<void>((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      await prechargerPuisQuitter(page, url, ".etat-chargement", isMobile);
+      const { interception } = await retarderApi(page, `**${api}**`);
 
-      const gotoPromise = page.goto(url);
-      // Synchronisation sur l'interception réseau elle-même plutôt qu'un événement de
-      // cycle de vie de page (domcontentloaded/load) : Firefox et webkit ordonnancent ces
-      // événements différemment par rapport au montage Vue + à l'appel fetch (chargement.value
-      // = true est déjà positionné avant l'appel réseau), ce qui rendait cette synchronisation
-      // fragile dans un sens ou dans l'autre selon le navigateur (#644, récidive webkit après
-      // le fix Firefox du 29/06).
+      await naviguerEnInterne(page, url, isMobile);
       await interception;
       await expect(page.locator(".etat-chargement")).toBeVisible({
         timeout: 5000,
       });
-      await gotoPromise;
       await expect(page.locator(".etat-chargement")).not.toBeVisible({
         timeout: 5000,
       });
@@ -356,24 +399,16 @@ test.describe("Scénario: indicateur de chargement admin (#644)", () => {
 
   test("admin_jobs_etat_chargement_visible_pendant_fetch_puis_absent", async ({
     page,
+    isMobile,
   }) => {
-    let requeteInterceptee: () => void;
-    const interception = new Promise<void>((resolve) => {
-      requeteInterceptee = resolve;
-    });
-    await page.route("**/api/admin/**", async (route) => {
-      requeteInterceptee();
-      await new Promise<void>((r) => setTimeout(r, 1500));
-      await route.continue();
-    });
+    await prechargerPuisQuitter(page, "/admin", ".etat-chargement", isMobile);
+    const { interception } = await retarderApi(page, "**/api/admin/**");
 
-    const gotoPromise = page.goto("/admin");
-    // Synchronisation sur l'interception réseau — voir commentaire ci-dessus (#644).
+    await naviguerEnInterne(page, "/admin", isMobile);
     await interception;
     await expect(page.locator(".etat-chargement").first()).toBeVisible({
       timeout: 5000,
     });
-    await gotoPromise;
     await expect(page.locator(".etat-chargement").first()).not.toBeVisible({
       timeout: 5000,
     });
