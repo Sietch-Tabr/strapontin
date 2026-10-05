@@ -147,4 +147,53 @@ class FetchArtistesBatchExecutorTest {
             org.mockito.ArgumentMatchers.anyInt(),
             org.mockito.ArgumentMatchers.argThat(ids -> !ids.isEmpty()));
   }
+
+  private static FetchUnArtisteExecutor unArtiste(
+      final FetchArtistesBatchExecutor executeur, final WorkerFetchCommun commun) {
+    return new FetchUnArtisteExecutor(
+        executeur,
+        mock(RecalculerMatchesService.class),
+        new FetchRapportage(
+            mock(NotificationDigestService.class),
+            mock(WorkerStatsService.class),
+            mock(SuiviSanteSourcesService.class),
+            mock(EnregistreurLieuxEventim.class)),
+        commun);
+  }
+
+  // L'ajout d'un artiste ne récupère que lui : ni cycle complet, ni remontée d'échec de lot.
+  @Test
+  void fetchUnArtiste_recupereLeSeulArtisteSansBilanDeCycle() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneArtiste("a1")));
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    when(tm.fetchArtistesLot(anyList())).thenReturn(List.<ConcertBrut>of());
+    final WorkerFetchCommun commun = mock(WorkerFetchCommun.class);
+    final FetchArtistesBatchExecutor executeur = executeur(jdbc, tm, commun);
+    when(commun.obtenirGestionQuotaTM().verifier("fetch:artiste")).thenReturn(true);
+
+    unArtiste(executeur, commun).executer("a1");
+
+    verify(jdbc)
+        .queryForList(
+            org.mockito.ArgumentMatchers.contains("IN (:ids)"), eq(Map.of("ids", List.of("a1"))));
+    verify(tm).fetchArtistesLot(List.of("K8vZ917oGV7"));
+    verify(commun, never())
+        .remonterEchecsLots(
+            anyString(), anyList(), org.mockito.ArgumentMatchers.anyInt(), anyList());
+  }
+
+  @Test
+  void fetchUnArtiste_quotaTicketmasterEpuise_nInterrogePasTicketmaster() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneArtiste("a1")));
+    final TicketmasterSource tm = mock(TicketmasterSource.class);
+    final WorkerFetchCommun commun = mock(WorkerFetchCommun.class);
+    final FetchArtistesBatchExecutor executeur = executeur(jdbc, tm, commun);
+    when(commun.obtenirGestionQuotaTM().verifier("fetch:artiste")).thenReturn(false);
+
+    unArtiste(executeur, commun).executer("a1");
+
+    verify(tm, never()).fetchArtistesLot(anyList());
+  }
 }

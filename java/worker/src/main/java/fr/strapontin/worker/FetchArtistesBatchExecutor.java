@@ -13,6 +13,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -67,15 +68,29 @@ class FetchArtistesBatchExecutor {
     rapportage
         .workerStatsService()
         .executerAvecStatsToleretErreur(
-            LOG, "fetch:artistes:batch", () -> executerCycle(retry, artisteIdsCibles));
+            LOG, "fetch:artistes:batch", () -> executerCycle(artisteIdsCibles));
   }
 
-  private WorkerStatsService.ResultatJob executerCycle(
-      final boolean retry, final List<String> artisteIdsCibles) {
+  /**
+   * Traite un lot hors cycle (ajout d'un artiste) : ni statistiques, ni
+   * remontée d'échec de lot — voir {@link FetchUnArtisteExecutor}.
+   * @param lot lignes artiste ({@link #chargerArtistesSuivis})
+   * @param ticketmasterAutorise {@code false} si le quota Ticketmaster est bas
+   */
+  /* package-private : appelé par FetchUnArtisteExecutor (même package). */
+  void traiterLotHorsCycle(
+      final List<Map<String, Object>> lot, final boolean ticketmasterAutorise) {
+    traiterLot(
+        lot,
+        sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList(),
+        ticketmasterAutorise);
+  }
+
+  private WorkerStatsService.ResultatJob executerCycle(final List<String> artisteIdsCibles) {
     // Quota Ticketmaster bas : seule cette source est suspendue, pas Eventim.
     final boolean ticketmasterAutorise = commun.obtenirGestionQuotaTM().cronAutorise();
 
-    final List<Map<String, Object>> rows = chargerArtistesSuivisBatch(retry, artisteIdsCibles);
+    final List<Map<String, Object>> rows = chargerArtistesSuivis(artisteIdsCibles);
     if (rows.isEmpty()) {
       LOG.info("fetch:artistes:batch — aucun artiste suivi");
       return WorkerStatsService.ResultatJob.succes(new ResultatPersistance(0, 0));
@@ -92,8 +107,13 @@ class FetchArtistesBatchExecutor {
     return WorkerStatsService.ResultatJob.selonQuota(resultat, ticketmasterAutorise);
   }
 
-  private List<Map<String, Object>> chargerArtistesSuivisBatch(
-      final boolean retry, final List<String> artisteIdsCibles) {
+  /**
+   * @param artisteIdsCibles identifiants ({@code artistes.id}, texte), ou
+   *     {@code null} pour tous les artistes suivis
+   * @return une ligne par artiste suivi
+   */
+  /* package-private : partagé avec FetchUnArtisteExecutor (même package). */
+  List<Map<String, Object>> chargerArtistesSuivis(final List<String> artisteIdsCibles) {
     return commun
         .obtenirJdbc()
         .queryForList(
@@ -105,9 +125,9 @@ class FetchArtistesBatchExecutor {
                 + " user_artistes ua JOIN artistes a ON a.id = ua.artiste_id LEFT JOIN"
                 + " artiste_sources asm   ON asm.artiste_id = ua.artiste_id AND asm.source ="
                 + " 'ticketmaster'"
-                + (retry ? " WHERE ua.artiste_id::text IN (:ids)" : "")
+                + (artisteIdsCibles != null ? " WHERE ua.artiste_id::text IN (:ids)" : "")
                 + " GROUP BY ua.artiste_id, a.id",
-            retry ? Map.of("ids", artisteIdsCibles) : Map.of());
+            Collections.singletonMap("ids", artisteIdsCibles));
   }
 
   private ResultatPersistance traiterLots(

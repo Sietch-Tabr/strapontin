@@ -203,7 +203,7 @@ public class ArtisteService {
           if (wikidataId != null && !wikidataId.isBlank()) {
             resoudreEtPersisterWikidata(artisteId, nom, wikidataId);
           }
-          declencherWorkerArtiste();
+          declencherWorkerArtiste(artisteId);
         };
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
@@ -423,11 +423,12 @@ public class ArtisteService {
     return ArtisteServiceParsing.parseDeezerResultats(objectMapper, json);
   }
 
-  private void declencherWorkerArtiste() {
+  // Seul l'artiste ajouté est récupéré, le cycle complet reste au cron.
+  private void declencherWorkerArtiste(final UUID artisteId) {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient,
         LOG,
-        "http://localhost:8081/trigger/artiste",
+        "http://localhost:8081/trigger/artiste?artisteId=" + artisteId,
         "Déclenchement worker artiste impossible");
   }
 }

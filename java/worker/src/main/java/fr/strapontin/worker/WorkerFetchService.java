@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class WorkerFetchService {
 
   private final FetchArtistesBatchExecutor fetchArtistesBatchExecutor;
+  private final FetchUnArtisteExecutor fetchUnArtisteExecutor;
   private final FetchRegionExecutor fetchRegionExecutor;
   private final FetchSallesExecutor fetchSallesExecutor;
 
@@ -38,6 +39,9 @@ public class WorkerFetchService {
     this.fetchArtistesBatchExecutor =
         new FetchArtistesBatchExecutor(
             sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
+    this.fetchUnArtisteExecutor =
+        new FetchUnArtisteExecutor(
+            fetchArtistesBatchExecutor, recalculerMatchesService, rapportage, commun);
     this.fetchRegionExecutor =
         new FetchRegionExecutor(
             sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
@@ -63,6 +67,15 @@ public class WorkerFetchService {
    */
   public void executerFetchArtistesBatch(final List<String> artisteIdsCibles) {
     fetchArtistesBatchExecutor.executer(artisteIdsCibles);
+  }
+
+  /**
+   * Récupère un seul artiste, à son ajout — voir {@link
+   * FetchUnArtisteExecutor}.
+   * @param artisteId identifiant ({@code artistes.id}, texte) de l'artiste
+   */
+  public void executerFetchArtiste(final String artisteId) {
+    fetchUnArtisteExecutor.executer(artisteId);
   }
 
   /**

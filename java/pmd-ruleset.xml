@@ -120,7 +120,7 @@
     <exclude name="LoosePackageCoupling"/>
   </rule>
   <!-- LoosePackageCoupling : sans packages/classes configurés, la règle ne vérifie rien
-       (configerror "No packages or classes specified") — les 13 jobs Quartz ne doivent être
+       (configerror "No packages or classes specified") — les jobs Quartz ne doivent être
        instanciés que par le scheduler (Planificateur, enregistrement des JobDetail) ou déclenchés
        explicitement (TriggerController, déclenchement manuel via API) ; classes liste ces deux
        points d'entrée documentés (table "Jobs background", CLAUDE.md) comme seuls autorisés à
@@ -130,7 +130,7 @@
       <property name="packages" value="fr.strapontin.worker.jobs"/>
       <property
           name="classes"
-          value="fr.strapontin.worker.jobs.FetchArtistesBatchJob,fr.strapontin.worker.jobs.FetchRegionJob,fr.strapontin.worker.jobs.FetchSalleJob,fr.strapontin.worker.jobs.FetchSallesAllJob,fr.strapontin.worker.jobs.GererComptesInactifsJob,fr.strapontin.worker.jobs.GererInvitesExpiresJob,fr.strapontin.worker.jobs.NotifierDigestJob,fr.strapontin.worker.jobs.NotifierVersionJob,fr.strapontin.worker.jobs.PurgerArtistesJob,fr.strapontin.worker.jobs.PurgerConcertsJob,fr.strapontin.worker.jobs.PurgerLogsAdminJob,fr.strapontin.worker.jobs.PurgerSallesJob,fr.strapontin.worker.jobs.RecalculerMatchesJob,fr.strapontin.worker.jobs.ReconciliationNocturneJob,fr.strapontin.worker.jobs.RevoquerAdminsJob,fr.strapontin.worker.jobs.SuiviCyclesJobsJob"/>
+          value="fr.strapontin.worker.jobs.FetchArtisteJob,fr.strapontin.worker.jobs.FetchArtistesBatchJob,fr.strapontin.worker.jobs.FetchRegionJob,fr.strapontin.worker.jobs.FetchSalleJob,fr.strapontin.worker.jobs.FetchSallesAllJob,fr.strapontin.worker.jobs.GererComptesInactifsJob,fr.strapontin.worker.jobs.GererInvitesExpiresJob,fr.strapontin.worker.jobs.NotifierDigestJob,fr.strapontin.worker.jobs.NotifierVersionJob,fr.strapontin.worker.jobs.PurgerArtistesJob,fr.strapontin.worker.jobs.PurgerConcertsJob,fr.strapontin.worker.jobs.PurgerLogsAdminJob,fr.strapontin.worker.jobs.PurgerSallesJob,fr.strapontin.worker.jobs.RecalculerMatchesJob,fr.strapontin.worker.jobs.ReconciliationNocturneJob,fr.strapontin.worker.jobs.RevoquerAdminsJob,fr.strapontin.worker.jobs.SuiviCyclesJobsJob"/>
     </properties>
   </rule>
   <rule ref="category/java/design.xml/CyclomaticComplexity">
