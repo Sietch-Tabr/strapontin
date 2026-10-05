@@ -37,6 +37,8 @@ export const versionsChangelog = [
           "Une billetterie momentanément indisponible ne fait plus passer ses concerts pour disparus, et deux séances d'un même spectacle le même jour ne sont plus confondues.",
           "Les dates Eventim continuent d'arriver quand Ticketmaster limite ses réponses pour la journée.",
           "Les spectacles toujours programmés ne sont plus proposés à tort à la suppression.",
+          "Le nom d'un spectacle ne change plus d'une mise à jour à l'autre quand deux billetteries l'écrivent différemment.",
+          "Ajouter un artiste ne recherche plus que ses concerts : les concerts de tous les artistes suivis n'étaient plus mis à jour à temps, faute de quota Ticketmaster.",
         ],
       },
       {
@@ -44,7 +46,7 @@ export const versionsChangelog = [
         items: [
           "Les salles sont reconnues grâce à l'adresse publiée par la billetterie : deux salles homonymes de villes différentes ne sont plus confondues.",
           "Le nom d'une salle ne change plus d'une mise à jour à l'autre.",
-          "Deux salles voisines aux noms différents (comme l'Élysée Montmartre et le Théâtre Montmartre-Galabru) ne sont plus réunies.",
+          "Deux salles voisines aux noms différents (comme l'Élysée Montmartre et le Théâtre Montmartre-Galabru, ou le Théâtre Montparnasse et le Théâtre de Poche) ne sont plus réunies.",
           "La ville d'une salle est sa commune : « Paris » au lieu d'un arrondissement ou d'un quartier comme « Saint-Thomas-d'Aquin ».",
           "Une salle n'est plus placée sur la carte chez un homonyme d'une autre région, et une salle étrangère n'est plus rangée dans un département français.",
         ],
