@@ -126,6 +126,39 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         "Q3354551", wikidataId, "Le wikidata_id déjà connu doit être préservé après fusion");
   }
 
+  private void creerLieu(final UUID salleId, final String source, final String identifiant) {
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:salle AS uuid), :source, :identifiant)",
+        Map.of("salle", salleId.toString(), "source", source, "identifiant", identifiant));
+  }
+
+  // Cas réel : la fusion d'une église dans le théâtre de l'Île Saint-Louis avait supprimé un
+  // lieu Eventim du théâtre, la salle absorbée en ayant elle aussi un.
+  @Test
+  void fusionner_lieuxDeMemeSourceSurLesDeuxSalles_conserveTousLesLieux() {
+    final UUID theatre = creerSalle("Theatre Ile Saint Louis", "75", null, LAT, LON);
+    final UUID doublon = creerSalle("Theatre Ile Saint-Louis", "75", null, LAT, LON);
+    creerLieu(theatre, "eventim", "internal:theatre de lile saint louis paul rey");
+    creerLieu(theatre, "eventim", "internal:theatre de lile saint louis@75004");
+    creerLieu(doublon, "eventim", "internal:theatre ile saint louis");
+    creerLieu(doublon, "ticketmaster", "rZFSnyZAvvk");
+    creerConcert("suzane", "20:00", "75", theatre);
+    creerConcert("suzane", "20:00", "75", doublon);
+
+    assertEquals(1, fusionSallesClePortee.fusionner());
+
+    assertEquals(
+        4L,
+        jdbc.queryForObject("SELECT COUNT(*) FROM salle_sources", Map.of(), Long.class),
+        "Aucun lieu ne doit disparaître à la fusion");
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE message LIKE 'lieux reportés%'",
+            Map.of(), Long.class));
+  }
+
   @Test
   void fusionner_fusionEffectuee_journaliseDansLogsAdmin() {
     // Une fusion automatique et destructive ne doit jamais rester silencieuse.

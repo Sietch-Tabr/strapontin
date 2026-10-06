@@ -4,11 +4,11 @@
  */
 package fr.strapontin.web.securite;
 
-import fr.strapontin.web.ErreurMetier;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.HttpServletRequest;

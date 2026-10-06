@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class PasswordResetController {
 
   private static final Logger LOG = LoggerFactory.getLogger(PasswordResetController.class);
-  private static final String CLE_ERREUR = "erreur";
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;

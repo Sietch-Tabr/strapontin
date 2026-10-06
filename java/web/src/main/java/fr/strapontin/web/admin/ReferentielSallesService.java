@@ -325,11 +325,25 @@ public class ReferentielSallesService {
             + " AS uuid)",
         ids);
 
-    dedupliquerSallesSourcesAvantFusion(cibleId, sourceId);
+    // Tous les lieux sont gardés : une salle a souvent plusieurs lieux d'une même
+    // source pour un même bâtiment, et la clé (source, identifiant) n'en dépend pas.
+    final List<String> lieuxReportes =
+        jdbc.queryForList(
+            "SELECT source || ':' || identifiant_externe FROM salle_sources"
+                + " WHERE salle_id = CAST(:source AS uuid) ORDER BY 1",
+            ids,
+            String.class);
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source AS"
             + " uuid)",
         ids);
+    if (!lieuxReportes.isEmpty()) {
+      logAdminService.logAdmin(
+          "info",
+          "admin",
+          "lieux reportés sur la salle conservée après fusion",
+          Map.of("salleCible", cibleId.toString(), "lieux", lieuxReportes));
+    }
   }
 
   // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
@@ -404,44 +418,5 @@ public class ReferentielSallesService {
             Map.of("id", salleId.toString()),
             (rs, _) -> (UUID) rs.getObject("salle_parent_id"));
     return resultat.isEmpty() ? null : resultat.get(0);
-  }
-
-  /**
-   * Supprime, avant réassignation, les doublons de {@code salle_sources}
-   * qu'une fusion créerait sinon (PK {@code (source, identifiant_externe)}
-   * indépendante de {@code salle_id}) — garde la ligne la plus saine (non
-   * suspecte, puis {@code nb_zero_consecutifs} le plus bas).
-   * @param cibleId UUID de la salle à conserver
-   * @param sourceId UUID de la salle à absorber
-   */
-  private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
-    final List<Map<String, Object>> conflits =
-        jdbc.queryForList(
-            """
-            SELECT src.source AS source,
-                   src.identifiant_externe AS id_source,
-                   dst.identifiant_externe AS id_cible,
-                   src.nb_zero_consecutifs AS sante_source,
-                   dst.nb_zero_consecutifs AS sante_cible,
-                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-            FROM salle_sources src
-            JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
-            WHERE src.salle_id = CAST(:source AS uuid)
-            """,
-            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()));
-
-    for (final Map<String, Object> conflit : conflits) {
-      final boolean garderSource = FusionSourcesUtils.laSourceEstPlusSaine(conflit);
-      final Map<String, Object> paramsSuppression = new HashMap<>();
-      paramsSuppression.put(CLE_SOURCE, conflit.get(CLE_SOURCE));
-      paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
-      paramsSuppression.put(
-          "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));
-      jdbc.update(
-          "DELETE FROM salle_sources WHERE salle_id = CAST(:salleId AS uuid) AND source ="
-              + " :source AND identifiant_externe = :identifiantExterne",
-          paramsSuppression);
-    }
   }
 }
