@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.ResourceAccessException;
@@ -29,7 +31,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  * @since 2.0.0
  * @author Kwaite
  */
-public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
+public class EventimSource
+    implements SourceConcerts, SourceAvecBilanFetch, SourceAvecProduitsEcartes {
 
   private static final Logger LOG = LoggerFactory.getLogger(EventimSource.class);
 
@@ -73,6 +76,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final EventimAttractionResolver attractionResolver;
   private final LieuxEventim lieux;
+  private final Queue<ProduitEcarte> produitsEcartes = new ConcurrentLinkedQueue<>();
 
   /**
    * Crée une instance avec un RestClient par défaut (headers Eventim,
@@ -277,7 +281,17 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
     produits.forEach(lieux::relever);
     final List<Map<String, Object>> retenus =
-        artisteFallback != null ? ProduitsDeLArtiste.retenir(produits, artisteFallback) : produits;
+        artisteFallback != null
+            ? ProduitsDeLArtiste.retenir(
+                produits,
+                artisteFallback,
+                ecarte ->
+                    produitsEcartes.add(
+                        new ProduitEcarte(
+                            artisteFallback,
+                            MapeurProduitEventim.extraireUrlProduit(ecarte),
+                            (String) ecarte.get("name"))))
+            : produits;
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : retenus) {
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
@@ -291,6 +305,16 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         entier(data, CLE_TOTAL_PAGES),
         produits.size(),
         true);
+  }
+
+  @Override
+  public List<ProduitEcarte> preleverProduitsEcartes() {
+    final List<ProduitEcarte> preleves = new ArrayList<>();
+    ProduitEcarte produit;
+    while ((produit = produitsEcartes.poll()) != null) {
+      preleves.add(produit);
+    }
+    return preleves;
   }
 
   private static int entier(final Map<String, Object> data, final String cle) {

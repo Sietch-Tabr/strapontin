@@ -5,8 +5,12 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.Normalisation;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,13 +32,24 @@ final class ProduitsDeLArtiste {
   /**
    * @param produits produits renvoyés pour l'artiste
    * @param artiste nom de l'artiste recherché
+   * @param ecartes reçoit chaque produit écarté
    * @return les produits qui ne sont pas la date d'un autre artiste
    */
   /* package-private : appelé par EventimSource (même package). */
   static List<Map<String, Object>> retenir(
-      final List<Map<String, Object>> produits, final String artiste) {
-    final List<Map<String, Object>> retenus =
-        produits.stream().filter(p -> concerneArtiste(p, artiste)).toList();
+      final List<Map<String, Object>> produits,
+      final String artiste,
+      final Consumer<Map<String, Object>> ecartes) {
+    final Set<String> festivalsNommes = festivalsNommantLArtiste(produits, artiste);
+    final List<Map<String, Object>> retenus = new ArrayList<>();
+    for (final Map<String, Object> produit : produits) {
+      if (concerneArtiste(produit, artiste)
+          && !soireeDUnFestivalOuLArtisteANomme(produit, artiste, festivalsNommes)) {
+        retenus.add(produit);
+      } else {
+        ecartes.accept(produit);
+      }
+    }
     if (retenus.size() < produits.size()) {
       LOG.info(
           "Eventim artiste={} : {} produit(s) d'un autre artiste du même festival écarté(s)",
@@ -42,6 +57,53 @@ final class ProduitsDeLArtiste {
           produits.size() - retenus.size());
     }
     return retenus;
+  }
+
+  /**
+   * Festivals dont un produit nomme l'artiste (« Suzane - Les Rendez-vous
+   * Soniques #17 ») : ses soirées titrées du seul nom du festival sont alors
+   * celles d'autres artistes, Eventim rattachant l'artiste à tout le festival.
+   * Sans produit nommant l'artiste, un titre de festival seul reste gardé (il
+   * peut être sa propre date : Nancy Jazz Pulsations).
+   */
+  private static Set<String> festivalsNommantLArtiste(
+      final List<Map<String, Object>> produits, final String artiste) {
+    final String recherche = artiste == null ? "" : Normalisation.normaliserTexte(artiste);
+    final Set<String> festivals = new HashSet<>();
+    if (recherche.isEmpty()) {
+      return festivals;
+    }
+    for (final Map<String, Object> produit : produits) {
+      if (produit.get(CLE_NOM) instanceof String titre) {
+        final String partie = MapeurProduitEventim.extraireNomArtiste(titre);
+        if (partie.length() < titre.length()
+            && (" " + Normalisation.normaliserTexte(partie) + " ")
+                .contains(" " + recherche + " ")) {
+          final String suite =
+              Normalisation.normaliserTexte(
+                  titre.substring(titre.indexOf(partie) + partie.length()).replace("..", ""));
+          if (suite.length() >= LONGUEUR_MIN_TRONQUE) {
+            festivals.add(suite);
+          }
+        }
+      }
+    }
+    return festivals;
+  }
+
+  private static boolean soireeDUnFestivalOuLArtisteANomme(
+      final Map<String, Object> produit, final String artiste, final Set<String> festivals) {
+    if (festivals.isEmpty() || !(produit.get(CLE_NOM) instanceof String titre)) {
+      return false;
+    }
+    final String partie =
+        Normalisation.normaliserTexte(MapeurProduitEventim.extraireNomArtiste(titre));
+    if ((" " + partie + " ").contains(" " + Normalisation.normaliserTexte(artiste) + " ")) {
+      return false;
+    }
+    final String titreNormalise = Normalisation.normaliserTexte(titre);
+    return festivals.stream()
+        .anyMatch(festival -> titreNormalise.equals(festival) || titreNormalise.contains(festival));
   }
 
   /**

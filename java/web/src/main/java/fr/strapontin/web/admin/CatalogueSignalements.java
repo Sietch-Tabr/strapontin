@@ -73,6 +73,12 @@ public final class CatalogueSignalements {
         "Le nom de l'artiste chez Ticketmaster ne correspond plus à l'artiste suivi : corriger son"
             + " identifiant ou accepter ce nom.");
     ajouter(
+        "date_festival_ecartee",
+        "Date de festival attribuée à tort",
+        "Ce concert vient d'un produit Eventim qui n'est plus retenu pour cet artiste (soirée"
+            + " d'un festival où il ne joue pas) : vérifier le programme puis supprimer le"
+            + " concert.");
+    ajouter(
         "concert_double_salles_distinctes",
         "Concert en double sur deux salles distinctes",
         "Le même concert existe sur deux salles déclarées distinctes : un lieu de billetterie"

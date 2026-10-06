@@ -4,12 +4,14 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.worker.sante.SignalementDatesFestivalEcartees;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import org.springframework.stereotype.Component;
 
 /**
  * Collaborateurs post-fetch partagés par les exécuteurs — notification,
- * bilan de job, suivi passif par source, relevé des lieux Eventim ; regroupés
+ * bilan de job, suivi passif par source, relevé des lieux Eventim, dates de
+ * festival écartées ; regroupés
  * pour rester sous le seuil de paramètres de constructeur (8).
  * @since 2.9.1
  * @author Kwaite
@@ -19,4 +21,5 @@ public record FetchRapportage(
     NotificationDigestService notificationDigestService,
     WorkerStatsService workerStatsService,
     SuiviSanteSourcesService suiviSanteSourcesService,
-    EnregistreurLieuxEventim enregistreurLieuxEventim) {}
+    EnregistreurLieuxEventim enregistreurLieuxEventim,
+    SignalementDatesFestivalEcartees datesFestivalEcartees) {}
