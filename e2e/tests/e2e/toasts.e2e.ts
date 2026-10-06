@@ -117,12 +117,12 @@ test.describe("Toasts — actions admin", () => {
       timeout: 5000,
     });
     const bouton = page.getByRole("button", {
-      name: "Relancer les fetches maintenant",
+      name: "Relancer les recherches de concerts",
     });
     await bouton.scrollIntoViewIfNeeded();
     await bouton.click();
     await expect(page.locator(".alerte-succes")).toContainText(
-      "Fetches relancés",
+      "Recherches de concerts relancées",
       { timeout: 5000 },
     );
   });

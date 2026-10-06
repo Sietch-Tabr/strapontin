@@ -755,7 +755,7 @@ async function confirmerVapid() {
     if (rep.ok) {
       const nb = corps.nbAbonnementsSupprimes ?? 0;
       afficherToast(
-        `Clés VAPID régénérées. ${nb} abonnement${nb !== 1 ? "s" : ""} push invalidé${nb !== 1 ? "s" : ""}.`,
+        `Clés des notifications push régénérées : ${nb} appareil${nb !== 1 ? "s devront" : " devra"} réactiver les notifications push.`,
         "succes",
       );
       const repConfig = await appelApi("/api/admin/config");

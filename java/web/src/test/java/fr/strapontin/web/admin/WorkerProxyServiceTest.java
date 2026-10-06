@@ -83,7 +83,7 @@ class WorkerProxyServiceTest {
     final ResultatRelance resultat = service.relancerJob("job-inconnu");
 
     assertFalse(resultat.succes());
-    assertTrue(resultat.messageErreur().contains("Job inconnu"));
+    assertTrue(resultat.messageErreur().contains("Tâche inconnue"));
     assertEquals(400, resultat.statutHttp());
   }
 
@@ -105,7 +105,7 @@ class WorkerProxyServiceTest {
     final ResultatRelance resultat = service.relancerJob("purger:salles");
 
     assertFalse(resultat.succes());
-    assertTrue(resultat.messageErreur().contains("Erreur interne worker"));
+    assertTrue(resultat.messageErreur().equals(WorkerProxyService.MESSAGE_EN_ERREUR));
     assertEquals(502, resultat.statutHttp());
   }
 

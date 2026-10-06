@@ -96,7 +96,7 @@
           :disabled="relancerEnCours"
           @click="relancerFetches"
         >
-          Relancer les fetches maintenant
+          Relancer les recherches de concerts
         </button>
       </div>
     </div>
@@ -202,7 +202,7 @@ async function charger() {
     if (jobsEnCours.value.length > 0) demarrerPolling();
   } catch (e) {
     if (e.name === "AbortError") return;
-    afficherToast("Erreur lors du chargement des jobs.", "erreur");
+    afficherToast("Erreur lors du chargement du tableau de bord.", "erreur");
   } finally {
     chargement.value = false;
   }
@@ -216,11 +216,15 @@ async function relancerFetches() {
       signal: controleur.signal,
     });
     if (rep.ok) {
-      afficherToast("Fetches relancés.", "succes");
+      afficherToast("Recherches de concerts relancées.", "succes");
       demarrerPolling();
     } else {
       relancerEnCours.value = false;
-      afficherToast("Erreur — worker inaccessible.", "erreur");
+      const corps = await lireJson(rep);
+      afficherToast(
+        corps.erreur || "Les recherches de concerts n'ont pas pu être relancées.",
+        "erreur",
+      );
     }
   } catch (e) {
     if (e.name === "AbortError") return;
@@ -237,10 +241,14 @@ async function relancerJob(typeJob) {
       { method: "POST", signal: controleur.signal },
     );
     if (rep.ok) {
-      afficherToast("Job relancé.", "succes");
+      afficherToast("Tâche relancée.", "succes");
       demarrerPolling();
     } else {
-      afficherToast("Erreur — worker inaccessible.", "erreur");
+      const corps = await lireJson(rep);
+      afficherToast(
+        corps.erreur || "La tâche n'a pas pu être relancée.",
+        "erreur",
+      );
     }
   } catch (e) {
     if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");

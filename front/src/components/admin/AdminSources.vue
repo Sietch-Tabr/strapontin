@@ -513,7 +513,7 @@ async function fetchSalle(salle) {
       signal: controleur.signal,
     });
     if (rep.ok) {
-      afficherToast("Fetch déclenché.", "succes");
+      afficherToast("Recherche des concerts de la salle lancée.", "succes");
     } else {
       const data = await lireJson(rep);
       afficherToast(data.erreur || "Erreur lors du déclenchement.", "erreur");

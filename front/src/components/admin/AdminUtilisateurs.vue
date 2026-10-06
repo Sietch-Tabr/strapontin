@@ -818,7 +818,7 @@ async function confirmerReinitTotp() {
     const corps = await lireJson(rep);
     if (rep.ok)
       afficherToast(
-        "2FA réinitialisée. L'utilisateur pourra se reconnecter sans code.",
+        "Double authentification réinitialisée : l'utilisateur pourra se reconnecter sans code.",
         "succes",
       );
     else afficherToast(corps.erreur || "Erreur.", "erreur");
