@@ -15,9 +15,7 @@ import jakarta.validation.constraints.Size;
  * @author Kwaite
  */
 public record RequeteSetup(
-    @NotBlank(message = "L'identifiant est requis.")
-        @Size(min = 3, message = "L'identifiant doit contenir au moins 3 caractères.")
-        String identifiant,
+    @NotBlank(message = "L'identifiant est requis.") String identifiant,
     @NotBlank(message = "L'adresse email est invalide.")
         @Email(message = "L'adresse email est invalide.")
         String email,

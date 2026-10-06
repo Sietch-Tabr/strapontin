@@ -144,7 +144,17 @@ test.describe("Scénario: invitation — flux activation", () => {
     await expect(pageInvite.locator('input[name="identifiant"]')).toBeVisible({
       timeout: 5000,
     });
+    // Chaque champ porte sa propre consigne, annoncée et visible pendant la saisie.
+    const champIdentifiant = pageInvite.locator('input[name="identifiant"]');
+    const champMotDePasse = pageInvite.locator('input[name="motDePasse"]');
+    await expect(champIdentifiant).toHaveAccessibleDescription(
+      /De 3 à 30 caractères/,
+    );
+    await expect(champMotDePasse).toHaveAccessibleDescription(
+      "Au moins 12 caractères.",
+    );
     await pageInvite.fill('input[name="identifiant"]', identifiantTest);
+    await expect(pageInvite.locator("#aide-identifiant")).toBeVisible();
     await pageInvite.fill('input[name="motDePasse"]', "TestE2E!2026invite");
     await pageInvite.click('button[type="submit"]');
 
