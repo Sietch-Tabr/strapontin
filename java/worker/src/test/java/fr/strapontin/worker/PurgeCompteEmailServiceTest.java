@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Tests unitaires pour {@link PurgeCompteEmailService}.
@@ -76,7 +77,11 @@ class PurgeCompteEmailServiceTest {
 
     assertTrue(service.envoyerRelanceInactivite("a@test.fr", 15));
 
-    verify(emailsMock).send(any(CreateEmailOptions.class));
+    final ArgumentCaptor<CreateEmailOptions> options =
+        ArgumentCaptor.forClass(CreateEmailOptions.class);
+    verify(emailsMock).send(options.capture());
+    assertTrue(options.getValue().getHtml().contains("dans les 15 jours"));
+    assertFalse(options.getValue().getHtml().contains("%d"));
   }
 
   @Test

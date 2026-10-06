@@ -49,9 +49,9 @@ final class PurgeCompteEmailTemplate {
   static String relanceInactivite(final int joursGrace, final String baseUrl) {
     final String sujet = "Votre compte Strapontin va être supprimé pour inactivité";
     final String corps =
-        "Vous n'êtes pas connecté depuis plusieurs mois. Sans connexion dans les %d jours,"
-            + " votre compte et vos préférences seront définitivement supprimés."
-                .formatted(joursGrace);
+        ("Vous n'êtes pas connecté depuis plusieurs mois. Sans connexion dans les %d jours,"
+                + " votre compte et vos préférences seront définitivement supprimés.")
+            .formatted(joursGrace);
     return GABARIT.formatted(sujet, sujet, corps, baseUrl, "Me reconnecter", baseUrl);
   }
 
