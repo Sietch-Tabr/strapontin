@@ -28,6 +28,8 @@
 
 <script setup>
 import { appelApi, lireJson } from "../utils/api.js";
+import { canalJoignable } from "../utils/notifications.js";
+import { lireEndpointsServeur } from "../composables/useAbonnementPush.js";
 defineOptions({ name: "ChecklistPremiersPas" });
 
 import { computed, onMounted, ref } from "vue";
@@ -61,19 +63,15 @@ const visible = computed(
 
 onMounted(async () => {
   try {
-    const [repConfig, repStats] = await Promise.all([
+    const [repConfig, repStats, endpoints] = await Promise.all([
       appelApi("/api/user/config"),
       appelApi("/api/parametres/stats"),
+      lireEndpointsServeur(),
     ]);
     if (repConfig.ok) {
       const config = await lireJson(repConfig);
       departementsConfigures.value = (config.departements?.length ?? 0) > 0;
-      notificationActive.value = !!(
-        config.notifArtistes ||
-        config.notifSalles ||
-        config.notifArtistesPush ||
-        config.notifSallesPush
-      );
+      notificationActive.value = canalJoignable(config, endpoints?.length ?? 0);
     }
     if (repStats.ok) {
       const stats = await lireJson(repStats);
