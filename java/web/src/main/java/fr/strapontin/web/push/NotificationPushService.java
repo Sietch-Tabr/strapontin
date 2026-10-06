@@ -5,8 +5,10 @@
 package fr.strapontin.web.push;
 
 import fr.strapontin.core.EndpointPush;
+import fr.strapontin.core.FournisseurBouncyCastle;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,6 +53,7 @@ public class NotificationPushService {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logAdminService = logAdminService;
+    FournisseurBouncyCastle.garantir();
   }
 
   /**
@@ -62,13 +65,13 @@ public class NotificationPushService {
     return configService.lireConfig("VAPID_PUBLIC_KEY");
   }
 
-  private int envoyerAUnAbonnement(
+  private ResultatEnvoiPush envoyerAUnAbonnement(
       final Map<String, Object> ab,
       final PushService pushService,
       final String userId,
       final String payload) {
     if (!estAutoriseSinonSupprime(ab, userId)) {
-      return 0;
+      return ResultatEnvoiPush.SERVICE_NAVIGATEUR_REFUSE;
     }
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
@@ -80,17 +83,21 @@ public class NotificationPushService {
       final int status = response.getStatusLine().getStatusCode();
       if (status == 404 || status == 410) {
         supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
-        return 0;
+        return ResultatEnvoiPush.APPAREIL_REVOQUE;
       }
-      return 1;
+      if (status >= 400) {
+        LOG.warn("Push: envoi refusé ({}) pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
+        return ResultatEnvoiPush.ECHEC_ENVOI;
+      }
+      return ResultatEnvoiPush.ENVOYEE;
     } catch (Exception e) {
       final int status = extraireCodeHttp(e);
       if (status == 404 || status == 410) {
         supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
-      } else {
-        LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
+        return ResultatEnvoiPush.APPAREIL_REVOQUE;
       }
-      return 0;
+      LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
+      return ResultatEnvoiPush.ECHEC_ENVOI;
     }
   }
 
@@ -100,13 +107,13 @@ public class NotificationPushService {
    * (sinon un utilisateur multi-appareils recevait le test sur un autre).
    * @param userId l'identifiant de l'utilisateur
    * @param endpoint l'endpoint de l'appareil demandeur, ou {@code null}
-   * @return {@code true} si la notification a été envoyée
+   * @return issue de l'envoi, avec la raison d'un échec
    */
-  public boolean envoyerNotificationTest(final String userId, final String endpoint) {
+  public ResultatEnvoiPush envoyerNotificationTest(final String userId, final String endpoint) {
     final Optional<String> clePublique = configService.lireConfig("VAPID_PUBLIC_KEY");
     final Optional<String> clePrivee = configService.lireConfig("VAPID_PRIVATE_KEY");
     if (clePublique.isEmpty() || clePrivee.isEmpty()) {
-      return false;
+      return ResultatEnvoiPush.SERVICE_NON_CONFIGURE;
     }
 
     final List<Map<String, Object>> abonnements =
@@ -127,8 +134,11 @@ public class NotificationPushService {
                 LIMIT 1
                 """,
                 Map.of("userId", userId));
-    if (abonnements.isEmpty() || !estAutoriseSinonSupprime(abonnements.get(0), userId)) {
-      return false;
+    if (abonnements.isEmpty()) {
+      return ResultatEnvoiPush.APPAREIL_INCONNU;
+    }
+    if (!estAutoriseSinonSupprime(abonnements.get(0), userId)) {
+      return ResultatEnvoiPush.SERVICE_NAVIGATEUR_REFUSE;
     }
 
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
@@ -141,13 +151,13 @@ public class NotificationPushService {
 
     final PushService pushService;
     try {
-      pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
+      pushService = creerServicePush(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
-      LOG.error("Impossible d'initialiser le service VAPID", e);
-      return false;
+      signalerServiceInutilisable(e);
+      return ResultatEnvoiPush.SERVICE_NON_CONFIGURE;
     }
 
-    return envoyerAUnAbonnement(abonnements.get(0), pushService, userId, payload) > 0;
+    return envoyerAUnAbonnement(abonnements.get(0), pushService, userId, payload);
   }
 
   /**
@@ -180,19 +190,47 @@ public class NotificationPushService {
                   "/",
                   "icon",
                   baseUrl + "/images/icon-192.png"));
-      pushService = new PushService(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
+      pushService = creerServicePush(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
-      LOG.error("Impossible de préparer la notification d'incident", e);
+      signalerServiceInutilisable(e);
       return 0;
     }
     int envoyes = 0;
     for (final Map<String, Object> ab :
         jdbc.queryForList(
             "SELECT id, user_id, endpoint, p256dh, auth FROM push_abonnements", Map.of())) {
-      envoyes += envoyerAUnAbonnement(ab, pushService, (String) ab.get("user_id"), payload);
+      if (envoyerAUnAbonnement(ab, pushService, (String) ab.get("user_id"), payload)
+          == ResultatEnvoiPush.ENVOYEE) {
+        envoyes++;
+      }
     }
     LOG.info("communication d'incident envoyée par push : {}", envoyes);
     return envoyes;
+  }
+
+  /**
+   * Point de construction unique du service d'envoi, remplaçable en test pour
+   * n'intercepter que le transport HTTP.
+   * @param clePublique clé VAPID publique
+   * @param clePrivee clé VAPID privée
+   * @param sujet sujet VAPID ({@code mailto:})
+   * @return service d'envoi prêt à chiffrer et signer
+   * @throws GeneralSecurityException si les clés sont illisibles
+   */
+  /* package-private : redéfini par les tests du même package. */
+  PushService creerServicePush(final String clePublique, final String clePrivee, final String sujet)
+      throws GeneralSecurityException {
+    return new PushService(clePublique, clePrivee, sujet);
+  }
+
+  // Sans trace admin, une panne du service ne se voyait que dans le journal.
+  private void signalerServiceInutilisable(final Exception e) {
+    LOG.error("Impossible d'initialiser le service VAPID", e);
+    logAdminService.logAdmin(
+        "error",
+        "web",
+        "service push inutilisable : clés VAPID illisibles",
+        Map.of("cause", e.getClass().getSimpleName()));
   }
 
   // Un abonnement enregistré avant la validation des endpoints n'est jamais appelé.

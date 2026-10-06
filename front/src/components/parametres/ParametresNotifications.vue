@@ -116,6 +116,20 @@
             votre navigateur.
           </p>
         </div>
+        <div v-else-if="pushNonEnregistre">
+          <p class="param-aide">
+            Cet appareil n'est plus enregistré pour les notifications push : il
+            ne les reçoit plus. Réactivez-les pour l'enregistrer à nouveau.
+          </p>
+          <button
+            type="button"
+            class="bouton bouton-secondaire"
+            :disabled="pushEnCours || frequenceNotifications === 'jamais'"
+            @click="abonnerPush"
+          >
+            Réactiver les notifications push
+          </button>
+        </div>
         <div v-else-if="pushAbonne">
           <p class="param-aide">
             Les notifications push sont activées sur cet appareil.
@@ -184,9 +198,23 @@ const notifNouvelleVersion = ref(false);
 const pushSupporte = ref(false);
 const vapidDisponible = ref(false);
 const pushPermission = ref("default");
-const pushAbonne = ref(false);
+// Abonnement du navigateur, et sa présence côté serveur : un appareil révoqué
+// par le serveur reste abonné dans le navigateur sans plus rien recevoir.
+const endpointNavigateur = ref(null);
 // Abonnements push du compte, tous appareils confondus (null : inconnu).
-const nbAppareilsAbonnes = ref(null);
+const endpointsServeur = ref(null);
+const nbAppareilsAbonnes = computed(
+  () => endpointsServeur.value?.length ?? null,
+);
+const pushAbonne = computed(
+  () =>
+    endpointNavigateur.value !== null &&
+    (endpointsServeur.value === null ||
+      endpointsServeur.value.includes(endpointNavigateur.value)),
+);
+const pushNonEnregistre = computed(
+  () => endpointNavigateur.value !== null && !pushAbonne.value,
+);
 const pushSansAppareil = computed(
   () =>
     nbAppareilsAbonnes.value === 0 &&
@@ -238,8 +266,8 @@ async function compterAppareilsAbonnes() {
   });
   if (rep.ok) {
     const abonnements = await lireJson(rep);
-    nbAppareilsAbonnes.value = Array.isArray(abonnements)
-      ? abonnements.length
+    endpointsServeur.value = Array.isArray(abonnements)
+      ? abonnements.map((a) => a.endpoint)
       : null;
   }
 }
@@ -256,9 +284,9 @@ async function initialiserPush() {
     try {
       swRegistration = await navigator.serviceWorker.ready;
       const abonnement = await swRegistration.pushManager.getSubscription();
-      pushAbonne.value = abonnement !== null;
+      endpointNavigateur.value = abonnement?.endpoint ?? null;
     } catch (_) {
-      pushAbonne.value = false;
+      endpointNavigateur.value = null;
     }
   }
 }
@@ -324,7 +352,7 @@ async function abonnerPush() {
     });
 
     if (rep.ok) {
-      pushAbonne.value = true;
+      endpointNavigateur.value = abonnement.endpoint;
       await compterAppareilsAbonnes();
       document.cookie =
         "push_opt_in=1; path=/; max-age=" +
@@ -337,7 +365,10 @@ async function abonnerPush() {
       afficherToast(corps.erreur || "Erreur lors de l'abonnement.", "erreur");
     }
   } catch (_) {
-    afficherToast("Erreur lors de l'abonnement push.", "erreur");
+    afficherToast(
+      "Impossible d'activer les notifications push sur cet appareil.",
+      "erreur",
+    );
   } finally {
     pushEnCours.value = false;
   }
@@ -364,7 +395,11 @@ async function testerPush() {
       afficherToast("Notification de test envoyée.", "succes");
     } else {
       const corps = await lireJson(rep);
-      afficherToast(corps.erreur || "Erreur lors du test.", "erreur");
+      afficherToast(corps.erreur || "L'envoi n'a pas abouti.", "erreur");
+      // Abonnement retiré par le serveur : l'état affiché doit le refléter.
+      if (["APPAREIL_INCONNU", "APPAREIL_REVOQUE"].includes(corps.raison)) {
+        await compterAppareilsAbonnes();
+      }
     }
   } catch (_) {
     afficherToast("Erreur réseau.", "erreur");
@@ -387,12 +422,15 @@ async function desabonnerPush() {
       });
       await abonnement.unsubscribe();
     }
-    pushAbonne.value = false;
+    endpointNavigateur.value = null;
     await compterAppareilsAbonnes();
     document.cookie = "push_opt_in=; path=/; max-age=0; SameSite=Strict";
     afficherToast("Notifications push désactivées.", "succes");
   } catch (_) {
-    afficherToast("Erreur lors du désabonnement push.", "erreur");
+    afficherToast(
+      "Impossible de désactiver les notifications push sur cet appareil.",
+      "erreur",
+    );
   } finally {
     pushEnCours.value = false;
   }

@@ -72,7 +72,7 @@ public class PushController {
    * demandeur si {@code endpoint} est fourni (plutôt que le plus récent).
    * @param requete corps JSON optionnel avec {@code endpoint}
    * @param auth contexte d'authentification
-   * @return 200 si envoyée, 400 si aucun abonnement actif
+   * @return 200 si envoyée, sinon le statut et le message de {@link ResultatEnvoiPush}
    */
   @PostMapping("/tester")
   public ResponseEntity<Map<String, Object>> tester(
@@ -80,10 +80,12 @@ public class PushController {
       final Authentication auth) {
     final String userId = ((UtilisateurDetails) auth.getPrincipal()).id();
     final String endpoint = requete != null ? requete.endpoint() : null;
-    final boolean envoye = notificationPushService.envoyerNotificationTest(userId, endpoint);
-    return envoye
+    final ResultatEnvoiPush resultat =
+        notificationPushService.envoyerNotificationTest(userId, endpoint);
+    return resultat == ResultatEnvoiPush.ENVOYEE
         ? ResponseEntity.ok(Map.of("ok", true))
-        : ResponseEntity.badRequest().body(Map.of("erreur", "Aucun abonnement actif."));
+        : ResponseEntity.status(resultat.statutHttp())
+            .body(Map.of("erreur", resultat.message(), "raison", resultat.name()));
   }
 
   /**

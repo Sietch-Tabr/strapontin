@@ -50,12 +50,12 @@ class NotificationPushServiceTest {
   }
 
   @Test
-  void envoyerNotificationTest_vapidNonConfigure_retourneFalseSansRequete() {
+  void envoyerNotificationTest_vapidNonConfigure_serviceNonConfigureSansRequete() {
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
 
-    final boolean resultat = service.envoyerNotificationTest("u1", null);
+    final ResultatEnvoiPush resultat = service.envoyerNotificationTest("u1", null);
 
-    assertFalse(resultat);
+    assertEquals(ResultatEnvoiPush.SERVICE_NON_CONFIGURE, resultat);
     verify(jdbc, never()).queryForList(anyString(), anyMap());
   }
 
@@ -65,10 +65,10 @@ class NotificationPushServiceTest {
   void envoyerNotificationTest_avecEndpoint_requeteFiltreParEndpoint() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    final boolean resultat =
+    final ResultatEnvoiPush resultat =
         service.envoyerNotificationTest("u1", "https://exemple.test/endpoint-precis");
 
-    assertFalse(resultat);
+    assertEquals(ResultatEnvoiPush.APPAREIL_INCONNU, resultat);
     final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     final ArgumentCaptor<Map<String, Object>> paramsCaptor = ArgumentCaptor.forClass(Map.class);
     verify(jdbc).queryForList(sqlCaptor.capture(), paramsCaptor.capture());
@@ -82,9 +82,9 @@ class NotificationPushServiceTest {
   void envoyerNotificationTest_sansEndpoint_requeteReplieSurLePlusRecent() {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    final boolean resultat = service.envoyerNotificationTest("u1", null);
+    final ResultatEnvoiPush resultat = service.envoyerNotificationTest("u1", null);
 
-    assertFalse(resultat);
+    assertEquals(ResultatEnvoiPush.APPAREIL_INCONNU, resultat);
     final ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
     verify(jdbc).queryForList(sqlCaptor.capture(), anyMap());
     assertTrue(sqlCaptor.getValue().contains("ORDER BY id DESC"));
@@ -102,9 +102,9 @@ class NotificationPushServiceTest {
     ab.put("auth", "au");
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ab));
 
-    final boolean resultat = service.envoyerNotificationTest("u1", null);
+    final ResultatEnvoiPush resultat = service.envoyerNotificationTest("u1", null);
 
-    assertFalse(resultat);
+    assertEquals(ResultatEnvoiPush.SERVICE_NAVIGATEUR_REFUSE, resultat);
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
   }
 }
