@@ -34,24 +34,26 @@ public class SignalementsAdminService {
         SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
                sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
                sm.confiance AS confiance, sm.detecte_le AS detecte_le,
-               sm.details::text AS details
+               sm.details::text AS details, sm.details ->> 'userId' AS utilisateur_id
         FROM signalements_matching sm WHERE sm.resolu_le IS NULL
         UNION ALL
         SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
-               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL
+               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL, NULL
         FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
         UNION ALL
         SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
-               s.id::text, 'moyenne', NULL, s.contamination_signalee
+               s.id::text, 'moyenne', NULL, s.contamination_signalee, NULL
         FROM salles s WHERE s.contamination_signalee IS NOT NULL
         UNION ALL
         SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
-               NULL, s.doublon_signale::text
+               NULL, s.doublon_signale::text, NULL
         FROM salles s WHERE s.doublon_signale IS NOT NULL
       ) t
       LEFT JOIN salles s ON t.entite_type = 'salle' AND s.id::text = t.entite_id
       LEFT JOIN artistes a ON t.entite_type = 'artiste' AND a.id::text = t.entite_id
-      LEFT JOIN users u ON t.entite_type = 'utilisateur' AND u.id::text = t.entite_id
+      -- L'entité d'un signalement est un UUID, dérivé de l'identifiant texte du compte.
+      LEFT JOIN users u ON t.entite_type = 'utilisateur'
+                       AND u.id = COALESCE(t.utilisateur_id, t.entite_id)
       ORDER BY t.detecte_le DESC NULLS LAST
       LIMIT :taille OFFSET :offset
       """;

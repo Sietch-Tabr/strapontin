@@ -244,6 +244,9 @@ public class NotificationPushService {
 
   private void supprimerAbonnement(final UUID id, final String userId, final String endpoint) {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
+    jdbc.update(
+        "UPDATE user_config SET dernier_appareil_retire_le = now() WHERE user_id = :userId",
+        Map.of("userId", userId));
     LOG.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
     logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
   }

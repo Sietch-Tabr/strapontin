@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,7 +121,13 @@ final class ControleInvariantsDonnees {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
         """
-        SELECT um.user_id, count(*) AS nb, min(c.first_seen)::text AS plus_ancien
+        SELECT um.user_id, count(*) AS nb, min(c.first_seen)::text AS plus_ancien,
+               bool_or(uc.notif_artistes OR uc.notif_salles) AS email_actif,
+               bool_or(uc.notif_artistes_push OR uc.notif_salles_push) AS push_coche,
+               EXISTS (SELECT 1 FROM push_abonnements pa WHERE pa.user_id = um.user_id)
+                 AS appareil_abonne,
+               max(uc.dernier_appareil_retire_le)::date AS appareil_retire_le,
+               max(uc.avertissement_canal_perdu_le)::date AS averti_le
         FROM user_matches um
         JOIN concerts c ON c.id = um.concert_id
         JOIN user_config uc ON uc.user_id = um.user_id
@@ -139,12 +146,18 @@ final class ControleInvariantsDonnees {
         """,
         Map.of(),
         rs -> {
-          anomalies.put(
-              uuidDe("utilisateur:" + rs.getString("user_id")),
-              Map.of(
-                  "userId", rs.getString("user_id"),
-                  "nb", rs.getLong("nb"),
-                  "plusAncien", rs.getString("plus_ancien")));
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.putAll(
+              CauseNotificationsNonEnvoyees.decrire(
+                  rs.getBoolean("email_actif"),
+                  rs.getBoolean("push_coche"),
+                  rs.getBoolean("appareil_abonne"),
+                  rs.getObject("appareil_retire_le", LocalDate.class),
+                  rs.getObject("averti_le", LocalDate.class)));
+          details.put("concerts", rs.getLong("nb"));
+          details.put("plusAncien", rs.getString("plus_ancien"));
+          details.put("userId", rs.getString("user_id"));
+          anomalies.put(uuidDe("utilisateur:" + rs.getString("user_id")), details);
         });
     return anomalies;
   }

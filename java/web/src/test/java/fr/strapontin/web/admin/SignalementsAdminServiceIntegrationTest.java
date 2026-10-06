@@ -111,6 +111,31 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
     assertTrue(reponse.catalogue().stream().anyMatch(t -> "contamination_salle".equals(t.type())));
   }
 
+  // L'entité du signalement est un UUID dérivé de l'identifiant texte du compte.
+  @Test
+  void lister_notificationsNonEnvoyees_nommeLeCompteParSonIdentifiantDeConnexion() {
+    jdbc.update("DELETE FROM users WHERE id = 'compte-signale'", Map.of());
+    jdbc.update(
+        "INSERT INTO users (id, email, role, username, display_username) VALUES"
+            + " ('compte-signale', 'c@test.fr', CAST('user' AS role_utilisateur), 'carlthor',"
+            + " 'Carl')",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('notifications_non_envoyees', 'utilisateur', gen_random_uuid(), 'haute',"
+            + " CAST('{\"userId\": \"compte-signale\"}' AS jsonb))",
+        Map.of());
+
+    final ReponseSignalements reponse = service.lister(0);
+
+    assertTrue(
+        reponse.signalements().stream()
+            .anyMatch(
+                e ->
+                    "notifications_non_envoyees".equals(e.type())
+                        && "carlthor".equals(e.entite().nom())));
+  }
+
   @Test
   void resoudre_signalementActif_leRetireDeLaListe() {
     final long id =

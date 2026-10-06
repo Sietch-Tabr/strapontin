@@ -33,7 +33,7 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
 
   // Le bean réel échoue au démarrage sans TICKETMASTER_API_KEY en base.
   @MockitoBean private TicketmasterSource ticketmasterSourceIgnore;
-  @MockitoBean private PurgeCompteEmailService purgeCompteEmailService;
+  @MockitoBean private EmailCompteService emailCompteService;
 
   @Autowired private NamedParameterJdbcTemplate jdbc;
   @Autowired private WorkerPurgeService service;
@@ -44,7 +44,7 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     creerCompte("actif", ilYA(1), false);
     creerCompte("sansDate", null, false);
     creerCompte("invite", ilYA(210), true);
-    when(purgeCompteEmailService.envoyerRelanceInactivite(anyString(), anyInt())).thenReturn(true);
+    when(emailCompteService.envoyerRelanceInactivite(anyString(), anyInt())).thenReturn(true);
 
     service.executerGererComptesInactifs();
 
@@ -65,7 +65,7 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     for (int i = 0; i < WorkerPurgeService.SEUIL_VAGUE_COMPTES; i++) {
       creerCompte("inactif" + i, ilYA(210), false);
     }
-    when(purgeCompteEmailService.envoyerRelanceInactivite(anyString(), anyInt())).thenReturn(true);
+    when(emailCompteService.envoyerRelanceInactivite(anyString(), anyInt())).thenReturn(true);
 
     service.executerGererComptesInactifs();
 
@@ -84,7 +84,7 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     creerInvite("relance", ilYA(8), null);
     creerInvite("expire", ilYA(20), ilYA(14));
     lienInvitation("expire@test.fr", ilYA(7));
-    when(purgeCompteEmailService.envoyerRelanceInvitation(anyString(), anyString(), any()))
+    when(emailCompteService.envoyerRelanceInvitation(anyString(), anyString(), any()))
         .thenReturn(true);
 
     service.executerGererInvitesExpires();

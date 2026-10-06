@@ -39,6 +39,7 @@ public class NotificationDigestService {
   private final NotificationEmailDigestService emailDigestService;
   private final MatchesNonNotifiesLoader matchesLoader;
   private final NotificationDigestStats stats;
+  private AvertissementCanalPerduService avertissementCanalPerdu;
 
   /**
    * Fabrique du client Resend — indirection nécessaire pour rendre
@@ -118,6 +119,16 @@ public class NotificationDigestService {
         new NotificationEmailDigestService(configService, gestionQuotaResendWorker, fabriqueResend);
     this.matchesLoader = new MatchesNonNotifiesLoader(jdbc);
     this.stats = new NotificationDigestStats(jdbc, jackson);
+  }
+
+  /**
+   * @param avertissementCanalPerdu avertissement des comptes privés de leur
+   *     dernier canal, vérifié après chaque digest
+   */
+  @Autowired
+  public void setAvertissementCanalPerdu(
+      final AvertissementCanalPerduService avertissementCanalPerdu) {
+    this.avertissementCanalPerdu = avertissementCanalPerdu;
   }
 
   /** Données d'un concert pour le digest. */
@@ -205,7 +216,20 @@ public class NotificationDigestService {
       enregistrerStat(System.currentTimeMillis() - debut, nbMatchesNotifies, erreur);
       logAdminDigest(nbEmailsOk, nbPushOk, nbErreurs);
       pushDigestService.remonterBilanPush();
+      verifierCanauxPerdus();
       LOG.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
+    }
+  }
+
+  // Un appareil retiré pendant ce digest peut laisser un compte sans canal.
+  private void verifierCanauxPerdus() {
+    if (avertissementCanalPerdu == null) {
+      return;
+    }
+    try {
+      avertissementCanalPerdu.verifier();
+    } catch (Exception e) {
+      LOG.error("notifier:digest — vérification des canaux perdus échouée", e);
     }
   }
 

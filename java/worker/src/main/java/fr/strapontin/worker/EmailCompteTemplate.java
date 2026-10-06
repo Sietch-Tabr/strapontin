@@ -9,13 +9,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 /**
- * Corps HTML des emails de relance avant purge de compte (inactivité,
- * invitation jamais activée) — même gabarit visuel qu'{@link
+ * Corps HTML des emails liés au compte (relances avant purge, perte du
+ * dernier canal de notification) — même gabarit visuel qu'{@link
  * EmailDigestTemplate}.
  * @since 3.0.0
  * @author Kwaite
  */
-final class PurgeCompteEmailTemplate {
+final class EmailCompteTemplate {
 
   private static final DateTimeFormatter DATE_LIMITE =
       DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.FRENCH);
@@ -43,9 +43,21 @@ final class PurgeCompteEmailTemplate {
       </html>
       """;
 
-  private PurgeCompteEmailTemplate() {}
+  private EmailCompteTemplate() {}
 
-  /* package-private : appelé par PurgeCompteEmailService (même package). */
+  /* package-private : appelé par EmailCompteService (même package). */
+  static String avertissementCanalPerdu(final String baseUrl) {
+    final String sujet = "Vous ne recevez plus les nouveaux concerts de Strapontin";
+    final String corps =
+        "Le dernier appareil sur lequel vous receviez les notifications push ne les accepte"
+            + " plus, et les notifications par email sont désactivées sur votre compte : les"
+            + " nouveaux concerts de vos artistes et salles ne vous parviennent plus. Réactivez"
+            + " les notifications push sur votre appareil ou activez l'email dans vos paramètres.";
+    return GABARIT.formatted(
+        sujet, sujet, corps, baseUrl + "/parametres#notifications", "Mes notifications", baseUrl);
+  }
+
+  /* package-private : appelé par EmailCompteService (même package). */
   static String relanceInactivite(final int joursGrace, final String baseUrl) {
     final String sujet = "Votre compte Strapontin va être supprimé pour inactivité";
     final String corps =
@@ -55,7 +67,7 @@ final class PurgeCompteEmailTemplate {
     return GABARIT.formatted(sujet, sujet, corps, baseUrl, "Me reconnecter", baseUrl);
   }
 
-  /* package-private : appelé par PurgeCompteEmailService (même package). */
+  /* package-private : appelé par EmailCompteService (même package). */
   static String relanceInvitation(
       final String lienActivation, final LocalDate dateLimite, final String baseUrl) {
     final String sujet = "Votre invitation Strapontin expire bientôt";

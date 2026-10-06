@@ -75,8 +75,8 @@ public final class CatalogueSignalements {
     ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
-        "Des concerts éligibles n'ont jamais été notifiés à cet utilisateur : vérifier l'envoi"
-            + " des emails et push.");
+        "Des concerts éligibles n'ont jamais été notifiés à ce compte. La cause (aucun canal"
+            + " joignable ou envoi en échec) et l'action possible sont indiquées dans le détail.");
     ajouter(
         "sessions_sans_appareil",
         "Sessions sans appareil",

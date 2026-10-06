@@ -38,7 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 class WorkerPurgeServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
-  private PurgeCompteEmailService purgeCompteEmailService;
+  private EmailCompteService emailCompteService;
   private ConfigServiceWorker configService;
   private WorkerPurgeService service;
 
@@ -58,11 +58,11 @@ class WorkerPurgeServiceTest {
             new io.micrometer.core.instrument.simple.SimpleMeterRegistry(),
             new SuiviChroniciteService(jdbc, new ObjectMapper()),
             new DeriveVolumeFetchService(jdbc, logsAdminWorker));
-    purgeCompteEmailService = mock(PurgeCompteEmailService.class);
+    emailCompteService = mock(EmailCompteService.class);
     configService = mock(ConfigServiceWorker.class);
     service =
         new WorkerPurgeService(
-            jdbc, workerStatsService, purgeCompteEmailService, configService, logsAdminWorker);
+            jdbc, workerStatsService, emailCompteService, configService, logsAdminWorker);
   }
 
   @Test
@@ -242,12 +242,12 @@ class WorkerPurgeServiceTest {
   void executerGererComptesInactifs_candidatTrouve_relanceEtProgrammeLaPurge() {
     when(jdbc.queryForList(contains("purge_le IS NULL"), anyMap()))
         .thenReturn(List.of(Map.of("id", "u1", "email", "a@test.fr")));
-    when(purgeCompteEmailService.envoyerRelanceInactivite("a@test.fr", 15)).thenReturn(true);
+    when(emailCompteService.envoyerRelanceInactivite("a@test.fr", 15)).thenReturn(true);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     service.executerGererComptesInactifs();
 
-    verify(purgeCompteEmailService).envoyerRelanceInactivite("a@test.fr", 15);
+    verify(emailCompteService).envoyerRelanceInactivite("a@test.fr", 15);
     verify(jdbc).update(contains("SET purge_le = now() + make_interval"), anyMap());
     verify(jdbc).update(contains("DELETE FROM users WHERE purge_le"), anyMap());
     verify(jdbc)
@@ -264,7 +264,7 @@ class WorkerPurgeServiceTest {
 
     service.executerGererComptesInactifs();
 
-    verify(purgeCompteEmailService, never())
+    verify(emailCompteService, never())
         .envoyerRelanceInactivite(anyString(), org.mockito.ArgumentMatchers.anyInt());
   }
 
@@ -274,14 +274,14 @@ class WorkerPurgeServiceTest {
         .thenReturn(java.util.Optional.of("https://strapontin.fr"));
     when(jdbc.queryForList(contains("must_change_credentials = true"), anyMap()))
         .thenReturn(List.of(Map.of("id", "u1", "email", "b@test.fr")));
-    when(purgeCompteEmailService.envoyerRelanceInvitation(anyString(), anyString(), any()))
+    when(emailCompteService.envoyerRelanceInvitation(anyString(), anyString(), any()))
         .thenReturn(true);
     when(jdbc.update(anyString(), anyMap())).thenReturn(1);
 
     service.executerGererInvitesExpires();
 
     verify(jdbc).update(contains("INSERT INTO verifications"), anyMap());
-    verify(purgeCompteEmailService)
+    verify(emailCompteService)
         .envoyerRelanceInvitation(
             org.mockito.ArgumentMatchers.eq("b@test.fr"),
             contains("https://strapontin.fr/reset-password?token="),
@@ -298,7 +298,7 @@ class WorkerPurgeServiceTest {
 
     service.executerGererInvitesExpires();
 
-    verify(purgeCompteEmailService, never())
+    verify(emailCompteService, never())
         .envoyerRelanceInvitation(anyString(), anyString(), any());
   }
 }

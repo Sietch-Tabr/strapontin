@@ -66,26 +66,26 @@ public class WorkerPurgeService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
-  private final PurgeCompteEmailService purgeCompteEmailService;
+  private final EmailCompteService emailCompteService;
   private final ConfigServiceWorker configService;
   private final LogsAdminWorker logsAdminWorker;
 
   /**
    * @param jdbc accès JDBC
    * @param workerStatsService journalisation du bilan de purge
-   * @param purgeCompteEmailService envoi des relances avant purge de compte
+   * @param emailCompteService envoi des relances avant purge de compte
    * @param configService lecture de PUBLIC_BASE_URL (lien d'activation)
    * @param logsAdminWorker signalement admin des relances et suppressions de comptes
    */
   public WorkerPurgeService(
       final NamedParameterJdbcTemplate jdbc,
       final WorkerStatsService workerStatsService,
-      final PurgeCompteEmailService purgeCompteEmailService,
+      final EmailCompteService emailCompteService,
       final ConfigServiceWorker configService,
       final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
-    this.purgeCompteEmailService = purgeCompteEmailService;
+    this.emailCompteService = emailCompteService;
     this.configService = configService;
     this.logsAdminWorker = logsAdminWorker;
   }
@@ -300,7 +300,7 @@ public class WorkerPurgeService {
           int relances = 0;
           for (final Map<String, Object> ligne : aRelancer) {
             final String email = (String) ligne.get(CLE_EMAIL);
-            if (purgeCompteEmailService.envoyerRelanceInactivite(email, DELAI_GRACE_JOURS)) {
+            if (emailCompteService.envoyerRelanceInactivite(email, DELAI_GRACE_JOURS)) {
               relances++;
             }
             jdbc.update(
@@ -338,7 +338,7 @@ public class WorkerPurgeService {
           for (final Map<String, Object> ligne : aRelancer) {
             final String email = (String) ligne.get(CLE_EMAIL);
             final String lien = baseUrl + "/reset-password?token=" + creerJetonInvitation(email);
-            if (purgeCompteEmailService.envoyerRelanceInvitation(
+            if (emailCompteService.envoyerRelanceInvitation(
                 email, lien, LocalDate.now().plusDays(DUREE_LIEN_RELANCE_JOURS))) {
               relances++;
             }

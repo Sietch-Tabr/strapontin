@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.core.CanalNotificationPerdu;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
@@ -68,6 +69,20 @@ public class UserConfigService {
     this.jdbc = jdbc;
     this.configService = configService;
     this.logAdminService = logAdminService;
+  }
+
+  /**
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si ses notifications actives ne peuvent plus lui
+   *     parvenir depuis le retrait automatique de son dernier appareil push
+   */
+  public boolean canalNotificationPerdu(final String userId) {
+    return !jdbc.queryForList(
+            "SELECT 1 FROM user_config uc WHERE uc.user_id = :userId AND "
+                + CanalNotificationPerdu.CONDITION_SQL,
+            Map.of(CLE_USER_ID, userId),
+            Integer.class)
+        .isEmpty();
   }
 
   /**

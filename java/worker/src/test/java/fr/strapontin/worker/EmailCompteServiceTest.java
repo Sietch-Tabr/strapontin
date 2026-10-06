@@ -23,12 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 /**
- * Tests unitaires pour {@link PurgeCompteEmailService}.
+ * Tests unitaires pour {@link EmailCompteService}.
  *
  * @since 3.0.0
  * @author Kwaite
  */
-class PurgeCompteEmailServiceTest {
+class EmailCompteServiceTest {
 
   private ConfigServiceWorker configService;
   private GestionQuotaResendWorker gestionQuotaResendWorker;
@@ -42,8 +42,8 @@ class PurgeCompteEmailServiceTest {
   @Test
   void envoyerRelanceInactivite_cleAbsente_neTenteAucunEnvoi() {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
-    final PurgeCompteEmailService service =
-        new PurgeCompteEmailService(
+    final EmailCompteService service =
+        new EmailCompteService(
             configService, gestionQuotaResendWorker, cle -> mock(Resend.class));
 
     assertFalse(service.envoyerRelanceInactivite("a@test.fr", 15));
@@ -55,8 +55,8 @@ class PurgeCompteEmailServiceTest {
   void envoyerRelanceInactivite_quotaAtteint_neContactePasResend() {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test"));
     when(gestionQuotaResendWorker.reserverEnvoi()).thenReturn(false);
-    final PurgeCompteEmailService service =
-        new PurgeCompteEmailService(
+    final EmailCompteService service =
+        new EmailCompteService(
             configService, gestionQuotaResendWorker, cle -> mock(Resend.class));
 
     assertFalse(service.envoyerRelanceInactivite("a@test.fr", 15));
@@ -72,8 +72,8 @@ class PurgeCompteEmailServiceTest {
     final Resend resendMock = mock(Resend.class);
     final Emails emailsMock = mock(Emails.class);
     when(resendMock.emails()).thenReturn(emailsMock);
-    final PurgeCompteEmailService service =
-        new PurgeCompteEmailService(configService, gestionQuotaResendWorker, cle -> resendMock);
+    final EmailCompteService service =
+        new EmailCompteService(configService, gestionQuotaResendWorker, cle -> resendMock);
 
     assertTrue(service.envoyerRelanceInactivite("a@test.fr", 15));
 
@@ -94,8 +94,8 @@ class PurgeCompteEmailServiceTest {
     final Resend resendMock = mock(Resend.class);
     final Emails emailsMock = mock(Emails.class);
     when(resendMock.emails()).thenReturn(emailsMock);
-    final PurgeCompteEmailService service =
-        new PurgeCompteEmailService(configService, gestionQuotaResendWorker, cle -> resendMock);
+    final EmailCompteService service =
+        new EmailCompteService(configService, gestionQuotaResendWorker, cle -> resendMock);
 
     assertTrue(
         service.envoyerRelanceInvitation(
@@ -117,8 +117,8 @@ class PurgeCompteEmailServiceTest {
     final Emails emailsMock = mock(Emails.class);
     when(resendMock.emails()).thenReturn(emailsMock);
     when(emailsMock.send(any(CreateEmailOptions.class))).thenThrow(new RuntimeException("panne"));
-    final PurgeCompteEmailService service =
-        new PurgeCompteEmailService(configService, gestionQuotaResendWorker, cle -> resendMock);
+    final EmailCompteService service =
+        new EmailCompteService(configService, gestionQuotaResendWorker, cle -> resendMock);
 
     assertFalse(
         service.envoyerRelanceInvitation(

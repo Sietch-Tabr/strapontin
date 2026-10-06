@@ -10,6 +10,7 @@ import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -173,8 +174,7 @@ class NotificationPushDigestService {
     int nbEnvoyes = 0;
     for (final Map<String, Object> ab : abonnements) {
       if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
-        jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-        LOG.warn("Abonnement push hors services de push supprimé : {}", userId);
+        retirerAbonnement(ab, userId, "service de push du navigateur non pris en charge", null);
         continue;
       }
       compteurPush.enregistrerAppel();
@@ -190,8 +190,7 @@ class NotificationPushDigestService {
           case ABONNEMENT_MORT -> {
             // Abonnement mort (410/404) : nettoyage attendu, pas une panne du
             // canal push — n'entre pas dans le bilan de panne.
-            jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-            LOG.info("Abonnement push révoqué : {} — {}", userId, ab.get(CLE_ENDPOINT));
+            retirerAbonnement(ab, userId, "abonnement retiré par le navigateur", status);
           }
           case SUCCES -> {
             nbEnvoyes++;
@@ -225,9 +224,32 @@ class NotificationPushDigestService {
   }
 
   /**
+   * Supprime un abonnement que le service de push n'accepte plus, et le
+   * date sur le compte : un retrait qui laisse le compte sans canal joignable
+   * déclenche l'avertissement de l'utilisateur.
+   */
+  private void retirerAbonnement(
+      final Map<String, Object> ab, final String userId, final String motif, final Integer statut) {
+    jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
+    jdbc.update(
+        "UPDATE user_config SET dernier_appareil_retire_le = now() WHERE user_id = :userId",
+        Map.of("userId", userId));
+    LOG.info("Abonnement push révoqué ({}) : {}", motif, userId);
+    final Map<String, Object> meta = new HashMap<>();
+    meta.put("userId", userId);
+    meta.put("motif", motif);
+    meta.put("statutHttp", statut);
+    logsAdminWorker.inserer(
+        "warn",
+        "notifier-digest",
+        "abonnement push révoqué automatiquement (" + motif + ") userId=" + userId,
+        meta);
+  }
+
+  /**
    * Un 403 isolé peut être transitoire (FCM) — seule une répétition sur
    * {@value #SEUIL_ECHECS_403_ABONNEMENT_MORT} cycles consécutifs révoque
-   * l'abonnement, journalisée (jamais silencieuse, contrairement à 404/410).
+   * l'abonnement.
    */
   private void traiterEchec403(final String userId, final Map<String, Object> ab) {
     final Integer echecs =
@@ -237,17 +259,8 @@ class NotificationPushDigestService {
             Map.of("id", ab.get("id")),
             Integer.class);
     if (echecs != null && echecs >= SEUIL_ECHECS_403_ABONNEMENT_MORT) {
-      jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-      LOG.info(
-          "Abonnement push révoqué — 403 persistant sur {} cycles : {} — {}",
-          echecs,
-          userId,
-          ab.get(CLE_ENDPOINT));
-      logsAdminWorker.inserer(
-          "warn",
-          "notifier-digest",
-          "abonnement push révoqué automatiquement — 403 persistant userId=" + userId,
-          Map.of("userId", userId, "echecs403Consecutifs", echecs));
+      retirerAbonnement(
+          ab, userId, "403 persistant sur " + echecs + " cycles", STATUT_HTTP_FORBIDDEN);
     } else {
       LOG.warn("Push: 403 ({}e consécutif) pour {} — {}", echecs, userId, ab.get(CLE_ENDPOINT));
     }

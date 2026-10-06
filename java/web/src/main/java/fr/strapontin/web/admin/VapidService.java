@@ -53,6 +53,10 @@ public class VapidService {
     configService.sauvegarderConfig("VAPID_PUBLIC_KEY", paire.clePublique());
     configService.sauvegarderConfig("VAPID_PRIVATE_KEY", paire.clePrivee());
 
+    jdbc.update(
+        "UPDATE user_config SET dernier_appareil_retire_le = now()"
+            + " WHERE user_id IN (SELECT user_id FROM push_abonnements)",
+        Map.of());
     final int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
     logAdminService.logAdmin(
         "warn",
