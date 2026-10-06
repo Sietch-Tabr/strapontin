@@ -36,6 +36,35 @@
         </p>
       </fieldset>
 
+      <fieldset v-if="!chargement" class="repartition-libelles">
+        <legend class="champ-label">Lieux des billetteries à déplacer</legend>
+        <p class="param-aide">
+          Un lieu laissé sur cette salle y ramène ses concerts à chaque
+          récupération : cochez tous ceux qui désignent l'autre salle.
+        </p>
+        <label
+          v-for="l in lieux"
+          :key="l.identifiant"
+          class="repartition-libelle"
+        >
+          <input v-model="lieuxChoisis" type="checkbox" :value="l.identifiant" />
+          {{ l.nom || "Lieu sans nom connu" }}
+          <span class="param-aide"
+            >({{ libelleSource(l.source) }}{{ l.ville ? ", " + l.ville : "" }})</span
+          >
+        </label>
+        <p v-if="!lieux.length" class="etat-vide-texte">
+          Aucun lieu de billetterie rattaché à cette salle.
+        </p>
+        <p
+          v-if="choisis.length && lieuxRestants.length"
+          class="alerte alerte-avertissement"
+        >
+          Resteront sur « {{ salle?.nom }} » :
+          {{ lieuxRestants.map((l) => l.nom || l.identifiant).join(", ") }}.
+        </p>
+      </fieldset>
+
       <fieldset class="repartition-destination">
         <legend class="champ-label">Destination</legend>
         <label class="repartition-libelle">
@@ -104,7 +133,8 @@
 <script setup>
 defineOptions({ name: "DialogueRepartitionSalle" });
 
-import { computed, ref, shallowRef } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
+import { lieuxCorrespondants } from "../../utils/repartition.js";
 import { appelApi, lireJson } from "../../utils/api.js";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
@@ -118,6 +148,20 @@ const { dialogRef, ouvrir: ouvrirDialog, fermer } = useDialog();
 const salle = ref(null);
 const libelles = shallowRef([]);
 const choisis = ref([]);
+const lieux = shallowRef([]);
+const lieuxChoisis = ref([]);
+const lieuxRestants = computed(() =>
+  lieux.value.filter((l) => !lieuxChoisis.value.includes(l.identifiant)),
+);
+const LIBELLES_SOURCES = { ticketmaster: "Ticketmaster", eventim: "Eventim" };
+function libelleSource(source) {
+  return LIBELLES_SOURCES[source] ?? source;
+}
+
+// Présélection à chaque changement de libellés ; l'admin peut ensuite ajuster.
+watch(choisis, (libellesChoisis) => {
+  lieuxChoisis.value = lieuxCorrespondants(lieux.value, libellesChoisis);
+});
 const chargement = ref(false);
 const mode = ref("nouvelle");
 const nouveauNom = ref("");
@@ -138,6 +182,8 @@ const peutConfirmer = computed(
 async function ouvrir(cible) {
   salle.value = cible;
   choisis.value = [];
+  lieuxChoisis.value = [];
+  lieux.value = [];
   mode.value = "nouvelle";
   nouveauNom.value = "";
   recherche.value = "";
@@ -146,11 +192,13 @@ async function ouvrir(cible) {
   ouvrirDialog();
   chargement.value = true;
   try {
-    const rep = await appelApi(
-      `/api/admin/salles/${cible.id}/libelles-sources`,
-    );
+    const [rep, repLieux] = await Promise.all([
+      appelApi(`/api/admin/salles/${cible.id}/libelles-sources`),
+      appelApi(`/api/admin/salles/${cible.id}/lieux-sources`),
+    ]);
     libelles.value = rep.ok ? await lireJson(rep) : [];
-    if (!rep.ok) {
+    lieux.value = repLieux.ok ? await lireJson(repLieux) : [];
+    if (!rep.ok || !repLieux.ok) {
       afficherToast("Erreur lors du chargement des lieux.", "erreur");
     }
   } catch {
@@ -196,6 +244,7 @@ async function confirmer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         libelles: choisis.value,
+        lieux: lieuxChoisis.value,
         cibleId: mode.value === "existante" ? cibleId.value : null,
         nouvelleSalleNom:
           mode.value === "nouvelle" ? nouveauNom.value.trim() : null,

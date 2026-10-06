@@ -33,6 +33,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.Session;
 
 /**
  * Premier démarrage, activation d'invitation et changement d'identifiant
@@ -56,11 +57,12 @@ class RegleIdentifiantParcoursTest {
             mock(ConfigService.class),
             mock(LogAdminService.class));
 
+    @SuppressWarnings("unchecked")
+    final FindByIndexNameSessionRepository<Session> sessions =
+        mock(FindByIndexNameSessionRepository.class);
     final UserController changement =
         new UserController(
-            mock(UtilisateurRepository.class),
-            mock(PasswordEncoder.class),
-            mock(FindByIndexNameSessionRepository.class));
+            mock(UtilisateurRepository.class), mock(PasswordEncoder.class), sessions);
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal())
         .thenReturn(

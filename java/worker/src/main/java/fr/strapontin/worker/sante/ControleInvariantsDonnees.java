@@ -46,7 +46,9 @@ final class ControleInvariantsDonnees {
         + publier("salle_suivie_contaminee", "salle", sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
-        + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques());
+        + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
+        + publier(
+            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes());
   }
 
   private int publier(
@@ -113,6 +115,38 @@ final class ControleInvariantsDonnees {
     return comptes.isEmpty()
         ? Map.of()
         : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
+  }
+
+  // Même concert sur deux salles déclarées distinctes (par un admin ou par une
+  // répartition) : un lieu resté sur la mauvaise salle l'y a recréé. Le plus récent est signalé.
+  private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+               e1.artiste_norm, e1.date::text AS date,
+               sa.nom AS salle_a, sb.nom AS salle_b
+        FROM salles_paires_distinctes d
+        JOIN evenements e1 ON e1.salle_id = d.salle_a
+        JOIN evenements e2 ON e2.salle_id = d.salle_b
+         AND e2.artiste_norm = e1.artiste_norm AND e2.date = e1.date
+         AND e2.heure IS NOT DISTINCT FROM e1.heure
+        JOIN salles sa ON sa.id = d.salle_a
+        JOIN salles sb ON sb.id = d.salle_b
+        WHERE e1.date >= CURRENT_DATE
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  "artiste", rs.getString("artiste_norm"),
+                  "date", rs.getString("date"),
+                  "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+        });
+    return anomalies;
   }
 
   // Match éligible (préférence active, suivi) jamais notifié un jour après

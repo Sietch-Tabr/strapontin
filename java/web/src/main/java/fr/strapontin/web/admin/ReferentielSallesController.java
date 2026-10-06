@@ -60,6 +60,22 @@ public class ReferentielSallesController {
   }
 
   /**
+   * Lieux de toutes les sources rattachés à une salle, pour préparer sa
+   * répartition.
+   *
+   * @param uuid UUID de la salle
+   * @return 200 avec les lieux, 400 si UUID invalide
+   */
+  @GetMapping("/salles/{uuid}/lieux-sources")
+  public ResponseEntity<?> listerLieuxSources(@PathVariable final String uuid) {
+    final UUID salleId = parseUuid(uuid);
+    if (salleId == null) {
+      return erreur(400, "UUID invalide.");
+    }
+    return ResponseEntity.ok(repartitionService.listerLieux(salleId));
+  }
+
+  /**
    * Déplace vers une salle existante ou créée les événements publiés sous
    * les libellés choisis.
    * @return 200 avec le bilan, 400 si invalide, 404 si salle inconnue

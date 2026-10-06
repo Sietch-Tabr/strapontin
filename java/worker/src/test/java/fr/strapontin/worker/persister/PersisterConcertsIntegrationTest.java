@@ -260,6 +260,26 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, nbLiees);
   }
 
+  // Sans nom, un lieu Ticketmaster ne pouvait suivre ses concerts lors d'une répartition.
+  @Test
+  void persisterConcerts_lieuTicketmaster_enregistreSonNomPublie() {
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste Libelle",
+                "2098-09-22",
+                "Elysee Montmartre",
+                "ticketmaster:venue-lib-1",
+                null)));
+
+    assertEquals(
+        "Elysee Montmartre",
+        jdbc.queryForObject(
+            "SELECT libelle_source FROM salle_sources WHERE identifiant_externe = 'venue-lib-1'",
+            Map.of(),
+            String.class));
+  }
+
   @Test
   void persisterConcerts_salleInconnueGeocodageSansSalleProche_creeNouvelleSalleAvecCoordonnees() {
     insererSalleAvecCoordonnees("Salle GPS Lointaine", 43.2965, 5.3698); // Marseille

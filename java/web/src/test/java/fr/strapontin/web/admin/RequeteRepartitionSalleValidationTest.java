@@ -27,25 +27,30 @@ class RequeteRepartitionSalleValidationTest {
   void valider_uneSeuleDestination_valide() {
     assertTrue(
         validator
-            .validate(new RequeteRepartitionSalle(List.of("Lieu"), UUID.randomUUID(), null))
+            .validate(new RequeteRepartitionSalle(List.of("Lieu"), null, UUID.randomUUID(), null))
             .isEmpty());
     assertTrue(
-        validator.validate(new RequeteRepartitionSalle(List.of("Lieu"), null, "Salle")).isEmpty());
+        validator
+            .validate(new RequeteRepartitionSalle(List.of("Lieu"), null, null, "Salle"))
+            .isEmpty());
   }
 
   @Test
   void valider_aucuneOuDeuxDestinations_invalide() {
     assertFalse(
-        validator.validate(new RequeteRepartitionSalle(List.of("Lieu"), null, " ")).isEmpty());
+        validator
+            .validate(new RequeteRepartitionSalle(List.of("Lieu"), null, null, " "))
+            .isEmpty());
     assertFalse(
         validator
-            .validate(new RequeteRepartitionSalle(List.of("Lieu"), UUID.randomUUID(), "Salle"))
+            .validate(
+                new RequeteRepartitionSalle(List.of("Lieu"), null, UUID.randomUUID(), "Salle"))
             .isEmpty());
   }
 
   @Test
   void valider_aucunLibelle_invalide() {
     assertFalse(
-        validator.validate(new RequeteRepartitionSalle(List.of(), null, "Salle")).isEmpty());
+        validator.validate(new RequeteRepartitionSalle(List.of(), null, null, "Salle")).isEmpty());
   }
 }

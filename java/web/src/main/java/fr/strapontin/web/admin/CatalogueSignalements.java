@@ -73,6 +73,12 @@ public final class CatalogueSignalements {
         "Le nom de l'artiste chez Ticketmaster ne correspond plus à l'artiste suivi : corriger son"
             + " identifiant ou accepter ce nom.");
     ajouter(
+        "concert_double_salles_distinctes",
+        "Concert en double sur deux salles distinctes",
+        "Le même concert existe sur deux salles déclarées distinctes : un lieu de billetterie"
+            + " est probablement resté sur la mauvaise salle. Répartir ses lieux, puis supprimer"
+            + " le concert en trop.");
+    ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
         "Des concerts éligibles n'ont jamais été notifiés à ce compte. La cause (aucun canal"

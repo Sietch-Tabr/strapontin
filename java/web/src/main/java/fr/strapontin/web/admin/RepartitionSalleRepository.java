@@ -171,19 +171,41 @@ class RepartitionSalleRepository {
   }
 
   /* package-private : réservé à RepartitionSalleService. */
-  List<Map<String, Object>> mappingsEventim(final UUID salleId) {
+  List<Map<String, Object>> lieux(final UUID salleId) {
     return jdbc.queryForList(
-        "SELECT identifiant_externe, libelle_source FROM salle_sources"
-            + " WHERE salle_id = CAST(:salle AS uuid) AND source = 'eventim'",
+        "SELECT source, identifiant_externe, libelle_source, ville_source FROM salle_sources"
+            + " WHERE salle_id = CAST(:salle AS uuid) ORDER BY source, identifiant_externe",
         Map.of(CLE_SALLE, salleId.toString()));
   }
 
+  /**
+   * @param identifiantPrefixe lieu sous la forme {@code source:identifiant}
+   */
   /* package-private : réservé à RepartitionSalleService. */
-  void deplacerMapping(final String identifiant, final UUID cibleId) {
+  void deplacerMapping(final String identifiantPrefixe, final UUID cibleId) {
+    final int separateur = identifiantPrefixe.indexOf(':');
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid)"
-            + " WHERE source = 'eventim' AND identifiant_externe = :identifiant",
-        Map.of(CLE_CIBLE, cibleId.toString(), "identifiant", identifiant));
+            + " WHERE source = :source AND identifiant_externe = :identifiant",
+        Map.of(
+            CLE_CIBLE,
+            cibleId.toString(),
+            "source",
+            identifiantPrefixe.substring(0, separateur),
+            "identifiant",
+            identifiantPrefixe.substring(separateur + 1)));
+  }
+
+  // Ordre comparé par PostgreSQL : l'ordre de UUID.compareTo en Java diffère.
+  /* package-private : réservé à RepartitionSalleService. */
+  void declarerDistinctes(final UUID salleId, final UUID cibleId) {
+    jdbc.update(
+        """
+        INSERT INTO salles_paires_distinctes (salle_a, salle_b)
+        SELECT LEAST(CAST(:a AS uuid), CAST(:b AS uuid)), GREATEST(CAST(:a AS uuid), CAST(:b AS uuid))
+        ON CONFLICT DO NOTHING
+        """,
+        Map.of("a", salleId.toString(), "b", cibleId.toString()));
   }
 
   // Position du premier lieu déplacé, pour une salle qui n'en a pas.
