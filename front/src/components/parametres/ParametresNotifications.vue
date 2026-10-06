@@ -29,6 +29,14 @@
               <input
                 v-model="frequenceNotifications"
                 type="radio"
+                value="hebdomadaire"
+              />
+              <span>Récapitulatif hebdomadaire (dimanche 10h)</span>
+            </label>
+            <label class="notif-radio">
+              <input
+                v-model="frequenceNotifications"
+                type="radio"
                 value="temps_reel"
               />
               <span>À chaque nouveau concert</span>
@@ -183,6 +191,12 @@ defineOptions({ name: "ParametresNotifications" });
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
+import {
+  abonnerAppareil,
+  lireEndpointsServeur,
+  lireVapid,
+  pushPrisEnCharge,
+} from "../../composables/useAbonnementPush.js";
 
 const { afficherToast } = useToasts();
 
@@ -230,9 +244,9 @@ const controleur = new AbortController();
 
 async function charger() {
   try {
-    const [repConfig, repPush] = await Promise.all([
+    const [repConfig, vapid] = await Promise.all([
       appelApi("/api/user/config", { signal: controleur.signal }),
-      appelApi("/api/push", { signal: controleur.signal }),
+      lireVapid(controleur.signal),
       compterAppareilsAbonnes(),
     ]);
     if (repConfig.ok) {
@@ -245,11 +259,8 @@ async function charger() {
       notifSallesPush.value = config.notifSallesPush ?? false;
       notifNouvelleVersion.value = config.notifNouvelleVersion ?? false;
     }
-    if (repPush.ok) {
-      const vapid = await lireJson(repPush);
-      vapidDisponible.value = vapid.disponible ?? false;
-      cleVapidPublique = vapid.clePublique ?? null;
-    }
+    vapidDisponible.value = vapid.disponible;
+    cleVapidPublique = vapid.clePublique;
     await initialiserPush();
   } catch (e) {
     if (e.name !== "AbortError") {
@@ -261,19 +272,11 @@ async function charger() {
 }
 
 async function compterAppareilsAbonnes() {
-  const rep = await appelApi("/api/push/abonnements", {
-    signal: controleur.signal,
-  });
-  if (rep.ok) {
-    const abonnements = await lireJson(rep);
-    endpointsServeur.value = Array.isArray(abonnements)
-      ? abonnements.map((a) => a.endpoint)
-      : null;
-  }
+  endpointsServeur.value = await lireEndpointsServeur(controleur.signal);
 }
 
 async function initialiserPush() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+  if (!pushPrisEnCharge()) {
     pushSupporte.value = false;
     return;
   }
@@ -289,13 +292,6 @@ async function initialiserPush() {
       endpointNavigateur.value = null;
     }
   }
-}
-
-function urlBase64VersUint8Array(base64) {
-  const pad = "=".repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + pad).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(b64);
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
 async function sauvegarderNotifications() {
@@ -329,40 +325,19 @@ async function abonnerPush() {
   if (!swRegistration || !cleVapidPublique) return;
   pushEnCours.value = true;
   try {
-    const permission = await Notification.requestPermission();
-    pushPermission.value = permission;
-    if (permission !== "granted") return;
-
-    const abonnement = await swRegistration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64VersUint8Array(cleVapidPublique),
-    });
-
-    const rep = await appelApi("/api/push", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        endpoint: abonnement.endpoint,
-        keys: {
-          p256dh: new Uint8Array(abonnement.getKey("p256dh")).toBase64(),
-          auth: new Uint8Array(abonnement.getKey("auth")).toBase64(),
-        },
-      }),
-      signal: controleur.signal,
-    });
-
-    if (rep.ok) {
-      endpointNavigateur.value = abonnement.endpoint;
+    const resultat = await abonnerAppareil(cleVapidPublique, controleur.signal);
+    if (resultat.statut === "refuse") {
+      pushPermission.value = resultat.permission;
+    } else if (resultat.statut === "ok") {
+      endpointNavigateur.value = resultat.endpoint;
       await compterAppareilsAbonnes();
-      document.cookie =
-        "push_opt_in=1; path=/; max-age=" +
-        365 * 24 * 3600 +
-        "; SameSite=Strict";
       afficherToast("Notifications push activées.", "succes");
     } else {
-      await abonnement.unsubscribe();
-      const corps = await lireJson(rep);
-      afficherToast(corps.erreur || "Erreur lors de l'abonnement.", "erreur");
+      afficherToast(
+        resultat.message ||
+          "Impossible d'activer les notifications push sur cet appareil.",
+        "erreur",
+      );
     }
   } catch (_) {
     afficherToast(

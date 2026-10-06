@@ -125,7 +125,8 @@ final class ControleInvariantsDonnees {
         JOIN concerts c ON c.id = um.concert_id
         JOIN user_config uc ON uc.user_id = um.user_id
         WHERE um.notification_envoyee_le IS NULL AND um.masque_le IS NULL
-          AND c.first_seen < now() - interval '1 day'
+          AND c.first_seen < now() - CASE uc.frequence_notifications
+                WHEN 'hebdomadaire' THEN interval '8 days' ELSE interval '1 day' END
           AND uc.frequence_notifications <> 'jamais'
           AND (
             ((uc.notif_artistes OR uc.notif_artistes_push) AND EXISTS (

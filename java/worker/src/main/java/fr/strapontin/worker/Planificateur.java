@@ -232,6 +232,18 @@ public class Planificateur {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
+  Trigger triggerNotifierDigestHebdomadaire(final JobDetail jobDetailNotifierDigest) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailNotifierDigest)
+        .withIdentity("triggerNotifierDigestHebdomadaire")
+        .usingJobData(NotifierDigestJob.CLE_FREQUENCE, "hebdomadaire")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 10 ? * SUN"))
+        .build();
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
   JobDetail jobDetailRevoquerAdmins() {
     return creerJobDetail(RevoquerAdminsJob.class, "revoquerAdmins");
   }

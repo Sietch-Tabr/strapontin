@@ -173,6 +173,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../utils/api.js";
+import { notificationsJoignables } from "../composables/useEtatNotifications.js";
 defineOptions({ name: "ArtistesPage" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
@@ -244,10 +245,10 @@ async function ajouter(nom, wikidataId = null) {
       return;
     }
     afficherToast(
-      `Fetch en cours pour « ${nom} »… Les concerts apparaîtront dans quelques secondes.`,
+      `Recherche des concerts de « ${nom} » en cours : ils apparaîtront dans quelques secondes.`,
       "info",
     );
-    if (premierAjout) {
+    if (premierAjout && (await notificationsJoignables()) === false) {
       afficherToast(
         "Astuce : activez les notifications dans Paramètres pour être alerté de vos prochains concerts.",
         "info",

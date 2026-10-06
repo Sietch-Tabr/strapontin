@@ -33,7 +33,7 @@ public class UserConfigService {
 
   private static final Logger LOG = LoggerFactory.getLogger(UserConfigService.class);
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
-  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
+  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien", "hebdomadaire");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_DEPARTEMENTS = "departements";
@@ -120,9 +120,19 @@ public class UserConfigService {
 
     final boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
 
+    // Mêmes valeurs que les défauts de user_config (migration V83).
     if (lignes.isEmpty()) {
       return new ConfigUtilisateur(
-          List.of(), true, "jamais", false, false, false, false, false, "auto", resendDisponible);
+          List.of(),
+          true,
+          "hebdomadaire",
+          true,
+          false,
+          false,
+          false,
+          false,
+          "auto",
+          resendDisponible);
     }
     final ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(

@@ -163,6 +163,9 @@ public class SetupService {
                   false, now(), now())
           """,
           paramsUser);
+      jdbc.update(
+          "INSERT INTO user_config (user_id) VALUES (:id) ON CONFLICT DO NOTHING",
+          Map.of("id", userId));
     } catch (DataIntegrityViolationException e) {
       final RessourceDejaExistante erreur =
           new RessourceDejaExistante("L'application est déjà configurée.");

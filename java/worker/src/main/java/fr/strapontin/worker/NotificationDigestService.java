@@ -166,8 +166,8 @@ public class NotificationDigestService {
    * Parcourt les matches non notifiés pour une fréquence donnée, envoie le
    * digest, met à jour {@code notifie_le} .
    *
-   * @param frequence {@code "temps_reel"} (après chaque recalcul) ou
-   *     {@code "quotidien"} (cron 8h)
+   * @param frequence {@code "temps_reel"} (après chaque recalcul),
+   *     {@code "quotidien"} (cron 8h) ou {@code "hebdomadaire"} (dimanche 10h)
    */
   public void executerDigest(final String frequence) {
     LOG.info("notifier:digest démarré frequence={}", frequence);
