@@ -134,8 +134,7 @@ class PushControllerTest {
     when(notificationPushService.envoyerNotificationTest(eq("user-1"), isNull()))
         .thenReturn(ResultatEnvoiPush.SERVICE_NON_CONFIGURE);
 
-    assertEquals(
-        HttpStatus.SERVICE_UNAVAILABLE, controller.tester(null, auth).getStatusCode());
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE, controller.tester(null, auth).getStatusCode());
   }
 
   // endpoint manquant/blanc : voir RequeteDesabonnementValidationTest (@Valid ne s'exerce pas

@@ -41,6 +41,7 @@ public class WorkerProxyService {
   public static final String MESSAGE_EN_ERREUR =
       "Le service de récupération des concerts a rencontré une erreur."
           + " Réessayez dans quelques minutes.";
+
   private static final String NIVEAU_INFO = "info";
   private static final String SOURCE_ADMIN = "admin";
 
@@ -167,8 +168,7 @@ public class WorkerProxyService {
       logAdminService.logAdmin(NIVEAU_INFO, SOURCE_ADMIN, "Fetches relancés manuellement");
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
-      return new ResultatRelance(
-          false, MESSAGE_EN_ERREUR, 502);
+      return new ResultatRelance(false, MESSAGE_EN_ERREUR, 502);
     } catch (Exception e) {
       LOG.warn("Erreur appel worker trigger : {}", e.getMessage());
       return new ResultatRelance(false, MESSAGE_INJOIGNABLE, 503);
@@ -197,8 +197,7 @@ public class WorkerProxyService {
         return new ResultatRelance(
             false, "Tâche inconnue : " + typeJob + ".", HttpStatus.BAD_REQUEST.value());
       }
-      return new ResultatRelance(
-          false, MESSAGE_EN_ERREUR, 502);
+      return new ResultatRelance(false, MESSAGE_EN_ERREUR, 502);
     } catch (Exception e) {
       LOG.warn("Erreur appel worker trigger job typeJob={} : {}", typeJob, e.getMessage());
       return new ResultatRelance(false, MESSAGE_INJOIGNABLE, 503);
@@ -226,8 +225,7 @@ public class WorkerProxyService {
           Map.of("version", version));
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
-      return new ResultatRelance(
-          false, MESSAGE_EN_ERREUR, 502);
+      return new ResultatRelance(false, MESSAGE_EN_ERREUR, 502);
     } catch (Exception e) {
       LOG.warn(
           "Erreur appel worker trigger notifier-version version={} : {}", version, e.getMessage());

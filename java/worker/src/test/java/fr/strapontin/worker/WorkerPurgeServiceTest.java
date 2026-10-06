@@ -298,7 +298,6 @@ class WorkerPurgeServiceTest {
 
     service.executerGererInvitesExpires();
 
-    verify(emailCompteService, never())
-        .envoyerRelanceInvitation(anyString(), anyString(), any());
+    verify(emailCompteService, never()).envoyerRelanceInvitation(anyString(), anyString(), any());
   }
 }

@@ -43,8 +43,7 @@ class EmailCompteServiceTest {
   void envoyerRelanceInactivite_cleAbsente_neTenteAucunEnvoi() {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
     final EmailCompteService service =
-        new EmailCompteService(
-            configService, gestionQuotaResendWorker, cle -> mock(Resend.class));
+        new EmailCompteService(configService, gestionQuotaResendWorker, cle -> mock(Resend.class));
 
     assertFalse(service.envoyerRelanceInactivite("a@test.fr", 15));
 
@@ -56,8 +55,7 @@ class EmailCompteServiceTest {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test"));
     when(gestionQuotaResendWorker.reserverEnvoi()).thenReturn(false);
     final EmailCompteService service =
-        new EmailCompteService(
-            configService, gestionQuotaResendWorker, cle -> mock(Resend.class));
+        new EmailCompteService(configService, gestionQuotaResendWorker, cle -> mock(Resend.class));
 
     assertFalse(service.envoyerRelanceInactivite("a@test.fr", 15));
   }

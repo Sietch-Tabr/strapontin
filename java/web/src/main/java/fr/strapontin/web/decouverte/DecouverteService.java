@@ -4,9 +4,9 @@
  */
 package fr.strapontin.web.decouverte;
 
-import fr.strapontin.web.admin.WorkerProxyService;
 import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
+import fr.strapontin.web.admin.WorkerProxyService;
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import java.time.Instant;

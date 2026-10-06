@@ -34,7 +34,8 @@ public class UserConfigService {
 
   private static final Logger LOG = LoggerFactory.getLogger(UserConfigService.class);
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
-  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien", "hebdomadaire");
+  private static final Set<String> FREQUENCES_VALIDES =
+      Set.of("jamais", "temps_reel", "quotidien", "hebdomadaire");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_DEPARTEMENTS = "departements";
