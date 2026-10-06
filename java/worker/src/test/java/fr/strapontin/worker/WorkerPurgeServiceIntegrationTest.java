@@ -115,6 +115,27 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("expireLe", expireLe, Types.TIMESTAMP));
   }
 
+  @Test
+  void executerPurgerSalles_salleOrphelineAvecLieux_traceLesLieuxSupprimes() {
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('orpheline', 'Orpheline',"
+            + " 'orpheline')",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " SELECT id, 'eventim', 'internal:orpheline' FROM salles",
+        Map.of());
+
+    service.executerPurgerSalles();
+
+    assertEquals(
+        List.of("lieux supprimés avec leurs salles orphelines : 1"),
+        jdbc.queryForList(
+            "SELECT message FROM logs_admin WHERE source = 'purger-salles'",
+            Map.of(),
+            String.class));
+  }
+
   private static Timestamp ilYA(final int jours) {
     return Timestamp.from(Instant.now().minus(Duration.ofDays(jours)));
   }
