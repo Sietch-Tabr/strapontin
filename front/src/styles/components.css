@@ -634,6 +634,17 @@ tr:hover td {
 .filtres-ligne input[type="number"] {
   max-width: 8rem;
 }
+/* Recherche texte : seule partie des filtres qui attend une validation. */
+.filtres-recherche {
+  display: flex;
+  gap: 0.25rem;
+  flex: 2;
+  min-width: 14rem;
+  max-width: 24rem;
+}
+.filtres-recherche input {
+  max-width: none;
+}
 /* ── Pagination ──────────────────────────────────────────── */
 .pagination {
   display: flex;

@@ -28,20 +28,20 @@
   display: block;
   margin-bottom: 0.5rem;
 }
-#filtres-form:not(.visible) {
+.filtres-form:not(.visible) {
   display: none;
 }
-#filtres-form.visible {
+.filtres-form.visible {
   animation: section-entree 0.2s ease-out;
 }
 @media (min-width: 1025px) {
   .filtres-bascule {
     display: none;
   }
-  #filtres-form:not(.visible) {
-    display: revert;
+  .filtres-form:not(.visible) {
+    display: block;
   }
-  #filtres-form.visible {
+  .filtres-form.visible {
     animation: none;
   }
 }
