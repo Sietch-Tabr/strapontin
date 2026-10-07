@@ -209,6 +209,56 @@ public class FusionSallesClePorteeService {
    */
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
+    fusionnerUnePaire(cibleId, sourceId, "clé forte (artiste+date+heure+dept)");
+  }
+
+  /**
+   * Fusionne les paires de salles d'un même lieu (positions et noms
+   * concordants) qui sont fiables, de même département et hors complexe et
+   * sous-salle ; une paire déjà absorbée dans le cycle est ignorée.
+   * @param paires paires {@code [salleA, salleB]} détectées au même lieu
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerMemesLieux(final List<UUID[]> paires) {
+    final Set<UUID> dejaAbsorbees = new HashSet<>();
+    int fusions = 0;
+    for (final UUID[] paire : paires) {
+      if (dejaAbsorbees.contains(paire[0])
+          || dejaAbsorbees.contains(paire[1])
+          || !fusionnableAuMemeLieu(paire[0], paire[1])) {
+        continue;
+      }
+      final UUID[] cibleSource = choisirCibleEtSource(paire[0], paire[1]);
+      if (cibleSource != null) {
+        fusionnerUnePaire(cibleSource[0], cibleSource[1], "même lieu (position et nom)");
+        dejaAbsorbees.add(cibleSource[1]);
+        fusions++;
+      }
+    }
+    return fusions;
+  }
+
+  private boolean fusionnableAuMemeLieu(final UUID idA, final UUID idB) {
+    final Integer nb =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM salles sa JOIN salles sb ON sb.id = CAST(:b AS uuid)"
+                + " WHERE sa.id = CAST(:a AS uuid) AND sa.dept IS NOT NULL AND sa.dept = sb.dept"
+                + " AND sa.salle_parent_id IS DISTINCT FROM sb.id"
+                + " AND sb.salle_parent_id IS DISTINCT FROM sa.id AND"
+                + SalleFiable.condition("sa")
+                + " AND"
+                + SalleFiable.condition("sb"),
+            Map.of("a", idA.toString(), "b", idB.toString()),
+            Integer.class);
+    return nb != null && nb > 0;
+  }
+
+  /**
+   * @param cibleId salle à conserver
+   * @param sourceId salle à absorber puis supprimer
+   * @param motif raison de la fusion, journalisée
+   */
+  private void fusionnerUnePaire(final UUID cibleId, final UUID sourceId, final String motif) {
     final Map<String, Object> ids =
         Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
     // Lus avant la suppression : la salle absorbée n'est sinon plus identifiable.
@@ -223,7 +273,8 @@ public class FusionSallesClePorteeService {
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     LOG.info(
-        "reconciliation:nocturne — salles fusionnées par clé forte cible={} ({}) source={} ({})",
+        "reconciliation:nocturne — salles fusionnées ({}) cible={} ({}) source={} ({})",
+        motif,
         cibleId,
         nomCible,
         sourceId,
@@ -234,7 +285,9 @@ public class FusionSallesClePorteeService {
     logsAdminWorker.inserer(
         "info",
         "reconciliation-nocturne",
-        "salles fusionnées automatiquement par clé forte (artiste+date+heure+dept) cible="
+        "salles fusionnées automatiquement par "
+            + motif
+            + " cible="
             + nomCible
             + " source="
             + nomSource,

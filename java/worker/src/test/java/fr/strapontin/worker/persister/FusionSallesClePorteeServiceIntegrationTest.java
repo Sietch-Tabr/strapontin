@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -157,6 +158,30 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         jdbc.queryForObject(
             "SELECT COUNT(*) FROM logs_admin WHERE message LIKE 'lieux reportés%'",
             Map.of(), Long.class));
+  }
+
+  @Test
+  void fusionnerMemesLieux_memeDepartement_fusionneEtJournalise() {
+    final UUID europeen = creerSalle("L'Européen", "75", null, LAT, LON);
+    final UUID doublon = creerSalle("Leuropeen Paris 17", "75", null, LAT, LON);
+
+    assertEquals(
+        1,
+        fusionSallesClePortee.fusionnerMemesLieux(List.<UUID[]>of(new UUID[] {europeen, doublon})));
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class));
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE message LIKE '%même lieu (position et nom)%'",
+            Map.of(), Long.class));
+  }
+
+  @Test
+  void fusionnerMemesLieux_departementsDifferents_neFusionnePas() {
+    final UUID a = creerSalle("Salle A", "75", null, LAT, LON);
+    final UUID b = creerSalle("Salle A Bis", "92", null, LAT, LON);
+
+    assertEquals(0, fusionSallesClePortee.fusionnerMemesLieux(List.<UUID[]>of(new UUID[] {a, b})));
   }
 
   @Test

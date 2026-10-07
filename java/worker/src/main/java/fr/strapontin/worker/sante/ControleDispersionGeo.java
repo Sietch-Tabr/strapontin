@@ -194,6 +194,36 @@ final class ControleDispersionGeo {
     return entites.size();
   }
 
+  /**
+   * Paires de salles dont des lieux sont au même endroit sous des noms qui
+   * désignent sans ambiguïté le même lieu (critère fort, mots du nom seulement)
+   * : candidates à une fusion automatique, hors complexe et sous-salle et hors
+   * paires déclarées distinctes.
+   * @return paires {@code [salleA, salleB]}
+   */
+  /* package-private : appelé par ControleIntegriteService. */
+  List<UUID[]> pairesMemeLieuFortes() {
+    final List<LieuSource> lieux = chargerLieux();
+    final Set<String> exclues = chargerPairesExclues();
+    final Set<String> vues = new HashSet<>();
+    final List<UUID[]> paires = new ArrayList<>();
+    for (int i = 0; i < lieux.size(); i++) {
+      for (int j = i + 1; j < lieux.size(); j++) {
+        final LieuSource premier = lieux.get(i);
+        final LieuSource second = lieux.get(j);
+        final String cle = cle(premier.salleId(), second.salleId());
+        if (deuxSallesAuMemeLieu(premier, second)
+            && NomsDeLieu.designentFortementLeMemeLieu(
+                premier.nom(), second.nom(), premier.contexte() + " " + second.contexte())
+            && !exclues.contains(cle)
+            && vues.add(cle)) {
+          paires.add(new UUID[] {premier.salleId(), second.salleId()});
+        }
+      }
+    }
+    return paires;
+  }
+
   // Même position et noms compatibles : des salles voisines (La Cigale, La Boule
   // Noire) et la position par défaut d'une billetterie (centre d'un parc, d'une
   // ville) rapprochent sinon des lieux distincts.

@@ -95,7 +95,9 @@ public class ReconciliationNocturneService {
     final int fichesPerimeesFusionnees =
         fusionEvenementsArtiste.fusionnerFichesPerimees()
             + fusionEvenementsArtiste.fusionnerConcertsDeplaces();
-    final int sallesFusionnees = fusionSallesClePortee.fusionner();
+    final int sallesFusionnees =
+        fusionSallesClePortee.fusionnerMemesLieux(controleIntegrite.pairesMemeLieuFortes())
+            + fusionSallesClePortee.fusionner();
     final int evenementsFusionnes = fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
