@@ -187,7 +187,8 @@ public class SalleService {
       String userId, String nom, String tmVenueId, String osmId, String wikidataId) {}
 
   /**
-   * Ajoute une salle (normalise, vérifie doublon/cap, résout via {@link
+   * Ajoute une salle (normalise, vérifie doublon/cap ; salle qui porte déjà
+   * le lieu Ticketmaster ou l'élément Wikidata fournis, sinon {@link
    * #resoudreSalleId}). osmId/wikidataId fournis : persistés immédiatement
    * (conflit d'index rattrapé et loggé).
    * @param donnees données d'ajout (voir {@link DonneesAjoutSalle})
@@ -201,7 +202,11 @@ public class SalleService {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    final UUID salleId = resoudreSalleId(donnees.nom(), salleCle);
+    // Identifiants d'abord : un nom proche créait sinon une seconde salle pour le même lieu.
+    final UUID connue =
+        salleRepository.trouverParIdentifiants(
+            donnees.tmVenueId(), blancEnNull(donnees.wikidataId()));
+    final UUID salleId = connue != null ? connue : resoudreSalleId(donnees.nom(), salleCle);
     validerAjoutSalle(donnees.userId(), salleId);
     enregistrerSourcesSalle(
         salleId, donnees.nom(), donnees.tmVenueId(), donnees.osmId(), donnees.wikidataId());
@@ -217,6 +222,10 @@ public class SalleService {
     if (salleRepository.compterPourUtilisateur(userId) >= CAP_SALLES) {
       throw new ErreurMetier("Limite de 200 salles atteinte.");
     }
+  }
+
+  private static String blancEnNull(final String valeur) {
+    return valeur == null || valeur.isBlank() ? null : valeur;
   }
 
   private void enregistrerSourcesSalle(

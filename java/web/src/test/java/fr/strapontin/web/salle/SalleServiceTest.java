@@ -163,6 +163,22 @@ class SalleServiceTest {
     verify(salleRepository).ajouterPourUtilisateur("u1", uuid);
   }
 
+  // L'Olympia ajouté depuis la recherche : la salle qui porte déjà son élément Wikidata est
+  // suivie, aucune seconde salle n'est créée sous le même nom.
+  @Test
+  void ajouter_elementWikidataDejaPorteParUneSalle_suitCetteSalleSansEnCreer() {
+    final UUID olympia = UUID.randomUUID();
+    when(salleRepository.trouverParIdentifiants(null, "Q915451")).thenReturn(olympia);
+    when(salleRepository.existePourUtilisateur("u1", olympia)).thenReturn(false);
+    when(salleRepository.compterPourUtilisateur("u1")).thenReturn(0);
+
+    salleService.ajouter(
+        new SalleService.DonneesAjoutSalle("u1", "L'Olympia", null, null, "Q915451"));
+
+    verify(salleRepository, org.mockito.Mockito.never()).upsertSalle(any(), any());
+    verify(salleRepository).ajouterPourUtilisateur("u1", olympia);
+  }
+
   // deux résultats externes désignant la même salle (Nominatim + Ticketmaster) doivent
   // fusionner en une seule suggestion combinant osmId et tmVenueId, pas créer un doublon.
   @Test

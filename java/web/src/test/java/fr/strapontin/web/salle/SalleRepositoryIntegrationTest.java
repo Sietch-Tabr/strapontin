@@ -123,6 +123,19 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
   // espaces qu'attend CorrespondanceSalle.tokensSignificatifs, cassant le matching Wikidata pour
   // toute salle ajoutée via le flux interactif (recherche Nominatim).
   @Test
+  void trouverParIdentifiants_lieuTicketmasterOuElementWikidata_retrouveLaSalle() {
+    final UUID olympia = repository.upsertSalle("l olympia paris", "L'Olympia");
+    jdbc.update(
+        "UPDATE salles SET wikidata_id = 'Q915451' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", olympia.toString()));
+    repository.enregistrerSalleSource(olympia, "ticketmaster", "KovZpZAEAd6A");
+
+    assertEquals(olympia, repository.trouverParIdentifiants(null, "Q915451"));
+    assertEquals(olympia, repository.trouverParIdentifiants("KovZpZAEAd6A", null));
+    assertNull(repository.trouverParIdentifiants(null, null));
+  }
+
+  @Test
   void upsertSalle_nomAvecApostropheEtEspaces_nomNormConserveLesEspaces() {
     final UUID salleId = repository.upsertSalle("lempreinte", "L'Empreinte");
 
