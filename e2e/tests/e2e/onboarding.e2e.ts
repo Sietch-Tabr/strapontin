@@ -216,7 +216,12 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
     try {
       const dialog = page.locator("dialog#dialog-onboarding");
       await expect(dialog).toBeVisible({ timeout: 5000 });
-      await dialog.locator(".bouton-icone").click();
+      // La fermeture enregistre l'accueil comme vu : sans attendre cet appel, le
+      // rechargement suivant pouvait le précéder et rouvrir l'accueil.
+      await Promise.all([
+        page.waitForResponse("**/api/user/config/onboarding-vu"),
+        dialog.locator(".bouton-icone").click(),
+      ]);
       await expect(dialog).not.toBeVisible({ timeout: 3000 });
 
       await page.goto("/aide");

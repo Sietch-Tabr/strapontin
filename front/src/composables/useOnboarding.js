@@ -19,7 +19,12 @@ export async function verifierOnboarding() {
 
 async function marquerVu() {
   try {
-    await appelApi("/api/user/config/onboarding-vu", { method: "POST" });
+    // keepalive : fermer l'accueil puis recharger ou quitter la page annulait l'appel,
+    // et l'accueil réapparaissait au chargement suivant.
+    await appelApi("/api/user/config/onboarding-vu", {
+      method: "POST",
+      keepalive: true,
+    });
   } catch (_) {
     // échec ignoré : best-effort, la modale réapparaîtra simplement au prochain montage
   }
