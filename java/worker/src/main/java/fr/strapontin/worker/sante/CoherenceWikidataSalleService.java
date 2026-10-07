@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
@@ -39,6 +40,10 @@ public class CoherenceWikidataSalleService {
   private static final String POSITION_COMPARABLE =
       "(s.origine_position = 'wikidata' AND EXISTS (SELECT 1 FROM salle_sources ss"
           + " WHERE ss.salle_id = s.id AND ss.latitude IS NOT NULL))";
+
+  // Au-delà, la position stockée n'est plus celle de l'élément (arrondi des
+  // coordonnées Wikidata, déplacement d'un point d'entrée).
+  private static final double ECART_REALIGNEMENT_METRES = 100;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
@@ -153,6 +158,66 @@ public class CoherenceWikidataSalleService {
     LOG.info(
         "coherence:wikidata:types candidats={} invalides={}", wikidataIds.size(), invalides.size());
     return invalides.size();
+  }
+
+  /**
+   * Réaligne sur son élément actuel la position d'une salle positionnée par
+   * Wikidata : une position écrite une fois (élément homonyme corrigé depuis,
+   * coordonnées modifiées sur Wikidata) n'était jamais relue, et passait pour
+   * un mauvais élément dans les contrôles de position.
+   * @return nombre de salles réalignées
+   */
+  public int realignerPositions() {
+    final List<SalleAEnrichir> salles =
+        jdbc.query(
+            "SELECT id, nom, nom_norm, ville, dept, wikidata_id, latitude, longitude FROM salles"
+                + " WHERE wikidata_id IS NOT NULL AND origine_position = 'wikidata'"
+                + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
+            Map.of(),
+            (rs, _) ->
+                new SalleAEnrichir(
+                    rs.getObject("id", UUID.class),
+                    rs.getString("nom"),
+                    rs.getString("nom_norm"),
+                    rs.getString("ville"),
+                    rs.getString("dept"),
+                    rs.getString("wikidata_id"),
+                    rs.getDouble("latitude"),
+                    rs.getDouble("longitude")));
+    if (salles.isEmpty()) {
+      return 0;
+    }
+    final Map<UUID, EnrichissementSalle> elements = wikidata.enrichirLot(salles);
+    int realignees = 0;
+    for (final SalleAEnrichir salle : salles) {
+      final EnrichissementSalle element = elements.get(salle.id());
+      if (element == null || element.latitude() == null || element.longitude() == null) {
+        continue;
+      }
+      final double ecart =
+          DistanceGeo.metres(
+              salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
+      if (ecart > ECART_REALIGNEMENT_METRES) {
+        jdbc.update(
+            "UPDATE salles SET latitude = :latitude, longitude = :longitude"
+                + " WHERE id = CAST(:id AS uuid)",
+            Map.of(
+                "latitude", element.latitude(),
+                "longitude", element.longitude(),
+                "id", salle.id().toString()));
+        logsAdminWorker.inserer(
+            "info",
+            "coherence-wikidata",
+            "position de salle réalignée sur son élément Wikidata salle=" + salle.nom(),
+            Map.of(
+                "salleId", salle.id().toString(),
+                "wikidataId", salle.wikidataId(),
+                "ecartMetres", Math.round(ecart)));
+        realignees++;
+      }
+    }
+    LOG.info("coherence:wikidata:positions candidates={} realignees={}", salles.size(), realignees);
+    return realignees;
   }
 
   private List<String> selectionnerTousLesWikidataId() {

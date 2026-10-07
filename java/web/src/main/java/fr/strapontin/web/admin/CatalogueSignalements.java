@@ -60,8 +60,9 @@ public final class CatalogueSignalements {
     ajouter(
         "position_wikidata_incoherente",
         "Wikidata d'un homonyme",
-        "La position Wikidata de cette salle est loin de ses lieux sources : réinitialiser son"
-            + " enrichissement depuis le référentiel.");
+        "L'élément Wikidata de cette salle est situé loin de ses lieux sources (sa position est"
+            + " réalignée chaque nuit sur l'élément) : c'est l'élément d'un autre lieu,"
+            + " réinitialiser son enrichissement depuis le référentiel.");
     ajouter(
         "position_hors_departement",
         "Salle hors de son département",

@@ -183,7 +183,8 @@ public class ReferentielSallesService {
 
   /**
    * Efface l'enrichissement auto d'une salle ({@code wikidata_id}/{@code
-   * nom_affiche}/{@code ville}) pour la remettre candidate à une nouvelle
+   * nom_affiche}/{@code ville}, et la position venue de cet élément, qui
+   * resterait sinon attribuée au suivant) pour la remettre candidate à une nouvelle
    * découverte (corrige un homonyme international, jamais auto-corrigé
    * via {@code COALESCE}).
    * @param salleId UUID de la salle
@@ -193,7 +194,11 @@ public class ReferentielSallesService {
     final int nb =
         jdbc.update(
             """
-            UPDATE salles SET wikidata_id = NULL, nom_affiche = NULL, ville = NULL
+            UPDATE salles SET wikidata_id = NULL, nom_affiche = NULL, ville = NULL,
+              latitude = CASE WHEN origine_position = 'wikidata' THEN NULL ELSE latitude END,
+              longitude = CASE WHEN origine_position = 'wikidata' THEN NULL ELSE longitude END,
+              origine_position = CASE WHEN origine_position = 'wikidata' THEN NULL
+                                      ELSE origine_position END
             WHERE id = CAST(:id AS uuid)
             """,
             Map.of("id", salleId.toString()));
