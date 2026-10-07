@@ -134,6 +134,38 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
     }
   });
 
+  test("onboarding_etapeNotifications_emailHebdomadaireCocheEtDesactivable", async ({
+    browser,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "Création de compte — chromium uniquement",
+    );
+
+    const { page, ctx } = await creerCompteFraisEtSeConnecter(browser);
+    try {
+      const dialog = page.locator("dialog#dialog-onboarding");
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+      await dialog.getByRole("button", { name: "Suivant" }).click();
+      await dialog.getByRole("button", { name: "Suivant" }).click();
+      await expect(dialog).toContainText("Notifications email et push");
+
+      const email = dialog.getByRole("checkbox", {
+        name: "Recevoir un email des nouveaux concerts de mes artistes",
+      });
+      await expect(email).toBeChecked();
+      await expect(dialog).toContainText("chaque dimanche à 10h");
+
+      await email.uncheck();
+      await expect(dialog).toContainText("Aucun email ne vous sera envoyé.");
+      const config = await (await page.request.get("/api/user/config")).json();
+      expect(config.notifArtistes).toBe(false);
+      expect(config.frequenceNotifications).toBe("jamais");
+    } finally {
+      await ctx.close();
+    }
+  });
+
   test("onboarding_terminer_masqueEtNeReapparaitPasApresRechargement", async ({
     browser,
   }, testInfo) => {
@@ -188,7 +220,9 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
 });
 
 test.describe("Scénario: checklist premiers pas — /aide", () => {
-  test("checklist_nouveauCompte_troisItemsNonCoches", async ({
+  // Un nouveau compte reçoit l'email hebdomadaire par défaut : seule l'étape des
+  // notifications est faite.
+  test("checklist_nouveauCompte_seuleEtapeNotificationsFaite", async ({
     browser,
   }, testInfo) => {
     test.skip(
@@ -201,7 +235,10 @@ test.describe("Scénario: checklist premiers pas — /aide", () => {
       await page.goto("/aide");
       const checklist = page.locator(".checklist-premiers-pas");
       await expect(checklist).toBeVisible({ timeout: 5000 });
-      await expect(checklist.locator(".checklist-marque--fait")).toHaveCount(0);
+      await expect(checklist.locator(".checklist-item--fait")).toHaveCount(1);
+      await expect(checklist.locator(".checklist-item--fait")).toContainText(
+        "Activer un canal de notification",
+      );
     } finally {
       await ctx.close();
     }
@@ -237,7 +274,8 @@ test.describe("Scénario: checklist premiers pas — /aide", () => {
 });
 
 test.describe("Scénario: nudge notifications — premier ajout", () => {
-  test("nudge_premierAjoutArtiste_afficheToastNotifications", async ({
+  // Le rappel n'apparaît que si aucune notification ne peut parvenir : notifications coupées ici.
+  test("nudge_premierAjoutArtisteSansCanal_afficheToastNotifications", async ({
     browser,
   }, testInfo) => {
     test.skip(
@@ -247,6 +285,17 @@ test.describe("Scénario: nudge notifications — premier ajout", () => {
 
     const { page, ctx } = await creerCompteFraisEtSeConnecter(browser);
     try {
+      const rep = await page.request.patch("/api/user/config/notifications", {
+        data: {
+          frequenceNotifications: "jamais",
+          notifArtistes: false,
+          notifSalles: false,
+          notifArtistesPush: false,
+          notifSallesPush: false,
+          notifNouvelleVersion: false,
+        },
+      });
+      expect(rep.ok()).toBe(true);
       await page.goto("/artistes");
       // page.goto (rechargement complet) redéclenche la vérification onboarding à chaque fois
       // tant que la modale n'a pas été fermée — un dialog natif ouvert rend le reste de la page
