@@ -9,6 +9,8 @@ import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -168,22 +170,7 @@ public class CoherenceWikidataSalleService {
    * @return nombre de salles réalignées
    */
   public int realignerPositions() {
-    final List<SalleAEnrichir> salles =
-        jdbc.query(
-            "SELECT id, nom, nom_norm, ville, dept, wikidata_id, latitude, longitude FROM salles"
-                + " WHERE wikidata_id IS NOT NULL AND origine_position = 'wikidata'"
-                + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
-            Map.of(),
-            (rs, _) ->
-                new SalleAEnrichir(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("nom"),
-                    rs.getString("nom_norm"),
-                    rs.getString("ville"),
-                    rs.getString("dept"),
-                    rs.getString("wikidata_id"),
-                    rs.getDouble("latitude"),
-                    rs.getDouble("longitude")));
+    final List<SalleAEnrichir> salles = sallesPositionneesParWikidata();
     if (salles.isEmpty()) {
       return 0;
     }
@@ -191,33 +178,49 @@ public class CoherenceWikidataSalleService {
     int realignees = 0;
     for (final SalleAEnrichir salle : salles) {
       final EnrichissementSalle element = elements.get(salle.id());
-      if (element == null || element.latitude() == null || element.longitude() == null) {
-        continue;
-      }
-      final double ecart =
-          DistanceGeo.metres(
-              salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
-      if (ecart > ECART_REALIGNEMENT_METRES) {
-        jdbc.update(
-            "UPDATE salles SET latitude = :latitude, longitude = :longitude"
-                + " WHERE id = CAST(:id AS uuid)",
-            Map.of(
-                "latitude", element.latitude(),
-                "longitude", element.longitude(),
-                "id", salle.id().toString()));
-        logsAdminWorker.inserer(
-            "info",
-            "coherence-wikidata",
-            "position de salle réalignée sur son élément Wikidata salle=" + salle.nom(),
-            Map.of(
-                "salleId", salle.id().toString(),
-                "wikidataId", salle.wikidataId(),
-                "ecartMetres", Math.round(ecart)));
+      if (element != null
+          && element.latitude() != null
+          && element.longitude() != null
+          && realignerSiEcart(salle, element)) {
         realignees++;
       }
     }
     LOG.info("coherence:wikidata:positions candidates={} realignees={}", salles.size(), realignees);
     return realignees;
+  }
+
+  private List<SalleAEnrichir> sallesPositionneesParWikidata() {
+    return jdbc.query(
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id, latitude, longitude FROM salles"
+            + " WHERE wikidata_id IS NOT NULL AND origine_position = 'wikidata'"
+            + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
+        Map.of(),
+        (rs, _) -> versSalleAEnrichir(rs));
+  }
+
+  private boolean realignerSiEcart(final SalleAEnrichir salle, final EnrichissementSalle element) {
+    final double ecart =
+        DistanceGeo.metres(
+            salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
+    if (ecart <= ECART_REALIGNEMENT_METRES) {
+      return false;
+    }
+    jdbc.update(
+        "UPDATE salles SET latitude = :latitude, longitude = :longitude"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of(
+            "latitude", element.latitude(),
+            "longitude", element.longitude(),
+            "id", salle.id().toString()));
+    logsAdminWorker.inserer(
+        "info",
+        "coherence-wikidata",
+        "position de salle réalignée sur son élément Wikidata salle=" + salle.nom(),
+        Map.of(
+            "salleId", salle.id().toString(),
+            "wikidataId", salle.wikidataId(),
+            "ecartMetres", Math.round(ecart)));
+    return true;
   }
 
   private List<String> selectionnerTousLesWikidataId() {
@@ -355,15 +358,18 @@ public class CoherenceWikidataSalleService {
             + " AND NOT "
             + POSITION_COMPARABLE,
         Map.of(),
-        (rs, _) ->
-            new SalleAEnrichir(
-                rs.getObject("id", UUID.class),
-                rs.getString("nom"),
-                rs.getString("nom_norm"),
-                rs.getString("ville"),
-                rs.getString("dept"),
-                rs.getString("wikidata_id"),
-                (Double) rs.getObject("latitude"),
-                (Double) rs.getObject("longitude")));
+        (rs, _) -> versSalleAEnrichir(rs));
+  }
+
+  private static SalleAEnrichir versSalleAEnrichir(final ResultSet rs) throws SQLException {
+    return new SalleAEnrichir(
+        rs.getObject("id", UUID.class),
+        rs.getString("nom"),
+        rs.getString("nom_norm"),
+        rs.getString("ville"),
+        rs.getString("dept"),
+        rs.getString("wikidata_id"),
+        (Double) rs.getObject("latitude"),
+        (Double) rs.getObject("longitude"));
   }
 }

@@ -72,7 +72,7 @@ public class PushController {
    * demandeur si {@code endpoint} est fourni (plutôt que le plus récent).
    * @param requete corps JSON optionnel avec {@code endpoint}
    * @param auth contexte d'authentification
-   * @return 200 si envoyée, sinon le statut et le message de {@link ResultatEnvoiPush}
+   * @return 200 si envoyée, sinon statut et message de {@link ResultatEnvoiPush}
    */
   @PostMapping("/tester")
   public ResponseEntity<Map<String, Object>> tester(

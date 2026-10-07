@@ -5,11 +5,9 @@
 package fr.strapontin.sources;
 
 /**
- * Produit d'une récupération par artiste écarté comme n'étant pas une date de
- * cet artiste (soirée de festival d'un autre artiste).
- *
+ * Produit écarté d'une récupération par artiste (soirée d'un autre artiste).
  * @param artiste nom de l'artiste recherché
- * @param url adresse du produit, identifiant de son observation
+ * @param url adresse du produit, qui identifie son observation
  * @param titre titre du produit
  * @since 3.0.3
  * @author Kwaite

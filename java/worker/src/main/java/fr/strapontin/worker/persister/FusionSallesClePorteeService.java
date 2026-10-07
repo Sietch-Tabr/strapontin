@@ -266,7 +266,7 @@ public class FusionSallesClePorteeService {
     final String nomSource = decrireSalle(sourceId);
 
     fusionnerEvenements(ids);
-    fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
+    fusionnerAbonnementsEtSources(ids, cibleId);
     fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
 
     // 7. Suppression de la salle source
@@ -356,9 +356,8 @@ public class FusionSallesClePorteeService {
   }
 
   // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
-  // réassignées, dédoublonnage préalable des conflits par type de source.
-  private void fusionnerAbonnementsEtSources(
-      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
+  // réassignées, toutes gardées.
+  private void fusionnerAbonnementsEtSources(final Map<String, Object> ids, final UUID cibleId) {
     jdbc.update(
         """
         DELETE FROM user_salles

@@ -121,7 +121,7 @@ public class SetupService {
     final String email =
         requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
     final String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
-    validerRequeteSetup(identifiant, email, motDePasse);
+    validerRequeteSetup(email, motDePasse);
 
     final String userId = UUID.randomUUID().toString();
     creerCompteAdmin(userId, email, identifiant);
@@ -132,8 +132,7 @@ public class SetupService {
     LOG.info("Premier administrateur créé : {}", identifiant);
   }
 
-  private static void validerRequeteSetup(
-      final String identifiant, final String email, final String motDePasse) {
+  private static void validerRequeteSetup(final String email, final String motDePasse) {
     if (email.isEmpty() || !email.contains("@")) {
       throw new ErreurMetier("L'adresse email est invalide.");
     }

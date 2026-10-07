@@ -10,13 +10,10 @@ import fr.strapontin.core.ConcertBrut;
 import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.ResourceAccessException;
@@ -31,8 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  * @since 2.0.0
  * @author Kwaite
  */
-public class EventimSource
-    implements SourceConcerts, SourceAvecBilanFetch, SourceAvecProduitsEcartes {
+public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
   private static final Logger LOG = LoggerFactory.getLogger(EventimSource.class);
 
@@ -76,7 +72,7 @@ public class EventimSource
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final EventimAttractionResolver attractionResolver;
   private final LieuxEventim lieux;
-  private final Queue<ProduitEcarte> produitsEcartes = new ConcurrentLinkedQueue<>();
+  private final ProduitsEcartes ecartes = new ProduitsEcartes();
 
   /**
    * Crée une instance avec un RestClient par défaut (headers Eventim,
@@ -281,17 +277,7 @@ public class EventimSource
 
     produits.forEach(lieux::relever);
     final List<Map<String, Object>> retenus =
-        artisteFallback != null
-            ? ProduitsDeLArtiste.retenir(
-                produits,
-                artisteFallback,
-                ecarte ->
-                    produitsEcartes.add(
-                        new ProduitEcarte(
-                            artisteFallback,
-                            MapeurProduitEventim.extraireUrlProduit(ecarte),
-                            (String) ecarte.get("name"))))
-            : produits;
+        artisteFallback != null ? ecartes.retenir(produits, artisteFallback) : produits;
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : retenus) {
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
@@ -307,14 +293,11 @@ public class EventimSource
         true);
   }
 
-  @Override
-  public List<ProduitEcarte> preleverProduitsEcartes() {
-    final List<ProduitEcarte> preleves = new ArrayList<>();
-    ProduitEcarte produit;
-    while ((produit = produitsEcartes.poll()) != null) {
-      preleves.add(produit);
-    }
-    return preleves;
+  /**
+   * @return produits écartés des récupérations par artiste, prélevés par le worker
+   */
+  public ProduitsEcartes produitsEcartes() {
+    return ecartes;
   }
 
   private static int entier(final Map<String, Object> data, final String cle) {
@@ -338,7 +321,6 @@ public class EventimSource
   private ResultatArtisteEventim fetchProduitsParAttraction(
       final String attractionId, final String artisteFallback) {
     final LocalDate dateFin = LocalDate.now().plusMonths(24);
-    final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     final List<ConcertBrut> concerts = new ArrayList<>();
     final String artisteSourceId = "eventim:" + attractionId;
     LocalDate debut = LocalDate.now();
@@ -352,8 +334,8 @@ public class EventimSource
                   .queryParam(PARAM_WEB_ID, WEB_ID)
                   .queryParam(PARAM_LANGUE, "fr")
                   .queryParam("attraction_ids", attractionId)
-                  .queryParam("date_from", fmt.format(debut))
-                  .queryParam("date_to", fmt.format(dateFin))
+                  .queryParam("date_from", debut.toString())
+                  .queryParam("date_to", dateFin.toString())
                   .queryParam("sort", "DateAsc")
                   .queryParam("top", TOP_MAX));
       final PageProduitsEventim resultat =

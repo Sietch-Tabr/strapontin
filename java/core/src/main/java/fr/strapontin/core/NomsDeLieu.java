@@ -29,8 +29,8 @@ public final class NomsDeLieu {
   // Mots de liaison de trois lettres, que tokensSignificatifs conserve.
   private static final Set<String> MOTS_DE_LIAISON = Set.of("des", "les", "aux", "sur", "une");
 
-  // Activités qu'une billetterie accole au nom (« Larchipel, théâtre, cinéma, musique ») :
-  // elles décrivent le lieu sans en désigner un autre.
+  // Activités accolées au nom par une billetterie (« Larchipel, théâtre,
+  // cinéma ») : elles décrivent le lieu sans en désigner un autre.
   private static final Set<String> MOTS_D_ACTIVITE =
       Set.of("cinema", "musique", "musiques", "danse", "spectacle", "spectacles", "concerts");
 

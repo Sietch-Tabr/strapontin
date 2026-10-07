@@ -23,7 +23,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 final class EnregistreurPositionsLieux {
 
-  // Le libellé d'un lieu Eventim, filtre de ses récupérations, n'est jamais réécrit ici.
+  // Le libellé d'un lieu Eventim, filtre de ses récupérations, n'est
+  // jamais réécrit ici.
   private static final String PREFIXE_TICKETMASTER = "ticketmaster:";
 
   private final NamedParameterJdbcTemplate jdbc;

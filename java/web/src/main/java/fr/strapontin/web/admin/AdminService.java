@@ -124,7 +124,8 @@ public class AdminService {
                 true, now(), now())
         """,
         paramsUser);
-    // Préférences par défaut du schéma (email hebdomadaire) : sans ligne, rien n'est envoyé.
+    // Préférences par défaut du schéma (email hebdomadaire) : sans ligne,
+    // le digest ignore le compte.
     jdbc.update(
         "INSERT INTO user_config (user_id) VALUES (:id) ON CONFLICT DO NOTHING",
         Map.of("id", userId));

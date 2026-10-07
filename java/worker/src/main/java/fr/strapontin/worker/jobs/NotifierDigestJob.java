@@ -4,17 +4,17 @@
  */
 package fr.strapontin.worker.jobs;
 
+import fr.strapontin.worker.AvertissementCanalPerduService;
 import fr.strapontin.worker.NotificationDigestService;
-import org.quartz.JobDataMap;
+import java.util.Map;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : envoi du digest de notifications, tous les jours à 8h
- * (fréquence quotidienne) et le dimanche à 10h (fréquence hebdomadaire,
- * portée par les données du déclencheur).
- *
+ * Job Quartz : digest de notifications (quotidien à 8h, hebdomadaire le
+ * dimanche à 10h, voir {@link #CLE_FREQUENCE}), puis avertissement des
+ * comptes privés de leur dernier canal.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -24,6 +24,7 @@ public class NotifierDigestJob extends QuartzJobBean {
   public static final String CLE_FREQUENCE = "frequence";
 
   private NotificationDigestService notificationDigestService;
+  private AvertissementCanalPerduService avertissementCanalPerdu;
 
   /** Constructeur par défaut, instancié par Spring. */
   public NotifierDigestJob() {
@@ -40,10 +41,24 @@ public class NotifierDigestJob extends QuartzJobBean {
     this.notificationDigestService = notificationDigestService;
   }
 
+  /**
+   * @param avertissementCanalPerdu avertissement des comptes privés de leur
+   *     dernier canal, injecté par Spring
+   */
+  @Autowired
+  public void setAvertissementCanalPerdu(
+      final AvertissementCanalPerduService avertissementCanalPerdu) {
+    this.avertissementCanalPerdu = avertissementCanalPerdu;
+  }
+
   @Override
   protected void executeInternal(final JobExecutionContext context) {
-    final JobDataMap donnees = context.getMergedJobDataMap();
-    final String frequence = donnees != null ? donnees.getString(CLE_FREQUENCE) : null;
-    notificationDigestService.executerDigest(frequence != null ? frequence : "quotidien");
+    final Map<String, Object> donnees = context.getMergedJobDataMap();
+    final Object frequence = donnees != null ? donnees.get(CLE_FREQUENCE) : null;
+    notificationDigestService.executerDigest(
+        frequence instanceof String valeur ? valeur : "quotidien");
+    if (avertissementCanalPerdu != null) {
+      avertissementCanalPerdu.verifier();
+    }
   }
 }

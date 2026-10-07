@@ -35,6 +35,9 @@ public class NotificationPushService {
 
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushService.class);
   private static final String CLE_ENDPOINT = "endpoint";
+  private static final String CLE_USER_ID = "userId";
+  // Premier statut HTTP d'erreur : un refus du service de push n'est pas un envoi.
+  private static final int STATUT_ERREUR_MIN = 400;
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private final ConfigService configService;
@@ -85,7 +88,7 @@ public class NotificationPushService {
         supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
         return ResultatEnvoiPush.APPAREIL_REVOQUE;
       }
-      if (status >= 400) {
+      if (status >= STATUT_ERREUR_MIN) {
         LOG.warn("Push: envoi refusé ({}) pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
         return ResultatEnvoiPush.ECHEC_ENVOI;
       }
@@ -124,7 +127,7 @@ public class NotificationPushService {
                 FROM push_abonnements
                 WHERE user_id = :userId AND endpoint = :endpoint
                 """,
-                Map.of("userId", userId, CLE_ENDPOINT, endpoint))
+                Map.of(CLE_USER_ID, userId, CLE_ENDPOINT, endpoint))
             : jdbc.queryForList(
                 """
                 SELECT id, endpoint, p256dh, auth
@@ -133,7 +136,7 @@ public class NotificationPushService {
                 ORDER BY id DESC
                 LIMIT 1
                 """,
-                Map.of("userId", userId));
+                Map.of(CLE_USER_ID, userId));
     if (abonnements.isEmpty()) {
       return ResultatEnvoiPush.APPAREIL_INCONNU;
     }
@@ -209,12 +212,10 @@ public class NotificationPushService {
   }
 
   /**
-   * Point de construction unique du service d'envoi, remplaçable en test pour
-   * n'intercepter que le transport HTTP.
    * @param clePublique clé VAPID publique
    * @param clePrivee clé VAPID privée
    * @param sujet sujet VAPID ({@code mailto:})
-   * @return service d'envoi prêt à chiffrer et signer
+   * @return service d'envoi, redéfini en test pour intercepter le transport
    * @throws GeneralSecurityException si les clés sont illisibles
    */
   /* package-private : redéfini par les tests du même package. */
@@ -224,13 +225,13 @@ public class NotificationPushService {
   }
 
   // Sans trace admin, une panne du service ne se voyait que dans le journal.
-  private void signalerServiceInutilisable(final Exception e) {
-    LOG.error("Impossible d'initialiser le service VAPID", e);
+  private void signalerServiceInutilisable(final Exception erreur) {
+    LOG.error("Impossible d'initialiser le service VAPID", erreur);
     logAdminService.logAdmin(
         "error",
         "web",
         "service push inutilisable : clés VAPID illisibles",
-        Map.of("cause", e.getClass().getSimpleName()));
+        Map.of("cause", erreur.getClass().getSimpleName()));
   }
 
   // Un abonnement enregistré avant la validation des endpoints n'est jamais appelé.
@@ -246,9 +247,9 @@ public class NotificationPushService {
     jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
     jdbc.update(
         "UPDATE user_config SET dernier_appareil_retire_le = now() WHERE user_id = :userId",
-        Map.of("userId", userId));
+        Map.of(CLE_USER_ID, userId));
     LOG.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
-    logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of("userId", userId));
+    logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
   }
 
   private static int extraireCodeHttp(final Exception exception) {

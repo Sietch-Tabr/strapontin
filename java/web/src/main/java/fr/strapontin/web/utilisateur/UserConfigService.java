@@ -136,19 +136,8 @@ public class UserConfigService {
 
     final boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
 
-    // Mêmes valeurs que les défauts de user_config (migration V83).
     if (lignes.isEmpty()) {
-      return new ConfigUtilisateur(
-          List.of(),
-          true,
-          "hebdomadaire",
-          true,
-          false,
-          false,
-          false,
-          false,
-          "auto",
-          resendDisponible);
+      return configParDefaut(resendDisponible);
     }
     final ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
@@ -368,4 +357,19 @@ public class UserConfigService {
 
   /** Résultat de la mise à jour des départements. */
   public record ResultatMajDepartements(List<String> ignores) {}
+
+  // Mêmes valeurs que les défauts de user_config (migration V83).
+  private static ConfigUtilisateur configParDefaut(final boolean resendDisponible) {
+    return new ConfigUtilisateur(
+        List.of(),
+        true,
+        "hebdomadaire",
+        true,
+        false,
+        false,
+        false,
+        false,
+        "auto",
+        resendDisponible);
+  }
 }

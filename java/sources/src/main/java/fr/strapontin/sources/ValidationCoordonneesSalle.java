@@ -25,16 +25,19 @@ final class ValidationCoordonneesSalle {
   private ValidationCoordonneesSalle() {}
 
   /**
-   * Permissif si l'une des coordonnées est inconnue : retourne
-   * {@code false}, jamais un rejet basé sur une absence de donnée.
-   * @return {@code true} si les deux coordonnées sont connues et distantes
-   *     de plus de {@value #DISTANCE_MAX_METRES} m
+   * Jamais de rejet sur une coordonnée inconnue. Sans position de la salle,
+   * le candidat doit rester dans son département.
+   * @return {@code true} si les positions sont distantes de plus de
+   *     {@value #DISTANCE_MAX_METRES} m, ou le candidat hors du département
    */
   /* package-private : appelé uniquement par WikidataSalleDecouverte (même package). */
   static boolean incompatibles(
       final SalleAEnrichir salle, final Double coordLat, final Double coordLon) {
-    if (salle.latitude() == null || salle.longitude() == null || coordLat == null) {
+    if (coordLat == null || coordLon == null) {
       return false;
+    }
+    if (salle.latitude() == null || salle.longitude() == null) {
+      return !PositionDepartement.plausible(salle.dept(), coordLat, coordLon);
     }
     return !DistanceGeo.connuesEtProches(
         salle.latitude(), salle.longitude(), coordLat, coordLon, DISTANCE_MAX_METRES);

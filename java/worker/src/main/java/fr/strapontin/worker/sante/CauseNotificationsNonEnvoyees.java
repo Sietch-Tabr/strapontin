@@ -30,6 +30,7 @@ final class CauseNotificationsNonEnvoyees {
    * @param averti date de l'avertissement envoyé à l'utilisateur, ou null
    * @return détails {@code cause} et {@code action} du signalement
    */
+  /* package-private : appelé par ControleInvariantsDonnees (même package). */
   static Map<String, Object> decrire(
       final boolean emailActif,
       final boolean pushCoche,
@@ -42,7 +43,8 @@ final class CauseNotificationsNonEnvoyees {
       details.put("action", "Vérifier dans les journaux l'envoi des emails et des push.");
       return details;
     }
-    final StringBuilder cause = new StringBuilder("Aucun canal joignable : email désactivé");
+    final StringBuilder cause =
+        new StringBuilder(160).append("Aucun canal joignable : email désactivé");
     if (pushCoche) {
       cause.append(", aucun appareil abonné au push");
       if (appareilRetireLe != null) {

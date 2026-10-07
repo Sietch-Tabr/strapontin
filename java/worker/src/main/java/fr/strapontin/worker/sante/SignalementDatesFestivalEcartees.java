@@ -6,7 +6,6 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.sources.ProduitEcarte;
 import fr.strapontin.sources.SourceAvecProduitsEcartes;
-import fr.strapontin.sources.SourceConcerts;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,17 +26,17 @@ public class SignalementDatesFestivalEcartees {
   /** Type de signalement publié. */
   public static final String TYPE = "date_festival_ecartee";
 
-  private final List<SourceConcerts> sources;
+  private final List<SourceAvecProduitsEcartes> sources;
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
 
   /**
-   * @param sources sources de concerts, dont celles qui remontent leurs produits écartés
+   * @param sources sources qui remontent les produits écartés de leurs récupérations
    * @param jdbc accès JDBC
    * @param signalements publication des signalements
    */
   public SignalementDatesFestivalEcartees(
-      final List<SourceConcerts> sources,
+      final List<SourceAvecProduitsEcartes> sources,
       final NamedParameterJdbcTemplate jdbc,
       final SignalementMatchingService signalements) {
     this.sources = sources;
@@ -53,11 +52,9 @@ public class SignalementDatesFestivalEcartees {
    */
   public int signaler() {
     int signales = 0;
-    for (final SourceConcerts source : sources) {
-      if (source instanceof SourceAvecProduitsEcartes avecEcartes) {
-        for (final ProduitEcarte produit : avecEcartes.preleverProduitsEcartes()) {
-          signales += signaler(produit);
-        }
+    for (final SourceAvecProduitsEcartes source : sources) {
+      for (final ProduitEcarte produit : source.preleverProduitsEcartes()) {
+        signales += signaler(produit);
       }
     }
     return signales;

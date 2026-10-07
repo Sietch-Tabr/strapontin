@@ -82,7 +82,8 @@ class MatchesNonNotifiesLoader {
       Map<String, List<NotificationDigestService.ConcertNotif>> parUtilisateur) {}
 
   /**
-   * @param frequence {@code "temps_reel"}, {@code "quotidien"} ou {@code "hebdomadaire"}
+   * @param frequence {@code "temps_reel"}, {@code "quotidien"} ou
+   *     {@code "hebdomadaire"}
    * @return les matches non notifiés, groupés par utilisateur
    */
   /* package-private : appelé par NotificationDigestService (même package). */

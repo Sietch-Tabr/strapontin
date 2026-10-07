@@ -19,8 +19,11 @@ public final class FournisseurBouncyCastle {
 
   private FournisseurBouncyCastle() {}
 
-  /** Enregistre BouncyCastle s'il ne l'est pas déjà (idempotent). */
-  public static synchronized void garantir() {
+  /**
+   * Enregistre BouncyCastle s'il ne l'est pas déjà : {@link Security#addProvider}
+   * ignore un fournisseur du même nom déjà installé, l'appel est idempotent.
+   */
+  public static void garantir() {
     if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
       Security.addProvider(new BouncyCastleProvider());
     }

@@ -76,8 +76,8 @@ public class WorkerPurgeService {
    * @param workerStatsService journalisation du bilan de purge
    * @param emailCompteService envoi des relances avant purge de compte
    * @param configService lecture de PUBLIC_BASE_URL (lien d'activation)
-   * @param logsAdminWorker signalement admin des relances et suppressions de comptes,
-   *     et des lieux supprimés avec leur salle
+   * @param logsAdminWorker signalement admin des relances, des suppressions
+   *     de comptes et des lieux supprimés avec leur salle
    */
   public WorkerPurgeService(
       final NamedParameterJdbcTemplate jdbc,

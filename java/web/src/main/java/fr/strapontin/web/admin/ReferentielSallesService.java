@@ -48,6 +48,8 @@ public class ReferentielSallesService {
       )
       """;
 
+  private static final String SOURCE_ADMIN = "admin";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
@@ -182,11 +184,9 @@ public class ReferentielSallesService {
   }
 
   /**
-   * Efface l'enrichissement auto d'une salle ({@code wikidata_id}/{@code
-   * nom_affiche}/{@code ville}, et la position venue de cet élément, qui
-   * resterait sinon attribuée au suivant) pour la remettre candidate à une nouvelle
-   * découverte (corrige un homonyme international, jamais auto-corrigé
-   * via {@code COALESCE}).
+   * Efface l'enrichissement auto d'une salle (élément Wikidata, nom
+   * d'affichage, ville et position venue de l'élément) pour la remettre
+   * candidate à une nouvelle découverte (homonyme jamais auto-corrigé).
    * @param salleId UUID de la salle
    * @return {@code true} si la salle existe et a été réinitialisée
    */
@@ -205,7 +205,7 @@ public class ReferentielSallesService {
     if (nb > 0) {
       logAdminService.logAdmin(
           "info",
-          "admin",
+          SOURCE_ADMIN,
           "enrichissement salle réinitialisé",
           Map.of("salleId", salleId.toString()));
     }
@@ -256,14 +256,14 @@ public class ReferentielSallesService {
         Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
 
     fusionnerEvenements(ids);
-    fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
+    fusionnerAbonnementsEtSources(ids, cibleId);
     fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
 
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     logAdminService.logAdmin(
-        "info", "admin", "fusion salle cible=" + cibleId + " source=" + sourceId);
+        "info", SOURCE_ADMIN, "fusion salle cible=" + cibleId + " source=" + sourceId);
     return true;
   }
 
@@ -308,13 +308,9 @@ public class ReferentielSallesService {
         ids);
   }
 
-  // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
-  // réassignées (PK indépendante de salle_id, pas de conflit de PK possible) —
-  // dédoublonnage préalable des conflits par type de source (sans lui, deux
-  // identifiants du même type, ex. deux ticketmaster, coexistent indéfiniment
-  // sur la salle fusionnée).
-  private void fusionnerAbonnementsEtSources(
-      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
+  // 3. Abonnements en double supprimés, le reste réassigné. 4. Lieux des
+  // sources tous réassignés (clé indépendante de salle_id, aucun conflit).
+  private void fusionnerAbonnementsEtSources(final Map<String, Object> ids, final UUID cibleId) {
     jdbc.update(
         """
         DELETE FROM user_salles
@@ -345,7 +341,7 @@ public class ReferentielSallesService {
     if (!lieuxReportes.isEmpty()) {
       logAdminService.logAdmin(
           "info",
-          "admin",
+          SOURCE_ADMIN,
           "lieux reportés sur la salle conservée après fusion",
           Map.of("salleCible", cibleId.toString(), "lieux", lieuxReportes));
     }
@@ -399,7 +395,7 @@ public class ReferentielSallesService {
             Map.of("id", enfant.toString()));
         logAdminService.logAdmin(
             "warn",
-            "admin",
+            SOURCE_ADMIN,
             "cycle salle_parent_id évité lors d'une fusion — sous-salle détachée enfant="
                 + enfant
                 + " cible="

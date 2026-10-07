@@ -18,11 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Répartition d'une salle mélangeant plusieurs lieux : les événements dont
- * toutes les observations portent les libellés choisis passent à une autre
- * salle avec les lieux des sources choisis (toutes sources) ; un événement
- * mixte reste en place. Les deux salles sont ensuite déclarées distinctes,
- * pour qu'aucune fusion automatique ne les réunisse.
+ * Répartition d'une salle mélangeant plusieurs lieux : événements des
+ * libellés choisis et lieux choisis (toutes sources) passent à une autre
+ * salle, un événement mixte reste en place ; les deux salles sont ensuite
+ * déclarées distinctes.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -43,9 +42,9 @@ public class RepartitionSalleService {
   /**
    * Lieu d'une source rattaché à la salle.
    *
-   * @param identifiant identifiant préfixé par la source ({@code source:identifiant})
+   * @param identifiant identifiant préfixé ({@code source:identifiant})
    * @param source source du lieu
-   * @param nom nom du lieu chez la source (libellé publié, ou nom porté par l'identifiant)
+   * @param nom nom du lieu chez la source (libellé ou nom de l'identifiant)
    * @param ville ville du lieu chez la source, si connue
    */
   public record LieuSource(String identifiant, String source, String nom, String ville) {}
@@ -182,7 +181,8 @@ public class RepartitionSalleService {
     return choisis;
   }
 
-  // Le libellé publié prime ; un lieu Eventim interne porte son nom dans l'identifiant.
+  // Le libellé publié prime ; un lieu Eventim interne porte son nom dans
+  // son identifiant.
   private static String nomDuLieu(final Map<String, Object> lieu) {
     if (lieu.get("libelle_source") instanceof String libelle && !libelle.isBlank()) {
       return libelle;

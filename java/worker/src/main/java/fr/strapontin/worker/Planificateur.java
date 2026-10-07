@@ -9,7 +9,6 @@ import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.FetchSallesAllJob;
 import fr.strapontin.worker.jobs.GererComptesInactifsJob;
 import fr.strapontin.worker.jobs.GererInvitesExpiresJob;
-import fr.strapontin.worker.jobs.NotifierDigestJob;
 import fr.strapontin.worker.jobs.PurgerArtistesJob;
 import fr.strapontin.worker.jobs.PurgerConcertsJob;
 import fr.strapontin.worker.jobs.PurgerLogsAdminJob;
@@ -58,13 +57,13 @@ public class Planificateur {
   /** Constructeur par défaut. */
   public Planificateur() {}
 
-  private static JobDetail creerJobDetail(
-      final Class<? extends Job> jobClass, final String identite) {
+  /* package-private : partagé avec PlanificateurNotifications (même package). */
+  static JobDetail creerJobDetail(final Class<? extends Job> jobClass, final String identite) {
     return JobBuilder.newJob(jobClass).withIdentity(identite).storeDurably().build();
   }
 
-  private static Trigger creerTrigger(
-      final JobDetail jobDetail, final String identite, final String cron) {
+  /* package-private : partagé avec PlanificateurNotifications (même package). */
+  static Trigger creerTrigger(final JobDetail jobDetail, final String identite, final String cron) {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetail)
         .withIdentity(identite)
@@ -213,32 +212,6 @@ public class Planificateur {
   @Bean
   Trigger triggerGererInvitesExpires(final JobDetail jobDetailGererInvitesExpires) {
     return creerTrigger(jobDetailGererInvitesExpires, "triggerGererInvitesExpires", "0 25 0 * * ?");
-  }
-
-  /* package-private : Bean Spring, jamais appelé directement hors du
-   * conteneur. */
-  @Bean
-  JobDetail jobDetailNotifierDigest() {
-    return creerJobDetail(NotifierDigestJob.class, "notifierDigest");
-  }
-
-  /* package-private : Bean Spring, jamais appelé directement hors du
-   * conteneur. */
-  @Bean
-  Trigger triggerNotifierDigest(final JobDetail jobDetailNotifierDigest) {
-    return creerTrigger(jobDetailNotifierDigest, "triggerNotifierDigest", "0 0 8 * * ?");
-  }
-
-  /* package-private : Bean Spring, jamais appelé directement hors du
-   * conteneur. */
-  @Bean
-  Trigger triggerNotifierDigestHebdomadaire(final JobDetail jobDetailNotifierDigest) {
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailNotifierDigest)
-        .withIdentity("triggerNotifierDigestHebdomadaire")
-        .usingJobData(NotifierDigestJob.CLE_FREQUENCE, "hebdomadaire")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 10 ? * SUN"))
-        .build();
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du

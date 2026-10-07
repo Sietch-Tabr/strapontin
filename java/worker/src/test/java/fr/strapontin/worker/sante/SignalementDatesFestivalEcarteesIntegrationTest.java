@@ -7,11 +7,9 @@ package fr.strapontin.worker.sante;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 import fr.strapontin.sources.ProduitEcarte;
 import fr.strapontin.sources.SourceAvecProduitsEcartes;
-import fr.strapontin.sources.SourceConcerts;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.util.List;
@@ -49,9 +47,8 @@ class SignalementDatesFestivalEcarteesIntegrationTest extends AbstractWorkerInte
   void signaler_concertEnregistreSousUnProduitEcarte_estSignale() {
     final UUID faux = evenement("https://www.eventim.fr/soniques-14-11", "2098-11-14");
     evenement("https://www.eventim.fr/suzane-13-11", "2098-11-13");
-    final SourceConcerts eventim =
-        mock(SourceConcerts.class, withSettings().extraInterfaces(SourceAvecProduitsEcartes.class));
-    when(((SourceAvecProduitsEcartes) eventim).preleverProduitsEcartes())
+    final SourceAvecProduitsEcartes eventim = mock(SourceAvecProduitsEcartes.class);
+    when(eventim.preleverProduitsEcartes())
         .thenReturn(
             List.of(
                 new ProduitEcarte(

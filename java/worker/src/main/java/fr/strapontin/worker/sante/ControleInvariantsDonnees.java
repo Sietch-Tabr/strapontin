@@ -117,8 +117,8 @@ final class ControleInvariantsDonnees {
         : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
-  // Même concert sur deux salles déclarées distinctes (par un admin ou par une
-  // répartition) : un lieu resté sur la mauvaise salle l'y a recréé. Le plus récent est signalé.
+  // Même concert sur deux salles déclarées distinctes (admin ou répartition) :
+  // un lieu resté sur la mauvaise salle l'a recréé. Le plus récent est signalé.
   private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(

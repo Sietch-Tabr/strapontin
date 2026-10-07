@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.worker.AvertissementCanalPerduService;
 import fr.strapontin.worker.NotificationDigestService;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -41,5 +42,17 @@ class NotifierDigestJobTest {
     job.executeInternal(contexte);
 
     verify(notificationDigestService).executerDigest("hebdomadaire");
+  }
+
+  @Test
+  void executeInternal_apresLeDigest_verifieLesCanauxPerdus() {
+    final NotifierDigestJob job = new NotifierDigestJob();
+    job.setNotificationDigestService(mock(NotificationDigestService.class));
+    final AvertissementCanalPerduService avertissement = mock(AvertissementCanalPerduService.class);
+    job.setAvertissementCanalPerdu(avertissement);
+
+    job.executeInternal(mock(JobExecutionContext.class));
+
+    verify(avertissement).verifier();
   }
 }

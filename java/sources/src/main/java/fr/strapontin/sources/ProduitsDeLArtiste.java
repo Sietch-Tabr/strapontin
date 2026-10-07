@@ -75,20 +75,26 @@ final class ProduitsDeLArtiste {
     }
     for (final Map<String, Object> produit : produits) {
       if (produit.get(CLE_NOM) instanceof String titre) {
-        final String partie = MapeurProduitEventim.extraireNomArtiste(titre);
-        if (partie.length() < titre.length()
-            && (" " + Normalisation.normaliserTexte(partie) + " ")
-                .contains(" " + recherche + " ")) {
-          final String suite =
-              Normalisation.normaliserTexte(
-                  titre.substring(titre.indexOf(partie) + partie.length()).replace("..", ""));
-          if (suite.length() >= LONGUEUR_MIN_TRONQUE) {
-            festivals.add(suite);
-          }
+        final String festival = festivalNommantLArtiste(titre, recherche);
+        if (festival != null) {
+          festivals.add(festival);
         }
       }
     }
     return festivals;
+  }
+
+  // « Suzane - Les Rendez-vous Soniques #17 » : festival nommé après l'artiste.
+  private static String festivalNommantLArtiste(final String titre, final String recherche) {
+    final String partie = MapeurProduitEventim.extraireNomArtiste(titre);
+    if (partie.length() >= titre.length()
+        || !(" " + Normalisation.normaliserTexte(partie) + " ").contains(" " + recherche + " ")) {
+      return null;
+    }
+    final String suite =
+        Normalisation.normaliserTexte(
+            titre.substring(titre.indexOf(partie) + partie.length()).replace("..", ""));
+    return suite.length() >= LONGUEUR_MIN_TRONQUE ? suite : null;
   }
 
   private static boolean soireeDUnFestivalOuLArtisteANomme(

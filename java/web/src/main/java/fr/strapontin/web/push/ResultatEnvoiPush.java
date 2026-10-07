@@ -39,25 +39,25 @@ public enum ResultatEnvoiPush {
       "L'envoi n'a pas abouti. Réessayez dans quelques minutes ;"
           + " si le problème persiste, prévenez l'administrateur du site.");
 
-  private final int statutHttp;
-  private final String message;
+  private final int codeHttp;
+  private final String texte;
 
-  ResultatEnvoiPush(final int statutHttp, final String message) {
-    this.statutHttp = statutHttp;
-    this.message = message;
+  ResultatEnvoiPush(final int codeHttp, final String texte) {
+    this.codeHttp = codeHttp;
+    this.texte = texte;
   }
 
   /**
    * @return statut HTTP à renvoyer au navigateur
    */
   public int statutHttp() {
-    return statutHttp;
+    return codeHttp;
   }
 
   /**
    * @return message en français courant, {@code null} si la notification est envoyée
    */
   public String message() {
-    return message;
+    return texte;
   }
 }

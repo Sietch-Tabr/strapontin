@@ -5,7 +5,6 @@
 package fr.strapontin.worker.enrichissement;
 
 import fr.strapontin.core.BilanFetch;
-import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
@@ -59,7 +58,6 @@ public class EnrichissementSallesService {
       "enrichissement:salles — taux de réussite chronique trop bas";
   private static final int JOURS_ENTRE_ALERTES_TAUX_BAS = 7;
   private static final String CLE_WIKIDATA_ID = "wikidataId";
-  private static final double DISTANCE_MAX_COLLISION_METRES = 20_000;
   private static final String CLE_LATITUDE = "latitude";
   private static final String CLE_LONGITUDE = "longitude";
   private static final String CLE_VILLE = "ville";
@@ -386,7 +384,7 @@ public class EnrichissementSallesService {
             + " wikidataId="
             + enrichissement.wikidataId(),
         Map.of("salleId", salleId.toString(), CLE_WIKIDATA_ID, enrichissement.wikidataId()));
-    if (porteuse != null && memeLieuPossible(salleId, porteuse)) {
+    if (porteuse != null && CollisionWikidataSalle.memeLieuPossible(jdbc, salleId, porteuse)) {
       signalementMatchingService.signaler(
           "collision_wikidata_salle",
           "salle",
@@ -399,29 +397,6 @@ public class EnrichissementSallesService {
               porteuse.get("id").toString()));
     }
     return false;
-  }
-
-  // Une collision n'est un doublon ou une erreur possible qu'entre deux salles d'un même
-  // secteur : l'élément d'un lieu d'une autre ville est seulement écarté.
-  private boolean memeLieuPossible(final UUID salleId, final Map<String, Object> porteuse) {
-    final List<Map<String, Object>> lignes =
-        jdbc.queryForList(
-            "SELECT dept, latitude, longitude FROM salles WHERE id = CAST(:id AS uuid)",
-            Map.of("id", salleId.toString()));
-    if (lignes.isEmpty()) {
-      return true;
-    }
-    final Map<String, Object> salle = lignes.get(0);
-    final Object deptSalle = salle.get("dept");
-    final Object deptPorteuse = porteuse.get("dept");
-    if (deptSalle != null && deptPorteuse != null && !deptSalle.equals(deptPorteuse)) {
-      return false;
-    }
-    return !(salle.get(CLE_LATITUDE) instanceof Double lat
-        && salle.get(CLE_LONGITUDE) instanceof Double lon
-        && porteuse.get(CLE_LATITUDE) instanceof Double latP
-        && porteuse.get(CLE_LONGITUDE) instanceof Double lonP
-        && DistanceGeo.metres(lat, lon, latP, lonP) > DISTANCE_MAX_COLLISION_METRES);
   }
 
   // Retour null idiomatique (une entité unique trouvée ou non, pas une collection
