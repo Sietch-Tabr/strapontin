@@ -14,6 +14,7 @@
       <main id="contenu-principal" class="contenu-principal">
         <BanniereIncident />
         <BanniereSysteme />
+        <BandeauCanalPerdu />
         <RouterView />
       </main>
     </div>
@@ -70,6 +71,7 @@ import BottomNav from "./components/layout/BottomNav.vue";
 import DrawerNav from "./components/layout/DrawerNav.vue";
 import BanniereSysteme from "./components/layout/BanniereSysteme.vue";
 import BanniereIncident from "./components/layout/BanniereIncident.vue";
+import BandeauCanalPerdu from "./components/layout/BandeauCanalPerdu.vue";
 import ToastContainer from "./components/layout/ToastContainer.vue";
 import OnboardingModal from "./components/layout/OnboardingModal.vue";
 import InstallPwaBanner from "./components/layout/InstallPwaBanner.vue";

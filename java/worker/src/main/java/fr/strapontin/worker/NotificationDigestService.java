@@ -145,11 +145,12 @@ public class NotificationDigestService {
       List<ConcertNotif> concertsEmail,
       List<ConcertNotif> concertsPush) {
 
-    // Rien à envoyer par email, et des push sans appareil abonné : ce n'est pas
-    // un échec, l'utilisateur n'a aucun canal (Paramètres le lui signale).
+    // Email ou push sans objet, sans service d'envoi configuré ou (push) sans
+    // appareil abonné : pas un échec, l'utilisateur n'a aucun canal joignable.
     /* package-private : appelé par traiterDigestUtilisateur (même classe). */
-    boolean sansCanal(final boolean abonnePush) {
-      return concertsEmail.isEmpty() && (concertsPush.isEmpty() || !abonnePush);
+    boolean sansCanal(final boolean abonnePush, final boolean emailDisponible) {
+      return (concertsEmail.isEmpty() || !emailDisponible)
+          && (concertsPush.isEmpty() || !abonnePush);
     }
   }
 
@@ -166,8 +167,8 @@ public class NotificationDigestService {
    * Parcourt les matches non notifiés pour une fréquence donnée, envoie le
    * digest, met à jour {@code notifie_le} .
    *
-   * @param frequence {@code "temps_reel"} (après chaque recalcul) ou
-   *     {@code "quotidien"} (cron 8h)
+   * @param frequence {@code "temps_reel"} (après chaque recalcul),
+   *     {@code "quotidien"} (cron 8h) ou {@code "hebdomadaire"} (dimanche 10h)
    */
   public void executerDigest(final String frequence) {
     LOG.info("notifier:digest démarré frequence={}", frequence);
@@ -238,7 +239,10 @@ public class NotificationDigestService {
               groupes.configsUtilisateurs().get(userId));
       emailOk = res.emailOk();
       pushOk = res.pushOk();
-      sansCanal = res.sansCanal(pushDigestService.aUnAbonnement(userId));
+      sansCanal =
+          res.sansCanal(
+              pushDigestService.serviceDisponible() && pushDigestService.aUnAbonnement(userId),
+              emailDigestService.serviceDisponible());
       // Seuls les concerts du canal effectivement en succès sont marqués
       // notifiés : un digest mixte email+push où un seul canal échoue ne doit
       // pas marquer à tort les concerts du canal en échec comme notifiés.

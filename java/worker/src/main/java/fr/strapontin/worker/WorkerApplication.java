@@ -4,8 +4,7 @@
  */
 package fr.strapontin.worker;
 
-import java.security.Security;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import fr.strapontin.core.FournisseurBouncyCastle;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -25,7 +24,7 @@ public final class WorkerApplication {
    * @param args arguments de la ligne de commande
    */
   public static void main(final String[] args) {
-    Security.addProvider(new BouncyCastleProvider());
+    FournisseurBouncyCastle.garantir();
     SpringApplication.run(WorkerApplication.class, args);
   }
 }

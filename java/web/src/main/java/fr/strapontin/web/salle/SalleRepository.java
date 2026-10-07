@@ -6,6 +6,7 @@ package fr.strapontin.web.salle;
 
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.TicketmasterSource;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -222,6 +223,31 @@ class SalleRepository {
       ids.add(prefixe + ":" + l.get("identifiant_externe"));
     }
     return String.join(",", ids);
+  }
+
+  /**
+   * Salle déjà rattachée au lieu Ticketmaster ou à l'élément Wikidata
+   * proposés par la recherche, avant toute résolution par le nom.
+   * @param tmVenueId identifiant Ticketmaster, peut être {@code null}
+   * @param wikidataId Q-ID Wikidata, peut être {@code null}
+   * @return la salle trouvée, ou {@code null}
+   */
+  /* package-private : accès SQL réservé à SalleService (même package). */
+  UUID trouverParIdentifiants(final String tmVenueId, final String wikidataId) {
+    final List<UUID> salles =
+        jdbc.queryForList(
+            """
+            SELECT salle_id FROM salle_sources
+            WHERE source = 'ticketmaster' AND identifiant_externe = :tm
+            UNION ALL
+            SELECT id FROM salles WHERE wikidata_id = :qid
+            LIMIT 1
+            """,
+            new MapSqlParameterSource()
+                .addValue("tm", tmVenueId, Types.VARCHAR)
+                .addValue("qid", wikidataId, Types.VARCHAR),
+            UUID.class);
+    return salles.isEmpty() ? null : salles.get(0);
   }
 
   /**

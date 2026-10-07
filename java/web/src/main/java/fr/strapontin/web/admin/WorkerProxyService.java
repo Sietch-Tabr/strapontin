@@ -32,6 +32,16 @@ public class WorkerProxyService {
   private static final String WORKER_BASE_URL = "http://localhost:8081";
   private static final String CLE_MDC_CORRELATION_ID = "correlationId";
   private static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
+
+  /** Message affiché quand le service de récupération des concerts ne répond pas. */
+  public static final String MESSAGE_INJOIGNABLE =
+      "Le service de récupération des concerts ne répond pas. Réessayez dans quelques minutes.";
+
+  /** Message affiché quand ce service répond en erreur (détail technique au journal). */
+  public static final String MESSAGE_EN_ERREUR =
+      "Le service de récupération des concerts a rencontré une erreur."
+          + " Réessayez dans quelques minutes.";
+
   private static final String NIVEAU_INFO = "info";
   private static final String SOURCE_ADMIN = "admin";
 
@@ -158,11 +168,10 @@ public class WorkerProxyService {
       logAdminService.logAdmin(NIVEAU_INFO, SOURCE_ADMIN, "Fetches relancés manuellement");
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
-      return new ResultatRelance(
-          false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
+      return new ResultatRelance(false, MESSAGE_EN_ERREUR, 502);
     } catch (Exception e) {
       LOG.warn("Erreur appel worker trigger : {}", e.getMessage());
-      return new ResultatRelance(false, "Worker inaccessible.", 503);
+      return new ResultatRelance(false, MESSAGE_INJOIGNABLE, 503);
     }
   }
 
@@ -186,13 +195,12 @@ public class WorkerProxyService {
     } catch (RestClientResponseException e) {
       if (e.getStatusCode().value() == HttpStatus.BAD_REQUEST.value()) {
         return new ResultatRelance(
-            false, "Job inconnu : " + typeJob + ".", HttpStatus.BAD_REQUEST.value());
+            false, "Tâche inconnue : " + typeJob + ".", HttpStatus.BAD_REQUEST.value());
       }
-      return new ResultatRelance(
-          false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
+      return new ResultatRelance(false, MESSAGE_EN_ERREUR, 502);
     } catch (Exception e) {
       LOG.warn("Erreur appel worker trigger job typeJob={} : {}", typeJob, e.getMessage());
-      return new ResultatRelance(false, "Worker inaccessible.", 503);
+      return new ResultatRelance(false, MESSAGE_INJOIGNABLE, 503);
     }
   }
 
@@ -217,12 +225,11 @@ public class WorkerProxyService {
           Map.of("version", version));
       return new ResultatRelance(true, null, 200);
     } catch (RestClientResponseException e) {
-      return new ResultatRelance(
-          false, "Erreur interne worker (statut " + e.getStatusCode().value() + ").", 502);
+      return new ResultatRelance(false, MESSAGE_EN_ERREUR, 502);
     } catch (Exception e) {
       LOG.warn(
           "Erreur appel worker trigger notifier-version version={} : {}", version, e.getMessage());
-      return new ResultatRelance(false, "Worker inaccessible.", 503);
+      return new ResultatRelance(false, MESSAGE_INJOIGNABLE, 503);
     }
   }
 }

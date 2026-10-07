@@ -11,6 +11,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,6 +189,36 @@ class EventimSourceTest {
                     Map.of("name", "Sinsemilia"),
                     Map.of("name", "Tryo"))),
             "Tryo"));
+  }
+
+  // Cas réel du 06/10/2026 : « Les Rendez-vous Soniques #17 » du 14/11, sans Suzane, à côté
+  // de sa propre date nommée.
+  @Test
+  void retenir_soireeTitreeDuSeulFestivalAvecUneDateNommantLArtiste_estEcartee() {
+    final Map<String, Object> saDate =
+        produitFestival("Suzane + Marguerite + Sam Sauvage - Les Rendez-Vous Soniques #17");
+    final Map<String, Object> autreSoiree = produitFestival("Les Rendez-vous Soniques #17");
+    final List<Map<String, Object>> ecartes = new ArrayList<>();
+
+    final List<Map<String, Object>> retenus =
+        ProduitsDeLArtiste.retenir(List.of(saDate, autreSoiree), "Suzane", ecartes::add);
+
+    assertEquals(List.of(saDate), retenus);
+    assertEquals(List.of(autreSoiree), ecartes);
+  }
+
+  // Une date réelle peut n'être titrée que du festival (Nancy Jazz Pulsations) : sans autre
+  // produit nommant l'artiste, elle est gardée.
+  @Test
+  void retenir_titreDuSeulFestivalSansDateNommantLArtiste_estGarde() {
+    final Map<String, Object> soiree =
+        Map.of(
+            "name",
+            "Nancy Jazz Pulsations",
+            "attractions",
+            List.of(Map.of("name", "Nancy Jazz Pulsations"), Map.of("name", "Ibeyi")));
+
+    assertEquals(List.of(soiree), ProduitsDeLArtiste.retenir(List.of(soiree), "Ibeyi", _ -> {}));
   }
 
   @Test

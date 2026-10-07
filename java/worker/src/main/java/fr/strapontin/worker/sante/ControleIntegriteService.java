@@ -53,6 +53,14 @@ public class ControleIntegriteService {
   }
 
   /**
+   * @return paires de salles au même lieu sous des noms désignant sans
+   *     ambiguïté ce lieu, à fusionner avant les contrôles
+   */
+  public List<UUID[]> pairesMemeLieuFortes() {
+    return dispersionGeo.pairesMemeLieuFortes();
+  }
+
+  /**
    * Exécute les invariants, dont {@link ControleDispersionGeo} et
    * {@link ControleInvariantsDonnees}.
    * @return nombre de signalements nouvellement posés, tous invariants

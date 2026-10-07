@@ -239,6 +239,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../utils/api.js";
+import { notificationsJoignables } from "../composables/useEtatNotifications.js";
 defineOptions({ name: "SallesPage" });
 
 import { ref, shallowRef, onMounted, onUnmounted } from "vue";
@@ -319,10 +320,10 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
       return;
     }
     afficherToast(
-      "Salle ajoutée — les concerts apparaîtront dans quelques secondes.",
-      "succes",
+      `Recherche des concerts de « ${nom} » en cours : ils apparaîtront dans quelques secondes.`,
+      "info",
     );
-    if (premierAjout) {
+    if (premierAjout && (await notificationsJoignables()) === false) {
       afficherToast(
         "Astuce : activez les notifications dans Paramètres pour être alerté de vos prochains concerts.",
         "info",

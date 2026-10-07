@@ -9,6 +9,7 @@ import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -66,26 +67,27 @@ public class WorkerPurgeService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkerStatsService workerStatsService;
-  private final PurgeCompteEmailService purgeCompteEmailService;
+  private final EmailCompteService emailCompteService;
   private final ConfigServiceWorker configService;
   private final LogsAdminWorker logsAdminWorker;
 
   /**
    * @param jdbc accès JDBC
    * @param workerStatsService journalisation du bilan de purge
-   * @param purgeCompteEmailService envoi des relances avant purge de compte
+   * @param emailCompteService envoi des relances avant purge de compte
    * @param configService lecture de PUBLIC_BASE_URL (lien d'activation)
-   * @param logsAdminWorker signalement admin des relances et suppressions de comptes
+   * @param logsAdminWorker signalement admin des relances, des suppressions
+   *     de comptes et des lieux supprimés avec leur salle
    */
   public WorkerPurgeService(
       final NamedParameterJdbcTemplate jdbc,
       final WorkerStatsService workerStatsService,
-      final PurgeCompteEmailService purgeCompteEmailService,
+      final EmailCompteService emailCompteService,
       final ConfigServiceWorker configService,
       final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.workerStatsService = workerStatsService;
-    this.purgeCompteEmailService = purgeCompteEmailService;
+    this.emailCompteService = emailCompteService;
     this.configService = configService;
     this.logsAdminWorker = logsAdminWorker;
   }
@@ -198,9 +200,17 @@ public class WorkerPurgeService {
                   (rs, _) -> rs.getObject("id", UUID.class));
 
           int supprimes = 0;
+          final List<String> lieuxSupprimes = new ArrayList<>();
           for (final UUID id : candidats) {
             try {
+              final List<String> lieux =
+                  jdbc.queryForList(
+                      "SELECT source || ':' || identifiant_externe FROM salle_sources"
+                          + " WHERE salle_id = CAST(:id AS uuid)",
+                      Map.of("id", id),
+                      String.class);
               jdbc.update("DELETE FROM salles WHERE id = CAST(:id AS uuid)", Map.of("id", id));
+              lieuxSupprimes.addAll(lieux);
               supprimes++;
             } catch (DuplicateKeyException e) {
               LOG.warn(
@@ -210,6 +220,14 @@ public class WorkerPurgeService {
             }
           }
 
+          // Un lieu peut avoir été saisi par un admin : sa disparition reste traçable.
+          if (!lieuxSupprimes.isEmpty()) {
+            logsAdminWorker.inserer(
+                "info",
+                "purger-salles",
+                "lieux supprimés avec leurs salles orphelines : " + lieuxSupprimes.size(),
+                Map.of("salles", supprimes, "lieux", lieuxSupprimes));
+          }
           LOG.info("purger:salles terminé supprimes={}", supprimes);
           return new ResultatPersistance(0, supprimes);
         });
@@ -300,7 +318,7 @@ public class WorkerPurgeService {
           int relances = 0;
           for (final Map<String, Object> ligne : aRelancer) {
             final String email = (String) ligne.get(CLE_EMAIL);
-            if (purgeCompteEmailService.envoyerRelanceInactivite(email, DELAI_GRACE_JOURS)) {
+            if (emailCompteService.envoyerRelanceInactivite(email, DELAI_GRACE_JOURS)) {
               relances++;
             }
             jdbc.update(
@@ -338,7 +356,7 @@ public class WorkerPurgeService {
           for (final Map<String, Object> ligne : aRelancer) {
             final String email = (String) ligne.get(CLE_EMAIL);
             final String lien = baseUrl + "/reset-password?token=" + creerJetonInvitation(email);
-            if (purgeCompteEmailService.envoyerRelanceInvitation(
+            if (emailCompteService.envoyerRelanceInvitation(
                 email, lien, LocalDate.now().plusDays(DUREE_LIEN_RELANCE_JOURS))) {
               relances++;
             }

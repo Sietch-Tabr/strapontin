@@ -16,16 +16,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Envoi email (Resend) des relances de purge de compte — même
+ * Envoi email (Resend) des messages liés au compte (relances de purge,
+ * perte du dernier canal de notification) — même
  * infrastructure indépendante que {@link NotificationEmailDigestService}
  * (worker n'a pas accès à l'{@code EmailSender} du module web).
  * @since 3.0.0
  * @author Kwaite
  */
 @Service
-public class PurgeCompteEmailService {
+public class EmailCompteService {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PurgeCompteEmailService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(EmailCompteService.class);
 
   private final ConfigServiceWorker configService;
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
@@ -36,7 +37,7 @@ public class PurgeCompteEmailService {
    * @param gestionQuotaResendWorker garde-fou de quota Resend worker
    */
   @Autowired
-  public PurgeCompteEmailService(
+  public EmailCompteService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker) {
     this(configService, gestionQuotaResendWorker, Resend::new);
@@ -44,7 +45,7 @@ public class PurgeCompteEmailService {
 
   /* package-private : constructeur de test, fabrique Resend substituable
    * (même package). */
-  PurgeCompteEmailService(
+  EmailCompteService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker,
       final NotificationDigestService.FabriqueResend fabriqueResend) {
@@ -64,7 +65,7 @@ public class PurgeCompteEmailService {
     return envoyer(
         email,
         "Votre compte Strapontin va être supprimé pour inactivité",
-        baseUrl -> PurgeCompteEmailTemplate.relanceInactivite(joursGrace, baseUrl));
+        baseUrl -> EmailCompteTemplate.relanceInactivite(joursGrace, baseUrl));
   }
 
   /**
@@ -80,7 +81,21 @@ public class PurgeCompteEmailService {
     return envoyer(
         email,
         "Votre invitation Strapontin expire bientôt",
-        baseUrl -> PurgeCompteEmailTemplate.relanceInvitation(lienActivation, dateLimite, baseUrl));
+        baseUrl -> EmailCompteTemplate.relanceInvitation(lienActivation, dateLimite, baseUrl));
+  }
+
+  /**
+   * Prévient un utilisateur que plus aucune notification ne peut lui
+   * parvenir : envoyé même si ses notifications email sont désactivées.
+   *
+   * @param email destinataire
+   * @return {@code true} si l'email a été envoyé
+   */
+  public boolean envoyerAvertissementCanalPerdu(final String email) {
+    return envoyer(
+        email,
+        "Vous ne recevez plus les nouveaux concerts de Strapontin",
+        EmailCompteTemplate::avertissementCanalPerdu);
   }
 
   private boolean envoyer(
@@ -89,7 +104,7 @@ public class PurgeCompteEmailService {
       final java.util.function.Function<String, String> corps) {
     final Optional<String> cle = configService.lireConfig("RESEND_API_KEY");
     if (cle.isEmpty()) {
-      LOG.debug("RESEND_API_KEY absent — relance de purge ignorée");
+      LOG.debug("RESEND_API_KEY absent — email de compte ignoré");
       return false;
     }
     if (!gestionQuotaResendWorker.reserverEnvoi()) {
@@ -109,10 +124,10 @@ public class PurgeCompteEmailService {
               .text(sujet)
               .build();
       resend.emails().send(options);
-      LOG.info("Relance de purge envoyée : {}", email);
+      LOG.info("Email de compte envoyé : {}", sujet);
       return true;
     } catch (Exception e) {
-      LOG.error("Échec envoi relance de purge : {}", email, e);
+      LOG.error("Échec envoi email de compte : {}", sujet, e);
       return false;
     }
   }

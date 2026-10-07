@@ -26,6 +26,7 @@
         <use :href="'/icons/lucide-sprite.svg#' + etapeCourante.icone" />
       </svg>
       <p>{{ etapeCourante.texte }}</p>
+      <slot v-if="etapeCourante.cle" :name="etapeCourante.cle" />
     </div>
 
     <div

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,30 +53,39 @@ class PasswordResetControllerTest {
   // (@Valid ne s'exerce pas sur un appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
-  void reinitialiserMotDePasse_identifiantTropCourt_retourne400() {
-    final var reponse =
-        controller.reinitialiserMotDePasse(
-            new ResetPasswordRequest("token", "motdepasse12345", "ab"),
-            mock(HttpServletRequest.class));
-    assertEquals(400, reponse.getStatusCode().value());
+  void reinitialiserMotDePasse_identifiantTropCourt_leveErreurMetierDeLaRegleCommune() {
+    final ErreurMetier erreur =
+        assertThrows(
+            ErreurMetier.class,
+            () ->
+                controller.reinitialiserMotDePasse(
+                    new ResetPasswordRequest("token", "motdepasse12345", "ab"),
+                    mock(HttpServletRequest.class)));
+    assertEquals(RegleIdentifiant.MESSAGE, erreur.getMessage());
   }
 
   @Test
-  void reinitialiserMotDePasse_identifiantTropLong_retourne400() {
-    final var reponse =
-        controller.reinitialiserMotDePasse(
-            new ResetPasswordRequest("token", "motdepasse12345", "a".repeat(31)),
-            mock(HttpServletRequest.class));
-    assertEquals(400, reponse.getStatusCode().value());
+  void reinitialiserMotDePasse_identifiantTropLong_leveErreurMetierDeLaRegleCommune() {
+    final ErreurMetier erreur =
+        assertThrows(
+            ErreurMetier.class,
+            () ->
+                controller.reinitialiserMotDePasse(
+                    new ResetPasswordRequest("token", "motdepasse12345", "a".repeat(31)),
+                    mock(HttpServletRequest.class)));
+    assertEquals(RegleIdentifiant.MESSAGE, erreur.getMessage());
   }
 
   @Test
-  void reinitialiserMotDePasse_identifiantFormatInvalide_retourne400() {
-    final var reponse =
-        controller.reinitialiserMotDePasse(
-            new ResetPasswordRequest("token", "motdepasse12345", "alice:test"),
-            mock(HttpServletRequest.class));
-    assertEquals(400, reponse.getStatusCode().value());
+  void reinitialiserMotDePasse_identifiantFormatInvalide_leveErreurMetierDeLaRegleCommune() {
+    final ErreurMetier erreur =
+        assertThrows(
+            ErreurMetier.class,
+            () ->
+                controller.reinitialiserMotDePasse(
+                    new ResetPasswordRequest("token", "motdepasse12345", "alice:test"),
+                    mock(HttpServletRequest.class)));
+    assertEquals(RegleIdentifiant.MESSAGE, erreur.getMessage());
   }
 
   @Test

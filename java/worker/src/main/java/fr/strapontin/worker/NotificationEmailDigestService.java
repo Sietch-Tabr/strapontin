@@ -37,6 +37,14 @@ class NotificationEmailDigestService {
     this.fabriqueResend = fabriqueResend;
   }
 
+  /**
+   * @return {@code true} si une clé Resend est configurée
+   */
+  /* package-private : appelé par NotificationDigestService (même package). */
+  boolean serviceDisponible() {
+    return configService.lireConfig("RESEND_API_KEY").isPresent();
+  }
+
   /* package-private : appelé par NotificationDigestService (même package). */
   boolean envoyerEmail(
       final String email, final List<NotificationDigestService.ConcertNotif> concerts) {

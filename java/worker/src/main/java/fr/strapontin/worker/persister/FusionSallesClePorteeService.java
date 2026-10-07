@@ -9,7 +9,6 @@ import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.SalleHierarchie;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -210,6 +209,56 @@ public class FusionSallesClePorteeService {
    */
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
+    fusionnerUnePaire(cibleId, sourceId, "clé forte (artiste+date+heure+dept)");
+  }
+
+  /**
+   * Fusionne les paires de salles d'un même lieu (positions et noms
+   * concordants) qui sont fiables, de même département et hors complexe et
+   * sous-salle ; une paire déjà absorbée dans le cycle est ignorée.
+   * @param paires paires {@code [salleA, salleB]} détectées au même lieu
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerMemesLieux(final List<UUID[]> paires) {
+    final Set<UUID> dejaAbsorbees = new HashSet<>();
+    int fusions = 0;
+    for (final UUID[] paire : paires) {
+      if (dejaAbsorbees.contains(paire[0])
+          || dejaAbsorbees.contains(paire[1])
+          || !fusionnableAuMemeLieu(paire[0], paire[1])) {
+        continue;
+      }
+      final UUID[] cibleSource = choisirCibleEtSource(paire[0], paire[1]);
+      if (cibleSource != null) {
+        fusionnerUnePaire(cibleSource[0], cibleSource[1], "même lieu (position et nom)");
+        dejaAbsorbees.add(cibleSource[1]);
+        fusions++;
+      }
+    }
+    return fusions;
+  }
+
+  private boolean fusionnableAuMemeLieu(final UUID idA, final UUID idB) {
+    final Integer nb =
+        jdbc.queryForObject(
+            "SELECT count(*) FROM salles sa JOIN salles sb ON sb.id = CAST(:b AS uuid)"
+                + " WHERE sa.id = CAST(:a AS uuid) AND sa.dept IS NOT NULL AND sa.dept = sb.dept"
+                + " AND sa.salle_parent_id IS DISTINCT FROM sb.id"
+                + " AND sb.salle_parent_id IS DISTINCT FROM sa.id AND"
+                + SalleFiable.condition("sa")
+                + " AND"
+                + SalleFiable.condition("sb"),
+            Map.of("a", idA.toString(), "b", idB.toString()),
+            Integer.class);
+    return nb != null && nb > 0;
+  }
+
+  /**
+   * @param cibleId salle à conserver
+   * @param sourceId salle à absorber puis supprimer
+   * @param motif raison de la fusion, journalisée
+   */
+  private void fusionnerUnePaire(final UUID cibleId, final UUID sourceId, final String motif) {
     final Map<String, Object> ids =
         Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString());
     // Lus avant la suppression : la salle absorbée n'est sinon plus identifiable.
@@ -217,14 +266,15 @@ public class FusionSallesClePorteeService {
     final String nomSource = decrireSalle(sourceId);
 
     fusionnerEvenements(ids);
-    fusionnerAbonnementsEtSources(ids, cibleId, sourceId);
+    fusionnerAbonnementsEtSources(ids, cibleId);
     fusionnerMetadonneesEtSousSalles(ids, cibleId, sourceId);
 
     // 7. Suppression de la salle source
     jdbc.update("DELETE FROM salles WHERE id = CAST(:source AS uuid)", ids);
 
     LOG.info(
-        "reconciliation:nocturne — salles fusionnées par clé forte cible={} ({}) source={} ({})",
+        "reconciliation:nocturne — salles fusionnées ({}) cible={} ({}) source={} ({})",
+        motif,
         cibleId,
         nomCible,
         sourceId,
@@ -235,7 +285,9 @@ public class FusionSallesClePorteeService {
     logsAdminWorker.inserer(
         "info",
         "reconciliation-nocturne",
-        "salles fusionnées automatiquement par clé forte (artiste+date+heure+dept) cible="
+        "salles fusionnées automatiquement par "
+            + motif
+            + " cible="
             + nomCible
             + " source="
             + nomSource,
@@ -304,9 +356,8 @@ public class FusionSallesClePorteeService {
   }
 
   // 3. Abonnements en double supprimés, le reste réassigné. 4. Sources externes
-  // réassignées, dédoublonnage préalable des conflits par type de source.
-  private void fusionnerAbonnementsEtSources(
-      final Map<String, Object> ids, final UUID cibleId, final UUID sourceId) {
+  // réassignées, toutes gardées.
+  private void fusionnerAbonnementsEtSources(final Map<String, Object> ids, final UUID cibleId) {
     jdbc.update(
         """
         DELETE FROM user_salles
@@ -322,11 +373,25 @@ public class FusionSallesClePorteeService {
             + " AS uuid)",
         ids);
 
-    dedupliquerSallesSourcesAvantFusion(cibleId, sourceId);
+    // Tous les lieux sont gardés : une salle a souvent plusieurs lieux d'une même
+    // source pour un même bâtiment, et la clé (source, identifiant) n'en dépend pas.
+    final List<String> lieuxReportes =
+        jdbc.queryForList(
+            "SELECT source || ':' || identifiant_externe FROM salle_sources"
+                + " WHERE salle_id = CAST(:source AS uuid) ORDER BY 1",
+            ids,
+            String.class);
     jdbc.update(
         "UPDATE salle_sources SET salle_id = CAST(:cible AS uuid) WHERE salle_id = CAST(:source"
             + " AS uuid)",
         ids);
+    if (!lieuxReportes.isEmpty()) {
+      logsAdminWorker.inserer(
+          "info",
+          "reconciliation-nocturne",
+          "lieux reportés sur la salle conservée après fusion cible=" + cibleId,
+          Map.of("salleCible", cibleId.toString(), "lieux", lieuxReportes));
+    }
   }
 
   // 5. Métadonnées récupérées si la cible ne les a pas déjà. 6. Sous-salles de
@@ -403,55 +468,5 @@ public class FusionSallesClePorteeService {
             Map.of("id", salleId.toString()),
             (rs, _) -> (UUID) rs.getObject("salle_parent_id"));
     return resultat.isEmpty() ? null : resultat.get(0);
-  }
-
-  private void dedupliquerSallesSourcesAvantFusion(final UUID cibleId, final UUID sourceId) {
-    final List<Map<String, Object>> conflits =
-        jdbc.queryForList(
-            """
-            SELECT src.source AS source,
-                   src.identifiant_externe AS id_source,
-                   dst.identifiant_externe AS id_cible,
-                   src.nb_zero_consecutifs AS sante_source,
-                   dst.nb_zero_consecutifs AS sante_cible,
-                   (src.suspect_depuis IS NOT NULL) AS suspect_source,
-                   (dst.suspect_depuis IS NOT NULL) AS suspect_cible
-            FROM salle_sources src
-            JOIN salle_sources dst ON dst.source = src.source AND dst.salle_id = CAST(:cible AS uuid)
-            WHERE src.salle_id = CAST(:source AS uuid)
-            """,
-            Map.of(CLE_CIBLE, cibleId.toString(), CLE_SOURCE, sourceId.toString()));
-
-    for (final Map<String, Object> conflit : conflits) {
-      final boolean garderSource = laSourceEstPlusSaine(conflit);
-      final Map<String, Object> paramsSuppression = new HashMap<>();
-      paramsSuppression.put(CLE_SOURCE, conflit.get(CLE_SOURCE));
-      paramsSuppression.put("salleId", garderSource ? cibleId.toString() : sourceId.toString());
-      paramsSuppression.put(
-          "identifiantExterne", conflit.get(garderSource ? "id_cible" : "id_source"));
-      jdbc.update(
-          "DELETE FROM salle_sources WHERE salle_id = CAST(:salleId AS uuid) AND source ="
-              + " :source AND identifiant_externe = :identifiantExterne",
-          paramsSuppression);
-    }
-  }
-
-  /**
-   * Même comparateur que {@code ReferentielSallesService.laSourceEstPlusSaine}
-   * (module web) : une ligne non suspecte l'emporte toujours sur une ligne
-   * suspecte, à égalité de statut la ligne avec le moins d'échecs consécutifs
-   * l'emporte.
-   *
-   * @return {@code true} si la ligne côté source doit être conservée
-   */
-  private static boolean laSourceEstPlusSaine(final Map<String, Object> conflit) {
-    final boolean suspectSource = Boolean.TRUE.equals(conflit.get("suspect_source"));
-    final boolean suspectCible = Boolean.TRUE.equals(conflit.get("suspect_cible"));
-    if (suspectSource != suspectCible) {
-      return !suspectSource;
-    }
-    final long santeSource = ((Number) conflit.get("sante_source")).longValue();
-    final long santeCible = ((Number) conflit.get("sante_cible")).longValue();
-    return santeSource <= santeCible;
   }
 }

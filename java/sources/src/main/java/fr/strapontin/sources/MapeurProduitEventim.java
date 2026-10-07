@@ -166,7 +166,8 @@ final class MapeurProduitEventim {
   }
 
   @SuppressWarnings("unchecked")
-  private static String extraireUrlProduit(final Map<String, Object> produit) {
+  /* package-private : appelé aussi par ProduitsDeLArtiste (même package). */
+  static String extraireUrlProduit(final Map<String, Object> produit) {
     final String lienDirect = (String) produit.get("link");
     if (lienDirect != null && lienDirect.startsWith("http")) {
       return lienDirect;

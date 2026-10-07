@@ -31,6 +31,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class ReferentielSallesController {
 
+  private static final String MESSAGE_UUID_INVALIDE = "UUID invalide.";
+
   private final ReferentielSallesService service;
   private final RepartitionSalleService repartitionService;
 
@@ -54,9 +56,25 @@ public class ReferentielSallesController {
   public ResponseEntity<?> listerLibellesSources(@PathVariable final String uuid) {
     final UUID salleId = parseUuid(uuid);
     if (salleId == null) {
-      return erreur(400, "UUID invalide.");
+      return erreur(400, MESSAGE_UUID_INVALIDE);
     }
     return ResponseEntity.ok(repartitionService.listerLibelles(salleId));
+  }
+
+  /**
+   * Lieux de toutes les sources rattachés à une salle, pour préparer sa
+   * répartition.
+   *
+   * @param uuid UUID de la salle
+   * @return 200 avec les lieux, 400 si UUID invalide
+   */
+  @GetMapping("/salles/{uuid}/lieux-sources")
+  public ResponseEntity<?> listerLieuxSources(@PathVariable final String uuid) {
+    final UUID salleId = parseUuid(uuid);
+    if (salleId == null) {
+      return erreur(400, MESSAGE_UUID_INVALIDE);
+    }
+    return ResponseEntity.ok(repartitionService.listerLieux(salleId));
   }
 
   /**
@@ -69,7 +87,7 @@ public class ReferentielSallesController {
       @PathVariable final String uuid, @Valid @RequestBody final RequeteRepartitionSalle requete) {
     final UUID salleId = parseUuid(uuid);
     if (salleId == null) {
-      return erreur(400, "UUID invalide.");
+      return erreur(400, MESSAGE_UUID_INVALIDE);
     }
     return ResponseEntity.ok(repartitionService.repartir(salleId, requete));
   }
@@ -150,7 +168,7 @@ public class ReferentielSallesController {
     final UUID source = parseUuid(uuid);
     final UUID cible = parseUuid(uuidCible);
     if (source == null || cible == null) {
-      return erreur(400, "UUID invalide.");
+      return erreur(400, MESSAGE_UUID_INVALIDE);
     }
     if (source.equals(cible)) {
       return erreur(400, "Les deux salles doivent être différentes.");

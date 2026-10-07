@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -85,6 +86,10 @@ public class PreferencesService {
   public ExportComplet deserialiserExport(final byte[] contenu) {
     try {
       return objectMapper.readValue(contenu, ExportComplet.class);
+    } catch (JacksonException e) {
+      // Fichier fourni par l'utilisateur : une erreur de format n'est pas une panne.
+      LOG.info("Import préférences : fichier illisible ({})", e.getClass().getSimpleName());
+      return null;
     } catch (Exception e) {
       LOG.warn("Import préférences : désérialisation échouée", e);
       return null;

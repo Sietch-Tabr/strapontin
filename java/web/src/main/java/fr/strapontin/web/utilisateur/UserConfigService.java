@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.utilisateur;
 
+import fr.strapontin.core.CanalNotificationPerdu;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
@@ -33,7 +34,8 @@ public class UserConfigService {
 
   private static final Logger LOG = LoggerFactory.getLogger(UserConfigService.class);
   private static final Pattern FORMAT_DEPT = Pattern.compile("^\\d{2,3}$");
-  private static final Set<String> FREQUENCES_VALIDES = Set.of("jamais", "temps_reel", "quotidien");
+  private static final Set<String> FREQUENCES_VALIDES =
+      Set.of("jamais", "temps_reel", "quotidien", "hebdomadaire");
   private static final Set<String> THEMES_VALIDES = Set.of("auto", "clair", "sombre");
   private static final String CLE_USER_ID = "userId";
   private static final String CLE_DEPARTEMENTS = "departements";
@@ -68,6 +70,20 @@ public class UserConfigService {
     this.jdbc = jdbc;
     this.configService = configService;
     this.logAdminService = logAdminService;
+  }
+
+  /**
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si ses notifications actives ne peuvent plus lui
+   *     parvenir depuis le retrait automatique de son dernier appareil push
+   */
+  public boolean canalNotificationPerdu(final String userId) {
+    return !jdbc.queryForList(
+            "SELECT 1 FROM user_config uc WHERE uc.user_id = :userId AND "
+                + CanalNotificationPerdu.CONDITION_SQL,
+            Map.of(CLE_USER_ID, userId),
+            Integer.class)
+        .isEmpty();
   }
 
   /**
@@ -121,8 +137,7 @@ public class UserConfigService {
     final boolean resendDisponible = configService.lireConfig("RESEND_API_KEY").isPresent();
 
     if (lignes.isEmpty()) {
-      return new ConfigUtilisateur(
-          List.of(), true, "jamais", false, false, false, false, false, "auto", resendDisponible);
+      return configParDefaut(resendDisponible);
     }
     final ConfigUtilisateur base = lignes.get(0);
     return new ConfigUtilisateur(
@@ -342,4 +357,19 @@ public class UserConfigService {
 
   /** Résultat de la mise à jour des départements. */
   public record ResultatMajDepartements(List<String> ignores) {}
+
+  // Mêmes valeurs que les défauts de user_config (migration V83).
+  private static ConfigUtilisateur configParDefaut(final boolean resendDisponible) {
+    return new ConfigUtilisateur(
+        List.of(),
+        true,
+        "hebdomadaire",
+        true,
+        false,
+        false,
+        false,
+        false,
+        "auto",
+        resendDisponible);
+  }
 }

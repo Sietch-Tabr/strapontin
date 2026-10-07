@@ -5,8 +5,7 @@
     </h1>
     <p class="auth-sous-titre">
       <template v-if="estInvite">
-        Choisissez votre identifiant de connexion et un mot de passe d'au moins
-        12 caractères.
+        Choisissez votre identifiant de connexion et votre mot de passe.
       </template>
       <template v-else>
         Choisissez un mot de passe d'au moins 12 caractères.
@@ -33,12 +32,13 @@
           name="identifiant"
           type="text"
           required
-          minlength="3"
-          maxlength="30"
-          pattern="[a-zA-Z0-9._\-]+"
+          :minlength="IDENTIFIANT_MIN"
+          :maxlength="IDENTIFIANT_MAX"
+          :pattern="IDENTIFIANT_MOTIF"
           autocomplete="username"
-          placeholder="Entre 3 et 30 caractères (lettres, chiffres, . - _)"
+          aria-describedby="aide-identifiant"
         />
+        <p id="aide-identifiant" class="form-aide">{{ AIDE_IDENTIFIANT }}</p>
       </div>
       <div class="form-groupe">
         <label for="mot-de-passe">Nouveau mot de passe</label>
@@ -49,9 +49,11 @@
           name="motDePasse"
           type="password"
           autocomplete="new-password"
-          minlength="12"
+          :minlength="MOT_DE_PASSE_MIN"
+          aria-describedby="aide-mot-de-passe"
           required
         />
+        <p id="aide-mot-de-passe" class="form-aide">{{ AIDE_MOT_DE_PASSE }}</p>
       </div>
       <button
         type="submit"
@@ -70,6 +72,14 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import {
+  AIDE_IDENTIFIANT,
+  AIDE_MOT_DE_PASSE,
+  IDENTIFIANT_MAX,
+  IDENTIFIANT_MIN,
+  IDENTIFIANT_MOTIF,
+  MOT_DE_PASSE_MIN,
+} from "../../utils/identifiant.js";
 defineOptions({ name: "ResetPasswordPage" });
 
 import { ref, onMounted, nextTick } from "vue";

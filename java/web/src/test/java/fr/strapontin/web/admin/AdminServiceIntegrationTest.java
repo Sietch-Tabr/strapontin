@@ -133,4 +133,24 @@ class AdminServiceIntegrationTest extends AbstractWebIntegrationTest {
             "SELECT role::text FROM users WHERE id = :id", Map.of("id", "admin4"), String.class);
     assertEquals("admin", roleEnBase);
   }
+
+  // Sans ligne user_config, le digest du worker ignorait le compte.
+  @Test
+  void creerUtilisateur_nouveauCompte_emailHebdomadaireDesArtistesParDefaut() {
+    service.creerUtilisateur("invite@test.fr", "admin1", "https://exemple.fr");
+
+    final Map<String, Object> config =
+        jdbc.queryForMap(
+            """
+            SELECT uc.frequence_notifications::text AS frequence, uc.notif_artistes,
+                   uc.notif_salles, uc.notif_artistes_push
+            FROM user_config uc JOIN users u ON u.id = uc.user_id
+            WHERE u.email = 'invite@test.fr'
+            """,
+            Map.of());
+    assertEquals("hebdomadaire", config.get("frequence"));
+    assertEquals(true, config.get("notif_artistes"));
+    assertEquals(false, config.get("notif_salles"));
+    assertEquals(false, config.get("notif_artistes_push"));
+  }
 }

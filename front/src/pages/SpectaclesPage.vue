@@ -63,6 +63,7 @@
         type="button"
         class="bouton bouton-secondaire bouton-petit"
         :aria-expanded="filtresVisibles ? 'true' : 'false'"
+        aria-controls="filtres-spectacles"
         @click="filtresVisibles = !filtresVisibles"
       >
         <svg class="icone" aria-hidden="true">
@@ -75,18 +76,27 @@
     </div>
 
     <form
+      id="filtres-spectacles"
       class="filtres-form"
       :class="{ visible: filtresVisibles }"
       @submit.prevent="appliquerFiltres"
     >
       <div class="filtres-ligne">
-        <input
-          v-model="qLocal"
-          type="text"
-          placeholder="Rechercher un artiste…"
-          aria-label="Rechercher un artiste"
-          autocomplete="off"
-        />
+        <div class="filtres-recherche" role="search">
+          <input
+            v-model="qLocal"
+            type="search"
+            placeholder="Rechercher un artiste…"
+            aria-label="Rechercher un artiste"
+            autocomplete="off"
+          />
+          <button type="submit" class="bouton bouton-secondaire">
+            <svg class="icone" aria-hidden="true">
+              <use href="/icons/lucide-sprite.svg#icon-search" />
+            </svg>
+            <span>Rechercher</span>
+          </button>
+        </div>
 
         <label for="filtre-mois" class="lecteur-ecran">Filtrer par mois</label>
         <select id="filtre-mois" v-model="moisLocal" @change="appliquerFiltres">
@@ -144,7 +154,6 @@
           <option value="nouveaute">Par nouveauté</option>
         </select>
 
-        <button type="submit" class="bouton bouton-secondaire">Filtrer</button>
         <RouterLink to="/spectacles" class="bouton bouton-texte"
           >Réinitialiser</RouterLink
         >

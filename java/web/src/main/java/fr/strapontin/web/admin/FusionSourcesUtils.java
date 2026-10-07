@@ -7,8 +7,8 @@ package fr.strapontin.web.admin;
 import java.util.Map;
 
 /**
- * Utilitaires partagés entre {@link ReferentielSallesService} et {@link
- * ReferentielArtistesService} pour la fusion de doublons.
+ * Utilitaire de fusion de doublons d'artistes ({@link
+ * ReferentielArtistesService}) : choix de l'identifiant source à garder.
  *
  * @since 2.8.7
  * @author Kwaite
@@ -23,8 +23,7 @@ final class FusionSourcesUtils {
    * @param conflit ligne agrégée {@code suspect_*}/{@code sante_*}
    * @return {@code true} si la ligne côté source doit être conservée
    */
-  /* package-private : appelé par
-   * ReferentielSallesService/ReferentielArtistesService (même package). */
+  /* package-private : appelé par ReferentielArtistesService (même package). */
   static boolean laSourceEstPlusSaine(final Map<String, Object> conflit) {
     final boolean suspectSource = (boolean) conflit.get("suspect_source");
     final boolean suspectCible = (boolean) conflit.get("suspect_cible");

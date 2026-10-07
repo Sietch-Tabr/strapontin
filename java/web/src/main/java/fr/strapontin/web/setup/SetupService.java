@@ -8,6 +8,7 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.config.ConfigService;
+import fr.strapontin.web.securite.RegleIdentifiant;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -116,12 +117,11 @@ public class SetupService {
       throw new RessourceDejaExistante("L'application est déjà configurée.");
     }
 
-    final String identifiant =
-        requete.identifiant() == null ? "" : requete.identifiant().strip().toLowerCase(Locale.ROOT);
+    final String identifiant = RegleIdentifiant.valider(requete.identifiant());
     final String email =
         requete.email() == null ? "" : requete.email().strip().toLowerCase(Locale.ROOT);
     final String motDePasse = requete.motDePasse() == null ? "" : requete.motDePasse();
-    validerRequeteSetup(identifiant, email, motDePasse);
+    validerRequeteSetup(email, motDePasse);
 
     final String userId = UUID.randomUUID().toString();
     creerCompteAdmin(userId, email, identifiant);
@@ -132,13 +132,7 @@ public class SetupService {
     LOG.info("Premier administrateur créé : {}", identifiant);
   }
 
-  private static void validerRequeteSetup(
-      final String identifiant, final String email, final String motDePasse) {
-    if (identifiant.length() < 3 || !identifiant.matches("[a-z0-9._-]+")) {
-      throw new ErreurMetier(
-          "L'identifiant doit contenir au moins 3 caractères"
-              + " (lettres minuscules, chiffres, points, tirets, _).");
-    }
+  private static void validerRequeteSetup(final String email, final String motDePasse) {
     if (email.isEmpty() || !email.contains("@")) {
       throw new ErreurMetier("L'adresse email est invalide.");
     }
@@ -163,6 +157,9 @@ public class SetupService {
                   false, now(), now())
           """,
           paramsUser);
+      jdbc.update(
+          "INSERT INTO user_config (user_id) VALUES (:id) ON CONFLICT DO NOTHING",
+          Map.of("id", userId));
     } catch (DataIntegrityViolationException e) {
       final RessourceDejaExistante erreur =
           new RessourceDejaExistante("L'application est déjà configurée.");

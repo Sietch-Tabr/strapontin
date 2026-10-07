@@ -348,6 +348,19 @@ class CorrespondanceSalleTest {
         "La Seine Musicale", CorrespondanceSalle.extraireBase("La Seine Musicale - Grande Seine"));
   }
 
+  // « Th du Rond Point -Salle Jean Tardieu » (Eventim et Ticketmaster).
+  @Test
+  void extraireBase_tiretAccoleAuQualificatifEtAbreviation_retourneLeComplexe() {
+    assertEquals(
+        "Théâtre du Rond Point",
+        CorrespondanceSalle.extraireBase("Th du Rond Point -Salle Jean Tardieu"));
+  }
+
+  @Test
+  void extraireBase_tiretInterieurAuNom_retourneNull() {
+    assertNull(CorrespondanceSalle.extraireBase("Église Saint-Louis-en-l'Île"));
+  }
+
   @Test
   void extraireBase_nomSansQualificatif_retourneNull() {
     assertNull(CorrespondanceSalle.extraireBase("Zenith Paris"));

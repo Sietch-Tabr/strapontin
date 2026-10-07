@@ -22,6 +22,7 @@ import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import fr.strapontin.worker.sante.SignalementDatesFestivalEcartees;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -78,7 +79,8 @@ class FetchArtistesBatchExecutorTest {
             mock(NotificationDigestService.class),
             workerStatsService,
             mock(SuiviSanteSourcesService.class),
-            mock(EnregistreurLieuxEventim.class));
+            mock(EnregistreurLieuxEventim.class),
+            mock(SignalementDatesFestivalEcartees.class));
 
     return new FetchArtistesBatchExecutor(
         List.of((SourceConcerts) () -> "aucune-source-simple"),
@@ -157,7 +159,8 @@ class FetchArtistesBatchExecutorTest {
             mock(NotificationDigestService.class),
             mock(WorkerStatsService.class),
             mock(SuiviSanteSourcesService.class),
-            mock(EnregistreurLieuxEventim.class)),
+            mock(EnregistreurLieuxEventim.class),
+            mock(SignalementDatesFestivalEcartees.class)),
         commun);
   }
 

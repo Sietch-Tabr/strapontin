@@ -384,7 +384,7 @@ public class EnrichissementSallesService {
             + " wikidataId="
             + enrichissement.wikidataId(),
         Map.of("salleId", salleId.toString(), CLE_WIKIDATA_ID, enrichissement.wikidataId()));
-    if (porteuse != null) {
+    if (porteuse != null && CollisionWikidataSalle.memeLieuPossible(jdbc, salleId, porteuse)) {
       signalementMatchingService.signaler(
           "collision_wikidata_salle",
           "salle",
@@ -406,7 +406,7 @@ public class EnrichissementSallesService {
   private Map<String, Object> trouverPorteuseWikidataId(final String wikidataId) {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
-            "SELECT id, nom_norm, ville, latitude, longitude, origine_position FROM salles"
+            "SELECT id, nom_norm, ville, dept, latitude, longitude, origine_position FROM salles"
                 + " WHERE wikidata_id = :wikidataId",
             Map.of(CLE_WIKIDATA_ID, wikidataId));
     return lignes.isEmpty() ? null : lignes.get(0);

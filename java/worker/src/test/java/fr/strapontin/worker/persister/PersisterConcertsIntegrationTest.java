@@ -260,6 +260,26 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, nbLiees);
   }
 
+  // Sans nom, un lieu Ticketmaster ne pouvait suivre ses concerts lors d'une répartition.
+  @Test
+  void persisterConcerts_lieuTicketmaster_enregistreSonNomPublie() {
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste Libelle",
+                "2098-09-22",
+                "Elysee Montmartre",
+                "ticketmaster:venue-lib-1",
+                null)));
+
+    assertEquals(
+        "Elysee Montmartre",
+        jdbc.queryForObject(
+            "SELECT libelle_source FROM salle_sources WHERE identifiant_externe = 'venue-lib-1'",
+            Map.of(),
+            String.class));
+  }
+
   @Test
   void persisterConcerts_salleInconnueGeocodageSansSalleProche_creeNouvelleSalleAvecCoordonnees() {
     insererSalleAvecCoordonnees("Salle GPS Lointaine", 43.2965, 5.3698); // Marseille
@@ -1757,6 +1777,38 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         1,
         lignes.size(),
         "le second cycle doit fusionner avec la ligne déjà persistée au premier cycle");
+  }
+
+  // Salle Jean Tardieu publiée sous une abréviation du complexe et un tiret accolé.
+  @Test
+  void persisterConcerts_sousSalleSousAbreviationDuComplexe_rattacheeAuComplexe() {
+    final UUID rondPoint =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES ('theatre du rond point',"
+                + " 'Théâtre du Rond-Point', 'theatre du rond point', '75') RETURNING id",
+            Map.of(),
+            UUID.class);
+    persisterConcerts.persisterConcerts(
+        List.of(
+            ConcertBrut.nouveau()
+                .artiste("Artiste Tardieu")
+                .date(DATE_RECENTE)
+                .heure("19:00")
+                .salle("Th du Rond Point -Salle Jean Tardieu")
+                .ville("Paris")
+                .dept("75")
+                .url("https://eventim.example/tardieu")
+                .source("eventim")
+                .salleSourceId("eventim:internal:th du rond point salle jean tardieu")
+                .construire()));
+
+    assertEquals(
+        rondPoint,
+        jdbc.queryForObject(
+            "SELECT s.salle_parent_id FROM salles s JOIN evenements e ON e.salle_id = s.id"
+                + " WHERE e.artiste_norm = 'artiste tardieu'",
+            Map.of(),
+            UUID.class));
   }
 
   // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls

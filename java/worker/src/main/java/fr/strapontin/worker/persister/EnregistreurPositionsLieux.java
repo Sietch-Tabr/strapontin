@@ -14,13 +14,18 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Enregistre la position publiée de chaque lieu sur son mapping et la reporte
+ * Enregistre la position publiée de chaque lieu (et le nom d'un lieu
+ * Ticketmaster, pour le rattacher à ses libellés) sur son mapping et la reporte
  * sur la salle sans position Wikidata ni de source (un géocodage est remplacé)
  * : sans elle, les garde-fous géographiques restaient inopérants.
  * @since 3.0.2
  * @author Kwaite
  */
 final class EnregistreurPositionsLieux {
+
+  // Le libellé d'un lieu Eventim, filtre de ses récupérations, n'est
+  // jamais réécrit ici.
+  private static final String PREFIXE_TICKETMASTER = "ticketmaster:";
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -40,7 +45,9 @@ final class EnregistreurPositionsLieux {
       final PositionLieu position = c.position();
       if (c.salleSourceId() != null
           && cachesSalles.containsKey(c.salleSourceId())
-          && (position.estGeolocalisee() || position.codePostal() != null)) {
+          && (position.estGeolocalisee()
+              || position.codePostal() != null
+              || c.salleSourceId().startsWith(PREFIXE_TICKETMASTER))) {
         parMapping.putIfAbsent(c.salleSourceId(), c);
       }
     }
@@ -56,7 +63,10 @@ final class EnregistreurPositionsLieux {
         UPDATE salle_sources
         SET latitude = COALESCE(:latitude, latitude),
             longitude = COALESCE(:longitude, longitude),
-            code_postal = COALESCE(:codePostal, code_postal)
+            code_postal = COALESCE(:codePostal, code_postal),
+            libelle_source = CASE WHEN source = 'ticketmaster'
+                                  THEN COALESCE(:libelle, libelle_source)
+                                  ELSE libelle_source END
         WHERE source = :source AND identifiant_externe = :identifiant
         """,
         params);
@@ -87,6 +97,7 @@ final class EnregistreurPositionsLieux {
         .addValue("salleId", cachesSalles.get(salleSourceId).toString())
         .addValue("latitude", concert.position().latitude(), Types.DOUBLE)
         .addValue("longitude", concert.position().longitude(), Types.DOUBLE)
-        .addValue("codePostal", concert.position().codePostal(), Types.VARCHAR);
+        .addValue("codePostal", concert.position().codePostal(), Types.VARCHAR)
+        .addValue("libelle", concert.salle(), Types.VARCHAR);
   }
 }

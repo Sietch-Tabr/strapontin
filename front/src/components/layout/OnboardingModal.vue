@@ -5,7 +5,11 @@
     :etapes="ETAPES"
     @termine="fermer"
     @ferme="fermer"
-  />
+  >
+    <template #notifications>
+      <ChoixNotificationsOnboarding v-if="ouvert" />
+    </template>
+  </ModaleEtapes>
 </template>
 
 <script setup>
@@ -13,6 +17,7 @@ defineOptions({ name: "OnboardingModal" });
 
 import { ref, watch } from "vue";
 import ModaleEtapes from "../ModaleEtapes.vue";
+import ChoixNotificationsOnboarding from "./ChoixNotificationsOnboarding.vue";
 import { useOnboarding } from "../../composables/useOnboarding.js";
 
 const { ouvert, fermer: fermerOnboarding } = useOnboarding();
@@ -41,10 +46,11 @@ const ETAPES = [
       "Choisissez vos départements dans Paramètres : ils limitent les concerts de vos artistes et définissent la page Découverte.",
   },
   {
+    cle: "notifications",
     icone: "icon-bell",
     titre: "Notifications email et push",
     texte:
-      "Activez les notifications dans Paramètres pour être alerté dès qu'un nouveau concert apparaît.",
+      "Choisissez comment être prévenu des nouveaux concerts de vos artistes. Vous pourrez changer d'avis à tout moment dans Paramètres.",
   },
   {
     icone: "icon-smartphone",

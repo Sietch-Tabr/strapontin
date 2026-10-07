@@ -6,6 +6,7 @@ package fr.strapontin.web.decouverte;
 
 import static fr.strapontin.web.concert.FiltreConcertsBuilder.CONCERTS_PAR_PAGE;
 
+import fr.strapontin.web.admin.WorkerProxyService;
 import fr.strapontin.web.concert.FiltreConcerts;
 import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import java.time.Instant;
@@ -181,12 +182,13 @@ public class DecouverteService {
       return ResponseEntity.ok(Map.of("statut", "déclenché"));
     } catch (RestClientResponseException e) {
       final Map<String, Object> erreur = new HashMap<>();
-      erreur.put("erreur", "Worker inaccessible (statut " + e.getStatusCode().value() + ").");
+      LOG.warn("Erreur du worker (découverte) statut={}", e.getStatusCode().value());
+      erreur.put("erreur", WorkerProxyService.MESSAGE_EN_ERREUR);
       return ResponseEntity.status(503).body(erreur);
     } catch (Exception e) {
       LOG.warn("Erreur appel worker trigger (découverte)", e);
       final Map<String, Object> erreur = new HashMap<>();
-      erreur.put("erreur", "Worker inaccessible.");
+      erreur.put("erreur", WorkerProxyService.MESSAGE_INJOIGNABLE);
       return ResponseEntity.status(503).body(erreur);
     }
   }

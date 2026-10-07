@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.ClientNominatim;
 import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.ProduitsEcartes;
 import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.Map;
@@ -126,6 +127,17 @@ public class WorkerConfiguration {
                 Map.of("depts", depts),
                 String.class));
     return source;
+  }
+
+  /**
+   * @param eventimSource source Eventim
+   * @return produits écartés de ses récupérations par artiste
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  ProduitsEcartes produitsEcartesEventim(final EventimSource eventimSource) {
+    return eventimSource.produitsEcartes();
   }
 
   /**

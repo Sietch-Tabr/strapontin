@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,9 @@ final class ControleInvariantsDonnees {
         + publier("salle_suivie_contaminee", "salle", sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
-        + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques());
+        + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
+        + publier(
+            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes());
   }
 
   private int publier(
@@ -114,18 +117,57 @@ final class ControleInvariantsDonnees {
         : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
+  // Même concert sur deux salles déclarées distinctes (admin ou répartition) :
+  // un lieu resté sur la mauvaise salle l'a recréé. Le plus récent est signalé.
+  private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+               e1.artiste_norm, e1.date::text AS date,
+               sa.nom AS salle_a, sb.nom AS salle_b
+        FROM salles_paires_distinctes d
+        JOIN evenements e1 ON e1.salle_id = d.salle_a
+        JOIN evenements e2 ON e2.salle_id = d.salle_b
+         AND e2.artiste_norm = e1.artiste_norm AND e2.date = e1.date
+         AND e2.heure IS NOT DISTINCT FROM e1.heure
+        JOIN salles sa ON sa.id = d.salle_a
+        JOIN salles sb ON sb.id = d.salle_b
+        WHERE e1.date >= CURRENT_DATE
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  "artiste", rs.getString("artiste_norm"),
+                  "date", rs.getString("date"),
+                  "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
   // Match éligible (préférence active, suivi) jamais notifié un jour après
   // l'apparition du concert : digest bloqué pour cet utilisateur.
   private Map<UUID, Map<String, Object>> notificationsNonEnvoyees() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
         """
-        SELECT um.user_id, count(*) AS nb, min(c.first_seen)::text AS plus_ancien
+        SELECT um.user_id, count(*) AS nb, min(c.first_seen)::text AS plus_ancien,
+               bool_or(uc.notif_artistes OR uc.notif_salles) AS email_actif,
+               bool_or(uc.notif_artistes_push OR uc.notif_salles_push) AS push_coche,
+               EXISTS (SELECT 1 FROM push_abonnements pa WHERE pa.user_id = um.user_id)
+                 AS appareil_abonne,
+               max(uc.dernier_appareil_retire_le)::date AS appareil_retire_le,
+               max(uc.avertissement_canal_perdu_le)::date AS averti_le
         FROM user_matches um
         JOIN concerts c ON c.id = um.concert_id
         JOIN user_config uc ON uc.user_id = um.user_id
         WHERE um.notification_envoyee_le IS NULL AND um.masque_le IS NULL
-          AND c.first_seen < now() - interval '1 day'
+          AND c.first_seen < now() - CASE uc.frequence_notifications
+                WHEN 'hebdomadaire' THEN interval '8 days' ELSE interval '1 day' END
           AND uc.frequence_notifications <> 'jamais'
           AND (
             ((uc.notif_artistes OR uc.notif_artistes_push) AND EXISTS (
@@ -138,12 +180,18 @@ final class ControleInvariantsDonnees {
         """,
         Map.of(),
         rs -> {
-          anomalies.put(
-              uuidDe("utilisateur:" + rs.getString("user_id")),
-              Map.of(
-                  "userId", rs.getString("user_id"),
-                  "nb", rs.getLong("nb"),
-                  "plusAncien", rs.getString("plus_ancien")));
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.putAll(
+              CauseNotificationsNonEnvoyees.decrire(
+                  rs.getBoolean("email_actif"),
+                  rs.getBoolean("push_coche"),
+                  rs.getBoolean("appareil_abonne"),
+                  rs.getObject("appareil_retire_le", LocalDate.class),
+                  rs.getObject("averti_le", LocalDate.class)));
+          details.put("concerts", rs.getLong("nb"));
+          details.put("plusAncien", rs.getString("plus_ancien"));
+          details.put("userId", rs.getString("user_id"));
+          anomalies.put(uuidDe("utilisateur:" + rs.getString("user_id")), details);
         });
     return anomalies;
   }

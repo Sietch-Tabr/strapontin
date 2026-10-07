@@ -60,8 +60,9 @@ public final class CatalogueSignalements {
     ajouter(
         "position_wikidata_incoherente",
         "Wikidata d'un homonyme",
-        "La position Wikidata de cette salle est loin de ses lieux sources : réinitialiser son"
-            + " enrichissement depuis le référentiel.");
+        "L'élément Wikidata de cette salle est situé loin de ses lieux sources (sa position est"
+            + " réalignée chaque nuit sur l'élément) : c'est l'élément d'un autre lieu,"
+            + " réinitialiser son enrichissement depuis le référentiel.");
     ajouter(
         "position_hors_departement",
         "Salle hors de son département",
@@ -73,10 +74,22 @@ public final class CatalogueSignalements {
         "Le nom de l'artiste chez Ticketmaster ne correspond plus à l'artiste suivi : corriger son"
             + " identifiant ou accepter ce nom.");
     ajouter(
+        "date_festival_ecartee",
+        "Date de festival attribuée à tort",
+        "Ce concert vient d'un produit Eventim qui n'est plus retenu pour cet artiste (soirée"
+            + " d'un festival où il ne joue pas) : vérifier le programme puis supprimer le"
+            + " concert.");
+    ajouter(
+        "concert_double_salles_distinctes",
+        "Concert en double sur deux salles distinctes",
+        "Le même concert existe sur deux salles déclarées distinctes : un lieu de billetterie"
+            + " est probablement resté sur la mauvaise salle. Répartir ses lieux, puis supprimer"
+            + " le concert en trop.");
+    ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
-        "Des concerts éligibles n'ont jamais été notifiés à cet utilisateur : vérifier l'envoi"
-            + " des emails et push.");
+        "Des concerts éligibles n'ont jamais été notifiés à ce compte. La cause (aucun canal"
+            + " joignable ou envoi en échec) et l'action possible sont indiquées dans le détail.");
     ajouter(
         "sessions_sans_appareil",
         "Sessions sans appareil",

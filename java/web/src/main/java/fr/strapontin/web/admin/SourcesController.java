@@ -126,6 +126,6 @@ public class SourcesController {
     final boolean ok = workerProxyService.relancerSalle(identifiants);
     return ok
         ? ResponseEntity.ok(Map.of("statut", "déclenché"))
-        : ResponseEntity.status(503).body(Map.of("erreur", "Worker inaccessible."));
+        : ResponseEntity.status(503).body(Map.of("erreur", WorkerProxyService.MESSAGE_INJOIGNABLE));
   }
 }

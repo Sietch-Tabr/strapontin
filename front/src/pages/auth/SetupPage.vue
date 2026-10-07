@@ -18,12 +18,14 @@
           v-model="identifiant"
           name="identifiant"
           type="text"
-          minlength="3"
-          maxlength="30"
-          pattern="[a-zA-Z0-9._\-]+"
+          :minlength="IDENTIFIANT_MIN"
+          :maxlength="IDENTIFIANT_MAX"
+          :pattern="IDENTIFIANT_MOTIF"
           autocomplete="username"
+          aria-describedby="aide-identifiant"
           required
         />
+        <p id="aide-identifiant" class="form-aide">{{ AIDE_IDENTIFIANT }}</p>
       </div>
       <div class="form-groupe">
         <label for="email">Email</label>
@@ -44,11 +46,12 @@
           v-model="motDePasse"
           name="motDePasse"
           type="password"
-          minlength="12"
+          :minlength="MOT_DE_PASSE_MIN"
           autocomplete="new-password"
-          placeholder="12 caractères minimum"
+          aria-describedby="aide-mot-de-passe"
           required
         />
+        <p id="aide-mot-de-passe" class="form-aide">{{ AIDE_MOT_DE_PASSE }}</p>
       </div>
       <div class="form-groupe">
         <label for="base-url">URL publique de l'application</label>
@@ -74,6 +77,14 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import {
+  AIDE_IDENTIFIANT,
+  AIDE_MOT_DE_PASSE,
+  IDENTIFIANT_MAX,
+  IDENTIFIANT_MIN,
+  IDENTIFIANT_MOTIF,
+  MOT_DE_PASSE_MIN,
+} from "../../utils/identifiant.js";
 defineOptions({ name: "SetupPage" });
 
 import { ref, onMounted } from "vue";

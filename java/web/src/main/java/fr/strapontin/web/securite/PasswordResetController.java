@@ -11,7 +11,6 @@ import jakarta.validation.Valid;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -35,8 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class PasswordResetController {
 
   private static final Logger LOG = LoggerFactory.getLogger(PasswordResetController.class);
-  private static final Pattern FORMAT_IDENTIFIANT = Pattern.compile("^[a-zA-Z0-9._-]+$");
-  private static final String CLE_ERREUR = "erreur";
 
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
@@ -114,19 +111,7 @@ public class PasswordResetController {
   public ResponseEntity<?> reinitialiserMotDePasse(
       @Valid @RequestBody final ResetPasswordRequest req, final HttpServletRequest httpRequest) {
     if (req.identifiant() != null && !req.identifiant().isBlank()) {
-      final String ident = req.identifiant().strip().toLowerCase(Locale.ROOT);
-      if (ident.length() < 3 || ident.length() > 30) {
-        return ResponseEntity.badRequest()
-            .body(Map.of(CLE_ERREUR, "L'identifiant doit contenir entre 3 et 30 caractères."));
-      }
-      if (!FORMAT_IDENTIFIANT.matcher(ident).matches()) {
-        return ResponseEntity.badRequest()
-            .body(
-                Map.of(
-                    CLE_ERREUR,
-                    "L'identifiant ne peut contenir que des lettres, chiffres, points,"
-                        + " tirets et underscores."));
-      }
+      final String ident = RegleIdentifiant.valider(req.identifiant());
       final String identFinal =
           authService.activerCompteInvite(req.token(), ident, req.motDePasse());
 

@@ -94,6 +94,14 @@ class UserConfigServiceTest {
   }
 
   @Test
+  void majNotifications_frequenceHebdomadaire_metAJourLaConfig() {
+    service.majNotifications(
+        "user-1", new RequeteNotifications("hebdomadaire", true, false, false, false, false));
+
+    verify(jdbc).update(anyString(), anyMap());
+  }
+
+  @Test
   void majTheme_valeurInvalide_leveErreurMetier() {
     assertThatThrownBy(() -> service.majTheme("user-1", "psychedelique"))
         .isInstanceOf(ErreurMetier.class);
@@ -146,7 +154,8 @@ class UserConfigServiceTest {
 
     assertThat(config.departements()).isEmpty();
     assertThat(config.filtreDisponibles()).isTrue();
-    assertThat(config.frequenceNotifications()).isEqualTo("jamais");
+    assertThat(config.frequenceNotifications()).isEqualTo("hebdomadaire");
+    assertThat(config.notifArtistes()).isTrue();
     assertThat(config.theme()).isEqualTo("auto");
     assertThat(config.resendDisponible()).isFalse();
   }

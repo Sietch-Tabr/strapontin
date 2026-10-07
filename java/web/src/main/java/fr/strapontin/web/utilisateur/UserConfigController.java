@@ -53,6 +53,19 @@ public class UserConfigController {
   }
 
   /**
+   * Indique si les notifications actives de l'utilisateur courant ne peuvent
+   * plus lui parvenir (bandeau d'avertissement).
+   *
+   * @param auth contexte d'authentification
+   * @return {@code canalPerdu}
+   */
+  @GetMapping("/canal-perdu")
+  public ResponseEntity<Map<String, Boolean>> lireCanalPerdu(final Authentication auth) {
+    return ResponseEntity.ok(
+        Map.of("canalPerdu", userConfigService.canalNotificationPerdu(utilisateur(auth).id())));
+  }
+
+  /**
    * Met à jour les départements de l'utilisateur.
    *
    * @param requete corps JSON avec {@code departements} séparés par virgules

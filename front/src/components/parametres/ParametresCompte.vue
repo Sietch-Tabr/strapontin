@@ -41,15 +41,17 @@
             id="identifiant"
             v-model="identifiant"
             type="text"
-            minlength="3"
-            maxlength="30"
-            pattern="[a-zA-Z0-9._-]+"
+            :minlength="IDENTIFIANT_MIN"
+            :maxlength="IDENTIFIANT_MAX"
+            :pattern="IDENTIFIANT_MOTIF"
             autocomplete="username"
+            aria-describedby="aide-identifiant"
           />
           <button type="submit" class="bouton bouton-secondaire">
             Modifier
           </button>
         </form>
+        <p id="aide-identifiant" class="param-aide">{{ AIDE_IDENTIFIANT }}</p>
       </div>
 
       <div class="param-bloc">
@@ -126,10 +128,13 @@
               v-model="mdpNouveau"
               type="password"
               required
-              minlength="12"
+              :minlength="MOT_DE_PASSE_MIN"
               autocomplete="new-password"
-              placeholder="12 caractères minimum"
+              aria-describedby="aide-mdp-nouveau"
             />
+            <p id="aide-mdp-nouveau" class="form-aide">
+              {{ AIDE_MOT_DE_PASSE }}
+            </p>
             <span class="form-aide" aria-live="polite">
               {{
                 mdpNouveau.length > 0
@@ -213,6 +218,14 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import {
+  AIDE_IDENTIFIANT,
+  AIDE_MOT_DE_PASSE,
+  IDENTIFIANT_MAX,
+  IDENTIFIANT_MIN,
+  IDENTIFIANT_MOTIF,
+  MOT_DE_PASSE_MIN,
+} from "../../utils/identifiant.js";
 defineOptions({ name: "ParametresCompte" });
 
 import { ref, onMounted, onUnmounted } from "vue";

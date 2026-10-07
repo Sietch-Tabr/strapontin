@@ -29,6 +29,11 @@ public final class NomsDeLieu {
   // Mots de liaison de trois lettres, que tokensSignificatifs conserve.
   private static final Set<String> MOTS_DE_LIAISON = Set.of("des", "les", "aux", "sur", "une");
 
+  // Activités accolées au nom par une billetterie (« Larchipel, théâtre,
+  // cinéma ») : elles décrivent le lieu sans en désigner un autre.
+  private static final Set<String> MOTS_D_ACTIVITE =
+      Set.of("cinema", "musique", "musiques", "danse", "spectacle", "spectacles", "concerts");
+
   private NomsDeLieu() {}
 
   /**
@@ -88,6 +93,7 @@ public final class NomsDeLieu {
     final Set<String> mots = new HashSet<>(CorrespondanceSalle.tokensSignificatifs(nomNorm));
     mots.removeAll(CorrespondanceSalle.MOTS_GENERIQUES_SALLE);
     mots.removeAll(MOTS_DE_LIAISON);
+    mots.removeAll(MOTS_D_ACTIVITE);
     if (ville != null) {
       mots.removeAll(CorrespondanceSalle.tokensSignificatifs(Normalisation.normaliserTexte(ville)));
     }

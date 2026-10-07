@@ -95,7 +95,8 @@ class PushControllerTest {
   @Test
   void tester_abonnementActif_retourne200() {
     stubPrincipal();
-    when(notificationPushService.envoyerNotificationTest("user-1", null)).thenReturn(true);
+    when(notificationPushService.envoyerNotificationTest("user-1", null))
+        .thenReturn(ResultatEnvoiPush.ENVOYEE);
 
     final ResponseEntity<Map<String, Object>> rep = controller.tester(null, auth);
 
@@ -107,7 +108,7 @@ class PushControllerTest {
   void tester_avecEndpointCible_transmetLendpointAuService() {
     stubPrincipal();
     when(notificationPushService.envoyerNotificationTest("user-1", "https://push.exemple/abc"))
-        .thenReturn(true);
+        .thenReturn(ResultatEnvoiPush.ENVOYEE);
 
     controller.tester(new RequeteTesterPush("https://push.exemple/abc"), auth);
 
@@ -115,13 +116,25 @@ class PushControllerTest {
   }
 
   @Test
-  void tester_aucunAbonnement_retourne400() {
+  void tester_appareilInconnuDuServeur_retourne409AvecRaisonEtMessage() {
     stubPrincipal();
-    when(notificationPushService.envoyerNotificationTest(eq("user-1"), isNull())).thenReturn(false);
+    when(notificationPushService.envoyerNotificationTest(eq("user-1"), isNull()))
+        .thenReturn(ResultatEnvoiPush.APPAREIL_INCONNU);
 
     final ResponseEntity<Map<String, Object>> rep = controller.tester(null, auth);
 
-    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
+    assertEquals(HttpStatus.CONFLICT, rep.getStatusCode());
+    assertEquals("APPAREIL_INCONNU", rep.getBody().get("raison"));
+    assertEquals(ResultatEnvoiPush.APPAREIL_INCONNU.message(), rep.getBody().get("erreur"));
+  }
+
+  @Test
+  void tester_serviceNonConfigure_retourne503() {
+    stubPrincipal();
+    when(notificationPushService.envoyerNotificationTest(eq("user-1"), isNull()))
+        .thenReturn(ResultatEnvoiPush.SERVICE_NON_CONFIGURE);
+
+    assertEquals(HttpStatus.SERVICE_UNAVAILABLE, controller.tester(null, auth).getStatusCode());
   }
 
   // endpoint manquant/blanc : voir RequeteDesabonnementValidationTest (@Valid ne s'exerce pas

@@ -140,4 +140,43 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
     assertEquals(1, coherence.verifier());
   }
+
+  // Espace Des Arts (Les Pavillons-sous-Bois, Q61860839) positionné à Chalon-sur-Saône.
+  @Test
+  void realignerPositions_positionLoinDeSonElement_estRealigneeEtTracee() {
+    final UUID salle = salleWikidata("espace des arts", true);
+    jdbc.update(
+        "UPDATE salles SET latitude = 46.78, longitude = 4.85 WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                salle,
+                new EnrichissementSalle("Q61860839", null, null, null, null, 48.903, 2.507)));
+
+    assertEquals(1, coherence.realignerPositions());
+
+    final Map<String, Object> position =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude, origine_position FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()));
+    assertEquals(48.903, (Double) position.get("latitude"), 1e-9);
+    assertEquals(2.507, (Double) position.get("longitude"), 1e-9);
+    assertEquals("wikidata", position.get("origine_position"));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM logs_admin WHERE message LIKE 'position de salle réalignée%'",
+            Map.of(), Integer.class));
+  }
+
+  @Test
+  void realignerPositions_positionDejaCelleDeLElement_inchangee() {
+    final UUID salle = salleWikidata("arena", true);
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(salle, new EnrichissementSalle("Q1", null, null, null, null, 44.8301, -0.6401)));
+
+    assertEquals(0, coherence.realignerPositions());
+  }
 }

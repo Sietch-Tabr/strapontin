@@ -47,6 +47,7 @@ const ICONES = [
   'circle-x',
   'check',
   'download',
+  'search',
 ];
 
 const pkgLucide = resolve(RACINE, 'node_modules/lucide-static/package.json');

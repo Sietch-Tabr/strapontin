@@ -10,7 +10,6 @@ import fr.strapontin.core.ConcertBrut;
 import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +72,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private final CompteurBilanFetch compteurBilan = new CompteurBilanFetch();
   private final EventimAttractionResolver attractionResolver;
   private final LieuxEventim lieux;
+  private final ProduitsEcartes ecartes = new ProduitsEcartes();
 
   /**
    * Crée une instance avec un RestClient par défaut (headers Eventim,
@@ -277,7 +277,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
 
     produits.forEach(lieux::relever);
     final List<Map<String, Object>> retenus =
-        artisteFallback != null ? ProduitsDeLArtiste.retenir(produits, artisteFallback) : produits;
+        artisteFallback != null ? ecartes.retenir(produits, artisteFallback) : produits;
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : retenus) {
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);
@@ -291,6 +291,13 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
         entier(data, CLE_TOTAL_PAGES),
         produits.size(),
         true);
+  }
+
+  /**
+   * @return produits écartés des récupérations par artiste, prélevés par le worker
+   */
+  public ProduitsEcartes produitsEcartes() {
+    return ecartes;
   }
 
   private static int entier(final Map<String, Object> data, final String cle) {
@@ -314,7 +321,6 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   private ResultatArtisteEventim fetchProduitsParAttraction(
       final String attractionId, final String artisteFallback) {
     final LocalDate dateFin = LocalDate.now().plusMonths(24);
-    final DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     final List<ConcertBrut> concerts = new ArrayList<>();
     final String artisteSourceId = "eventim:" + attractionId;
     LocalDate debut = LocalDate.now();
@@ -328,8 +334,8 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
                   .queryParam(PARAM_WEB_ID, WEB_ID)
                   .queryParam(PARAM_LANGUE, "fr")
                   .queryParam("attraction_ids", attractionId)
-                  .queryParam("date_from", fmt.format(debut))
-                  .queryParam("date_to", fmt.format(dateFin))
+                  .queryParam("date_from", debut.toString())
+                  .queryParam("date_to", dateFin.toString())
                   .queryParam("sort", "DateAsc")
                   .queryParam("top", TOP_MAX));
       final PageProduitsEventim resultat =

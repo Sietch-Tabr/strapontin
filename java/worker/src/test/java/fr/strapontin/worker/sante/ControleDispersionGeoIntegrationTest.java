@@ -144,6 +144,31 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     assertEquals(0, controle.verifier());
   }
 
+  // L'Européen publié « Leuropeen Paris 17 » par une seconde billetterie : même lieu, à fusionner.
+  @Test
+  void pairesMemeLieuFortes_memeLieuSousDeuxNoms_retenue() {
+    final UUID europeen = creerSalle("l europeen");
+    final UUID doublon = creerSalle("leuropeen paris 17");
+    lieu(europeen, "internal:l europeen@75017", 48.88310, 2.32700);
+    lieu(doublon, "internal:leuropeen paris 17@75017", 48.88312, 2.32702);
+
+    final List<UUID[]> paires = controle.pairesMemeLieuFortes();
+
+    assertEquals(1, paires.size());
+    assertEquals(
+        java.util.Set.of(europeen, doublon), java.util.Set.of(paires.get(0)[0], paires.get(0)[1]));
+  }
+
+  @Test
+  void pairesMemeLieuFortes_sallesVoisinesDistinctes_aucune() {
+    final UUID cigale = creerSalle("la cigale");
+    final UUID bouleNoire = creerSalle("la boule noire");
+    lieu(cigale, "internal:la cigale@75018", 48.88220, 2.34040);
+    lieu(bouleNoire, "internal:la boule noire paris 18@75018", 48.88225, 2.34045);
+
+    assertEquals(0, controle.pairesMemeLieuFortes().size());
+  }
+
   @Test
   void verifier_complexeEtSousSalleAuMemeLieu_neSignalePas() {
     final UUID complexe = creerSalle("la seine musicale");

@@ -7,6 +7,8 @@ package fr.strapontin.web.admin;
 import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.ErreurMetier;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,9 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Répartition d'une salle mélangeant plusieurs lieux : les événements dont
- * toutes les observations portent les libellés choisis passent à une autre
- * salle avec leurs lieux Eventim ; un événement mixte reste en place.
+ * Répartition d'une salle mélangeant plusieurs lieux : événements des
+ * libellés choisis et lieux choisis (toutes sources) passent à une autre
+ * salle, un événement mixte reste en place ; les deux salles sont ensuite
+ * déclarées distinctes.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -37,15 +40,27 @@ public class RepartitionSalleService {
   public record LibelleSource(String libelle, long nbEvenements) {}
 
   /**
+   * Lieu d'une source rattaché à la salle.
+   *
+   * @param identifiant identifiant préfixé ({@code source:identifiant})
+   * @param source source du lieu
+   * @param nom nom du lieu chez la source (libellé ou nom de l'identifiant)
+   * @param ville ville du lieu chez la source, si connue
+   */
+  public record LieuSource(String identifiant, String source, String nom, String ville) {}
+
+  /**
    * Bilan : événements déplacés, fusionnés dans un événement existant de la
-   * cible, laissés en place (mixtes), et lieux Eventim rattachés.
+   * cible, laissés en place (mixtes), lieux déplacés et lieux restés sur la
+   * salle d'origine.
    */
   public record ResultatRepartition(
       UUID cibleId,
       int evenementsDeplaces,
       int evenementsFusionnes,
       int evenementsMixtes,
-      int lieuxEventimDeplaces) {}
+      int lieuxDeplaces,
+      List<String> lieuxRestes) {}
 
   /**
    * @param repository accès SQL
@@ -66,9 +81,27 @@ public class RepartitionSalleService {
   }
 
   /**
-   * @param requete libellés, et salle cible existante ou nom à créer
+   * @param salleId salle à examiner
+   * @return lieux de toutes les sources rattachés à la salle
+   */
+  public List<LieuSource> listerLieux(final UUID salleId) {
+    return repository.lieux(salleId).stream()
+        .map(
+            lieu ->
+                new LieuSource(
+                    lieu.get("source") + ":" + lieu.get("identifiant_externe"),
+                    (String) lieu.get("source"),
+                    nomDuLieu(lieu),
+                    (String) lieu.get("ville_source")))
+        .toList();
+  }
+
+  /**
+   * @param requete libellés, lieux à déplacer (tous ceux dont le nom porte un
+   *     libellé choisi si absent), et salle cible existante ou nom à créer
    * @return bilan de la répartition
-   * @throws ErreurMetier salle inconnue, cible invalide ou aucun libellé
+   * @throws ErreurMetier salle inconnue, cible invalide, aucun libellé ou lieu
+   *     étranger à la salle
    */
   @Transactional
   public ResultatRepartition repartir(final UUID salleId, final RequeteRepartitionSalle requete) {
@@ -76,6 +109,8 @@ public class RepartitionSalleService {
         repository
             .lireSalle(salleId)
             .orElseThrow(() -> new ErreurMetier("Salle introuvable.", 404));
+    final List<LieuSource> lieux = listerLieux(salleId);
+    final List<String> aDeplacer = lieuxADeplacer(lieux, requete);
     final UUID cibleId = resoudreCible(salleId, salle, requete);
     final List<String> libelles = requete.libelles();
 
@@ -85,28 +120,27 @@ public class RepartitionSalleService {
         evenements.isEmpty() ? 0 : repository.fusionnerEvenementsEnDoublon(evenements, cibleId);
     final int deplaces =
         evenements.isEmpty() ? 0 : repository.deplacerEvenements(evenements, cibleId);
-    final int lieux = deplacerLieuxEventim(salleId, libelles, cibleId);
+    aDeplacer.forEach(identifiant -> repository.deplacerMapping(identifiant, cibleId));
     repository.completerPositionDepuisMappings(cibleId);
     repository.leverContamination(salleId);
+    repository.declarerDistinctes(salleId, cibleId);
 
-    logAdminService.logAdmin(
-        "info",
-        "admin",
-        "répartition de salle",
-        Map.of(
-            "salleId",
-            salleId.toString(),
-            "cibleId",
-            cibleId.toString(),
-            "libelles",
-            String.join(" | ", libelles),
-            "evenementsDeplaces",
-            deplaces,
-            "evenementsFusionnes",
-            fusionnes,
-            "evenementsMixtes",
-            mixtes));
-    return new ResultatRepartition(cibleId, deplaces, fusionnes, mixtes, lieux);
+    final List<String> restes =
+        lieux.stream()
+            .map(LieuSource::identifiant)
+            .filter(identifiant -> !aDeplacer.contains(identifiant))
+            .toList();
+    final Map<String, Object> meta = new HashMap<>();
+    meta.put("salleId", salleId.toString());
+    meta.put("cibleId", cibleId.toString());
+    meta.put("libelles", String.join(" | ", libelles));
+    meta.put("evenementsDeplaces", deplaces);
+    meta.put("evenementsFusionnes", fusionnes);
+    meta.put("evenementsMixtes", mixtes);
+    meta.put("lieuxDeplaces", aDeplacer);
+    meta.put("lieuxRestes", restes);
+    logAdminService.logAdmin("info", "admin", "répartition de salle", meta);
+    return new ResultatRepartition(cibleId, deplaces, fusionnes, mixtes, aDeplacer.size(), restes);
   }
 
   private UUID resoudreCible(
@@ -122,20 +156,40 @@ public class RepartitionSalleService {
         nom, Normalisation.normaliserTexte(nom), (String) salle.get("dept"));
   }
 
-  private int deplacerLieuxEventim(
-      final UUID salleId, final List<String> libelles, final UUID cibleId) {
+  // Choix explicite de l'admin, sinon les lieux dont le nom porte un libellé choisi.
+  private static List<String> lieuxADeplacer(
+      final List<LieuSource> lieux, final RequeteRepartitionSalle requete) {
+    final Set<String> rattaches =
+        lieux.stream().map(LieuSource::identifiant).collect(Collectors.toSet());
+    if (requete.lieux() != null) {
+      for (final String identifiant : requete.lieux()) {
+        if (!rattaches.contains(identifiant)) {
+          throw new ErreurMetier("Ce lieu n'est pas rattaché à la salle : " + identifiant);
+        }
+      }
+      return List.copyOf(requete.lieux());
+    }
     final Set<String> nomsNormalises =
-        libelles.stream().map(Normalisation::normaliserTexte).collect(Collectors.toSet());
-    int deplaces = 0;
-    for (final Map<String, Object> mapping : repository.mappingsEventim(salleId)) {
-      final String identifiant = (String) mapping.get("identifiant_externe");
-      final String libelleSource = (String) mapping.get("libelle_source");
-      if ((libelleSource != null && libelles.contains(libelleSource))
-          || nomsNormalises.contains(IdentifiantLieuEventim.nom(identifiant))) {
-        repository.deplacerMapping(identifiant, cibleId);
-        deplaces++;
+        requete.libelles().stream().map(Normalisation::normaliserTexte).collect(Collectors.toSet());
+    final List<String> choisis = new ArrayList<>();
+    for (final LieuSource lieu : lieux) {
+      if (lieu.nom() != null
+          && nomsNormalises.contains(Normalisation.normaliserTexte(lieu.nom()))) {
+        choisis.add(lieu.identifiant());
       }
     }
-    return deplaces;
+    return choisis;
+  }
+
+  // Le libellé publié prime ; un lieu Eventim interne porte son nom dans
+  // son identifiant.
+  private static String nomDuLieu(final Map<String, Object> lieu) {
+    if (lieu.get("libelle_source") instanceof String libelle && !libelle.isBlank()) {
+      return libelle;
+    }
+    final String identifiant = (String) lieu.get("identifiant_externe");
+    return "eventim".equals(lieu.get("source")) && identifiant.startsWith("internal:")
+        ? IdentifiantLieuEventim.nom(identifiant)
+        : null;
   }
 }

@@ -29,6 +29,14 @@
               <input
                 v-model="frequenceNotifications"
                 type="radio"
+                value="hebdomadaire"
+              />
+              <span>Récapitulatif hebdomadaire (dimanche 10h)</span>
+            </label>
+            <label class="notif-radio">
+              <input
+                v-model="frequenceNotifications"
+                type="radio"
                 value="temps_reel"
               />
               <span>À chaque nouveau concert</span>
@@ -116,6 +124,20 @@
             votre navigateur.
           </p>
         </div>
+        <div v-else-if="pushNonEnregistre">
+          <p class="param-aide">
+            Cet appareil n'est plus enregistré pour les notifications push : il
+            ne les reçoit plus. Réactivez-les pour l'enregistrer à nouveau.
+          </p>
+          <button
+            type="button"
+            class="bouton bouton-secondaire"
+            :disabled="pushEnCours || frequenceNotifications === 'jamais'"
+            @click="abonnerPush"
+          >
+            Réactiver les notifications push
+          </button>
+        </div>
         <div v-else-if="pushAbonne">
           <p class="param-aide">
             Les notifications push sont activées sur cet appareil.
@@ -169,6 +191,12 @@ defineOptions({ name: "ParametresNotifications" });
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
+import {
+  abonnerAppareil,
+  lireEndpointsServeur,
+  lireVapid,
+  pushPrisEnCharge,
+} from "../../composables/useAbonnementPush.js";
 
 const { afficherToast } = useToasts();
 
@@ -184,9 +212,23 @@ const notifNouvelleVersion = ref(false);
 const pushSupporte = ref(false);
 const vapidDisponible = ref(false);
 const pushPermission = ref("default");
-const pushAbonne = ref(false);
+// Abonnement du navigateur, et sa présence côté serveur : un appareil révoqué
+// par le serveur reste abonné dans le navigateur sans plus rien recevoir.
+const endpointNavigateur = ref(null);
 // Abonnements push du compte, tous appareils confondus (null : inconnu).
-const nbAppareilsAbonnes = ref(null);
+const endpointsServeur = ref(null);
+const nbAppareilsAbonnes = computed(
+  () => endpointsServeur.value?.length ?? null,
+);
+const pushAbonne = computed(
+  () =>
+    endpointNavigateur.value !== null &&
+    (endpointsServeur.value === null ||
+      endpointsServeur.value.includes(endpointNavigateur.value)),
+);
+const pushNonEnregistre = computed(
+  () => endpointNavigateur.value !== null && !pushAbonne.value,
+);
 const pushSansAppareil = computed(
   () =>
     nbAppareilsAbonnes.value === 0 &&
@@ -202,9 +244,9 @@ const controleur = new AbortController();
 
 async function charger() {
   try {
-    const [repConfig, repPush] = await Promise.all([
+    const [repConfig, vapid] = await Promise.all([
       appelApi("/api/user/config", { signal: controleur.signal }),
-      appelApi("/api/push", { signal: controleur.signal }),
+      lireVapid(controleur.signal),
       compterAppareilsAbonnes(),
     ]);
     if (repConfig.ok) {
@@ -217,11 +259,8 @@ async function charger() {
       notifSallesPush.value = config.notifSallesPush ?? false;
       notifNouvelleVersion.value = config.notifNouvelleVersion ?? false;
     }
-    if (repPush.ok) {
-      const vapid = await lireJson(repPush);
-      vapidDisponible.value = vapid.disponible ?? false;
-      cleVapidPublique = vapid.clePublique ?? null;
-    }
+    vapidDisponible.value = vapid.disponible;
+    cleVapidPublique = vapid.clePublique;
     await initialiserPush();
   } catch (e) {
     if (e.name !== "AbortError") {
@@ -233,19 +272,11 @@ async function charger() {
 }
 
 async function compterAppareilsAbonnes() {
-  const rep = await appelApi("/api/push/abonnements", {
-    signal: controleur.signal,
-  });
-  if (rep.ok) {
-    const abonnements = await lireJson(rep);
-    nbAppareilsAbonnes.value = Array.isArray(abonnements)
-      ? abonnements.length
-      : null;
-  }
+  endpointsServeur.value = await lireEndpointsServeur(controleur.signal);
 }
 
 async function initialiserPush() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+  if (!pushPrisEnCharge()) {
     pushSupporte.value = false;
     return;
   }
@@ -256,18 +287,11 @@ async function initialiserPush() {
     try {
       swRegistration = await navigator.serviceWorker.ready;
       const abonnement = await swRegistration.pushManager.getSubscription();
-      pushAbonne.value = abonnement !== null;
+      endpointNavigateur.value = abonnement?.endpoint ?? null;
     } catch (_) {
-      pushAbonne.value = false;
+      endpointNavigateur.value = null;
     }
   }
-}
-
-function urlBase64VersUint8Array(base64) {
-  const pad = "=".repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + pad).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(b64);
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
 async function sauvegarderNotifications() {
@@ -301,43 +325,25 @@ async function abonnerPush() {
   if (!swRegistration || !cleVapidPublique) return;
   pushEnCours.value = true;
   try {
-    const permission = await Notification.requestPermission();
-    pushPermission.value = permission;
-    if (permission !== "granted") return;
-
-    const abonnement = await swRegistration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64VersUint8Array(cleVapidPublique),
-    });
-
-    const rep = await appelApi("/api/push", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        endpoint: abonnement.endpoint,
-        keys: {
-          p256dh: new Uint8Array(abonnement.getKey("p256dh")).toBase64(),
-          auth: new Uint8Array(abonnement.getKey("auth")).toBase64(),
-        },
-      }),
-      signal: controleur.signal,
-    });
-
-    if (rep.ok) {
-      pushAbonne.value = true;
+    const resultat = await abonnerAppareil(cleVapidPublique, controleur.signal);
+    if (resultat.statut === "refuse") {
+      pushPermission.value = resultat.permission;
+    } else if (resultat.statut === "ok") {
+      endpointNavigateur.value = resultat.endpoint;
       await compterAppareilsAbonnes();
-      document.cookie =
-        "push_opt_in=1; path=/; max-age=" +
-        365 * 24 * 3600 +
-        "; SameSite=Strict";
       afficherToast("Notifications push activées.", "succes");
     } else {
-      await abonnement.unsubscribe();
-      const corps = await lireJson(rep);
-      afficherToast(corps.erreur || "Erreur lors de l'abonnement.", "erreur");
+      afficherToast(
+        resultat.message ||
+          "Impossible d'activer les notifications push sur cet appareil.",
+        "erreur",
+      );
     }
   } catch (_) {
-    afficherToast("Erreur lors de l'abonnement push.", "erreur");
+    afficherToast(
+      "Impossible d'activer les notifications push sur cet appareil.",
+      "erreur",
+    );
   } finally {
     pushEnCours.value = false;
   }
@@ -364,7 +370,11 @@ async function testerPush() {
       afficherToast("Notification de test envoyée.", "succes");
     } else {
       const corps = await lireJson(rep);
-      afficherToast(corps.erreur || "Erreur lors du test.", "erreur");
+      afficherToast(corps.erreur || "L'envoi n'a pas abouti.", "erreur");
+      // Abonnement retiré par le serveur : l'état affiché doit le refléter.
+      if (["APPAREIL_INCONNU", "APPAREIL_REVOQUE"].includes(corps.raison)) {
+        await compterAppareilsAbonnes();
+      }
     }
   } catch (_) {
     afficherToast("Erreur réseau.", "erreur");
@@ -387,12 +397,15 @@ async function desabonnerPush() {
       });
       await abonnement.unsubscribe();
     }
-    pushAbonne.value = false;
+    endpointNavigateur.value = null;
     await compterAppareilsAbonnes();
     document.cookie = "push_opt_in=; path=/; max-age=0; SameSite=Strict";
     afficherToast("Notifications push désactivées.", "succes");
   } catch (_) {
-    afficherToast("Erreur lors du désabonnement push.", "erreur");
+    afficherToast(
+      "Impossible de désactiver les notifications push sur cet appareil.",
+      "erreur",
+    );
   } finally {
     pushEnCours.value = false;
   }

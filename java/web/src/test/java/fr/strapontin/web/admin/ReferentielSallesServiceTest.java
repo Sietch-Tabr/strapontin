@@ -241,44 +241,24 @@ class ReferentielSallesServiceTest {
     verify(logAdminService).logAdmin(eq("warn"), eq("admin"), any());
   }
 
-  // deux identifiants du même type de source (ex. deux ticketmaster) sur cible et source
-  // ne doivent pas coexister après fusion — la ligne la moins saine (suspecte) doit être
-  // supprimée avant la réassignation en masse.
+  // Une salle a souvent plusieurs lieux d'une même source (forme historique et forme
+  // qualifiée) : la fusion les garde tous, la clé (source, identifiant) ne dépendant pas
+  // de la salle.
   @Test
-  void fusionner_conflitSourceCommune_supprimeLaLigneSuspecte() {
+  void fusionner_lieuxDeMemeSourceSurLesDeuxSalles_neSupprimeAucunLieuEtLesJournalise() {
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Long.class))).thenReturn(2L);
-    final UUID cible = UUID.randomUUID();
-    final UUID source = UUID.randomUUID();
+    when(jdbc.queryForList(contains("FROM salle_sources"), anyMap(), eq(String.class)))
+        .thenReturn(List.of("eventim:internal:theatre paul rey"));
 
-    final Map<String, Object> conflit =
-        Map.of(
-            "source",
-            "ticketmaster",
-            "id_source",
-            "tm-source-mort",
-            "id_cible",
-            "tm-cible-sain",
-            "sante_source",
-            5,
-            "sante_cible",
-            0,
-            "suspect_source",
-            true,
-            "suspect_cible",
-            false);
-    when(jdbc.queryForList(contains("FROM salle_sources src"), anyMap()))
-        .thenReturn(List.of(conflit));
+    assertTrue(service.fusionner(UUID.randomUUID(), UUID.randomUUID()));
 
-    final boolean fusionnee = service.fusionner(cible, source);
-
-    assertTrue(fusionnee);
-    verify(jdbc)
-        .update(
-            org.mockito.ArgumentMatchers.argThat(
-                (String sql) -> sql.contains("DELETE FROM salle_sources WHERE salle_id")),
+    verify(jdbc, never()).update(contains("DELETE FROM salle_sources"), anyMap());
+    verify(logAdminService)
+        .logAdmin(
+            eq("info"),
+            eq("admin"),
+            eq("lieux reportés sur la salle conservée après fusion"),
             org.mockito.ArgumentMatchers.<Map<String, Object>>argThat(
-                p ->
-                    p.get("salleId").equals(source.toString())
-                        && p.get("identifiantExterne").equals("tm-source-mort")));
+                meta -> List.of("eventim:internal:theatre paul rey").equals(meta.get("lieux"))));
   }
 }

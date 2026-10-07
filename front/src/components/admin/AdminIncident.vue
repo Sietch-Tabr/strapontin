@@ -182,7 +182,7 @@ async function publier() {
     const corps = await lireJson(rep);
     if (rep.ok) {
       afficherToast(
-        `Communication publiée (${corps.nbEmails} email(s), ${corps.nbPush} push).`,
+        `Communication publiée : ${corps.nbEmails} email(s) et ${corps.nbPush} notification(s) push envoyés.`,
         "succes",
       );
       titre.value = MODELE_TITRE_INCIDENT;

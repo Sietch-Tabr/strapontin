@@ -36,7 +36,6 @@ class ResolveurSalleParConcert {
   private static final Logger LOG = LoggerFactory.getLogger(ResolveurSalleParConcert.class);
   private static final String CLE_DEPT = "dept";
   private static final String CLE_NOM = "nom";
-  private static final String CLE_SALLE_CLE = "salleCle";
   // Département connu d'une salle, avec repli sur un concert déjà rattaché
   // (salles.dept n'est pas toujours renseigné).
   private static final String DEPT_SALLE =
@@ -48,6 +47,7 @@ class ResolveurSalleParConcert {
   private final CreationSalleDernierRecours dernierRecours;
   private final ResolveurSallePosition parPosition;
   private final ResolveurSalleParCleForte parCleForte;
+  private final ResolveurSousSalle sousSalles;
   private boolean resolutionParPosition = true;
 
   /* package-private : instancié uniquement par ReconciliateurSalles (même
@@ -59,6 +59,7 @@ class ResolveurSalleParConcert {
     this.dernierRecours = new CreationSalleDernierRecours(jdbc, clientNominatim, this::deptsConnus);
     this.parPosition = new ResolveurSallePosition(jdbc);
     this.parCleForte = new ResolveurSalleParCleForte(jdbc, this::deptsConnus);
+    this.sousSalles = new ResolveurSousSalle(jdbc, this::chercherSalleParTokens);
   }
 
   /**
@@ -149,10 +150,14 @@ class ResolveurSalleParConcert {
   private UUID chercherParNom(final ValeurConcert concert) {
     UUID salleId = retenir(chercherSalleParNomExact(concert.salle(), concert.dept()), concert);
     if (salleId == null) {
-      salleId = retenir(chercherSalleParTokens(concert.salle(), concert.dept()), concert);
+      salleId =
+          sousSalles.plutotQueLeComplexe(
+              retenir(chercherSalleParTokens(concert.salle(), concert.dept()), concert),
+              concert.salle(),
+              concert.dept());
     }
     if (salleId == null) {
-      salleId = retenir(resoudreSousSalle(concert.salle(), concert.dept()), concert);
+      salleId = retenir(sousSalles.resoudre(concert.salle(), concert.dept()), concert);
     }
     return salleId != null ? salleId : retenir(chercherSalleParCleForte(concert), concert);
   }
@@ -296,52 +301,6 @@ class ResolveurSalleParConcert {
           meilleurScore);
     }
     return meilleurUuid;
-  }
-
-  /**
-   * Résout/crée une sous-salle rattachée à un complexe connu (nom qualifié,
-   * ex. "La Seine Musicale - Grande Seine") plutôt que de mélanger ses
-   * événements avec ceux du complexe.
-   * @param nom nom brut entrant, potentiellement qualifié
-   * @param dept département connu du concert
-   * @return UUID de la sous-salle, ou {@code null} si pas de qualificatif
-   */
-  private UUID resoudreSousSalle(final String nom, final String dept) {
-    final String base = CorrespondanceSalle.extraireBase(nom);
-    if (base == null) {
-      return null;
-    }
-
-    final UUID complexeId = chercherSalleParTokens(base, dept);
-    if (complexeId == null) {
-      return null;
-    }
-
-    final String salleCle = Normalisation.normaliserTexte(nom);
-    // MapSqlParameterSource plutôt que Map.of — dept peut être null ici (Map.of
-    // lève une NPE sur toute valeur null).
-    jdbc.update(
-        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, salle_parent_id)"
-            + " VALUES (:salleCle, :nom, :nomNorm, :dept, CAST(:parentId AS uuid))"
-            + " ON CONFLICT (salle_cle) DO NOTHING",
-        new MapSqlParameterSource()
-            .addValue(CLE_SALLE_CLE, salleCle)
-            .addValue(CLE_NOM, nom)
-            .addValue("nomNorm", salleCle)
-            .addValue(CLE_DEPT, dept)
-            .addValue("parentId", complexeId.toString()));
-    final UUID sousSalleId =
-        jdbc.queryForObject(
-            "SELECT id FROM salles WHERE salle_cle = :salleCle",
-            Map.of(CLE_SALLE_CLE, salleCle),
-            UUID.class);
-    LOG.info(
-        "sous-salle créée pour complexe nom={} base={} complexeId={} sousSalleId={}",
-        nom,
-        base,
-        complexeId,
-        sousSalleId);
-    return sousSalleId;
   }
 
   /**

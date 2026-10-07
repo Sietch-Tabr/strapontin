@@ -27,6 +27,7 @@ import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import fr.strapontin.worker.quota.GestionQuotaTM;
+import fr.strapontin.worker.sante.SignalementDatesFestivalEcartees;
 import fr.strapontin.worker.sante.SuiviSanteSourcesService;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -104,7 +105,8 @@ class WorkerFetchServiceTest {
             notificationDigestService,
             workerStatsService,
             suiviSanteSourcesService,
-            new EnregistreurLieuxEventim(jdbc, eventim));
+            new EnregistreurLieuxEventim(jdbc, eventim),
+            mock(SignalementDatesFestivalEcartees.class));
     fetchService =
         new WorkerFetchService(
             sources, persisterConcerts, recalculerMatchesService, rapportage, commun);

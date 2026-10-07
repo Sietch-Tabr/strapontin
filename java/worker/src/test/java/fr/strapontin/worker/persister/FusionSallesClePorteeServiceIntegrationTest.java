@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,6 +125,63 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         jdbc.queryForObject("SELECT wikidata_id FROM salles", Map.of(), String.class);
     assertEquals(
         "Q3354551", wikidataId, "Le wikidata_id déjà connu doit être préservé après fusion");
+  }
+
+  private void creerLieu(final UUID salleId, final String source, final String identifiant) {
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:salle AS uuid), :source, :identifiant)",
+        Map.of("salle", salleId.toString(), "source", source, "identifiant", identifiant));
+  }
+
+  // Cas réel : la fusion d'une église dans le théâtre de l'Île Saint-Louis avait supprimé un
+  // lieu Eventim du théâtre, la salle absorbée en ayant elle aussi un.
+  @Test
+  void fusionner_lieuxDeMemeSourceSurLesDeuxSalles_conserveTousLesLieux() {
+    final UUID theatre = creerSalle("Theatre Ile Saint Louis", "75", null, LAT, LON);
+    final UUID doublon = creerSalle("Theatre Ile Saint-Louis", "75", null, LAT, LON);
+    creerLieu(theatre, "eventim", "internal:theatre de lile saint louis paul rey");
+    creerLieu(theatre, "eventim", "internal:theatre de lile saint louis@75004");
+    creerLieu(doublon, "eventim", "internal:theatre ile saint louis");
+    creerLieu(doublon, "ticketmaster", "rZFSnyZAvvk");
+    creerConcert("suzane", "20:00", "75", theatre);
+    creerConcert("suzane", "20:00", "75", doublon);
+
+    assertEquals(1, fusionSallesClePortee.fusionner());
+
+    assertEquals(
+        4L,
+        jdbc.queryForObject("SELECT COUNT(*) FROM salle_sources", Map.of(), Long.class),
+        "Aucun lieu ne doit disparaître à la fusion");
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE message LIKE 'lieux reportés%'",
+            Map.of(), Long.class));
+  }
+
+  @Test
+  void fusionnerMemesLieux_memeDepartement_fusionneEtJournalise() {
+    final UUID europeen = creerSalle("L'Européen", "75", null, LAT, LON);
+    final UUID doublon = creerSalle("Leuropeen Paris 17", "75", null, LAT, LON);
+
+    assertEquals(
+        1,
+        fusionSallesClePortee.fusionnerMemesLieux(List.<UUID[]>of(new UUID[] {europeen, doublon})));
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class));
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM logs_admin WHERE message LIKE '%même lieu (position et nom)%'",
+            Map.of(), Long.class));
+  }
+
+  @Test
+  void fusionnerMemesLieux_departementsDifferents_neFusionnePas() {
+    final UUID a = creerSalle("Salle A", "75", null, LAT, LON);
+    final UUID b = creerSalle("Salle A Bis", "92", null, LAT, LON);
+
+    assertEquals(0, fusionSallesClePortee.fusionnerMemesLieux(List.<UUID[]>of(new UUID[] {a, b})));
   }
 
   @Test

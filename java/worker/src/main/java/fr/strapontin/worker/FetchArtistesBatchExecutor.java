@@ -84,6 +84,7 @@ class FetchArtistesBatchExecutor {
         lot,
         sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList(),
         ticketmasterAutorise);
+    rapportage.datesFestivalEcartees().signaler();
   }
 
   private WorkerStatsService.ResultatJob executerCycle(final List<String> artisteIdsCibles) {
@@ -99,6 +100,7 @@ class FetchArtistesBatchExecutor {
     final List<SourceConcerts> sourcesSimples =
         sources.stream().filter(s -> !(s instanceof SourceAvecFetchLot)).toList();
     final ResultatPersistance resultat = traiterLots(rows, sourcesSimples, ticketmasterAutorise);
+    rapportage.datesFestivalEcartees().signaler();
 
     commun.sauvegarderQuota();
     recalculerMatchesService.recalculerMatches(null);

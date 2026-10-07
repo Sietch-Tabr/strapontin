@@ -106,6 +106,30 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(List.of("comptes_incoherents"), actifs());
   }
 
+  // Élysée Montmartre réparti hors du Galabru, puis recréé sur le Galabru par son lieu
+  // Ticketmaster resté en place.
+  @Test
+  void verifier_concertRecreeSurUneSalleDeclareeDistincte_signaleLeConcertRecent() {
+    final UUID galabru = creerSalle();
+    final UUID elysee =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('elysee', 'Élysée Montmartre',"
+                + " 'elysee montmartre') RETURNING id",
+            Map.of(),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO salles_paires_distinctes (salle_a, salle_b) SELECT"
+            + " LEAST(CAST(:a AS uuid), CAST(:b AS uuid)), GREATEST(CAST(:a AS uuid), CAST(:b AS"
+            + " uuid))",
+        Map.of("a", galabru.toString(), "b", elysee.toString()));
+    evenement(elysee, "gaz coombes", "75");
+    evenement(galabru, "gaz coombes", "75");
+
+    controle.verifier();
+
+    assertEquals(List.of("concert_double_salles_distinctes"), actifs());
+  }
+
   @Test
   void verifier_donneesSaines_aucunSignalement() {
     evenement(creerSalle(), "artiste", "75");

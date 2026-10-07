@@ -5,9 +5,11 @@
 package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
+import fr.strapontin.web.ErreurMetier;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -103,10 +105,11 @@ class RepartitionSalleServiceIntegrationTest extends AbstractWebIntegrationTest 
     final RepartitionSalleService.ResultatRepartition resultat =
         service.repartir(
             bastille,
-            new RequeteRepartitionSalle(List.of("Comedie de Paris"), null, "Comédie de Paris"));
+            new RequeteRepartitionSalle(
+                List.of("Comedie de Paris"), null, null, "Comédie de Paris"));
 
     assertEquals(1, resultat.evenementsDeplaces());
-    assertEquals(1, resultat.lieuxEventimDeplaces());
+    assertEquals(1, resultat.lieuxDeplaces());
     assertEquals(resultat.cibleId(), salleDe(comedieParis));
     assertEquals(bastille, salleDe(resteBastille));
   }
@@ -126,7 +129,7 @@ class RepartitionSalleServiceIntegrationTest extends AbstractWebIntegrationTest 
         service.repartir(
             complexe,
             new RequeteRepartitionSalle(
-                List.of("La Seine Musicale - Grande Seine"), grandeSeine, null));
+                List.of("La Seine Musicale - Grande Seine"), null, grandeSeine, null));
 
     assertEquals(1, resultat.evenementsFusionnes());
     assertEquals(1, resultat.evenementsMixtes());
@@ -150,5 +153,99 @@ class RepartitionSalleServiceIntegrationTest extends AbstractWebIntegrationTest 
             new RepartitionSalleService.LibelleSource("Comedie de Paris", 2),
             new RepartitionSalleService.LibelleSource("La Comedie Bastille", 1)),
         service.listerLibelles(bastille));
+  }
+
+  private void lieu(final UUID salle, final String source, final String id, final String libelle) {
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe, libelle_source)"
+            + " VALUES (CAST(:salle AS uuid), :source, :id, :libelle)",
+        new MapSqlParameterSource()
+            .addValue("salle", salle.toString())
+            .addValue("source", source)
+            .addValue("id", id)
+            .addValue("libelle", libelle));
+  }
+
+  private UUID salleDuLieu(final String source, final String id) {
+    return jdbc.queryForObject(
+        "SELECT salle_id FROM salle_sources WHERE source = :source AND identifiant_externe = :id",
+        Map.of("source", source, "id", id),
+        UUID.class);
+  }
+
+  // Le lieu Ticketmaster resté sur la salle d'origine y ramenait ses concerts à chaque
+  // récupération : il suit désormais son libellé comme un lieu Eventim.
+  @Test
+  void repartir_lieuTicketmasterPortantLeLibelle_estDeplaceAvecLesConcerts() {
+    evenement(bastille, "artiste a", "Comedie de Paris");
+    lieu(bastille, "ticketmaster", "rZ6SnyZdd7", "Comédie de Paris");
+    lieu(bastille, "ticketmaster", "rZbastille", "La Comedie Bastille");
+
+    final RepartitionSalleService.ResultatRepartition resultat =
+        service.repartir(
+            bastille,
+            new RequeteRepartitionSalle(
+                List.of("Comedie de Paris"), null, null, "Comédie de Paris"));
+
+    assertEquals(resultat.cibleId(), salleDuLieu("ticketmaster", "rZ6SnyZdd7"));
+    assertEquals(bastille, salleDuLieu("ticketmaster", "rZbastille"));
+    assertEquals(List.of("ticketmaster:rZbastille"), resultat.lieuxRestes());
+  }
+
+  @Test
+  void repartir_lieuxChoisisParLAdmin_deplaceExactementCesLieuxEtDeclareLesSallesDistinctes() {
+    evenement(bastille, "artiste a", "Comedie de Paris");
+    lieu(bastille, "ticketmaster", "rZsansLibelle", null);
+    lieu(bastille, "eventim", "internal:comedie de paris", null);
+
+    final RepartitionSalleService.ResultatRepartition resultat =
+        service.repartir(
+            bastille,
+            new RequeteRepartitionSalle(
+                List.of("Comedie de Paris"),
+                List.of("ticketmaster:rZsansLibelle"),
+                null,
+                "Comédie de Paris"));
+
+    assertEquals(resultat.cibleId(), salleDuLieu("ticketmaster", "rZsansLibelle"));
+    assertEquals(bastille, salleDuLieu("eventim", "internal:comedie de paris"));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM salles_paires_distinctes"
+                + " WHERE CAST(:a AS uuid) IN (salle_a, salle_b)"
+                + " AND CAST(:b AS uuid) IN (salle_a, salle_b)",
+            Map.of("a", bastille.toString(), "b", resultat.cibleId().toString()),
+            Integer.class));
+  }
+
+  @Test
+  void repartir_lieuNonRattacheALaSalle_refuseSansRienDeplacer() {
+    final UUID autre = creerSalle("Autre Theatre");
+    evenement(bastille, "artiste a", "Comedie de Paris");
+    lieu(autre, "ticketmaster", "rZautre", null);
+
+    assertThrows(
+        ErreurMetier.class,
+        () ->
+            service.repartir(
+                bastille,
+                new RequeteRepartitionSalle(
+                    List.of("Comedie de Paris"), List.of("ticketmaster:rZautre"), null, "X")));
+    assertEquals(autre, salleDuLieu("ticketmaster", "rZautre"));
+  }
+
+  @Test
+  void listerLieux_toutesSources_nommeChaqueLieu() {
+    lieu(bastille, "eventim", "internal:comedie de paris@75009", null);
+    lieu(bastille, "ticketmaster", "rZ1", "Comédie Bastille");
+
+    assertEquals(
+        List.of(
+            new RepartitionSalleService.LieuSource(
+                "eventim:internal:comedie de paris@75009", "eventim", "comedie de paris", null),
+            new RepartitionSalleService.LieuSource(
+                "ticketmaster:rZ1", "ticketmaster", "Comédie Bastille", null)),
+        service.listerLieux(bastille));
   }
 }
