@@ -656,6 +656,39 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Cas réel du 06/10/2026 : Notre-Dame de Paris (Q2981) proposée pour une « Cathédrale » de la
+  // Marne, sans ville ni code postal : seule la coordonnée situe l'élément.
+  @Test
+  void enrichirLot_decouverte_rejetteCandidatPositionneHorsDuDepartement() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final UUID id = UUID.randomUUID();
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(id, "Cathédrale", "cathedrale", null, "51", null, null, null);
+
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.manyTimes(),
+            requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q2981"},
+                   "itemLabel":{"type":"literal","value":"Cathédrale"},
+                   "coord":{"type":"literal","value":"Point(2.3499 48.8530)"},
+                   "num":{"type":"literal","value":"0"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final WikidataSalleSource src = source(restClient, Caffeine.newBuilder().build());
+
+    assertTrue(src.enrichirLot(List.of(salle)).isEmpty());
+  }
+
   // Non-régression : dept connu et cohérent (ou code postal absent côté Wikidata) n'empêche pas
   // l'acceptation d'un candidat par ailleurs valide.
   @Test

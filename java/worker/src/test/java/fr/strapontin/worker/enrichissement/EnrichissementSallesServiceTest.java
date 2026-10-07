@@ -499,6 +499,22 @@ class EnrichissementSallesServiceTest {
         .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
+  // Théâtre du Chariot proposé avec l'élément du Théâtre du Châtelet : la salle qui porte
+  // l'élément est ailleurs, ce n'est ni un doublon ni une erreur à revoir.
+  @Test
+  void enrichir_collisionAvecUneSalleLointaine_nISignalePas() {
+    final UUID salleId = UUID.randomUUID();
+    final Map<String, Object> chatelet =
+        porteuse(UUID.randomUUID(), "theatre du chatelet", "wikidata");
+    chatelet.put("latitude", 45.75);
+    chatelet.put("longitude", 4.85);
+
+    final IssueCollision issue = enrichirAvecCollision(salleId, "theatre du chariot", chatelet);
+
+    verify(issue.signalement(), never())
+        .signaler(anyString(), anyString(), any(), anyString(), any());
+  }
+
   @Test
   void enrichir_collisionNomsDeDeuxLieuxVoisins_signaleSansFusionner() {
     final UUID salleId = UUID.randomUUID();

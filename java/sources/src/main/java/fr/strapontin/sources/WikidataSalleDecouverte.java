@@ -226,6 +226,18 @@ final class WikidataSalleDecouverte {
       return Optional.empty();
     }
 
+    // Sans ville ni code postal, la seule coordonnée situe l'élément : Notre-Dame de Paris
+    // était proposée pour une « Cathédrale » de la Marne.
+    if (coordLat != null
+        && coordLon != null
+        && !PositionDepartement.plausible(salle.dept(), coordLat, coordLon)) {
+      LOG.info(
+          "Wikidata découverte salle — rejet position hors département nom={} deptSalle={}",
+          nomRecherche,
+          salle.dept());
+      return Optional.empty();
+    }
+
     if (ValidationCoordonneesSalle.incompatibles(salle, coordLat, coordLon)) {
       LOG.warn(
           "Wikidata découverte salle — rejet coordonnées divergentes nom={} salleId={}",
