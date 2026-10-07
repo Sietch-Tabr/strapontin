@@ -4,6 +4,63 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.0.3 — 7 octobre 2026",
+    categories: [
+      {
+        categorie: "Notifications",
+        items: [
+          "Nouveau : un récapitulatif hebdomadaire, chaque dimanche à 10h. C'est le réglage d'un nouveau compte, qui reçoit par email les nouveaux concerts de ses artistes sans rien configurer.",
+          "L'accueil propose directement d'activer l'email et les notifications push, au lieu de renvoyer vers Paramètres.",
+          "La notification de test et les notifications push des communications d'incident sont de nouveau envoyées.",
+          "Un échec d'envoi de la notification de test explique pourquoi et quoi faire.",
+          "Paramètres indique quand cet appareil n'est plus enregistré pour les notifications push et propose de le réactiver.",
+          "Si plus aucune notification ne peut vous parvenir (dernier appareil qui ne les accepte plus, email désactivé), vous en êtes prévenu par email et par un bandeau dans l'application.",
+          "La checklist « Premiers pas » ne coche l'étape des notifications que si une notification peut réellement vous parvenir.",
+        ],
+      },
+      {
+        categorie: "Interface",
+        items: [
+          "Sur mobile et tablette, le bouton « Filtres » de Mes spectacles et de Découverte replie et déplie bien les filtres.",
+          "La recherche par nom se lance avec son propre bouton « Rechercher » ; les autres filtres s'appliquent dès leur sélection.",
+          "Les messages affichés après une action sont rédigés en français courant, sans termes techniques.",
+        ],
+      },
+      {
+        categorie: "Compte",
+        items: [
+          "À la création de votre compte, l'identifiant et le mot de passe ont chacun leur consigne, visible pendant la saisie.",
+          "La même règle d'identifiant (3 à 30 caractères) s'applique partout, avec le même message.",
+          "L'email prévenant de la suppression d'un compte inactif indique bien le nombre de jours restants.",
+        ],
+      },
+      {
+        categorie: "Concerts",
+        items: [
+          "Une soirée de festival où votre artiste ne joue pas ne lui est plus attribuée, même quand son titre ne nomme que le festival.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "Un même lieu publié sous deux noms par deux billetteries ne forme plus qu'une salle.",
+          "Une salle interne d'un lieu (comme la Salle Jean Tardieu du Théâtre du Rond-Point) est rattachée à son lieu.",
+          "La position d'une salle sur la carte suit celle de sa fiche Wikidata.",
+          "Une salle n'est plus associée à la fiche Wikidata d'un monument d'une autre ville.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "La répartition d'une salle mélangeant plusieurs lieux montre tous les lieux des billetteries, Ticketmaster compris, et ceux qui resteraient en place ; les deux salles ne sont plus réunies ensuite.",
+          "Une fusion de salles garde tous les lieux des deux salles, et chaque lieu reporté ou supprimé est tracé dans les logs.",
+          "Le signalement « Notifications non envoyées » nomme le compte et en donne la cause.",
+          "Nouveaux signalements : concert en double sur deux salles déclarées distinctes, date de festival attribuée à tort.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.0.2 — 3 octobre 2026",
     categories: [
       {
