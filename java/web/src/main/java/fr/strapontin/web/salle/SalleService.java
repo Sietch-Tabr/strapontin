@@ -187,10 +187,8 @@ public class SalleService {
       String userId, String nom, String tmVenueId, String osmId, String wikidataId) {}
 
   /**
-   * Ajoute une salle (normalise, vérifie doublon/cap ; salle qui porte déjà
-   * le lieu Ticketmaster ou l'élément Wikidata fournis, sinon {@link
-   * #resoudreSalleId}). osmId/wikidataId fournis : persistés immédiatement
-   * (conflit d'index rattrapé et loggé).
+   * Ajoute une salle : celle qui porte déjà le lieu Ticketmaster ou l'élément
+   * Wikidata fournis, sinon {@link #resoudreSalleId}.
    * @param donnees données d'ajout (voir {@link DonneesAjoutSalle})
    * @throws ErreurMetier si le nom est vide ou le cap de 200 salles atteint
    * @throws RessourceDejaExistante si la salle est déjà suivie
@@ -202,7 +200,7 @@ public class SalleService {
       throw new ErreurMetier("Nom de salle invalide.");
     }
 
-    // Identifiants d'abord : un nom proche créait sinon une seconde salle pour le même lieu.
+    // Identifiants d'abord : un nom proche créait sinon une seconde salle.
     final UUID connue =
         salleRepository.trouverParIdentifiants(
             donnees.tmVenueId(), blancEnNull(donnees.wikidataId()));
