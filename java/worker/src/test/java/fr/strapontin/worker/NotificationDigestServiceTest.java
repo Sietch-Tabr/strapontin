@@ -8,6 +8,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.resend.Resend;
 import com.resend.services.emails.Emails;
 import com.resend.services.emails.model.CreateEmailOptions;
@@ -27,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import tools.jackson.databind.ObjectMapper;
@@ -95,7 +100,7 @@ class NotificationDigestServiceTest {
 
     assertDoesNotThrow(() -> service.executerDigest("quotidien"));
 
-    verify(configService).lireConfig("RESEND_API_KEY");
+    verify(configService, atLeastOnce()).lireConfig("RESEND_API_KEY");
   }
 
   @Test
@@ -108,7 +113,7 @@ class NotificationDigestServiceTest {
 
     assertDoesNotThrow(() -> service.executerDigest("quotidien"));
 
-    verify(configService).lireConfig("VAPID_PUBLIC_KEY");
+    verify(configService, atLeastOnce()).lireConfig("VAPID_PUBLIC_KEY");
   }
 
   @Test
@@ -416,6 +421,32 @@ class NotificationDigestServiceTest {
     assertEquals(
         NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
         NotificationPushDigestService.interpreterStatutPush(500));
+  }
+
+  // Sans service d'envoi configuré, l'email n'est pas un canal joignable : ce n'est pas un
+  // échec d'envoi, aucun avertissement répété à chaque cycle.
+  @Test
+  void executerDigest_resendAbsent_aucunAvertissementDEchec() {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligneTest("u1")));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+    lenient().when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
+    lenient().when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
+    final Logger logger = (Logger) LoggerFactory.getLogger(NotificationDigestService.class);
+    final ListAppender<ILoggingEvent> evenements = new ListAppender<>();
+    evenements.start();
+    logger.addAppender(evenements);
+    try {
+      service.executerDigest("quotidien");
+    } finally {
+      logger.detachAppender(evenements);
+    }
+
+    assertEquals(
+        List.of(),
+        evenements.list.stream()
+            .filter(e -> e.getLevel() == Level.WARN)
+            .map(ILoggingEvent::getFormattedMessage)
+            .toList());
   }
 
   // --- : marquage notification_envoyee_le uniquement si un canal a réellement réussi ---

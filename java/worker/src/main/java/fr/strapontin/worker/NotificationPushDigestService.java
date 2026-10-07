@@ -150,6 +150,15 @@ class NotificationPushDigestService {
     return !chargerAbonnementsPush(userId).isEmpty();
   }
 
+  /**
+   * @return {@code true} si les clés VAPID sont configurées
+   */
+  /* package-private : appelé par NotificationDigestService (même package). */
+  boolean serviceDisponible() {
+    return configService.lireConfig("VAPID_PUBLIC_KEY").isPresent()
+        && configService.lireConfig("VAPID_PRIVATE_KEY").isPresent();
+  }
+
   private List<Map<String, Object>> chargerAbonnementsPush(final String userId) {
     return jdbc.queryForList(
         "SELECT id, endpoint, p256dh, auth FROM push_abonnements WHERE user_id = :userId",
