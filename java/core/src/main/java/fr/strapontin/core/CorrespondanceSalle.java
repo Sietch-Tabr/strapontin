@@ -7,6 +7,8 @@ package fr.strapontin.core;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -83,7 +85,12 @@ public final class CorrespondanceSalle {
   // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_TOKEN = 4;
 
-  private static final String SEPARATEUR_QUALIFICATIF = " - ";
+  // Tiret précédé ou suivi d'une espace (« Th du Rond Point -Salle Jean Tardieu ») ;
+  // un tiret accolé des deux côtés appartient au nom (« Saint-Louis »).
+  private static final Pattern SEPARATEUR_QUALIFICATIF = Pattern.compile("\\s+-\\s*|\\s*-\\s+");
+  // Abréviation de billetterie en tête du nom du complexe.
+  private static final Pattern ABREVIATION_THEATRE =
+      Pattern.compile("^th\\.?\\s+", Pattern.CASE_INSENSITIVE);
 
   private CorrespondanceSalle() {}
 
@@ -321,13 +328,39 @@ public final class CorrespondanceSalle {
 
   // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une
   // espace) — l'extraction opère donc sur le nom brut, jamais sur nom_norm.
+  /**
+   * @param nomBrut nom publié, éventuellement qualifié (« Complexe - Salle »)
+   * @param nomNormCandidat nom normalisé d'une salle trouvée pour ce nom
+   * @return {@code true} si le nom est qualifié et que la salle trouvée n'en
+   *     porte pas le qualificatif : c'est le complexe, pas sa salle interne
+   */
+  public static boolean qualificatifAbsentDe(final String nomBrut, final String nomNormCandidat) {
+    final String qualif = extraireQualificatif(nomBrut);
+    if (qualif == null || nomNormCandidat == null) {
+      return false;
+    }
+    final Set<String> motsQualif = tokensSignificatifs(Normalisation.normaliserTexte(qualif));
+    return !motsQualif.isEmpty() && !tokensSignificatifs(nomNormCandidat).containsAll(motsQualif);
+  }
+
   private static String extraireQualificatif(final String nomBrut) {
-    final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
-    if (idx <= 0) {
+    final MatchResult separateur = dernierSeparateur(nomBrut);
+    if (separateur == null) {
       return null;
     }
-    final String qualif = nomBrut.substring(idx + SEPARATEUR_QUALIFICATIF.length()).trim();
+    final String qualif = nomBrut.substring(separateur.end()).trim();
     return qualif.isEmpty() ? null : qualif;
+  }
+
+  private static MatchResult dernierSeparateur(final String nomBrut) {
+    final Matcher matcher = SEPARATEUR_QUALIFICATIF.matcher(nomBrut);
+    MatchResult dernier = null;
+    while (matcher.find()) {
+      if (matcher.start() > 0) {
+        dernier = matcher.toMatchResult();
+      }
+    }
+    return dernier;
   }
 
   /**
@@ -339,11 +372,14 @@ public final class CorrespondanceSalle {
    *     qualificatif
    */
   public static String extraireBase(final String nomBrut) {
-    final int idx = nomBrut.lastIndexOf(SEPARATEUR_QUALIFICATIF);
-    if (idx <= 0) {
+    final MatchResult separateur = dernierSeparateur(nomBrut);
+    if (separateur == null) {
       return null;
     }
-    final String base = nomBrut.substring(0, idx).trim();
+    final String base =
+        ABREVIATION_THEATRE
+            .matcher(nomBrut.substring(0, separateur.start()).trim())
+            .replaceFirst("Théâtre ");
     return base.isEmpty() ? null : base;
   }
 

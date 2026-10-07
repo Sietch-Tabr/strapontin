@@ -150,6 +150,12 @@ class ResolveurSalleParConcert {
     UUID salleId = retenir(chercherSalleParNomExact(concert.salle(), concert.dept()), concert);
     if (salleId == null) {
       salleId = retenir(chercherSalleParTokens(concert.salle(), concert.dept()), concert);
+      // Le complexe trouvé sans le qualificatif : la salle interne a sa propre salle.
+      if (salleId != null
+          && CorrespondanceSalle.qualificatifAbsentDe(concert.salle(), nomNormDe(salleId))) {
+        final UUID sousSalle = resoudreSousSalle(concert.salle(), concert.dept());
+        salleId = sousSalle != null ? sousSalle : salleId;
+      }
     }
     if (salleId == null) {
       salleId = retenir(resoudreSousSalle(concert.salle(), concert.dept()), concert);
@@ -296,6 +302,15 @@ class ResolveurSalleParConcert {
           meilleurScore);
     }
     return meilleurUuid;
+  }
+
+  private String nomNormDe(final UUID salleId) {
+    final List<String> noms =
+        jdbc.queryForList(
+            "SELECT nom_norm FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()),
+            String.class);
+    return noms.isEmpty() ? null : noms.get(0);
   }
 
   /**

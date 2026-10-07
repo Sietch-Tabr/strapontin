@@ -1779,6 +1779,38 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         "le second cycle doit fusionner avec la ligne déjà persistée au premier cycle");
   }
 
+  // Salle Jean Tardieu publiée sous une abréviation du complexe et un tiret accolé.
+  @Test
+  void persisterConcerts_sousSalleSousAbreviationDuComplexe_rattacheeAuComplexe() {
+    final UUID rondPoint =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES ('theatre du rond point',"
+                + " 'Théâtre du Rond-Point', 'theatre du rond point', '75') RETURNING id",
+            Map.of(),
+            UUID.class);
+    persisterConcerts.persisterConcerts(
+        List.of(
+            ConcertBrut.nouveau()
+                .artiste("Artiste Tardieu")
+                .date(DATE_RECENTE)
+                .heure("19:00")
+                .salle("Th du Rond Point -Salle Jean Tardieu")
+                .ville("Paris")
+                .dept("75")
+                .url("https://eventim.example/tardieu")
+                .source("eventim")
+                .salleSourceId("eventim:internal:th du rond point salle jean tardieu")
+                .construire()));
+
+    assertEquals(
+        rondPoint,
+        jdbc.queryForObject(
+            "SELECT s.salle_parent_id FROM salles s JOIN evenements e ON e.salle_id = s.id"
+                + " WHERE e.artiste_norm = 'artiste tardieu'",
+            Map.of(),
+            UUID.class));
+  }
+
   // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls
   // physiquement distincts sous un même salle_id — la seconde sous-salle qualifiée rencontrée
   // devient un enfant du complexe plutôt que d'être fusionnée ou de rester ambiguë.
