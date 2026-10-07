@@ -154,6 +154,17 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
         name: "Recevoir un email des nouveaux concerts de mes artistes",
       });
       await expect(email).toBeChecked();
+      const avant = await (await page.request.get("/api/user/config")).json();
+      expect(avant.frequenceNotifications).toBe("hebdomadaire");
+      // Sans service d'envoi configuré (clé Resend absente), l'email ne peut être modifié et
+      // l'étape le dit au lieu d'annoncer un récapitulatif qui ne partirait pas.
+      if (!avant.resendDisponible) {
+        await expect(email).toBeDisabled();
+        await expect(dialog).toContainText(
+          "Les emails ne sont pas disponibles pour le moment.",
+        );
+        return;
+      }
       await expect(dialog).toContainText("chaque dimanche à 10h");
 
       await email.uncheck();
@@ -264,9 +275,11 @@ test.describe("Scénario: checklist premiers pas — /aide", () => {
         data: { departements: "75" },
       });
       await page.goto("/aide");
-      await expect(checklist.locator(".checklist-item--fait")).toContainText(
-        "Configurer vos départements",
-      );
+      await expect(
+        checklist
+          .locator(".checklist-item--fait")
+          .filter({ hasText: "Configurer vos départements" }),
+      ).toHaveCount(1);
     } finally {
       await ctx.close();
     }

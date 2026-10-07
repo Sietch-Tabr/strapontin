@@ -155,9 +155,10 @@ test.describe("Scénario: catalogue — salles", () => {
 
     sallesANettoyer.push(nomSalle);
     await btnSuivre.click();
-    await expect(page.locator(".alerte-succes").first()).toBeVisible({
-      timeout: 5000,
-    });
+    // Même message qu'à l'ajout d'un artiste : la recherche de ses concerts est lancée.
+    await expect(
+      page.locator(".alerte-info").filter({ hasText: "Recherche des concerts" }),
+    ).toBeVisible({ timeout: 5000 });
 
     // Suppression inline post-test
     const btnSupprimer = page.locator(

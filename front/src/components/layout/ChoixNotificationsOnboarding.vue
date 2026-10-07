@@ -11,7 +11,11 @@
         <span>Recevoir un email des nouveaux concerts de mes artistes</span>
       </label>
       <p class="form-aide">
-        {{ libelleFrequence }}
+        {{
+          config.resendDisponible
+            ? libelleFrequence
+            : "Les emails ne sont pas disponibles pour le moment."
+        }}
       </p>
     </div>
 
