@@ -5,6 +5,7 @@
 package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
@@ -46,6 +47,7 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
   @BeforeEach
   void setUp() {
     jdbc.update("DELETE FROM signalements_matching", Map.of());
+    jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM artiste_sources", Map.of());
     jdbc.update("DELETE FROM artistes", Map.of());
     jdbc.update(
@@ -209,5 +211,47 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
             Long.class);
     assertEquals(1L, paires);
     assertEquals(0, service.lister(0).total());
+  }
+
+  private long signalerConcert(final String type) {
+    final UUID concert =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, salle_norm, date)"
+                + " VALUES ('selah sue', 'chapiteau', CURRENT_DATE + 4) RETURNING id",
+            Map.of(),
+            UUID.class);
+    return jdbc.queryForObject(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
+            + " VALUES (:type, 'evenement', CAST(:id AS uuid), 'moyenne') RETURNING id",
+        Map.of("type", type, "id", concert.toString()),
+        Long.class);
+  }
+
+  @Test
+  void supprimerConcertSignale_dateDeFestivalEcartee_supprimeEtClot() {
+    final long id = signalerConcert("date_festival_ecartee");
+
+    assertTrue(service.supprimerConcertSignale(id));
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM evenements WHERE artiste_norm = 'selah sue'",
+            Map.of(),
+            Integer.class));
+    assertFalse(service.supprimerConcertSignale(id), "signalement déjà clos");
+  }
+
+  // Seuls les signalements dont l'action attendue est la suppression la permettent.
+  @Test
+  void supprimerConcertSignale_autreType_neSupprimeRien() {
+    final long id = signalerConcert("notifications_non_envoyees");
+
+    assertFalse(service.supprimerConcertSignale(id));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM evenements WHERE artiste_norm = 'selah sue'",
+            Map.of(),
+            Integer.class));
   }
 }
