@@ -104,10 +104,9 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
 
   @Test
   void fusionner_deuxSallesEtabliesPartageantUnConcert_fusionneEtPreserveWikidataId() {
-    // Cas réel documenté (#1099) : "Grand Theatre Limoges" (Eventim, sans wikidata_id) et
-    // "Opera de Limoges" (TM, wikidata_id connu) désignent le même bâtiment — aucun rapport
-    // textuel entre les deux noms, seul un concert partagé (artiste+date+heure+dept) le révèle.
-    final UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null, LAT, LON);
+    // Deux libellés du même bâtiment, Eventim sans wikidata_id et Ticketmaster avec, révélés
+    // par un concert partagé (artiste+date+heure+dept).
+    final UUID grandTheatre = creerSalle("Opera Limoges", "87", null, LAT, LON);
     final UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551", LAT, LON);
     creerConcert("laurent voulzy", "20:30", "87", grandTheatre);
     creerConcert("laurent voulzy", "20:30", "87", operaLimoges);
@@ -187,7 +186,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   @Test
   void fusionner_fusionEffectuee_journaliseDansLogsAdmin() {
     // Une fusion automatique et destructive ne doit jamais rester silencieuse.
-    final UUID a = creerSalle("Grand Theatre Limoges", "87", null, LAT, LON);
+    final UUID a = creerSalle("Opera Limoges", "87", null, LAT, LON);
     final UUID b = creerSalle("Opera de Limoges", "87", "Q3354551", LAT, LON);
     creerConcert("laurent voulzy", "20:30", "87", a);
     creerConcert("laurent voulzy", "20:30", "87", b);
@@ -205,7 +204,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         jdbc.queryForObject(
             "SELECT meta->>'nomSource' FROM logs_admin WHERE message LIKE '%fusionnées%'",
             Map.of(), String.class);
-    assertEquals("Grand Theatre Limoges (87)", nomSource);
+    assertEquals("Opera Limoges (87)", nomSource);
   }
 
   @Test
@@ -259,7 +258,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
 
   @Test
   void fusionner_coordonneesProchesNomsSimilaires_fusionne() {
-    final UUID salleA = creerSalle("Grand Theatre Limoges", "87", null, 45.8336, 1.2611);
+    final UUID salleA = creerSalle("Opera Limoges", "87", null, 45.8336, 1.2611);
     final UUID salleB = creerSalle("Opera de Limoges", "87", "Q3354551", 45.8337, 1.2612);
     creerConcert("laurent voulzy", "20:30", "87", salleA);
     creerConcert("laurent voulzy", "20:30", "87", salleB);
@@ -274,7 +273,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // orphelines.
   @Test
   void fusionner_sourceAvecSousSalle_reassigneLeParentIdVersLaCible() {
-    final UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null, LAT, LON);
+    final UUID grandTheatre = creerSalle("Opera Limoges", "87", null, LAT, LON);
     final UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551", LAT, LON);
     final UUID sousSalleDeLaSource = creerSalle("Grand Theatre Limoges - Petite Salle", "87", null);
     jdbc.update(
@@ -302,7 +301,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // cible -> intermediaire -> source deviendrait intermediaire -> cible -> intermediaire.
   @Test
   void fusionner_cibleDescendanteDeLaSourceViaIntermediaire_detacheSansCreerDeCycle() {
-    final UUID source = creerSalle("Grand Theatre Limoges", "87", null);
+    final UUID source = creerSalle("Opera Limoges", "87", null);
     final UUID intermediaire = creerSalle("Grand Theatre Limoges - Aile Est", "87", null);
     final UUID cible = creerSalle("Grand Theatre Limoges - Aile Est - Loge", "87", null);
     jdbc.update(
@@ -353,7 +352,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
 
   @Test
   void fusionner_paireDeclareeDistincteParUnAdmin_neFusionnePas() {
-    final UUID a = creerSalle("Grand Theatre Limoges", "87", null, LAT, LON);
+    final UUID a = creerSalle("Opera Limoges", "87", null, LAT, LON);
     final UUID b = creerSalle("Opera de Limoges", "87", null, LAT, LON);
     creerConcert("laurent voulzy", "20:30", "87", a);
     creerConcert("laurent voulzy", "20:30", "87", b);
@@ -369,7 +368,7 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
   // Un concert partagé avec une salle mélangeant plusieurs lieux ne prouve pas le même lieu.
   @Test
   void fusionner_salleSignaleeContaminee_neFusionnePas() {
-    final UUID grandTheatre = creerSalle("Grand Theatre Limoges", "87", null, LAT, LON);
+    final UUID grandTheatre = creerSalle("Opera Limoges", "87", null, LAT, LON);
     final UUID operaLimoges = creerSalle("Opera de Limoges", "87", "Q3354551", LAT, LON);
     creerConcert("laurent voulzy", "20:30", "87", grandTheatre);
     creerConcert("laurent voulzy", "20:30", "87", operaLimoges);

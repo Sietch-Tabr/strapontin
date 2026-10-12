@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.QualificatifSalle;
 import fr.strapontin.sources.ClientNominatim;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -282,7 +283,7 @@ class ResolveurSalleParConcert {
       if (!CorrespondanceSalle.estDoublonSalle(nomNorm, nomNormCandidat)) {
         continue;
       }
-      if (CorrespondanceSalle.qualificatifsDivergents(nom, nomCandidat)) {
+      if (QualificatifSalle.qualificatifsDivergents(nom, nomCandidat)) {
         continue;
       }
       final double score = CorrespondanceSalle.jaccardTokens(nomNorm, nomNormCandidat);

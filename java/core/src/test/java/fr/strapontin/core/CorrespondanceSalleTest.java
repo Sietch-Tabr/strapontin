@@ -89,15 +89,11 @@ class CorrespondanceSalleTest {
             "centre des congres angers", "centre des congres jonzac"));
   }
 
-  // "Le Rockstore Montpellier"/"Le Corum - Montpellier" : le pivot "montpellier" (11
-  // caractères) n'est pas un mot-type de salle générique (c'est un nom de ville) — hors scope de
-  // la liste d'exclusion (nécessiterait une liste de communes françaises, non demandée). Reste
-  // également hors de portée du filtre dept : les deux salles sont dans le même département
-  // (34). Faux positif connu et non corrigé.
+  // "Le Rockstore Montpellier"/"Le Corum - Montpellier" : la ville accolée en fin des deux noms
+  // ne sert plus de pivot, ces deux salles d'un même département restent distinctes.
   @Test
-  void
-      estDoublonSalle_sallesMontpellieraisesDistinctesPartageantLeNomDeVille_resteTrueLimiteConnue() {
-    assertTrue(
+  void estDoublonSalle_sallesMontpellieraisesDistinctesPartageantLeNomDeVille_retourneFalse() {
+    assertFalse(
         CorrespondanceSalle.estDoublonSalle("le rockstore montpellier", "le corum montpellier"));
   }
 
@@ -320,32 +316,32 @@ class CorrespondanceSalleTest {
   @Test
   void qualificatifsDivergents_qualificatifsDistinctsMemeComplexe_retourneTrue() {
     assertTrue(
-        CorrespondanceSalle.qualificatifsDivergents(
+        QualificatifSalle.qualificatifsDivergents(
             "La Seine Musicale - Grande Seine", "Seine Musicale - Auditorium P.devedjian"));
   }
 
   @Test
   void qualificatifsDivergents_memeQualificatif_retourneFalse() {
     assertFalse(
-        CorrespondanceSalle.qualificatifsDivergents(
+        QualificatifSalle.qualificatifsDivergents(
             "La Seine Musicale - Grande Seine", "Seine Musicale - Grande Seine"));
   }
 
   @Test
   void qualificatifsDivergents_unSeulNomQualifie_retourneFalse() {
     assertFalse(
-        CorrespondanceSalle.qualificatifsDivergents("La Seine Musicale - Grande Seine", "Zenith"));
+        QualificatifSalle.qualificatifsDivergents("La Seine Musicale - Grande Seine", "Zenith"));
   }
 
   @Test
   void qualificatifsDivergents_aucunQualificatif_retourneFalse() {
-    assertFalse(CorrespondanceSalle.qualificatifsDivergents("Zenith Paris", "Zenith de Paris"));
+    assertFalse(QualificatifSalle.qualificatifsDivergents("Zenith Paris", "Zenith de Paris"));
   }
 
   @Test
   void extraireBase_nomQualifie_retourneLaPartieComplexe() {
     assertEquals(
-        "La Seine Musicale", CorrespondanceSalle.extraireBase("La Seine Musicale - Grande Seine"));
+        "La Seine Musicale", QualificatifSalle.extraireBase("La Seine Musicale - Grande Seine"));
   }
 
   // « Th du Rond Point -Salle Jean Tardieu » (Eventim et Ticketmaster).
@@ -353,17 +349,17 @@ class CorrespondanceSalleTest {
   void extraireBase_tiretAccoleAuQualificatifEtAbreviation_retourneLeComplexe() {
     assertEquals(
         "Théâtre du Rond Point",
-        CorrespondanceSalle.extraireBase("Th du Rond Point -Salle Jean Tardieu"));
+        QualificatifSalle.extraireBase("Th du Rond Point -Salle Jean Tardieu"));
   }
 
   @Test
   void extraireBase_tiretInterieurAuNom_retourneNull() {
-    assertNull(CorrespondanceSalle.extraireBase("Église Saint-Louis-en-l'Île"));
+    assertNull(QualificatifSalle.extraireBase("Église Saint-Louis-en-l'Île"));
   }
 
   @Test
   void extraireBase_nomSansQualificatif_retourneNull() {
-    assertNull(CorrespondanceSalle.extraireBase("Zenith Paris"));
+    assertNull(QualificatifSalle.extraireBase("Zenith Paris"));
   }
 
   // --- Pivot sur un nom réduit à un seul token spécifique (quartier, ville) ---
@@ -392,5 +388,33 @@ class CorrespondanceSalleTest {
   @Test
   void estDoublonSalle_memeNomAvecVilleEnSuffixe_resteTrue() {
     assertTrue(CorrespondanceSalle.estDoublonSalle("theatre mogador", "theatre mogador paris"));
+  }
+
+  // La ville accolée par la source (fin commune) ne sert plus de pivot : L'Empreinte et
+  // l'Espace Prévert sont deux lieux de Savigny-le-Temple.
+  @Test
+  void estDoublonSalle_lieuxDistinctsDUneMemeVilleAccolee_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "lempreinte savigny le temple cedex", "espace prevert savigny le temple"));
+    assertFalse(CorrespondanceSalle.estDoublonSalle("kursaal besancon", "la rodia besancon"));
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle(
+            "grande halle de la villette", "la petite halle de la villette"));
+  }
+
+  // « Comédie » ne rapproche pas seul deux théâtres, sans pour autant réduire un nom à sa ville.
+  @Test
+  void estDoublonSalle_theatresComedieDistincts_retourneFalse() {
+    assertFalse(
+        CorrespondanceSalle.estDoublonSalle("la comedie st michel paris 05", "comedie de paris"));
+    assertFalse(CorrespondanceSalle.estDoublonSalle("casino de paris", "comedie de paris"));
+    assertFalse(CorrespondanceSalle.estDoublonSalle("la comedie bastille paris", "opera bastille"));
+  }
+
+  @Test
+  void estDoublonSalle_memeComedieSousDeuxLibelles_resteTrue() {
+    assertTrue(
+        CorrespondanceSalle.estDoublonSalle("comedie de paris paris 09", "comedie de paris"));
   }
 }

@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.QualificatifSalle;
 import fr.strapontin.core.SalleHierarchie;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
@@ -136,7 +137,7 @@ public class FusionSallesClePorteeService {
   private static boolean memeLieu(final Map<String, Object> ligne) {
     return CorrespondanceSalle.estDoublonSalle(
             (String) ligne.get("nom_a"), (String) ligne.get("nom_b"))
-        && !CorrespondanceSalle.qualificatifsDivergents(
+        && !QualificatifSalle.qualificatifsDivergents(
             (String) ligne.get("brut_a"), (String) ligne.get("brut_b"))
         && coordonneesConnuesEtProches(
             (Double) ligne.get("lat_a"),

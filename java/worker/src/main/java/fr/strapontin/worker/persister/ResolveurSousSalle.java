@@ -4,8 +4,8 @@
  */
 package fr.strapontin.worker.persister;
 
-import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.QualificatifSalle;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,7 +52,7 @@ final class ResolveurSousSalle {
    */
   /* package-private : appelé par ResolveurSalleParConcert (même package). */
   UUID plutotQueLeComplexe(final UUID trouvee, final String nom, final String dept) {
-    if (trouvee == null || !CorrespondanceSalle.qualificatifAbsentDe(nom, nomNormDe(trouvee))) {
+    if (trouvee == null || !QualificatifSalle.qualificatifAbsentDe(nom, nomNormDe(trouvee))) {
       return trouvee;
     }
     final UUID sousSalle = resoudre(nom, dept);
@@ -67,7 +67,7 @@ final class ResolveurSousSalle {
    */
   /* package-private : appelé par ResolveurSalleParConcert (même package). */
   UUID resoudre(final String nom, final String dept) {
-    final String base = CorrespondanceSalle.extraireBase(nom);
+    final String base = QualificatifSalle.extraireBase(nom);
     if (base == null) {
       return null;
     }
