@@ -257,6 +257,29 @@ public class PersisteurConcertsDb {
   }
 
   /**
+   * Ajoute les autres artistes de la soirée, jamais retirés : deux sources ne
+   * publient pas toujours le même plateau, et un lot dédoublonné n'en garde
+   * qu'une. L'artiste est relié s'il existe déjà au référentiel.
+   */
+  private void enregistrerPlateau(final UUID evenementId, final ValeurConcert concert) {
+    for (final String nom : concert.brut().artistesInvites()) {
+      final String norm = Normalisation.normaliserTexte(nom);
+      if (norm.isEmpty() || norm.equals(concert.artisteNorm())) {
+        continue;
+      }
+      jdbc.update(
+          """
+          INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom, artiste_id)
+          VALUES (CAST(:id AS uuid), :norm, :nom,
+                  (SELECT a.id FROM artistes a WHERE a.nom_norm = :norm))
+          ON CONFLICT (evenement_id, artiste_norm) DO UPDATE
+            SET artiste_id = COALESCE(evenement_artistes.artiste_id, EXCLUDED.artiste_id)
+          """,
+          Map.of("id", evenementId.toString(), "norm", norm, "nom", nom));
+    }
+  }
+
+  /**
    * Retrouve, parmi les observations déjà attachées à un événement, le
    * {@code salle_brut} de celle qui servirait de référence dans la vue
    * {@code concerts} — même priorité (package puis TM &gt; Eventim &gt;
@@ -298,6 +321,7 @@ public class PersisteurConcertsDb {
     for (final ValeurConcert concert : valeurs) {
       final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert);
       upsertObservation(resolution.id(), concert);
+      enregistrerPlateau(resolution.id(), concert);
       if (resolution.nouveau()) {
         inserts++;
       } else {

@@ -31,7 +31,7 @@ class MatchesNonNotifiesLoader {
                WHEN EXISTS (
                  SELECT 1 FROM user_artistes ua
                  WHERE ua.user_id = um.user_id
-                   AND c.artiste_id = ua.artiste_id
+                   AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
                ) THEN 'ARTISTE'
                ELSE 'SALLE'
              END AS source
@@ -47,7 +47,7 @@ class MatchesNonNotifiesLoader {
           ((uc.notif_artistes = true OR uc.notif_artistes_push = true) AND EXISTS (
             SELECT 1 FROM user_artistes ua
             WHERE ua.user_id = um.user_id
-              AND c.artiste_id = ua.artiste_id
+              AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
           ))
           OR
           ((uc.notif_salles = true OR uc.notif_salles_push = true) AND EXISTS (

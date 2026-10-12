@@ -316,6 +316,14 @@ public class FusionEvenementsArtisteService {
         "UPDATE observations SET evenement_id = CAST(:cible AS uuid)"
             + " WHERE evenement_id = CAST(:source AS uuid)",
         ids);
+    jdbc.update(
+        """
+        INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom, artiste_id)
+        SELECT CAST(:cible AS uuid), artiste_norm, artiste_nom, artiste_id
+        FROM evenement_artistes WHERE evenement_id = CAST(:source AS uuid)
+        ON CONFLICT DO NOTHING
+        """,
+        ids);
 
     // 2. user_matches : conflits déjà côté cible supprimés, le reste
     // réassigné — jamais laissé à la suppression CASCADE de la source

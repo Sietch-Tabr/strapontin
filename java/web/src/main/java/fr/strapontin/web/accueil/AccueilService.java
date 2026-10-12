@@ -58,7 +58,7 @@ public class AccueilService {
           AND um.vu_le IS NULL
           AND EXISTS (
             SELECT 1 FROM user_artistes ua
-            WHERE ua.user_id = um.user_id AND c.artiste_id = ua.artiste_id
+            WHERE ua.user_id = um.user_id AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
           )
         """,
         Map.of(CLE_USER_ID, userId));
@@ -135,7 +135,7 @@ public class AccueilService {
          AND EXISTS (
            SELECT 1 FROM user_artistes ua
            WHERE ua.user_id = :userId
-             AND c.artiste_id = ua.artiste_id
+             AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
          )
         """);
     return where;
@@ -151,13 +151,29 @@ public class AccueilService {
       final StringBuilder where, final Map<String, Object> params) {
     return jdbc.query(
         """
-        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
-               c.artiste_id::text AS artiste_id, c.date::text,
+        SELECT c.id, COALESCE(suivi.nom, a.nom, c.artiste) AS artiste,
+               COALESCE(suivi.artiste_norm, c.artiste_norm) AS artiste_norm,
+               COALESCE(suivi.artiste_id, c.artiste_id)::text AS artiste_id, c.date::text,
                c.heure::text, c.salle, c.ville, c.url, c.statut,
-               um.vu_le IS NULL AS est_nouveau
+               um.vu_le IS NULL AS est_nouveau,
+               CASE WHEN suivi.artiste_id IS NOT NULL THEN COALESCE(a.nom, c.artiste) END
+                 AS tete_d_affiche
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         LEFT JOIN artistes a ON a.id = c.artiste_id
+        -- Soirée partagée dont la tête d'affiche n'est pas suivie : classée
+        -- sous l'artiste suivi du plateau.
+        LEFT JOIN LATERAL (
+          SELECT ea.artiste_id, ea.artiste_norm, COALESCE(ai.nom, ea.artiste_nom) AS nom
+          FROM evenement_artistes ea
+          JOIN user_artistes ui ON ui.artiste_id = ea.artiste_id AND ui.user_id = :userId
+          LEFT JOIN artistes ai ON ai.id = ea.artiste_id
+          WHERE ea.evenement_id = c.id
+            AND NOT EXISTS (SELECT 1 FROM user_artistes ut
+                            WHERE ut.user_id = :userId AND ut.artiste_id = c.artiste_id)
+          ORDER BY ea.artiste_norm
+          LIMIT 1
+        ) suivi ON true
         WHERE %s
         ORDER BY c.date ASC, c.artiste ASC
         """
@@ -175,7 +191,8 @@ public class AccueilService {
                 rs.getString("ville"),
                 rs.getString("url"),
                 rs.getString("statut"),
-                rs.getBoolean("est_nouveau")));
+                rs.getBoolean("est_nouveau"),
+                rs.getString("tete_d_affiche")));
   }
 
   private List<GroupeArtiste> grouperParArtiste(final List<ConcertAccueil> lignes) {

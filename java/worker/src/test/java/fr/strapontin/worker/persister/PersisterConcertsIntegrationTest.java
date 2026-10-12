@@ -245,6 +245,32 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             "SELECT ville FROM evenements WHERE artiste_norm = 'niska'", Map.of(), String.class));
   }
 
+  @Test
+  void persisterConcerts_soireePartagee_enregistreLePlateauSansLArtistePrincipal() {
+    final ConcertBrut soiree =
+        ConcertBrut.nouveau()
+            .artiste("Charlie Winston")
+            .date("2098-10-08")
+            .heure("20:00")
+            .salle("Chapiteau de la Pépinière")
+            .ville("Nancy")
+            .dept("54")
+            .source("ticketmaster")
+            .url("https://www.ticketmaster.fr/njp-08")
+            .artistesInvites(List.of("Bertrand Belin", "Alain Chamfort", "Charlie Winston"))
+            .construire();
+
+    persisterConcerts.persisterConcerts(List.of(soiree));
+    persisterConcerts.persisterConcerts(List.of(soiree));
+
+    assertEquals(
+        List.of("alain chamfort", "bertrand belin"),
+        jdbc.queryForList(
+            "SELECT artiste_norm FROM evenement_artistes ORDER BY artiste_norm",
+            Map.of(),
+            String.class));
+  }
+
   private void insererSalleAvecCoordonnees(
       final String nom, final double latitude, final double longitude) {
     jdbc.update(

@@ -182,7 +182,8 @@ public class SpectacleService {
           params,
           "SELECT artiste_id FROM user_artistes WHERE user_id = :u",
           userId,
-          "c.artiste_id IN (:artisteIds)",
+          "(c.artiste_id IN (:artisteIds) OR EXISTS (SELECT 1 FROM evenement_artistes ea"
+              + " WHERE ea.evenement_id = c.id AND ea.artiste_id IN (:artisteIds)))",
           "artisteIds");
     } else if (sourceSalles && !sourceArtistes) {
       appliquerFiltreEntite(
@@ -389,7 +390,10 @@ public class SpectacleService {
           AND masque_le IS NULL
           AND concert_id IN (
             SELECT id FROM concerts
-            WHERE artiste_id = CAST(:artisteId AS uuid) AND date >= :aujourd8
+            WHERE (artiste_id = CAST(:artisteId AS uuid)
+                   OR id IN (SELECT evenement_id FROM evenement_artistes
+                             WHERE artiste_id = CAST(:artisteId AS uuid)))
+              AND date >= :aujourd8
           )
         """,
         Map.of(
@@ -414,7 +418,10 @@ public class SpectacleService {
         WHERE user_id = :userId
           AND concert_id IN (
             SELECT id FROM concerts
-            WHERE artiste_id = CAST(:artisteId AS uuid) AND date >= :aujourd8
+            WHERE (artiste_id = CAST(:artisteId AS uuid)
+                   OR id IN (SELECT evenement_id FROM evenement_artistes
+                             WHERE artiste_id = CAST(:artisteId AS uuid)))
+              AND date >= :aujourd8
           )
         """,
         Map.of(

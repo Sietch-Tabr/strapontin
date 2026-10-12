@@ -185,7 +185,8 @@ class AccueilServiceTest {
             "Paris",
             "url1",
             "onsale",
-            false);
+            false,
+            null);
     final ConcertAccueil c2 =
         new ConcertAccueil(
             "c2",
@@ -198,7 +199,8 @@ class AccueilServiceTest {
             "Paris",
             "url2",
             "onsale",
-            true);
+            true,
+            null);
     final ConcertAccueil c3 =
         new ConcertAccueil(
             "c3",
@@ -211,7 +213,8 @@ class AccueilServiceTest {
             "Paris",
             "url3",
             "onsale",
-            false);
+            false,
+            null);
     when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of(c1, c2, c3));
     when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
 

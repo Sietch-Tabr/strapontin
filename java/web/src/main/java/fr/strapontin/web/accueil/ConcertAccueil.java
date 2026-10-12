@@ -7,9 +7,9 @@ package fr.strapontin.web.accueil;
 import fr.strapontin.web.utils.Dates;
 
 /**
- * Concert dans la vue accueil d'un utilisateur — {@code artisteId} (UUID
- * référentiel) sert au masquage par groupe, {@code artisteNorm} (texte par
- * source, pouvant diverger selon le fetch) aux ancres de navigation.
+ * Concert de l'accueil : {@code artisteId} sert au masquage par groupe,
+ * {@code artisteNorm} aux ancres ; {@code teteDAffiche} nomme la tête
+ * d'affiche d'une soirée classée sous un autre artiste suivi du plateau.
  * @since 2.1.0
  * @author Kwaite
  */
@@ -24,7 +24,8 @@ public record ConcertAccueil(
     String ville,
     String url,
     String statut,
-    boolean estNew) {
+    boolean estNew,
+    String teteDAffiche) {
 
   /**
    * @return date courte formatée (ex. "sam. 12 avr.")

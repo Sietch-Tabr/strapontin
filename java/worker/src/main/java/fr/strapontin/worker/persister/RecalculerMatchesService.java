@@ -43,6 +43,11 @@ public class RecalculerMatchesService {
    * dans la vue {@code concerts} — elle redevient visible dès qu'une fiche
    * normale apparaît.
    */
+  // Tête d'affiche, ou autre artiste du plateau d'une soirée partagée.
+  private static final String SQL_ARTISTE_A_L_AFFICHE =
+      "(c.artiste_id IN (:artisteIds) OR EXISTS (SELECT 1 FROM evenement_artistes ea"
+          + " WHERE ea.evenement_id = c.id AND ea.artiste_id IN (:artisteIds)))";
+
   private static final String SQL_PAS_PACKAGE_ISOLE =
       " AND (c.url IS NULL OR c.url !~* '/pack/' OR EXISTS ("
           + "   SELECT 1 FROM concerts c2"
@@ -72,6 +77,7 @@ public class RecalculerMatchesService {
    * @return nombre d'utilisateurs traités
    */
   public int recalculerMatches(final List<String> userIds) {
+    relierArtistesDesPlateaux();
     final Set<String> usersAvecArtistes =
         new LinkedHashSet<>(
             jdbc.queryForList(
@@ -114,6 +120,15 @@ public class RecalculerMatchesService {
 
     purgerMatchesOrphelins(usersSet);
     return usersARecalculer.size();
+  }
+
+  // Un artiste du plateau entre au référentiel quand un utilisateur le suit,
+  // souvent après l'enregistrement de la soirée.
+  private void relierArtistesDesPlateaux() {
+    jdbc.update(
+        "UPDATE evenement_artistes ea SET artiste_id = a.id FROM artistes a"
+            + " WHERE ea.artiste_id IS NULL AND a.nom_norm = ea.artiste_norm",
+        Map.of());
   }
 
   private void recalculerPourUser(final String userId, final String aujourdhui) {
@@ -181,13 +196,17 @@ public class RecalculerMatchesService {
     if (departements.isEmpty()) {
       sql =
           "SELECT DISTINCT c.id FROM concerts c"
-              + " WHERE c.artiste_id IN (:artisteIds) AND c.date >= :aujourdhui"
+              + " WHERE "
+              + SQL_ARTISTE_A_L_AFFICHE
+              + " AND c.date >= :aujourdhui"
               + SQL_PAS_PACKAGE_ISOLE;
     } else {
       params.put("departements", departements);
       sql =
           "SELECT DISTINCT c.id FROM concerts c"
-              + " WHERE c.artiste_id IN (:artisteIds) AND c.date >= :aujourdhui"
+              + " WHERE "
+              + SQL_ARTISTE_A_L_AFFICHE
+              + " AND c.date >= :aujourdhui"
               + " AND c.dept = ANY(ARRAY[:departements])"
               + SQL_PAS_PACKAGE_ISOLE;
     }

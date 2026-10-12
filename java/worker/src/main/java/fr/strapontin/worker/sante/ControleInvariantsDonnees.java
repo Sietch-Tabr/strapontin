@@ -175,7 +175,7 @@ final class ControleInvariantsDonnees {
           AND (
             ((uc.notif_artistes OR uc.notif_artistes_push) AND EXISTS (
               SELECT 1 FROM user_artistes ua
-              WHERE ua.user_id = um.user_id AND ua.artiste_id = c.artiste_id))
+              WHERE ua.user_id = um.user_id AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))))
             OR ((uc.notif_salles OR uc.notif_salles_push) AND EXISTS (
               SELECT 1 FROM user_salles us
               WHERE us.user_id = um.user_id AND us.salle_id = c.salle_id)))

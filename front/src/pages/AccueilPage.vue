@@ -149,6 +149,9 @@
                   {{ concert.salle
                   }}{{ concert.ville ? " · " + concert.ville : "" }}
                 </p>
+                <p v-if="concert.teteDAffiche" class="concert-lieu">
+                  Avec {{ concert.teteDAffiche }}
+                </p>
               </div>
               <div class="concert-actions">
                 <a

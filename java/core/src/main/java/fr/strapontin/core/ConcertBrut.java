@@ -4,11 +4,13 @@
  */
 package fr.strapontin.core;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
  * Concert brut renvoyé par une source, avant dédoublonnage et résolution.
  * Artiste, date, lieu et source obligatoires ; construit par {@link #nouveau()}.
+ * Une soirée partagée porte aussi les autres artistes du plateau.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -21,7 +23,8 @@ public record ConcertBrut(
     String url,
     String source,
     Classement classement,
-    InfosVente vente) {
+    InfosVente vente,
+    List<String> artistesInvites) {
 
   /** Valide la présence des champs obligatoires. */
   public ConcertBrut {
@@ -31,6 +34,7 @@ public record ConcertBrut(
     Objects.requireNonNull(source, "source");
     vente = vente != null ? vente : InfosVente.INCONNUE;
     classement = classement != null ? classement : Classement.INCONNU;
+    artistesInvites = artistesInvites != null ? List.copyOf(artistesInvites) : List.of();
   }
 
   /**
@@ -78,7 +82,8 @@ public record ConcertBrut(
         .url(url)
         .source(source)
         .classement(classement)
-        .vente(vente);
+        .vente(vente)
+        .artistesInvites(artistesInvites);
   }
 
   /**
@@ -153,6 +158,7 @@ public record ConcertBrut(
     private String nomSource;
     private Classement classementConcert = Classement.INCONNU;
     private InfosVente infosVente = InfosVente.INCONNUE;
+    private List<String> invites = List.of();
 
     private Constructeur() {}
 
@@ -331,6 +337,15 @@ public record ConcertBrut(
     }
 
     /**
+     * @param valeur autres artistes du plateau, sans l'artiste principal
+     * @return ce constructeur
+     */
+    public Constructeur artistesInvites(final List<String> valeur) {
+      this.invites = valeur;
+      return this;
+    }
+
+    /**
      * @return le concert
      * @throws NullPointerException si artiste, date, salle ou source manque
      */
@@ -344,7 +359,8 @@ public record ConcertBrut(
           urlFiche,
           nomSource,
           classementConcert,
-          infosVente);
+          infosVente,
+          invites);
     }
   }
 }

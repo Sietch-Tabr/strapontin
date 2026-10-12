@@ -333,6 +333,19 @@ public class FusionSallesClePorteeService {
           AND o1.source = o2.source AND o1.url IS NOT DISTINCT FROM o2.url
         """,
         ids);
+    // Plateau de l'événement absorbé reporté sur la cible, jamais laissé au CASCADE.
+    jdbc.update(
+        """
+        INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom, artiste_id)
+        SELECT e2.id, ea.artiste_norm, ea.artiste_nom, ea.artiste_id
+        FROM evenement_artistes ea, evenements e1, evenements e2
+        WHERE ea.evenement_id = e1.id
+          AND e1.salle_id = CAST(:source AS uuid) AND e2.salle_id = CAST(:cible AS uuid)
+          AND e1.artiste_norm = e2.artiste_norm AND e1.date = e2.date
+          AND e1.heure IS NOT DISTINCT FROM e2.heure
+        ON CONFLICT DO NOTHING
+        """,
+        ids);
     jdbc.update(
         """
         UPDATE observations SET evenement_id = e2.id
