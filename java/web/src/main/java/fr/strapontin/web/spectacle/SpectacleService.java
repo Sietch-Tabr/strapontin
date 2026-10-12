@@ -75,19 +75,7 @@ public class SpectacleService {
     final StringBuilder whereClause =
         construireWhere(userId, filtre, conditionMasque, inclureIndisponibles, aujourd8, params);
 
-    final String selectSql =
-        """
-        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
-               c.salle, c.ville, c.url, c.classification, c.first_seen, c.statut, um.vu_le,
-               c.presale_debut, c.presale_nom, c.absence_detectee_le
-        FROM user_matches um
-        INNER JOIN concerts c ON um.concert_id = c.id
-        LEFT JOIN artistes a ON a.id = c.artiste_id
-        WHERE %s
-        ORDER BY %s
-        LIMIT :limit OFFSET :offset
-        """
-            .formatted(whereClause, FiltreConcertsBuilder.clauseTri(filtre.tri()));
+    final String selectSql = requetePage(whereClause, filtre.tri());
 
     final Map<String, Object> paramsPage = new HashMap<>(params);
     paramsPage.put("limit", CONCERTS_PAR_PAGE);
@@ -101,6 +89,9 @@ public class SpectacleService {
         CompletableFuture.supplyAsync(() -> compterTotal(whereClause, params));
     final CompletableFuture<Integer> futureNbSuivi =
         CompletableFuture.supplyAsync(() -> compterSuivi(baseParams));
+    final CompletableFuture<Integer> futureNbIndisponibles =
+        CompletableFuture.supplyAsync(
+            () -> compterIndisponibles(userId, filtre, conditionMasque, aujourd8, baseParams));
 
     // Requête principale sur le thread courant pendant que les futures
     // s'exécutent
@@ -110,7 +101,6 @@ public class SpectacleService {
     final FiltresDisponibles filtresDispos = chargerFiltresDisponibles(conditionMasque, baseParams);
 
     final int total = futureTotal.join();
-    final int nbSuivi = futureNbSuivi.join();
 
     return new ReponseSpectacles(
         concerts,
@@ -121,7 +111,8 @@ public class SpectacleService {
         filtresDispos.mois(),
         filtresDispos.classifications(),
         inclureIndisponibles,
-        nbSuivi > 0);
+        futureNbIndisponibles.join(),
+        futureNbSuivi.join() > 0);
   }
 
   /**
@@ -152,9 +143,7 @@ public class SpectacleService {
       params.put("dans15Jours", aujourd8.plusDays(15));
     }
     if (!inclureIndisponibles) {
-      where.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
-              + " 'postponed'))");
+      where.append(" AND ").append(FiltreConcertsBuilder.CONDITION_DISPONIBLE);
     }
 
     final String recherche = FiltreConcertsBuilder.tronquer(filtre.recherche(), 100);
@@ -230,6 +219,37 @@ public class SpectacleService {
    * @param params paramètres nommés
    * @return le nombre total de concerts
    */
+  private static String requetePage(final StringBuilder whereClause, final String tri) {
+    return """
+        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.date::text, c.heure::text,
+               c.salle, c.ville, c.url, c.classification, c.first_seen, c.statut, um.vu_le,
+               c.presale_debut, c.presale_nom, c.absence_detectee_le
+        FROM user_matches um
+        INNER JOIN concerts c ON um.concert_id = c.id
+        LEFT JOIN artistes a ON a.id = c.artiste_id
+        WHERE %s
+        ORDER BY %s
+        LIMIT :limit OFFSET :offset
+        """
+        .formatted(whereClause, FiltreConcertsBuilder.clauseTri(tri));
+  }
+
+  // Mêmes filtres, restreints aux concerts indisponibles : nombre que le filtre
+  // « Indisponibles » ajouterait.
+  private int compterIndisponibles(
+      final String userId,
+      final FiltreConcerts filtre,
+      final String conditionMasque,
+      final LocalDate aujourd8,
+      final Map<String, Object> baseParams) {
+    final Map<String, Object> params = new HashMap<>(baseParams);
+    final StringBuilder where =
+        construireWhere(userId, filtre, conditionMasque, true, aujourd8, params)
+            .append(" AND NOT ")
+            .append(FiltreConcertsBuilder.CONDITION_DISPONIBLE);
+    return compterTotal(where, params);
+  }
+
   private int compterTotal(final StringBuilder whereClause, final Map<String, Object> params) {
     return Objects.requireNonNullElse(
         jdbc.queryForObject(

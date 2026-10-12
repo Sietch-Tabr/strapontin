@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -249,6 +250,31 @@ class AccueilServiceTest {
 
     assertThat(rep.nbArtistes()).isEqualTo(12);
     assertThat(rep.nbSalles()).isEqualTo(3);
+  }
+
+  // L'état du filtre affiché suit ce que le serveur applique, préférence comprise.
+  @Test
+  @SuppressWarnings("unchecked")
+  void accueil_preferenceDisponiblesSeuls_renvoieExclusionEtNombreDIndisponibles() {
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
+    when(jdbc.queryForObject(contains("AND NOT"), anyMap(), eq(Integer.class))).thenReturn(2);
+    when(userConfigService.lireFiltreDisponibles("user-1")).thenReturn(true);
+
+    final ReponseAccueil rep = service.accueil("user-1", false, null, false);
+
+    assertFalse(rep.inclureIndisponibles());
+    assertThat(rep.nbIndisponibles()).isEqualTo(2);
+  }
+
+  // Préférence « tous les concerts » : seul un « 0 » explicite permet d'exclure.
+  @Test
+  void accueil_exclusionExpliciteMalgrePreferenceTousLesConcerts_exclut() {
+    stubRequetesVides();
+    when(userConfigService.lireFiltreDisponibles("user-1")).thenReturn(false);
+
+    assertFalse(service.accueil("user-1", false, "0", false).inclureIndisponibles());
+    assertTrue(service.accueil("user-1", false, null, false).inclureIndisponibles());
   }
 
   @SuppressWarnings("unchecked")

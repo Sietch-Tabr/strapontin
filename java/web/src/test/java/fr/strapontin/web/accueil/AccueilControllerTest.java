@@ -54,7 +54,7 @@ class AccueilControllerTest {
 
   @Test
   void accueil_masquesEtIndisponiblesEtNouveau_transmisAuService() {
-    final ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0);
+    final ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0, false, 0);
     when(accueilService.accueil("user-1", true, "1", true)).thenReturn(attendu);
 
     final ResponseEntity<ReponseAccueil> rep = controller.accueil(true, "1", true, auth);
@@ -65,7 +65,7 @@ class AccueilControllerTest {
 
   @Test
   void accueil_valeursParDefaut_transmisesAuService() {
-    final ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0);
+    final ReponseAccueil attendu = new ReponseAccueil(List.of(), 0, 0, false, 0);
     when(accueilService.accueil("user-1", false, null, false)).thenReturn(attendu);
 
     controller.accueil(false, null, false, auth);

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.accueil;
 
+import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -64,12 +65,12 @@ public class AccueilService {
   }
 
   /**
-   * Retourne les prochains concerts des artistes suivis, groupés par
-   * artiste — {@code masques}/{@code indisponibles}/{@code nouveau}
-   * filtrent respectivement les concerts masqués, non disponibles et
-   * récents (moins de 7 jours).
+   * Prochains concerts des artistes suivis, groupés par artiste.
    * @param userId identifiant de l'utilisateur
-   * @return groupes artiste/concerts avec compteurs
+   * @param masques concerts masqués plutôt que visibles
+   * @param indisponibles "1" inclut, "0" exclut, null suit la préférence
+   * @param nouveau concerts détectés depuis moins de 7 jours seulement
+   * @return groupes, compteurs, inclusion effective des indisponibles
    */
   public ReponseAccueil accueil(
       final String userId,
@@ -89,9 +90,27 @@ public class AccueilService {
 
     final List<ConcertAccueil> lignes = chargerConcertsAccueil(where, params);
     final List<GroupeArtiste> artistesGroupes = grouperParArtiste(lignes);
+    final StringBuilder whereIndisponibles =
+        construireWhereAccueil(masques, nouveau, true)
+            .append(" AND NOT ")
+            .append(FiltreConcertsBuilder.CONDITION_DISPONIBLE);
 
     return new ReponseAccueil(
-        artistesGroupes, compterUserArtistes(userId), compterUserSalles(userId));
+        artistesGroupes,
+        compterUserArtistes(userId),
+        compterUserSalles(userId),
+        inclureIndisponibles,
+        compterConcerts(whereIndisponibles, params));
+  }
+
+  private int compterConcerts(final StringBuilder where, final Map<String, Object> params) {
+    return Objects.requireNonNullElse(
+        jdbc.queryForObject(
+            "SELECT count(*) FROM user_matches um JOIN concerts c ON c.id = um.concert_id WHERE "
+                + where,
+            params,
+            Integer.class),
+        0);
   }
 
   private StringBuilder construireWhereAccueil(
@@ -106,9 +125,7 @@ public class AccueilService {
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
-      where.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
-              + " 'postponed'))");
+      where.append(" AND ").append(FiltreConcertsBuilder.CONDITION_DISPONIBLE);
     }
     if (nouveau) {
       where.append(" AND c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days')");

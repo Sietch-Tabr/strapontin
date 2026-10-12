@@ -21,4 +21,5 @@ public record ReponseSpectacles(
     List<String> moisDisponibles,
     List<String> classificationsDisponibles,
     boolean inclureIndisponibles,
+    int nbIndisponibles,
     boolean aSuivi) {}

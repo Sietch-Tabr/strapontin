@@ -7,9 +7,14 @@ package fr.strapontin.web.accueil;
 import java.util.List;
 
 /**
- * Réponse de l'endpoint GET /api/accueil.
- *
+ * Réponse de GET /api/accueil : inclusion effective des indisponibles
+ * (préférence comprise) et nombre d'indisponibles correspondant aux filtres.
  * @since 2.1.0
  * @author Kwaite
  */
-public record ReponseAccueil(List<GroupeArtiste> artistesGroupes, int nbArtistes, int nbSalles) {}
+public record ReponseAccueil(
+    List<GroupeArtiste> artistesGroupes,
+    int nbArtistes,
+    int nbSalles,
+    boolean inclureIndisponibles,
+    int nbIndisponibles) {}
