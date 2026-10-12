@@ -216,6 +216,35 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count);
   }
 
+  // Eventim omet parfois la ville d'un lieu connu (Stade de France) : celle de la salle la
+  // remplace, jamais une valeur vide.
+  @Test
+  void persisterConcerts_sourceSansVilleSurSalleConnue_repriseDeLaVilleDeLaSalle() {
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville, dept)"
+            + " VALUES ('stade de france', 'Stade de France', 'stade de france', 'Saint-Denis',"
+            + " '93')",
+        Map.of());
+    final ConcertBrut sansVille =
+        ConcertBrut.nouveau()
+            .artiste("Niska")
+            .date("2098-06-20")
+            .heure("20:00")
+            .salle("Stade de France")
+            .ville(null)
+            .dept("93")
+            .source("eventim")
+            .url("https://www.eventim.fr/event/niska-stade-de-france-1/")
+            .construire();
+
+    persisterConcerts.persisterConcerts(List.of(sansVille));
+
+    assertEquals(
+        "Saint-Denis",
+        jdbc.queryForObject(
+            "SELECT ville FROM evenements WHERE artiste_norm = 'niska'", Map.of(), String.class));
+  }
+
   private void insererSalleAvecCoordonnees(
       final String nom, final double latitude, final double longitude) {
     jdbc.update(

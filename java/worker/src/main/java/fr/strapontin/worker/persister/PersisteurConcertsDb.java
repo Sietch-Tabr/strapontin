@@ -170,7 +170,9 @@ public class PersisteurConcertsDb {
         INSERT INTO evenements
             (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
              genre, sous_genre, statut, presale_debut, presale_nom, artiste_id)
-        VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
+        VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm,
+                COALESCE(NULLIF(:ville, ''), (SELECT s.ville FROM salles s
+                                               WHERE s.id = CAST(:salleId AS uuid))), :dept,
                 :classification, :genre, :sousGenre, :statut, CAST(:presaleDebut AS timestamptz),
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
@@ -213,7 +215,8 @@ public class PersisteurConcertsDb {
         """
         UPDATE evenements SET
             salle_norm     = COALESCE(:salleNormReference, salle_norm),
-            ville          = COALESCE(:ville, ville),
+            ville          = COALESCE(NULLIF(:ville, ''), ville, (SELECT s.ville FROM salles s
+                               WHERE s.id = COALESCE(CAST(:salleId AS uuid), salle_id))),
             dept           = COALESCE(:dept, dept),
             classification = COALESCE(:classification, classification),
             genre          = COALESCE(:genre, genre),
