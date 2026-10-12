@@ -50,6 +50,7 @@ class AlerteLogsAdminServiceTest {
     configService = mock(ConfigService.class);
     emailAlerteService = mock(EmailAlerteService.class);
     when(configService.lireConfig(anyString())).thenReturn(Optional.empty());
+    when(emailAlerteService.envoiDisponible()).thenReturn(true);
     service =
         new AlerteLogsAdminService(
             logAdminService,
@@ -152,5 +153,19 @@ class AlerteLogsAdminServiceTest {
 
   private static EntreeLogAdmin erreur(final long id) {
     return new EntreeLogAdmin(id, 1000L * id, "error", "worker", "échec " + id, null);
+  }
+
+  // Sans service d'email, rien ne peut partir : aucune tentative, curseur conservé.
+  @Test
+  void verifier_aucunServiceDEmail_neTentePasDEnvoiNiNAvanceLeCurseur() {
+    when(emailAlerteService.envoiDisponible()).thenReturn(false);
+    when(logAdminService.lireErreursDepuis(0L))
+        .thenReturn(List.of(mock(LogAdminService.EntreeLogAdmin.class)));
+
+    service.verifier();
+    service.verifier();
+
+    verify(emailAlerteService, never()).envoyerAlerteLogsAdmin(anyString(), anyList());
+    verify(configService, never()).sauvegarderConfig(anyString(), anyString());
   }
 }

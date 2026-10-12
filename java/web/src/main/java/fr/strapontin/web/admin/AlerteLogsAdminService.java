@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -40,6 +41,7 @@ public class AlerteLogsAdminService {
   private final ConfigService configService;
   private final EmailAlerteService emailAlerteService;
   private final Clock horloge;
+  private final AtomicBoolean envoiIndisponibleSignale = new AtomicBoolean();
 
   /**
    * @param logAdminService lecture des entrées d'erreur depuis le curseur
@@ -71,6 +73,18 @@ public class AlerteLogsAdminService {
     if (erreurs.isEmpty()) {
       return;
     }
+
+    // Sans service d'email (dev, clé retirée), rien ne peut partir : signalé
+    // une fois par démarrage, la clé absente reste visible dans la configuration.
+    if (!emailAlerteService.envoiDisponible()) {
+      if (envoiIndisponibleSignale.compareAndSet(false, true)) {
+        LOG.warn(
+            "alerteLogsAdmin: aucun service d'email configuré — {} erreur(s) en attente",
+            erreurs.size());
+      }
+      return;
+    }
+    envoiIndisponibleSignale.set(false);
 
     final LocalDate aujourdhui = LocalDate.now(horloge);
     final int envoisDuJour = lireEnvoisDuJour(aujourdhui);
