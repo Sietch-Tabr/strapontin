@@ -62,7 +62,21 @@
         </button>
       </div>
     </div>
-    <AdminIncident />
+    <AdminNotificationVersion />
+    <div
+      class="communication-exceptionnelle"
+      role="group"
+      aria-labelledby="titre-communication-exceptionnelle"
+    >
+      <h3 id="titre-communication-exceptionnelle" class="section-titre">
+        Communication exceptionnelle
+      </h3>
+      <p class="param-aide">
+        Réservée à un incident de sécurité : visible de tous, jusque sur la page
+        de connexion.
+      </p>
+      <AdminIncident />
+    </div>
   </section>
 </template>
 
@@ -72,6 +86,7 @@ defineOptions({ name: "AdminBanniere" });
 
 import { ref, onMounted } from "vue";
 import AdminIncident from "./AdminIncident.vue";
+import AdminNotificationVersion from "./AdminNotificationVersion.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { parseJsonOuNull } from "../../utils/reponseJson.js";
 import { chargerBanniere } from "../../composables/useBanniere.js";
@@ -134,6 +149,12 @@ onMounted(chargerBanniereActive);
 </script>
 
 <style scoped>
+.communication-exceptionnelle {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--danger);
+}
+
 .form-actions {
   display: flex;
   gap: 0.75rem;
