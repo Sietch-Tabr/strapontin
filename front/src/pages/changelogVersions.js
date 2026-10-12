@@ -4,6 +4,52 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.0.4 — 12 octobre 2026",
+    categories: [
+      {
+        categorie: "Concerts",
+        items: [
+          "Une soirée à plusieurs artistes (festival, plateau partagé) apparaît pour chacun d'eux : si vous suivez un artiste qui n'est pas en tête d'affiche, vous êtes notifié et la soirée s'affiche sous son nom, avec la tête d'affiche.",
+          "Les départements d'outre-mer sont interrogés chez Ticketmaster. Un département choisi où aucune billetterie ne propose de concert est signalé dans Paramètres et sur la page Découverte.",
+          "Un concert dont la billetterie omet la ville reprend celle de sa salle.",
+        ],
+      },
+      {
+        categorie: "Accueil et Mes spectacles",
+        items: [
+          "Le filtre « Indisponibles » montre toujours ce qui est réellement affiché, quel que soit votre réglage par défaut, et prévient quand il n'y a aucun concert indisponible à ajouter.",
+          "Masquer un concert ou tous les concerts d'un artiste demande une confirmation et rappelle que le filtre « Masqués » permet de les réafficher.",
+          "Le bouton « Masquer » d'un artiste reste aligné à droite, quel que soit son nom.",
+          "Les boutons suivent partout la même présentation selon leur rôle (action principale, annulation, suppression), et la bannière d'information reprend ses couleurs d'avertissement et d'erreur.",
+        ],
+      },
+      {
+        categorie: "Notifications",
+        items: [
+          "Un appareil dont les notifications push échouent à répétition est retiré après cinq échecs consécutifs, quelle qu'en soit la raison.",
+          "L'email qui vous prévient que vous ne recevez plus les nouveaux concerts explique pourquoi votre appareil a été retiré et comment réactiver les notifications.",
+          "Si vous avez choisi les notifications push sans qu'aucun appareil n'ait été enregistré, un bandeau vous le signale, puis un email dès qu'un concert vous a échappé.",
+        ],
+      },
+      {
+        categorie: "Salles",
+        items: [
+          "Deux salles d'une même ville ne sont plus réunies au seul motif du nom de la ville, ni deux théâtres au seul mot « Comédie ».",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "La notification de nouvelle version passe dans l'onglet Communication ; la communication d'incident de sécurité y est placée en dernier, nettement à part.",
+          "À traiter : les boutons gardent leur taille en mobile, un concert signalé est nommé (artiste, date, salle) et peut être supprimé sur place.",
+          "Le signalement « Date de festival attribuée à tort » ne vise plus les concerts légitimes (billet couplé, date d'un autre artiste du festival).",
+          "Le signalement « Notifications non envoyées » ne remonte plus que les envois en échec vers un compte joignable, avec une date propre à ce compte.",
+          "La cause d'une révocation d'appareil push est tracée dans les logs.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.0.3 — 7 octobre 2026",
     categories: [
       {
