@@ -3,7 +3,7 @@
     <div
       v-if="visible && banniere"
       class="banniere-overlay"
-      :class="'banniere-overlay--' + banniere.type"
+      :class="'banniere-overlay--' + MODIFICATEURS[banniere.type]"
       :role="banniere.type === 'error' ? 'alert' : 'status'"
     >
       <svg class="banniere-icone icone" aria-hidden="true">
@@ -12,7 +12,7 @@
       <span class="banniere-message">{{ banniere.message }}</span>
       <button
         type="button"
-        class="banniere-fermer"
+        class="bouton-icone banniere-fermer"
         aria-label="Fermer la bannière"
         @click="fermer"
       >
@@ -46,6 +46,13 @@ const ICONES = {
   error: "icon-circle-x",
 };
 const icone = computed(() => ICONES[banniere.value?.type] ?? "icon-info");
+
+// Types publiés par l'admin, modificateurs de style en français.
+const MODIFICATEURS = {
+  info: "info",
+  warning: "avertissement",
+  error: "erreur",
+};
 </script>
 
 <style scoped>
@@ -90,21 +97,7 @@ const icone = computed(() => ICONES[banniere.value?.type] ?? "icon-info");
 }
 
 .banniere-fermer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.2rem;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius);
-  color: inherit;
-  opacity: 0.6;
   flex-shrink: 0;
-  cursor: pointer;
-}
-
-.banniere-fermer:hover {
-  opacity: 1;
 }
 
 .banniere-progression {

@@ -261,7 +261,7 @@
                   :href="concert.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="bouton bouton-tres-petit bouton-secondaire"
+                  class="bouton bouton-secondaire bouton-petit"
                   aria-label="Acheter des billets (ouvre dans un nouvel onglet)"
                 >
                   <svg class="icone" aria-hidden="true">

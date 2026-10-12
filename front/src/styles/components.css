@@ -108,17 +108,32 @@ textarea:focus {
   background: var(--danger);
   color: var(--danger-fg);
 }
+/* Choix parmi plusieurs options (aria-pressed), l'option retenue porte .actif. */
+.bouton-bascule {
+  background: none;
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.bouton-bascule:hover {
+  color: var(--fg);
+  border-color: var(--fg-muted);
+  opacity: 1;
+}
+.bouton-bascule.actif {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
 .bouton-pleine-largeur {
   width: 100%;
 }
 .bouton-petit {
   padding: 0.375rem 0.75rem;
   font-size: 0.8125rem;
-}
-.bouton-tres-petit {
-  padding: 0.2rem 0.55rem;
-  font-size: 0.75rem;
-  font-weight: 500;
 }
 /* ── Bannière système overlay ────────────────────────────── */
 @keyframes reduire-progression {
@@ -129,18 +144,18 @@ textarea:focus {
     transform: scaleX(0);
   }
 }
-.banniere-slide-enter-active {
+.banniere-glissement-enter-active {
   transition:
     transform 0.3s ease,
     opacity 0.3s ease;
 }
-.banniere-slide-leave-active {
+.banniere-glissement-leave-active {
   transition:
     transform 0.2s ease,
     opacity 0.2s ease;
 }
-.banniere-slide-enter-from,
-.banniere-slide-leave-to {
+.banniere-glissement-enter-from,
+.banniere-glissement-leave-to {
   transform: translateY(-100%);
   opacity: 0;
 }
@@ -293,9 +308,6 @@ tr:hover td {
   .table-cartes td.cel-vide {
     display: none;
   }
-  .table-cartes td.source-actions {
-    flex-direction: row;
-  }
   .table-cartes td input,
   .table-cartes td select {
     min-width: 0;
@@ -348,6 +360,45 @@ tr:hover td {
   background: #fdf4ff;
   color: #7e22ce;
 }
+.badge-tournee {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+.sombre .badge-tournee {
+  background: #0c2d4a;
+  color: #7dd3fc;
+}
+.badge-a-verifier {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+.sombre .badge-a-verifier {
+  background: #27272a;
+  color: #a1a1aa;
+}
+.badge-info {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+.badge-mono {
+  font-family: monospace;
+  background: var(--bg-muted);
+  color: var(--fg-muted);
+}
+.badge-avertissement {
+  background: var(--avertissement-bg);
+  color: var(--avertissement-text);
+}
+.badge-danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.badge-quota-critique {
+  color: var(--danger);
+}
+.badge-quota-attention {
+  color: var(--warning);
+}
 .sombre .badge-prevente {
   background: #3b0764;
   color: #e9d5ff;
@@ -372,11 +423,6 @@ tr:hover td {
 }
 .cache {
   display: none;
-}
-.page-titre {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
 }
 .section-titre {
   font-size: 0.75rem;
@@ -452,9 +498,6 @@ tr:hover td {
   background: none;
   border: none;
   color: var(--fg-muted);
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius);
   transition:
     background 0.15s,
     color 0.15s;
@@ -462,25 +505,7 @@ tr:hover td {
 .bouton-texte:hover {
   background: var(--accent);
   color: var(--fg);
-}
-.bouton-texte.bouton-petit {
-  font-size: 0.75rem;
-  padding: 0.125rem 0.375rem;
-}
-.bouton-danger-texte {
-  background: none;
-  border: none;
-  color: var(--fg-muted);
-  font-size: 0.8125rem;
-  padding: 0.375rem 0.75rem;
-  border-radius: var(--radius);
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.bouton-danger-texte:hover {
-  background: var(--danger-bg);
-  color: var(--danger-text);
+  opacity: 1;
 }
 /* ── Formulaires spéciaux ────────────────────────────────── */
 .form-recherche {
@@ -522,9 +547,6 @@ tr:hover td {
 }
 .form-compact {
   max-width: 28rem;
-}
-.form-ajouter-direct {
-  margin-top: 0.75rem;
 }
 .form-checkboxes {
   display: flex;
@@ -771,13 +793,13 @@ dialog::backdrop {
     transform: scale(0.95);
   }
 }
-.overlay-maj-enter-active {
+.calque-maj-enter-active {
   transition: opacity 0.15s ease;
 }
-.overlay-maj-leave-active {
+.calque-maj-leave-active {
   transition: opacity 0.3s ease;
 }
-.overlay-maj-enter-from,
-.overlay-maj-leave-to {
+.calque-maj-enter-from,
+.calque-maj-leave-to {
   opacity: 0;
 }

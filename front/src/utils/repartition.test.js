@@ -10,7 +10,10 @@ describe("normaliserNom", () => {
 describe("lieuxCorrespondants", () => {
   const lieux = [
     { identifiant: "ticketmaster:rZ1", nom: "Comédie de Paris" },
-    { identifiant: "eventim:internal:comedie de paris", nom: "comedie de paris" },
+    {
+      identifiant: "eventim:internal:comedie de paris",
+      nom: "comedie de paris",
+    },
     { identifiant: "ticketmaster:rZ2", nom: null },
     { identifiant: "ticketmaster:rZ3", nom: "La Comédie Bastille" },
   ];

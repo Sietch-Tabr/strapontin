@@ -125,7 +125,7 @@
             <span class="carte-nom">{{ artiste.artisteAffiche }}</span>
             <button
               type="button"
-              class="bouton bouton-petit bouton-danger-texte"
+              class="bouton bouton-danger bouton-petit"
               :aria-label="'Supprimer ' + artiste.artisteAffiche"
               @click="demanderSuppression(artiste)"
             >

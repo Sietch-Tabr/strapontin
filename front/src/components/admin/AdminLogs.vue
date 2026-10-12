@@ -30,8 +30,7 @@
             v-for="niv in ['info', 'warn', 'error']"
             :key="niv"
             type="button"
-            class="log-filtre-btn"
-            :data-niveau="niv"
+            class="bouton bouton-bascule bouton-petit"
             :class="{ actif: filtresNiveaux.has(niv) }"
             :aria-pressed="filtresNiveaux.has(niv) ? 'true' : 'false'"
             @click="toggleNiveau(niv)"
@@ -44,14 +43,14 @@
         >
         <button
           type="button"
-          class="bouton bouton-secondaire logs-btn-action"
+          class="bouton bouton-secondaire bouton-petit"
           @click="reinitialiserFiltres"
         >
           Réinitialiser
         </button>
         <button
           type="button"
-          class="bouton bouton-secondaire logs-btn-action"
+          class="bouton bouton-secondaire bouton-petit"
           @click="charger"
         >
           Rafraîchir
@@ -266,11 +265,6 @@ onMounted(charger);
   gap: 0.25rem;
 }
 
-.logs-btn-action {
-  font-size: 0.75rem;
-  padding: 0.125rem 0.625rem;
-}
-
 .logs-note-info {
   font-size: 0.8125rem;
   color: var(--fg-muted);
@@ -291,40 +285,6 @@ onMounted(charger);
   border-radius: 0.25rem;
   background: var(--bg);
   color: var(--fg);
-}
-
-.log-filtre-btn {
-  border: none;
-  background: none;
-  border-radius: 0.25rem;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--fg-muted);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.log-filtre-btn:hover {
-  background: var(--accent);
-  color: var(--fg);
-}
-
-.log-filtre-btn[data-niveau="info"].actif {
-  background: var(--info-bg);
-  color: var(--info-text);
-}
-
-.log-filtre-btn[data-niveau="warn"].actif {
-  background: var(--avertissement-bg);
-  color: var(--avertissement-text);
-}
-
-.log-filtre-btn[data-niveau="error"].actif {
-  background: var(--danger-bg);
-  color: var(--danger-text);
 }
 
 .log-compte {

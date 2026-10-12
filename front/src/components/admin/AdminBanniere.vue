@@ -55,7 +55,7 @@
         </button>
         <button
           type="button"
-          class="bouton bouton-danger-contour"
+          class="bouton bouton-danger"
           @click="effacerBanniere"
         >
           Effacer
@@ -160,17 +160,5 @@ onMounted(chargerBanniereActive);
   gap: 0.75rem;
   align-items: center;
   margin-top: 0.75rem;
-}
-</style>
-
-<style scoped>
-.bouton-danger-contour {
-  background: none;
-  border: 1px solid var(--danger);
-  color: var(--danger-text);
-}
-
-.bouton-danger-contour:hover {
-  background: var(--danger-bg);
 }
 </style>

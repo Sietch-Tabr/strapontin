@@ -23,7 +23,7 @@
               En attente de confirmation : {{ profil.pendingEmail }}
             </p>
           </div>
-          <button type="submit" class="bouton bouton-secondaire">
+          <button type="submit" class="bouton bouton-primaire">
             Enregistrer
           </button>
         </form>

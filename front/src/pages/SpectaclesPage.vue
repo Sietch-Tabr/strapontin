@@ -257,7 +257,7 @@
                   :href="concert.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="bouton bouton-tres-petit bouton-secondaire"
+                  class="bouton bouton-secondaire bouton-petit"
                   aria-label="Acheter des billets (ouvre dans un nouvel onglet)"
                 >
                   <svg class="icone" aria-hidden="true">
@@ -309,6 +309,12 @@ import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { formaterAvecHeure } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
+import {
+  choixExplicite,
+  indisponiblesAffiches,
+  messageSansAjout,
+  valeurApresBascule,
+} from "../utils/filtreIndisponibles.js";
 import EtatChargement from "../components/EtatChargement.vue";
 
 const route = useRoute();
@@ -339,7 +345,9 @@ const sourceSallesActive = computed(
 );
 const quinzaineActive = computed(() => route.query.quinzaine === "true");
 const masquesActive = computed(() => route.query.masques === "true");
-const indisponiblesActive = computed(() => route.query.indisponibles === "1");
+const indisponiblesActive = computed(() =>
+  indisponiblesAffiches(route.query.indisponibles, donnees.value),
+);
 
 const nbFiltresActifs = computed(() => {
   let n = 0;
@@ -382,7 +390,8 @@ async function charger() {
       params.set("tri", triLocal.value);
     if (masquesActive.value) params.set("masques", "true");
     sources.value.forEach((s) => params.append("source", s));
-    if (indisponiblesActive.value) params.set("indisponibles", "1");
+    const indisponibles = choixExplicite(route.query.indisponibles);
+    if (indisponibles) params.set("indisponibles", indisponibles);
     if (route.query.page) params.set("page", route.query.page);
     const rep = await appelApi("/api/spectacles?" + params, {
       signal: controleur.signal,
@@ -453,11 +462,9 @@ function toggleMasques() {
 function toggleIndisponibles() {
   const q = { ...route.query };
   delete q.page;
-  if (indisponiblesActive.value) {
-    delete q.indisponibles;
-  } else {
-    q.indisponibles = "1";
-  }
+  const message = messageSansAjout(indisponiblesActive.value, donnees.value);
+  if (message) afficherToast(message, "info");
+  q.indisponibles = valeurApresBascule(indisponiblesActive.value);
   router.push({ query: q });
 }
 
@@ -513,16 +520,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.badge-a-verifier {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.sombre .badge-a-verifier {
-  background: #27272a;
-  color: #a1a1aa;
-}
-
 .actions-cellule {
   vertical-align: middle;
   text-align: right;

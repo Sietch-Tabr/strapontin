@@ -22,3 +22,24 @@ paths:
 - **Tableaux** : toujours dans un conteneur `table-conteneur table-cartes` (cartes sur mobile, `styles/components.css`), chaque `<td>` avec un `data-label` (vide pour la cellule d'actions). **Dialogues** : titre `<h2 class="dialog-titre" id="…">` relié par `aria-labelledby`. Les deux sont vérifiés par `src/gabarits.test.js`, l'accessibilité des gabarits par `eslint-plugin-vuejs-accessibility`.
 - **Fetch/AbortController** : tout fetch de montage (`onMounted`)/action destructive doit avoir un try/catch et, pour les pages avec fetch réactif au changement de route/filtre, un `AbortController` annulant l'appel précédent avant d'en lancer un nouveau.
 - **Onboarding** (`front/src/components/ModaleEtapes.vue`) : composant générique à étapes (dialog natif, Suivant/Précédent/Terminer), réutilisable pour un futur flux similaire (ex. annonce de mise à jour majeure) — piloté par `useOnboarding.js`/`OnboardingModal.vue` pour la modale de bienvenue actuelle. `verifierOnboarding()` doit être rappelée non seulement au montage de `App.vue` mais aussi dans son `watch(estPageAuth)` (sortie d'une page d'authentification) — l'activation d'un compte invité fait un `router.push` SPA, pas un rechargement complet, donc l'unique `onMounted` s'exécute avant la connexion et échoue en 401 sans ce second point d'entrée (même pattern déjà en place pour `chargerSession`/`chargerBanniere`).
+
+## Charte graphique
+
+Un rôle = un style, partout. Contrôlée par `src/charte.test.js` (Vitest, bloquant en CI) : toute nouvelle classe ou variante doit y trouver sa place, jamais une exception locale.
+
+| Rôle | Classes | Exemples |
+|---|---|---|
+| Action principale (une par zone ou dialogue) | `bouton bouton-primaire` | Enregistrer, Envoyer, Notifier, Confirmer |
+| Action secondaire | `bouton bouton-secondaire` | Billets, Rafraîchir, Fermer (dialogue sans autre choix) |
+| Annulation, action discrète | `bouton bouton-texte` | Annuler, Masquer, Réafficher, Déconnexion |
+| Action destructive ou irréversible | `bouton bouton-danger` | Supprimer, Fusionner, Révoquer, Effacer, Publier un incident |
+| Choix parmi des options (`aria-pressed`) | `bouton bouton-bascule` + `actif` sur l'option retenue | Thème, niveaux de logs, Salles/Artistes |
+| Icône seule (`aria-label` obligatoire) | `bouton-icone` | fermeture de toast ou de bannière |
+
+- Taille : `bouton-petit` dans les zones denses (lignes de tableau, cartes, en-têtes de groupe), sinon taille normale ; tous les boutons d'une même zone ont la même taille. `bouton-pleine-largeur` réservé aux pages d'authentification. Un lien stylé en bouton suit les mêmes règles.
+- Dialogue : action d'abord (principale ou destructive), « Annuler » ensuite en `bouton-texte`. Confirmation simple : composant partagé `DialogueConfirmation.vue` (`demander({ titre, message, action })` → promesse booléenne).
+- Boutons dans `styles/components.css` uniquement ; badges (`badge-*`) et alertes (`alerte-*`) dans les feuilles partagées `styles/*.css`. Un composant peut placer un élément de la charte (position, marges, flex, largeur), jamais en changer l'aspect.
+- Autres éléments partagés : badge `badge` + variante sémantique (`badge-succes`, `badge-avertissement`, `badge-danger`, `badge-info`, statuts de concert) ; alerte `alerte alerte-{info,succes,avertissement,erreur}` ; champ `form-champ` > `form-label` + `form-control` ; dialogue `dialog-titre`, `dialog-corps`, `dialog-pied` ; bloc de réglage `param-bloc` (`param-bloc-danger` pour une action exceptionnelle).
+- Exception documentée : les éléments de navigation (`nav-bas-plus`) suivent le style des liens de navigation.
+- Toute classe d'une feuille partagée doit être utilisée (classes construites par concaténation et noms de `<Transition>` reconnus) : une règle orpheline est supprimée.
+

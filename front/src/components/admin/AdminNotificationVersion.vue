@@ -37,20 +37,20 @@
     </p>
     <div class="dialog-pied">
       <button
-        id="dialog-notifier-version-annuler"
-        type="button"
-        class="bouton bouton-texte"
-        @click="fermer"
-      >
-        Annuler
-      </button>
-      <button
         id="dialog-notifier-version-confirmer"
         type="button"
         class="bouton bouton-primaire"
         @click="confirmer"
       >
         Notifier
+      </button>
+      <button
+        id="dialog-notifier-version-annuler"
+        type="button"
+        class="bouton bouton-texte"
+        @click="fermer"
+      >
+        Annuler
       </button>
     </div>
   </dialog>

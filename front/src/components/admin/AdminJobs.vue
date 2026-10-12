@@ -222,7 +222,8 @@ async function relancerFetches() {
       relancerEnCours.value = false;
       const corps = await lireJson(rep);
       afficherToast(
-        corps.erreur || "Les recherches de concerts n'ont pas pu être relancées.",
+        corps.erreur ||
+          "Les recherches de concerts n'ont pas pu être relancées.",
         "erreur",
       );
     }
@@ -329,7 +330,6 @@ onUnmounted(() => {
 .job-carte-action {
   align-self: flex-start;
   margin-top: auto;
-  padding-top: 0.5rem;
 }
 
 .job-carte-entete {

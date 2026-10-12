@@ -22,7 +22,7 @@
             autocomplete="off"
             maxlength="1000"
           />
-          <button type="submit" class="bouton bouton-secondaire">
+          <button type="submit" class="bouton bouton-primaire">
             Enregistrer
           </button>
         </form>
@@ -56,7 +56,7 @@
             v-for="opt in optionsTheme"
             :key="opt.valeur"
             type="button"
-            class="bouton bouton-theme"
+            class="bouton bouton-bascule"
             :class="{ actif: theme === opt.valeur }"
             :aria-pressed="theme === opt.valeur ? 'true' : 'false'"
             @click="changerTheme(opt.valeur)"
@@ -173,31 +173,6 @@ onMounted(charger);
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.bouton-theme {
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--fg-muted);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
-}
-
-.bouton-theme.actif {
-  background: var(--fg);
-  color: var(--bg);
-  border-color: var(--fg);
-}
-
-.bouton-theme:hover {
-  color: var(--fg);
-  border-color: var(--fg-muted);
 }
 
 .form-bascule {

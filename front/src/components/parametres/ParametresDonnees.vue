@@ -130,18 +130,18 @@
     <div class="dialog-pied">
       <button
         type="button"
-        class="bouton bouton-secondaire"
-        @click="fermerDialogSuppression"
-      >
-        Annuler
-      </button>
-      <button
-        type="button"
         class="bouton bouton-danger"
         :disabled="confirmationSuppression !== 'supprimer'"
         @click="supprimerCompte"
       >
         Supprimer mon compte
+      </button>
+      <button
+        type="button"
+        class="bouton bouton-texte"
+        @click="fermerDialogSuppression"
+      >
+        Annuler
       </button>
     </div>
   </dialog>

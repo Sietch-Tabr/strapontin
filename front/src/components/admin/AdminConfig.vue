@@ -41,7 +41,7 @@
                 autocomplete="off"
                 :aria-label="'Valeur de ' + cle"
               />
-              <button type="submit" class="bouton bouton-secondaire">
+              <button type="submit" class="bouton bouton-primaire">
                 Enregistrer
               </button>
             </form>
@@ -82,7 +82,7 @@
               placeholder="Nouvelle valeur…"
               aria-label="Valeur de TICKETMASTER_API_KEY"
             />
-            <button type="submit" class="bouton bouton-secondaire">
+            <button type="submit" class="bouton bouton-primaire">
               Enregistrer
             </button>
           </form>
@@ -133,7 +133,7 @@
               placeholder="Nouvelle valeur…"
               aria-label="Valeur de RESEND_API_KEY"
             />
-            <button type="submit" class="bouton bouton-secondaire">
+            <button type="submit" class="bouton bouton-primaire">
               Enregistrer
             </button>
           </form>
@@ -176,7 +176,7 @@
                 placeholder="Nouvelle valeur…"
                 aria-label="Valeur de RESEND_WEBHOOK_SECRET"
               />
-              <button type="submit" class="bouton bouton-secondaire">
+              <button type="submit" class="bouton bouton-primaire">
                 Enregistrer
               </button>
             </form>
@@ -330,7 +330,7 @@
           </p>
           <button
             type="button"
-            class="bouton bouton-secondaire"
+            class="bouton bouton-danger"
             @click="ouvrirDialogVapid"
           >
             Régénérer les clés VAPID (invalide tous les abonnements push)
@@ -377,7 +377,7 @@
       <button
         id="dialog-vapid-confirmer"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-danger"
         @click="confirmerVapid"
       >
         Régénérer
@@ -385,7 +385,7 @@
       <button
         id="dialog-vapid-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogVapid"
       >
         Annuler

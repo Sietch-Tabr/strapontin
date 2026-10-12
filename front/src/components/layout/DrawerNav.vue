@@ -65,7 +65,9 @@
         method="post"
         @submit.prevent="deconnecter"
       >
-        <button type="submit" class="bouton-deconnexion">Déconnexion</button>
+        <button type="submit" class="bouton bouton-texte bouton-petit">
+          Déconnexion
+        </button>
       </form>
     </div>
   </dialog>

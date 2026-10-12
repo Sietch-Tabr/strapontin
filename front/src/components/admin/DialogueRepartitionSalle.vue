@@ -47,10 +47,15 @@
           :key="l.identifiant"
           class="repartition-libelle"
         >
-          <input v-model="lieuxChoisis" type="checkbox" :value="l.identifiant" />
+          <input
+            v-model="lieuxChoisis"
+            type="checkbox"
+            :value="l.identifiant"
+          />
           {{ l.nom || "Lieu sans nom connu" }}
           <span class="param-aide"
-            >({{ libelleSource(l.source) }}{{ l.ville ? ", " + l.ville : "" }})</span
+            >({{ libelleSource(l.source)
+            }}{{ l.ville ? ", " + l.ville : "" }})</span
           >
         </label>
         <p v-if="!lieux.length" class="etat-vide-texte">
@@ -117,7 +122,7 @@
       <div class="dialog-pied">
         <button
           type="submit"
-          class="bouton bouton-secondaire"
+          class="bouton bouton-primaire"
           :disabled="!peutConfirmer || enCours"
         >
           Répartir
