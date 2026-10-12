@@ -26,6 +26,15 @@
             Enregistrer
           </button>
         </form>
+        <p
+          v-if="departementsSansConcert.length"
+          class="alerte alerte-info"
+          role="status"
+        >
+          Aucun concert n'est proposé pour l'instant par nos sources
+          (Ticketmaster, Eventim) dans :
+          {{ departementsSansConcert.join(", ") }}.
+        </p>
       </div>
 
       <div class="param-bloc">
@@ -74,6 +83,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import { useDepartementsSansConcert } from "../../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "ParametresPreferences" });
 
 import { ref, onMounted } from "vue";
@@ -86,6 +96,8 @@ const { enregistrerTheme, lireThemeCookie } = useTheme();
 
 const chargement = ref(true);
 const departements = ref("");
+const { departementsSansConcert, chargerDepartementsSansConcert } =
+  useDepartementsSansConcert();
 const filtreDisponibles = ref(false);
 const theme = ref("auto");
 const optionsTheme = [
@@ -100,6 +112,7 @@ async function charger() {
     if (rep.ok) {
       const config = await lireJson(rep);
       departements.value = config.departements?.join(", ") ?? "";
+      chargerDepartementsSansConcert();
       filtreDisponibles.value = config.filtreDisponibles ?? false;
     }
     theme.value = lireThemeCookie() || "auto";
@@ -127,6 +140,7 @@ async function sauvegarderDepartements() {
       } else {
         afficherToast("Départements enregistrés.", "succes");
       }
+      chargerDepartementsSansConcert();
     } else {
       afficherToast(corps.erreur || "Erreur.", "erreur");
     }

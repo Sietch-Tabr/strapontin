@@ -88,6 +88,24 @@ public class UserConfigService {
 
   /**
    * @param userId identifiant de l'utilisateur
+   * @return départements choisis où aucune source ne propose de concert à
+   *     venir, triés
+   */
+  public List<String> departementsSansConcert(final String userId) {
+    return jdbc.queryForList(
+        """
+        SELECT d FROM user_config uc, unnest(uc.departements) d
+        WHERE uc.user_id = :userId
+          AND NOT EXISTS (
+            SELECT 1 FROM evenements e WHERE e.dept = d AND e.date >= CURRENT_DATE)
+        ORDER BY d
+        """,
+        Map.of(CLE_USER_ID, userId),
+        String.class);
+  }
+
+  /**
+   * @param userId identifiant de l'utilisateur
    * @return {@code true} si seul le push est coché et qu'aucun appareil n'a
    *     jamais été abonné : ses notifications n'ont jamais pris effet
    */

@@ -177,6 +177,15 @@
       trouvé{{ donnees.totalConcerts !== 1 ? "s" : "" }}
     </p>
 
+    <p
+      v-if="departementsSansConcert.length"
+      class="alerte alerte-info"
+      role="status"
+    >
+      Aucun concert n'est proposé pour l'instant par nos sources (Ticketmaster,
+      Eventim) dans : {{ departementsSansConcert.join(", ") }}.
+    </p>
+
     <EtatChargement v-if="chargement && !donnees" />
 
     <div
@@ -299,6 +308,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../utils/api.js";
+import { useDepartementsSansConcert } from "../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "DecouvertePage" });
 
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
@@ -321,6 +331,10 @@ const moisLocal = ref("");
 const genreLocal = ref("");
 const classificationLocal = ref("");
 const triLocal = ref("date");
+
+const { departementsSansConcert, chargerDepartementsSansConcert } =
+  useDepartementsSansConcert();
+onMounted(chargerDepartementsSansConcert);
 
 const deptsActifs = computed(() => {
   const d = route.query.dept;

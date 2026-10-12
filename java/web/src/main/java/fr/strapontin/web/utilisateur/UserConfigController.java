@@ -72,6 +72,20 @@ public class UserConfigController {
   }
 
   /**
+   * Départements choisis sans aucun concert connu : l'absence de couverture
+   * par les sources est affichée plutôt que silencieuse.
+   *
+   * @param auth contexte d'authentification
+   * @return {@code departements}
+   */
+  @GetMapping("/departements-sans-concert")
+  public ResponseEntity<Map<String, List<String>>> lireDepartementsSansConcert(
+      final Authentication auth) {
+    return ResponseEntity.ok(
+        Map.of("departements", userConfigService.departementsSansConcert(utilisateur(auth).id())));
+  }
+
+  /**
    * Met à jour les départements de l'utilisateur.
    *
    * @param requete corps JSON avec {@code departements} séparés par virgules
