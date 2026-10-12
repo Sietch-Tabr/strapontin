@@ -88,8 +88,10 @@ public final class CatalogueSignalements {
     ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
-        "Des concerts éligibles n'ont jamais été notifiés à ce compte. La cause (aucun canal"
-            + " joignable ou envoi en échec) et l'action possible sont indiquées dans le détail.");
+        "Des concerts éligibles n'ont pas été notifiés à ce compte alors qu'un canal est"
+            + " joignable (email actif ou appareil abonné au push) : vérifier l'envoi dans les"
+            + " journaux. La date indiquée est celle du plus ancien concert en attente pour ce"
+            + " compte.");
     ajouter(
         "sessions_sans_appareil",
         "Sessions sans appareil",

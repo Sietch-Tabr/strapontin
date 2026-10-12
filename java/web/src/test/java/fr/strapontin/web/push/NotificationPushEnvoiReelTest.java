@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -131,6 +132,18 @@ class NotificationPushEnvoiReelTest {
     statutRenvoye = 503;
 
     assertEquals(ResultatEnvoiPush.ECHEC_ENVOI, service().envoyerNotificationTest("u1", null));
+  }
+
+  @Test
+  void envoyerNotificationTest_cinquiemeEchecConsecutif_appareilRevoque() throws Exception {
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnement()));
+    when(jdbc.queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class)))
+        .thenReturn(5);
+    statutRenvoye = 403;
+
+    assertEquals(ResultatEnvoiPush.APPAREIL_REVOQUE, service().envoyerNotificationTest("u1", null));
+    verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
+    verify(jdbc).update(contains("cause_dernier_retrait_appareil"), anyMap());
   }
 
   @Test

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -15,7 +16,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,12 +28,14 @@ import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
+import org.apache.http.entity.StringEntity;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Tests unitaires de {@link NotificationPushDigestService} — révocation
- * d'un abonnement en échec 403 persistant.
+ * Tests unitaires de {@link NotificationPushDigestService} : révocation
+ * d'un abonnement en échec répété, cause lue dans la réponse.
  *
  * @since 3.0.0
  * @author Kwaite
@@ -88,68 +94,109 @@ class NotificationPushDigestServiceTest {
             "onsale"));
   }
 
-  // #1219 : un 403 isolé peut être transitoire côté FCM — ne doit jamais révoquer seul.
-  @Test
-  void envoyerPush_403UneFois_neRevoquePasLAbonnement() throws Exception {
+  private static PushService pushServiceRetournant(final int statutHttp, final String corps)
+      throws Exception {
+    final PushService pushServiceMock = pushServiceRetournant(statutHttp);
+    final HttpResponse reponse = pushServiceMock.send(mock(Notification.class));
+    when(reponse.getEntity()).thenReturn(new StringEntity(corps, StandardCharsets.UTF_8));
+    return pushServiceMock;
+  }
+
+  private static NamedParameterJdbcTemplate jdbcAvecCompteur(final int echecs) {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
         .thenReturn(List.of(abonnement(1)));
-    when(jdbc.queryForObject(contains("echecs_403_consecutifs"), anyMap(), eq(Integer.class)))
-        .thenReturn(1);
+    when(jdbc.queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class)))
+        .thenReturn(echecs);
+    return jdbc;
+  }
+
+  // Un échec isolé peut être transitoire côté service push : jamais de révocation seul.
+  @Test
+  void envoyerPush_403UneFois_neRevoquePasLAbonnement() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(1);
     final LogsAdminWorker logsAdminWorker = mock(LogsAdminWorker.class);
     final PushService pushServiceMock = pushServiceRetournant(403);
 
-    final NotificationPushDigestService service =
-        new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock);
-
-    service.envoyerPush("u1", unConcert());
+    new NotificationPushDigestService(
+            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+        .envoyerPush("u1", unConcert());
 
     verify(jdbc, never()).update(contains("DELETE FROM push_abonnements"), anyMap());
     verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), anyMap());
   }
 
-  // Trois cycles consécutifs en 403 (SEUIL_ECHECS_403_ABONNEMENT_MORT) — révocation attendue,
-  // journalisée (jamais silencieuse, contrairement à 404/410).
   @Test
-  void envoyerPush_403TroisFoisConsecutifs_revoqueEtSignale() throws Exception {
-    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
-        .thenReturn(List.of(abonnement(1)));
-    when(jdbc.queryForObject(contains("echecs_403_consecutifs"), anyMap(), eq(Integer.class)))
-        .thenReturn(3);
+  void envoyerPush_cinquiemeEchecConsecutifHors403_revoqueAvecLaRaisonDuService() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(EchecPush.SEUIL_ECHECS_CONSECUTIFS);
     final LogsAdminWorker logsAdminWorker = mock(LogsAdminWorker.class);
-    final PushService pushServiceMock = pushServiceRetournant(403);
+    final PushService pushServiceMock =
+        pushServiceRetournant(429, "{\"reason\":\"TooManyProviderTokenUpdates\"}");
 
-    final NotificationPushDigestService service =
-        new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock);
-
-    service.envoyerPush("u1", unConcert());
+    new NotificationPushDigestService(
+            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+        .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
-    verify(logsAdminWorker).inserer(eq("warn"), eq("notifier-digest"), anyString(), anyMap());
+    verify(jdbc)
+        .update(
+            contains("cause_dernier_retrait_appareil"),
+            eq(Map.of("userId", "u1", "cause", EchecPush.causeLisible(429))));
+    final ArgumentCaptor<Map<String, Object>> meta = ArgumentCaptor.captor();
+    verify(logsAdminWorker).inserer(eq("warn"), eq("notifier-digest"), anyString(), meta.capture());
+    assertTrue(((String) meta.getValue().get("raison")).contains("TooManyProviderTokenUpdates"));
+    assertEquals("https://fcm.googleapis.com/…", meta.getValue().get("service"));
   }
 
-  // Un envoi réussi doit remettre le compteur à zéro, pas seulement l'ignorer — sans quoi un 403
-  // isolé un jour puis un autre 403 isolé une semaine plus tard finiraient par s'additionner à
-  // tort en "3 consécutifs".
   @Test
-  void envoyerPush_succes_reinitialiseLeCompteur403() throws Exception {
-    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
-        .thenReturn(List.of(abonnement(1)));
-    when(jdbc.update(anyString(), anyMap())).thenReturn(1);
-    final LogsAdminWorker logsAdminWorker = mock(LogsAdminWorker.class);
+  void envoyerPush_exceptionRepetee_revoqueAuSeuil() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(EchecPush.SEUIL_ECHECS_CONSECUTIFS);
+    final PushService pushServiceMock = mock(PushService.class);
+    when(pushServiceMock.send(any(Notification.class))).thenThrow(new IOException("timeout"));
+
+    new NotificationPushDigestService(
+            configServiceAvecVapid(),
+            jdbc,
+            mock(LogsAdminWorker.class),
+            (_, _, _) -> pushServiceMock)
+        .envoyerPush("u1", unConcert());
+
+    verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
+  }
+
+  @Test
+  void envoyerPush_410_revoqueSansCompterLesEchecs() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(0);
+    final PushService pushServiceMock = pushServiceRetournant(410);
+
+    new NotificationPushDigestService(
+            configServiceAvecVapid(),
+            jdbc,
+            mock(LogsAdminWorker.class),
+            (_, _, _) -> pushServiceMock)
+        .envoyerPush("u1", unConcert());
+
+    verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
+    verify(jdbc, never())
+        .queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class));
+  }
+
+  // Sans remise à zéro, deux échecs isolés à des semaines d'écart finiraient par
+  // s'additionner en échecs « consécutifs ».
+  @Test
+  void envoyerPush_succes_reinitialiseLeCompteur() throws Exception {
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(0);
     final PushService pushServiceMock = pushServiceRetournant(201);
 
-    final NotificationPushDigestService service =
+    final boolean envoye =
         new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock);
-
-    final boolean envoye = service.envoyerPush("u1", unConcert());
+                configServiceAvecVapid(),
+                jdbc,
+                mock(LogsAdminWorker.class),
+                (_, _, _) -> pushServiceMock)
+            .envoyerPush("u1", unConcert());
 
     assertTrue(envoye);
-    verify(jdbc).update(contains("echecs_403_consecutifs = 0"), anyMap());
+    verify(jdbc).update(contains("echecs_consecutifs = 0"), anyMap());
   }
 }

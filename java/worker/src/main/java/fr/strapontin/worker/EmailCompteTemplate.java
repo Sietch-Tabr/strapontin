@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.UtilitairesChaine;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -46,13 +47,36 @@ final class EmailCompteTemplate {
   private EmailCompteTemplate() {}
 
   /* package-private : appelé par EmailCompteService (même package). */
-  static String avertissementCanalPerdu(final String baseUrl) {
+  static String avertissementCanalPerdu(final String baseUrl, final String cause) {
     final String sujet = "Vous ne recevez plus les nouveaux concerts de Strapontin";
+    final String raison =
+        cause != null && !cause.isBlank()
+            ? "Le dernier appareil sur lequel vous receviez les notifications push a été retiré : "
+                + UtilitairesChaine.echapperHtml(cause)
+                + "."
+            : "Le dernier appareil sur lequel vous receviez les notifications push ne les accepte"
+                + " plus.";
     final String corps =
-        "Le dernier appareil sur lequel vous receviez les notifications push ne les accepte"
-            + " plus, et les notifications par email sont désactivées sur votre compte : les"
-            + " nouveaux concerts de vos artistes et salles ne vous parviennent plus. Réactivez"
-            + " les notifications push sur votre appareil ou activez l'email dans vos paramètres.";
+        raison
+            + " Les notifications par email étant désactivées sur votre compte, les nouveaux"
+            + " concerts de vos artistes et salles ne vous parviennent plus. Pour réactiver le"
+            + " push, ouvrez Strapontin sur votre appareil, autorisez les notifications dans le"
+            + " navigateur puis réactivez-les dans vos paramètres ; vous pouvez aussi activer"
+            + " l'email.";
+    return GABARIT.formatted(
+        sujet, sujet, corps, baseUrl + "/parametres#notifications", "Mes notifications", baseUrl);
+  }
+
+  /* package-private : appelé par EmailCompteService (même package). */
+  static String avertissementPushJamaisActive(final String baseUrl) {
+    final String sujet = "Vos notifications Strapontin ne sont pas activées";
+    final String corps =
+        "Vous avez choisi d'être prévenu par notification push, mais aucun appareil n'a jamais"
+            + " été enregistré (autorisation refusée par le navigateur ou activation"
+            + " interrompue), et l'email est désactivé : de nouveaux concerts de vos artistes et"
+            + " salles vous attendent sans vous avoir été signalés. Ouvrez Strapontin sur votre"
+            + " appareil, autorisez les notifications puis réactivez-les dans vos paramètres, ou"
+            + " activez l'email.";
     return GABARIT.formatted(
         sujet, sujet, corps, baseUrl + "/parametres#notifications", "Mes notifications", baseUrl);
   }

@@ -54,15 +54,21 @@ public class UserConfigController {
 
   /**
    * Indique si les notifications actives de l'utilisateur courant ne peuvent
-   * plus lui parvenir (bandeau d'avertissement).
+   * pas lui parvenir (bandeau d'avertissement) : dernier appareil retiré, ou
+   * push jamais abonné.
    *
    * @param auth contexte d'authentification
-   * @return {@code canalPerdu}
+   * @return {@code canalPerdu} et {@code pushJamaisActive}
    */
   @GetMapping("/canal-perdu")
   public ResponseEntity<Map<String, Boolean>> lireCanalPerdu(final Authentication auth) {
+    final String userId = utilisateur(auth).id();
     return ResponseEntity.ok(
-        Map.of("canalPerdu", userConfigService.canalNotificationPerdu(utilisateur(auth).id())));
+        Map.of(
+            "canalPerdu",
+            userConfigService.canalNotificationPerdu(userId),
+            "pushJamaisActive",
+            userConfigService.pushJamaisActive(userId)));
   }
 
   /**

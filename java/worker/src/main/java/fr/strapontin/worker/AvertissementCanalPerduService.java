@@ -13,10 +13,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Prévient par email, une seule fois par perte, l'utilisateur dont le
- * retrait automatique du dernier appareil push laisse des notifications
- * actives sans aucun canal joignable. L'avertissement est effacé dès qu'un
- * canal redevient joignable, pour qu'une perte ultérieure soit signalée.
+ * Prévient par email, une fois par perte, l'utilisateur dont les notifications
+ * actives n'ont aucun canal joignable (dernier appareil retiré, ou push jamais
+ * abonné). Réarmé dès qu'un canal redevient joignable.
  * @since 3.0.3
  * @author Kwaite
  */
@@ -24,6 +23,14 @@ import org.springframework.stereotype.Service;
 public class AvertissementCanalPerduService {
 
   private static final Logger LOG = LoggerFactory.getLogger(AvertissementCanalPerduService.class);
+
+  // Un push jamais abonné n'est signalé qu'une fois une notification réellement
+  // manquée : l'abonnement suit de quelques secondes l'activation, et l'accueil
+  // ne doit pas déclencher d'email.
+  private static final String MATCH_EN_ATTENTE_SQL =
+      "EXISTS (SELECT 1 FROM user_matches um WHERE um.user_id = uc.user_id"
+          + " AND um.notification_envoyee_le IS NULL AND um.masque_le IS NULL"
+          + " AND um.cree_le < now() - interval '1 day')";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final EmailCompteService emailCompteService;
@@ -39,8 +46,9 @@ public class AvertissementCanalPerduService {
   }
 
   /**
-   * Avertit les comptes qui viennent de perdre leur dernier canal et réarme
-   * ceux qui en ont retrouvé un.
+   * Avertit les comptes qui viennent de perdre leur dernier canal, ou dont le
+   * push n'a jamais pris effet alors qu'un concert attend, et réarme ceux qui
+   * en ont retrouvé un.
    *
    * @return nombre d'avertissements envoyés
    */
@@ -48,19 +56,32 @@ public class AvertissementCanalPerduService {
     jdbc.update(
         "UPDATE user_config uc SET avertissement_canal_perdu_le = NULL"
             + " WHERE uc.avertissement_canal_perdu_le IS NOT NULL AND NOT ("
-            + CanalNotificationPerdu.CONDITION_SQL
+            + CanalNotificationPerdu.CONDITION_SANS_CANAL_SQL
             + ")",
         Map.of());
     final List<Map<String, Object>> comptes =
         jdbc.queryForList(
-            "SELECT uc.user_id, u.email FROM user_config uc JOIN users u ON u.id = uc.user_id"
-                + " WHERE uc.avertissement_canal_perdu_le IS NULL AND u.email IS NOT NULL AND "
-                + CanalNotificationPerdu.CONDITION_SQL,
+            "SELECT uc.user_id, u.email, uc.cause_dernier_retrait_appareil AS cause,"
+                + " uc.dernier_appareil_retire_le IS NULL AS jamais_abonne"
+                + " FROM user_config uc JOIN users u ON u.id = uc.user_id"
+                + " WHERE uc.avertissement_canal_perdu_le IS NULL AND u.email IS NOT NULL AND (("
+                + CanalNotificationPerdu.CONDITION_SQL
+                + ") OR ("
+                + CanalNotificationPerdu.CONDITION_JAMAIS_ABONNE_SQL
+                + " AND "
+                + MATCH_EN_ATTENTE_SQL
+                + "))",
             Map.of());
     int envoyes = 0;
     for (final Map<String, Object> compte : comptes) {
+      final String email = (String) compte.get("email");
+      final boolean envoye =
+          Boolean.TRUE.equals(compte.get("jamais_abonne"))
+              ? emailCompteService.envoyerAvertissementPushJamaisActive(email)
+              : emailCompteService.envoyerAvertissementCanalPerdu(
+                  email, (String) compte.get("cause"));
       // Non marqué en cas d'échec : nouvelle tentative au cycle suivant.
-      if (emailCompteService.envoyerAvertissementCanalPerdu((String) compte.get("email"))) {
+      if (envoye) {
         jdbc.update(
             "UPDATE user_config SET avertissement_canal_perdu_le = now() WHERE user_id = :userId",
             Map.of("userId", compte.get("user_id")));
@@ -68,7 +89,7 @@ public class AvertissementCanalPerduService {
       }
     }
     if (envoyes > 0) {
-      LOG.info("Avertissements de perte du dernier canal de notification envoyés : {}", envoyes);
+      LOG.info("Avertissements de compte sans canal de notification envoyés : {}", envoyes);
     }
     return envoyes;
   }

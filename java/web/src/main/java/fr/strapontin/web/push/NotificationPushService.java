@@ -4,15 +4,16 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.security.GeneralSecurityException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -25,8 +26,8 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service de notifications Web Push VAPID — envoie des notifications aux
- * abonnements de {@code push_abonnements} (supprime automatiquement un
- * abonnement en 404/410). Clés VAPID lues depuis la config chiffrée.
+ * abonnements de {@code push_abonnements}, révocation des appareils en
+ * échec selon {@link EchecPush}. Clés VAPID lues depuis la config chiffrée.
  * @since 2.0.0
  * @author Kwaite
  */
@@ -36,8 +37,7 @@ public class NotificationPushService {
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushService.class);
   private static final String CLE_ENDPOINT = "endpoint";
   private static final String CLE_USER_ID = "userId";
-  // Premier statut HTTP d'erreur : un refus du service de push n'est pas un envoi.
-  private static final int STATUT_ERREUR_MIN = 400;
+  private static final String CLE_ID = "id";
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private final ConfigService configService;
@@ -76,32 +76,59 @@ public class NotificationPushService {
     if (!estAutoriseSinonSupprime(ab, userId)) {
       return ResultatEnvoiPush.SERVICE_NAVIGATEUR_REFUSE;
     }
+    final HttpResponse response;
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      final Notification notification = new Notification(subscription, payload);
-      final HttpResponse response = pushService.send(notification);
-      final int status = response.getStatusLine().getStatusCode();
-      if (status == 404 || status == 410) {
-        supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
-        return ResultatEnvoiPush.APPAREIL_REVOQUE;
-      }
-      if (status >= STATUT_ERREUR_MIN) {
-        LOG.warn("Push: envoi refusé ({}) pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
-        return ResultatEnvoiPush.ECHEC_ENVOI;
-      }
-      return ResultatEnvoiPush.ENVOYEE;
+      response = pushService.send(new Notification(subscription, payload));
     } catch (Exception e) {
-      final int status = extraireCodeHttp(e);
-      if (status == 404 || status == 410) {
-        supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
-        return ResultatEnvoiPush.APPAREIL_REVOQUE;
-      }
-      LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
-      return ResultatEnvoiPush.ECHEC_ENVOI;
+      return compterEchec(ab, userId, null, e.getMessage());
     }
+    final int status = response.getStatusLine().getStatusCode();
+    return switch (EchecPush.interpreter(status)) {
+      case SUCCES -> {
+        jdbc.update(EchecPush.SQL_REINITIALISER_ECHECS, Map.of(CLE_ID, ab.get(CLE_ID)));
+        yield ResultatEnvoiPush.ENVOYEE;
+      }
+      case ABONNEMENT_SUPPRIME -> {
+        supprimerAbonnement(
+            ab, userId, EchecPush.causeLisible(status), EchecPush.raison(status, null));
+        yield ResultatEnvoiPush.APPAREIL_REVOQUE;
+      }
+      case ECHEC ->
+          compterEchec(
+              ab, userId, status, EchecPush.lireCorps(() -> response.getEntity().getContent()));
+    };
+  }
+
+  /**
+   * Un échec isolé peut être transitoire : seule une répétition sur
+   * {@value EchecPush#SEUIL_ECHECS_CONSECUTIFS} envois consécutifs révoque
+   * l'abonnement.
+   */
+  private ResultatEnvoiPush compterEchec(
+      final Map<String, Object> ab, final String userId, final Integer status, final String corps) {
+    final String raison = EchecPush.raison(status, corps);
+    final Integer echecs =
+        jdbc.queryForObject(
+            EchecPush.SQL_INCREMENTER_ECHECS, Map.of(CLE_ID, ab.get(CLE_ID)), Integer.class);
+    if (EchecPush.seuilAtteint(echecs)) {
+      supprimerAbonnement(
+          ab,
+          userId,
+          EchecPush.causeLisible(status),
+          raison + ", " + echecs + " échecs consécutifs");
+      return ResultatEnvoiPush.APPAREIL_REVOQUE;
+    }
+    LOG.warn(
+        "Push: échec {} ({}e consécutif) pour {} — {}",
+        raison,
+        echecs,
+        userId,
+        EchecPush.masquerEndpoint((String) ab.get(CLE_ENDPOINT)));
+    return ResultatEnvoiPush.ECHEC_ENVOI;
   }
 
   /**
@@ -239,36 +266,20 @@ public class NotificationPushService {
     if (EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
       return true;
     }
-    supprimerAbonnement((UUID) ab.get("id"), userId, (String) ab.get(CLE_ENDPOINT));
+    supprimerAbonnement(
+        ab, userId, EchecPush.CAUSE_SERVICE_NON_PRIS_EN_CHARGE, "endpoint non autorisé");
     return false;
   }
 
-  private void supprimerAbonnement(final UUID id, final String userId, final String endpoint) {
-    jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", id));
-    jdbc.update(
-        "UPDATE user_config SET dernier_appareil_retire_le = now() WHERE user_id = :userId",
-        Map.of(CLE_USER_ID, userId));
-    LOG.info("Abonnement push révoqué, supprimé : {} — {}", userId, endpoint);
-    logAdminService.logAdmin("info", "web", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
-  }
-
-  private static int extraireCodeHttp(final Exception exception) {
-    final String msg = exception.getMessage();
-    if (msg == null) {
-      return -1;
-    }
-    // webpush-java peut lancer une exception avec le code HTTP dans le message
-    try {
-      final String[] parties = msg.split("\\s+");
-      for (final String p : parties) {
-        final int code = Integer.parseInt(p);
-        if (code >= 400 && code < 600) {
-          return code;
-        }
-      }
-    } catch (NumberFormatException nfe) {
-      LOG.trace("extraireCodeHttp : pas de code HTTP dans le message", nfe);
-    }
-    return -1;
+  private void supprimerAbonnement(
+      final Map<String, Object> ab, final String userId, final String cause, final String raison) {
+    jdbc.update(EchecPush.SQL_SUPPRIMER_ABONNEMENT, Map.of(CLE_ID, ab.get(CLE_ID)));
+    jdbc.update(EchecPush.SQL_DATER_RETRAIT, Map.of(CLE_USER_ID, userId, "cause", cause));
+    LOG.info("Abonnement push révoqué ({}) : {}", raison, userId);
+    final Map<String, Object> meta = new HashMap<>();
+    meta.put(CLE_USER_ID, userId);
+    meta.put("raison", raison);
+    meta.put("service", EchecPush.masquerEndpoint((String) ab.get(CLE_ENDPOINT)));
+    logAdminService.logAdmin("warn", "web", "abonnement push révoqué (" + raison + ")", meta);
   }
 }

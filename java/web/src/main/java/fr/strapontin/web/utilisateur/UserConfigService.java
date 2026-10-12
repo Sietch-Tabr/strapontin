@@ -87,6 +87,20 @@ public class UserConfigService {
   }
 
   /**
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si seul le push est coché et qu'aucun appareil n'a
+   *     jamais été abonné : ses notifications n'ont jamais pris effet
+   */
+  public boolean pushJamaisActive(final String userId) {
+    return !jdbc.queryForList(
+            "SELECT 1 FROM user_config uc WHERE uc.user_id = :userId AND "
+                + CanalNotificationPerdu.CONDITION_JAMAIS_ABONNE_SQL,
+            Map.of(CLE_USER_ID, userId),
+            Integer.class)
+        .isEmpty();
+  }
+
+  /**
    * Lit le filtre "concerts disponibles uniquement" de l'utilisateur.
    *
    * @param userId identifiant de l'utilisateur

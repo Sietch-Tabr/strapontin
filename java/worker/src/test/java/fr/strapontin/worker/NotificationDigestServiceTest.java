@@ -389,40 +389,6 @@ class NotificationDigestServiceTest {
     assertFalse(html.contains("border-top:2px solid #ddd"));
   }
 
-  // --- : interprétation du statut HTTP push ---
-
-  @Test
-  void interpreterStatutPush_statut2xx_retourneSucces() {
-    assertEquals(
-        NotificationPushDigestService.ResultatEnvoiPush.SUCCES,
-        NotificationPushDigestService.interpreterStatutPush(201));
-  }
-
-  @Test
-  void interpreterStatutPush_statut404Ou410_retourneAbonnementMort() {
-    assertEquals(
-        NotificationPushDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
-        NotificationPushDigestService.interpreterStatutPush(404));
-    assertEquals(
-        NotificationPushDigestService.ResultatEnvoiPush.ABONNEMENT_MORT,
-        NotificationPushDigestService.interpreterStatutPush(410));
-  }
-
-  // Avant, tout statut différent de 404/410 était compté comme un succès — un 400 (payload
-  // malformé), un 429 (rate-limit) ou un 500 étaient donc traités à tort comme des envois réussis.
-  @Test
-  void interpreterStatutPush_statutErreurNi404Ni410_retourneEchec() {
-    assertEquals(
-        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationPushDigestService.interpreterStatutPush(400));
-    assertEquals(
-        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationPushDigestService.interpreterStatutPush(429));
-    assertEquals(
-        NotificationPushDigestService.ResultatEnvoiPush.ECHEC,
-        NotificationPushDigestService.interpreterStatutPush(500));
-  }
-
   // Sans service d'envoi configuré, l'email n'est pas un canal joignable : ce n'est pas un
   // échec d'envoi, aucun avertissement répété à chaque cycle.
   @Test
@@ -541,6 +507,7 @@ class NotificationDigestServiceTest {
     when(configService.lireConfig("CONTACT_EMAIL"))
         .thenReturn(Optional.of("contact@strapontin.fr"));
     when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
+    when(jdbc.update(contains("echecs_consecutifs = 0"), anyMap())).thenReturn(1);
 
     final PushService pushServiceMock = mock(PushService.class);
     final HttpResponse reponseMock = mock(HttpResponse.class);

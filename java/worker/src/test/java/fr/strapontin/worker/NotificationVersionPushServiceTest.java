@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,6 +51,8 @@ class NotificationVersionPushServiceTest {
 
   private static Map<String, Object> abonnementTest() {
     final Map<String, Object> ab = new HashMap<>();
+    ab.put("id", 1);
+    ab.put("user_id", "u1");
     ab.put("endpoint", "https://fcm.googleapis.com/fcm/send/abonnement-xyz");
     ab.put(
         "p256dh",
@@ -137,5 +141,29 @@ class NotificationVersionPushServiceTest {
     final int nbEnvoyes = service.notifierVersion("3.0.0");
 
     assertEquals(0, nbEnvoyes);
+    verify(jdbc).queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class));
+  }
+
+  @Test
+  void notifierVersion_abonnementSupprime_revoqueLAppareil() throws Exception {
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.of("cle-publique"));
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.of("cle-privee"));
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+    when(configService.lireConfig("CONTACT_EMAIL"))
+        .thenReturn(Optional.of("contact@strapontin.fr"));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnementTest()));
+    final PushService pushServiceMock = mock(PushService.class);
+    final HttpResponse reponseMock = mock(HttpResponse.class);
+    final StatusLine statusLineMock = mock(StatusLine.class);
+    when(statusLineMock.getStatusCode()).thenReturn(410);
+    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
+    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+
+    new NotificationVersionPushService(
+            configService, jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+        .notifierVersion("3.0.0");
+
+    verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
   }
 }

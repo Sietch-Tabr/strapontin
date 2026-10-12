@@ -6,11 +6,11 @@ package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
+import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,15 +34,12 @@ class NotificationPushDigestService {
   private static final String CLE_ENDPOINT = "endpoint";
   private static final int NB_CONCERTS_SINGULIER = 1;
   private static final String SOURCE_SALLE = "SALLE";
-  private static final int STATUT_HTTP_FORBIDDEN = 403;
-  // Même seuil que SuiviChroniciteService — un seul 403 peut être transitoire
-  // (FCM), une répétition sur plusieurs cycles consécutifs signe un abonnement
-  // définitivement invalide (VAPID/subscription).
-  private static final int SEUIL_ECHECS_403_ABONNEMENT_MORT = 3;
+  private static final String SOURCE_LOGS = "notifier-digest";
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
+  private final SuiviEchecsPush suiviEchecs;
   private final NotificationDigestService.FabriquePushService fabriquePushService;
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans
   // logs_admin.
@@ -58,6 +55,7 @@ class NotificationPushDigestService {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
+    this.suiviEchecs = new SuiviEchecsPush(jdbc, logsAdminWorker);
     this.fabriquePushService = fabriquePushService;
   }
 
@@ -76,36 +74,6 @@ class NotificationPushDigestService {
             entree ->
                 logsAdminWorker.inserer(
                     entree.niveau(), "worker", entree.message(), entree.meta()));
-  }
-
-  /**
-   * Issue possible d'un envoi push individuel, selon le statut HTTP retourné
-   * par le push service.
-   */
-  /* package-private : type interne, utilisé uniquement au sein de cette
-   * classe/des tests du même package. */
-  enum ResultatEnvoiPush {
-    SUCCES,
-    ABONNEMENT_MORT,
-    ECHEC
-  }
-
-  /**
-   * Interprète le statut HTTP d'un envoi push — seul 2xx est un succès,
-   * 404/410 signent un abonnement mort, le reste (400/429/5xx) est un
-   * échec (avant : tout code hors 404/410 comptait à tort en succès).
-   * @param status statut HTTP retourné par le push service
-   * @return issue de l'envoi
-   */
-  /* package-private : appelé par les tests du même package. */
-  static ResultatEnvoiPush interpreterStatutPush(final int status) {
-    if (status == 404 || status == 410) {
-      return ResultatEnvoiPush.ABONNEMENT_MORT;
-    }
-    if (status >= 200 && status < 300) {
-      return ResultatEnvoiPush.SUCCES;
-    }
-    return ResultatEnvoiPush.ECHEC;
   }
 
   /* package-private : appelé par NotificationDigestService (même package). */
@@ -183,96 +151,65 @@ class NotificationPushDigestService {
     int nbEnvoyes = 0;
     for (final Map<String, Object> ab : abonnements) {
       if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
-        retirerAbonnement(ab, userId, "service de push du navigateur non pris en charge", null);
+        suiviEchecs.revoquer(
+            ab,
+            userId,
+            EchecPush.CAUSE_SERVICE_NON_PRIS_EN_CHARGE,
+            "endpoint non autorisé",
+            SOURCE_LOGS);
         continue;
       }
       compteurPush.enregistrerAppel();
-      try {
-        final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
-        final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
-        final Subscription subscription =
-            new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-        final Notification notification = new Notification(subscription, payload);
-        final HttpResponse response = pushService.send(notification);
-        final int status = response.getStatusLine().getStatusCode();
-        switch (interpreterStatutPush(status)) {
-          case ABONNEMENT_MORT -> {
-            // Abonnement mort (410/404) : nettoyage attendu, pas une panne du
-            // canal push — n'entre pas dans le bilan de panne.
-            retirerAbonnement(ab, userId, "abonnement retiré par le navigateur", status);
-          }
-          case SUCCES -> {
-            nbEnvoyes++;
-            reinitialiserEchecs403(ab);
-          }
-          case ECHEC -> {
-            // tout statut hors 2xx/404/410 (400, 429, 5xx...) est un échec, pas
-            // un succès implicite — sans cette branche, un push jamais délivré
-            // était compté comme réussi.
-            compteurPush.enregistrerErreur();
-            if (status == STATUT_HTTP_FORBIDDEN) {
-              traiterEchec403(userId, ab);
-            } else {
-              LOG.warn(
-                  "Push: statut inattendu {} pour {} — {}", status, userId, ab.get(CLE_ENDPOINT));
-            }
-          }
-        }
-      } catch (Exception e) {
-        compteurPush.enregistrerErreur();
-        LOG.warn("Push: échec envoi pour {} — {}", userId, ab.get(CLE_ENDPOINT), e);
+      if (envoyerAUnAbonnement(pushService, ab, payload, userId)) {
+        nbEnvoyes++;
       }
     }
     return nbEnvoyes;
   }
 
-  private void reinitialiserEchecs403(final Map<String, Object> ab) {
-    jdbc.update(
-        "UPDATE push_abonnements SET echecs_403_consecutifs = 0 WHERE id = :id",
-        Map.of("id", ab.get("id")));
-  }
-
-  /**
-   * Supprime un abonnement que le service de push n'accepte plus, et le
-   * date sur le compte : un retrait qui laisse le compte sans canal joignable
-   * déclenche l'avertissement de l'utilisateur.
-   */
-  private void retirerAbonnement(
-      final Map<String, Object> ab, final String userId, final String motif, final Integer statut) {
-    jdbc.update("DELETE FROM push_abonnements WHERE id = :id", Map.of("id", ab.get("id")));
-    jdbc.update(
-        "UPDATE user_config SET dernier_appareil_retire_le = now() WHERE user_id = :userId",
-        Map.of("userId", userId));
-    LOG.info("Abonnement push révoqué ({}) : {}", motif, userId);
-    final Map<String, Object> meta = new HashMap<>();
-    meta.put("userId", userId);
-    meta.put("motif", motif);
-    meta.put("statutHttp", statut);
-    logsAdminWorker.inserer(
-        "warn",
-        "notifier-digest",
-        "abonnement push révoqué automatiquement (" + motif + ") userId=" + userId,
-        meta);
-  }
-
-  /**
-   * Un 403 isolé peut être transitoire (FCM) — seule une répétition sur
-   * {@value #SEUIL_ECHECS_403_ABONNEMENT_MORT} cycles consécutifs révoque
-   * l'abonnement.
-   */
-  private void traiterEchec403(final String userId, final Map<String, Object> ab) {
-    final Integer echecs =
-        jdbc.queryForObject(
-            "UPDATE push_abonnements SET echecs_403_consecutifs = echecs_403_consecutifs + 1"
-                + " WHERE id = :id RETURNING echecs_403_consecutifs",
-            Map.of("id", ab.get("id")),
-            Integer.class);
-    if (echecs != null && echecs >= SEUIL_ECHECS_403_ABONNEMENT_MORT) {
-      retirerAbonnement(
-          ab, userId, "403 persistant sur " + echecs + " cycles", STATUT_HTTP_FORBIDDEN);
-    } else {
-      LOG.warn("Push: 403 ({}e consécutif) pour {} — {}", echecs, userId, ab.get(CLE_ENDPOINT));
+  private boolean envoyerAUnAbonnement(
+      final PushService pushService,
+      final Map<String, Object> ab,
+      final String payload,
+      final String userId) {
+    final HttpResponse response;
+    try {
+      final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
+      final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
+      final Subscription subscription =
+          new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
+      response = pushService.send(new Notification(subscription, payload));
+    } catch (Exception e) {
+      compteurPush.enregistrerErreur();
+      suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
+      return false;
     }
+    final int status = response.getStatusLine().getStatusCode();
+    switch (EchecPush.interpreter(status)) {
+      case SUCCES -> {
+        suiviEchecs.succes(ab);
+        return true;
+      }
+      // Abonnement supprimé côté navigateur : nettoyage attendu, pas une panne
+      // du canal push, il n'entre pas dans le bilan de panne.
+      case ABONNEMENT_SUPPRIME ->
+          suiviEchecs.revoquer(
+              ab,
+              userId,
+              EchecPush.causeLisible(status),
+              EchecPush.raison(status, null),
+              SOURCE_LOGS);
+      case ECHEC -> {
+        compteurPush.enregistrerErreur();
+        suiviEchecs.echec(
+            ab,
+            userId,
+            status,
+            EchecPush.lireCorps(() -> response.getEntity().getContent()),
+            SOURCE_LOGS);
+      }
+    }
+    return false;
   }
 
   // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service
