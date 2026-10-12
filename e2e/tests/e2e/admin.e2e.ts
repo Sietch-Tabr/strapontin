@@ -795,6 +795,37 @@ test.describe("Scénario: admin — API endpoints", () => {
 });
 
 test.describe("Scénario: admin — onglet Communication", () => {
+  // La notification de nouvelle version est un envoi aux utilisateurs : onglet Communication,
+  // plus Configuration. L'incident de sécurité vient en dernier, à part.
+  test("admin_communication_notificationVersionPuisIncidentEnDernier", async ({
+    page,
+  }) => {
+    await page.goto("/admin#communication");
+    const section = page.locator("#communication");
+    const version = section.getByRole("button", {
+      name: "Notifier la nouvelle version",
+    });
+    await expect(version).toBeVisible();
+    const exceptionnelle = section.getByRole("group", {
+      name: "Communication exceptionnelle",
+    });
+    await expect(
+      exceptionnelle.getByRole("heading", {
+        name: "Communication d'incident de sécurité",
+      }),
+    ).toBeVisible();
+    const positions = await Promise.all(
+      [version, exceptionnelle].map(async (l) => (await l.boundingBox())!.y),
+    );
+    expect(positions[0]).toBeLessThan(positions[1]);
+
+    await page.goto("/admin#configuration");
+    await expect(page.locator("section#configuration")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Notifier la nouvelle version" }),
+    ).toHaveCount(0);
+  });
+
   // Le modèle pré-rempli bloque la publication tant qu'un champ entre crochets reste à
   // compléter ; le test ne publie jamais (emails et push réels).
   test("admin_incident_modelePreRempli_publicationBloqueeTantQueIncomplet", async ({

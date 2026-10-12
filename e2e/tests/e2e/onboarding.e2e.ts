@@ -291,6 +291,36 @@ test.describe("Scénario: checklist premiers pas — /aide", () => {
   });
 });
 
+test.describe("Scénario: départements sans concert", () => {
+  // Aucune billetterie ne propose de concert dans un département choisi : l'utilisateur le voit
+  // dans Paramètres et sur Découverte, au lieu d'une liste vide inexpliquée.
+  test("departements_sansConcertConnu_signalesDansParametresEtDecouverte", async ({
+    browser,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== "chromium",
+      "Création de compte — chromium uniquement",
+    );
+
+    const { page, ctx } = await creerCompteFraisEtSeConnecter(browser);
+    try {
+      await page.request.patch("/api/user/config/departements", {
+        data: { departements: "976" },
+      });
+      await page.goto("/parametres#preferences");
+      await expect(
+        page.locator("#preferences .alerte-info", { hasText: "976" }),
+      ).toBeVisible();
+      await page.goto("/decouverte");
+      await expect(
+        page.locator(".alerte-info", { hasText: "976" }),
+      ).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
 test.describe("Scénario: nudge notifications — premier ajout", () => {
   // Le rappel n'apparaît que si aucune notification ne peut parvenir : notifications coupées ici.
   test("nudge_premierAjoutArtisteSansCanal_afficheToastNotifications", async ({
