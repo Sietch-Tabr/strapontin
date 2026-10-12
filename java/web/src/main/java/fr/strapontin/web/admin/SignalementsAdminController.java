@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/signalements")
 public class SignalementsAdminController {
 
+  private static final String CLE_SUCCES = "succes";
+
   private static final String MESSAGE_UUID_INVALIDE = "UUID de salle invalide.";
 
   private final SignalementsAdminService service;
@@ -63,7 +65,22 @@ public class SignalementsAdminController {
     if (!resolu) {
       return erreur(404, "Signalement inconnu ou déjà résolu.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
+  }
+
+  /**
+   * Supprime le concert désigné par un signalement (date attribuée à tort,
+   * concert en double) et clôt le signalement.
+   *
+   * @param id identifiant numérique du signalement
+   * @return 200 si supprimé, 404 si aucun signalement actif de ce type
+   */
+  @PostMapping("/{id}/supprimer-concert")
+  public ResponseEntity<Map<String, Object>> supprimerConcert(@PathVariable final long id) {
+    if (!service.supprimerConcertSignale(id)) {
+      return erreur(404, "Signalement inconnu, déjà résolu ou sans concert à supprimer.");
+    }
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -82,7 +99,7 @@ public class SignalementsAdminController {
     if (!service.accepterContamination(uuid)) {
       return erreur(404, "Aucune contamination signalée pour cette salle.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 
   /**
@@ -101,6 +118,6 @@ public class SignalementsAdminController {
     if (!service.declarerSallesDistinctes(uuid)) {
       return erreur(404, "Aucun doublon signalé pour cette salle.");
     }
-    return ResponseEntity.ok(Map.of("succes", true));
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
   }
 }

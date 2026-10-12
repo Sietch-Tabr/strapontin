@@ -28,7 +28,8 @@ public class SignalementsAdminService {
   // Quatre mécanismes réunis, entité nommée par jointure selon son type.
   private static final String SQL_LISTE =
       """
-      SELECT t.*, COALESCE(s.nom_affiche, s.nom, a.nom_affiche, a.nom, u.username)
+      SELECT t.*, COALESCE(s.nom_affiche, s.nom, a.nom_affiche, a.nom, u.username,
+               concat_ws(' · ', c.artiste, to_char(c.date, 'DD/MM/YYYY'), c.salle))
                AS entite_nom
       FROM (
         SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
@@ -51,6 +52,7 @@ public class SignalementsAdminService {
       ) t
       LEFT JOIN salles s ON t.entite_type = 'salle' AND s.id::text = t.entite_id
       LEFT JOIN artistes a ON t.entite_type = 'artiste' AND a.id::text = t.entite_id
+      LEFT JOIN concerts c ON t.entite_type = 'evenement' AND c.id::text = t.entite_id
       -- L'entité d'un signalement est un UUID, dérivé de l'identifiant texte du compte.
       LEFT JOIN users u ON t.entite_type = 'utilisateur'
                        AND u.id = COALESCE(t.utilisateur_id, t.entite_id)
@@ -58,6 +60,11 @@ public class SignalementsAdminService {
       LIMIT :taille OFFSET :offset
       """;
   private static final String CLE_ID = "id";
+  private static final String NIVEAU_INFO = "info";
+  private static final String SOURCE_ADMIN = "admin";
+  // Signalements dont l'action attendue est la suppression du concert désigné.
+  private static final List<String> TYPES_CONCERT_A_SUPPRIMER =
+      List.of("date_festival_ecartee", "concert_double_salles_distinctes");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
@@ -135,9 +142,43 @@ public class SignalementsAdminService {
             Map.of("id", id));
     if (lignes > 0) {
       logAdminService.logAdmin(
-          "info", "admin", "signalement résolu manuellement", Map.of("signalementId", id));
+          NIVEAU_INFO,
+          SOURCE_ADMIN,
+          "signalement résolu manuellement",
+          Map.of("signalementId", id));
     }
     return lignes > 0;
+  }
+
+  /**
+   * Supprime le concert d'un signalement actif qui le désigne comme à
+   * supprimer, et clôt le signalement.
+   * @param id identifiant numérique du signalement
+   * @return {@code true} si le concert a été supprimé
+   */
+  @Transactional
+  public boolean supprimerConcertSignale(final long id) {
+    final List<String> concerts =
+        jdbc.queryForList(
+            "SELECT entite_id::text FROM signalements_matching WHERE id = :id"
+                + " AND resolu_le IS NULL AND entite_type = 'evenement'"
+                + " AND type IN (:types)",
+            Map.of(CLE_ID, id, "types", TYPES_CONCERT_A_SUPPRIMER),
+            String.class);
+    if (concerts.isEmpty()) {
+      return false;
+    }
+    jdbc.update(
+        "DELETE FROM evenements WHERE id = CAST(:concert AS uuid)",
+        Map.of("concert", concerts.get(0)));
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now() WHERE id = :id", Map.of(CLE_ID, id));
+    logAdminService.logAdmin(
+        NIVEAU_INFO,
+        SOURCE_ADMIN,
+        "concert signalé supprimé",
+        Map.of("signalementId", id, "concertId", concerts.get(0)));
+    return true;
   }
 
   /**
@@ -169,8 +210,8 @@ public class SignalementsAdminService {
         "UPDATE salles SET contamination_signalee = NULL WHERE id = CAST(:id AS uuid)",
         Map.of(CLE_ID, salleId.toString()));
     logAdminService.logAdmin(
-        "info",
-        "admin",
+        NIVEAU_INFO,
+        SOURCE_ADMIN,
         "contamination de salle déclarée faux positif",
         Map.of("salleId", salleId.toString(), "sources", String.join(", ", noms)));
     return true;
@@ -206,8 +247,8 @@ public class SignalementsAdminService {
         "UPDATE salles SET doublon_signale = NULL WHERE id = CAST(:id AS uuid)",
         Map.of(CLE_ID, salleId.toString()));
     logAdminService.logAdmin(
-        "info",
-        "admin",
+        NIVEAU_INFO,
+        SOURCE_ADMIN,
         "salles déclarées distinctes",
         Map.of("salleA", salleId.toString(), "salleB", partenaire.toString()));
     return true;
