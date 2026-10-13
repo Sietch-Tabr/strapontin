@@ -29,6 +29,7 @@ export const versionsChangelog = [
           "Un appareil dont les notifications push échouent à répétition est retiré après cinq échecs consécutifs, quelle qu'en soit la raison.",
           "L'email qui vous prévient que vous ne recevez plus les nouveaux concerts explique pourquoi votre appareil a été retiré et comment réactiver les notifications.",
           "Si vous avez choisi les notifications push sans qu'aucun appareil n'ait été enregistré, un bandeau vous le signale, puis un email dès qu'un concert vous a échappé.",
+          "L'alerte de connexion depuis un nouvel appareil n'est plus envoyée plusieurs fois pour une même connexion.",
         ],
       },
       {

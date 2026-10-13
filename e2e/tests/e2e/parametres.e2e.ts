@@ -601,7 +601,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await expect(dialog).toBeVisible();
     await dialog.locator("input#confirmation-suppression").fill("supprimer");
     await expect(dialog.locator("button.bouton-danger")).not.toBeDisabled();
-    await dialog.locator("button.bouton-secondaire").click();
+    await dialog.getByRole("button", { name: "Annuler" }).click();
     await expect(dialog).not.toBeVisible();
   });
 
@@ -613,7 +613,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await page.locator("section#donnees button.bouton-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();
-    await dialog.locator("button.bouton-secondaire").click();
+    await dialog.getByRole("button", { name: "Annuler" }).click();
     await expect(dialog).not.toBeVisible();
   });
 });
