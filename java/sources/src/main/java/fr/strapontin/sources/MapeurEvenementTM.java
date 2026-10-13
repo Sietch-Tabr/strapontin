@@ -6,10 +6,12 @@ package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,35 +84,42 @@ final class MapeurEvenementTM {
   }
 
   @SuppressWarnings(UNCHECKED)
-  private static String extraireArtisteTM(
-      final Map<String, Object> evt,
-      final Map<String, Object> embedded,
-      final String artisteFallback) {
+  private static List<Map<String, Object>> attractions(final Map<String, Object> embedded) {
     final List<Map<String, Object>> attractions =
         embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-    final String nomAttraction =
-        attractions != null && !attractions.isEmpty()
-            ? (String) attractions.get(0).get(CLE_NAME)
-            : null;
-    if (nomAttraction != null) {
-      return artisteDepuisAttraction(nomAttraction, artisteFallback);
-    }
-    return artisteDepuisFallback(evt, artisteFallback);
+    return attractions != null ? attractions : List.of();
   }
 
   /**
-   * Si la recherche était par nom d'artiste, rejette les attractions dont le
-   * nom normalisé ne correspond pas exactement (évite les homonymes partiels,
-   * ex: "Anuv Jain" pour "Jain").
+   * Attraction retenue comme artiste : celle qu'une recherche par artiste
+   * désigne exactement (un co-plateau peut la citer en second ; un homonyme
+   * partiel, « Anuv Jain » pour « Jain », reste écarté), sinon la première.
+   * @return l'attraction, vide si aucune ne convient
    */
-  private static String artisteDepuisAttraction(
-      final String nomAttraction, final String artisteFallback) {
-    if (artisteFallback != null
-        && !Normalisation.normaliserTexte(nomAttraction)
-            .equals(Normalisation.normaliserTexte(artisteFallback))) {
+  private static Optional<Map<String, Object>> attractionPrincipale(
+      final List<Map<String, Object>> attractions, final String artisteFallback) {
+    if (artisteFallback == null) {
+      return attractions.stream().findFirst();
+    }
+    final String recherche = Normalisation.normaliserTexte(artisteFallback);
+    return attractions.stream()
+        .filter(a -> a.get(CLE_NAME) instanceof String)
+        .filter(a -> Normalisation.normaliserTexte((String) a.get(CLE_NAME)).equals(recherche))
+        .findFirst();
+  }
+
+  private static String extraireArtisteTM(
+      final Map<String, Object> evt,
+      final List<Map<String, Object>> attractions,
+      final Map<String, Object> principale,
+      final String artisteFallback) {
+    if (principale != null && principale.get(CLE_NAME) instanceof String nom) {
+      return Normalisation.normaliserCasse(nom);
+    }
+    if (!attractions.isEmpty()) {
       return null;
     }
-    return Normalisation.normaliserCasse(nomAttraction);
+    return artisteDepuisFallback(evt, artisteFallback);
   }
 
   private static String artisteDepuisFallback(
@@ -129,14 +138,28 @@ final class MapeurEvenementTM {
   }
 
   @SuppressWarnings(UNCHECKED)
-  private static String extraireAttractionIdTM(final Map<String, Object> embedded) {
-    final List<Map<String, Object>> attractions =
-        embedded != null ? (List<Map<String, Object>>) embedded.get("attractions") : null;
-    if (attractions == null || attractions.isEmpty()) {
-      return null;
-    }
-    final Object id = attractions.get(0).get("id");
+  private static ExtracteurVenueTM.InfosVenueTM infosVenue(final Map<String, Object> embedded) {
+    final List<Map<String, Object>> venues =
+        embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
+    final Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
+    return ExtracteurVenueTM.extraireInfosVenueTM(venue);
+  }
+
+  private static String extraireAttractionIdTM(final Map<String, Object> principale) {
+    final Object id = principale != null ? principale.get("id") : null;
     return id != null ? "ticketmaster:" + id : null;
+  }
+
+  // Les autres attractions de l'événement : le plateau d'une soirée partagée.
+  private static List<String> invitesTM(
+      final List<Map<String, Object>> attractions, final String artiste) {
+    final List<String> noms = new ArrayList<>();
+    for (final Map<String, Object> attraction : attractions) {
+      if (attraction.get(CLE_NAME) instanceof String nom) {
+        noms.add(Normalisation.normaliserCasse(nom));
+      }
+    }
+    return PlateauSoiree.sansArtistePrincipal(noms, artiste);
   }
 
   @SuppressWarnings(UNCHECKED)
@@ -174,16 +197,16 @@ final class MapeurEvenementTM {
     final String[] datHeure = parseDateTM(dateStr, (String) start.get("localTime"));
 
     final Map<String, Object> embedded = (Map<String, Object>) evt.get(CLE_EMBEDDED);
-    final String artiste = extraireArtisteTM(evt, embedded, artisteFallback);
+    final List<Map<String, Object>> attractions = attractions(embedded);
+    final Map<String, Object> principale =
+        attractionPrincipale(attractions, artisteFallback).orElse(null);
+    final String artiste = extraireArtisteTM(evt, attractions, principale, artisteFallback);
     if (artiste == null) {
       return null;
     }
 
-    final List<Map<String, Object>> venues =
-        embedded != null ? (List<Map<String, Object>>) embedded.get("venues") : null;
-    final Map<String, Object> venue = venues != null && !venues.isEmpty() ? venues.get(0) : null;
-    final ExtracteurVenueTM.InfosVenueTM infosVenue = ExtracteurVenueTM.extraireInfosVenueTM(venue);
-    final String artisteSourceId = extraireAttractionIdTM(embedded);
+    final ExtracteurVenueTM.InfosVenueTM infosVenue = infosVenue(embedded);
+    final String artisteSourceId = extraireAttractionIdTM(principale);
 
     final String url = (String) evt.get("url");
     final ExtracteurVenteTM.InfosVenteTM infosVente =
@@ -213,6 +236,7 @@ final class MapeurEvenementTM {
         .salleSourceId(infosVenue.salleSourceId())
         .artisteSourceId(artisteSourceId)
         .position(infosVenue.position())
+        .artistesInvites(invitesTM(attractions, artiste))
         .construire();
   }
 }

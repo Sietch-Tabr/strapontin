@@ -49,8 +49,8 @@ public class WorkerFetchCommun {
   // une demi-journée de silence continu). Package-private : référencé par
   // WorkerPurgeService pour dériver le seuil de purge définitive (voir
   // WorkerPurgeService.SEUIL_PURGE_ABSENCES).
-  /* package-private : réutilisé par les exécuteurs de fetch (même package). */
-  static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
+  /** Absences consécutives à partir desquelles un concert est marqué non confirmé. */
+  public static final int SEUIL_ABSENCES_CONSECUTIVES = 5;
 
   private static final String SQL_ABSENCES_BASE =
       "UPDATE evenements SET"

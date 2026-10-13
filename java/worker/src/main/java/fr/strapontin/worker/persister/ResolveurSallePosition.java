@@ -9,6 +9,7 @@ import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
+import fr.strapontin.core.QualificatifSalle;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,7 @@ final class ResolveurSallePosition {
               (Double) c.get("longitude"));
       if (distance > RAYON_MEME_LIEU_METRES
           || !CorrespondanceSalle.estDoublonSalle(nomNorm, (String) c.get("nom_norm"))
-          || CorrespondanceSalle.qualificatifsDivergents(nom, (String) c.get("nom"))) {
+          || QualificatifSalle.qualificatifsDivergents(nom, (String) c.get("nom"))) {
         continue;
       }
       if (meilleure == null || distance < meilleure.distance()) {

@@ -5,7 +5,9 @@
 package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -43,11 +45,30 @@ class AvertissementCanalPerduServiceIntegrationTest extends AbstractWorkerIntegr
     jdbc.update(
         """
         INSERT INTO user_config (user_id, frequence_notifications, notif_artistes, notif_salles,
-                                 notif_artistes_push, notif_salles_push, dernier_appareil_retire_le)
-        VALUES ('u1', 'quotidien', false, false, true, false, now())
+                                 notif_artistes_push, notif_salles_push, dernier_appareil_retire_le,
+                                 cause_dernier_retrait_appareil)
+        VALUES ('u1', 'quotidien', false, false, true, false, now(), 'cause lisible')
         """,
         Map.of());
-    when(emailCompteService.envoyerAvertissementCanalPerdu(anyString())).thenReturn(true);
+    when(emailCompteService.envoyerAvertissementCanalPerdu(anyString(), any())).thenReturn(true);
+    when(emailCompteService.envoyerAvertissementPushJamaisActive(anyString())).thenReturn(true);
+  }
+
+  private void ajouterMatchEnAttente(final String age) {
+    jdbc.update(
+        "INSERT INTO artistes (id, nom, nom_norm) VALUES"
+            + " (CAST('00000000-0000-0000-0000-0000000000a1' AS uuid), 'A', 'a')",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO evenements (id, artiste_norm, salle_norm, date, artiste_id) VALUES"
+            + " (CAST('00000000-0000-0000-0000-0000000000e1' AS uuid), 'a', 'salle', CURRENT_DATE + 30,"
+            + " CAST('00000000-0000-0000-0000-0000000000a1' AS uuid))",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id, cree_le) VALUES"
+            + " ('u1', CAST('00000000-0000-0000-0000-0000000000e1' AS uuid),"
+            + " now() - CAST(:age AS interval))",
+        Map.of("age", age));
   }
 
   private void abonnerAppareil() {
@@ -62,7 +83,7 @@ class AvertissementCanalPerduServiceIntegrationTest extends AbstractWorkerIntegr
     assertEquals(1, service.verifier());
     assertEquals(0, service.verifier());
 
-    verify(emailCompteService, times(1)).envoyerAvertissementCanalPerdu("u1@test.fr");
+    verify(emailCompteService, times(1)).envoyerAvertissementCanalPerdu(eq("u1@test.fr"), any());
   }
 
   @Test
@@ -73,7 +94,7 @@ class AvertissementCanalPerduServiceIntegrationTest extends AbstractWorkerIntegr
     jdbc.update("DELETE FROM push_abonnements", Map.of());
 
     assertEquals(1, service.verifier());
-    verify(emailCompteService, times(2)).envoyerAvertissementCanalPerdu("u1@test.fr");
+    verify(emailCompteService, times(2)).envoyerAvertissementCanalPerdu(eq("u1@test.fr"), any());
   }
 
   @Test
@@ -81,22 +102,47 @@ class AvertissementCanalPerduServiceIntegrationTest extends AbstractWorkerIntegr
     jdbc.update("UPDATE user_config SET notif_artistes = true", Map.of());
 
     assertEquals(0, service.verifier());
-    verify(emailCompteService, never()).envoyerAvertissementCanalPerdu(anyString());
+    verify(emailCompteService, never()).envoyerAvertissementCanalPerdu(anyString(), any());
   }
 
   @Test
-  void verifier_aucunAppareilJamaisRetire_aucunAvertissement() {
+  void verifier_dernierAppareilRetire_transmetLaCause() {
+    service.verifier();
+
+    verify(emailCompteService).envoyerAvertissementCanalPerdu("u1@test.fr", "cause lisible");
+  }
+
+  @Test
+  void verifier_pushJamaisAbonneSansMatchEnAttente_aucunAvertissement() {
     jdbc.update("UPDATE user_config SET dernier_appareil_retire_le = NULL", Map.of());
 
     assertEquals(0, service.verifier());
   }
 
   @Test
+  void verifier_pushJamaisAbonneAvecMatchRecent_aucunAvertissement() {
+    jdbc.update("UPDATE user_config SET dernier_appareil_retire_le = NULL", Map.of());
+    ajouterMatchEnAttente("1 hour");
+
+    assertEquals(0, service.verifier());
+  }
+
+  @Test
+  void verifier_pushJamaisAbonneAvecMatchEnAttente_avertitDuPushJamaisActive() {
+    jdbc.update("UPDATE user_config SET dernier_appareil_retire_le = NULL", Map.of());
+    ajouterMatchEnAttente("2 days");
+
+    assertEquals(1, service.verifier());
+    verify(emailCompteService).envoyerAvertissementPushJamaisActive("u1@test.fr");
+    verify(emailCompteService, never()).envoyerAvertissementCanalPerdu(anyString(), any());
+  }
+
+  @Test
   void verifier_envoiEchoue_retenteAuCycleSuivant() {
-    when(emailCompteService.envoyerAvertissementCanalPerdu(anyString())).thenReturn(false);
+    when(emailCompteService.envoyerAvertissementCanalPerdu(anyString(), any())).thenReturn(false);
     assertEquals(0, service.verifier());
 
-    when(emailCompteService.envoyerAvertissementCanalPerdu(anyString())).thenReturn(true);
+    when(emailCompteService.envoyerAvertissementCanalPerdu(anyString(), any())).thenReturn(true);
     assertEquals(1, service.verifier());
   }
 }

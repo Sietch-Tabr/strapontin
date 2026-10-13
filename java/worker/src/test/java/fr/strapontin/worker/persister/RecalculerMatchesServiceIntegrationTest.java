@@ -401,4 +401,35 @@ class RecalculerMatchesServiceIntegrationTest extends AbstractWorkerIntegrationT
         "suivre une sous-salle précise ne doit pas remonter les concerts d'une autre sous-salle du"
             + " même complexe");
   }
+
+  // Soirée enregistrée sous Charlie Winston ; Bertrand Belin, au plateau, n'était pas encore au
+  // référentiel : il y entre quand l'utilisateur le suit, le recalcul le relie et notifie.
+  @Test
+  void recalculerMatches_artisteSuiviAuPlateauDUneSoiree_creeLeMatch() {
+    insererUser("u1");
+    insererConcert("Charlie Winston", "charlie winston", DATE_FUTURE, "chapiteau", null, null);
+    final UUID soiree =
+        jdbc.queryForObject(
+            "SELECT id FROM evenements WHERE artiste_norm = 'charlie winston'",
+            Map.of(),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom)"
+            + " VALUES (CAST(:id AS uuid), 'bertrand belin', 'Bertrand Belin')",
+        Map.of("id", soiree.toString()));
+    final UUID belin = insererArtiste("u1", "bertrand belin", "Bertrand Belin");
+
+    service.recalculerMatches(null);
+
+    assertEquals(
+        List.of(soiree),
+        jdbc.queryForList(
+            "SELECT concert_id FROM user_matches WHERE user_id = 'u1'", Map.of(), UUID.class));
+    assertEquals(
+        belin,
+        jdbc.queryForObject(
+            "SELECT artiste_id FROM evenement_artistes WHERE evenement_id = CAST(:id AS uuid)",
+            Map.of("id", soiree.toString()),
+            UUID.class));
+  }
 }

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import fr.strapontin.sources.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -135,6 +136,74 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     evenement(creerSalle(), "artiste", "75");
 
     assertEquals(0, controle.verifier());
+    assertEquals(List.of(), actifs());
+  }
+
+  private void compteAvecMatch(
+      final boolean emailActif, final String ageMatch, final String ageConcert) {
+    jdbc.update(
+        "INSERT INTO users (id, email, role, display_username, must_change_credentials)"
+            + " VALUES ('u1', 'u1@test.fr', CAST('user' AS role_utilisateur), 'u1', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, frequence_notifications, notif_artistes,"
+            + " notif_artistes_push) VALUES ('u1', 'quotidien', :email, NOT :email)",
+        Map.of("email", emailActif));
+    final UUID artiste =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('A', 'a') RETURNING id",
+            Map.of(),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)"
+            + " VALUES ('u1', 'A', CAST(:artiste AS uuid))",
+        Map.of("artiste", artiste.toString()));
+    final UUID concert =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, artiste_id, first_seen)"
+                + " VALUES ('a', CURRENT_DATE + 30, 'salle', CAST(:artiste AS uuid),"
+                + " now() - CAST(:age AS interval)) RETURNING id",
+            Map.of("artiste", artiste.toString(), "age", ageConcert),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id, cree_le)"
+            + " VALUES ('u1', CAST(:concert AS uuid), now() - CAST(:age AS interval))",
+        Map.of("concert", concert.toString(), "age", ageMatch));
+  }
+
+  @Test
+  void verifier_envoiEnAttenteAvecEmailActif_signaleAvecLaDateDuRapprochement() {
+    compteAvecMatch(true, "3 days", "60 days");
+
+    controle.verifier();
+
+    assertEquals(List.of("notifications_non_envoyees"), actifs());
+    assertEquals(
+        LocalDate.now().minusDays(3).toString(),
+        jdbc.queryForObject(
+            "SELECT details->>'plusAncien' FROM signalements_matching"
+                + " WHERE type = 'notifications_non_envoyees'",
+            Map.of(),
+            String.class));
+  }
+
+  // Concert connu de longue date, artiste suivi aujourd'hui : le délai n'est pas écoulé.
+  @Test
+  void verifier_artisteSuiviRecemment_aucunSignalement() {
+    compteAvecMatch(true, "1 hour", "60 days");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  // Compte sans canal joignable : seul l'utilisateur peut agir, déjà averti.
+  @Test
+  void verifier_pushSansAppareil_aucunSignalement() {
+    compteAvecMatch(false, "3 days", "60 days");
+
+    controle.verifier();
+
     assertEquals(List.of(), actifs());
   }
 }

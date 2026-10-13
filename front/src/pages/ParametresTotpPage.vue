@@ -77,10 +77,7 @@
               >
                 Confirmer
               </button>
-              <RouterLink
-                to="/parametres#compte"
-                class="bouton bouton-secondaire"
-              >
+              <RouterLink to="/parametres#compte" class="bouton bouton-texte">
                 Annuler
               </RouterLink>
             </div>

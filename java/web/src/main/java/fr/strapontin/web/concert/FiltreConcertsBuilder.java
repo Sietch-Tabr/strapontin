@@ -21,6 +21,10 @@ public final class FiltreConcertsBuilder {
   /** Nombre de concerts par page pour les listings paginés. */
   public static final int CONCERTS_PAR_PAGE = 100;
 
+  /** Concert encore disponible à la vente (statut inconnu compris), alias {@code c}. */
+  public static final String CONDITION_DISPONIBLE =
+      "(c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled', 'postponed'))";
+
   private FiltreConcertsBuilder() {
     // Classe utilitaire — pas d'instanciation
   }

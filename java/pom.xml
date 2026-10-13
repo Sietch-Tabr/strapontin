@@ -25,7 +25,7 @@
 
     <properties>
         <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.0.3</revision>
+        <revision>3.0.4</revision>
         <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
@@ -55,7 +55,7 @@
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
         <pmdCore.version>7.28.0</pmdCore.version>
         <jacoco.version>0.8.15</jacoco.version>
-        <spotless.version>3.10.3</spotless.version>
+        <spotless.version>3.10.4</spotless.version>
     </properties>
 
     <build>

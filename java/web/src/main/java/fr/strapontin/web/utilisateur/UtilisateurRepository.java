@@ -243,7 +243,7 @@ class UtilisateurRepository {
               AND EXISTS (
                 SELECT 1 FROM user_artistes ua
                 WHERE ua.user_id = :userId
-                  AND c.artiste_id = ua.artiste_id
+                  AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
               )
             """,
             Map.of(CLE_USER_ID, userId),

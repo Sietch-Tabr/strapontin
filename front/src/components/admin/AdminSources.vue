@@ -144,16 +144,18 @@
           >
             <button
               type="button"
-              class="bouton bouton-petit"
-              :class="vueEventim ? 'bouton-secondaire' : 'bouton-primaire'"
+              class="bouton bouton-bascule bouton-petit"
+              :class="{ actif: !vueEventim }"
+              :aria-pressed="!vueEventim"
               @click="basculerVue(false)"
             >
               Sans source
             </button>
             <button
               type="button"
-              class="bouton bouton-petit"
-              :class="vueEventim ? 'bouton-primaire' : 'bouton-secondaire'"
+              class="bouton bouton-bascule bouton-petit"
+              :class="{ actif: vueEventim }"
+              :aria-pressed="vueEventim"
               @click="basculerVue(true)"
             >
               Avec lieu Eventim
@@ -207,7 +209,9 @@
                 </thead>
                 <tbody>
                   <tr v-for="salle in salles" :key="salle.salleId">
-                    <td class="source-salle-nom" data-label="Salle">{{ salle.nom }}</td>
+                    <td class="source-salle-nom" data-label="Salle">
+                      {{ salle.nom }}
+                    </td>
                     <td class="source-salle-loc" data-label="Ville / Dép.">
                       <span v-if="salle.ville || salle.dept">{{
                         [salle.ville, salle.dept].filter(Boolean).join(" ")
@@ -243,7 +247,7 @@
                     <td class="source-actions" data-label="">
                       <button
                         type="button"
-                        class="bouton bouton-secondaire bouton-petit"
+                        class="bouton bouton-primaire bouton-petit"
                         :disabled="enCours[salle.salleId + ':lieu']"
                         :aria-label="
                           'Enregistrer le lieu Eventim de ' + salle.nom
@@ -582,14 +586,6 @@ onUnmounted(() => {
   border-radius: 9999px;
   transition: width 0.3s;
   width: 0%;
-}
-
-.badge-quota-critique {
-  color: var(--danger);
-}
-
-.badge-quota-attention {
-  color: var(--warning);
 }
 
 .sources-grille {

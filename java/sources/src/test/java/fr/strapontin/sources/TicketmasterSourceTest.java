@@ -81,6 +81,44 @@ class TicketmasterSourceTest {
         .formatted(events, totalElements, totalPages);
   }
 
+  private static Map<String, Object> coPlateauTM() {
+    return evenementTMRaw(
+        Map.of(
+            "_embedded",
+            Map.of(
+                "attractions",
+                List.of(
+                    Map.of("name", "Charlie Winston", "id", "K1"),
+                    Map.of("name", "Bertrand Belin", "id", "K2"),
+                    Map.of("name", "Alain Chamfort", "id", "K3")),
+                "venues",
+                List.of(Map.of("name", "CHAPITEAU", "city", Map.of("name", "Nancy"))))));
+  }
+
+  // Recherche de Bertrand Belin : cité en second, il reste l'artiste du concert, avec son propre
+  // identifiant, et les deux autres forment le plateau.
+  @Test
+  void mapper_artisteRechercheCiteEnSecond_retenuAvecLePlateau() {
+    final ConcertBrut concert = MapeurEvenementTM.mapper(coPlateauTM(), "Bertrand Belin");
+
+    assertEquals("Bertrand Belin", concert.artiste());
+    assertEquals("ticketmaster:K2", concert.artisteSourceId());
+    assertEquals(List.of("Charlie Winston", "Alain Chamfort"), concert.artistesInvites());
+  }
+
+  @Test
+  void mapper_sansRecherche_premiereAttractionEtPlateau() {
+    final ConcertBrut concert = MapeurEvenementTM.mapper(coPlateauTM(), null);
+
+    assertEquals("Charlie Winston", concert.artiste());
+    assertEquals(List.of("Bertrand Belin", "Alain Chamfort"), concert.artistesInvites());
+  }
+
+  @Test
+  void mapper_artisteRechercheAbsentDesAttractions_ecarte() {
+    assertNull(MapeurEvenementTM.mapper(coPlateauTM(), "Jain"));
+  }
+
   // --- parseDateTM ---
 
   // La position du lieu (venue.location, publiée sous forme de texte) et son code postal sont

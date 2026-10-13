@@ -9,10 +9,8 @@
         v-for="choix in CHOIX"
         :key="choix.valeur"
         type="button"
-        class="bouton bouton-petit"
-        :class="
-          entite === choix.valeur ? 'bouton-primaire' : 'bouton-secondaire'
-        "
+        class="bouton bouton-bascule bouton-petit"
+        :class="{ actif: entite === choix.valeur }"
         :aria-pressed="entite === choix.valeur"
         @click="basculer(choix.valeur)"
       >

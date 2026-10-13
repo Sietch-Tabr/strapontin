@@ -120,4 +120,27 @@ class AppareilEnregistrementInterceptorTest {
 
     verify(alerteActiviteUtilisateurService).notifierNouvelAppareil("test@test.fr", "Mozilla/5.0");
   }
+
+  // Appels parallèles de la première page : l'attribut n'est pas encore visible des autres
+  // requêtes, seule la première enregistre, marque la session et alerte.
+  @Test
+  void preHandle_appelsParallelesAvantMarquage_unSeulEnregistrementEtUneSeuleAlerte() {
+    when(request.getSession(false)).thenReturn(session);
+    when(session.getAttribute("appareilEnregistre")).thenReturn(null);
+    when(session.getId()).thenReturn("sess-2");
+    when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
+    when(appareilsService.estNouvelAppareil("u1", "Mozilla/5.0")).thenReturn(true);
+    final UtilisateurDetails details =
+        new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
+    SecurityContextHolder.getContext()
+        .setAuthentication(UsernamePasswordAuthenticationToken.authenticated(details, null, null));
+
+    interceptor.preHandle(request, response, new Object());
+    interceptor.preHandle(request, response, new Object());
+    interceptor.preHandle(request, response, new Object());
+
+    verify(appareilsService).enregistrerAppareil("sess-2", "u1", "Mozilla/5.0");
+    verify(session).setAttribute("appareilEnregistre", Boolean.TRUE);
+    verify(alerteActiviteUtilisateurService).notifierNouvelAppareil("test@test.fr", "Mozilla/5.0");
+  }
 }

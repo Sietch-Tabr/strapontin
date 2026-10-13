@@ -41,7 +41,7 @@
                 autocomplete="off"
                 :aria-label="'Valeur de ' + cle"
               />
-              <button type="submit" class="bouton bouton-secondaire">
+              <button type="submit" class="bouton bouton-primaire">
                 Enregistrer
               </button>
             </form>
@@ -82,7 +82,7 @@
               placeholder="Nouvelle valeur…"
               aria-label="Valeur de TICKETMASTER_API_KEY"
             />
-            <button type="submit" class="bouton bouton-secondaire">
+            <button type="submit" class="bouton bouton-primaire">
               Enregistrer
             </button>
           </form>
@@ -133,7 +133,7 @@
               placeholder="Nouvelle valeur…"
               aria-label="Valeur de RESEND_API_KEY"
             />
-            <button type="submit" class="bouton bouton-secondaire">
+            <button type="submit" class="bouton bouton-primaire">
               Enregistrer
             </button>
           </form>
@@ -176,7 +176,7 @@
                 placeholder="Nouvelle valeur…"
                 aria-label="Valeur de RESEND_WEBHOOK_SECRET"
               />
-              <button type="submit" class="bouton bouton-secondaire">
+              <button type="submit" class="bouton bouton-primaire">
                 Enregistrer
               </button>
             </form>
@@ -330,32 +330,12 @@
           </p>
           <button
             type="button"
-            class="bouton bouton-secondaire"
+            class="bouton bouton-danger"
             @click="ouvrirDialogVapid"
           >
             Régénérer les clés VAPID (invalide tous les abonnements push)
           </button>
         </div>
-      </div>
-
-      <!-- Notification nouvelle version -->
-      <div class="param-bloc">
-        <h3 class="param-libelle">Notification nouvelle version</h3>
-        <p class="param-aide">
-          Envoie une notification push aux utilisateurs ayant activé « Nouvelle
-          version de l'application » dans leurs préférences (version courante :
-          {{ versionApplication || "—" }}). Vérifiez d'abord qu'une entrée
-          existe pour cette version dans le changelog utilisateur — aucune
-          vérification automatique n'est faite côté serveur.
-        </p>
-        <button
-          type="button"
-          class="bouton bouton-secondaire"
-          :disabled="notifierVersionEnCours"
-          @click="ouvrirDialogNotifierVersion"
-        >
-          Notifier la nouvelle version
-        </button>
       </div>
 
       <!-- APP_CONFIG_SECRET -->
@@ -381,41 +361,6 @@
   </section>
 
   <dialog
-    id="dialog-notifier-version"
-    ref="dialogNotifierVersionRef"
-    aria-labelledby="titre-dialog-notifier-version"
-    aria-modal="true"
-  >
-    <h2 id="titre-dialog-notifier-version" class="dialog-titre">
-      Notifier la nouvelle version ?
-    </h2>
-    <p class="dialog-corps">
-      Une notification push sera envoyée à tous les utilisateurs ayant activé «
-      Nouvelle version de l'application » — vérifiez au préalable qu'une entrée
-      existe bien pour la version {{ versionApplication || "—" }}
-      dans le changelog utilisateur.
-    </p>
-    <div class="dialog-pied">
-      <button
-        id="dialog-notifier-version-confirmer"
-        type="button"
-        class="bouton bouton-secondaire"
-        @click="confirmerNotifierVersion"
-      >
-        Notifier
-      </button>
-      <button
-        id="dialog-notifier-version-annuler"
-        type="button"
-        class="bouton bouton-secondaire"
-        @click="fermerDialogNotifierVersion"
-      >
-        Annuler
-      </button>
-    </div>
-  </dialog>
-
-  <dialog
     id="dialog-vapid"
     ref="dialogVapidRef"
     aria-labelledby="titre-dialog-vapid"
@@ -432,7 +377,7 @@
       <button
         id="dialog-vapid-confirmer"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-danger"
         @click="confirmerVapid"
       >
         Régénérer
@@ -440,7 +385,7 @@
       <button
         id="dialog-vapid-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogVapid"
       >
         Annuler
@@ -498,11 +443,6 @@ const {
 } = useDialog();
 const { dialogRef: dialogTentativesRef, ouvrir: ouvrirDialogTentativesModal } =
   useDialog();
-const {
-  dialogRef: dialogNotifierVersionRef,
-  ouvrir: ouvrirDialogNotifierVersionModal,
-  fermer: fermerDialogNotifierVersionModal,
-} = useDialog();
 
 const DESCRIPTIONS_CONFIG = {
   CONTACT_EMAIL:
@@ -518,8 +458,6 @@ const DESCRIPTIONS_CONFIG = {
 const chargement = ref(true);
 const configs = shallowRef([]);
 const appConfigSecretPresente = ref(false);
-const versionApplication = ref("");
-const notifierVersionEnCours = ref(false);
 const etatTm = ref(null);
 const testTmEnCours = ref(false);
 const etatEmail = ref(null);
@@ -562,7 +500,6 @@ async function charger() {
     if (repInfo.ok) {
       const info = await lireJson(repInfo);
       appConfigSecretPresente.value = info.appConfigSecretPresente ?? false;
-      versionApplication.value = info.version ?? "";
     }
     if (configParCle.value["RESEND_API_KEY"]?.presente) {
       chargerWebhooks();
@@ -765,40 +702,6 @@ async function confirmerVapid() {
     }
   } catch {
     afficherToast("Erreur réseau lors de la génération.", "erreur");
-  }
-}
-
-function ouvrirDialogNotifierVersion() {
-  ouvrirDialogNotifierVersionModal();
-}
-
-function fermerDialogNotifierVersion() {
-  fermerDialogNotifierVersionModal();
-}
-
-async function confirmerNotifierVersion() {
-  fermerDialogNotifierVersion();
-  notifierVersionEnCours.value = true;
-  try {
-    const rep = await appelApi("/api/admin/notifier-version", {
-      method: "POST",
-    });
-    const corps = await lireJson(rep);
-    if (rep.ok) {
-      afficherToast(
-        `Notification envoyée pour la version ${corps.version}.`,
-        "succes",
-      );
-    } else {
-      afficherToast(
-        corps.erreur || "Erreur lors de la notification.",
-        "erreur",
-      );
-    }
-  } catch {
-    afficherToast("Erreur réseau lors de la notification.", "erreur");
-  } finally {
-    notifierVersionEnCours.value = false;
   }
 }
 

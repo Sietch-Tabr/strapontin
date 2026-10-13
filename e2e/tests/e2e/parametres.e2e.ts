@@ -290,16 +290,20 @@ test.describe("Scénario: Préférences — thème", () => {
   }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
-    await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Sombre" })
+      .click();
     await expect(
-      page.locator(".bouton-theme", { hasText: "Sombre" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Sombre" }),
     ).toHaveClass(/actif/);
     await expect(
-      page.locator(".bouton-theme", { hasText: "Automatique" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
-    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Automatique" })
+      .click();
     await expect(
-      page.locator(".bouton-theme", { hasText: "Automatique" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Automatique" }),
     ).toHaveClass(/actif/);
   });
 
@@ -309,11 +313,15 @@ test.describe("Scénario: Préférences — thème", () => {
   }) => {
     if (isMobile) test.skip();
     await page.goto("/parametres#preferences");
-    await page.locator(".bouton-theme", { hasText: "Clair" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Clair" })
+      .click();
     await expect(
-      page.locator(".bouton-theme", { hasText: "Clair" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Clair" }),
     ).toHaveClass(/actif/);
-    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Automatique" })
+      .click();
   });
 
   test("theme_mobile_sombre_affiche_classe_actif", async ({
@@ -323,14 +331,18 @@ test.describe("Scénario: Préférences — thème", () => {
     if (!isMobile) test.skip();
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
-    await page.locator(".bouton-theme", { hasText: "Sombre" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Sombre" })
+      .click();
     await expect(
-      page.locator(".bouton-theme", { hasText: "Sombre" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Sombre" }),
     ).toHaveClass(/actif/);
     await expect(
-      page.locator(".bouton-theme", { hasText: "Automatique" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Automatique" }),
     ).not.toHaveClass(/actif/);
-    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Automatique" })
+      .click();
   });
 
   test("theme_mobile_clair_affiche_classe_actif", async ({
@@ -340,11 +352,15 @@ test.describe("Scénario: Préférences — thème", () => {
     if (!isMobile) test.skip();
     await page.goto("/parametres");
     await page.selectOption("select.param-onglets-mobile", "#preferences");
-    await page.locator(".bouton-theme", { hasText: "Clair" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Clair" })
+      .click();
     await expect(
-      page.locator(".bouton-theme", { hasText: "Clair" }),
+      page.locator(".theme-choix .bouton-bascule", { hasText: "Clair" }),
     ).toHaveClass(/actif/);
-    await page.locator(".bouton-theme", { hasText: "Automatique" }).click();
+    await page
+      .locator(".theme-choix .bouton-bascule", { hasText: "Automatique" })
+      .click();
   });
 });
 
@@ -585,7 +601,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await expect(dialog).toBeVisible();
     await dialog.locator("input#confirmation-suppression").fill("supprimer");
     await expect(dialog.locator("button.bouton-danger")).not.toBeDisabled();
-    await dialog.locator("button.bouton-secondaire").click();
+    await dialog.getByRole("button", { name: "Annuler" }).click();
     await expect(dialog).not.toBeVisible();
   });
 
@@ -597,7 +613,7 @@ test.describe("Scénario: Données — suppression de compte", () => {
     await page.locator("section#donnees button.bouton-danger").click();
     const dialog = page.locator("dialog#dialog-supprimer-compte");
     await expect(dialog).toBeVisible();
-    await dialog.locator("button.bouton-secondaire").click();
+    await dialog.getByRole("button", { name: "Annuler" }).click();
     await expect(dialog).not.toBeVisible();
   });
 });

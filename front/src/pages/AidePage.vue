@@ -38,6 +38,17 @@
                 n'avez pas encore vus ; il disparaît après votre passage sur
                 l'accueil.
               </li>
+              <li>
+                <strong>Masquer</strong> retire de l'accueil un concert, ou tous
+                les concerts à venir d'un artiste, après confirmation. Le filtre
+                <strong>Masqués</strong> les affiche, et
+                <strong>Réafficher</strong> les remet en place.
+              </li>
+              <li>
+                Le filtre <strong>Indisponibles</strong> ajoute les concerts
+                complets ou annulés ; sa valeur par défaut se règle dans les
+                paramètres.
+              </li>
             </ul>
           </div>
 

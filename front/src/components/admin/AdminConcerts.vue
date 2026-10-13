@@ -35,7 +35,7 @@
               <td data-label="Flagué le">
                 {{ formaterInstant(concert.suppressionSuggereeLe) }}
               </td>
-              <td data-label="Actions" class="source-actions">
+              <td data-label="" class="source-actions">
                 <button
                   type="button"
                   class="bouton bouton-secondaire bouton-petit"

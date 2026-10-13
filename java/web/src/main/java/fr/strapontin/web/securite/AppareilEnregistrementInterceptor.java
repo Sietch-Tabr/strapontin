@@ -4,9 +4,12 @@
  */
 package fr.strapontin.web.securite;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.time.Duration;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -23,6 +26,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
 
   private static final String ATTRIBUT_DEJA_ENREGISTRE = "appareilEnregistre";
+
+  // Les appels parallèles de la première page après connexion voient tous
+  // l'attribut absent : seul le premier enregistre, sinon chacun réinsère
+  // l'attribut de session (clé dupliquée) et l'alerte part plusieurs fois.
+  private final Cache<String, Boolean> enregistrementsEnCours =
+      Caffeine.newBuilder().expireAfterWrite(Duration.ofMinutes(1)).maximumSize(10_000).build();
 
   private final AppareilsService appareilsService;
   private final AlerteActiviteUtilisateurService alerteActiviteUtilisateurService;
@@ -53,6 +62,9 @@ public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
       return true;
     }
 
+    if (enregistrementsEnCours.asMap().putIfAbsent(session.getId(), Boolean.TRUE) != null) {
+      return true;
+    }
     final String userAgent = request.getHeader("User-Agent");
     final boolean nouvelAppareil = appareilsService.estNouvelAppareil(details.id(), userAgent);
     appareilsService.enregistrerAppareil(session.getId(), details.id(), userAgent);

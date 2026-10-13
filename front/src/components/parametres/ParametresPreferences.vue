@@ -22,10 +22,19 @@
             autocomplete="off"
             maxlength="1000"
           />
-          <button type="submit" class="bouton bouton-secondaire">
+          <button type="submit" class="bouton bouton-primaire">
             Enregistrer
           </button>
         </form>
+        <p
+          v-if="departementsSansConcert.length"
+          class="alerte alerte-info"
+          role="status"
+        >
+          Aucun concert n'est proposé pour l'instant par nos sources
+          (Ticketmaster, Eventim) dans :
+          {{ departementsSansConcert.join(", ") }}.
+        </p>
       </div>
 
       <div class="param-bloc">
@@ -56,7 +65,7 @@
             v-for="opt in optionsTheme"
             :key="opt.valeur"
             type="button"
-            class="bouton bouton-theme"
+            class="bouton bouton-bascule"
             :class="{ actif: theme === opt.valeur }"
             :aria-pressed="theme === opt.valeur ? 'true' : 'false'"
             @click="changerTheme(opt.valeur)"
@@ -74,6 +83,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import { useDepartementsSansConcert } from "../../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "ParametresPreferences" });
 
 import { ref, onMounted } from "vue";
@@ -86,6 +96,8 @@ const { enregistrerTheme, lireThemeCookie } = useTheme();
 
 const chargement = ref(true);
 const departements = ref("");
+const { departementsSansConcert, chargerDepartementsSansConcert } =
+  useDepartementsSansConcert();
 const filtreDisponibles = ref(false);
 const theme = ref("auto");
 const optionsTheme = [
@@ -100,6 +112,7 @@ async function charger() {
     if (rep.ok) {
       const config = await lireJson(rep);
       departements.value = config.departements?.join(", ") ?? "";
+      chargerDepartementsSansConcert();
       filtreDisponibles.value = config.filtreDisponibles ?? false;
     }
     theme.value = lireThemeCookie() || "auto";
@@ -127,6 +140,7 @@ async function sauvegarderDepartements() {
       } else {
         afficherToast("Départements enregistrés.", "succes");
       }
+      chargerDepartementsSansConcert();
     } else {
       afficherToast(corps.erreur || "Erreur.", "erreur");
     }
@@ -173,31 +187,6 @@ onMounted(charger);
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.bouton-theme {
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--fg-muted);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
-}
-
-.bouton-theme.actif {
-  background: var(--fg);
-  color: var(--bg);
-  border-color: var(--fg);
-}
-
-.bouton-theme:hover {
-  color: var(--fg);
-  border-color: var(--fg-muted);
 }
 
 .form-bascule {

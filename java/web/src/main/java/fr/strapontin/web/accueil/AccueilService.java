@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.accueil;
 
+import fr.strapontin.web.concert.FiltreConcertsBuilder;
 import fr.strapontin.web.utilisateur.UserConfigService;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -57,19 +58,19 @@ public class AccueilService {
           AND um.vu_le IS NULL
           AND EXISTS (
             SELECT 1 FROM user_artistes ua
-            WHERE ua.user_id = um.user_id AND c.artiste_id = ua.artiste_id
+            WHERE ua.user_id = um.user_id AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
           )
         """,
         Map.of(CLE_USER_ID, userId));
   }
 
   /**
-   * Retourne les prochains concerts des artistes suivis, groupés par
-   * artiste — {@code masques}/{@code indisponibles}/{@code nouveau}
-   * filtrent respectivement les concerts masqués, non disponibles et
-   * récents (moins de 7 jours).
+   * Prochains concerts des artistes suivis, groupés par artiste.
    * @param userId identifiant de l'utilisateur
-   * @return groupes artiste/concerts avec compteurs
+   * @param masques concerts masqués plutôt que visibles
+   * @param indisponibles "1" inclut, "0" exclut, null suit la préférence
+   * @param nouveau concerts détectés depuis moins de 7 jours seulement
+   * @return groupes, compteurs, inclusion effective des indisponibles
    */
   public ReponseAccueil accueil(
       final String userId,
@@ -89,9 +90,27 @@ public class AccueilService {
 
     final List<ConcertAccueil> lignes = chargerConcertsAccueil(where, params);
     final List<GroupeArtiste> artistesGroupes = grouperParArtiste(lignes);
+    final StringBuilder whereIndisponibles =
+        construireWhereAccueil(masques, nouveau, true)
+            .append(" AND NOT ")
+            .append(FiltreConcertsBuilder.CONDITION_DISPONIBLE);
 
     return new ReponseAccueil(
-        artistesGroupes, compterUserArtistes(userId), compterUserSalles(userId));
+        artistesGroupes,
+        compterUserArtistes(userId),
+        compterUserSalles(userId),
+        inclureIndisponibles,
+        compterConcerts(whereIndisponibles, params));
+  }
+
+  private int compterConcerts(final StringBuilder where, final Map<String, Object> params) {
+    return Objects.requireNonNullElse(
+        jdbc.queryForObject(
+            "SELECT count(*) FROM user_matches um JOIN concerts c ON c.id = um.concert_id WHERE "
+                + where,
+            params,
+            Integer.class),
+        0);
   }
 
   private StringBuilder construireWhereAccueil(
@@ -106,9 +125,7 @@ public class AccueilService {
                 .formatted(masques ? "NOT NULL" : "NULL"));
 
     if (!inclureIndisponibles) {
-      where.append(
-          " AND (c.statut IS NULL OR c.statut IN ('onsale', 'presale', 'rescheduled',"
-              + " 'postponed'))");
+      where.append(" AND ").append(FiltreConcertsBuilder.CONDITION_DISPONIBLE);
     }
     if (nouveau) {
       where.append(" AND c.first_seen >= (CURRENT_TIMESTAMP - INTERVAL '7 days')");
@@ -118,7 +135,7 @@ public class AccueilService {
          AND EXISTS (
            SELECT 1 FROM user_artistes ua
            WHERE ua.user_id = :userId
-             AND c.artiste_id = ua.artiste_id
+             AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))
          )
         """);
     return where;
@@ -134,13 +151,29 @@ public class AccueilService {
       final StringBuilder where, final Map<String, Object> params) {
     return jdbc.query(
         """
-        SELECT c.id, COALESCE(a.nom, c.artiste) AS artiste, c.artiste_norm,
-               c.artiste_id::text AS artiste_id, c.date::text,
+        SELECT c.id, COALESCE(suivi.nom, a.nom, c.artiste) AS artiste,
+               COALESCE(suivi.artiste_norm, c.artiste_norm) AS artiste_norm,
+               COALESCE(suivi.artiste_id, c.artiste_id)::text AS artiste_id, c.date::text,
                c.heure::text, c.salle, c.ville, c.url, c.statut,
-               um.vu_le IS NULL AS est_nouveau
+               um.vu_le IS NULL AS est_nouveau,
+               CASE WHEN suivi.artiste_id IS NOT NULL THEN COALESCE(a.nom, c.artiste) END
+                 AS tete_d_affiche
         FROM user_matches um
         INNER JOIN concerts c ON um.concert_id = c.id
         LEFT JOIN artistes a ON a.id = c.artiste_id
+        -- Soirée partagée dont la tête d'affiche n'est pas suivie : classée
+        -- sous l'artiste suivi du plateau.
+        LEFT JOIN LATERAL (
+          SELECT ea.artiste_id, ea.artiste_norm, COALESCE(ai.nom, ea.artiste_nom) AS nom
+          FROM evenement_artistes ea
+          JOIN user_artistes ui ON ui.artiste_id = ea.artiste_id AND ui.user_id = :userId
+          LEFT JOIN artistes ai ON ai.id = ea.artiste_id
+          WHERE ea.evenement_id = c.id
+            AND NOT EXISTS (SELECT 1 FROM user_artistes ut
+                            WHERE ut.user_id = :userId AND ut.artiste_id = c.artiste_id)
+          ORDER BY ea.artiste_norm
+          LIMIT 1
+        ) suivi ON true
         WHERE %s
         ORDER BY c.date ASC, c.artiste ASC
         """
@@ -158,7 +191,8 @@ public class AccueilService {
                 rs.getString("ville"),
                 rs.getString("url"),
                 rs.getString("statut"),
-                rs.getBoolean("est_nouveau")));
+                rs.getBoolean("est_nouveau"),
+                rs.getString("tete_d_affiche")));
   }
 
   private List<GroupeArtiste> grouperParArtiste(final List<ConcertAccueil> lignes) {

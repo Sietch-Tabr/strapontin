@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.util.List;
@@ -21,9 +22,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * Envoi push VAPID "nouvelle version disponible" — action admin manuelle,
- * distincte du digest de matching ({@link NotificationPushDigestService}) :
- * pas de nettoyage des abonnements morts ici, laissé au prochain cycle de
- * digest régulier.
+ * distincte du digest de matching ({@link NotificationPushDigestService}),
+ * avec la même règle de révocation des appareils en échec.
  * @since 3.0.0
  * @author Kwaite
  */
@@ -31,12 +31,14 @@ import org.springframework.stereotype.Service;
 public class NotificationVersionPushService {
 
   private static final String CLE_ENDPOINT = "endpoint";
+  private static final String SOURCE_LOGS = "push";
   private static final Logger LOG = LoggerFactory.getLogger(NotificationVersionPushService.class);
 
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final NotificationDigestService.FabriquePushService fabriquePushService;
+  private final SuiviEchecsPush suiviEchecs;
 
   /**
    * Constructeur Spring — {@code FabriquePushService} n'est jamais un bean
@@ -72,6 +74,7 @@ public class NotificationVersionPushService {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.fabriquePushService = fabriquePushService;
+    this.suiviEchecs = new SuiviEchecsPush(jdbc, logsAdminWorker);
   }
 
   /**
@@ -119,7 +122,7 @@ public class NotificationVersionPushService {
   private List<Map<String, Object>> chargerAbonnementsOptIn() {
     return jdbc.queryForList(
         """
-        SELECT pa.endpoint, pa.p256dh, pa.auth
+        SELECT pa.id, pa.user_id, pa.endpoint, pa.p256dh, pa.auth
         FROM push_abonnements pa
         JOIN user_config uc ON uc.user_id = pa.user_id
         WHERE uc.notif_nouvelle_version = true
@@ -151,27 +154,48 @@ public class NotificationVersionPushService {
 
   private boolean envoyerAUnAbonnement(
       final PushService pushService, final Map<String, Object> ab, final String payload) {
+    final String userId = (String) ab.get("user_id");
     if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
-      LOG.warn("Notification nouvelle version : endpoint hors services de push ignoré");
+      suiviEchecs.revoquer(
+          ab,
+          userId,
+          EchecPush.CAUSE_SERVICE_NON_PRIS_EN_CHARGE,
+          "endpoint non autorisé",
+          SOURCE_LOGS);
       return false;
     }
+    final HttpResponse response;
     try {
       final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      final Notification notification = new Notification(subscription, payload);
-      final HttpResponse response = pushService.send(notification);
-      final int status = response.getStatusLine().getStatusCode();
-      if (status >= 200 && status < 300) {
-        return true;
-      }
-      LOG.warn(
-          "Notification nouvelle version : statut inattendu {} — {}", status, ab.get(CLE_ENDPOINT));
-      return false;
+      response = pushService.send(new Notification(subscription, payload));
     } catch (Exception e) {
-      LOG.warn("Notification nouvelle version : échec envoi — {}", ab.get(CLE_ENDPOINT), e);
+      suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
       return false;
     }
+    final int status = response.getStatusLine().getStatusCode();
+    switch (EchecPush.interpreter(status)) {
+      case SUCCES -> {
+        suiviEchecs.succes(ab);
+        return true;
+      }
+      case ABONNEMENT_SUPPRIME ->
+          suiviEchecs.revoquer(
+              ab,
+              userId,
+              EchecPush.causeLisible(status),
+              EchecPush.raison(status, null),
+              SOURCE_LOGS);
+      case ECHEC ->
+          suiviEchecs.echec(
+              ab,
+              userId,
+              status,
+              EchecPush.lireCorps(() -> response.getEntity().getContent()),
+              SOURCE_LOGS);
+    }
+    return false;
   }
 }

@@ -9,6 +9,12 @@ const LIBELLES_ENTITE = {
   invariant: "Données",
 };
 
+// Signalements dont l'action attendue est la suppression du concert désigné.
+const TYPES_CONCERT_A_SUPPRIMER = new Set([
+  "date_festival_ecartee",
+  "concert_double_salles_distinctes",
+]);
+
 // Signalements de salle qu'une répartition des concerts par libellé source peut corriger.
 const TYPES_REPARTISSABLES = new Set([
   "contamination_salle",
@@ -62,13 +68,19 @@ function versTexte(v) {
 
 /// Actions proposées sur place pour un signalement, dans l'ordre d'affichage.
 /// @param signalement entrée renvoyée par l'API
-/// @return codes parmi `resoudre`, `fauxPositif`, `sallesDistinctes`, `ignorerEcart`,
-///         `repartir`, `voirFiche`
+/// @return codes parmi `supprimerConcert`, `resoudre`, `fauxPositif`, `sallesDistinctes`,
+///         `ignorerEcart`, `repartir`, `voirFiche`
 export function actionsSignalement(signalement) {
   const actions = [];
   const entite = signalement.entite ?? {};
   if (TYPES_REPARTISSABLES.has(signalement.type) && entite.type === "salle") {
     actions.push("repartir");
+  }
+  if (
+    TYPES_CONCERT_A_SUPPRIMER.has(signalement.type) &&
+    entite.type === "evenement"
+  ) {
+    actions.push("supprimerConcert");
   }
   switch (signalement.categorie) {
     case "contamination_salle":

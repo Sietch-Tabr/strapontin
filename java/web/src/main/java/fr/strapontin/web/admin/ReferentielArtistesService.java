@@ -257,7 +257,8 @@ public class ReferentielArtistesService {
 
   /**
    * Fusionne deux artistes : l'artiste source est absorbé par l'artiste
-   * cible (concerts, abonnements, sources externes), puis supprimé.
+   * cible (concerts, plateaux de soirées, abonnements, sources externes),
+   * puis supprimé.
    * @param cibleId UUID de l'artiste à conserver
    * @param sourceId UUID de l'artiste à absorber
    * @return {@code true} si fusionnée, {@code false} si UUID inconnu
@@ -283,6 +284,10 @@ public class ReferentielArtistesService {
     fusionnerEvenementsArtiste(ids);
     fusionnerAbonnementsEtSourcesArtiste(ids, cibleId, sourceId);
     fusionnerMetadonneesArtiste(ids);
+    jdbc.update(
+        "UPDATE evenement_artistes SET artiste_id = CAST(:cible AS uuid)"
+            + " WHERE artiste_id = CAST(:source AS uuid)",
+        ids);
 
     jdbc.update("DELETE FROM artistes WHERE id = CAST(:source AS uuid)", ids);
 
@@ -307,6 +312,19 @@ public class ReferentielArtistesService {
           AND e1.salle_id = e2.salle_id AND e1.date = e2.date
           AND e1.heure IS NOT DISTINCT FROM e2.heure
           AND o1.source = o2.source AND o1.url IS NOT DISTINCT FROM o2.url
+        """,
+        ids);
+    // Plateau de l'événement absorbé reporté sur la cible, jamais laissé au CASCADE.
+    jdbc.update(
+        """
+        INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom, artiste_id)
+        SELECT e2.id, ea.artiste_norm, ea.artiste_nom, ea.artiste_id
+        FROM evenement_artistes ea, evenements e1, evenements e2
+        WHERE ea.evenement_id = e1.id
+          AND e1.artiste_id = CAST(:source AS uuid) AND e2.artiste_id = CAST(:cible AS uuid)
+          AND e1.salle_id = e2.salle_id AND e1.date = e2.date
+          AND e1.heure IS NOT DISTINCT FROM e2.heure
+        ON CONFLICT DO NOTHING
         """,
         ids);
     jdbc.update(

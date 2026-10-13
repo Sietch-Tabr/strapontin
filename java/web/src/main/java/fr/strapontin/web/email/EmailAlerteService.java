@@ -319,6 +319,13 @@ public class EmailAlerteService {
   }
 
   /**
+   * @return {@code true} si un service d'envoi d'emails est configuré
+   */
+  public boolean envoiDisponible() {
+    return emailSender.obtenirContexte().isPresent();
+  }
+
+  /**
    * Envoie un digest des nouvelles entrées {@code logs_admin}
    * de niveau erreur.
    * @param email l'adresse email de l'administrateur

@@ -62,6 +62,16 @@ describe("formaterDetails", () => {
 });
 
 describe("actionsSignalement", () => {
+  it("propose la suppression d'un concert attribué à tort", () => {
+    expect(
+      actionsSignalement({
+        categorie: "nouveau",
+        type: "date_festival_ecartee",
+        entite: { type: "evenement", id: "3", nom: "Selah Sue · 16/10/2026" },
+      }),
+    ).toEqual(["supprimerConcert", "resoudre"]);
+  });
+
   it("propose répartition, faux positif et fiche pour une contamination", () => {
     expect(
       actionsSignalement({

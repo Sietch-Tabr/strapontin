@@ -157,7 +157,9 @@ test.describe("Scénario: catalogue — salles", () => {
     await btnSuivre.click();
     // Même message qu'à l'ajout d'un artiste : la recherche de ses concerts est lancée.
     await expect(
-      page.locator(".alerte-info").filter({ hasText: "Recherche des concerts" }),
+      page
+        .locator(".alerte-info")
+        .filter({ hasText: "Recherche des concerts" }),
     ).toBeVisible({ timeout: 5000 });
 
     // Suppression inline post-test
@@ -332,6 +334,72 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
     }
   });
 
+  // Annuler la confirmation ne masque rien : aucun appel, le concert reste affiché.
+  test("accueil_masquerConcertPuisAnnuler_concertToujoursAffiche", async ({
+    page,
+  }) => {
+    await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/api/accueil") && r.status() === 200,
+      ),
+      page.goto("/"),
+    ]);
+    const lignes = page.locator(".concert-ligne");
+    const nbAvant = await lignes.count();
+    test.skip(nbAvant === 0, "Aucun concert sur l'accueil de e2euser");
+    const appels: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/spectacles/")) appels.push(r.url());
+    });
+
+    await page
+      .locator('button[aria-label="Masquer ce concert"]')
+      .first()
+      .click();
+    const confirmation = page.locator("#dialogue-confirmation");
+    await expect(confirmation).toBeVisible();
+    await confirmation.getByRole("button", { name: "Annuler" }).click();
+
+    await expect(confirmation).toBeHidden();
+    await expect(lignes).toHaveCount(nbAvant);
+    expect(appels).toEqual([]);
+  });
+
+  // L'état du filtre suit la réponse du serveur (préférence comprise) et chaque bascule envoie
+  // une valeur explicite.
+  test("accueil_filtreIndisponibles_etatSuitLeServeurEtBasculeExplicite", async ({
+    page,
+  }) => {
+    const [reponse] = await Promise.all([
+      page.waitForResponse(
+        (r) => r.url().includes("/api/accueil") && r.status() === 200,
+      ),
+      page.goto("/"),
+    ]);
+    const donnees = await reponse.json();
+    const chip = page.locator(".chips a", { hasText: "Indisponibles" });
+    if (donnees.inclureIndisponibles) {
+      await expect(chip).toHaveClass(/actif/);
+    } else {
+      await expect(chip).not.toHaveClass(/actif/);
+    }
+
+    const valeurAttendue = donnees.inclureIndisponibles ? "0" : "1";
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/accueil") &&
+          r.url().includes(`indisponibles=${valeurAttendue}`),
+      ),
+      chip.click(),
+    ]);
+    if (donnees.inclureIndisponibles) {
+      await expect(chip).not.toHaveClass(/actif/);
+    } else {
+      await expect(chip).toHaveClass(/actif/);
+    }
+  });
+
   test("accueil_masquerPuisDemasquerConcert_disparaitPuisReapparait", async ({
     page,
   }, testInfo) => {
@@ -359,12 +427,15 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
       .locator('button[aria-label="Masquer ce concert"]')
       .first();
     await expect(btnMasquer).toBeVisible({ timeout: 3000 });
+    await btnMasquer.click();
+    const confirmation = page.locator("#dialogue-confirmation");
+    await expect(confirmation).toContainText("Masqués");
     await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/spectacles/matches/") && r.status() === 200,
       ),
-      btnMasquer.click(),
+      confirmation.getByRole("button", { name: "Masquer" }).click(),
     ]);
 
     const [,] = await Promise.all([

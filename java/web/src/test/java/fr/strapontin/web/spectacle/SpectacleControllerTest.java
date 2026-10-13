@@ -56,7 +56,7 @@ class SpectacleControllerTest {
   void listerSpectacles_delegueAuServiceAvecUserId() {
     stubPrincipal();
     final ReponseSpectacles attendu =
-        new ReponseSpectacles(List.of(), 0, 1, 0, List.of(), List.of(), List.of(), true, false);
+        new ReponseSpectacles(List.of(), 0, 1, 0, List.of(), List.of(), List.of(), true, 0, false);
     when(spectacleService.listerSpectacles(eq("user-1"), any(FiltreConcerts.class)))
         .thenReturn(attendu);
 

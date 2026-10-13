@@ -151,28 +151,31 @@ final class ControleInvariantsDonnees {
 
   // Match éligible (préférence active, suivi) jamais notifié un jour après
   // l'apparition du concert : digest bloqué pour cet utilisateur.
+  // Seuls les comptes joignables sont signalés : un compte sans canal relève de
+  // l'utilisateur, déjà averti par email et par le bandeau de l'application.
+  // Le délai part du rapprochement du concert avec le compte, pas de sa
+  // première détection, qui peut précéder de loin le suivi.
   private Map<UUID, Map<String, Object>> notificationsNonEnvoyees() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
         """
-        SELECT um.user_id, count(*) AS nb, min(c.first_seen)::text AS plus_ancien,
-               bool_or(uc.notif_artistes OR uc.notif_salles) AS email_actif,
-               bool_or(uc.notif_artistes_push OR uc.notif_salles_push) AS push_coche,
-               EXISTS (SELECT 1 FROM push_abonnements pa WHERE pa.user_id = um.user_id)
-                 AS appareil_abonne,
-               max(uc.dernier_appareil_retire_le)::date AS appareil_retire_le,
-               max(uc.avertissement_canal_perdu_le)::date AS averti_le
+        SELECT um.user_id, count(*) AS nb,
+               min(greatest(um.cree_le, c.first_seen))::date AS plus_ancien,
+               bool_or(uc.notif_artistes OR uc.notif_salles) AS email_actif
         FROM user_matches um
         JOIN concerts c ON c.id = um.concert_id
         JOIN user_config uc ON uc.user_id = um.user_id
         WHERE um.notification_envoyee_le IS NULL AND um.masque_le IS NULL
-          AND c.first_seen < now() - CASE uc.frequence_notifications
+          AND greatest(um.cree_le, c.first_seen) < now() - CASE uc.frequence_notifications
                 WHEN 'hebdomadaire' THEN interval '8 days' ELSE interval '1 day' END
           AND uc.frequence_notifications <> 'jamais'
+          AND ((uc.notif_artistes OR uc.notif_salles)
+            OR ((uc.notif_artistes_push OR uc.notif_salles_push)
+              AND EXISTS (SELECT 1 FROM push_abonnements pa WHERE pa.user_id = um.user_id)))
           AND (
             ((uc.notif_artistes OR uc.notif_artistes_push) AND EXISTS (
               SELECT 1 FROM user_artistes ua
-              WHERE ua.user_id = um.user_id AND ua.artiste_id = c.artiste_id))
+              WHERE ua.user_id = um.user_id AND (c.artiste_id = ua.artiste_id OR EXISTS (SELECT 1 FROM evenement_artistes ea WHERE ea.evenement_id = c.id AND ea.artiste_id = ua.artiste_id))))
             OR ((uc.notif_salles OR uc.notif_salles_push) AND EXISTS (
               SELECT 1 FROM user_salles us
               WHERE us.user_id = um.user_id AND us.salle_id = c.salle_id)))
@@ -181,15 +184,14 @@ final class ControleInvariantsDonnees {
         Map.of(),
         rs -> {
           final Map<String, Object> details = new LinkedHashMap<>();
-          details.putAll(
-              CauseNotificationsNonEnvoyees.decrire(
-                  rs.getBoolean("email_actif"),
-                  rs.getBoolean("push_coche"),
-                  rs.getBoolean("appareil_abonne"),
-                  rs.getObject("appareil_retire_le", LocalDate.class),
-                  rs.getObject("averti_le", LocalDate.class)));
+          details.put(
+              "cause",
+              rs.getBoolean("email_actif")
+                  ? "Envoi en échec alors que l'email est actif."
+                  : "Envoi en échec alors qu'un appareil est abonné au push.");
+          details.put("action", "Vérifier dans les journaux l'envoi des emails et des push.");
           details.put("concerts", rs.getLong("nb"));
-          details.put("plusAncien", rs.getString("plus_ancien"));
+          details.put("plusAncien", rs.getObject("plus_ancien", LocalDate.class).toString());
           details.put("userId", rs.getString("user_id"));
           anomalies.put(uuidDe("utilisateur:" + rs.getString("user_id")), details);
         });

@@ -90,7 +90,7 @@
               </button>
               <button
                 type="button"
-                class="bouton bouton-petit bouton-secondaire"
+                class="bouton bouton-danger bouton-petit"
                 @click="revoquerSessions(u)"
               >
                 Révoquer sessions
@@ -161,7 +161,7 @@
               </button>
               <button
                 type="button"
-                class="bouton bouton-petit bouton-secondaire"
+                class="bouton bouton-texte bouton-petit"
                 @click="fermerModif(u.id)"
               >
                 Annuler
@@ -225,7 +225,7 @@
       <button
         id="dialog-supprimer-user-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogSupprimer"
       >
         Annuler
@@ -251,7 +251,7 @@
       <button
         id="dialog-reinit-mdp-confirmer"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-primaire"
         @click="confirmerReinitMdp"
       >
         Envoyer
@@ -259,7 +259,7 @@
       <button
         id="dialog-reinit-mdp-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogReinitMdp"
       >
         Annuler
@@ -284,7 +284,7 @@
       <button
         id="dialog-reinit-totp-confirmer"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-danger"
         @click="confirmerReinitTotp"
       >
         Désactiver
@@ -292,7 +292,7 @@
       <button
         id="dialog-reinit-totp-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogReinitTotp"
       >
         Annuler
@@ -317,7 +317,7 @@
       <button
         id="dialog-revoquer-sessions-confirmer"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-danger"
         @click="confirmerRevoquerSessions"
       >
         Révoquer
@@ -325,7 +325,7 @@
       <button
         id="dialog-revoquer-sessions-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogRevoquerSessions"
       >
         Annuler
@@ -358,7 +358,7 @@
       <button
         id="dialog-verrouiller-compte-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogVerrouillerCompte"
       >
         Annuler
@@ -382,7 +382,7 @@
       <button
         id="dialog-confirmer-role-ok"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-primaire"
         @click="confirmerChangementRole"
       >
         Confirmer
@@ -390,7 +390,7 @@
       <button
         id="dialog-confirmer-role-annuler"
         type="button"
-        class="bouton bouton-secondaire"
+        class="bouton bouton-texte"
         @click="fermerDialogConfirmerRole"
       >
         Annuler
@@ -440,7 +440,7 @@
       <button
         id="btn-fermer-invitation"
         type="button"
-        class="bouton bouton-primaire"
+        class="bouton bouton-secondaire"
         @click="fermerDialogInvitation"
       >
         Fermer
@@ -943,27 +943,6 @@ onMounted(charger);
 </script>
 
 <style scoped>
-.badge-info {
-  background: var(--info-bg);
-  color: var(--info-text);
-}
-
-.badge-mono {
-  font-family: monospace;
-  background: var(--bg-muted);
-  color: var(--fg-muted);
-}
-
-.badge-avertissement {
-  background: var(--avertissement-bg);
-  color: var(--avertissement-text);
-}
-
-.badge-danger {
-  background: var(--danger-bg);
-  color: var(--danger-text);
-}
-
 .user-liste {
   list-style: none;
   display: flex;

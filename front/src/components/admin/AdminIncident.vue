@@ -1,5 +1,5 @@
 <template>
-  <div class="param-bloc">
+  <div class="param-bloc param-bloc-danger">
     <h3 class="param-libelle">Communication d'incident de sécurité</h3>
     <p class="param-aide">
       Affichée à tous, y compris sur la page de connexion, jusqu'à sa clôture.

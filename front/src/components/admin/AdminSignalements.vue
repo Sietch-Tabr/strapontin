@@ -81,6 +81,17 @@
                 Accepter le nom publié
               </button>
               <button
+                v-else-if="action === 'supprimerConcert'"
+                type="button"
+                class="bouton bouton-danger bouton-petit"
+                :aria-label="
+                  'Supprimer le concert : ' + libelleEntite(s.entite)
+                "
+                @click="supprimerConcert(s)"
+              >
+                Supprimer le concert
+              </button>
+              <button
                 v-else-if="action === 'resoudre'"
                 type="button"
                 class="bouton bouton-secondaire bouton-petit"
@@ -125,6 +136,7 @@
     </div>
 
     <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
+    <DialogueConfirmation ref="dialogueConfirmation" />
   </section>
 </template>
 
@@ -143,6 +155,7 @@ import {
 } from "../../utils/signalements.js";
 import EtatChargement from "../EtatChargement.vue";
 import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
+import DialogueConfirmation from "../DialogueConfirmation.vue";
 
 const emit = defineEmits(["voir-fiche", "total"]);
 
@@ -155,6 +168,7 @@ const page = ref(0);
 const totalPages = ref(1);
 const total = ref(0);
 const repartition = ref(null);
+const dialogueConfirmation = ref(null);
 const controleur = new AbortController();
 
 async function charger() {
@@ -224,6 +238,19 @@ function ignorerEcart(signalement) {
   return poster(
     `/api/admin/artistes/${signalement.entite.id}/ignorer-intervention`,
     "Nom publié accepté.",
+  );
+}
+
+async function supprimerConcert(signalement) {
+  const confirme = await dialogueConfirmation.value?.demander({
+    titre: "Supprimer ce concert ?",
+    message: `${libelleEntite(signalement.entite)} sera supprimé définitivement, et l'anomalie marquée comme traitée.`,
+    action: "Supprimer",
+  });
+  if (!confirme) return;
+  return poster(
+    `/api/admin/signalements/${signalement.id}/supprimer-concert`,
+    "Concert supprimé.",
   );
 }
 

@@ -7,8 +7,6 @@ package fr.strapontin.core;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -28,6 +26,11 @@ public final class CorrespondanceSalle {
   private static final Pattern SUFFIXE_ARRONDISSEMENT =
       Pattern.compile("\\s+(paris|lyon|marseille)\\s+\\d{1,2}$");
   private static final double SEUIL_SIMILARITE_SALLE = 0.75;
+  private static final Pattern MENTION_CEDEX = Pattern.compile("\\s+cedex$");
+  // Mots-types trop répandus pour rapprocher seuls deux lieux (des dizaines de
+  // « Comédie » sans rapport), mais qui distinguent un nom dans le Jaccard :
+  // retirés, « casino de paris » et « comedie de paris » se réduiraient à la ville.
+  private static final Set<String> MOTS_NON_PIVOTS = Set.of("comedie");
   private static final int LONGUEUR_MIN_CONTAINMENT_SALLE = 4;
   private static final double RATIO_MIN_CONTAINMENT_SALLE = 0.5;
   // Longueur minimale pour inclure un token dans le calcul Jaccard (filtre
@@ -84,13 +87,6 @@ public final class CorrespondanceSalle {
   // partiel asymétrique — évite un containment trivial sur un token déjà très
   // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_TOKEN = 4;
-
-  // Tiret précédé ou suivi d'une espace (« Th du Rond Point -Salle Jean Tardieu ») ;
-  // un tiret accolé des deux côtés appartient au nom (« Saint-Louis »).
-  private static final Pattern SEPARATEUR_QUALIFICATIF = Pattern.compile("\\s+-\\s*|\\s*-\\s+");
-  // Abréviation de billetterie en tête du nom du complexe.
-  private static final Pattern ABREVIATION_THEATRE =
-      Pattern.compile("^th\\.?\\s+", Pattern.CASE_INSENSITIVE);
 
   private CorrespondanceSalle() {}
 
@@ -261,9 +257,30 @@ public final class CorrespondanceSalle {
     if (estJaccardSpecifiqueSuffisant(specA, specB, jaccardSpec)) {
       return true;
     }
+    final Set<String> pivotsPossibles = new HashSet<>(intersectionSpec);
+    pivotsPossibles.removeAll(finCommune(tokensA, tokensB));
+    pivotsPossibles.removeAll(MOTS_NON_PIVOTS);
     return (pivotAutorise
-            && estPivotSpecifique(tokA, tokB, specA, specB, jaccardSpec, intersectionSpec))
+            && estPivotSpecifique(tokA, tokB, specA, specB, jaccardSpec, pivotsPossibles))
         || estContainmentPartielSuffisant(specA, specB);
+  }
+
+  // Mots de fin identiques des deux noms : la ville qu'une source accole au
+  // lieu (« ... savigny le temple »), qui ne distingue aucun lieu de sa ville.
+  // Rien n'est retiré si un nom s'y réduit (c'est alors tout le nom).
+  private static Set<String> finCommune(final String nomA, final String nomB) {
+    final String[] motsA = MENTION_CEDEX.matcher(nomA).replaceFirst("").split("\\s+");
+    final String[] motsB = MENTION_CEDEX.matcher(nomB).replaceFirst("").split("\\s+");
+    int communs = 0;
+    while (communs < motsA.length
+        && communs < motsB.length
+        && motsA[motsA.length - 1 - communs].equals(motsB[motsB.length - 1 - communs])) {
+      communs++;
+    }
+    if (communs == 0 || communs == motsA.length || communs == motsB.length) {
+      return Set.of();
+    }
+    return Set.of(Arrays.copyOfRange(motsA, motsA.length - communs, motsA.length));
   }
 
   private static Set<String> intersection(
@@ -300,13 +317,13 @@ public final class CorrespondanceSalle {
       final Set<String> specA,
       final Set<String> specB,
       final double jaccardSpec,
-      final Set<String> intersectionSpec) {
+      final Set<String> pivotsPossibles) {
     return tokA.size() >= 2
         && tokB.size() >= 2
         && specA.size() >= 2
         && specB.size() >= 2
         && jaccardSpec > SEUIL_JACCARD_PIVOT
-        && intersectionSpec.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
+        && pivotsPossibles.stream().anyMatch(t -> t.length() >= LONGUEUR_MIN_PIVOT);
   }
 
   // Garde-fou sur le nombre de tokens SPÉCIFIQUES (pas bruts) de chaque côté —
@@ -324,80 +341,5 @@ public final class CorrespondanceSalle {
     final Set<String> specCourt = specA.size() <= specB.size() ? specA : specB;
     final Set<String> specLong = specA.size() <= specB.size() ? specB : specA;
     return estContainmentTokensPartiel(specCourt, specLong);
-  }
-
-  // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une
-  // espace) — l'extraction opère donc sur le nom brut, jamais sur nom_norm.
-  /**
-   * @param nomBrut nom publié, éventuellement qualifié (« Complexe - Salle »)
-   * @param nomNormCandidat nom normalisé d'une salle trouvée pour ce nom
-   * @return {@code true} si le nom est qualifié et que la salle trouvée n'en
-   *     porte pas le qualificatif : c'est le complexe, pas sa salle interne
-   */
-  public static boolean qualificatifAbsentDe(final String nomBrut, final String nomNormCandidat) {
-    final String qualif = extraireQualificatif(nomBrut);
-    if (qualif == null || nomNormCandidat == null) {
-      return false;
-    }
-    final Set<String> motsQualif = tokensSignificatifs(Normalisation.normaliserTexte(qualif));
-    return !motsQualif.isEmpty() && !tokensSignificatifs(nomNormCandidat).containsAll(motsQualif);
-  }
-
-  private static String extraireQualificatif(final String nomBrut) {
-    final MatchResult separateur = dernierSeparateur(nomBrut);
-    if (separateur == null) {
-      return null;
-    }
-    final String qualif = nomBrut.substring(separateur.end()).trim();
-    return qualif.isEmpty() ? null : qualif;
-  }
-
-  private static MatchResult dernierSeparateur(final String nomBrut) {
-    final Matcher matcher = SEPARATEUR_QUALIFICATIF.matcher(nomBrut);
-    MatchResult dernier = null;
-    while (matcher.find()) {
-      if (matcher.start() > 0) {
-        dernier = matcher.toMatchResult();
-      }
-    }
-    return dernier;
-  }
-
-  /**
-   * Extrait la partie complexe/base d'un nom qualifié (ex. "La Seine
-   * Musicale - Grande Seine" → "La Seine Musicale"), pour résoudre le
-   * complexe avant de créer/retrouver la sous-salle correspondante.
-   * @param nomBrut nom brut (non normalisé)
-   * @return le nom de base, ou {@code null} si nomBrut ne porte aucun
-   *     qualificatif
-   */
-  public static String extraireBase(final String nomBrut) {
-    final MatchResult separateur = dernierSeparateur(nomBrut);
-    if (separateur == null) {
-      return null;
-    }
-    final String base =
-        ABREVIATION_THEATRE
-            .matcher(nomBrut.substring(0, separateur.start()).trim())
-            .replaceFirst("Théâtre ");
-    return base.isEmpty() ? null : base;
-  }
-
-  /**
-   * Indique si deux noms bruts portent un qualificatif de sous-salle
-   * distinct — un complexe multi-salles ne fusionne pas deux halls
-   * distincts au seul motif du nom du complexe partagé.
-   * @param nomBrutA premier nom, non normalisé
-   * @param nomBrutB second nom, non normalisé
-   * @return {@code true} si les deux portent un qualificatif divergent
-   */
-  public static boolean qualificatifsDivergents(final String nomBrutA, final String nomBrutB) {
-    final String qualifA = extraireQualificatif(nomBrutA);
-    final String qualifB = extraireQualificatif(nomBrutB);
-    if (qualifA == null || qualifB == null) {
-      return false;
-    }
-    return !estDoublonSalle(
-        Normalisation.normaliserTexte(qualifA), Normalisation.normaliserTexte(qualifB));
   }
 }

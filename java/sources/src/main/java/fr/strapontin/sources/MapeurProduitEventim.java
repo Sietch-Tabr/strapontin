@@ -254,6 +254,9 @@ final class MapeurProduitEventim {
         .salleSourceId(salleSourceId)
         .artisteSourceId(artisteSourceId)
         .position(position)
+        .artistesInvites(
+            PlateauSoiree.invitesEventim(
+                (String) produit.get(CLE_NOM), produit.get("attractions"), artiste))
         .construire();
   }
 

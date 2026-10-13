@@ -216,6 +216,61 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count);
   }
 
+  // Eventim omet parfois la ville d'un lieu connu (Stade de France) : celle de la salle la
+  // remplace, jamais une valeur vide.
+  @Test
+  void persisterConcerts_sourceSansVilleSurSalleConnue_repriseDeLaVilleDeLaSalle() {
+    jdbc.update(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville, dept)"
+            + " VALUES ('stade de france', 'Stade de France', 'stade de france', 'Saint-Denis',"
+            + " '93')",
+        Map.of());
+    final ConcertBrut sansVille =
+        ConcertBrut.nouveau()
+            .artiste("Niska")
+            .date("2098-06-20")
+            .heure("20:00")
+            .salle("Stade de France")
+            .ville(null)
+            .dept("93")
+            .source("eventim")
+            .url("https://www.eventim.fr/event/niska-stade-de-france-1/")
+            .construire();
+
+    persisterConcerts.persisterConcerts(List.of(sansVille));
+
+    assertEquals(
+        "Saint-Denis",
+        jdbc.queryForObject(
+            "SELECT ville FROM evenements WHERE artiste_norm = 'niska'", Map.of(), String.class));
+  }
+
+  @Test
+  void persisterConcerts_soireePartagee_enregistreLePlateauSansLArtistePrincipal() {
+    final ConcertBrut soiree =
+        ConcertBrut.nouveau()
+            .artiste("Charlie Winston")
+            .date("2098-10-08")
+            .heure("20:00")
+            .salle("Chapiteau de la Pépinière")
+            .ville("Nancy")
+            .dept("54")
+            .source("ticketmaster")
+            .url("https://www.ticketmaster.fr/njp-08")
+            .artistesInvites(List.of("Bertrand Belin", "Alain Chamfort", "Charlie Winston"))
+            .construire();
+
+    persisterConcerts.persisterConcerts(List.of(soiree));
+    persisterConcerts.persisterConcerts(List.of(soiree));
+
+    assertEquals(
+        List.of("alain chamfort", "bertrand belin"),
+        jdbc.queryForList(
+            "SELECT artiste_norm FROM evenement_artistes ORDER BY artiste_norm",
+            Map.of(),
+            String.class));
+  }
+
   private void insererSalleAvecCoordonnees(
       final String nom, final double latitude, final double longitude) {
     jdbc.update(

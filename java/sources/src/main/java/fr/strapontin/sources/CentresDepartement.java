@@ -110,7 +110,13 @@ final class CentresDepartement {
           Map.entry("92", new CentreDept(48.8402, 2.2413, 15)),
           Map.entry("93", new CentreDept(48.9098, 2.4458, 17)),
           Map.entry("94", new CentreDept(48.7745, 2.4622, 15)),
-          Map.entry("95", new CentreDept(49.0751, 2.1014, 41)));
+          Map.entry("95", new CentreDept(49.0751, 2.1014, 41)),
+          // Outre-mer : centre et demi-diagonale de l'emprise Nominatim.
+          Map.entry("971", new CentreDept(16.2529, -61.5687, 88)),
+          Map.entry("972", new CentreDept(14.6114, -60.9621, 62)),
+          Map.entry("973", new CentreDept(4.004, -53.0, 275)),
+          Map.entry("974", new CentreDept(-21.1309, 55.5266, 75)),
+          Map.entry("976", new CentreDept(-12.823, 45.1521, 26)));
 
   private CentresDepartement() {}
 }

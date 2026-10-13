@@ -89,13 +89,27 @@ public class EmailCompteService {
    * parvenir : envoyé même si ses notifications email sont désactivées.
    *
    * @param email destinataire
+   * @param cause cause lisible du retrait du dernier appareil, peut être null
    * @return {@code true} si l'email a été envoyé
    */
-  public boolean envoyerAvertissementCanalPerdu(final String email) {
+  public boolean envoyerAvertissementCanalPerdu(final String email, final String cause) {
     return envoyer(
         email,
         "Vous ne recevez plus les nouveaux concerts de Strapontin",
-        EmailCompteTemplate::avertissementCanalPerdu);
+        baseUrl -> EmailCompteTemplate.avertissementCanalPerdu(baseUrl, cause));
+  }
+
+  /**
+   * Prévient l'utilisateur que ses notifications push n'ont jamais pris effet
+   * (aucun appareil abonné), alors que l'email est désactivé.
+   * @param email destinataire
+   * @return {@code true} si l'email est parti
+   */
+  public boolean envoyerAvertissementPushJamaisActive(final String email) {
+    return envoyer(
+        email,
+        "Vos notifications Strapontin ne sont pas activées",
+        EmailCompteTemplate::avertissementPushJamaisActive);
   }
 
   private boolean envoyer(

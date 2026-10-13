@@ -54,7 +54,7 @@
         </label>
         <button
           type="button"
-          class="bouton bouton-secondaire bouton-petit"
+          class="bouton bouton-danger bouton-petit"
           :disabled="selection.length !== 2"
           @click="ouvrirFusion"
         >
@@ -237,7 +237,7 @@
       <div class="dialog-pied">
         <button
           type="submit"
-          class="bouton bouton-secondaire"
+          class="bouton bouton-primaire"
           :disabled="enCoursEdition"
         >
           Enregistrer
@@ -361,4 +361,3 @@ const {
   filtresExtra: () => ({ ville: filtreVille.value, dept: filtreDept.value }),
 });
 </script>
-

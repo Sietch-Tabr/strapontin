@@ -170,7 +170,9 @@ public class PersisteurConcertsDb {
         INSERT INTO evenements
             (artiste_norm, date, heure, salle_id, salle_norm, ville, dept, classification,
              genre, sous_genre, statut, presale_debut, presale_nom, artiste_id)
-        VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm, :ville, :dept,
+        VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm,
+                COALESCE(NULLIF(:ville, ''), (SELECT s.ville FROM salles s
+                                               WHERE s.id = CAST(:salleId AS uuid))), :dept,
                 :classification, :genre, :sousGenre, :statut, CAST(:presaleDebut AS timestamptz),
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
@@ -213,7 +215,8 @@ public class PersisteurConcertsDb {
         """
         UPDATE evenements SET
             salle_norm     = COALESCE(:salleNormReference, salle_norm),
-            ville          = COALESCE(:ville, ville),
+            ville          = COALESCE(NULLIF(:ville, ''), ville, (SELECT s.ville FROM salles s
+                               WHERE s.id = COALESCE(CAST(:salleId AS uuid), salle_id))),
             dept           = COALESCE(:dept, dept),
             classification = COALESCE(:classification, classification),
             genre          = COALESCE(:genre, genre),
@@ -251,6 +254,29 @@ public class PersisteurConcertsDb {
             .addValue("url", concert.url())
             .addValue("artiste", concert.artiste())
             .addValue(CLE_SALLE, concert.salle()));
+  }
+
+  /**
+   * Ajoute les autres artistes de la soirée, jamais retirés : deux sources ne
+   * publient pas toujours le même plateau, et un lot dédoublonné n'en garde
+   * qu'une. L'artiste est relié s'il existe déjà au référentiel.
+   */
+  private void enregistrerPlateau(final UUID evenementId, final ValeurConcert concert) {
+    for (final String nom : concert.brut().artistesInvites()) {
+      final String norm = Normalisation.normaliserTexte(nom);
+      if (norm.isEmpty() || norm.equals(concert.artisteNorm())) {
+        continue;
+      }
+      jdbc.update(
+          """
+          INSERT INTO evenement_artistes (evenement_id, artiste_norm, artiste_nom, artiste_id)
+          VALUES (CAST(:id AS uuid), :norm, :nom,
+                  (SELECT a.id FROM artistes a WHERE a.nom_norm = :norm))
+          ON CONFLICT (evenement_id, artiste_norm) DO UPDATE
+            SET artiste_id = COALESCE(evenement_artistes.artiste_id, EXCLUDED.artiste_id)
+          """,
+          Map.of("id", evenementId.toString(), "norm", norm, "nom", nom));
+    }
   }
 
   /**
@@ -295,6 +321,7 @@ public class PersisteurConcertsDb {
     for (final ValeurConcert concert : valeurs) {
       final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert);
       upsertObservation(resolution.id(), concert);
+      enregistrerPlateau(resolution.id(), concert);
       if (resolution.nouveau()) {
         inserts++;
       } else {

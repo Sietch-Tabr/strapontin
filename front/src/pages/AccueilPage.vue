@@ -48,7 +48,7 @@
           </div>
         </template>
         <template v-else>
-          <template v-if="!filtreIndisponibles">
+          <template v-if="!filtreIndisponibles && donnees.nbIndisponibles > 0">
             <p class="etat-vide-titre">Aucun concert avec ces filtres.</p>
             <p class="etat-vide-texte">
               Essayez d'inclure les concerts indisponibles ci-dessus.
@@ -72,17 +72,19 @@
           class="concert-groupe"
         >
           <div class="groupe-entete">
-            <span class="groupe-artiste">{{ groupe.artiste }}</span>
-            <span v-if="groupe.estTournee" class="badge badge-tournee">
-              Tournée · {{ groupe.concerts.length }} dates
-            </span>
-            <span v-if="groupe.estNew" class="badge badge-nouveau"
-              >Nouveau</span
-            >
+            <div class="groupe-titre">
+              <span class="groupe-artiste">{{ groupe.artiste }}</span>
+              <span v-if="groupe.estTournee" class="badge badge-tournee">
+                Tournée · {{ groupe.concerts.length }} dates
+              </span>
+              <span v-if="groupe.estNew" class="badge badge-nouveau"
+                >Nouveau</span
+              >
+            </div>
             <button
               v-if="!filtreMasques"
               type="button"
-              class="bouton-texte"
+              class="bouton bouton-texte bouton-petit groupe-action"
               :aria-label="'Masquer tous les concerts de ' + groupe.artiste"
               @click="masquerGroupe(groupe)"
             >
@@ -91,7 +93,7 @@
             <button
               v-else
               type="button"
-              class="bouton-texte"
+              class="bouton bouton-texte bouton-petit groupe-action"
               :aria-label="'Réafficher tous les concerts de ' + groupe.artiste"
               @click="demasquerGroupe(groupe)"
             >
@@ -147,6 +149,9 @@
                   {{ concert.salle
                   }}{{ concert.ville ? " · " + concert.ville : "" }}
                 </p>
+                <p v-if="concert.teteDAffiche" class="concert-lieu">
+                  Avec {{ concert.teteDAffiche }}
+                </p>
               </div>
               <div class="concert-actions">
                 <a
@@ -154,13 +159,13 @@
                   :href="concert.url"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="bouton bouton-tres-petit bouton-secondaire"
+                  class="bouton bouton-secondaire bouton-petit"
                   >Billets</a
                 >
                 <button
                   v-if="filtreMasques"
                   type="button"
-                  class="bouton-texte bouton-petit"
+                  class="bouton bouton-texte bouton-petit"
                   aria-label="Réafficher ce concert"
                   @click="demasquerConcert(concert, groupe)"
                 >
@@ -169,7 +174,7 @@
                 <button
                   v-else
                   type="button"
-                  class="bouton-texte bouton-petit"
+                  class="bouton bouton-texte bouton-petit"
                   aria-label="Masquer ce concert"
                   @click="masquerConcert(concert, groupe)"
                 >
@@ -181,6 +186,7 @@
         </div>
       </div>
     </template>
+    <DialogueConfirmation ref="dialogueConfirmation" />
   </div>
 </template>
 
@@ -198,10 +204,17 @@ import {
   nextTick,
 } from "vue";
 import EtatChargement from "../components/EtatChargement.vue";
+import DialogueConfirmation from "../components/DialogueConfirmation.vue";
 import { useRoute, useRouter } from "vue-router";
 import { formaterAvecHeure } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
 import { useSession } from "../composables/useSession.js";
+import {
+  choixExplicite,
+  indisponiblesAffiches,
+  messageSansAjout,
+  valeurApresBascule,
+} from "../utils/filtreIndisponibles.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -209,10 +222,13 @@ const { afficherToast } = useToasts();
 const { chargerSession } = useSession();
 
 const donnees = shallowRef(null);
+const dialogueConfirmation = ref(null);
 const chargement = ref(false);
 
 const filtreNouveau = computed(() => route.query.nouveau === "true");
-const filtreIndisponibles = computed(() => route.query.indisponibles === "1");
+const filtreIndisponibles = computed(() =>
+  indisponiblesAffiches(route.query.indisponibles, donnees.value),
+);
 const filtreMasques = computed(() => route.query.masques === "true");
 
 const controleurComposant = new AbortController();
@@ -230,7 +246,8 @@ async function charger() {
   try {
     const params = new URLSearchParams();
     if (filtreNouveau.value) params.set("nouveau", "true");
-    if (filtreIndisponibles.value) params.set("indisponibles", "1");
+    const indisponibles = choixExplicite(route.query.indisponibles);
+    if (indisponibles) params.set("indisponibles", indisponibles);
     if (filtreMasques.value) params.set("masques", "true");
     const rep = await appelApi("/api/accueil?" + params, {
       signal: controleur.signal,
@@ -254,7 +271,9 @@ function basculerFiltre(filtre) {
   if (filtre === "nouveau") {
     q.nouveau === "true" ? delete q.nouveau : (q.nouveau = "true");
   } else if (filtre === "indisponibles") {
-    q.indisponibles === "1" ? delete q.indisponibles : (q.indisponibles = "1");
+    const message = messageSansAjout(filtreIndisponibles.value, donnees.value);
+    if (message) afficherToast(message, "info");
+    q.indisponibles = valeurApresBascule(filtreIndisponibles.value);
   } else if (filtre === "masques") {
     q.masques === "true" ? delete q.masques : (q.masques = "true");
   }
@@ -262,6 +281,12 @@ function basculerFiltre(filtre) {
 }
 
 async function masquerConcert(concert, groupe) {
+  const confirme = await dialogueConfirmation.value?.demander({
+    titre: "Masquer ce concert ?",
+    message: `Le concert de ${groupe.artiste} du ${formaterAvecHeure(concert.date, concert.heure)} (${concert.salle}) ne s'affichera plus. Vous pourrez le réafficher depuis le filtre « Masqués ».`,
+    action: "Masquer",
+  });
+  if (!confirme) return;
   try {
     const rep = await appelApi(`/api/spectacles/matches/${concert.id}`, {
       method: "PATCH",
@@ -309,6 +334,13 @@ async function demasquerConcert(concert, groupe) {
 // groupe visuellement affiché sont couverts, artiste_norm pouvant diverger entre concerts d'un
 // même artiste réel selon la source de fetch. artisteNorm reste utilisé pour les clés Vue/ancres.
 async function masquerGroupe(groupe) {
+  const confirme = await dialogueConfirmation.value?.demander({
+    titre: `Masquer tous les concerts de ${groupe.artiste} ?`,
+    message:
+      "Tous ses concerts à venir déjà connus ne s'afficheront plus. Vous pourrez les réafficher depuis le filtre « Masqués ».",
+    action: "Masquer",
+  });
+  if (!confirme) return;
   try {
     const rep = await appelApi("/api/spectacles/masquer-artiste", {
       method: "POST",
@@ -409,12 +441,26 @@ onUnmounted(() => {
 
 .groupe-entete {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-muted);
+}
+
+/* Nom et badges se replient entre eux, l'action reste toujours à droite. */
+.groupe-titre {
+  display: flex;
+  flex: 1;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+}
+
+.groupe-action {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .groupe-artiste {
@@ -476,16 +522,6 @@ onUnmounted(() => {
   gap: 0.25rem;
   margin-left: 0.75rem;
   flex-shrink: 0;
-}
-
-.badge-tournee {
-  background: #f0f9ff;
-  color: #0369a1;
-}
-
-.sombre .badge-tournee {
-  background: #0c2d4a;
-  color: #7dd3fc;
 }
 
 .etat-vide-actions {

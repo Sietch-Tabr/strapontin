@@ -344,7 +344,7 @@ public class EnrichissementSallesService {
           UPDATE salles SET
             wikidata_id = COALESCE(wikidata_id, :wikidataId),
             nom_affiche = COALESCE(nom_affiche, :nomAffiche),
-            ville       = COALESCE(ville, :ville),
+            ville       = COALESCE(ville, NULLIF(:ville, '')),
             latitude    = COALESCE(CAST(:latitude AS double precision), latitude),
             longitude   = COALESCE(CAST(:longitude AS double precision), longitude),
             origine_position = CASE WHEN CAST(:latitude AS double precision) IS NOT NULL

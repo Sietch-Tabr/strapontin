@@ -103,7 +103,7 @@
             sur au moins un appareil.
           </p>
 
-          <button type="submit" class="bouton bouton-secondaire">
+          <button type="submit" class="bouton bouton-primaire">
             Enregistrer
           </button>
         </form>

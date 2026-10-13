@@ -34,14 +34,6 @@ public class CoherenceMultiSalleService {
 
   private static final String PREFIXE_INTERNAL = IdentifiantLieuEventim.PREFIXE;
 
-  // Longueur minimale du sigle (sans espace) pour éviter un match trivial sur
-  // une seule lettre.
-  private static final int LONGUEUR_MIN_SIGLE = 2;
-
-  // Longueur minimale pour éviter un containment trivial sur un nom déjà très
-  // court.
-  private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
-
   // Même seuil que la fusion par clé forte : au-delà, deux lieux distincts.
   private static final double DISTANCE_MEME_LIEU_METRES = 500;
 

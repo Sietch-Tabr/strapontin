@@ -66,5 +66,49 @@ class SignalementDatesFestivalEcarteesIntegrationTest extends AbstractWorkerInte
             "SELECT entite_id FROM signalements_matching WHERE type = 'date_festival_ecartee'",
             Map.of(),
             UUID.class));
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM evenements WHERE id = CAST(:id AS uuid)",
+            Map.of("id", faux.toString()),
+            Integer.class),
+        "le produit écarté n'est plus observé : une absence par cycle");
+  }
+
+  private int signalerProduitEcartePourSuzane(final String url) {
+    final SourceAvecProduitsEcartes eventim = mock(SourceAvecProduitsEcartes.class);
+    when(eventim.preleverProduitsEcartes())
+        .thenReturn(List.of(new ProduitEcarte("Suzane", url, "Couplé Chapiteau + Magic 13")));
+    return new SignalementDatesFestivalEcartees(List.of(eventim), jdbc, signalements).signaler();
+  }
+
+  // Billet couplé : seconde observation du concert, à côté de son billet normal.
+  @Test
+  void signaler_concertAyantUnAutreBillet_nEstPasSignale() {
+    final UUID concert = evenement("https://www.eventim.fr/couple-13", "2098-10-13");
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('eventim' AS source_concert),"
+            + " 'https://www.eventim.fr/suzane-13', 'Suzane', 'Chapiteau')",
+        Map.of("id", concert.toString()));
+
+    assertEquals(0, signalerProduitEcartePourSuzane("https://www.eventim.fr/couple-13"));
+  }
+
+  // Produit écarté pour Suzane, mais concert de Yael Naim : sa date légitime.
+  @Test
+  void signaler_concertDUnAutreArtisteIdentifie_nEstPasSignale() {
+    final UUID concert = evenement("https://www.eventim.fr/soniques-14", "2098-11-14");
+    final UUID yael =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('Yael Naim', 'yael naim') RETURNING id",
+            Map.of(),
+            UUID.class);
+    jdbc.update(
+        "UPDATE evenements SET artiste_id = CAST(:a AS uuid), artiste_norm = 'yael naim'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("a", yael.toString(), "id", concert.toString()));
+
+    assertEquals(0, signalerProduitEcartePourSuzane("https://www.eventim.fr/soniques-14"));
   }
 }

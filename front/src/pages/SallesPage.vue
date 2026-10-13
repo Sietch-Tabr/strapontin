@@ -119,7 +119,7 @@
             </span>
             <button
               type="button"
-              class="bouton bouton-petit bouton-danger-texte"
+              class="bouton bouton-danger bouton-petit"
               :aria-label="'Supprimer ' + salle.nom"
               @click="demanderSuppression(salle)"
             >
@@ -219,7 +219,7 @@
         <div class="dialog-pied">
           <button
             type="submit"
-            class="bouton bouton-secondaire"
+            class="bouton bouton-primaire"
             :disabled="signalementEnCours"
           >
             Envoyer
