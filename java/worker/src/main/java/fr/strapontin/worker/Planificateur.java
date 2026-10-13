@@ -54,6 +54,9 @@ public class Planificateur {
   @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronRecalculerMatches;
 
+  @Value("${worker.cron.reconciliation-nocturne:0 0 3 * * ?}")
+  private String cronReconciliationNocturne;
+
   /** Constructeur par défaut. */
   public Planificateur() {}
 
@@ -240,7 +243,9 @@ public class Planificateur {
   @Bean
   Trigger triggerReconciliationNocturne(final JobDetail jobDetailReconciliationNocturne) {
     return creerTrigger(
-        jobDetailReconciliationNocturne, "triggerReconciliationNocturne", "0 0 3 * * ?");
+        jobDetailReconciliationNocturne,
+        "triggerReconciliationNocturne",
+        cronReconciliationNocturne);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
