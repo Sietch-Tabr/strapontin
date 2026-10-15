@@ -17,7 +17,7 @@
         <article
           v-for="stat in groupe.jobs"
           :key="stat.typeJob"
-          class="job-carte"
+          class="job-carte cadre cadre-serre"
         >
           <div class="job-carte-entete">
             <span
@@ -49,7 +49,7 @@
           <p v-if="stat.description" class="job-carte-description">
             {{ stat.description }}
           </p>
-          <p class="job-carte-detail">
+          <p class="job-carte-detail texte-discret">
             <span v-if="stat.derniereExec">{{
               formaterInstant(stat.derniereExec)
             }}</span>
@@ -64,14 +64,14 @@
             }}</span>
             <span v-if="!stat.derniereExec">Pas encore exécuté</span>
           </p>
-          <p v-if="stat.erreur" class="job-carte-detail">
+          <p v-if="stat.erreur" class="job-carte-detail texte-discret">
             <span class="badge badge-erreur">{{
               stat.erreur.length > 80
                 ? stat.erreur.substring(0, 80) + "…"
                 : stat.erreur
             }}</span>
           </p>
-          <p v-if="stat.prochaineExec" class="job-carte-detail">
+          <p v-if="stat.prochaineExec" class="job-carte-detail texte-discret">
             Prochaine exécution : {{ formaterInstant(stat.prochaineExec) }}
           </p>
           <button
@@ -103,16 +103,21 @@
 
     <div class="param-bloc">
       <h3 class="param-libelle">Worker</h3>
-      <div class="worker-carte" :class="{ 'worker-alerte': workerEnAlerte }">
+      <div
+        class="worker-carte cadre cadre-large"
+        :class="{ 'cadre-avertissement': workerEnAlerte }"
+      >
         <div v-if="workerDepuisTexte">
           <p class="worker-carte-libelle">Dernier job complété</p>
-          <p class="worker-carte-detail">{{ workerDepuisTexte }}</p>
+          <p class="worker-carte-detail texte-secondaire">
+            {{ workerDepuisTexte }}
+          </p>
           <p v-if="workerEnAlerte" class="worker-alerte-texte" role="alert">
             Inactif depuis plus de 3 h
           </p>
         </div>
         <div v-else>
-          <p class="worker-carte-detail">
+          <p class="worker-carte-detail texte-secondaire">
             Aucun job complété — worker non démarré.
           </p>
         </div>
@@ -317,9 +322,6 @@ onUnmounted(() => {
 .job-carte {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--espace-6) var(--espace-8);
 }
 
 .job-carte-description {
@@ -345,8 +347,6 @@ onUnmounted(() => {
 }
 
 .job-carte-detail {
-  font-size: var(--texte-xs);
-  color: var(--fg-muted);
   margin-top: var(--espace-2);
 }
 
@@ -379,25 +379,12 @@ onUnmounted(() => {
   }
 }
 
-.worker-carte {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--espace-8);
-}
-
-.worker-carte.worker-alerte {
-  border-color: var(--warning);
-  background: var(--avertissement-bg);
-}
-
 .worker-carte-libelle {
   font-size: var(--texte-m);
   font-weight: 500;
 }
 
 .worker-carte-detail {
-  font-size: var(--texte-m);
-  color: var(--fg-muted);
   margin-top: var(--espace-2);
 }
 

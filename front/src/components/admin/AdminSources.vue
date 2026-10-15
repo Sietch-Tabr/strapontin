@@ -10,6 +10,8 @@
             :key="source.id"
             :class="[
               'source-carte',
+              'cadre',
+              'cadre-serre',
               { 'source-carte-large': source.id === 'ticketmaster' },
             ]"
           >
@@ -19,14 +21,19 @@
             </span>
 
             <template v-if="source.id === 'ticketmaster'">
-              <div v-if="source.quotaTM" class="quota-tm-carte">
+              <div
+                v-if="source.quotaTM"
+                class="quota-tm-carte cadre cadre-large"
+              >
                 <div class="quota-tm-chiffres">
                   <span>
                     <strong>{{ source.quotaTM.dispo }}</strong>
-                    <span class="quota-tm-sep">{{
+                    <span class="quota-tm-sep texte-secondaire">{{
                       " / " + source.quotaTM.total
                     }}</span>
-                    <span class="quota-tm-unite">appels restants</span>
+                    <span class="quota-tm-unite texte-discret"
+                      >appels restants</span
+                    >
                   </span>
                   <span class="quota-tm-pct">{{ pctQuota(source) }}%</span>
                 </div>
@@ -69,7 +76,7 @@
               <p v-else class="etat-vide-texte">
                 Quota non disponible (aucun fetch effectué).
               </p>
-              <p class="source-carte-detail param-aide">
+              <p class="source-carte-detail param-aide texte-note">
                 {{ source.nbSallesConfigurees ?? 0 }} salle{{
                   source.nbSallesConfigurees > 1 ? "s" : ""
                 }}
@@ -81,7 +88,7 @@
             </template>
 
             <template v-else-if="source.id === 'eventim'">
-              <p class="source-carte-detail">
+              <p class="source-carte-detail texte-note">
                 {{ source.nbSallesConfigurees ?? 0 }} salle{{
                   source.nbSallesConfigurees > 1 ? "s" : ""
                 }}
@@ -93,7 +100,7 @@
             </template>
 
             <template v-else-if="source.id === 'deezer'">
-              <p class="source-carte-detail">
+              <p class="source-carte-detail texte-note">
                 <span v-if="source.nbArtistesConfigures > 0">
                   {{ source.nbArtistesConfigures }} artiste{{
                     source.nbArtistesConfigures > 1 ? "s" : ""
@@ -107,7 +114,7 @@
             </template>
 
             <template v-else-if="source.id === 'wikidata'">
-              <p class="source-carte-detail">
+              <p class="source-carte-detail texte-note">
                 {{ source.nbSallesConfigurees ?? 0 }} salle{{
                   source.nbSallesConfigurees > 1 ? "s" : ""
                 }}
@@ -120,13 +127,13 @@
 
             <p
               v-if="source.dernierFetch"
-              class="source-carte-detail param-aide"
+              class="source-carte-detail param-aide texte-note"
             >
               Dernier fetch : {{ formaterInstant(source.dernierFetch) }}
             </p>
             <p
               v-else-if="source.id !== 'deezer' && source.id !== 'wikidata'"
-              class="source-carte-detail param-aide"
+              class="source-carte-detail param-aide texte-note"
             >
               Jamais exécuté
             </p>
@@ -212,7 +219,10 @@
                     <td class="source-salle-nom" data-label="Salle">
                       {{ salle.nom }}
                     </td>
-                    <td class="source-salle-loc" data-label="Ville / Dép.">
+                    <td
+                      class="source-salle-loc texte-secondaire"
+                      data-label="Ville / Dép."
+                    >
                       <span v-if="salle.ville || salle.dept">{{
                         [salle.ville, salle.dept].filter(Boolean).join(" ")
                       }}</span>
@@ -223,7 +233,7 @@
                         <input
                           v-model="lieuxEdites[salle.salleId]"
                           type="text"
-                          class="source-lieu-input"
+                          class="source-lieu-input champ-compact"
                           maxlength="200"
                           placeholder="Nom exact chez Eventim"
                           :aria-label="'Lieu Eventim pour ' + salle.nom"
@@ -537,12 +547,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.quota-tm-carte {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--espace-8);
-}
-
 .quota-tm-chiffres {
   display: flex;
   justify-content: space-between;
@@ -557,14 +561,10 @@ onUnmounted(() => {
 }
 
 .quota-tm-sep {
-  color: var(--fg-muted);
-  font-size: var(--texte-m);
   margin-left: var(--espace-2);
 }
 
 .quota-tm-unite {
-  color: var(--fg-muted);
-  font-size: var(--texte-xs);
   margin-left: var(--espace-3);
 }
 
@@ -606,9 +606,6 @@ onUnmounted(() => {
 }
 
 .source-carte {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--espace-7) var(--espace-8);
   display: flex;
   flex-direction: column;
   gap: var(--espace-4);
@@ -626,8 +623,6 @@ onUnmounted(() => {
 }
 
 .source-carte-detail {
-  font-size: var(--texte-s);
-  color: var(--fg-muted);
   margin: 0;
 }
 
@@ -639,12 +634,6 @@ onUnmounted(() => {
 }
 
 .source-lieu-input {
-  font-size: var(--texte-s);
-  padding: var(--espace-2) var(--espace-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--fg);
   width: 9rem;
 }
 
@@ -672,8 +661,6 @@ onUnmounted(() => {
 }
 
 .source-salle-loc {
-  font-size: var(--texte-m);
-  color: var(--fg-muted);
   white-space: nowrap;
 }
 </style>

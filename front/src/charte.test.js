@@ -454,6 +454,54 @@ describe("charte : classes partagées non redéfinies", () => {
   });
 });
 
+describe("charte : rôles partagés non reproduits", () => {
+  const ROLES = [
+    {
+      classe: "texte-secondaire",
+      declarations: { color: "var(--fg-muted)", "font-size": "var(--texte-m)" },
+    },
+    {
+      classe: "texte-note",
+      declarations: { color: "var(--fg-muted)", "font-size": "var(--texte-s)" },
+    },
+    {
+      classe: "texte-discret",
+      declarations: {
+        color: "var(--fg-muted)",
+        "font-size": "var(--texte-xs)",
+      },
+    },
+    {
+      classe: "cadre",
+      declarations: {
+        border: "1px solid var(--border)",
+        "border-radius": "var(--radius)",
+      },
+    },
+  ];
+
+  it("un composant reprend le rôle partagé au lieu de le réécrire", () => {
+    const parRegle = new Map();
+    // Règles d'un seul sélecteur de classe : un style de descendant (tableau, contenu rédigé)
+    // dépend de sa spécificité et reste propre au composant.
+    for (const d of toutesLesDeclarations.filter(
+      (x) => x.fichier.endsWith(".vue") && /^\.[\w-]+$/.test(x.selecteur),
+    )) {
+      const cle = `${d.fichier} : ${d.selecteur}`;
+      parRegle.set(cle, {
+        ...(parRegle.get(cle) ?? {}),
+        [d.propriete]: d.valeur,
+      });
+    }
+    const fautifs = [...parRegle.entries()].flatMap(([cle, decl]) =>
+      ROLES.filter((r) =>
+        Object.entries(r.declarations).every(([p, v]) => decl[p] === v),
+      ).map((r) => `${cle} reproduit .${r.classe}`),
+    );
+    expect(fautifs).toEqual([]);
+  });
+});
+
 describe("charte : classes partagées utilisées", () => {
   const code = sources
     .filter((s) => !s.nom.endsWith(".css"))

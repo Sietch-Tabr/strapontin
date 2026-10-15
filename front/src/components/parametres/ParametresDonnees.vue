@@ -54,7 +54,9 @@
             >
               Choisir un fichier
             </button>
-            <span class="form-fichier__nom">{{ nomFichier }}</span>
+            <span class="form-fichier__nom texte-secondaire">{{
+              nomFichier
+            }}</span>
           </div>
           <p class="form-aide">Fichier .json exporté depuis Strapontin</p>
         </div>
@@ -282,8 +284,6 @@ onMounted(charger);
 }
 
 .form-fichier__nom {
-  font-size: var(--texte-m);
-  color: var(--fg-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

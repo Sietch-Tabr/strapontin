@@ -4,13 +4,13 @@
       <h3 class="param-libelle">Logs applicatifs</h3>
       <div class="logs-filtres">
         <div class="logs-filtres-source">
-          <label for="filtre-source" class="logs-filtre-libelle"
+          <label for="filtre-source" class="logs-filtre-libelle texte-note"
             >Source :</label
           >
           <select
             id="filtre-source"
             v-model="filtreSource"
-            class="logs-filtre-select"
+            class="logs-filtre-select champ-compact"
           >
             <option value="">Toutes</option>
             <option value="auth">auth</option>
@@ -25,7 +25,7 @@
           role="group"
           aria-label="Filtrer par niveau de log"
         >
-          <span class="logs-filtre-libelle">Niveau :</span>
+          <span class="logs-filtre-libelle texte-note">Niveau :</span>
           <button
             v-for="niv in ['info', 'warn', 'error']"
             :key="niv"
@@ -39,7 +39,7 @@
             {{ niv }}
           </button>
         </div>
-        <span class="log-compte" aria-live="polite"
+        <span class="log-compte texte-discret" aria-live="polite"
           >{{ logsVisibles }} / {{ logs.length }}</span
         >
         <button
@@ -57,7 +57,7 @@
           Rafraîchir
         </button>
       </div>
-      <p v-if="!filtresNiveaux.has('info')" class="logs-note-info">
+      <p v-if="!filtresNiveaux.has('info')" class="logs-note-info texte-note">
         Les logs de niveau info sont masqués par défaut. Activez-les via le
         filtre ci-dessus.
       </p>
@@ -267,31 +267,16 @@ onMounted(charger);
 }
 
 .logs-note-info {
-  font-size: var(--texte-s);
-  color: var(--fg-muted);
   margin-bottom: var(--espace-4);
   font-style: italic;
 }
 
-.logs-filtre-libelle {
-  font-size: var(--texte-s);
-  color: var(--fg-muted);
-}
-
 .logs-filtre-select {
   width: auto;
-  font-size: var(--texte-s);
-  padding: var(--espace-2) var(--espace-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
-  background: var(--bg);
-  color: var(--fg);
 }
 
 .log-compte {
   margin-left: auto;
-  font-size: var(--texte-xs);
-  color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
 

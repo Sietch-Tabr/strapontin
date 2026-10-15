@@ -410,7 +410,9 @@
       <li v-for="t in tentatives" :key="t.id">
         <strong>{{ t.httpStatusCode ?? "—" }}</strong>
         — {{ t.envoyeeLe ? formaterInstant(t.envoyeeLe) : "—" }}
-        <div v-if="t.reponse" class="tentatives-reponse">{{ t.reponse }}</div>
+        <div v-if="t.reponse" class="tentatives-reponse texte-discret">
+          {{ t.reponse }}
+        </div>
       </li>
     </ul>
     <div class="dialog-pied">
@@ -718,9 +720,7 @@ onMounted(charger);
 }
 
 .tentatives-reponse {
-  color: var(--fg-muted);
   font-family: monospace;
-  font-size: var(--texte-xs);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

@@ -22,7 +22,7 @@
     <div v-else-if="utilisateurs.length" class="param-bloc">
       <h3 class="param-libelle">Utilisateurs ({{ total }})</h3>
       <ul class="user-liste">
-        <li v-for="u in utilisateurs" :key="u.id" class="user-carte">
+        <li v-for="u in utilisateurs" :key="u.id" class="user-carte cadre">
           <div class="user-carte-entete">
             <div class="user-carte-info">
               <div class="user-carte-badges">
@@ -50,7 +50,7 @@
               <p v-if="u.displayUsername" class="user-carte-nom">
                 {{ u.displayUsername }}
               </p>
-              <p class="user-carte-email">{{ u.email }}</p>
+              <p class="user-carte-email texte-note">{{ u.email }}</p>
               <p class="user-carte-activite">
                 <span v-if="u.derniereActivite"
                   >Dernière activité :
@@ -140,17 +140,20 @@
               <input
                 v-model="modifData[u.id].nom"
                 type="text"
+                class="champ-compact"
                 placeholder="Nom d'affichage"
                 aria-label="Nom d'affichage de l'utilisateur"
               />
               <input
                 v-model="modifData[u.id].email"
                 type="email"
+                class="champ-compact"
                 placeholder="Email"
                 aria-label="Adresse email de l'utilisateur"
               />
               <select
                 v-model="modifData[u.id].role"
+                class="champ-compact"
                 aria-label="Rôle de l'utilisateur"
               >
                 <option value="user">user</option>
@@ -951,8 +954,6 @@ onMounted(charger);
 }
 
 .user-carte {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -985,8 +986,6 @@ onMounted(charger);
 }
 
 .user-carte-email {
-  font-size: var(--texte-s);
-  color: var(--fg-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1038,12 +1037,6 @@ onMounted(charger);
 .form-modif-utilisateur input,
 .form-modif-utilisateur select {
   width: auto;
-  font-size: var(--texte-s);
-  padding: var(--espace-3) var(--espace-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
-  background: var(--bg);
-  color: var(--fg);
 }
 
 .form-modif-utilisateur input[name="nom"] {

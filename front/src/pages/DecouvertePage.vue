@@ -8,13 +8,16 @@
     </div>
 
     <div v-if="donnees" class="decouverte-entete">
-      <span v-if="donnees.derniereSyncRegion" class="synchro-info">
+      <span
+        v-if="donnees.derniereSyncRegion"
+        class="synchro-info texte-discret"
+      >
         Dernière synchro :
         <time :datetime="donnees.derniereSyncRegion">{{
           formaterInstant(donnees.derniereSyncRegion)
         }}</time>
       </span>
-      <span v-else class="synchro-info">Jamais synchronisé</span>
+      <span v-else class="synchro-info texte-discret">Jamais synchronisé</span>
       <button
         v-if="estAdmin"
         type="button"
@@ -492,10 +495,5 @@ onUnmounted(() => {
 
 .decouverte-depts {
   margin-bottom: var(--espace-8);
-}
-
-.synchro-info {
-  font-size: var(--texte-xs);
-  color: var(--fg-muted);
 }
 </style>

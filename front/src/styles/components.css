@@ -67,6 +67,16 @@ textarea:focus {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* Champ de saisie ou liste de taille réduite, pour les zones denses (admin). */
+input.champ-compact,
+select.champ-compact {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  color: var(--fg);
+  font-size: var(--texte-s);
+  padding: var(--espace-2) var(--espace-4);
+}
 /* ── Boutons ─────────────────────────────────────────────── */
 .bouton {
   display: inline-flex;
@@ -418,6 +428,37 @@ tr:hover td {
 }
 .cache {
   display: none;
+}
+/* ── Cadre : bordure arrondie, fond et espacement en variantes ── */
+.cadre {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.cadre-fond {
+  background: var(--bg-card);
+}
+.cadre-large {
+  padding: var(--espace-8);
+}
+.cadre-serre {
+  padding: var(--espace-6) var(--espace-8);
+}
+.cadre-avertissement {
+  border-color: var(--warning);
+  background: var(--avertissement-bg);
+}
+/* ── Textes secondaires : couleur atténuée, trois tailles ─── */
+.texte-secondaire {
+  color: var(--fg-muted);
+  font-size: var(--texte-m);
+}
+.texte-note {
+  color: var(--fg-muted);
+  font-size: var(--texte-s);
+}
+.texte-discret {
+  color: var(--fg-muted);
+  font-size: var(--texte-xs);
 }
 .section-titre {
   font-size: var(--texte-xs);

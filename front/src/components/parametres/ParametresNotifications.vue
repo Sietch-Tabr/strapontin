@@ -48,7 +48,7 @@
 
           <fieldset class="notif-grille">
             <legend class="form-label">Concerts à notifier</legend>
-            <div class="notif-grille__entete" aria-hidden="true">
+            <div class="notif-grille__entete texte-discret" aria-hidden="true">
               <span></span>
               <span>Email</span>
               <span>Push</span>
@@ -438,9 +438,7 @@ onUnmounted(() => controleur.abort());
 }
 
 .notif-grille__entete {
-  font-size: var(--texte-xs);
   font-weight: 500;
-  color: var(--fg-muted);
   text-align: center;
   margin-bottom: var(--espace-2);
 }

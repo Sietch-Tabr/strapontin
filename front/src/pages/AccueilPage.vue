@@ -69,7 +69,7 @@
           v-for="groupe in donnees.artistesGroupes"
           :id="'artiste-' + groupe.artisteNorm"
           :key="groupe.artisteNorm"
-          class="concert-groupe"
+          class="concert-groupe cadre cadre-fond"
         >
           <div class="groupe-entete">
             <div class="groupe-titre">
@@ -112,7 +112,7 @@
                   :class="
                     groupe.estTournee
                       ? 'concert-date-principale'
-                      : 'concert-date-secondaire'
+                      : 'concert-date-secondaire texte-secondaire'
                   "
                 >
                   <time :datetime="concert.date">{{
@@ -145,11 +145,14 @@
                     >Prévente</span
                   >
                 </p>
-                <p class="concert-lieu">
+                <p class="concert-lieu texte-discret">
                   {{ concert.salle
                   }}{{ concert.ville ? " · " + concert.ville : "" }}
                 </p>
-                <p v-if="concert.teteDAffiche" class="concert-lieu">
+                <p
+                  v-if="concert.teteDAffiche"
+                  class="concert-lieu texte-discret"
+                >
                   Avec {{ concert.teteDAffiche }}
                 </p>
               </div>
@@ -433,9 +436,6 @@ onUnmounted(() => {
 }
 
 .concert-groupe {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -494,14 +494,7 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.concert-date-secondaire {
-  font-size: var(--texte-m);
-  color: var(--fg-muted);
-}
-
 .concert-lieu {
-  font-size: var(--texte-xs);
-  color: var(--fg-muted);
   margin-top: var(--espace-2);
   white-space: normal;
   overflow: visible;

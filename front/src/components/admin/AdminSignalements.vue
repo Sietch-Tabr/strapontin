@@ -14,7 +14,7 @@
         <li
           v-for="s in signalements"
           :key="s.categorie + s.id"
-          class="signalement"
+          class="signalement cadre cadre-serre"
         >
           <div class="signalement-entete">
             <strong class="signalement-titre">{{
@@ -23,16 +23,16 @@
             <span class="signalement-entite">{{
               libelleEntite(s.entite)
             }}</span>
-            <span v-if="s.detecteLe" class="signalement-date">
+            <span v-if="s.detecteLe" class="signalement-date texte-note">
               {{ formaterInstant(s.detecteLe) }}
             </span>
           </div>
-          <p class="signalement-explication">
+          <p class="signalement-explication texte-note">
             {{ decrireType(catalogue, s.type).explication }}
           </p>
           <dl
             v-if="formaterDetails(s.details).length"
-            class="signalement-details"
+            class="signalement-details texte-note"
           >
             <template v-for="(d, i) in formaterDetails(s.details)" :key="i">
               <dt v-if="d.cle">{{ d.cle }}</dt>
@@ -275,9 +275,6 @@ onUnmounted(() => controleur.abort());
 }
 
 .signalement {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--espace-6) var(--espace-8);
   min-width: 0;
 }
 
@@ -290,13 +287,6 @@ onUnmounted(() => controleur.abort());
 
 .signalement-entite {
   overflow-wrap: anywhere;
-}
-
-.signalement-date,
-.signalement-explication,
-.signalement-details {
-  font-size: var(--texte-s);
-  color: var(--fg-muted);
 }
 
 .signalement-explication {

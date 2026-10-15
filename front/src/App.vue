@@ -53,7 +53,7 @@
       aria-label="Mise à jour en cours"
     >
       <img src="/images/icon-192.png" alt="" class="calque-logo" />
-      <p class="calque-texte">Mise à jour en cours…</p>
+      <p class="calque-texte texte-secondaire">Mise à jour en cours…</p>
     </div>
   </Transition>
 </template>
@@ -224,8 +224,6 @@ onMounted(async () => {
 
 .calque-texte {
   margin-top: var(--espace-10);
-  font-size: var(--texte-m);
-  color: var(--fg-muted);
 }
 
 .structure-app {
