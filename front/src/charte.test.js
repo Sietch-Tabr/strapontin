@@ -234,6 +234,44 @@ describe("charte : boutons", () => {
   });
 });
 
+describe("charte : distinctions sémantiques", () => {
+  const feuille = sansCommentaires(
+    sources.find((s) => s.nom === FEUILLE_CHARTE).texte,
+  );
+  const fond = (niveau) =>
+    feuille.match(
+      new RegExp(
+        `\\.bouton-bascule\\[data-niveau="${niveau}"\\]\\.actif\\s*\\{[^}]*background:\\s*([^;]+);`,
+      ),
+    )?.[1];
+
+  it("chaque filtre de niveau actif a sa couleur propre", () => {
+    const fonds = ["info", "warn", "error"].map(fond);
+    expect(fonds.every(Boolean)).toBe(true);
+    expect(new Set(fonds).size).toBe(3);
+  });
+
+  it("chaque bouton bascule portant un niveau a une règle d'état actif", () => {
+    const niveaux = new Set(
+      sources
+        .filter((s) => s.nom.endsWith(".vue"))
+        .flatMap((s) => [
+          ...s.texte.matchAll(/<button[^>]*\sdata-niveau="([\w-]+)"/g),
+        ])
+        .map((m) => m[1]),
+    );
+    const sansRegle = [...niveaux].filter((n) => !fond(n));
+    expect(sansRegle).toEqual([]);
+  });
+
+  it("les filtres de niveau d'Admin > Logs portent leur niveau", () => {
+    const logs = sources.find((s) => s.nom.endsWith("admin/AdminLogs.vue"));
+    expect(logs.texte).toMatch(
+      /bouton-bascule[^>]*\s:data-niveau="niv"|:data-niveau="niv"[^>]*bouton-bascule/,
+    );
+  });
+});
+
 describe("charte : éléments définis une seule fois", () => {
   // Boutons dans la feuille de la charte, badges et alertes dans les feuilles partagées.
   it("bouton, badge et alerte ne sont stylés que dans les feuilles partagées", () => {

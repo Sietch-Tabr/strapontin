@@ -31,6 +31,7 @@
             :key="niv"
             type="button"
             class="bouton bouton-bascule bouton-petit"
+            :data-niveau="niv"
             :class="{ actif: filtresNiveaux.has(niv) }"
             :aria-pressed="filtresNiveaux.has(niv) ? 'true' : 'false'"
             @click="toggleNiveau(niv)"

@@ -128,6 +128,22 @@ textarea:focus {
   color: var(--bg);
   border-color: var(--fg);
 }
+/* Option dont le niveau sémantique (data-niveau) colore l'état actif. */
+.bouton-bascule[data-niveau="info"].actif {
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-color: var(--info-border);
+}
+.bouton-bascule[data-niveau="warn"].actif {
+  background: var(--avertissement-bg);
+  color: var(--avertissement-text);
+  border-color: var(--avertissement-border);
+}
+.bouton-bascule[data-niveau="error"].actif {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
 .bouton-pleine-largeur {
   width: 100%;
 }
