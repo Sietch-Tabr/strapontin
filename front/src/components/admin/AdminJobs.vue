@@ -368,6 +368,17 @@ onUnmounted(() => {
   color: var(--info-text);
 }
 
+.job-en-cours .roue-chargement {
+  animation: tourner 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .job-en-cours .roue-chargement {
+    animation: none;
+  }
+}
+
 .worker-carte {
   border: 1px solid var(--border);
   border-radius: var(--radius);

@@ -8,6 +8,7 @@
         v-for="item in navPrincipal"
         :key="item.href"
         :href="item.href"
+        class="nav-lien"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
@@ -28,6 +29,7 @@
         v-for="item in navSecondaire"
         :key="item.href"
         :href="item.href"
+        class="nav-lien"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
@@ -42,6 +44,7 @@
       <a
         v-if="estAdmin"
         href="/admin"
+        class="nav-lien"
         :class="{ actif: estActif('/admin') }"
         :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguer('/admin')"
@@ -55,6 +58,7 @@
         v-for="item in navFooter"
         :key="item.href"
         :href="item.href"
+        class="nav-lien"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguer(item.href)"
@@ -136,21 +140,6 @@ const { deconnecter } = useDeconnexion();
   overflow-y: auto;
 }
 
-.barre-laterale-nav a {
-  display: flex;
-  align-items: center;
-  gap: var(--espace-5);
-  padding: var(--espace-4) var(--espace-6);
-  border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-size: var(--texte-m);
-  font-weight: 500;
-  position: relative;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
 .barre-laterale-nav hr {
   margin: var(--espace-4) 0;
   border-color: var(--border);
@@ -169,19 +158,9 @@ const { deconnecter } = useDeconnexion();
   border-color: var(--border);
 }
 
-.barre-laterale-pied a {
-  display: flex;
-  align-items: center;
-  gap: var(--espace-5);
-  padding: var(--espace-4) var(--espace-6);
-  border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-size: var(--texte-m);
-  font-weight: 500;
-  position: relative;
-  transition:
-    background 0.15s,
-    color 0.15s;
+.barre-laterale-nav .nav-lien.actif,
+.barre-laterale-pied .nav-lien.actif {
+  view-transition-name: nav-actif;
 }
 
 .nav-badge--barre-laterale {

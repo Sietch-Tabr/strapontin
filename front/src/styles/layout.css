@@ -1,25 +1,9 @@
 /* Strapontin — layout : barre latérale, contenu, nav mobile, auth */
 /* ── Layout application (barre latérale + contenu) ──────── */
-.barre-laterale-nav a:hover,
-.barre-laterale-nav a.actif {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.barre-laterale-nav a.actif {
-  view-transition-name: nav-actif;
-}
 .icone {
   width: 1.125rem;
   height: 1.125rem;
   flex-shrink: 0;
-}
-.barre-laterale-pied a:hover,
-.barre-laterale-pied a.actif {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.barre-laterale-pied a.actif {
-  view-transition-name: nav-actif;
 }
 /* Drawer navigation mobile (dialog natif) */
 #dialog-nav-plus {
@@ -50,11 +34,6 @@
 }
 #dialog-nav-plus::backdrop {
   background: var(--voile-tiroir);
-}
-.dialog-nav-contenu a:hover,
-.dialog-nav-contenu a.actif {
-  background: var(--accent);
-  color: var(--accent-fg);
 }
 /* Badge nouveautés — bottom nav */
 .nav-badge {

@@ -32,7 +32,6 @@
   .admin-section,
   .parametres-section,
   #dialog-nav-plus,
-  .job-en-cours .roue-chargement,
   .nav-badge--point-pulsation {
     animation: none;
     transition: none;
@@ -137,6 +136,7 @@
   --texte-2xl: 1.5rem;
   --texte-reduit: 0.875em;
   --trait-fin: 1px;
+  --cible-tactile: 44px;
   --indice-toast: 0;
   --contenu-largeur: 1100px;
   --sidebar-w: 240px;

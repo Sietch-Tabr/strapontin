@@ -12,6 +12,7 @@
         v-for="item in navSecondaire"
         :key="item.href"
         :href="item.href"
+        class="nav-lien nav-lien-large"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
@@ -25,6 +26,7 @@
       <a
         v-if="estAdmin"
         href="/admin"
+        class="nav-lien nav-lien-large"
         :class="{ actif: estActif('/admin') }"
         :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguerEtFermer('/admin')"
@@ -38,6 +40,7 @@
         v-for="item in navFooter"
         :key="item.href"
         :href="item.href"
+        class="nav-lien nav-lien-large"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
@@ -185,22 +188,6 @@ function retirerSwipe() {
   display: flex;
   flex-direction: column;
   gap: var(--espace-1);
-}
-
-.dialog-nav-contenu a {
-  display: flex;
-  align-items: center;
-  gap: var(--espace-5);
-  padding: var(--espace-6) var(--espace-8);
-  min-height: 44px;
-  border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-size: var(--texte-l);
-  font-weight: 500;
-  position: relative;
-  transition:
-    background 0.15s,
-    color 0.15s;
 }
 
 .dialog-nav-sep {

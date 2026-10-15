@@ -757,4 +757,8 @@ onMounted(charger);
   gap: var(--espace-4);
   margin-bottom: var(--espace-2);
 }
+
+.param-libelle-ligne .param-libelle {
+  margin-bottom: 0;
+}
 </style>

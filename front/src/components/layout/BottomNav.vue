@@ -144,4 +144,9 @@ const estDansDrawer = computed(() =>
 .nav-bas-elements a.actif {
   view-transition-name: nav-actif;
 }
+
+.nav-bas-elements a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 </style>

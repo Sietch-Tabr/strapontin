@@ -55,7 +55,7 @@
             </div>
             <div class="notif-grille__ligne">
               <span class="notif-grille__libelle">Artistes suivis</span>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Email — artistes suivis</span>
                 <input
                   v-model="notifArtistes"
@@ -63,14 +63,14 @@
                   :disabled="!resendDisponible"
                 />
               </label>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Push — artistes suivis</span>
                 <input v-model="notifArtistesPush" type="checkbox" />
               </label>
             </div>
             <div class="notif-grille__ligne">
               <span class="notif-grille__libelle">Salles suivies</span>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Email — salles suivies</span>
                 <input
                   v-model="notifSalles"
@@ -78,7 +78,7 @@
                   :disabled="!resendDisponible"
                 />
               </label>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Push — salles suivies</span>
                 <input v-model="notifSallesPush" type="checkbox" />
               </label>
@@ -88,7 +88,7 @@
                 >Nouvelle version de l'application</span
               >
               <span></span>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran"
                   >Push — nouvelle version de l'application</span
                 >

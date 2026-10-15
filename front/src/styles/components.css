@@ -86,8 +86,7 @@ textarea:focus {
 .bouton:focus-visible,
 .bouton-texte:focus-visible,
 .bouton-icone:focus-visible,
-.barre-laterale-nav a:focus-visible,
-.nav-bas-elements a:focus-visible {
+.nav-lien:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -150,6 +149,30 @@ textarea:focus {
 .bouton-petit {
   padding: var(--espace-3) var(--espace-6);
   font-size: var(--texte-s);
+}
+/* ── Lien de navigation (barre latérale, tiroir mobile) ──── */
+.nav-lien {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-5);
+  padding: var(--espace-4) var(--espace-6);
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: var(--texte-m);
+  font-weight: 500;
+  position: relative;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.nav-lien:hover,
+.nav-lien.actif {
+  background: var(--accent);
+}
+.nav-lien-large {
+  padding: var(--espace-6) var(--espace-8);
+  min-height: var(--cible-tactile);
+  font-size: var(--texte-l);
 }
 /* ── Bannière système overlay ────────────────────────────── */
 @keyframes reduire-progression {
@@ -530,7 +553,7 @@ tr:hover td {
   cursor: pointer;
 }
 .form-checkboxes input[type="checkbox"],
-.notif-grille__case input[type="checkbox"] {
+.case-grille input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   width: 1.25rem;
@@ -546,7 +569,7 @@ tr:hover td {
   vertical-align: middle;
 }
 .form-checkboxes input[type="checkbox"]:checked,
-.notif-grille__case input[type="checkbox"]:checked {
+.case-grille input[type="checkbox"]:checked {
   background: var(--primary);
   border-color: var(--primary);
   background-image: var(--icone-coche);
@@ -555,7 +578,7 @@ tr:hover td {
   background-size: 75%;
 }
 .form-checkboxes input[type="checkbox"]:disabled,
-.notif-grille__case input[type="checkbox"]:disabled {
+.case-grille input[type="checkbox"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -740,10 +763,6 @@ dialog::backdrop {
 }
 /* ── Modale à étapes (ModaleEtapes.vue) ──────────────────── */
 /* ── Indicateur de chargement ─────────────────────────────── */
-.etat-chargement .roue-chargement {
-  animation: tourner 0.9s linear infinite;
-  flex-shrink: 0;
-}
 @keyframes pulsation {
   0%,
   100% {

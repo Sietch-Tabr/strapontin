@@ -23,7 +23,7 @@ const PREFIXES_CHARTE = ["bouton", "badge", "alerte"];
 const FEUILLE_CHARTE = "styles/components.css";
 // Placer un élément de la charte ne change pas son aspect.
 const PROPRIETES_DE_PLACEMENT =
-  /^(position|top|right|bottom|left|inset|z-index|display|visibility|order|align-self|justify-self|flex(-grow|-shrink|-basis)?|grid(-[a-z]+)*|margin(-[a-z]+)*|width|min-width|max-width)$/;
+  /^(position|top|right|bottom|left|inset|z-index|display|visibility|order|view-transition-name|align-self|justify-self|flex(-grow|-shrink|-basis)?|grid(-[a-z]+)*|margin(-[a-z]+)*|width|min-width|max-width)$/;
 const VERBES_DESTRUCTEURS = /^(Supprimer|Fusionner|Révoquer|Effacer)\b/;
 
 function tousLesFichiers(dossier) {
@@ -426,6 +426,30 @@ describe("charte : aspect porté par les variables du thème", () => {
     const fautifs = toutesLesDeclarations
       .filter((d) => /var\(\s*--[\w-]+\s*,/.test(d.valeur))
       .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+});
+
+describe("charte : classes partagées non redéfinies", () => {
+  const partagees = new Set(
+    toutesLesRegles
+      .filter((r) => r.fichier.startsWith("styles/"))
+      .flatMap((r) => classesDuSelecteur(r.selecteur))
+      .filter((c) => !ETATS.includes(c)),
+  );
+
+  it("un composant place une classe partagée, il n'en change pas l'aspect", () => {
+    const fautifs = toutesLesRegles
+      .filter(
+        (r) =>
+          r.fichier.endsWith(".vue") &&
+          classesDuSelecteur(r.selecteur).some((c) => partagees.has(c)),
+      )
+      .flatMap((r) =>
+        r.proprietes
+          .filter((p) => !PROPRIETES_DE_PLACEMENT.test(p))
+          .map((p) => `${r.fichier} : ${r.selecteur} { ${p} }`),
+      );
     expect(fautifs).toEqual([]);
   });
 });

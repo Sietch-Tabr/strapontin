@@ -32,4 +32,9 @@ defineProps({
   color: var(--fg-muted);
   padding: var(--espace-8) 0;
 }
+
+.etat-chargement .roue-chargement {
+  animation: tourner 0.9s linear infinite;
+  flex-shrink: 0;
+}
 </style>
