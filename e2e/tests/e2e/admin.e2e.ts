@@ -66,6 +66,29 @@ test.describe("Scénario: admin — sections et contenus", () => {
     await expect(page.locator("section#jobs")).not.toBeVisible();
   });
 
+  test("admin_logs_filtresDeNiveauActifs_ontChacunLeurCouleur", async ({
+    page,
+  }) => {
+    await page.goto("/admin#logs");
+    const groupe = page.getByRole("group", {
+      name: "Filtrer par niveau de log",
+    });
+    await expect(groupe).toBeVisible();
+    const fonds: string[] = [];
+    for (const niveau of ["info", "warn", "error"]) {
+      const bouton = groupe.getByRole("button", { name: niveau, exact: true });
+      if ((await bouton.getAttribute("aria-pressed")) !== "true") {
+        await bouton.click();
+      }
+      await expect(bouton).toHaveAttribute("aria-pressed", "true");
+      fonds.push(
+        await bouton.evaluate((el) => getComputedStyle(el).backgroundColor),
+      );
+    }
+    expect(new Set(fonds).size).toBe(3);
+    expect(fonds).not.toContain("rgba(0, 0, 0, 0)");
+  });
+
   test("admin_desktop_section_banniere_visible", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
