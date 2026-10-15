@@ -142,28 +142,48 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
             String.class));
   }
 
-  private long alertesTauxBas() {
+  private long alertesEnrichissementSalles() {
     return jdbc.queryForObject(
-        "SELECT count(*) FROM logs_admin WHERE niveau = 'warn'"
-            + " AND message LIKE 'enrichissement:salles — taux de réussite%'",
+        "SELECT count(*) FROM logs_admin WHERE niveau = 'warn' AND source = 'worker'"
+            + " AND message LIKE 'reconciliation:nocturne — %'",
         Map.of(), Long.class);
   }
 
-  // Les salles restant à enrichir sont les cas difficiles : l'alerte tombait chaque nuit.
-  @Test
-  void enrichir_tauxBasDejaSignaleCetteSemaine_neRepetePasLAlerte() {
-    jdbc.update("DELETE FROM logs_admin", Map.of());
-    for (int i = 0; i < 25; i++) {
+  private void insererSallesDifficiles(final int nombre) {
+    for (int i = 0; i < nombre; i++) {
       insererSalle("Salle Difficile " + i, "EXTRACT(ISODOW FROM CURRENT_DATE)");
     }
-    jdbc.update(
-        "INSERT INTO logs_admin (ts, niveau, source, message) VALUES (now() - interval '2 days',"
-            + " 'warn', 'reconciliation-nocturne',"
-            + " 'enrichissement:salles — taux de réussite chronique trop bas (0/25)')",
-        Map.of());
+  }
+
+  // Les salles restantes sans fiche exploitable donnent un taux bas par construction : seul un
+  // défaut de la source est signalé.
+  @Test
+  void enrichir_aucuneSalleEnrichieMaisSourcesRepondent_neSignaleRien() {
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    insererSallesDifficiles(25);
+    when(wikidataSalleSource.preleverBilan())
+        .thenReturn(new fr.strapontin.core.BilanFetch(60, 0, 10));
 
     service.enrichir();
 
-    assertEquals(1L, alertesTauxBas());
+    assertEquals(0L, alertesEnrichissementSalles());
+  }
+
+  @Test
+  void enrichir_sourceRepondantToujoursVide_signaleLaSource() {
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    insererSallesDifficiles(25);
+    when(wikidataSalleSource.preleverBilan())
+        .thenReturn(new fr.strapontin.core.BilanFetch(60, 0, 60));
+
+    service.enrichir();
+
+    assertEquals(1L, alertesEnrichissementSalles());
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM logs_admin WHERE message LIKE '%Wikidata répond sans aucun"
+                + " résultat%'",
+            Map.of(), Long.class));
   }
 }

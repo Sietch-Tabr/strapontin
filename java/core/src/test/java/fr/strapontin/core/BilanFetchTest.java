@@ -84,4 +84,35 @@ class BilanFetchTest {
     assertTrue(entree.get().message().contains("en échec partiel"));
     assertTrue(entree.get().message().contains("2/5"));
   }
+
+  @Test
+  void repondVide_toutesReponsesVidesAuDessusDuSeuil_retourneVrai() {
+    final int appels = BilanFetch.SEUIL_APPELS_MIN_REPONSES_VIDES;
+    assertTrue(new BilanFetch(appels, 0, appels).repondVide());
+  }
+
+  @Test
+  void repondVide_sousLeSeuilOuAvecUnResultat_retourneFaux() {
+    final int appels = BilanFetch.SEUIL_APPELS_MIN_REPONSES_VIDES;
+    assertFalse(new BilanFetch(appels - 1, 0, appels - 1).repondVide());
+    assertFalse(new BilanFetch(appels, 0, appels - 1).repondVide());
+    assertFalse(new BilanFetch(appels, 1, appels).repondVide());
+  }
+
+  @Test
+  void evaluer_sourceRepondantToujoursVide_retourneWarnSansParlerDePanne() {
+    final int appels = BilanFetch.SEUIL_APPELS_MIN_REPONSES_VIDES;
+    final Optional<BilanFetch.EntreeLog> entree =
+        new BilanFetch(appels, 0, appels).evaluer("reconciliation:nocturne", "Wikidata", SEUIL);
+
+    assertTrue(entree.isPresent());
+    assertEquals("warn", entree.get().niveau());
+    assertTrue(entree.get().message().contains("répond sans aucun résultat"));
+  }
+
+  @Test
+  void evaluer_reponsesVidesPartielles_retourneVide() {
+    assertTrue(
+        new BilanFetch(60, 0, 30).evaluer("reconciliation:nocturne", "Wikidata", SEUIL).isEmpty());
+  }
 }

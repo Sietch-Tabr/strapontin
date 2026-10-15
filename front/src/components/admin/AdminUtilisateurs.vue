@@ -22,7 +22,7 @@
     <div v-else-if="utilisateurs.length" class="param-bloc">
       <h3 class="param-libelle">Utilisateurs ({{ total }})</h3>
       <ul class="user-liste">
-        <li v-for="u in utilisateurs" :key="u.id" class="user-carte">
+        <li v-for="u in utilisateurs" :key="u.id" class="user-carte cadre">
           <div class="user-carte-entete">
             <div class="user-carte-info">
               <div class="user-carte-badges">
@@ -50,7 +50,7 @@
               <p v-if="u.displayUsername" class="user-carte-nom">
                 {{ u.displayUsername }}
               </p>
-              <p class="user-carte-email">{{ u.email }}</p>
+              <p class="user-carte-email texte-note">{{ u.email }}</p>
               <p class="user-carte-activite">
                 <span v-if="u.derniereActivite"
                   >Dernière activité :
@@ -140,17 +140,20 @@
               <input
                 v-model="modifData[u.id].nom"
                 type="text"
+                class="champ-compact"
                 placeholder="Nom d'affichage"
                 aria-label="Nom d'affichage de l'utilisateur"
               />
               <input
                 v-model="modifData[u.id].email"
                 type="email"
+                class="champ-compact"
                 placeholder="Email"
                 aria-label="Adresse email de l'utilisateur"
               />
               <select
                 v-model="modifData[u.id].role"
+                class="champ-compact"
                 aria-label="Rôle de l'utilisateur"
               >
                 <option value="user">user</option>
@@ -947,12 +950,10 @@ onMounted(charger);
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .user-carte {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   overflow: hidden;
 }
 
@@ -960,8 +961,8 @@ onMounted(charger);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  gap: 1rem;
+  padding: var(--espace-6) var(--espace-8);
+  gap: var(--espace-8);
   flex-wrap: wrap;
 }
 
@@ -980,28 +981,26 @@ onMounted(charger);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-bottom: 0.25rem;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-2);
 }
 
 .user-carte-email {
-  font-size: 0.8125rem;
-  color: var(--fg-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .user-carte-activite {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-subtle);
-  margin-top: 0.125rem;
+  margin-top: var(--espace-1);
 }
 
 .user-carte-actions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espace-2);
   flex-shrink: 0;
   width: 100%;
   justify-content: flex-end;
@@ -1018,7 +1017,7 @@ onMounted(charger);
 
 .modif-ligne {
   border-top: 1px solid var(--border);
-  padding: 0.75rem 1rem;
+  padding: var(--espace-6) var(--espace-8);
   background: var(--bg-card);
   display: none;
 }
@@ -1030,7 +1029,7 @@ onMounted(charger);
 .form-modif-utilisateur {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   align-items: center;
   max-width: 28rem;
 }
@@ -1038,12 +1037,6 @@ onMounted(charger);
 .form-modif-utilisateur input,
 .form-modif-utilisateur select {
   width: auto;
-  font-size: 0.8125rem;
-  padding: 0.3125rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  background: var(--bg);
-  color: var(--fg);
 }
 
 .form-modif-utilisateur input[name="nom"] {
@@ -1057,19 +1050,19 @@ onMounted(charger);
 }
 
 .erreur-modif {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--danger);
 }
 
 .dialog-lien {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: var(--espace-4);
+  margin-bottom: var(--espace-6);
 }
 
 .dialog-lien input {
   flex: 1;
   font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
+  font-size: var(--texte-s);
 }
 </style>

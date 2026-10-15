@@ -41,5 +41,17 @@ Un rôle = un style, partout. Contrôlée par `src/charte.test.js` (Vitest, bloq
 - Boutons dans `styles/components.css` uniquement ; badges (`badge-*`) et alertes (`alerte-*`) dans les feuilles partagées `styles/*.css`. Un composant peut placer un élément de la charte (position, marges, flex, largeur), jamais en changer l'aspect.
 - Autres éléments partagés : badge `badge` + variante sémantique (`badge-succes`, `badge-avertissement`, `badge-danger`, `badge-info`, statuts de concert) ; alerte `alerte alerte-{info,succes,avertissement,erreur}` ; champ `form-champ` > `form-label` + `form-control` ; dialogue `dialog-titre`, `dialog-corps`, `dialog-pied` ; bloc de réglage `param-bloc` (`param-bloc-danger` pour une action exceptionnelle).
 - Exception documentée : les éléments de navigation (`nav-bas-plus`) suivent le style des liens de navigation.
+
+### Aspect porté par les variables du thème
+
+L'aspect (couleurs, ombres, icônes, tailles de police, espacements, rayons) ne dépend que des variables de `styles/base.css` : jamais une valeur en dur dans une feuille ou un composant. Changer de thème, c'est redéfinir ces variables (le thème sombre est un bloc `.sombre` de variables, sans règle par élément).
+
+- Couleurs : variables sémantiques (`--info-*`, `--avertissement-*`, `--danger-*`, `--succes-*`) et teintes de statut des badges (`--teinte-{bleu,rouge,jaune,orange,violet,cyan,gris,ardoise}-{bg,fg}`). Voiles, ombres et halos : `--voile-*`, `--ombre-*`, `--nouveaute-*`. Icônes dont le trait suit le thème (SVG en `url()`) : `--icone-chevron`, `--icone-recherche`, `--icone-coche`.
+- Espacement : `--espace-N`, avec N en huitièmes de rem (`--espace-4` = 0,5rem, `--espace-8` = 1rem). Police : `--texte-{4xs…2xl}` (`--texte-m` = 0,875rem, `--texte-reduit` en `em`). Rayons : `--radius`, `--radius-s`, `--radius-l`, `--radius-xl`, `--radius-pill`. Autres : `--trait-fin`, `--cible-tactile`, `--contenu-largeur`.
+- Une variable utilisée est toujours définie, sans valeur de repli (`var(--x, …)` interdit).
+- Rôles partagés : `cadre` (+ `cadre-fond`, `cadre-large`, `cadre-serre`, `cadre-avertissement`), `texte-secondaire`/`texte-note`/`texte-discret`, `nav-lien` (+ `nav-lien-large`), `champ-compact` (input/select de zone dense), `case-grille` (cases à cocher de la grille de notifications). Un composant les pose en classe et ne réécrit pas leur aspect.
+- Une règle qui ne sert qu'un composant, état compris (`.X:hover`, `.X.actif`), vit dans son `<style scoped>`, jamais dans une feuille partagée ; inversement un composant ne redéfinit pas une classe d'une feuille partagée.
+- Exception : la page hors ligne de `sw.js`, autonome par construction, porte ses propres valeurs.
+- Contrôlé par `src/charte.test.js` : couleur ou dimension en dur, règle `.sombre` hors variables, variable non définie ou à repli, classe partagée redéfinie localement, rôle réécrit, distinction sémantique perdue (filtres de niveau des logs).
 - Toute classe d'une feuille partagée doit être utilisée (classes construites par concaténation et noms de `<Transition>` reconnus) : une règle orpheline est supprimée.
 

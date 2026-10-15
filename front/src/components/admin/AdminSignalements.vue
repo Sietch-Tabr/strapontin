@@ -14,7 +14,7 @@
         <li
           v-for="s in signalements"
           :key="s.categorie + s.id"
-          class="signalement"
+          class="signalement cadre cadre-serre"
         >
           <div class="signalement-entete">
             <strong class="signalement-titre">{{
@@ -23,16 +23,16 @@
             <span class="signalement-entite">{{
               libelleEntite(s.entite)
             }}</span>
-            <span v-if="s.detecteLe" class="signalement-date">
+            <span v-if="s.detecteLe" class="signalement-date texte-note">
               {{ formaterInstant(s.detecteLe) }}
             </span>
           </div>
-          <p class="signalement-explication">
+          <p class="signalement-explication texte-note">
             {{ decrireType(catalogue, s.type).explication }}
           </p>
           <dl
             v-if="formaterDetails(s.details).length"
-            class="signalement-details"
+            class="signalement-details texte-note"
           >
             <template v-for="(d, i) in formaterDetails(s.details)" :key="i">
               <dt v-if="d.cle">{{ d.cle }}</dt>
@@ -271,20 +271,17 @@ onUnmounted(() => controleur.abort());
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--espace-6);
 }
 
 .signalement {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
   min-width: 0;
 }
 
 .signalement-entete {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  gap: var(--espace-2) var(--espace-6);
   align-items: baseline;
 }
 
@@ -292,22 +289,15 @@ onUnmounted(() => controleur.abort());
   overflow-wrap: anywhere;
 }
 
-.signalement-date,
-.signalement-explication,
-.signalement-details {
-  font-size: 0.82rem;
-  color: var(--fg-muted);
-}
-
 .signalement-explication {
-  margin: 0.25rem 0;
+  margin: var(--espace-2) 0;
 }
 
 .signalement-details {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.1rem 0.75rem;
-  margin: 0.25rem 0 0.5rem;
+  gap: var(--espace-1) var(--espace-6);
+  margin: var(--espace-2) 0 var(--espace-4);
   overflow-wrap: anywhere;
 }
 

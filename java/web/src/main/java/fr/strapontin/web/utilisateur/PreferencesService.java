@@ -276,6 +276,7 @@ public class PreferencesService {
   }
 
   private void importerConfig(final String userId, final ConfigExport config) {
+    final boolean pushPermis = UserConfigService.pushPermis(config.frequenceNotifications());
     final String[] depts =
         config.departements() != null
             ? config.departements().toArray(String[]::new)
@@ -314,9 +315,9 @@ public class PreferencesService {
             "notifSalles",
             config.notifSalles(),
             "notifArtistesPush",
-            config.notifArtistesPush(),
+            pushPermis && config.notifArtistesPush(),
             "notifSallesPush",
-            config.notifSallesPush(),
+            pushPermis && config.notifSallesPush(),
             "theme",
             config.theme() != null ? config.theme() : "auto"));
   }

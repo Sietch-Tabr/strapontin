@@ -25,7 +25,7 @@
 
     <properties>
         <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.0.4</revision>
+        <revision>3.0.5</revision>
         <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
@@ -37,7 +37,7 @@
         <!-- Dépendances de compilation de web-push, qui ne les tire qu'au runtime -->
         <httpclient.version>4.5.14</httpclient.version>
         <jose4j.version>0.9.7</jose4j.version>
-        <okapibarcode.version>0.5.6</okapibarcode.version>
+        <okapibarcode.version>0.5.7</okapibarcode.version>
         <resend.version>4.28.0</resend.version>
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->

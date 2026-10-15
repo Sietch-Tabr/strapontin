@@ -17,16 +17,16 @@ defineOptions({ name: "AuthLayout" });
   align-items: center;
   justify-content: center;
   background: var(--bg-muted);
-  padding: 1rem;
+  padding: var(--espace-8);
 }
 
 .auth-carte {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) * 1.5);
-  padding: 2rem;
+  padding: var(--espace-16);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  box-shadow: var(--ombre-carte);
 }
 </style>

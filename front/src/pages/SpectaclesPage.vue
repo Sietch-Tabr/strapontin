@@ -533,6 +533,6 @@ onUnmounted(() => {
 }
 
 .actions-cellule > * + * {
-  margin-left: 0.375rem;
+  margin-left: var(--espace-3);
 }
 </style>

@@ -78,6 +78,7 @@ public record ConcertBrut(
         .ville(lieu.ville())
         .dept(lieu.dept())
         .salleSourceId(lieu.salleSourceId())
+        .sallePubliee(lieu.sallePubliee())
         .position(lieu.position())
         .url(url)
         .source(source)
@@ -91,6 +92,13 @@ public record ConcertBrut(
    */
   public String salle() {
     return lieu.salle();
+  }
+
+  /**
+   * @return nom de la salle tel que la source du concert le publie
+   */
+  public String sallePubliee() {
+    return lieu.sallePubliee();
   }
 
   /**
@@ -150,6 +158,7 @@ public record ConcertBrut(
     private String dateConcert;
     private String heureConcert;
     private String nomSalle;
+    private String nomSallePublie;
     private String villeLieu;
     private String deptLieu;
     private String idLieuSource;
@@ -222,6 +231,15 @@ public record ConcertBrut(
      */
     public Constructeur dept(final String valeur) {
       this.deptLieu = valeur;
+      return this;
+    }
+
+    /**
+     * @param valeur nom de la salle tel que la source du concert le publie
+     * @return ce constructeur
+     */
+    public Constructeur sallePubliee(final String valeur) {
+      this.nomSallePublie = valeur;
       return this;
     }
 
@@ -355,7 +373,7 @@ public record ConcertBrut(
           idArtisteSource,
           dateConcert,
           heureConcert,
-          new LieuBrut(nomSalle, villeLieu, deptLieu, idLieuSource, positionLieu),
+          new LieuBrut(nomSalle, villeLieu, deptLieu, idLieuSource, positionLieu, nomSallePublie),
           urlFiche,
           nomSource,
           classementConcert,

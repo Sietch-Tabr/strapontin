@@ -114,4 +114,30 @@ class ReconciliationNomsSallesIntegrationTest extends AbstractWorkerIntegrationT
     absorber("eventim", "eventim:internal:salle pleyel", "Salle Pleyel");
     assertEquals("Salle Pleyel", nom());
   }
+
+  // Concert Ticketmaster fusionné avec celui d'Eventim : le nom affiché est celui d'Eventim, le
+  // nom publié reste celui de Ticketmaster, seul retenu pour renommer la salle.
+  @Test
+  void
+      absorberRenommagesSalles_concertFusionneDontLeNomAffichéVientDUneAutreSource_utiliseLeNomPublie() {
+    mapper("ticketmaster", "ticketmaster:olympia");
+    final ValeurConcert fusionne =
+        FabriqueValeurConcert.nouveau()
+            .artiste("Stromae")
+            .artisteNorm("stromae")
+            .date(LocalDate.now().plusMonths(2))
+            .salle("L'Olympia Bruno Coquatrix Paris")
+            .sallePubliee("L'Olympia")
+            .salleNorm("l olympia bruno coquatrix paris")
+            .ville("Paris")
+            .dept("75")
+            .source("ticketmaster")
+            .salleSourceId("ticketmaster:olympia")
+            .construire();
+
+    reconciliation.absorberRenommagesSalles(
+        List.of(fusionne), Map.of("ticketmaster:olympia", salleId), Map.of());
+
+    assertEquals("L'Olympia", nom());
+  }
 }

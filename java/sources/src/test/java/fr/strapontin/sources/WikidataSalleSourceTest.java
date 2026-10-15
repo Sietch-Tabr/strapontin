@@ -81,6 +81,51 @@ class WikidataSalleSourceTest {
     serveur.verify();
   }
 
+  // Une réponse sans résultat n'est pas une panne : elle est comptée à part, une réponse en
+  // erreur ne l'est pas.
+  @Test
+  void preleverBilan_decouverteSansResultat_compteUneReponseVide() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.manyTimes(),
+            requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(withSuccess("{\"results\":{\"bindings\":[]}}", MediaType.APPLICATION_JSON));
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(UUID.randomUUID(), "Aeronef", "aeronef", null, null, null, null, null);
+
+    final WikidataSalleSource src = source(builder.build(), Caffeine.newBuilder().build());
+    src.enrichirLot(List.of(salle));
+
+    final fr.strapontin.core.BilanFetch bilan = src.preleverBilan();
+    assertEquals(bilan.appels(), bilan.reponsesVides());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  // Une impasse (Q12731) portait le Q-ID de la salle « Bon Secours » : les types de voie sont
+  // exclus de la découverte.
+  @Test
+  void enrichirLot_decouverte_excluLesTypesDeVoie() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.manyTimes(),
+            requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("wd%3AQ12731")))
+        .andRespond(withSuccess("{\"results\":{\"bindings\":[]}}", MediaType.APPLICATION_JSON));
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(
+            UUID.randomUUID(), "Bon Secours", "bon secours", null, null, null, null, null);
+
+    source(builder.build(), Caffeine.newBuilder().build()).enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   // la recherche mwapi échoue quasi systématiquement sur les noms à suffixe de sous-salle
   // ("Zenith Toulouse Metropole" → 0 résultat en direct, "Zenith de Toulouse" trouvé aussitôt).
   // Ici : nom avec séparateur "-", premier appel (nom complet) sans résultat, repli sur le nom

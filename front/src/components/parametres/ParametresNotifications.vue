@@ -48,14 +48,14 @@
 
           <fieldset class="notif-grille">
             <legend class="form-label">Concerts à notifier</legend>
-            <div class="notif-grille__entete" aria-hidden="true">
+            <div class="notif-grille__entete texte-discret" aria-hidden="true">
               <span></span>
               <span>Email</span>
               <span>Push</span>
             </div>
             <div class="notif-grille__ligne">
               <span class="notif-grille__libelle">Artistes suivis</span>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Email — artistes suivis</span>
                 <input
                   v-model="notifArtistes"
@@ -63,14 +63,14 @@
                   :disabled="!resendDisponible"
                 />
               </label>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Push — artistes suivis</span>
                 <input v-model="notifArtistesPush" type="checkbox" />
               </label>
             </div>
             <div class="notif-grille__ligne">
               <span class="notif-grille__libelle">Salles suivies</span>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Email — salles suivies</span>
                 <input
                   v-model="notifSalles"
@@ -78,7 +78,7 @@
                   :disabled="!resendDisponible"
                 />
               </label>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran">Push — salles suivies</span>
                 <input v-model="notifSallesPush" type="checkbox" />
               </label>
@@ -88,7 +88,7 @@
                 >Nouvelle version de l'application</span
               >
               <span></span>
-              <label class="notif-grille__case">
+              <label class="case-grille notif-grille__case">
                 <span class="lecteur-ecran"
                   >Push — nouvelle version de l'application</span
                 >
@@ -188,7 +188,7 @@
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresNotifications" });
 
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
 import {
@@ -207,6 +207,14 @@ const notifArtistes = ref(false);
 const notifSalles = ref(false);
 const notifArtistesPush = ref(false);
 const notifSallesPush = ref(false);
+
+// Le serveur coupe le push avec « jamais » : le formulaire affiche le même état.
+watch(frequenceNotifications, (frequence) => {
+  if (frequence === "jamais") {
+    notifArtistesPush.value = false;
+    notifSallesPush.value = false;
+  }
+});
 const notifNouvelleVersion = ref(false);
 
 const pushSupporte = ref(false);
@@ -417,7 +425,7 @@ onUnmounted(() => controleur.abort());
 
 <style scoped>
 .param-bloc-push {
-  margin-top: 1.5rem;
+  margin-top: var(--espace-12);
 }
 
 .notif-grille__entete,
@@ -430,11 +438,9 @@ onUnmounted(() => controleur.abort());
 }
 
 .notif-grille__entete {
-  font-size: 0.75rem;
   font-weight: 500;
-  color: var(--fg-muted);
   text-align: center;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--espace-2);
 }
 
 .notif-grille__entete span:first-child {
@@ -442,11 +448,11 @@ onUnmounted(() => controleur.abort());
 }
 
 .notif-grille__ligne {
-  padding: 0.25rem 0;
+  padding: var(--espace-2) 0;
 }
 
 .notif-grille__libelle {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
 }
 
 .notif-grille__case {
@@ -459,7 +465,7 @@ onUnmounted(() => controleur.abort());
 .notif-radio {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   font-weight: normal;
   cursor: pointer;
 }

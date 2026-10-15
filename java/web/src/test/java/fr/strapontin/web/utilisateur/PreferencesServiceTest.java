@@ -219,6 +219,22 @@ class PreferencesServiceTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
+  void importer_frequenceJamaisEtPushCoche_importePushAFaux() {
+    final ConfigExport config =
+        new ConfigExport(List.of("75"), true, "jamais", false, false, true, true, "auto");
+    final ExportComplet export = new ExportComplet(1, "2026-07-04", null, null, config);
+
+    service.importer("u1", export, false, true);
+
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(jdbc)
+        .update(org.mockito.ArgumentMatchers.contains("INSERT INTO user_config"), captor.capture());
+    assertEquals(false, captor.getValue().get("notifArtistesPush"));
+    assertEquals(false, captor.getValue().get("notifSallesPush"));
+  }
+
+  @Test
   void importer_importerConfigVrai_remplaceToute_neFusionnePas() {
     final ConfigExport config =
         new ConfigExport(List.of("75"), true, "quotidien", true, false, false, false, "sombre");

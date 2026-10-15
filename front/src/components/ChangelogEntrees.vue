@@ -24,22 +24,22 @@ defineProps({
 .changelog-entrees {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--espace-8);
 }
 
 .changelog-categorie {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   font-weight: 500;
-  margin-bottom: 0.375rem;
+  margin-bottom: var(--espace-3);
 }
 
 .changelog-entrees ul {
   list-style: disc;
-  padding-left: 1.25rem;
-  font-size: 0.875rem;
+  padding-left: var(--espace-10);
+  font-size: var(--texte-m);
   color: var(--fg-muted);
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--espace-2);
 }
 </style>

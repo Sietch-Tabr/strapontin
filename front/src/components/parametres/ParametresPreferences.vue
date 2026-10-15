@@ -185,14 +185,14 @@ onMounted(charger);
 <style scoped>
 .theme-choix {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   flex-wrap: wrap;
 }
 
 .form-bascule {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--espace-6);
 }
 
 .bascule {
@@ -213,7 +213,7 @@ onMounted(charger);
   position: absolute;
   inset: 0;
   background: var(--border);
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   transition: background 0.2s;
   cursor: pointer;
 }
@@ -225,7 +225,7 @@ onMounted(charger);
   top: 0.1875rem;
   width: 1.125rem;
   height: 1.125rem;
-  background: white;
+  background: var(--curseur-bascule);
   border-radius: 50%;
   transition: transform 0.2s;
 }

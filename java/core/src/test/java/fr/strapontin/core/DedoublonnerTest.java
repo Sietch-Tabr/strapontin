@@ -243,6 +243,30 @@ class DedoublonnerTest {
     assertEquals("Accor Arena", resultat.get(0).salle());
   }
 
+  // Le nom retenu pour l'affichage peut venir d'Eventim ; le nom publié reste celui de la source
+  // du concert gardé (Ticketmaster), sans quoi la salle serait renommée en alternance.
+  @Test
+  void dedoublonner_nomRetenuDUneAutreSource_gardeLeNomPublieParLaSourceDuConcert() {
+    final var tm =
+        ConcertBrut.nouveau()
+            .artiste("Mika")
+            .date("2025-10-01")
+            .salle("Carre des Docks - le Havre Normandie")
+            .ville("Le Havre")
+            .statut("onsale")
+            .source("ticketmaster")
+            .construire();
+    final var eventim =
+        concert("Mika", "2025-10-01", "Carré des Docks Le Havre", "Le Havre", "eventim");
+
+    final var resultat = Dedoublonner.dedoublonner(List.of(tm, eventim));
+
+    assertEquals(1, resultat.size());
+    assertEquals("ticketmaster", resultat.get(0).source());
+    assertEquals("Carré des Docks Le Havre", resultat.get(0).salle());
+    assertEquals("Carre des Docks - le Havre Normandie", resultat.get(0).sallePubliee());
+  }
+
   // --- Ville null ---
 
   @Test

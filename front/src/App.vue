@@ -53,7 +53,7 @@
       aria-label="Mise à jour en cours"
     >
       <img src="/images/icon-192.png" alt="" class="calque-logo" />
-      <p class="calque-texte">Mise à jour en cours…</p>
+      <p class="calque-texte texte-secondaire">Mise à jour en cours…</p>
     </div>
   </Transition>
 </template>
@@ -218,14 +218,12 @@ onMounted(async () => {
 .calque-logo {
   width: 96px;
   height: 96px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   animation: pulsation 1s ease-in-out infinite;
 }
 
 .calque-texte {
-  margin-top: 1.25rem;
-  font-size: 0.875rem;
-  color: var(--texte-secondaire);
+  margin-top: var(--espace-10);
 }
 
 .structure-app {
@@ -239,9 +237,11 @@ onMounted(async () => {
 
   /* Élément flex : sans cela, la largeur minimale de son contenu l'élargit au-delà de l'écran. */
   min-width: 0;
-  padding: 1rem;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 1rem);
-  max-width: 1100px;
+  padding: var(--espace-8);
+  padding-bottom: calc(
+    var(--nav-h) + env(safe-area-inset-bottom) + var(--espace-8)
+  );
+  max-width: var(--contenu-largeur);
   view-transition-name: zone-principale;
   overflow-x: clip;
 }
@@ -250,9 +250,9 @@ onMounted(async () => {
   .contenu-principal {
     margin-left: max(
       var(--sidebar-w),
-      calc((100vw + var(--sidebar-w) - 1100px) / 2)
+      calc((100vw + var(--sidebar-w) - var(--contenu-largeur)) / 2)
     );
-    padding: 2rem;
+    padding: var(--espace-16);
   }
 }
 
@@ -266,8 +266,8 @@ onMounted(async () => {
   top: 1rem;
   z-index: 9999;
   background: var(--bg);
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  padding: var(--espace-4) var(--espace-8);
+  border-radius: var(--radius-s);
   outline: 2px solid var(--primary);
 }
 </style>

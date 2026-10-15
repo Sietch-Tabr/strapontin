@@ -119,7 +119,10 @@ public class FusionEvenementsArtisteService {
   /**
    * Concert déplacé : la fiche de l'ancienne salle, absente, rejoint l'unique
    * événement vivant de même artiste, date, heure, département et source dans
-   * une autre salle ; ambigu : ignoré.
+   * une autre salle ; ambigu : ignoré. Une salle qui publie encore d'autres
+   * séances de la même manifestation (idmanif, à défaut URL) n'a pas déplacé
+   * celle-ci : deux salles donnant le même soir un spectacle de même intitulé
+   * restent distinctes.
    * @return nombre de fusions effectuées
    */
   public int fusionnerConcertsDeplaces() {
@@ -140,6 +143,15 @@ public class FusionEvenementsArtisteService {
               AND EXISTS (SELECT 1 FROM observations op JOIN observations ov
                             ON ov.source = op.source
                           WHERE op.evenement_id = p.id AND ov.evenement_id = v.id)
+              AND NOT EXISTS (
+                SELECT 1 FROM observations op
+                JOIN observations os
+                  ON os.source = op.source
+                 AND COALESCE(substring(os.url FROM '/idmanif/([0-9]+)'), os.url)
+                   = COALESCE(substring(op.url FROM '/idmanif/([0-9]+)'), op.url)
+                JOIN evenements es ON es.id = os.evenement_id
+                WHERE op.evenement_id = p.id AND es.id <> p.id
+                  AND es.salle_id = p.salle_id AND es.absences_consecutives = 0)
             GROUP BY p.id
             """,
             Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));

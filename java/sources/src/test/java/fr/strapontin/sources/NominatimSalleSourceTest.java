@@ -72,6 +72,30 @@ class NominatimSalleSourceTest {
   }
 
   @Test
+  void preleverBilan_reponseSansLieu_compteUneReponseVide() {
+    when(client.rechercherLieux(anyString(), any()))
+        .thenReturn(new ClientNominatim.ResultatRecherche(List.of(), true));
+
+    source.enrichirLot(List.of(LA_CIGALE));
+
+    final fr.strapontin.core.BilanFetch bilan = source.preleverBilan();
+    assertEquals(bilan.appels(), bilan.reponsesVides());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_reponseAvecLieuxNonRetenus_neCompteAucuneReponseVide() {
+    when(client.rechercherLieux(anyString(), any()))
+        .thenReturn(
+            new ClientNominatim.ResultatRecherche(
+                List.of(lieu("La Cigale", 48.88760, 2.34040, "Q999")), true));
+
+    source.enrichirLot(List.of(LA_CIGALE));
+
+    assertEquals(0, source.preleverBilan().reponsesVides());
+  }
+
+  @Test
   void enrichirLot_salleSansPosition_nInterrogePasNominatim() {
     final SalleAEnrichir sansPosition =
         new SalleAEnrichir(ID, "La Cigale", "la cigale", "Paris", "75", null, null, null);

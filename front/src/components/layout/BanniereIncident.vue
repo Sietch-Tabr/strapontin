@@ -65,7 +65,7 @@ onUnmounted(() => controleur.abort());
 
 <style scoped>
 .banniere-incident {
-  margin: 1rem;
+  margin: var(--espace-8);
 }
 
 .banniere-incident__titre {

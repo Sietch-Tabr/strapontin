@@ -574,6 +574,42 @@ test.describe("Scénario: notifications push sans appareil abonné", () => {
   });
 });
 
+test.describe("Scénario: fréquence « jamais » et canaux push", () => {
+  test("notifications_frequenceJamais_decochePushDuFormulaire", async ({
+    page,
+  }) => {
+    await page.route("**/api/user/config", async (route) => {
+      if (route.request().method() !== "GET") {
+        return route.continue();
+      }
+      const reponse = await route.fetch();
+      const config = await reponse.json();
+      return route.fulfill({
+        response: reponse,
+        json: {
+          ...config,
+          resendDisponible: true,
+          frequenceNotifications: "quotidien",
+          notifArtistes: true,
+          notifArtistesPush: true,
+          notifSallesPush: true,
+        },
+      });
+    });
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+    await expect(section).toBeVisible();
+    const pushArtistes = section.getByLabel("Push — artistes suivis");
+    const pushSalles = section.getByLabel("Push — salles suivies");
+    await expect(pushArtistes).toBeChecked();
+
+    await section.getByRole("radio", { name: "Jamais" }).check();
+
+    await expect(pushArtistes).not.toBeChecked();
+    await expect(pushSalles).not.toBeChecked();
+  });
+});
+
 test.describe("Scénario: Données — suppression de compte", () => {
   test("suppression_compte_bouton_dialog_desactive_sans_texte", async ({
     page,

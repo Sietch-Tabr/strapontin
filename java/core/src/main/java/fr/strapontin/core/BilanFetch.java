@@ -12,10 +12,38 @@ import java.util.Optional;
  * prélèvement (détail : CLAUDE.md, Services notables).
  * @param appels nombre total d'appels tentés
  * @param erreursHttp nombre d'appels en échec
+ * @param reponsesVides nombre d'appels réussis dont la réponse ne contient aucun résultat
  * @since 2.7.0
  * @author Kwaite
  */
-public record BilanFetch(int appels, int erreursHttp) {
+public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
+
+  /**
+   * Nombre minimal d'appels pour qu'une source qui ne répond que des
+   * réponses vides soit signalée : sur un petit lot, aucun résultat reste
+   * plausible quand les lieux cherchés sont peu connus.
+   */
+  public static final int SEUIL_APPELS_MIN_REPONSES_VIDES = 20;
+
+  /**
+   * Bilan sans réponse vide comptée.
+   *
+   * @param appels nombre total d'appels tentés
+   * @param erreursHttp nombre d'appels en échec
+   */
+  public BilanFetch(final int appels, final int erreursHttp) {
+    this(appels, erreursHttp, 0);
+  }
+
+  /**
+   * Indique si la source a répondu sans erreur mais sans aucun résultat sur
+   * tous ses appels, en nombre suffisant pour que ce ne soit pas un hasard.
+   *
+   * @return {@code true} si toutes les réponses sont vides
+   */
+  public boolean repondVide() {
+    return appels >= SEUIL_APPELS_MIN_REPONSES_VIDES && erreursHttp == 0 && reponsesVides == appels;
+  }
 
   /**
    * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100%
@@ -60,7 +88,20 @@ public record BilanFetch(int appels, int erreursHttp) {
     }
     final boolean panneTotale = panneTotale(seuilAppelsMin);
     if (!panneTotale && erreursHttp == 0) {
-      return Optional.empty();
+      return repondVide()
+          ? Optional.of(
+              new EntreeLog(
+                  "warn",
+                  typeJob
+                      + " — "
+                      + nomSource
+                      + " répond sans aucun résultat sur ce cycle ("
+                      + reponsesVides
+                      + "/"
+                      + appels
+                      + " réponses vides)",
+                  Map.of("appels", appels, "reponsesVides", reponsesVides)))
+          : Optional.empty();
     }
 
     final String niveau = panneTotale ? "error" : "warn";

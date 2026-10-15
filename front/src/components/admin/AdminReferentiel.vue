@@ -63,7 +63,7 @@ function basculer(valeur) {
 <style scoped>
 .referentiel-bascule {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: var(--espace-4);
+  margin-bottom: var(--espace-8);
 }
 </style>

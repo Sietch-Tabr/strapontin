@@ -75,8 +75,9 @@ final class ClientSparqlWikidata {
   // (Retry-After 120s constaté) a fait perdre ~4 des 5 minutes d'un cycle
   // nocturne. Aucune politique de rate-limit publiée par Wikidata pour
   // l'endpoint SPARQL ; valeur calibrée empiriquement, sans contrainte de temps
-  // réel (cycle nocturne unique).
-  private static final int DELAI_MIN_ENTRE_APPELS_MS = 2000;
+  // réel (cycle nocturne unique). 2 s laissait un 429 par cycle de découverte
+  // (requêtes lourdes, budget de temps de calcul par IP partagé avec la prod).
+  private static final int DELAI_MIN_ENTRE_APPELS_MS = 4000;
   private static final Pattern MOTIF_Q_ID = Pattern.compile("^Q[0-9]+$");
   // Wikidata renvoie P625 au format WKT "Point(lon lat)" (ordre longitude puis
   // latitude, jamais l'inverse — convention géographique standard).
@@ -149,11 +150,13 @@ final class ClientSparqlWikidata {
       tentative++;
       try {
         final Map<String, Object> resultat = effectuerRequete(sparql);
+        cadenceur.apaiser();
         return resultat != null ? resultat : Map.of();
       } catch (HttpClientErrorException.TooManyRequests e) {
         final long attenteMs =
             extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
         LOG.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
+        cadenceur.ralentir();
         dormir(attenteMs);
       } catch (HttpServerErrorException.ServiceUnavailable
           | HttpServerErrorException.BadGateway
@@ -189,6 +192,15 @@ final class ClientSparqlWikidata {
    * (même package). */
   fr.strapontin.core.BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
+  }
+
+  /**
+   * Compte un appel réussi sans aucun résultat. Appelé par la découverte de
+   * salles seulement : pour les artistes, une réponse vide est le cas courant.
+   */
+  /* package-private : appelé par WikidataSalleDecouverte (même package). */
+  void enregistrerReponseVide() {
+    compteurBilan.enregistrerReponseVide();
   }
 
   private static Optional<Long> extraireRetryAfterMs(final HttpHeaders headers) {

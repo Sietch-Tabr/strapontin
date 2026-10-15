@@ -12,6 +12,7 @@
         v-for="item in navSecondaire"
         :key="item.href"
         :href="item.href"
+        class="nav-lien nav-lien-large"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
@@ -25,6 +26,7 @@
       <a
         v-if="estAdmin"
         href="/admin"
+        class="nav-lien nav-lien-large"
         :class="{ actif: estActif('/admin') }"
         :aria-current="estActif('/admin') ? 'page' : undefined"
         @click.prevent="naviguerEtFermer('/admin')"
@@ -38,6 +40,7 @@
         v-for="item in navFooter"
         :key="item.href"
         :href="item.href"
+        class="nav-lien nav-lien-large"
         :class="{ actif: estActif(item.href) }"
         :aria-current="estActif(item.href) ? 'page' : undefined"
         @click.prevent="naviguerEtFermer(item.href)"
@@ -176,35 +179,19 @@ function retirerSwipe() {
   width: 2.5rem;
   height: 0.25rem;
   background: var(--border);
-  border-radius: 9999px;
-  margin: 0.75rem auto 0.25rem;
+  border-radius: var(--radius-pill);
+  margin: var(--espace-6) auto var(--espace-2);
 }
 
 .dialog-nav-contenu {
-  padding: 0.25rem 0.5rem 1.5rem;
+  padding: var(--espace-2) var(--espace-4) var(--espace-12);
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
-}
-
-.dialog-nav-contenu a {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  padding: 0.75rem 1rem;
-  min-height: 44px;
-  border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  position: relative;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  gap: var(--espace-1);
 }
 
 .dialog-nav-sep {
-  margin: 0.25rem 0;
+  margin: var(--espace-2) 0;
   border-color: var(--border);
 }
 </style>

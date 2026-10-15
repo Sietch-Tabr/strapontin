@@ -42,11 +42,11 @@ const { visible, installer, plusTard } = usePwaInstall();
   z-index: 40;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
+  gap: var(--espace-6);
+  padding: var(--espace-6) var(--espace-10);
   background: var(--bg-card);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 8px rgb(0 0 0 / 8%);
+  box-shadow: var(--ombre-bandeau-bas);
 }
 
 @media (width >= 1025px) {
@@ -58,12 +58,12 @@ const { visible, installer, plusTard } = usePwaInstall();
 
 .pwa-install-message {
   flex: 1;
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
 }
 
 .pwa-install-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   flex-shrink: 0;
 }
 </style>

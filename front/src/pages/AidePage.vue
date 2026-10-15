@@ -7,7 +7,7 @@
     <div class="contenu-largeur-moyenne">
       <ChecklistPremiersPas />
 
-      <p class="aide-pied">
+      <p class="aide-pied texte-secondaire">
         <button
           type="button"
           class="bouton bouton-texte"
@@ -20,7 +20,7 @@
       <section class="aide-section" aria-labelledby="titre-usage">
         <p id="titre-usage" class="aide-libelle">Usage courant</p>
         <div class="aide-grille">
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-book-open" />
@@ -52,7 +52,7 @@
             </ul>
           </div>
 
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-bell" />
@@ -72,7 +72,7 @@
             </ul>
           </div>
 
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-smartphone" />
@@ -95,7 +95,7 @@
             </ul>
           </div>
 
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-settings" />
@@ -115,7 +115,7 @@
             </ul>
           </div>
 
-          <div class="carte carte-large">
+          <div class="aide-carte aide-carte-large cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-compass" />
@@ -139,7 +139,7 @@
       <section class="aide-section" aria-labelledby="titre-infos">
         <p id="titre-infos" class="aide-libelle">Informations</p>
         <div class="aide-grille">
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-shield-check" />
@@ -167,7 +167,7 @@
             </ul>
           </div>
 
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-scale" />
@@ -181,7 +181,7 @@
             </p>
           </div>
 
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-code" />
@@ -199,7 +199,7 @@
             </p>
           </div>
 
-          <div class="carte">
+          <div class="aide-carte cadre cadre-fond cadre-large">
             <h2 class="carte-titre">
               <svg width="16" height="16" aria-hidden="true">
                 <use href="/icons/lucide-sprite.svg#icon-message-square" />
@@ -243,7 +243,7 @@
         </div>
       </section>
 
-      <p class="aide-pied">
+      <p class="aide-pied texte-secondaire">
         <RouterLink to="/changelog">Voir les nouveautés →</RouterLink>
       </p>
     </div>
@@ -409,57 +409,45 @@ onMounted(async () => {
 }
 
 .aide-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: var(--espace-20);
 }
 
 .aide-grille {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--espace-6);
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-}
-
-.carte {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
 }
 
 .carte-titre {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
+  gap: var(--espace-3);
+  font-size: var(--texte-m);
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espace-4);
 }
 
-.carte ul {
+.aide-carte ul {
   list-style: disc;
-  padding-left: 1.25rem;
-  font-size: 0.875rem;
+  padding-left: var(--espace-10);
+  font-size: var(--texte-m);
   color: var(--fg-muted);
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--espace-2);
 }
 
-.carte p {
-  font-size: 0.875rem;
+.aide-carte p {
+  font-size: var(--texte-m);
   color: var(--fg-muted);
 }
 
-.carte a {
+.aide-carte a {
   text-decoration: underline;
 }
 
-.carte-large {
+.aide-carte-large {
   grid-column: 1 / -1;
-}
-
-.aide-pied {
-  font-size: 0.875rem;
-  color: var(--fg-muted);
 }
 
 .aide-pied a {

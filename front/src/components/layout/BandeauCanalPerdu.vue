@@ -53,6 +53,6 @@ watch(() => route.path, charger);
 
 <style scoped>
 .bandeau-canal-perdu {
-  margin-bottom: 1rem;
+  margin-bottom: var(--espace-8);
 }
 </style>

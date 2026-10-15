@@ -23,7 +23,7 @@ const PREFIXES_CHARTE = ["bouton", "badge", "alerte"];
 const FEUILLE_CHARTE = "styles/components.css";
 // Placer un élément de la charte ne change pas son aspect.
 const PROPRIETES_DE_PLACEMENT =
-  /^(position|top|right|bottom|left|inset|z-index|display|visibility|order|align-self|justify-self|flex(-grow|-shrink|-basis)?|grid(-[a-z]+)*|margin(-[a-z]+)*|width|min-width|max-width)$/;
+  /^(position|top|right|bottom|left|inset|z-index|display|visibility|order|view-transition-name|align-self|justify-self|flex(-grow|-shrink|-basis)?|grid(-[a-z]+)*|margin(-[a-z]+)*|width|min-width|max-width)$/;
 const VERBES_DESTRUCTEURS = /^(Supprimer|Fusionner|Révoquer|Effacer)\b/;
 
 function tousLesFichiers(dossier) {
@@ -234,6 +234,44 @@ describe("charte : boutons", () => {
   });
 });
 
+describe("charte : distinctions sémantiques", () => {
+  const feuille = sansCommentaires(
+    sources.find((s) => s.nom === FEUILLE_CHARTE).texte,
+  );
+  const fond = (niveau) =>
+    feuille.match(
+      new RegExp(
+        `\\.bouton-bascule\\[data-niveau="${niveau}"\\]\\.actif\\s*\\{[^}]*background:\\s*([^;]+);`,
+      ),
+    )?.[1];
+
+  it("chaque filtre de niveau actif a sa couleur propre", () => {
+    const fonds = ["info", "warn", "error"].map(fond);
+    expect(fonds.every(Boolean)).toBe(true);
+    expect(new Set(fonds).size).toBe(3);
+  });
+
+  it("chaque bouton bascule portant un niveau a une règle d'état actif", () => {
+    const niveaux = new Set(
+      sources
+        .filter((s) => s.nom.endsWith(".vue"))
+        .flatMap((s) => [
+          ...s.texte.matchAll(/<button[^>]*\sdata-niveau="([\w-]+)"/g),
+        ])
+        .map((m) => m[1]),
+    );
+    const sansRegle = [...niveaux].filter((n) => !fond(n));
+    expect(sansRegle).toEqual([]);
+  });
+
+  it("les filtres de niveau d'Admin > Logs portent leur niveau", () => {
+    const logs = sources.find((s) => s.nom.endsWith("admin/AdminLogs.vue"));
+    expect(logs.texte).toMatch(
+      /bouton-bascule[^>]*\s:data-niveau="niv"|:data-niveau="niv"[^>]*bouton-bascule/,
+    );
+  });
+});
+
 describe("charte : éléments définis une seule fois", () => {
   // Boutons dans la feuille de la charte, badges et alertes dans les feuilles partagées.
   it("bouton, badge et alerte ne sont stylés que dans les feuilles partagées", () => {
@@ -254,6 +292,212 @@ describe("charte : éléments définis une seule fois", () => {
           .filter((p) => !PROPRIETES_DE_PLACEMENT.test(p))
           .map((p) => `${r.fichier} : ${r.selecteur} { ${p} }`),
       );
+    expect(fautifs).toEqual([]);
+  });
+});
+
+// Contrôle de l'aspect : tout ce qui change l'apparence d'un élément (couleur, ombre, icône,
+// taille de police, espacement, rayon) vient des variables de base.css, jamais d'une valeur en dur.
+const FEUILLE_THEME = "styles/base.css";
+const PROPRIETE_DE_DIMENSION =
+  /^(font-size|margin(-[a-z]+)*|padding(-[a-z]+)*|gap|row-gap|column-gap|border(-[a-z]+)*-radius)$/;
+const DIMENSION_LITTERALE = /-?\d*\.?\d+(px|rem|em)\b/;
+const COULEUR_LITTERALE =
+  /#[0-9a-fA-F]{3,8}\b|%23[0-9a-fA-F]{3,8}|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color-mix)\(|(?:^|[\s,(])(?:white|black|red|green|blue|gray|grey|orange|yellow|purple)(?![\w-])/i;
+
+// Découpe un bloc de déclarations sans couper dans une parenthèse ou une chaîne.
+function separerDeclarations(corps) {
+  const resultat = [];
+  let courant = "";
+  let profondeur = 0;
+  let guillemet = null;
+  for (const c of corps) {
+    if (guillemet) {
+      if (c === guillemet) guillemet = null;
+    } else if (c === '"' || c === "'") guillemet = c;
+    else if (c === "(") profondeur++;
+    else if (c === ")") profondeur--;
+    else if (c === ";" && profondeur === 0) {
+      resultat.push(courant);
+      courant = "";
+      continue;
+    }
+    courant += c;
+  }
+  resultat.push(courant);
+  return resultat
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => {
+      const i = d.indexOf(":");
+      return { propriete: d.slice(0, i).trim(), valeur: d.slice(i + 1).trim() };
+    })
+    .filter((d) => d.propriete && d.valeur);
+}
+
+// Toutes les déclarations des feuilles de l'application, y compris celles des étapes d'une
+// animation (@keyframes). La page hors ligne de sw.js, autonome par construction, n'en fait pas partie.
+const toutesLesDeclarations = sources
+  .filter((s) => /\.(css|vue)$/.test(s.nom))
+  .flatMap((source) =>
+    feuillesDe(source).flatMap((css) =>
+      [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter((m) => !m[1].trim().startsWith("@"))
+        .flatMap((m) =>
+          separerDeclarations(m[2]).map((d) => ({
+            ...d,
+            selecteur: m[1].trim(),
+            fichier: source.nom,
+          })),
+        ),
+    ),
+  );
+
+const enClair = (d) =>
+  `${d.fichier} : ${d.selecteur} { ${d.propriete}: ${d.valeur} }`;
+
+describe("charte : aspect porté par les variables du thème", () => {
+  it("l'analyse trouve bien des déclarations", () => {
+    expect(toutesLesDeclarations.length).toBeGreaterThan(1000);
+  });
+
+  it("aucune couleur n'est écrite en dur hors des variables de base.css", () => {
+    const fautifs = toutesLesDeclarations
+      .filter(
+        (d) =>
+          !(d.fichier === FEUILLE_THEME && d.propriete.startsWith("--")) &&
+          COULEUR_LITTERALE.test(d.valeur),
+      )
+      .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+
+  it("le thème sombre ne redéfinit que des variables", () => {
+    const fautifs = toutesLesDeclarations
+      .filter(
+        (d) =>
+          /(^|[^\w-])\.sombre(?![\w-])/.test(d.selecteur) &&
+          !(d.fichier === FEUILLE_THEME && d.propriete.startsWith("--")),
+      )
+      .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+
+  it("taille de police, espacement et rayon passent par l'échelle de variables", () => {
+    const fautifs = toutesLesDeclarations
+      .filter(
+        (d) =>
+          PROPRIETE_DE_DIMENSION.test(d.propriete) &&
+          DIMENSION_LITTERALE.test(
+            d.valeur.replace(/(var|env)\((?:[^()]|\([^()]*\))*\)/g, ""),
+          ),
+      )
+      .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+
+  it("toute variable utilisée est définie", () => {
+    const definies = new Set(
+      sources.flatMap((s) =>
+        [...s.texte.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]),
+      ),
+    );
+    // Variables posées par le code (style en ligne, setProperty) : leur nom figure hors des feuilles.
+    sources
+      .filter((s) => !s.nom.endsWith(".css"))
+      .forEach((s) =>
+        [...s.texte.matchAll(/['"`](--[\w-]+)['"`]|(--[\w-]+)\s*:/g)].forEach(
+          (m) => definies.add(m[1] ?? m[2]),
+        ),
+      );
+    const fautifs = toutesLesDeclarations
+      .flatMap((d) =>
+        [...d.valeur.matchAll(/var\(\s*(--[\w-]+)/g)].map((m) => ({
+          d,
+          nom: m[1],
+        })),
+      )
+      .filter(({ nom }) => !definies.has(nom))
+      .map(({ d, nom }) => `${nom} dans ${enClair(d)}`);
+    expect(fautifs).toEqual([]);
+  });
+
+  it("une variable utilisée n'a pas de valeur de repli", () => {
+    const fautifs = toutesLesDeclarations
+      .filter((d) => /var\(\s*--[\w-]+\s*,/.test(d.valeur))
+      .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+});
+
+describe("charte : classes partagées non redéfinies", () => {
+  const partagees = new Set(
+    toutesLesRegles
+      .filter((r) => r.fichier.startsWith("styles/"))
+      .flatMap((r) => classesDuSelecteur(r.selecteur))
+      .filter((c) => !ETATS.includes(c)),
+  );
+
+  it("un composant place une classe partagée, il n'en change pas l'aspect", () => {
+    const fautifs = toutesLesRegles
+      .filter(
+        (r) =>
+          r.fichier.endsWith(".vue") &&
+          classesDuSelecteur(r.selecteur).some((c) => partagees.has(c)),
+      )
+      .flatMap((r) =>
+        r.proprietes
+          .filter((p) => !PROPRIETES_DE_PLACEMENT.test(p))
+          .map((p) => `${r.fichier} : ${r.selecteur} { ${p} }`),
+      );
+    expect(fautifs).toEqual([]);
+  });
+});
+
+describe("charte : rôles partagés non reproduits", () => {
+  const ROLES = [
+    {
+      classe: "texte-secondaire",
+      declarations: { color: "var(--fg-muted)", "font-size": "var(--texte-m)" },
+    },
+    {
+      classe: "texte-note",
+      declarations: { color: "var(--fg-muted)", "font-size": "var(--texte-s)" },
+    },
+    {
+      classe: "texte-discret",
+      declarations: {
+        color: "var(--fg-muted)",
+        "font-size": "var(--texte-xs)",
+      },
+    },
+    {
+      classe: "cadre",
+      declarations: {
+        border: "1px solid var(--border)",
+        "border-radius": "var(--radius)",
+      },
+    },
+  ];
+
+  it("un composant reprend le rôle partagé au lieu de le réécrire", () => {
+    const parRegle = new Map();
+    // Règles d'un seul sélecteur de classe : un style de descendant (tableau, contenu rédigé)
+    // dépend de sa spécificité et reste propre au composant.
+    for (const d of toutesLesDeclarations.filter(
+      (x) => x.fichier.endsWith(".vue") && /^\.[\w-]+$/.test(x.selecteur),
+    )) {
+      const cle = `${d.fichier} : ${d.selecteur}`;
+      parRegle.set(cle, {
+        ...(parRegle.get(cle) ?? {}),
+        [d.propriete]: d.valeur,
+      });
+    }
+    const fautifs = [...parRegle.entries()].flatMap(([cle, decl]) =>
+      ROLES.filter((r) =>
+        Object.entries(r.declarations).every(([p, v]) => decl[p] === v),
+      ).map((r) => `${cle} reproduit .${r.classe}`),
+    );
     expect(fautifs).toEqual([]);
   });
 });

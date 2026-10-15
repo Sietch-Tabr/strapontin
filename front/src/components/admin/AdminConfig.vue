@@ -410,7 +410,9 @@
       <li v-for="t in tentatives" :key="t.id">
         <strong>{{ t.httpStatusCode ?? "—" }}</strong>
         — {{ t.envoyeeLe ? formaterInstant(t.envoyeeLe) : "—" }}
-        <div v-if="t.reponse" class="tentatives-reponse">{{ t.reponse }}</div>
+        <div v-if="t.reponse" class="tentatives-reponse texte-discret">
+          {{ t.reponse }}
+        </div>
       </li>
     </ul>
     <div class="dialog-pied">
@@ -713,37 +715,35 @@ onMounted(charger);
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: var(--espace-4);
+  font-size: var(--texte-m);
 }
 
 .tentatives-reponse {
-  color: var(--fg-muted);
   font-family: monospace;
-  font-size: 0.75rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .config-groupe-item {
   border-top: 1px solid var(--border);
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: var(--espace-6);
+  padding-top: var(--espace-6);
 }
 
 .config-vapid-details {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espace-4);
 }
 
 .config-vapid-details summary {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-muted);
   cursor: pointer;
   user-select: none;
 }
 
 .config-vapid-details[open] summary {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--espace-2);
 }
 
 .config-vapid-avertissement {
@@ -754,7 +754,11 @@ onMounted(charger);
 .param-libelle-ligne {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  gap: var(--espace-4);
+  margin-bottom: var(--espace-2);
+}
+
+.param-libelle-ligne .param-libelle {
+  margin-bottom: 0;
 }
 </style>

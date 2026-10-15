@@ -28,8 +28,13 @@ defineProps({
 .etat-chargement {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--texte-secondaire);
-  padding: 1rem 0;
+  gap: var(--espace-4);
+  color: var(--fg-muted);
+  padding: var(--espace-8) 0;
+}
+
+.etat-chargement .roue-chargement {
+  animation: tourner 0.9s linear infinite;
+  flex-shrink: 0;
 }
 </style>

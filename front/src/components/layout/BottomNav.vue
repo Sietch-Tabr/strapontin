@@ -118,8 +118,8 @@ const estDansDrawer = computed(() =>
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
+  gap: var(--espace-2);
+  font-size: var(--texte-xs);
   color: var(--fg-muted);
   transition: color 0.15s;
   background: none;
@@ -143,5 +143,10 @@ const estDansDrawer = computed(() =>
 
 .nav-bas-elements a.actif {
   view-transition-name: nav-actif;
+}
+
+.nav-bas-elements a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 </style>

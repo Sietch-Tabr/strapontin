@@ -17,9 +17,11 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
@@ -68,6 +70,37 @@ class UserConfigServiceTest {
     service.majNotifications("user-1", requete);
 
     verify(jdbc).update(anyString(), anyMap());
+  }
+
+  @Test
+  void majNotifications_frequenceJamaisEtPushCoche_forcePushAFaux() {
+    final RequeteNotifications requete =
+        new RequeteNotifications("jamais", false, false, true, true, false);
+
+    service.majNotifications("user-1", requete);
+
+    final Map<String, Object> params = parametresEcrits();
+    assertThat(params).containsEntry("notifArtistesPush", false);
+    assertThat(params).containsEntry("notifSallesPush", false);
+  }
+
+  @Test
+  void majNotifications_frequenceQuotidienneEtPushCoche_conserveLePush() {
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", false, false, true, false, false);
+
+    service.majNotifications("user-1", requete);
+
+    final Map<String, Object> params = parametresEcrits();
+    assertThat(params).containsEntry("notifArtistesPush", true);
+    assertThat(params).containsEntry("notifSallesPush", false);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> parametresEcrits() {
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(jdbc).update(anyString(), captor.capture());
+    return captor.getValue();
   }
 
   // notifNouvelleVersion n'est pas un canal de contenu (matching artistes/salles) — activé seul

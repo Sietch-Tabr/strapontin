@@ -29,7 +29,9 @@
           <details class="totp-manuel">
             <summary>Saisie manuelle (si QR indisponible)</summary>
             <p class="param-aide">Entrez ce code dans votre application :</p>
-            <code class="totp-secret-code">{{ totpSecret }}</code>
+            <code class="totp-secret-code cadre cadre-fond">{{
+              totpSecret
+            }}</code>
             <p class="param-aide param-aide--mt">
               Ou ouvrez ce lien depuis votre téléphone :
               <a :href="otpUri" class="break-all">{{ otpUri }}</a>
@@ -174,34 +176,31 @@ onMounted(chargerSetup);
 
 <style scoped>
 .param-aide--mt {
-  margin-top: 0.5rem;
+  margin-top: var(--espace-4);
 }
 
 .totp-qr {
   width: 200px;
   height: 200px;
-  margin: 1rem 0;
+  margin: var(--espace-8) 0;
 }
 
 .totp-secret-code {
   display: block;
-  font-size: 1.1rem;
+  font-size: var(--texte-xl);
   letter-spacing: 0.15em;
-  padding: 0.75rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: var(--espace-6);
   word-break: break-all;
-  margin: 0.5rem 0;
+  margin: var(--espace-4) 0;
 }
 
 .totp-manuel {
-  margin-top: 0.75rem;
+  margin-top: var(--espace-6);
 }
 
 .totp-manuel summary {
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
 }
 </style>

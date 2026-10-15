@@ -102,7 +102,7 @@ final class AbsorptionRenommagesSalles {
     final List<String> noms =
         candidats.stream()
             .filter(c -> !referenceTm || "ticketmaster".equals(c.source()))
-            .map(ValeurConcert::salle)
+            .map(ValeurConcert::sallePubliee)
             .distinct()
             .toList();
     if (noms.isEmpty()) {
