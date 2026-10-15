@@ -131,6 +131,15 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
 
   private UUID creerEvenementDansSalle(
       final UUID salleId, final String artisteNorm, final int absences, final String url) {
+    return creerEvenementDansSalle(salleId, artisteNorm, absences, url, DATE_FUTURE);
+  }
+
+  private UUID creerEvenementDansSalle(
+      final UUID salleId,
+      final String artisteNorm,
+      final int absences,
+      final String url,
+      final String date) {
     final UUID evenementId =
         jdbc.queryForObject(
             "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept,"
@@ -139,7 +148,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
                 + " RETURNING id",
             new MapSqlParameterSource()
                 .addValue("artisteNorm", artisteNorm)
-                .addValue("date", DATE_FUTURE)
+                .addValue("date", date)
                 .addValue("salleId", salleId.toString())
                 .addValue("absences", absences),
             UUID.class);
@@ -167,6 +176,25 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
             "SELECT id FROM evenements WHERE artiste_norm = 'father of peace'",
             Map.of(),
             UUID.class));
+  }
+
+  // Même intitulé générique, même soir, deux salles distinctes : la salle d'origine publie
+  // encore d'autres séances de la même manifestation, la séance absente n'a pas été déplacée.
+  @Test
+  void fusionnerConcertsDeplaces_salleOriginePublieEncoreLaManifestation_neFusionnePas() {
+    final UUID gaveau = creerSalle("Salle Gaveau");
+    final UUID saintChapelle = creerSalle("Sainte-Chapelle");
+    final String autreDate = LocalDate.now().plusMonths(3).toString();
+    creerEvenementDansSalle(
+        gaveau, "concert du nouvel an", 6, "https://tm/idmanif/660939/idseance/1");
+    creerEvenementDansSalle(
+        gaveau, "concert du nouvel an", 0, "https://tm/idmanif/660939/idseance/2", autreDate);
+    creerEvenementDansSalle(
+        saintChapelle, "concert du nouvel an", 0, "https://tm/idmanif/512345/idseance/9");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerConcertsDeplaces());
+    assertEquals(
+        3L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
   }
 
   @Test
