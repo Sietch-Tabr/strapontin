@@ -4,6 +4,38 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.0.5 — 15 octobre 2026",
+    categories: [
+      {
+        categorie: "Notifications",
+        items: [
+          "Choisir la fréquence « Jamais » coupe aussi les notifications push : les cases push sont décochées et ne peuvent plus rester cochées sans effet, y compris après l'import de vos préférences.",
+        ],
+      },
+      {
+        categorie: "Concerts",
+        items: [
+          "Un concert d'une salle n'est plus absorbé par celui d'une autre salle donné le même soir sous un intitulé identique : seule une séance réellement déplacée est regroupée.",
+          "Une salle n'est plus rattachée à une rue ou une impasse trouvée sur Wikidata, et une position de salle très éloignée de sa fiche Wikidata est désormais signalée.",
+        ],
+      },
+      {
+        categorie: "Interface",
+        items: [
+          "Tous les écrans partagent une même charte graphique : couleurs, tailles de texte, espacements, cartes et liens de navigation viennent de réglages communs, clair comme sombre. Le rendu reste le même, à quelques pixels près dans l'administration.",
+          "Les pastilles de source de l'onglet Sources et certains textes de l'administration sont plus lisibles, en particulier en thème sombre.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "Logs : les filtres de niveau retrouvent leur couleur (bleu, orange, rouge).",
+          "L'alerte « taux de réussite chronique trop bas » de l'enrichissement des salles ne part plus quand les sources répondent : elle ne signale qu'une source en panne ou qui ne renvoie plus aucun résultat.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.0.4 — 12 octobre 2026",
     categories: [
       {
