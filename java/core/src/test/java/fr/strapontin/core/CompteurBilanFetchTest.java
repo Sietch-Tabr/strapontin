@@ -48,4 +48,14 @@ class CompteurBilanFetchTest {
     assertEquals(0, second.appels());
     assertEquals(0, second.erreursHttp());
   }
+
+  @Test
+  void preleverBilan_reponsesVides_cumuleEtRemetAZero() {
+    final CompteurBilanFetch compteur = new CompteurBilanFetch();
+    compteur.enregistrerAppel();
+    compteur.enregistrerReponseVide();
+
+    assertEquals(1, compteur.preleverBilan().reponsesVides());
+    assertEquals(0, compteur.preleverBilan().reponsesVides());
+  }
 }

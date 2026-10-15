@@ -18,6 +18,7 @@ public final class CompteurBilanFetch {
 
   private final AtomicInteger appelsCumules = new AtomicInteger();
   private final AtomicInteger erreursCumulees = new AtomicInteger();
+  private final AtomicInteger reponsesVidesCumulees = new AtomicInteger();
 
   /** Constructeur par défaut. */
   public CompteurBilanFetch() {}
@@ -32,6 +33,11 @@ public final class CompteurBilanFetch {
     erreursCumulees.incrementAndGet();
   }
 
+  /** Enregistre un appel réussi dont la réponse ne contient aucun résultat. */
+  public void enregistrerReponseVide() {
+    reponsesVidesCumulees.incrementAndGet();
+  }
+
   /**
    * Retourne le bilan cumulé depuis le dernier prélèvement et remet les
    * compteurs à zéro.
@@ -39,6 +45,9 @@ public final class CompteurBilanFetch {
    * @return le bilan depuis le dernier appel
    */
   public BilanFetch preleverBilan() {
-    return new BilanFetch(appelsCumules.getAndSet(0), erreursCumulees.getAndSet(0));
+    return new BilanFetch(
+        appelsCumules.getAndSet(0),
+        erreursCumulees.getAndSet(0),
+        reponsesVidesCumulees.getAndSet(0));
   }
 }

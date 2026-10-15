@@ -8,6 +8,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -179,7 +180,12 @@ final class WikidataSalleDecouverte {
       return Optional.empty();
     }
 
-    for (final Map<String, Object> binding : ClientSparqlWikidata.extraireBindings(data)) {
+    final List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
+    // Une map vide est un échec déjà compté par le client, pas une réponse sans résultat.
+    if (bindings.isEmpty() && !data.isEmpty()) {
+      client.enregistrerReponseVide();
+    }
+    for (final Map<String, Object> binding : bindings) {
       final Optional<EnrichissementSalle> candidat =
           evaluerCandidatDecouverte(salle, binding, nomRecherche);
       if (candidat.isPresent()) {

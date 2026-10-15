@@ -43,20 +43,6 @@ public class EnrichissementSallesService {
   // (cadenceurs de Nominatim et de WikidataSalleSource) — laisse ces services
   // publics respirer entre deux lots plutôt que d'enchaîner immédiatement.
   private static final long DELAI_ENTRE_LOTS_MS = 2000;
-  // Nombre minimal de candidats pour qu'un cycle sous le seuil de taux de
-  // réussite déclenche une alerte — évite un faux positif sur un tout petit lot
-  // où un faible nombre de succès est plausible même en fonctionnement normal
-  // (aucune des quelques salles du jour n'existe sur Wikidata/OSM).
-  private static final int SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF = 20;
-  // Un seuil strict à 0 salle enrichie ne détecte qu'une panne totale — une
-  // dégradation chronique mais non totale (constaté en production : 90-100%
-  // d'échec chaque nuit durant 11 nuits, jamais 100% pile) reste alors
-  // indéfiniment sous le seuil. Un taux de réussite est requis, pas seulement
-  // une absence totale de résultat.
-  private static final double SEUIL_TAUX_REUSSITE_MIN_CYCLE = 0.15;
-  private static final String MOTIF_ALERTE_TAUX_BAS =
-      "enrichissement:salles — taux de réussite chronique trop bas";
-  private static final int JOURS_ENTRE_ALERTES_TAUX_BAS = 7;
   private static final String CLE_WIKIDATA_ID = "wikidataId";
   private static final String CLE_LATITUDE = "latitude";
   private static final String CLE_LONGITUDE = "longitude";
@@ -116,60 +102,8 @@ public class EnrichissementSallesService {
       nbEnrichis += enrichirEtPersisterLot(lot);
     }
     LOG.info("enrichissement:salles candidats={} enrichis={}", candidats.size(), nbEnrichis);
-    alerterSiCycleImproductif(candidats.size(), nbEnrichis);
     remonterBilans();
     return nbEnrichis;
-  }
-
-  /**
-   * Alerte sur un taux de réussite chronique trop bas (voir {@link
-   * #SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF}/{@link
-   * #SEUIL_TAUX_REUSSITE_MIN_CYCLE}) — {@link #remonterBilans} ne détecte
-   * pas une source répondant 200 OK avec un contenu vide.
-   * @param nbCandidats nombre de salles traitées dans ce cycle
-   * @param nbEnrichis nombre de salles effectivement enrichies
-   */
-  private void alerterSiCycleImproductif(final int nbCandidats, final int nbEnrichis) {
-    if (nbCandidats < SEUIL_CANDIDATS_ALERTE_CYCLE_IMPRODUCTIF) {
-      return;
-    }
-    final double tauxReussite = (double) nbEnrichis / nbCandidats;
-    if (tauxReussite >= SEUIL_TAUX_REUSSITE_MIN_CYCLE) {
-      return;
-    }
-    // Les salles restant à enrichir sont souvent les cas difficiles : rappel
-    // hebdomadaire plutôt que chaque nuit.
-    if (alerteTauxBasRecente()) {
-      LOG.info(
-          "enrichissement:salles — taux bas {}/{}, déjà signalé cette semaine",
-          nbEnrichis,
-          nbCandidats);
-      return;
-    }
-    logsAdminWorker.inserer(
-        "warn",
-        "reconciliation-nocturne",
-        MOTIF_ALERTE_TAUX_BAS
-            + " ("
-            + nbEnrichis
-            + "/"
-            + nbCandidats
-            + ") — vérifier que les sources d'enrichissement répondent réellement",
-        Map.of("candidats", nbCandidats, "enrichis", nbEnrichis));
-  }
-
-  private boolean alerteTauxBasRecente() {
-    final Boolean recente =
-        jdbc.queryForObject(
-            """
-            SELECT EXISTS (SELECT 1 FROM logs_admin
-                           WHERE source = 'reconciliation-nocturne' AND niveau = 'warn'
-                             AND message LIKE :motif
-                             AND ts > now() - make_interval(days => :jours))
-            """,
-            Map.of("motif", MOTIF_ALERTE_TAUX_BAS + "%", "jours", JOURS_ENTRE_ALERTES_TAUX_BAS),
-            Boolean.class);
-    return Boolean.TRUE.equals(recente);
   }
 
   /**
@@ -191,7 +125,7 @@ public class EnrichissementSallesService {
       final int streak =
           suiviChronicite.enregistrerCycle(
               "reconciliation:nocturne|" + EnrichissementUtils.capitaliser(source.nom()),
-              bilan.erreursHttp() > 0);
+              bilan.erreursHttp() > 0 || bilan.repondVide());
       bilan
           .evaluer(
               "reconciliation:nocturne",

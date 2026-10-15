@@ -191,6 +191,15 @@ final class ClientSparqlWikidata {
     return compteurBilan.preleverBilan();
   }
 
+  /**
+   * Compte un appel réussi sans aucun résultat. Appelé par la découverte de
+   * salles seulement : pour les artistes, une réponse vide est le cas courant.
+   */
+  /* package-private : appelé par WikidataSalleDecouverte (même package). */
+  void enregistrerReponseVide() {
+    compteurBilan.enregistrerReponseVide();
+  }
+
   private static Optional<Long> extraireRetryAfterMs(final HttpHeaders headers) {
     if (headers == null) {
       return Optional.empty();

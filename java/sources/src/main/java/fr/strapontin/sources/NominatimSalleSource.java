@@ -88,6 +88,9 @@ public class NominatimSalleSource implements SourceEnrichissementSalle, SourceAv
       compteurBilan.enregistrerErreur();
       return Optional.empty();
     }
+    if (resultat.lieux().isEmpty()) {
+      compteurBilan.enregistrerReponseVide();
+    }
     return resultat.lieux().stream()
         .filter(lieu -> lieu.etiquettes().get("wikidata") != null)
         .filter(lieu -> designeLaSalle(lieu, salle))
