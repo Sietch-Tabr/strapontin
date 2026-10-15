@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.sources.EnrichissementSalle;
@@ -83,12 +85,10 @@ class EnrichissementSallesServiceTest {
     verify(source, never()).enrichirLot(any());
   }
 
-  // Un bilan d'appels/erreurs à 0 échec ne détecte pas une source qui répond systématiquement
-  // "200 OK, aucun résultat" (ex. panne géographique silencieuse d'une instance publique) — un
-  // cycle avec un
-  // nombre significatif de candidats et 0 salle enrichie doit être journalisé séparément.
+  // Les salles restantes n'ont par construction pas de fiche exploitable : un taux de réussite bas
+  // ne signale rien tant que la source répond.
   @Test
-  void enrichir_vingtCandidatsZeroEnrichis_journaliseUneAlerte() {
+  void enrichir_vingtCandidatsZeroEnrichisSourceQuiRepond_neJournalisePasDAlerte() {
     final List<SalleAEnrichir> candidats = new ArrayList<>();
     for (int i = 0; i < 20; i++) {
       candidats.add(
@@ -111,8 +111,37 @@ class EnrichissementSallesServiceTest {
     final int nb = service.enrichir();
 
     assertEquals(0, nb);
+    verify(logsAdminWorker, never()).inserer(eq("warn"), anyString(), anyString(), anyMap());
+  }
+
+  // Une source qui répond 200 OK sans aucun résultat sur tous ses appels est signalée par son
+  // bilan, pas par le taux de réussite.
+  @Test
+  void enrichir_sourceRepondantToujoursVide_journaliseUneAlerteDeLaSource() {
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of());
+    final SourceEnrichissementSalle source =
+        mock(
+            SourceEnrichissementSalle.class,
+            withSettings().extraInterfaces(SourceAvecBilanFetch.class));
+    when(source.nom()).thenReturn("wikidata");
+    when(((SourceAvecBilanFetch) source).preleverBilan()).thenReturn(new BilanFetch(60, 0, 60));
+    final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+    final SalleAEnrichir candidat =
+        new SalleAEnrichir(UUID.randomUUID(), "Zenith", "zenith", null, null, null, null, null);
+    final EnrichissementSallesService service =
+        new EnrichissementSallesService(
+            jdbcAvecCandidats(List.of(candidat)),
+            List.of(source),
+            logsAdminWorker,
+            suiviChronicite(jdbc),
+            mock(FusionSallesClePorteeService.class),
+            mock(SignalementMatchingService.class));
+    when(source.enrichirLot(any())).thenReturn(Map.of());
+
+    service.enrichir();
+
     verify(logsAdminWorker)
-        .inserer(eq("warn"), eq("reconciliation-nocturne"), anyString(), anyMap());
+        .inserer(eq("warn"), eq("worker"), contains("répond sans aucun résultat"), anyMap());
   }
 
   @Test
@@ -138,11 +167,9 @@ class EnrichissementSallesServiceTest {
         .inserer(anyString(), eq("reconciliation-nocturne"), anyString(), anyMap());
   }
 
-  // Un seuil strict à 0 salle enrichie ne détectait qu'une panne totale — une dégradation
-  // chronique mais non totale (quelques succès isolés sur un gros lot) doit désormais aussi
-  // déclencher l'alerte via un seuil de taux de réussite.
+  // Quelques succès isolés sur un gros lot : un taux bas seul ne déclenche plus d'alerte.
   @Test
-  void enrichir_trenteCandidatsTroisEnrichisTauxSousLeSeuil_journaliseUneAlerte() {
+  void enrichir_trenteCandidatsTroisEnrichisTauxBas_neJournalisePasDAlerte() {
     final List<SalleAEnrichir> candidats = new ArrayList<>();
     final List<UUID> ids = new ArrayList<>();
     for (int i = 0; i < 30; i++) {
@@ -180,8 +207,7 @@ class EnrichissementSallesServiceTest {
     final int nb = service.enrichir();
 
     assertEquals(3, nb);
-    verify(logsAdminWorker)
-        .inserer(eq("warn"), eq("reconciliation-nocturne"), anyString(), anyMap());
+    verify(logsAdminWorker, never()).inserer(eq("warn"), anyString(), anyString(), anyMap());
   }
 
   @Test
