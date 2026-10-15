@@ -149,11 +149,13 @@ final class ClientSparqlWikidata {
       tentative++;
       try {
         final Map<String, Object> resultat = effectuerRequete(sparql);
+        cadenceur.apaiser();
         return resultat != null ? resultat : Map.of();
       } catch (HttpClientErrorException.TooManyRequests e) {
         final long attenteMs =
             extraireRetryAfterMs(e.getResponseHeaders()).orElse(1000L << tentative);
         LOG.warn("Wikidata 429 — attente {} ms avant retry", attenteMs);
+        cadenceur.ralentir();
         dormir(attenteMs);
       } catch (HttpServerErrorException.ServiceUnavailable
           | HttpServerErrorException.BadGateway
