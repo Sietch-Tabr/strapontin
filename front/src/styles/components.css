@@ -650,8 +650,8 @@ tr:hover td {
   position: fixed;
   inset: auto;
   bottom: calc(
-    var(--nav-h) + env(safe-area-inset-bottom) + 0.75rem +
-      var(--indice-toast) * 5.25rem
+    var(--nav-h) + env(safe-area-inset-bottom) + 0.75rem + var(--indice-toast) *
+      5.25rem
   );
   right: 1rem;
   left: 1rem;
