@@ -242,11 +242,12 @@ public class UserConfigService {
   }
 
   /**
-   * Indique si la fréquence autorise un canal push : « jamais » coupe aussi le push, un canal
-   * coché serait sinon un état qu'aucune livraison ni aucun garde-fou ne traite.
+   * Indique si la fréquence autorise un canal push : « jamais » coupe
+   * aussi le push, qu'aucune livraison ni aucun garde-fou ne traiterait.
    * @param frequence fréquence de notification choisie
    * @return {@code false} pour « jamais »
    */
+  /* package-private : appelé par PreferencesService (même package). */
   static boolean pushPermis(final String frequence) {
     return !"jamais".equals(frequence);
   }

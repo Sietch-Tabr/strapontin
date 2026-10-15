@@ -35,6 +35,8 @@ import org.springframework.stereotype.Service;
 public class CoherenceWikidataSalleService {
 
   private static final Logger LOG = LoggerFactory.getLogger(CoherenceWikidataSalleService.class);
+  private static final String SOURCE_LOG = "coherence-wikidata";
+  private static final String CLE_WIKIDATA_ID = "wikidataId";
 
   // Position Wikidata comparable aux lieux publiés : le contrôle de position
   // (20 km) tranche ; les noms de communes signalaient à tort une agglomération
@@ -262,12 +264,15 @@ public class CoherenceWikidataSalleService {
     }
     logsAdminWorker.inserer(
         "warn",
-        "coherence-wikidata",
+        SOURCE_LOG,
         MESSAGE_POSITION_SOURCE_ELOIGNEE + salle.nom(),
         Map.of(
-            "salleId", salle.id().toString(),
-            "wikidataId", salle.wikidataId(),
-            "ecartMetres", Math.round(ecart)));
+            "salleId",
+            salle.id().toString(),
+            CLE_WIKIDATA_ID,
+            salle.wikidataId(),
+            "ecartMetres",
+            Math.round(ecart)));
   }
 
   private List<SalleAEnrichir> sallesPositionneesParWikidata() {
@@ -295,12 +300,15 @@ public class CoherenceWikidataSalleService {
             "id", salle.id().toString()));
     logsAdminWorker.inserer(
         "info",
-        "coherence-wikidata",
+        SOURCE_LOG,
         "position de salle réalignée sur son élément Wikidata salle=" + salle.nom(),
         Map.of(
-            "salleId", salle.id().toString(),
-            "wikidataId", salle.wikidataId(),
-            "ecartMetres", Math.round(ecart)));
+            "salleId",
+            salle.id().toString(),
+            CLE_WIKIDATA_ID,
+            salle.wikidataId(),
+            "ecartMetres",
+            Math.round(ecart)));
     return true;
   }
 
@@ -319,11 +327,11 @@ public class CoherenceWikidataSalleService {
         Map.of("qid", qid));
     logsAdminWorker.inserer(
         "warn",
-        "coherence-wikidata",
+        SOURCE_LOG,
         "wikidata_id invalidé — type Wikidata désormais exclu (gare/tram/administratif/commerce)"
             + " wikidataId="
             + qid,
-        Map.of("wikidataId", qid));
+        Map.of(CLE_WIKIDATA_ID, qid));
   }
 
   /**
@@ -401,7 +409,7 @@ public class CoherenceWikidataSalleService {
             : String.join(", ", villesConcerts);
     logsAdminWorker.inserer(
         "warn",
-        "coherence-wikidata",
+        SOURCE_LOG,
         (partielle
                 ? "wikidata_id incohérent avec une partie des concerts (contamination partielle)"
                 : "wikidata_id incohérent avec la ville")
@@ -416,7 +424,7 @@ public class CoherenceWikidataSalleService {
         Map.of(
             "salleId",
             salle.id().toString(),
-            "wikidataId",
+            CLE_WIKIDATA_ID,
             salle.wikidataId(),
             "ville",
             salle.ville(),
