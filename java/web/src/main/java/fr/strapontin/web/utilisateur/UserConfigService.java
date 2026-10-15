@@ -228,16 +228,27 @@ public class UserConfigService {
           "Activez au moins un type de contenu pour recevoir des notifications.");
     }
 
+    final boolean pushPermis = pushPermis(requete.frequenceNotifications());
     final Map<String, Object> champs = new HashMap<>();
     champs.put("frequenceNotifications", requete.frequenceNotifications());
     champs.put("notifArtistes", requete.notifArtistes());
     champs.put("notifSalles", requete.notifSalles());
-    champs.put("notifArtistesPush", requete.notifArtistesPush());
-    champs.put("notifSallesPush", requete.notifSallesPush());
+    champs.put("notifArtistesPush", pushPermis && requete.notifArtistesPush());
+    champs.put("notifSallesPush", pushPermis && requete.notifSallesPush());
     champs.put("notifNouvelleVersion", requete.notifNouvelleVersion());
     upsertConfig(userId, champs);
 
     journaliserMajNotifications(userId, requete);
+  }
+
+  /**
+   * Indique si la fréquence autorise un canal push : « jamais » coupe aussi le push, un canal
+   * coché serait sinon un état qu'aucune livraison ni aucun garde-fou ne traite.
+   * @param frequence fréquence de notification choisie
+   * @return {@code false} pour « jamais »
+   */
+  static boolean pushPermis(final String frequence) {
+    return !"jamais".equals(frequence);
   }
 
   private void journaliserMajNotifications(

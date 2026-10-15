@@ -188,7 +188,7 @@
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresNotifications" });
 
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
 import EtatChargement from "../EtatChargement.vue";
 import {
@@ -207,6 +207,14 @@ const notifArtistes = ref(false);
 const notifSalles = ref(false);
 const notifArtistesPush = ref(false);
 const notifSallesPush = ref(false);
+
+// Le serveur coupe le push avec « jamais » : le formulaire affiche le même état.
+watch(frequenceNotifications, (frequence) => {
+  if (frequence === "jamais") {
+    notifArtistesPush.value = false;
+    notifSallesPush.value = false;
+  }
+});
 const notifNouvelleVersion = ref(false);
 
 const pushSupporte = ref(false);
