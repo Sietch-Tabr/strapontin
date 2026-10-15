@@ -88,20 +88,20 @@ onMounted(async () => {
 
 <style scoped>
 .checklist-premiers-pas {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--espace-12);
 }
 
 .checklist-liste {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .checklist-item {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  font-size: 0.875rem;
+  gap: var(--espace-5);
+  font-size: var(--texte-m);
 }
 
 .checklist-item--fait {

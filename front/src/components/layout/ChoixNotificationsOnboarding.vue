@@ -160,7 +160,7 @@ onUnmounted(() => controleur.abort());
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--espace-6);
   text-align: left;
 }
 </style>

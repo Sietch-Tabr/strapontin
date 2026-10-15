@@ -271,20 +271,20 @@ onUnmounted(() => controleur.abort());
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--espace-6);
 }
 
 .signalement {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.75rem 1rem;
+  padding: var(--espace-6) var(--espace-8);
   min-width: 0;
 }
 
 .signalement-entete {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  gap: var(--espace-2) var(--espace-6);
   align-items: baseline;
 }
 
@@ -295,19 +295,19 @@ onUnmounted(() => controleur.abort());
 .signalement-date,
 .signalement-explication,
 .signalement-details {
-  font-size: 0.82rem;
+  font-size: var(--texte-s);
   color: var(--fg-muted);
 }
 
 .signalement-explication {
-  margin: 0.25rem 0;
+  margin: var(--espace-2) 0;
 }
 
 .signalement-details {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.1rem 0.75rem;
-  margin: 0.25rem 0 0.5rem;
+  gap: var(--espace-1) var(--espace-6);
+  margin: var(--espace-2) 0 var(--espace-4);
   overflow-wrap: anywhere;
 }
 

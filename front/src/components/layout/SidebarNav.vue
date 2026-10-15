@@ -124,26 +124,26 @@ const { deconnecter } = useDeconnexion();
 }
 
 .barre-laterale-logo {
-  padding: 1.25rem 1rem;
-  font-size: 1.125rem;
+  padding: var(--espace-10) var(--espace-8);
+  font-size: var(--texte-xl);
   font-weight: 700;
   border-bottom: 1px solid var(--border);
 }
 
 .barre-laterale-nav {
   flex: 1;
-  padding: 0.5rem;
+  padding: var(--espace-4);
   overflow-y: auto;
 }
 
 .barre-laterale-nav a {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
+  gap: var(--espace-5);
+  padding: var(--espace-4) var(--espace-6);
   border-radius: var(--radius);
   color: var(--fg-muted);
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   font-weight: 500;
   position: relative;
   transition:
@@ -152,31 +152,31 @@ const { deconnecter } = useDeconnexion();
 }
 
 .barre-laterale-nav hr {
-  margin: 0.5rem 0;
+  margin: var(--espace-4) 0;
   border-color: var(--border);
 }
 
 .barre-laterale-pied {
-  padding: 0.5rem;
+  padding: var(--espace-4);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: var(--espace-1);
 }
 
 .barre-laterale-pied hr {
-  margin: 0.25rem 0;
+  margin: var(--espace-2) 0;
   border-color: var(--border);
 }
 
 .barre-laterale-pied a {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
+  gap: var(--espace-5);
+  padding: var(--espace-4) var(--espace-6);
   border-radius: var(--radius);
   color: var(--fg-muted);
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   font-weight: 500;
   position: relative;
   transition:

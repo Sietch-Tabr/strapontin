@@ -31,7 +31,7 @@
   max-height: 80vh;
   border: none;
   border-top: 1px solid var(--border);
-  border-radius: 0.75rem 0.75rem 0 0;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
   padding: 0;
   background: var(--bg);
   color: var(--fg);
@@ -65,13 +65,13 @@
   height: 1rem;
   background: var(--danger);
   color: var(--danger-fg);
-  border-radius: 9999px;
-  font-size: 0.5625rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--texte-3xs);
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 0.2rem;
+  padding: 0 var(--espace-2);
   pointer-events: none;
   line-height: 1;
 }
@@ -86,7 +86,7 @@
   transform: translateY(-50%);
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   background: var(--warning);
   pointer-events: none;
 }
@@ -135,19 +135,19 @@ html {
 /* ── Page auth (login, forgot, reset, setup) ─────────────── */
 .auth-logo {
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--espace-8);
 }
 .auth-logo img {
   width: 160px;
   height: auto;
 }
 .auth-titre {
-  font-size: 1.5rem;
+  font-size: var(--texte-2xl);
   font-weight: 700;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--espace-2);
 }
 .auth-sous-titre {
   color: var(--fg-muted);
-  font-size: 0.875rem;
-  margin-bottom: 1.5rem;
+  font-size: var(--texte-m);
+  margin-bottom: var(--espace-12);
 }

@@ -288,15 +288,15 @@ defineExpose({ ouvrir });
 .repartition-libelles,
 .repartition-destination {
   border: none;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--espace-8);
   padding: 0;
 }
 
 .repartition-libelle {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   align-items: baseline;
-  padding: 0.2rem 0;
+  padding: var(--espace-2) 0;
   overflow-wrap: anywhere;
 }
 </style>

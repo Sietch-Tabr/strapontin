@@ -428,7 +428,7 @@ onUnmounted(() => {
 .concert-groupes {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--espace-8);
   max-width: 42rem;
 }
 
@@ -442,8 +442,8 @@ onUnmounted(() => {
 .groupe-entete {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  gap: var(--espace-4);
+  padding: var(--espace-6) var(--espace-8);
   border-bottom: 1px solid var(--border);
   background: var(--bg-muted);
 }
@@ -454,7 +454,7 @@ onUnmounted(() => {
   flex: 1;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.5rem;
+  gap: var(--espace-2) var(--espace-4);
   min-width: 0;
 }
 
@@ -471,7 +471,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: var(--espace-6) var(--espace-8);
   border-bottom: 1px solid var(--border);
   transition: background 0.15s;
 }
@@ -490,19 +490,19 @@ onUnmounted(() => {
 }
 
 .concert-date-principale {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   font-weight: 500;
 }
 
 .concert-date-secondaire {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
 }
 
 .concert-lieu {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-muted);
-  margin-top: 0.25rem;
+  margin-top: var(--espace-2);
   white-space: normal;
   overflow: visible;
   text-overflow: ellipsis;
@@ -519,8 +519,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.25rem;
-  margin-left: 0.75rem;
+  gap: var(--espace-2);
+  margin-left: var(--espace-6);
   flex-shrink: 0;
 }
 
@@ -528,7 +528,7 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+  gap: var(--espace-6);
+  margin-top: var(--espace-12);
 }
 </style>

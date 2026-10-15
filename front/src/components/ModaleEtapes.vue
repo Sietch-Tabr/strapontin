@@ -125,8 +125,8 @@ defineExpose({ ouvrir, fermer });
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 1rem;
-  padding: 1rem 0;
+  gap: var(--espace-8);
+  padding: var(--espace-8) 0;
 }
 
 .etapes-icone {
@@ -136,8 +136,8 @@ defineExpose({ ouvrir, fermer });
 .etapes-progression {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--espace-4);
+  margin-top: var(--espace-4);
 }
 
 .etapes-point {

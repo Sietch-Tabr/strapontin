@@ -409,12 +409,12 @@ onMounted(async () => {
 }
 
 .aide-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: var(--espace-20);
 }
 
 .aide-grille {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--espace-6);
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
 }
 
@@ -422,30 +422,30 @@ onMounted(async () => {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: var(--espace-8);
 }
 
 .carte-titre {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
+  gap: var(--espace-3);
+  font-size: var(--texte-m);
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espace-4);
 }
 
 .carte ul {
   list-style: disc;
-  padding-left: 1.25rem;
-  font-size: 0.875rem;
+  padding-left: var(--espace-10);
+  font-size: var(--texte-m);
   color: var(--fg-muted);
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--espace-2);
 }
 
 .carte p {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
 }
 
@@ -458,7 +458,7 @@ onMounted(async () => {
 }
 
 .aide-pied {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
 }
 

@@ -540,50 +540,50 @@ onUnmounted(() => {
 .quota-tm-carte {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: var(--espace-8);
 }
 
 .quota-tm-chiffres {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  margin-bottom: var(--espace-4);
+  font-size: var(--texte-m);
 }
 
 .quota-tm-chiffres strong {
-  font-size: 1.5rem;
+  font-size: var(--texte-2xl);
   font-weight: 700;
 }
 
 .quota-tm-sep {
   color: var(--fg-muted);
-  font-size: 0.875rem;
-  margin-left: 0.25rem;
+  font-size: var(--texte-m);
+  margin-left: var(--espace-2);
 }
 
 .quota-tm-unite {
   color: var(--fg-muted);
-  font-size: 0.75rem;
-  margin-left: 0.375rem;
+  font-size: var(--texte-xs);
+  margin-left: var(--espace-3);
 }
 
 .quota-tm-pct {
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
 }
 
 .quota-tm-barre-fond {
   height: 0.5rem;
   background: var(--bg-muted);
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espace-4);
 }
 
 .quota-tm-barre-remplissage {
   height: 100%;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   transition: width 0.3s;
   width: 0%;
 }
@@ -591,8 +591,8 @@ onUnmounted(() => {
 .sources-grille {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  gap: var(--espace-8);
+  margin-top: var(--espace-4);
 }
 
 @media (width >= 641px) {
@@ -608,25 +608,25 @@ onUnmounted(() => {
 .source-carte {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.875rem 1rem;
+  padding: var(--espace-7) var(--espace-8);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .source-nom {
   font-weight: 600;
-  font-size: 0.9rem;
-  margin: 0 0 0.25rem;
+  font-size: var(--texte-m);
+  margin: 0 0 var(--espace-2);
 }
 
 .source-vue-bascule {
   display: flex;
-  gap: 0.375rem;
+  gap: var(--espace-3);
 }
 
 .source-carte-detail {
-  font-size: 0.8rem;
+  font-size: var(--texte-s);
   color: var(--fg-muted);
   margin: 0;
 }
@@ -634,13 +634,13 @@ onUnmounted(() => {
 .source-lieu-inline {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: var(--espace-3);
   flex-wrap: wrap;
 }
 
 .source-lieu-input {
-  font-size: 0.82rem;
-  padding: 0.2rem 0.45rem;
+  font-size: var(--texte-s);
+  padding: var(--espace-2) var(--espace-4);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg);
@@ -659,7 +659,7 @@ onUnmounted(() => {
 }
 
 .source-test-statut {
-  font-size: 0.78rem;
+  font-size: var(--texte-xs);
   font-weight: 600;
 }
 
@@ -672,7 +672,7 @@ onUnmounted(() => {
 }
 
 .source-salle-loc {
-  font-size: 0.85rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
   white-space: nowrap;
 }

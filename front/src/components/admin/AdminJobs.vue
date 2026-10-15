@@ -298,8 +298,8 @@ onUnmounted(() => {
 .jobs-grille {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  gap: var(--espace-6);
+  margin-top: var(--espace-4);
 }
 
 @media (width >= 641px) {
@@ -319,12 +319,12 @@ onUnmounted(() => {
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 0.75rem 1rem;
+  padding: var(--espace-6) var(--espace-8);
 }
 
 .job-carte-description {
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
+  font-size: var(--texte-xs);
+  margin-top: var(--espace-2);
 }
 
 .job-carte-action {
@@ -335,23 +335,23 @@ onUnmounted(() => {
 .job-carte-entete {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .job-carte-libelle {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   font-weight: 500;
   margin: 0;
 }
 
 .job-carte-detail {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-muted);
-  margin-top: 0.25rem;
+  margin-top: var(--espace-2);
 }
 
 .relancer-actions {
-  margin-top: 0.75rem;
+  margin-top: var(--espace-6);
 }
 
 .job-pastille {
@@ -371,7 +371,7 @@ onUnmounted(() => {
 .worker-carte {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: var(--espace-8);
 }
 
 .worker-carte.worker-alerte {
@@ -380,19 +380,19 @@ onUnmounted(() => {
 }
 
 .worker-carte-libelle {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   font-weight: 500;
 }
 
 .worker-carte-detail {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
-  margin-top: 0.25rem;
+  margin-top: var(--espace-2);
 }
 
 .worker-alerte-texte {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--avertissement-text);
-  margin-top: 0.375rem;
+  margin-top: var(--espace-3);
 }
 </style>

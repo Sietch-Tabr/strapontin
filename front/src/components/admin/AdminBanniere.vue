@@ -150,15 +150,15 @@ onMounted(chargerBanniereActive);
 
 <style scoped>
 .communication-exceptionnelle {
-  margin-top: 2.5rem;
-  padding-top: 1.5rem;
+  margin-top: var(--espace-20);
+  padding-top: var(--espace-12);
   border-top: 2px solid var(--danger);
 }
 
 .form-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--espace-6);
   align-items: center;
-  margin-top: 0.75rem;
+  margin-top: var(--espace-6);
 }
 </style>

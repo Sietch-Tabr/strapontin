@@ -174,34 +174,34 @@ onMounted(chargerSetup);
 
 <style scoped>
 .param-aide--mt {
-  margin-top: 0.5rem;
+  margin-top: var(--espace-4);
 }
 
 .totp-qr {
   width: 200px;
   height: 200px;
-  margin: 1rem 0;
+  margin: var(--espace-8) 0;
 }
 
 .totp-secret-code {
   display: block;
-  font-size: 1.1rem;
+  font-size: var(--texte-xl);
   letter-spacing: 0.15em;
-  padding: 0.75rem;
+  padding: var(--espace-6);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   word-break: break-all;
-  margin: 0.5rem 0;
+  margin: var(--espace-4) 0;
 }
 
 .totp-manuel {
-  margin-top: 0.75rem;
+  margin-top: var(--espace-6);
 }
 
 .totp-manuel summary {
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
 }
 </style>

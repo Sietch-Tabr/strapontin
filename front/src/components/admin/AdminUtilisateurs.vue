@@ -947,7 +947,7 @@ onMounted(charger);
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .user-carte {
@@ -960,8 +960,8 @@ onMounted(charger);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  gap: 1rem;
+  padding: var(--espace-6) var(--espace-8);
+  gap: var(--espace-8);
   flex-wrap: wrap;
 }
 
@@ -980,12 +980,12 @@ onMounted(charger);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-bottom: 0.25rem;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-2);
 }
 
 .user-carte-email {
-  font-size: 0.8125rem;
+  font-size: var(--texte-s);
   color: var(--fg-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -993,15 +993,15 @@ onMounted(charger);
 }
 
 .user-carte-activite {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-subtle);
-  margin-top: 0.125rem;
+  margin-top: var(--espace-1);
 }
 
 .user-carte-actions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espace-2);
   flex-shrink: 0;
   width: 100%;
   justify-content: flex-end;
@@ -1018,7 +1018,7 @@ onMounted(charger);
 
 .modif-ligne {
   border-top: 1px solid var(--border);
-  padding: 0.75rem 1rem;
+  padding: var(--espace-6) var(--espace-8);
   background: var(--bg-card);
   display: none;
 }
@@ -1030,7 +1030,7 @@ onMounted(charger);
 .form-modif-utilisateur {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   align-items: center;
   max-width: 28rem;
 }
@@ -1038,10 +1038,10 @@ onMounted(charger);
 .form-modif-utilisateur input,
 .form-modif-utilisateur select {
   width: auto;
-  font-size: 0.8125rem;
-  padding: 0.3125rem 0.5rem;
+  font-size: var(--texte-s);
+  padding: var(--espace-3) var(--espace-4);
   border: 1px solid var(--border);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-s);
   background: var(--bg);
   color: var(--fg);
 }
@@ -1057,19 +1057,19 @@ onMounted(charger);
 }
 
 .erreur-modif {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--danger);
 }
 
 .dialog-lien {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: var(--espace-4);
+  margin-bottom: var(--espace-6);
 }
 
 .dialog-lien input {
   flex: 1;
   font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
+  font-size: var(--texte-s);
 }
 </style>

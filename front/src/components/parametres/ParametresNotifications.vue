@@ -425,7 +425,7 @@ onUnmounted(() => controleur.abort());
 
 <style scoped>
 .param-bloc-push {
-  margin-top: 1.5rem;
+  margin-top: var(--espace-12);
 }
 
 .notif-grille__entete,
@@ -438,11 +438,11 @@ onUnmounted(() => controleur.abort());
 }
 
 .notif-grille__entete {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   font-weight: 500;
   color: var(--fg-muted);
   text-align: center;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--espace-2);
 }
 
 .notif-grille__entete span:first-child {
@@ -450,11 +450,11 @@ onUnmounted(() => controleur.abort());
 }
 
 .notif-grille__ligne {
-  padding: 0.25rem 0;
+  padding: var(--espace-2) 0;
 }
 
 .notif-grille__libelle {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
 }
 
 .notif-grille__case {
@@ -467,7 +467,7 @@ onUnmounted(() => controleur.abort());
 .notif-radio {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espace-4);
   font-weight: normal;
   cursor: pointer;
 }

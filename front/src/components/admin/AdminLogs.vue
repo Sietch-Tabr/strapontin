@@ -194,7 +194,7 @@ onMounted(charger);
 /* Variante compacte des cartes partagées : une ligne de journal par carte, sans libellés. */
 @container table-cartes (max-width: 700px) {
   .logs-conteneur tr {
-    margin-bottom: 0.375rem;
+    margin-bottom: var(--espace-3);
   }
 
   .logs-conteneur tr.log-erreur {
@@ -207,8 +207,8 @@ onMounted(charger);
 
   .logs-conteneur td {
     display: block;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.8125rem;
+    padding: var(--espace-3) var(--espace-6);
+    font-size: var(--texte-s);
   }
 
   .logs-conteneur td::before {
@@ -220,20 +220,20 @@ onMounted(charger);
   }
 
   .logs-conteneur td[data-label="Source"] {
-    font-size: 0.75rem;
+    font-size: var(--texte-xs);
     color: var(--fg-muted);
     padding-top: 0;
   }
 
   .logs-conteneur td.log-ts {
-    font-size: 0.75rem;
+    font-size: var(--texte-xs);
     color: var(--fg-muted);
     padding-bottom: 0;
   }
 
   .logs-conteneur td.log-message {
-    padding-top: 0.25rem;
-    padding-bottom: 0.5rem;
+    padding-top: var(--espace-2);
+    padding-bottom: var(--espace-4);
     overflow-wrap: anywhere;
   }
 }
@@ -248,49 +248,49 @@ onMounted(charger);
 
 .logs-filtres {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--espace-6);
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--espace-6);
   flex-wrap: wrap;
 }
 
 .logs-filtres-source {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: var(--espace-3);
 }
 
 .logs-filtres-niveaux {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espace-2);
 }
 
 .logs-note-info {
-  font-size: 0.8125rem;
+  font-size: var(--texte-s);
   color: var(--fg-muted);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espace-4);
   font-style: italic;
 }
 
 .logs-filtre-libelle {
-  font-size: 0.8125rem;
+  font-size: var(--texte-s);
   color: var(--fg-muted);
 }
 
 .logs-filtre-select {
   width: auto;
-  font-size: 0.8125rem;
-  padding: 0.25rem 0.5rem;
+  font-size: var(--texte-s);
+  padding: var(--espace-2) var(--espace-4);
   border: 1px solid var(--border);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-s);
   background: var(--bg);
   color: var(--fg);
 }
 
 .log-compte {
   margin-left: auto;
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -298,16 +298,16 @@ onMounted(charger);
 .log-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-top: 0.25rem;
+  gap: var(--espace-3);
+  margin-top: var(--espace-2);
 }
 
 .log-meta-item {
-  font-size: 0.6875rem;
+  font-size: var(--texte-2xs);
   color: var(--fg-muted);
   background: var(--bg-muted);
-  padding: 0.0625rem 0.375rem;
-  border-radius: 0.1875rem;
+  padding: var(--espace-1) var(--espace-3);
+  border-radius: var(--radius-s);
   font-family: monospace;
 }
 </style>

@@ -475,15 +475,15 @@ onUnmounted(() => controleur.abort());
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .ligne-appareil {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0;
+  gap: var(--espace-8);
+  padding: var(--espace-4) 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -494,7 +494,7 @@ onUnmounted(() => controleur.abort());
 .appareil-info {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
-  font-size: 0.875rem;
+  gap: var(--espace-1);
+  font-size: var(--texte-m);
 }
 </style>

@@ -51,12 +51,12 @@ onMounted(async () => {
 
 <style scoped>
 .changelog-version {
-  font-size: 1rem;
+  font-size: var(--texte-base);
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: var(--espace-8);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espace-4);
 }
 
 .changelog {
@@ -66,16 +66,16 @@ onMounted(async () => {
 }
 
 .changelog > section {
-  padding-bottom: 2.5rem;
+  padding-bottom: var(--espace-20);
 }
 
 .changelog > details {
-  padding-bottom: 2.5rem;
+  padding-bottom: var(--espace-20);
 }
 
 .changelog > section + details,
 .changelog > details + details {
-  padding-top: 2.5rem;
+  padding-top: var(--espace-20);
   border-top: 1px solid var(--border);
 }
 
@@ -95,7 +95,7 @@ onMounted(async () => {
 
 .changelog > details > summary .changelog-version::before {
   content: "▶";
-  font-size: 0.5rem;
+  font-size: var(--texte-4xs);
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -117,6 +117,6 @@ onMounted(async () => {
 .changelog > details > .details-corps > .changelog-entrees {
   overflow: hidden;
   min-height: 0;
-  padding-top: 1rem;
+  padding-top: var(--espace-8);
 }
 </style>

@@ -64,10 +64,10 @@ const MODIFICATEURS = {
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 1.25rem;
-  padding-top: max(0.625rem, env(safe-area-inset-top));
-  font-size: 0.875rem;
+  gap: var(--espace-6);
+  padding: var(--espace-5) var(--espace-10);
+  padding-top: max(var(--espace-5), env(safe-area-inset-top));
+  font-size: var(--texte-m);
   line-height: 1.5;
   border-bottom: 1px solid;
   border-radius: 0;
@@ -78,7 +78,7 @@ const MODIFICATEURS = {
 @media (width >= 1025px) {
   .banniere-overlay {
     left: var(--sidebar-w);
-    padding-top: 0.625rem;
+    padding-top: var(--espace-5);
     border-bottom-left-radius: var(--radius);
     border-bottom-right-radius: var(--radius);
     box-shadow: var(--ombre-bandeau-haut-large);

@@ -274,7 +274,7 @@ onMounted(charger);
 .form-fichier {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--espace-6);
 }
 
 .form-fichier__input {
@@ -282,7 +282,7 @@ onMounted(charger);
 }
 
 .form-fichier__nom {
-  font-size: 0.875rem;
+  font-size: var(--texte-m);
   color: var(--fg-muted);
   white-space: nowrap;
   overflow: hidden;

@@ -485,17 +485,17 @@ onUnmounted(() => {
 .decouverte-entete {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--espace-8);
+  margin-bottom: var(--espace-8);
   flex-wrap: wrap;
 }
 
 .decouverte-depts {
-  margin-bottom: 1rem;
+  margin-bottom: var(--espace-8);
 }
 
 .synchro-info {
-  font-size: 0.75rem;
+  font-size: var(--texte-xs);
   color: var(--fg-muted);
 }
 </style>
