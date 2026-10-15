@@ -184,7 +184,6 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
         jdbc.queryForObject(
             "SELECT count(*) FROM logs_admin WHERE message LIKE '%Wikidata répond sans aucun"
                 + " résultat%'",
-            Map.of(),
-            Long.class));
+            Map.of(), Long.class));
   }
 }

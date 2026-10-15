@@ -193,8 +193,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
         saintChapelle, "concert du nouvel an", 0, "https://tm/idmanif/512345/idseance/9");
 
     assertEquals(0, fusionEvenementsArtiste.fusionnerConcertsDeplaces());
-    assertEquals(
-        3L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(3L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
   }
 
   @Test

@@ -68,7 +68,13 @@ final class WikidataSalleDecouverte {
           "Q11707",
           "Q1002697",
           "Q11032",
-          "Q702842");
+          "Q702842",
+          // Voies : impasse, route, rue, boulevard, voie de communication.
+          "Q12731",
+          "Q34442",
+          "Q79007",
+          "Q54114",
+          "Q83620");
 
   // Rempli par decouvrir() sur divergence GPS, vidé par preleverAmbiguites() —
   // même patron que WikidataArtisteSource.ambiguites.

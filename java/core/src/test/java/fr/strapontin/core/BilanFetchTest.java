@@ -112,6 +112,7 @@ class BilanFetchTest {
 
   @Test
   void evaluer_reponsesVidesPartielles_retourneVide() {
-    assertTrue(new BilanFetch(60, 0, 30).evaluer("reconciliation:nocturne", "Wikidata", SEUIL).isEmpty());
+    assertTrue(
+        new BilanFetch(60, 0, 30).evaluer("reconciliation:nocturne", "Wikidata", SEUIL).isEmpty());
   }
 }

@@ -103,6 +103,29 @@ class WikidataSalleSourceTest {
     assertEquals(0, bilan.erreursHttp());
   }
 
+  // Une impasse (Q12731) portait le Q-ID de la salle « Bon Secours » : les types de voie sont
+  // exclus de la découverte.
+  @Test
+  void enrichirLot_decouverte_excluLesTypesDeVoie() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(
+            org.springframework.test.web.client.ExpectedCount.manyTimes(),
+            requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andExpect(
+            MockRestRequestMatchers.content()
+                .string(org.hamcrest.Matchers.containsString("wd%3AQ12731")))
+        .andRespond(withSuccess("{\"results\":{\"bindings\":[]}}", MediaType.APPLICATION_JSON));
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(
+            UUID.randomUUID(), "Bon Secours", "bon secours", null, null, null, null, null);
+
+    source(builder.build(), Caffeine.newBuilder().build()).enrichirLot(List.of(salle));
+
+    serveur.verify();
+  }
+
   // la recherche mwapi échoue quasi systématiquement sur les noms à suffixe de sous-salle
   // ("Zenith Toulouse Metropole" → 0 résultat en direct, "Zenith de Toulouse" trouvé aussitôt).
   // Ici : nom avec séparateur "-", premier appel (nom complet) sans résultat, repli sur le nom

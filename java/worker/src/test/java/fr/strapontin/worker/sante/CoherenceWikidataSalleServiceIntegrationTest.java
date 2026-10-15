@@ -179,4 +179,64 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
     assertEquals(0, coherence.realignerPositions());
   }
+
+  private UUID salleParUneSource(final String nom, final String origine) {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id, latitude,"
+            + " longitude, origine_position) VALUES (CAST(:id AS uuid), :nom, :nom, :nom,"
+            + " 'Montpellier', '34', :qid, 43.6108, 3.8767, :origine)",
+        Map.of(
+            "id",
+            id.toString(),
+            "nom",
+            nom,
+            "qid",
+            "Q" + Math.abs(nom.hashCode()),
+            "origine",
+            origine));
+    return id;
+  }
+
+  private int signalementsPosition() {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM logs_admin WHERE niveau = 'warn'"
+            + " AND message LIKE 'position de source éloignée%'",
+        Map.of(), Integer.class);
+  }
+
+  // Sud de France Arena : position TM au centre de Montpellier, élément Wikidata à Pérols.
+  @Test
+  void signalerPositionsDivergentes_positionDeSourceLoinDeLElement_estSignaleeUneFoisParMois() {
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    final UUID salle = salleParUneSource("sud de france arena", "sources");
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(salle, new EnrichissementSalle("Q1", null, null, null, null, 43.5686, 3.9519)));
+
+    assertEquals(1, coherence.signalerPositionsDivergentes());
+    assertEquals(1, coherence.signalerPositionsDivergentes());
+
+    assertEquals(1, signalementsPosition());
+    assertEquals(
+        43.6108,
+        jdbc.queryForObject(
+            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Double.class),
+        1e-9);
+  }
+
+  @Test
+  void signalerPositionsDivergentes_positionProcheOuPosee_parWikidata_neSignaleRien() {
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    final UUID proche = salleParUneSource("salle proche", "sources");
+    salleParUneSource("salle wikidata", "wikidata");
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(proche, new EnrichissementSalle("Q2", null, null, null, null, 43.6112, 3.8770)));
+
+    assertEquals(0, coherence.signalerPositionsDivergentes());
+    assertEquals(0, signalementsPosition());
+  }
 }

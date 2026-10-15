@@ -42,9 +42,7 @@ public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
    * @return {@code true} si toutes les réponses sont vides
    */
   public boolean repondVide() {
-    return appels >= SEUIL_APPELS_MIN_REPONSES_VIDES
-        && erreursHttp == 0
-        && reponsesVides == appels;
+    return appels >= SEUIL_APPELS_MIN_REPONSES_VIDES && erreursHttp == 0 && reponsesVides == appels;
   }
 
   /**

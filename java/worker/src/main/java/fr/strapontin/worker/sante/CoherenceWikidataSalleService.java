@@ -47,6 +47,13 @@ public class CoherenceWikidataSalleService {
   // coordonnées Wikidata, déplacement d'un point d'entrée).
   private static final double ECART_REALIGNEMENT_METRES = 100;
 
+  // Au-delà, une position publiée par une source ne désigne plus le même
+  // lieu que l'élément Wikidata (centre-ville au lieu de la commune de la salle).
+  private static final double ECART_SIGNALEMENT_METRES = 1000;
+  private static final int JOURS_ENTRE_SIGNALEMENTS_POSITION = 30;
+  private static final String MESSAGE_POSITION_SOURCE_ELOIGNEE =
+      "position de source éloignée de l'élément Wikidata salle=";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
   private final LogsAdminWorker logsAdminWorker;
@@ -187,6 +194,80 @@ public class CoherenceWikidataSalleService {
     }
     LOG.info("coherence:wikidata:positions candidates={} realignees={}", salles.size(), realignees);
     return realignees;
+  }
+
+  /**
+   * Signale, sans rien modifier, les salles dont la position vient d'une
+   * source (billetterie ou géocodage) mais se trouve à plus d'un kilomètre
+   * de leur élément Wikidata : l'un des deux désigne un autre lieu.
+   * Un même écart n'est rappelé qu'une fois par mois.
+   * @return nombre de salles à la position divergente
+   */
+  public int signalerPositionsDivergentes() {
+    final List<SalleAEnrichir> salles = sallesPositionneesParUneSource();
+    if (salles.isEmpty()) {
+      return 0;
+    }
+    final Map<UUID, EnrichissementSalle> elements = wikidata.enrichirLot(salles);
+    int divergentes = 0;
+    for (final SalleAEnrichir salle : salles) {
+      final EnrichissementSalle element = elements.get(salle.id());
+      if (element == null || element.latitude() == null || element.longitude() == null) {
+        continue;
+      }
+      final double ecart =
+          DistanceGeo.metres(
+              salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
+      if (ecart > ECART_SIGNALEMENT_METRES) {
+        divergentes++;
+        signalerPositionDivergente(salle, ecart);
+      }
+    }
+    LOG.info(
+        "coherence:wikidata:positions-sources candidates={} divergentes={}",
+        salles.size(),
+        divergentes);
+    return divergentes;
+  }
+
+  private List<SalleAEnrichir> sallesPositionneesParUneSource() {
+    return jdbc.query(
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id, latitude, longitude FROM salles"
+            + " WHERE wikidata_id IS NOT NULL AND origine_position IS DISTINCT FROM 'wikidata'"
+            + " AND latitude IS NOT NULL AND longitude IS NOT NULL",
+        Map.of(),
+        (rs, _) -> versSalleAEnrichir(rs));
+  }
+
+  private void signalerPositionDivergente(final SalleAEnrichir salle, final double ecart) {
+    final Boolean dejaSignalee =
+        jdbc.queryForObject(
+            """
+            SELECT EXISTS (SELECT 1 FROM logs_admin
+                           WHERE source = 'coherence-wikidata' AND niveau = 'warn'
+                             AND message LIKE :motif
+                             AND meta ->> 'salleId' = :id
+                             AND ts > now() - make_interval(days => :jours))
+            """,
+            Map.of(
+                "motif",
+                MESSAGE_POSITION_SOURCE_ELOIGNEE + "%",
+                "id",
+                salle.id().toString(),
+                "jours",
+                JOURS_ENTRE_SIGNALEMENTS_POSITION),
+            Boolean.class);
+    if (Boolean.TRUE.equals(dejaSignalee)) {
+      return;
+    }
+    logsAdminWorker.inserer(
+        "warn",
+        "coherence-wikidata",
+        MESSAGE_POSITION_SOURCE_ELOIGNEE + salle.nom(),
+        Map.of(
+            "salleId", salle.id().toString(),
+            "wikidataId", salle.wikidataId(),
+            "ecartMetres", Math.round(ecart)));
   }
 
   private List<SalleAEnrichir> sallesPositionneesParWikidata() {
