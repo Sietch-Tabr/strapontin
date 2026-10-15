@@ -98,6 +98,6 @@ final class EnregistreurPositionsLieux {
         .addValue("latitude", concert.position().latitude(), Types.DOUBLE)
         .addValue("longitude", concert.position().longitude(), Types.DOUBLE)
         .addValue("codePostal", concert.position().codePostal(), Types.VARCHAR)
-        .addValue("libelle", concert.salle(), Types.VARCHAR);
+        .addValue("libelle", concert.sallePubliee(), Types.VARCHAR);
   }
 }

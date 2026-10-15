@@ -59,6 +59,11 @@ final class FabriqueValeurConcert {
     return this;
   }
 
+  FabriqueValeurConcert sallePubliee(final String valeur) {
+    brut.sallePubliee(valeur);
+    return this;
+  }
+
   FabriqueValeurConcert salleNorm(final String valeur) {
     salleNorm = valeur;
     return this;

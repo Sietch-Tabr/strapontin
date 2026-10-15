@@ -63,6 +63,13 @@ public record ValeurConcert(
   }
 
   /**
+   * @return nom de salle tel que la source du concert le publie
+   */
+  public String sallePubliee() {
+    return brut.sallePubliee();
+  }
+
+  /**
    * @return ville publiée, peut être null
    */
   public String ville() {
