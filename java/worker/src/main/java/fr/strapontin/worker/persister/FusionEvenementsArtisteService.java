@@ -117,12 +117,10 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Concert déplacé : la fiche de l'ancienne salle, absente, rejoint l'unique
+   * Concert déplacé : la fiche absente de l'ancienne salle rejoint l'unique
    * événement vivant de même artiste, date, heure, département et source dans
-   * une autre salle ; ambigu : ignoré. Une salle qui publie encore d'autres
-   * séances de la même manifestation (idmanif, à défaut URL) n'a pas déplacé
-   * celle-ci : deux salles donnant le même soir un spectacle de même intitulé
-   * restent distinctes.
+   * une autre salle ; ambigu, ou salle publiant encore la manifestation
+   * (idmanif, à défaut URL) : ignoré.
    * @return nombre de fusions effectuées
    */
   public int fusionnerConcertsDeplaces() {

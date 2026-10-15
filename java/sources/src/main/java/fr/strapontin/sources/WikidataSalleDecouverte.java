@@ -186,11 +186,7 @@ final class WikidataSalleDecouverte {
       return Optional.empty();
     }
 
-    final List<Map<String, Object>> bindings = ClientSparqlWikidata.extraireBindings(data);
-    // Une map vide est un échec déjà compté par le client, pas une réponse sans résultat.
-    if (bindings.isEmpty() && !data.isEmpty()) {
-      client.enregistrerReponseVide();
-    }
+    final List<Map<String, Object>> bindings = client.bindingsDeDecouverte(data);
     for (final Map<String, Object> binding : bindings) {
       final Optional<EnrichissementSalle> candidat =
           evaluerCandidatDecouverte(salle, binding, nomRecherche);

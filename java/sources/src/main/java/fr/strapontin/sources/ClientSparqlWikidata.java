@@ -195,12 +195,18 @@ final class ClientSparqlWikidata {
   }
 
   /**
-   * Compte un appel réussi sans aucun résultat. Appelé par la découverte de
-   * salles seulement : pour les artistes, une réponse vide est le cas courant.
+   * Bindings d'une réponse de découverte de salle ; une réponse réussie sans
+   * résultat est comptée au bilan (une map vide est un échec déjà compté).
+   * @param data réponse de {@link #executer}
+   * @return les bindings, vide si aucun
    */
   /* package-private : appelé par WikidataSalleDecouverte (même package). */
-  void enregistrerReponseVide() {
-    compteurBilan.enregistrerReponseVide();
+  List<Map<String, Object>> bindingsDeDecouverte(final Map<String, Object> data) {
+    final List<Map<String, Object>> bindings = extraireBindings(data);
+    if (bindings.isEmpty() && !data.isEmpty()) {
+      compteurBilan.enregistrerReponseVide();
+    }
+    return bindings;
   }
 
   private static Optional<Long> extraireRetryAfterMs(final HttpHeaders headers) {

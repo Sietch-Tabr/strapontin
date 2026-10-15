@@ -25,11 +25,15 @@ public interface CadenceurAppels {
    * l'écart minimal s'allonge tant que le service n'a pas récupéré. Sans effet
    * par défaut.
    */
-  default void ralentir() {}
+  default void ralentir() {
+    // sans effet
+  }
 
   /**
    * Signale un appel accepté : après une série d'appels sans refus, l'écart
    * minimal revient vers sa valeur de base. Sans effet par défaut.
    */
-  default void apaiser() {}
+  default void apaiser() {
+    // sans effet
+  }
 }

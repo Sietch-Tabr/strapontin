@@ -8,15 +8,22 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Bilan agrégé d'appels et d'échecs depuis le dernier
- * prélèvement (détail : CLAUDE.md, Services notables).
- * @param appels nombre total d'appels tentés
- * @param erreursHttp nombre d'appels en échec
- * @param reponsesVides nombre d'appels réussis dont la réponse ne contient aucun résultat
+ * Bilan agrégé d'appels et d'échecs depuis le dernier prélèvement.
+ * @param appels appels tentés
+ * @param erreursHttp appels en échec
+ * @param reponsesVides appels réussis sans résultat
  * @since 2.7.0
  * @author Kwaite
  */
 public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
+
+  /**
+   * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100%
+   * déclenche une escalade en niveau {@code error} plutôt qu'un simple
+   * {@code warn} — évite une fausse alerte sur un cycle mono-appel victime d'un
+   * aléa réseau isolé.
+   */
+  public static final int SEUIL_APPELS_MIN_ALERTE_DEFAUT = 3;
 
   /**
    * Nombre minimal d'appels pour qu'une source qui ne répond que des
@@ -44,14 +51,6 @@ public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
   public boolean repondVide() {
     return appels >= SEUIL_APPELS_MIN_REPONSES_VIDES && erreursHttp == 0 && reponsesVides == appels;
   }
-
-  /**
-   * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100%
-   * déclenche une escalade en niveau {@code error} plutôt qu'un simple
-   * {@code warn} — évite une fausse alerte sur un cycle mono-appel victime d'un
-   * aléa réseau isolé.
-   */
-  public static final int SEUIL_APPELS_MIN_ALERTE_DEFAUT = 3;
 
   /**
    * Entrée à insérer dans {@code logs_admin} pour ce bilan.

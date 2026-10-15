@@ -23,7 +23,7 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   private static final int SUCCES_POUR_APAISER = 20;
 
   private final long delaiMinMs;
-  private final AtomicLong delaiCourantMs;
+  private final AtomicLong ecartCourantMs;
   private final AtomicLong succesConsecutifs = new AtomicLong(0);
   private final AtomicLong dernierAppelMs = new AtomicLong(0);
   private final ReentrantLock verrou = new ReentrantLock();
@@ -35,7 +35,7 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   /* package-private : instancié uniquement au sein du package sources. */
   CadenceurAppelsMemoire(final long delaiMinMs) {
     this.delaiMinMs = delaiMinMs;
-    this.delaiCourantMs = new AtomicLong(delaiMinMs);
+    this.ecartCourantMs = new AtomicLong(delaiMinMs);
   }
 
   @Override
@@ -43,7 +43,7 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
     verrou.lock();
     try {
       final long maintenant = System.currentTimeMillis();
-      final long prochainAppel = dernierAppelMs.get() + delaiCourantMs.get();
+      final long prochainAppel = dernierAppelMs.get() + ecartCourantMs.get();
       if (maintenant < prochainAppel) {
         try {
           Thread.sleep(prochainAppel - maintenant);
@@ -60,14 +60,14 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
   @Override
   public void ralentir() {
     succesConsecutifs.set(0);
-    delaiCourantMs.updateAndGet(courant -> Math.min(courant * 2, delaiMinMs * FACTEUR_MAX));
+    ecartCourantMs.updateAndGet(courant -> Math.min(courant * 2, delaiMinMs * FACTEUR_MAX));
   }
 
   @Override
   public void apaiser() {
     if (succesConsecutifs.incrementAndGet() >= SUCCES_POUR_APAISER) {
       succesConsecutifs.set(0);
-      delaiCourantMs.updateAndGet(courant -> Math.max(courant / 2, delaiMinMs));
+      ecartCourantMs.updateAndGet(courant -> Math.max(courant / 2, delaiMinMs));
     }
   }
 
@@ -76,6 +76,6 @@ final class CadenceurAppelsMemoire implements CadenceurAppels {
    */
   /* package-private : lu par les tests du package. */
   long delaiCourantMs() {
-    return delaiCourantMs.get();
+    return ecartCourantMs.get();
   }
 }
