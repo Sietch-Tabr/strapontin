@@ -42,16 +42,13 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background-color: var(--bg-card);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: var(--icone-chevron);
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;
   color: var(--fg);
   cursor: pointer;
   appearance: none;
-}
-.sombre .param-onglets-mobile {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 /* ── Page Aide ───────────────────────────────────────────── */
 .contenu-largeur-etroite {
@@ -288,20 +285,12 @@ fieldset.notif-grille {
   letter-spacing: 0.03em;
 }
 .badge-source-concerts {
-  background: var(--accent-bg, #eff6ff);
-  color: var(--accent, #1d4ed8);
+  background: var(--teinte-bleu-bg);
+  color: var(--teinte-bleu-fg);
 }
 .badge-source-metadonnees {
-  background: #f3f4f6;
-  color: #374151;
-}
-.sombre .badge-source-concerts {
-  background: #1e3a8a;
-  color: #93c5fd;
-}
-.sombre .badge-source-metadonnees {
-  background: #374151;
-  color: #d1d5db;
+  background: var(--teinte-ardoise-bg);
+  color: var(--teinte-ardoise-fg);
 }
 .source-salle-nom {
   font-weight: 500;

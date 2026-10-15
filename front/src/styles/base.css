@@ -65,6 +65,41 @@
   --info-border: #bfdbfe;
   --info-text: #1e40af;
   --warning: #ca8a04;
+  /* Teintes de statut (badges) */
+  --teinte-bleu-bg: #eff6ff;
+  --teinte-bleu-fg: #1d4ed8;
+  --teinte-rouge-bg: #fef2f2;
+  --teinte-rouge-fg: #991b1b;
+  --teinte-jaune-bg: #fffbeb;
+  --teinte-jaune-fg: #92400e;
+  --teinte-orange-bg: #fff7ed;
+  --teinte-orange-fg: #c2410c;
+  --teinte-violet-bg: #fdf4ff;
+  --teinte-violet-fg: #7e22ce;
+  --teinte-cyan-bg: #f0f9ff;
+  --teinte-cyan-fg: #0369a1;
+  --teinte-gris-bg: #f3f4f6;
+  --teinte-gris-fg: #4b5563;
+  --teinte-ardoise-bg: #f3f4f6;
+  --teinte-ardoise-fg: #374151;
+  /* Voiles, ombres et halos */
+  --voile-modale: rgba(0, 0, 0, 0.5);
+  --voile-tiroir: rgba(0, 0, 0, 0.4);
+  --ombre-modale: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --ombre-tiroir: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  --ombre-toast: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --ombre-carte: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --ombre-bandeau-haut: 0 2px 6px rgba(0, 0, 0, 0.1);
+  --ombre-bandeau-haut-large: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --ombre-bandeau-bas: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  --nouveaute-pulsation: rgba(202, 138, 4, 0.55);
+  --nouveaute-pulsation-fin: rgba(202, 138, 4, 0);
+  --nouveaute-halo: rgba(202, 138, 4, 0.6);
+  --curseur-bascule: #ffffff;
+  /* Icônes dont le trait suit le thème */
+  --icone-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --icone-recherche: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  --icone-coche: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
   --avertissement: #b45309;
   --avertissement-bg: #fffbeb;
   --avertissement-border: #fde68a;
@@ -98,6 +133,27 @@
   --avertissement-bg: #1c1400;
   --avertissement-border: #78350f;
   --avertissement-text: #fcd34d;
+  --teinte-bleu-bg: #1e3a8a;
+  --teinte-bleu-fg: #93c5fd;
+  --teinte-rouge-bg: #7f1d1d;
+  --teinte-rouge-fg: #fca5a5;
+  --teinte-jaune-bg: #78350f;
+  --teinte-jaune-fg: #fde68a;
+  --teinte-orange-bg: #7c2d12;
+  --teinte-orange-fg: #fed7aa;
+  --teinte-violet-bg: #3b0764;
+  --teinte-violet-fg: #e9d5ff;
+  --teinte-cyan-bg: #0c2d4a;
+  --teinte-cyan-fg: #7dd3fc;
+  --teinte-gris-bg: #27272a;
+  --teinte-gris-fg: #a1a1aa;
+  --teinte-ardoise-bg: #374151;
+  --teinte-ardoise-fg: #d1d5db;
+  --voile-modale: rgba(0, 0, 0, 0.7);
+  --voile-tiroir: rgba(0, 0, 0, 0.6);
+  --icone-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --icone-recherche: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  --icone-coche: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2309090b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
 }
 /* ── Reset ──────────────────────────────────────────────── */
 *,

@@ -46,7 +46,7 @@ const { visible, installer, plusTard } = usePwaInstall();
   padding: 0.75rem 1.25rem;
   background: var(--bg-card);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 8px rgb(0 0 0 / 8%);
+  box-shadow: var(--ombre-bandeau-bas);
 }
 
 @media (width >= 1025px) {

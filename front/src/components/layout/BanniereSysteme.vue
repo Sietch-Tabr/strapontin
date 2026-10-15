@@ -72,7 +72,7 @@ const MODIFICATEURS = {
   border-bottom: 1px solid;
   border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 10%);
+  box-shadow: var(--ombre-bandeau-haut);
 }
 
 @media (width >= 1025px) {
@@ -81,7 +81,7 @@ const MODIFICATEURS = {
     padding-top: 0.625rem;
     border-bottom-left-radius: var(--radius);
     border-bottom-right-radius: var(--radius);
-    box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
+    box-shadow: var(--ombre-bandeau-haut-large);
   }
 }
 

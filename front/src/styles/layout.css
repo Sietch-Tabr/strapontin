@@ -37,7 +37,7 @@
   color: var(--fg);
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--ombre-tiroir);
   animation: drawer-entree 0.25s ease;
 }
 @keyframes drawer-entree {
@@ -49,10 +49,7 @@
   }
 }
 #dialog-nav-plus::backdrop {
-  background: rgba(0, 0, 0, 0.4);
-}
-.sombre #dialog-nav-plus::backdrop {
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--voile-tiroir);
 }
 .dialog-nav-contenu a:hover,
 .dialog-nav-contenu a.actif {
@@ -67,7 +64,7 @@
   min-width: 1rem;
   height: 1rem;
   background: var(--danger);
-  color: #fff;
+  color: var(--danger-fg);
   border-radius: 9999px;
   font-size: 0.5625rem;
   font-weight: 700;
@@ -105,22 +102,20 @@
 .nav-badge--point-pulsation {
   animation: nouveaute-pulse 1.6s ease-in-out 3;
 }
-/* rgba figée (pas de syntaxe couleur relative CSS — support navigateur inégal, hors E2E
-   webkit/firefox du projet) : #ca8a04 = --warning, valeur unique quel que soit le thème. */
 @keyframes nouveaute-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.55);
+    box-shadow: 0 0 0 0 var(--nouveaute-pulsation);
   }
   50% {
-    box-shadow: 0 0 0 0.3rem rgba(202, 138, 4, 0);
+    box-shadow: 0 0 0 0.3rem var(--nouveaute-pulsation-fin);
   }
 }
 /* icône "Nouveautés" (sparkles) elle-même teintée dorée + léger halo quand une
    nouveauté est non lue — pas besoin d'un second symbole, celui existant change d'état. */
 .icone--nouveaute-actif {
   color: var(--warning);
-  filter: drop-shadow(0 0 3px rgba(202, 138, 4, 0.6));
+  filter: drop-shadow(0 0 3px var(--nouveaute-halo));
 }
 /* Fix view-transition : isoler la bottom nav de la transition root */
 ::view-transition-old(barre-nav-mobile),

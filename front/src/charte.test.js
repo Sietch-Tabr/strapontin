@@ -296,6 +296,91 @@ describe("charte : éléments définis une seule fois", () => {
   });
 });
 
+// Contrôle de l'aspect : tout ce qui change l'apparence d'un élément (couleur, ombre, icône,
+// taille de police, espacement, rayon) vient des variables de base.css, jamais d'une valeur en dur.
+const FEUILLE_THEME = "styles/base.css";
+const COULEUR_LITTERALE =
+  /#[0-9a-fA-F]{3,8}\b|%23[0-9a-fA-F]{3,8}|\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color-mix)\(|(?:^|[\s,(])(?:white|black|red|green|blue|gray|grey|orange|yellow|purple)(?![\w-])/i;
+
+// Découpe un bloc de déclarations sans couper dans une parenthèse ou une chaîne.
+function separerDeclarations(corps) {
+  const resultat = [];
+  let courant = "";
+  let profondeur = 0;
+  let guillemet = null;
+  for (const c of corps) {
+    if (guillemet) {
+      if (c === guillemet) guillemet = null;
+    } else if (c === '"' || c === "'") guillemet = c;
+    else if (c === "(") profondeur++;
+    else if (c === ")") profondeur--;
+    else if (c === ";" && profondeur === 0) {
+      resultat.push(courant);
+      courant = "";
+      continue;
+    }
+    courant += c;
+  }
+  resultat.push(courant);
+  return resultat
+    .map((d) => d.trim())
+    .filter(Boolean)
+    .map((d) => {
+      const i = d.indexOf(":");
+      return { propriete: d.slice(0, i).trim(), valeur: d.slice(i + 1).trim() };
+    })
+    .filter((d) => d.propriete && d.valeur);
+}
+
+// Toutes les déclarations des feuilles de l'application, y compris celles des étapes d'une
+// animation (@keyframes). La page hors ligne de sw.js, autonome par construction, n'en fait pas partie.
+const toutesLesDeclarations = sources
+  .filter((s) => /\.(css|vue)$/.test(s.nom))
+  .flatMap((source) =>
+    feuillesDe(source).flatMap((css) =>
+      [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter((m) => !m[1].trim().startsWith("@"))
+        .flatMap((m) =>
+          separerDeclarations(m[2]).map((d) => ({
+            ...d,
+            selecteur: m[1].trim(),
+            fichier: source.nom,
+          })),
+        ),
+    ),
+  );
+
+const enClair = (d) =>
+  `${d.fichier} : ${d.selecteur} { ${d.propriete}: ${d.valeur} }`;
+
+describe("charte : aspect porté par les variables du thème", () => {
+  it("l'analyse trouve bien des déclarations", () => {
+    expect(toutesLesDeclarations.length).toBeGreaterThan(1000);
+  });
+
+  it("aucune couleur n'est écrite en dur hors des variables de base.css", () => {
+    const fautifs = toutesLesDeclarations
+      .filter(
+        (d) =>
+          !(d.fichier === FEUILLE_THEME && d.propriete.startsWith("--")) &&
+          COULEUR_LITTERALE.test(d.valeur),
+      )
+      .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+
+  it("le thème sombre ne redéfinit que des variables", () => {
+    const fautifs = toutesLesDeclarations
+      .filter(
+        (d) =>
+          /(^|[^\w-])\.sombre(?![\w-])/.test(d.selecteur) &&
+          !(d.fichier === FEUILLE_THEME && d.propriete.startsWith("--")),
+      )
+      .map(enClair);
+    expect(fautifs).toEqual([]);
+  });
+});
+
 describe("charte : classes partagées utilisées", () => {
   const code = sources
     .filter((s) => !s.nom.endsWith(".css"))

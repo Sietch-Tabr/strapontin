@@ -225,7 +225,7 @@ onMounted(charger);
   top: 0.1875rem;
   width: 1.125rem;
   height: 1.125rem;
-  background: white;
+  background: var(--curseur-bascule);
   border-radius: 50%;
   transition: transform 0.2s;
 }

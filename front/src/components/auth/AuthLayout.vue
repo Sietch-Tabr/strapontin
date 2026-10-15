@@ -27,6 +27,6 @@ defineOptions({ name: "AuthLayout" });
   padding: 2rem;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+  box-shadow: var(--ombre-carte);
 }
 </style>

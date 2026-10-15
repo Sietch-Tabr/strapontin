@@ -664,16 +664,16 @@ onUnmounted(() => {
 }
 
 .source-test-ok {
-  color: #166534;
+  color: var(--succes-text);
 }
 
 .source-test-ko {
-  color: #991b1b;
+  color: var(--danger-text);
 }
 
 .source-salle-loc {
   font-size: 0.85rem;
-  color: var(--texte-secondaire, #6b7280);
+  color: var(--fg-muted);
   white-space: nowrap;
 }
 </style>

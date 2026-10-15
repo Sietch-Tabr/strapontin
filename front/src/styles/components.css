@@ -176,35 +176,19 @@ textarea:focus {
   opacity: 0;
 }
 .banniere-overlay--info {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info-text);
 }
 .banniere-overlay--avertissement {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background: var(--avertissement-bg);
+  border-color: var(--avertissement-border);
+  color: var(--avertissement-text);
 }
 .banniere-overlay--erreur {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
-}
-/* ── Bannière d'installation PWA (InstallPwaBanner.vue) ──── */
-.sombre .banniere-overlay--info {
-  background: #0c1a3a;
-  border-color: #1e3a8a;
-  color: #93c5fd;
-}
-.sombre .banniere-overlay--avertissement {
-  background: #1c1400;
-  border-color: #78350f;
-  color: #fcd34d;
-}
-.sombre .banniere-overlay--erreur {
-  background: #1c0a0a;
-  border-color: #7f1d1d;
-  color: #fca5a5;
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
 }
 /* ── Alertes ─────────────────────────────────────────────── */
 .alerte {
@@ -341,56 +325,32 @@ tr:hover td {
   white-space: nowrap;
 }
 .badge-nouveau {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--teinte-bleu-bg);
+  color: var(--teinte-bleu-fg);
 }
 .badge-annule {
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--teinte-rouge-bg);
+  color: var(--teinte-rouge-fg);
 }
 .badge-reporte {
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--teinte-jaune-bg);
+  color: var(--teinte-jaune-fg);
 }
 .badge-complet {
-  background: #fff7ed;
-  color: #c2410c;
-}
-.sombre .badge-nouveau {
-  background: #1e3a8a;
-  color: #93c5fd;
-}
-.sombre .badge-annule {
-  background: #7f1d1d;
-  color: #fca5a5;
-}
-.sombre .badge-reporte {
-  background: #78350f;
-  color: #fde68a;
-}
-.sombre .badge-complet {
-  background: #7c2d12;
-  color: #fed7aa;
+  background: var(--teinte-orange-bg);
+  color: var(--teinte-orange-fg);
 }
 .badge-prevente {
-  background: #fdf4ff;
-  color: #7e22ce;
+  background: var(--teinte-violet-bg);
+  color: var(--teinte-violet-fg);
 }
 .badge-tournee {
-  background: #f0f9ff;
-  color: #0369a1;
-}
-.sombre .badge-tournee {
-  background: #0c2d4a;
-  color: #7dd3fc;
+  background: var(--teinte-cyan-bg);
+  color: var(--teinte-cyan-fg);
 }
 .badge-a-verifier {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-.sombre .badge-a-verifier {
-  background: #27272a;
-  color: #a1a1aa;
+  background: var(--teinte-gris-bg);
+  color: var(--teinte-gris-fg);
 }
 .badge-info {
   background: var(--info-bg);
@@ -414,10 +374,6 @@ tr:hover td {
 }
 .badge-quota-attention {
   color: var(--warning);
-}
-.sombre .badge-prevente {
-  background: #3b0764;
-  color: #e9d5ff;
 }
 /* ── Utilitaires ─────────────────────────────────────────── */
 .lecteur-ecran {
@@ -532,13 +488,10 @@ tr:hover td {
 .form-recherche input {
   flex: 1;
   padding-left: 2.125rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-image: var(--icone-recherche);
   background-repeat: no-repeat;
   background-position: left 0.625rem center;
   background-size: 1rem;
-}
-.sombre .form-recherche input {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
 }
 .form-aide {
   font-size: 0.75rem;
@@ -596,14 +549,10 @@ tr:hover td {
 .notif-grille__case input[type="checkbox"]:checked {
   background: var(--primary);
   border-color: var(--primary);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
+  background-image: var(--icone-coche);
   background-position: center;
   background-repeat: no-repeat;
   background-size: 75%;
-}
-.sombre .form-checkboxes input[type="checkbox"]:checked,
-.sombre .notif-grille__case input[type="checkbox"]:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%2309090b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3 8l3.5 3.5L13 5'/%3E%3C/svg%3E");
 }
 .form-checkboxes input[type="checkbox"]:disabled,
 .notif-grille__case input[type="checkbox"]:disabled {
@@ -709,7 +658,7 @@ tr:hover td {
   top: auto;
   width: auto;
   margin: 0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--ombre-toast);
   transition:
     opacity 0.3s ease,
     transform 0.3s ease,
@@ -744,14 +693,11 @@ dialog {
   padding: 1.5rem;
   max-width: 32rem;
   width: 90%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--ombre-modale);
   margin: auto;
 }
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
-}
-.sombre dialog::backdrop {
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--voile-modale);
 }
 .dialog-entete {
   display: flex;
