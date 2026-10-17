@@ -165,7 +165,7 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
         );
         return;
       }
-      await expect(dialog).toContainText("chaque dimanche à 10h");
+      await expect(dialog).toContainText("chaque dimanche à 12h");
 
       await email.uncheck();
       await expect(dialog).toContainText("Aucun email ne vous sera envoyé.");
