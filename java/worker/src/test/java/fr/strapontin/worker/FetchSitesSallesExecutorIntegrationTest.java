@@ -164,4 +164,22 @@ class FetchSitesSallesExecutorIntegrationTest extends AbstractWorkerIntegrationT
             "SELECT count(*) FROM logs_admin WHERE niveau = 'error' AND message LIKE '%site-faux%'",
             Map.of(), Long.class));
   }
+
+  @Test
+  void executer_siteQuiNeRendPlusRienAlorsQueLaBaseEnConnait_neCompteAucuneAbsence() {
+    site.artistes = List.of("Groupe Un", "Groupe Deux");
+    executor.executer();
+
+    site.artistes = List.of();
+    executor.executer();
+
+    assertEquals(0, absences("groupe un"));
+    assertEquals(0, absences("groupe deux"));
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM logs_admin WHERE message LIKE '%mise en page modifiée%'"
+                + " OR message LIKE '%site-faux%'",
+            Map.of(), Long.class));
+  }
 }

@@ -80,6 +80,13 @@ class FetchSitesSallesExecutor {
 
   private ResultatPersistance traiterSite(final SourceSiteSalle site) {
     final List<ConcertBrut> lus = site.lireProgrammation();
+    final List<String> sallesDuSite = sallesDuSite(site.identifiantSite());
+    // Une page qui ne donne plus rien alors que la base connaît des concerts à venir est plus
+    // probablement une mise en page changée qu'un programme vidé : aucune absence n'est comptée.
+    if (lus.isEmpty() && aDesConcertsAVenir(sallesDuSite)) {
+      throw new IllegalStateException(
+          "aucun concert lu alors que la base en connaît à venir : mise en page modifiée ?");
+    }
     final List<ConcertBrut> dedoublonnes = commun.resoudreEtDeduplicer(lus, LOG);
     LOG.info(
         "{} {} bruts={} dédoublonnés={}", TYPE_JOB, site.nom(), lus.size(), dedoublonnes.size());
@@ -91,6 +98,21 @@ class FetchSitesSallesExecutor {
         debut,
         Map.of(SourceSiteSalle.SOURCE, LocalDate.now().plusYears(ANNEES_DE_COUVERTURE)));
     return resultat;
+  }
+
+  private boolean aDesConcertsAVenir(final List<String> salleIds) {
+    if (salleIds.isEmpty()) {
+      return false;
+    }
+    final Long nombre =
+        commun
+            .obtenirJdbc()
+            .queryForObject(
+                "SELECT count(*) FROM evenements WHERE salle_id::text IN (:ids)"
+                    + " AND date >= CURRENT_DATE",
+                Map.of("ids", salleIds),
+                Long.class);
+    return nombre != null && nombre > 0;
   }
 
   // Les dates de mise à jour sont celles de la base : l'horloge de la JVM peut en différer de
