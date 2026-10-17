@@ -19,12 +19,13 @@ import org.springframework.stereotype.Service;
  * @since 2.6.0
  * @author Kwaite
  */
-// 12 collaborateurs indépendants : chacun est une vérification/un
+// 13 collaborateurs indépendants : chacun est une vérification/un
 // enrichissement autonome du job nocturne, sans regroupement thématique naturel
 // (contrairement à FetchRapportage côté fetch) — un tel regroupement serait un
 // simple contournement du seuil, pas une amélioration de conception.
 // HealthCheckArtistesTM/HealthCheckSallesTM (déjà des beans Spring, voir leur
-// propre Javadoc) ont réduit le compte de 12 à 11 ; CompleteurVillesSalles le remonte à 12.
+// propre Javadoc) ont réduit le compte de 12 à 11 ; CompleteurVillesSalles et
+// CouvertureDepartements le remontent à 13.
 @SuppressWarnings("PMD.ExcessiveParameterList")
 @Service
 public class ReconciliationNocturneService {
@@ -41,9 +42,10 @@ public class ReconciliationNocturneService {
   private final HealthCheckArtistesTM healthCheckArtistesTM;
   private final HealthCheckSallesTM healthCheckSallesTM;
   private final CompleteurVillesSalles completeurVillesSalles;
+  private final CouvertureDepartements couvertureDepartements;
 
   /**
-   * Assemble les 12 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 13 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -58,7 +60,8 @@ public class ReconciliationNocturneService {
       final ControleIntegriteService controleIntegrite,
       final HealthCheckArtistesTM healthCheckArtistesTM,
       final HealthCheckSallesTM healthCheckSallesTM,
-      final CompleteurVillesSalles completeurVillesSalles) {
+      final CompleteurVillesSalles completeurVillesSalles,
+      final CouvertureDepartements couvertureDepartements) {
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
@@ -71,6 +74,7 @@ public class ReconciliationNocturneService {
     this.healthCheckArtistesTM = healthCheckArtistesTM;
     this.healthCheckSallesTM = healthCheckSallesTM;
     this.completeurVillesSalles = completeurVillesSalles;
+    this.couvertureDepartements = couvertureDepartements;
   }
 
   /**
@@ -111,6 +115,7 @@ public class ReconciliationNocturneService {
     final int evenementsFusionnes = fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
+    couvertureDepartements.verifier();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
     final int integriteSignalements = controleIntegrite.verifier();
     // Après les contrôles : une salle mélangeant deux lieux y est signalée et exclue.

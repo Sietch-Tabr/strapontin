@@ -29,7 +29,9 @@ public class SignalementsAdminService {
   private static final String SQL_LISTE =
       """
       SELECT t.*, COALESCE(s.nom_affiche, s.nom, a.nom_affiche, a.nom, u.username,
-               concat_ws(' · ', c.artiste, to_char(c.date, 'DD/MM/YYYY'), c.salle))
+               NULLIF(concat_ws(' · ', c.artiste, to_char(c.date, 'DD/MM/YYYY'), c.salle), ''),
+               CASE WHEN t.entite_type = 'departement'
+                    THEN 'Département ' || (t.details::jsonb ->> 'departement') END)
                AS entite_nom
       FROM (
         SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
@@ -129,17 +131,30 @@ public class SignalementsAdminService {
 
   /**
    * Marque un signalement de la table {@code signalements_matching} comme
-   * résolu manuellement.
+   * résolu manuellement ; pour un département sans concert, l'absence de
+   * couverture est aussi reconnue (plus de signalement tant qu'il reste vide).
    *
    * @param id identifiant numérique du signalement
    * @return {@code true} si un signalement actif correspondant a été résolu
    */
   public boolean resoudre(final long id) {
+    final List<String> departements =
+        jdbc.queryForList(
+            "SELECT details ->> 'departement' FROM signalements_matching WHERE id = :id"
+                + " AND resolu_le IS NULL AND type = 'departement_sans_concert'",
+            Map.of(CLE_ID, id),
+            String.class);
     final int lignes =
         jdbc.update(
             "UPDATE signalements_matching SET resolu_le = now()"
                 + " WHERE id = :id AND resolu_le IS NULL",
             Map.of("id", id));
+    if (lignes > 0 && !departements.isEmpty()) {
+      // Absence reconnue : le département n'est plus signalé tant qu'il reste sans concert.
+      jdbc.update(
+          "UPDATE couverture_departements SET couverture_connue_le = now() WHERE dept = :dept",
+          Map.of("dept", departements.get(0)));
+    }
     if (lignes > 0) {
       logAdminService.logAdmin(
           NIVEAU_INFO,

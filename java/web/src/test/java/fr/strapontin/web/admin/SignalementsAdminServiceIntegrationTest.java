@@ -154,6 +154,44 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
     assertEquals(0, service.lister(0).total());
   }
 
+  // « Marquer comme traité » reconnaît l'absence de couverture : la nuit suivante, le département
+  // n'est plus signalé tant qu'il reste sans concert.
+  @Test
+  void resoudre_departementSansConcert_reconnaitLAbsenceDeCouverture() {
+    jdbc.update("DELETE FROM couverture_departements", Map.of());
+    jdbc.update(
+        "INSERT INTO couverture_departements (dept, nb_concerts, sans_concert_depuis)"
+            + " VALUES ('973', 0, CURRENT_DATE)",
+        Map.of());
+    final long id =
+        jdbc.queryForObject(
+            "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+                + " VALUES ('departement_sans_concert', 'departement', CAST(:id AS uuid),"
+                + " 'moyenne', CAST('{\"departement\": \"973\"}' AS jsonb)) RETURNING id",
+            Map.of("id", UUID.randomUUID().toString()),
+            Long.class);
+
+    assertTrue(service.resoudre(id));
+
+    assertTrue(
+        jdbc.queryForObject(
+            "SELECT couverture_connue_le IS NOT NULL FROM couverture_departements"
+                + " WHERE dept = '973'",
+            Map.of(),
+            Boolean.class));
+  }
+
+  @Test
+  void lister_departementSansConcert_nommeLeDepartement() {
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('departement_sans_concert', 'departement', CAST(:id AS uuid),"
+            + " 'moyenne', CAST('{\"departement\": \"976\"}' AS jsonb))",
+        Map.of("id", UUID.randomUUID().toString()));
+
+    assertEquals("Département 976", service.lister(0).signalements().getFirst().entite().nom());
+  }
+
   @Test
   void resoudre_signalementInconnu_retourneFalse() {
     assertEquals(false, service.resoudre(999_999L));

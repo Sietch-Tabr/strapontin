@@ -92,6 +92,13 @@ public final class CatalogueSignalements {
             + " calendrier de la salle. Si un seul concert y est annoncé, supprimer la fiche en"
             + " trop depuis les concerts ; sinon marquer comme traité.");
     ajouter(
+        "departement_sans_concert",
+        "Département sans concert",
+        "Aucun concert à venir dans ce département : aucune de nos billetteries n'y programme ou"
+            + " ne le couvre. Marquer comme traité une fois l'absence de couverture reconnue ; le"
+            + " département ne sera signalé de nouveau que s'il retrouve des concerts puis les"
+            + " perd.");
+    ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
         "Des concerts éligibles n'ont pas été notifiés à ce compte alors qu'un canal est"
