@@ -18,8 +18,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Renommage d'une salle par sa source de référence (Ticketmaster si mappée,
- * sinon toute source) ; plusieurs mappings de cette source ne la renomment
- * que pour un nom strictement meilleur, jamais en alternance à chaque cycle.
+ * sinon toute source) ; plusieurs mappings de cette source, ou une simple
+ * variante de graphie du nom actuel, ne la renomment que pour un nom
+ * strictement meilleur, jamais en alternance à chaque cycle.
  * @since 3.0.2
  * @author Kwaite
  */
@@ -118,7 +119,7 @@ final class AbsorptionRenommagesSalles {
       return null;
     }
     final int mappingsReference = referenceTm ? etat.nbMappingsTm() : etat.nbMappings();
-    if (mappingsReference <= MAPPING_UNIQUE) {
+    if (mappingsReference <= MAPPING_UNIQUE && !estVarianteDeNom(meilleur, etat.nom())) {
       return meilleur;
     }
     final boolean strictementMeilleur =
@@ -126,6 +127,13 @@ final class AbsorptionRenommagesSalles {
             || ReconciliationNomsSalles.scoreSalle(meilleur)
                 > ReconciliationNomsSalles.scoreSalle(etat.nom());
     return strictementMeilleur ? meilleur : null;
+  }
+
+  // Une source publie parfois deux graphies d'un même identifiant selon la requête : seule une
+  // graphie strictement meilleure remplace l'actuelle, sinon la salle alterne à chaque lot.
+  private static boolean estVarianteDeNom(final String candidat, final String nomActuel) {
+    return nomActuel != null
+        && Normalisation.normaliserTexte(candidat).equals(Normalisation.normaliserTexte(nomActuel));
   }
 
   private void renommer(final UUID salleId, final String nouveauNom) {
