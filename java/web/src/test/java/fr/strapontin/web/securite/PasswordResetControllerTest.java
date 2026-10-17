@@ -161,6 +161,33 @@ class PasswordResetControllerTest {
     verify(authService).motDePasseOublie("alice@test.fr", "https://strapontin.fr");
   }
 
+  @Test
+  void motDePasseOublieEndpoint_quatriemeDemandePourLaMemeAdresse_estIgnoreeSansLeLaisserVoir() {
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+
+    for (int i = 0; i < 4; i++) {
+      final var reponse = controller.motDePasseOublie(new ForgotPasswordRequest("Alice@Test.fr"));
+      assertEquals(200, reponse.getStatusCode().value());
+      assertEquals(Boolean.TRUE, reponse.getBody().get("succes"));
+    }
+
+    verify(authService, times(3)).motDePasseOublie("alice@test.fr", "https://strapontin.fr");
+  }
+
+  @Test
+  void motDePasseOublieEndpoint_adressesDifferentes_quotasIndependants() {
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+    for (int i = 0; i < 3; i++) {
+      controller.motDePasseOublie(new ForgotPasswordRequest("alice@test.fr"));
+    }
+
+    controller.motDePasseOublie(new ForgotPasswordRequest("bob@test.fr"));
+
+    verify(authService).motDePasseOublie("bob@test.fr", "https://strapontin.fr");
+  }
+
   // PUBLIC_BASE_URL absente : ne doit jamais retomber sur le header Host de la requête entrante
   // (Host Header Injection) — le lien de réinitialisation ne doit tout simplement pas être
   // envoyé, avec une alerte logs_admin plutôt qu'un lien potentiellement redirigé vers un domaine
