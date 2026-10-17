@@ -12,10 +12,12 @@ import java.util.Optional;
  * @param appels appels tentés
  * @param erreursHttp appels en échec
  * @param reponsesVides appels réussis sans résultat
+ * @param causes nombre d'échecs par cause lisible, vide si elles ne sont pas attribuées
  * @since 2.7.0
  * @author Kwaite
  */
-public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
+public record BilanFetch(
+    int appels, int erreursHttp, int reponsesVides, Map<String, Integer> causes) {
 
   /**
    * Nombre minimal d'appels sur un cycle pour qu'un taux d'échec de 100%
@@ -31,6 +33,22 @@ public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
    * plausible quand les lieux cherchés sont peu connus.
    */
   public static final int SEUIL_APPELS_MIN_REPONSES_VIDES = 20;
+
+  /** Copie défensive des causes. */
+  public BilanFetch {
+    causes = causes == null ? Map.of() : Map.copyOf(causes);
+  }
+
+  /**
+   * Bilan sans cause attribuée aux échecs.
+   *
+   * @param appels nombre total d'appels tentés
+   * @param erreursHttp nombre d'appels en échec
+   * @param reponsesVides appels réussis sans résultat
+   */
+  public BilanFetch(final int appels, final int erreursHttp, final int reponsesVides) {
+    this(appels, erreursHttp, reponsesVides, Map.of());
+  }
 
   /**
    * Bilan sans réponse vide comptée.
@@ -114,8 +132,27 @@ public record BilanFetch(int appels, int erreursHttp, int reponsesVides) {
             + erreursHttp
             + "/"
             + appels
-            + " appels HTTP)";
-    final Map<String, Object> meta = Map.of("appels", appels, "erreursHttp", erreursHttp);
+            + " appels HTTP)"
+            + decrireCauses();
+    final Map<String, Object> meta =
+        causes.isEmpty()
+            ? Map.of("appels", appels, "erreursHttp", erreursHttp)
+            : Map.of("appels", appels, "erreursHttp", erreursHttp, "causes", causes);
     return Optional.of(new EntreeLog(niveau, message, meta));
+  }
+
+  // Causes triées de la plus fréquente à la plus rare : « connexion refusée × 9, délai dépassé × 3 ».
+  private String decrireCauses() {
+    if (causes.isEmpty()) {
+      return "";
+    }
+    return " : "
+        + causes.entrySet().stream()
+            .sorted(
+                Map.Entry.<String, Integer>comparingByValue()
+                    .reversed()
+                    .thenComparing(Map.Entry.comparingByKey()))
+            .map(e -> e.getKey() + " × " + e.getValue())
+            .collect(java.util.stream.Collectors.joining(", "));
   }
 }

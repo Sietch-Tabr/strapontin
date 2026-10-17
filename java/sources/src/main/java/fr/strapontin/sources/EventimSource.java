@@ -251,11 +251,11 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     } catch (ResourceAccessException e) {
       // Panne réseau (DNS, I/O, timeout) : propagée pour que l'appelant ne la confonde
       // pas avec une réponse vide (retry ciblé, absences non comptées).
-      compteurBilan.enregistrerErreur();
+      compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
       LOG.warn("Eventim injoignable : {}", e.getMessage());
       throw e;
     } catch (Exception e) {
-      compteurBilan.enregistrerErreur();
+      compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
       LOG.warn("Eventim erreur HTTP : {}", e.getMessage());
       return PageProduitsEventim.ECHEC;
     }

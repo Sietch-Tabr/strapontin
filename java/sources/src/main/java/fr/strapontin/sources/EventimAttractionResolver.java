@@ -125,11 +125,11 @@ final class EventimAttractionResolver {
     } catch (ResourceAccessException e) {
       // Panne réseau : un artiste introuvable ne doit pas être confondu avec une source
       // injoignable (ses concerts compteraient sinon une absence).
-      compteurBilan.enregistrerErreur();
+      compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
       LOG.warn("Eventim injoignable (attractions) terme={} : {}", terme, e.getMessage());
       throw e;
     } catch (Exception e) {
-      compteurBilan.enregistrerErreur();
+      compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
       LOG.warn("Eventim attractions erreur terme={} : {}", terme, e.getMessage());
       return null;
     }
