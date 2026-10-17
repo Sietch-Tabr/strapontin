@@ -17,13 +17,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 
 /**
  * Tests unitaires de {@link AideRestController}.
  *
- * <p>Couvre le rate limiting par IP (3 signalements/h) et la validation du message.
+ * <p>Couvre le rate limiting par utilisateur (3 signalements/h) et la validation du message.
  *
  * @since 2.2.0
  * @author Kwaite
@@ -74,10 +73,8 @@ class AideRestControllerTest {
 
   @Test
   void signaler_troisSignalementsSuccessifs_sontAcceptes() {
-    final var request = requete("10.0.0.1");
     for (int i = 0; i < 3; i++) {
-      final var rep =
-          controller.signaler(new RequeteSignalement("bug", "message test " + i), auth, request);
+      final var rep = controller.signaler(new RequeteSignalement("bug", "message test " + i), auth);
       assertEquals(
           HttpStatus.NO_CONTENT, rep.getStatusCode(), "Le signalement " + (i + 1) + " doit passer");
     }
@@ -85,23 +82,20 @@ class AideRestControllerTest {
 
   @Test
   void signaler_quatriemeSignalement_retourneErreurRateLimit() {
-    final var request = requete("10.0.0.2");
     for (int i = 0; i < 3; i++) {
-      controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
+      controller.signaler(new RequeteSignalement("bug", "message test"), auth);
     }
-    final var rep =
-        controller.signaler(new RequeteSignalement("bug", "message test"), auth, request);
+    final var rep = controller.signaler(new RequeteSignalement("bug", "message test"), auth);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 
   @Test
-  void signaler_ipsDifferentes_bucketsIndependants() {
-    final var ip1 = requete("10.0.0.3");
-    final var ip2 = requete("10.0.0.4");
+  void signaler_utilisateursDifferents_quotasIndependants() {
+    final var autre = authDe("user-2", "autre@test.fr");
     for (int i = 0; i < 3; i++) {
-      controller.signaler(new RequeteSignalement("bug", "msg"), auth, ip1);
+      controller.signaler(new RequeteSignalement("bug", "msg"), auth);
     }
-    final var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, ip2);
+    final var rep = controller.signaler(new RequeteSignalement("bug", "msg"), autre);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
 
@@ -109,33 +103,24 @@ class AideRestControllerTest {
   // un appel Java direct au contrôleur, seulement via Spring MVC).
 
   @Test
-  void signaler_headerXRealIpIgnore_seulRemoteAddrCompte() {
-    // Épuise le bucket de 10.0.0.20 avec X-Real-IP variés (tous ignorés)
+  void signaler_memeUtilisateurDerriereAdressesDifferentes_quotaPartage() {
     for (int i = 0; i < 3; i++) {
-      final var req = new MockHttpServletRequest();
-      req.setRemoteAddr("10.0.0.20");
-      req.addHeader("X-Real-IP", "1.2.3." + i);
-      controller.signaler(new RequeteSignalement("bug", "msg"), auth, req);
+      controller.signaler(new RequeteSignalement("bug", "msg"), auth);
     }
-    // Même remoteAddr → bucket épuisé même avec un X-Real-IP différent
-    final var req429 = new MockHttpServletRequest();
-    req429.setRemoteAddr("10.0.0.20");
-    req429.addHeader("X-Real-IP", "9.9.9.9");
-    final var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth, req429);
+    final var rep = controller.signaler(new RequeteSignalement("bug", "msg"), auth);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 
   @Test
   void signaler_typeValide_estTransmisTelQuelAEmailService() {
-    controller.signaler(new RequeteSignalement("suggestion", "message"), auth, requete("10.0.1.1"));
+    controller.signaler(new RequeteSignalement("suggestion", "message"), auth);
 
     verify(emailService).envoyerSignalement("suggestion", "message", "k@test.fr");
   }
 
   @Test
   void signaler_typeInvalide_replieSurQuestion() {
-    controller.signaler(
-        new RequeteSignalement("pas-un-type", "message"), auth, requete("10.0.1.2"));
+    controller.signaler(new RequeteSignalement("pas-un-type", "message"), auth);
 
     verify(emailService).envoyerSignalement("question", "message", "k@test.fr");
   }
@@ -145,17 +130,16 @@ class AideRestControllerTest {
     final Authentication authAnonyme = mock(Authentication.class);
     when(authAnonyme.getPrincipal()).thenReturn("anonymousUser");
 
-    final var rep =
-        controller.signaler(
-            new RequeteSignalement("bug", "message"), authAnonyme, requete("10.0.1.3"));
+    final var rep = controller.signaler(new RequeteSignalement("bug", "message"), authAnonyme);
 
     assertEquals(HttpStatus.UNAUTHORIZED, rep.getStatusCode());
     verify(emailService, never()).envoyerSignalement(anyString(), anyString(), anyString());
   }
 
-  private static MockHttpServletRequest requete(final String ip) {
-    final var request = new MockHttpServletRequest();
-    request.setRemoteAddr(ip);
-    return request;
+  private static Authentication authDe(final String id, final String email) {
+    final Authentication autre = mock(Authentication.class);
+    when(autre.getPrincipal())
+        .thenReturn(new UtilisateurDetails(id, id, email, "", "user", false, false, false));
+    return autre;
   }
 }

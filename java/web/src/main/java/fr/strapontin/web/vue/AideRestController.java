@@ -10,7 +10,6 @@ import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.HashMap;
@@ -74,20 +73,16 @@ public class AideRestController {
    *
    * @param requete corps JSON avec type et message
    * @param auth contexte d'authentification
-   * @param request la requête HTTP (pour rate limiting par IP)
    * @return 204 si envoyé, 400 si validation échoue, 429 si rate limit atteint
    */
   @PostMapping("/signalement")
   public ResponseEntity<Map<String, Object>> signaler(
-      @Valid @RequestBody final RequeteSignalement requete,
-      final Authentication auth,
-      final HttpServletRequest request) {
+      @Valid @RequestBody final RequeteSignalement requete, final Authentication auth) {
     if (!(auth.getPrincipal() instanceof UtilisateurDetails utilisateur)) {
       return erreur(401, "Non authentifié.");
     }
 
-    final String ip = request.getRemoteAddr();
-    if (!limiteurSignalement.autoriser(ip)) {
+    if (!limiteurSignalement.autoriser(utilisateur.id())) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 

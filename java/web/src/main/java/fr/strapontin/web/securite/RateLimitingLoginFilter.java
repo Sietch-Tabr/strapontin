@@ -66,7 +66,7 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
     }
 
     final String ip = request.getRemoteAddr();
-    final String cleBucket = ip + ":" + chemin;
+    final String cleBucket = AdresseClient.cle(ip) + ":" + chemin;
     final boolean estReset = URL_RESET_PASSWORD.equals(chemin);
     final LimiteurDebit limiteur = estReset ? limiteurReset : limiteurLogin;
 

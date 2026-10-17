@@ -9,7 +9,6 @@ import static fr.strapontin.web.ControllerUtils.erreur;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.Map;
@@ -122,14 +121,11 @@ public class SalleController {
    * Signale une salle absente (email admin + confirmation), rate-limité.
    * @param requete corps JSON avec nom, ville, urlSite, commentaire
    * @param auth contexte d'authentification
-   * @param request la requête HTTP (pour rate limiting par IP)
    * @return 204 si transmis, 400 si invalide, 429 si rate limit atteint
    */
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
-      @Valid @RequestBody final RequeteSignalementSalle requete,
-      final Authentication auth,
-      final HttpServletRequest request) {
+      @Valid @RequestBody final RequeteSignalementSalle requete, final Authentication auth) {
     final UtilisateurDetails utilisateur = utilisateur(auth);
 
     // @Valid rejette une requête invalide avant l'exécution de cette méthode —
@@ -140,8 +136,7 @@ public class SalleController {
     final String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
     final String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
 
-    final String ip = request.getRemoteAddr();
-    if (!limiteurSignalement.autoriser(ip)) {
+    if (!limiteurSignalement.autoriser(utilisateur.id())) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 

@@ -7,13 +7,13 @@ package fr.strapontin.web.client;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.securite.AdresseClient;
 import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -79,7 +79,7 @@ public class ClientController {
     final String cleUtilisateur =
         auth != null && auth.getPrincipal() instanceof UtilisateurDetails details
             ? details.id()
-            : Objects.requireNonNullElse(request.getRemoteAddr(), "inconnu");
+            : AdresseClient.cle(request.getRemoteAddr());
     if (messagesRecents.asMap().putIfAbsent(cleUtilisateur + "|" + type + "|" + message, true)
         != null) {
       return ResponseEntity.status(201).body(Map.of("succes", true));
