@@ -36,7 +36,16 @@
           >
             <template v-for="(d, i) in formaterDetails(s.details)" :key="i">
               <dt v-if="d.cle">{{ d.cle }}</dt>
-              <dd>{{ d.valeur }}</dd>
+              <dd>
+                <a
+                  v-if="d.lien"
+                  :href="d.lien"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ d.valeur }}</a
+                >
+                <template v-else>{{ d.valeur }}</template>
+              </dd>
             </template>
           </dl>
           <div class="source-actions">

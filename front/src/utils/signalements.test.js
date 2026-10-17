@@ -59,6 +59,33 @@ describe("formaterDetails", () => {
   it("ignore l'absence de détails", () => {
     expect(formaterDetails(null)).toEqual([]);
   });
+
+  it("fait d'une URL http(s) un lien", () => {
+    expect(
+      formaterDetails('{"url": "https://www.eventim.fr/event/x-1/"}'),
+    ).toEqual([
+      {
+        cle: "url",
+        valeur: "https://www.eventim.fr/event/x-1/",
+        lien: "https://www.eventim.fr/event/x-1/",
+      },
+    ]);
+  });
+
+  it("ne fait jamais un lien d'un autre schéma", () => {
+    const [couple] = formaterDetails('{"url": "javascript:alert(1)"}');
+    expect(couple.lien).toBeUndefined();
+  });
+
+  it("renvoie vers Wikidata pour un identifiant d'élément", () => {
+    const [couple] = formaterDetails('{"wikidataId": "Q123456"}');
+    expect(couple.lien).toBe("https://www.wikidata.org/wiki/Q123456");
+  });
+
+  it("ne lie pas un texte qui ressemble seulement à un identifiant", () => {
+    const [couple] = formaterDetails('{"nom": "Q123 Arena"}');
+    expect(couple.lien).toBeUndefined();
+  });
 });
 
 describe("actionsSignalement", () => {
