@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -68,12 +69,12 @@ class FetchArtistesBatchExecutorTest {
     final WorkerStatsService workerStatsService = mock(WorkerStatsService.class);
     doAnswer(
             invocation -> {
-              final Supplier<WorkerStatsService.ResultatJob> travail = invocation.getArgument(2);
+              final Supplier<WorkerStatsService.ResultatJob> travail = invocation.getArgument(3);
               travail.get();
               return null;
             })
         .when(workerStatsService)
-        .executerAvecStatsToleretErreur(any(), anyString(), any());
+        .executerAvecStatsToleretErreur(any(), anyString(), anyBoolean(), any());
     final FetchRapportage rapportage =
         new FetchRapportage(
             mock(NotificationDigestService.class),
