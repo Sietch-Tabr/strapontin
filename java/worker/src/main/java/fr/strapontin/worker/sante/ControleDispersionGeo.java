@@ -72,41 +72,45 @@ final class ControleDispersionGeo {
         + horsDepartementSignalees;
   }
 
-  // Position Wikidata loin des lieux sources : élément d'un homonyme (« Espace
-  // des Arts » de Chalon) ou d'un lieu voisin (église luthérienne Saint-Pierre).
+  // Position Wikidata loin de tous les lieux sources : élément d'un homonyme (« Espace des Arts »
+  // de Chalon) ou d'un lieu voisin (église luthérienne Saint-Pierre). Un lieu proche de l'élément,
+  // même accepté par un admin, le confirme : les lieux plus éloignés sont alors les faux.
   private int verifierPositionsWikidata() {
-    final Map<UUID, Map<String, Object>> incoherentes = new LinkedHashMap<>();
+    final Map<UUID, Double> plusProche = new LinkedHashMap<>();
+    final Map<UUID, String> elements = new LinkedHashMap<>();
     jdbc.query(
         """
-        SELECT s.id, s.wikidata_id, s.latitude, s.longitude,
-               percentile_cont(0.5) WITHIN GROUP (ORDER BY ss.latitude) AS latitude_sources,
-               percentile_cont(0.5) WITHIN GROUP (ORDER BY ss.longitude) AS longitude_sources
+        SELECT s.id, s.wikidata_id, s.latitude, s.longitude, ss.latitude AS latitude_lieu,
+               ss.longitude AS longitude_lieu
         FROM salles s JOIN salle_sources ss ON ss.salle_id = s.id
         WHERE s.origine_position = 'wikidata' AND ss.latitude IS NOT NULL
-          AND ss.contamination_acceptee_le IS NULL
-        GROUP BY s.id, s.wikidata_id, s.latitude, s.longitude
         """,
         Map.of(),
         rs -> {
+          final UUID salle = rs.getObject("id", UUID.class);
           final double distance =
               DistanceGeo.metres(
                   rs.getDouble("latitude"),
                   rs.getDouble("longitude"),
-                  rs.getDouble("latitude_sources"),
-                  rs.getDouble("longitude_sources"));
+                  rs.getDouble("latitude_lieu"),
+                  rs.getDouble("longitude_lieu"));
+          plusProche.merge(salle, distance, Math::min);
+          elements.put(salle, rs.getString("wikidata_id"));
+        });
+    final Set<UUID> incoherentes = new HashSet<>();
+    plusProche.forEach(
+        (salle, distance) -> {
           if (distance > EvaluationCoherenceWikidata.DISTANCE_AUTRE_LIEU_METRES) {
-            incoherentes.put(
-                rs.getObject("id", UUID.class),
-                Map.of(
-                    "wikidataId", rs.getString("wikidata_id"),
-                    "distanceMetres", Math.round(distance)));
+            incoherentes.add(salle);
+            signalements.signaler(
+                "position_wikidata_incoherente",
+                "salle",
+                salle,
+                "haute",
+                Map.of("wikidataId", elements.get(salle), "distanceMetres", Math.round(distance)));
           }
         });
-    incoherentes.forEach(
-        (salle, details) ->
-            signalements.signaler(
-                "position_wikidata_incoherente", "salle", salle, "haute", details));
-    signalements.clore("position_wikidata_incoherente", incoherentes.keySet());
+    signalements.clore("position_wikidata_incoherente", incoherentes);
     return incoherentes.size();
   }
 

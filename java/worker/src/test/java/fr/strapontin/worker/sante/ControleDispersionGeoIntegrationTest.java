@@ -294,6 +294,27 @@ class ControleDispersionGeoIntegrationTest extends AbstractWorkerIntegrationTest
     assertEquals(List.of("position_wikidata_incoherente"), typesSignales());
   }
 
+  // Sud de France Arena : les deux lieux Eventim, à 130 m de l'élément Wikidata, sont acceptés ;
+  // le lieu Ticketmaster resté en centre-ville ne rend pas fausse la position de la salle.
+  @Test
+  void verifier_lieuAccepteConfirmeLaPositionWikidata_neSignalePas() {
+    final UUID salle = creerSalle("sud de france arena");
+    jdbc.update(
+        "UPDATE salles SET latitude = 43.57334, longitude = 3.95176, origine_position ="
+            + " 'wikidata', wikidata_id = 'Q3586547' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    lieu(salle, "ticketmaster:centre-montpellier@34000", 43.608181, 3.879438);
+    lieu(salle, "internal:sud de france arena montpellier@34000", 43.5722, 3.9522);
+    jdbc.update(
+        "UPDATE salle_sources SET contamination_acceptee_le = now() WHERE identifiant_externe"
+            + " LIKE 'internal:%'",
+        Map.of());
+
+    controle.verifier();
+
+    assertTrue(typesSignales().stream().noneMatch("position_wikidata_incoherente"::equals));
+  }
+
   // Église luthérienne de la Trinité (13e) rattachée à l'église luthérienne Saint-Pierre, 5,5 km.
   @Test
   void verifier_positionWikidataDUnLieuVoisin_signaleLIncoherence() {
