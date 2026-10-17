@@ -448,6 +448,14 @@ class EnrichissementSallesServiceTest {
   // Collision entre « salle » (positionnée près de la porteuse) et une porteuse donnée.
   private IssueCollision enrichirAvecCollision(
       final UUID salleId, final String nomSalle, final Map<String, Object> porteuse) {
+    return enrichirAvecCollision(salleId, nomSalle, porteuse, null);
+  }
+
+  private IssueCollision enrichirAvecCollision(
+      final UUID salleId,
+      final String nomSalle,
+      final Map<String, Object> porteuse,
+      final String libelleWikidata) {
     final SalleAEnrichir candidat =
         new SalleAEnrichir(salleId, nomSalle, nomSalle, null, null, null, null, null);
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
@@ -464,7 +472,8 @@ class EnrichissementSallesServiceTest {
 
     final SourceEnrichissementSalle source = mock(SourceEnrichissementSalle.class);
     when(source.enrichirLot(any()))
-        .thenReturn(Map.of(salleId, new EnrichissementSalle("Q1", null, null, null, null)));
+        .thenReturn(
+            Map.of(salleId, new EnrichissementSalle("Q1", libelleWikidata, null, null, null)));
     final FusionSallesClePorteeService fusion = mock(FusionSallesClePorteeService.class);
     final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
     new EnrichissementSallesService(
@@ -539,6 +548,38 @@ class EnrichissementSallesServiceTest {
 
     verify(issue.signalement(), never())
         .signaler(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  // Le Chariot et le Châtelet sont voisins à Paris : seul le libellé de l'élément, qui ne désigne
+  // pas la salle, prouve que la proposition est fausse (proposée de nouveau chaque semaine).
+  @Test
+  void enrichir_collisionLibelleDUnAutreLieuDeLaMemeVille_neSignaleNiNeJournalise() {
+    final UUID salleId = UUID.randomUUID();
+    final Map<String, Object> chatelet =
+        porteuse(UUID.randomUUID(), "theatre du chatelet", "wikidata");
+
+    final IssueCollision issue =
+        enrichirAvecCollision(salleId, "theatre du chariot", chatelet, "Théâtre du Châtelet");
+
+    verify(issue.signalement(), never())
+        .signaler(anyString(), anyString(), any(), anyString(), any());
+  }
+
+  // Théâtre Montparnasse porteur à tort : le libellé de l'élément désigne bien la salle qui le
+  // reçoit, la collision reste à signaler.
+  @Test
+  void enrichir_collisionLibelleDesignantLaSalle_signaleToujours() {
+    final UUID salleId = UUID.randomUUID();
+
+    final IssueCollision issue =
+        enrichirAvecCollision(
+            salleId,
+            "theatre de poche montparnasse",
+            porteuse(UUID.randomUUID(), "theatre montparnasse", "wikidata"),
+            "Théâtre de Poche-Montparnasse");
+
+    verify(issue.signalement())
+        .signaler(eq("collision_wikidata_salle"), eq("salle"), eq(salleId), anyString(), any());
   }
 
   @Test

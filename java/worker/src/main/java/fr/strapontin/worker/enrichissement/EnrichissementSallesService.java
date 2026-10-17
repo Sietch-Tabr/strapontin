@@ -6,6 +6,7 @@ package fr.strapontin.worker.enrichissement;
 
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.NomsDeLieu;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecAmbiguitesDecouverte;
@@ -310,6 +311,13 @@ public class EnrichissementSallesService {
       return true;
     }
 
+    if (!libelleDesigneLaSalle(nom, enrichissement.nomAffiche())) {
+      LOG.debug(
+          "élément Wikidata d'un autre lieu écarté salle={} libelle={}",
+          nom,
+          enrichissement.nomAffiche());
+      return false;
+    }
     logsAdminWorker.inserer(
         "warn",
         "enrichissement-wikidata",
@@ -331,6 +339,17 @@ public class EnrichissementSallesService {
               porteuse.get("id").toString()));
     }
     return false;
+  }
+
+  // Un élément dont le libellé ne désigne pas notre salle (Théâtre du Châtelet proposé au Théâtre
+  // du Chariot) est une proposition fausse : ni conflit à journaliser, ni doublon à signaler.
+  private static boolean libelleDesigneLaSalle(final String nomSalle, final String libelle) {
+    if (libelle == null || libelle.isBlank()) {
+      return true;
+    }
+    final String nomNorm = Normalisation.normaliserTexte(nomSalle);
+    return NomsDeLieu.designentFortementLeMemeLieu(
+        nomNorm, Normalisation.normaliserTexte(libelle), nomNorm);
   }
 
   // Retour null idiomatique (une entité unique trouvée ou non, pas une collection
