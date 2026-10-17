@@ -144,6 +144,20 @@ class EventimSourceTest {
             "Suzane"));
   }
 
+  @Test
+  void concerneArtiste_hommageALArtisteRecherche_estEcarte() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of("name", "AC/DC Live Tribute by Poun, Black Bomb A, Smack"), "AC/DC"));
+  }
+
+  @Test
+  void concerneArtiste_hommageRechercheParSonPropreNom_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of("name", "AC/DC Tribute - Live au Balajo"), "AC/DC Tribute"));
+  }
+
   // Titre tronqué par Eventim : la suite reste un préfixe du festival.
   @Test
   void concerneArtiste_titreTronque_dateDUnAutreArtisteEcartee() {

@@ -24,6 +24,19 @@ class CorrespondanceArtisteTest {
   }
 
   @Test
+  void estDoublonArtiste_hommageEtArtisteImite_retourneFalse() {
+    assertFalse(
+        CorrespondanceArtiste.estDoublonArtiste(
+            "ac dc live tribute by poun black bomb a smack", "ac dc"));
+    assertFalse(CorrespondanceArtiste.estMemeAffiche("ac dc", "ac dc tribute"));
+  }
+
+  @Test
+  void estMemeAffiche_deuxHommagesAuMemeArtiste_retourneTrue() {
+    assertTrue(CorrespondanceArtiste.estMemeAffiche("ac dc tribute", "ac dc tribute 1ere partie"));
+  }
+
+  @Test
   void estDoublonArtiste_sansEspaceJaroSuffisant_retourneTrue() {
     // Jaro("krash karma", "krashkarma") = 0.97 >= seuil 0.95
     assertTrue(CorrespondanceArtiste.estDoublonArtiste("krash karma", "krashkarma"));

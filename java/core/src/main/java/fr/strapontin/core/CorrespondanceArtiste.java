@@ -63,6 +63,9 @@ public final class CorrespondanceArtiste {
   public static boolean estMemeAffiche(final String nomA, final String nomB) {
     Objects.requireNonNull(nomA, "nomA");
     Objects.requireNonNull(nomB, "nomB");
+    if (Hommage.estHommage(nomA) != Hommage.estHommage(nomB)) {
+      return false;
+    }
     final Set<String> motsA = motsSignificatifs(nomA);
     final Set<String> motsB = motsSignificatifs(nomB);
     final Set<String> court = motsA.size() <= motsB.size() ? motsA : motsB;
@@ -96,6 +99,10 @@ public final class CorrespondanceArtiste {
     Objects.requireNonNull(nomB, "nomB");
     if (nomA.equals(nomB)) {
       return true;
+    }
+    // Un hommage n'est jamais l'artiste qu'il imite, quelle que soit la proximité des noms.
+    if (Hommage.estHommage(nomA) != Hommage.estHommage(nomB)) {
+      return false;
     }
     if (DistanceTexte.jaro(nomA, nomB) >= SEUIL_JARO_ARTISTE) {
       return true;
