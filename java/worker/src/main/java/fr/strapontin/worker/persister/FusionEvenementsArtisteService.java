@@ -38,6 +38,9 @@ public class FusionEvenementsArtisteService {
   // fetch manqué ponctuellement ne suffit pas).
   /* package-private : visibilité élargie pour les tests (même package). */
   static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
+  // Écart d'heure maximal entre l'ancienne et la nouvelle fiche d'une même séance : au-delà, ce
+  // sont deux séances (matinée et soirée).
+  private static final int ECART_MAX_HEURE_CHANGEE_SECONDES = 3600;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -114,6 +117,38 @@ public class FusionEvenementsArtisteService {
             """,
             Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
     return fusionnerSiVivantUnique(lignes, "fiche source périmée");
+  }
+
+  /**
+   * Séance dont l'heure a changé : la fiche qui n'est plus publiée (absente depuis plusieurs
+   * cycles) rejoint l'unique fiche vivante du même artiste, de la même salle et du même jour, à
+   * moins d'une heure d'écart — quelle que soit la source de l'une ou l'autre. Deux séances
+   * réelles d'un même jour (matinée, soirée) sont plus éloignées ; plusieurs vivantes
+   * possibles : ignoré.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerSeancesHeureChangee() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT p.id AS perime, min(v.id::text) AS vivant, count(DISTINCT v.id) AS nb_vivants
+            FROM evenements p
+            JOIN evenements v
+              ON v.id <> p.id
+             AND v.salle_id = p.salle_id
+             AND v.date = p.date
+             AND (v.artiste_norm = p.artiste_norm
+                  OR (v.artiste_id IS NOT NULL AND v.artiste_id = p.artiste_id))
+             AND v.heure IS NOT NULL AND p.heure IS NOT NULL
+             AND abs(extract(epoch FROM (v.heure - p.heure))) <= :ecartSecondes
+            WHERE p.date >= CURRENT_DATE AND p.salle_id IS NOT NULL
+              AND p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+            GROUP BY p.id
+            """,
+            Map.of(
+                "seuil", SEUIL_ABSENCES_FICHE_PERIMEE,
+                "ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+    return fusionnerSiVivantUnique(lignes, "séance dont l'heure a changé");
   }
 
   /**

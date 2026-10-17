@@ -402,6 +402,38 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(vivante));
   }
 
+  // Nubiyan Twist : l'ancienne fiche (20 h 30, d'une autre source) reste affichée à côté de la
+  // nouvelle (19 h 30) tant qu'elle n'a pas atteint 50 absences.
+  @Test
+  void fusionnerSeancesHeureChangee_ancienneFicheAbsenteEtNouvelleVivante_fusionneDansLaVivante() {
+    final UUID ancienne = creerFiche(salle, DATE_FUTURE, "20:30", 14, URL_TM + "/idseance/1");
+    final UUID nouvelle = creerFiche(salle, DATE_FUTURE, "19:30", 0, "https://eventim.fr/p/2");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerSeancesHeureChangee());
+    assertFalse(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerSeancesHeureChangee_matineeEtSoiree_neFusionnePas() {
+    final UUID soir = creerFiche(salle, DATE_FUTURE, "18:00", 10, URL_TM + "/idseance/1");
+    final UUID matinee = creerFiche(salle, DATE_FUTURE, "13:00", 0, URL_TM + "/idseance/2");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerSeancesHeureChangee());
+    assertTrue(existe(soir));
+    assertTrue(existe(matinee));
+  }
+
+  @Test
+  void fusionnerSeancesHeureChangee_deuxFichesVivantesProches_ignoreLAmbiguite() {
+    final UUID ancienne = creerFiche(salle, DATE_FUTURE, "20:30", 14, URL_TM + "/idseance/1");
+    creerFiche(salle, DATE_FUTURE, "19:30", 0, URL_TM + "/idseance/2");
+    creerFiche(salle, DATE_FUTURE, "20:00", 0, URL_TM + "/idseance/3");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerSeancesHeureChangee());
+    assertTrue(existe(ancienne));
+  }
+
   // Le Roi Lion à Mogador : séances de 13 h et 18 h sous un même idmanif, vues
   // au même passage ; une absence de l'une ne fait pas d'elle un report.
   @Test

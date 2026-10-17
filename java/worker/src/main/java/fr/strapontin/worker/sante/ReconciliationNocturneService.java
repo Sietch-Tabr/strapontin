@@ -102,6 +102,7 @@ public class ReconciliationNocturneService {
     // fournirait la coïncidence qui fusionne deux salles distinctes.
     final int fichesPerimeesFusionnees =
         fusionEvenementsArtiste.fusionnerFichesPerimees()
+            + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
             + fusionEvenementsArtiste.fusionnerConcertsDeplaces();
     final int sallesFusionnees =
         fusionSallesClePortee.fusionnerMemesLieux(controleIntegrite.pairesMemeLieuFortes())
