@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
+import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.QualificatifSalle;
 import fr.strapontin.core.SalleHierarchie;
 import fr.strapontin.worker.LogsAdminWorker;
@@ -40,6 +41,13 @@ public class FusionSallesClePorteeService {
   // peut partager un nom quasi identique entre deux halls physiquement
   // distincts de plusieurs centaines de mètres.
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
+  // Une position de billetterie peut être fausse de plusieurs kilomètres (centre-ville au lieu de
+  // la salle) : deux concerts identiques et des noms qui désignent le même lieu suffisent alors.
+  private static final double DISTANCE_MAX_FUSION_CONCERTS_PARTAGES_METRES = 5_000;
+  private static final int NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE = 2;
+  // Deux billetteries publient la même séance à 30 ou 60 minutes d'écart (ouverture des portes
+  // et début) ; au-delà, ce sont deux séances.
+  private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final String CLE_CIBLE = "cible";
   private static final int NB_SALLES_PAIRE = 2;
   private static final String CLE_SOURCE = "source";
@@ -85,26 +93,29 @@ public class FusionSallesClePorteeService {
   }
 
   /**
-   * Paires de salles partageant un concert (artiste, date, heure, dept), aux
-   * noms doublons, de même département, à moins de
-   * {@value #DISTANCE_MAX_FUSION_METRES} m (coordonnées connues des deux
-   * côtés), hors complexe/sous-salle, paires déclarées distinctes et salles
-   * signalées contaminées.
+   * Paires de salles partageant un concert (artiste, date, dept, heures à
+   * moins d'une heure), aux noms doublons ou désignant fortement le même
+   * lieu, de même département, à moins de {@value #DISTANCE_MAX_FUSION_METRES}
+   * m (coordonnées connues des deux côtés) ou à moins de cinq kilomètres si
+   * elles partagent au moins deux concerts, hors complexe/sous-salle, paires
+   * déclarées distinctes et salles signalées contaminées.
    */
   private List<PaireSalles> detecterPaires() {
     final List<Map<String, Object>> lignes =
         jdbc.queryForList(
             """
-            SELECT DISTINCT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
+            SELECT c1.salle_id AS salle_a, c2.salle_id AS salle_b,
                    sa.nom_norm AS nom_a, sb.nom_norm AS nom_b,
                    sa.nom AS brut_a, sb.nom AS brut_b,
+                   concat_ws(' ', sa.ville, sb.ville) AS villes,
                    sa.latitude AS lat_a, sa.longitude AS lon_a,
-                   sb.latitude AS lat_b, sb.longitude AS lon_b
+                   sb.latitude AS lat_b, sb.longitude AS lon_b,
+                   count(*) AS nb_partages
             FROM concerts c1
             JOIN concerts c2
               ON c1.artiste_norm = c2.artiste_norm
              AND c1.date = c2.date
-             AND c1.heure = c2.heure
+             AND abs(extract(epoch FROM (c1.heure - c2.heure))) <= :ecartHeure
              AND c1.dept = c2.dept
              AND c1.salle_id < c2.salle_id
             JOIN salles sa ON sa.id = c1.salle_id
@@ -123,8 +134,13 @@ public class FusionSallesClePorteeService {
             """
                 + SalleFiable.condition("sa")
                 + " AND "
-                + SalleFiable.condition("sb"),
-            Map.of());
+                + SalleFiable.condition("sb")
+                + """
+
+            GROUP BY c1.salle_id, c2.salle_id, sa.nom_norm, sb.nom_norm, sa.nom, sb.nom,
+                     sa.ville, sb.ville, sa.latitude, sa.longitude, sb.latitude, sb.longitude
+            """,
+            Map.of("ecartHeure", ECART_MAX_HEURE_SECONDES));
     final List<PaireSalles> paires = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
       if (memeLieu(ligne)) {
@@ -135,15 +151,28 @@ public class FusionSallesClePorteeService {
   }
 
   private static boolean memeLieu(final Map<String, Object> ligne) {
-    return CorrespondanceSalle.estDoublonSalle(
-            (String) ligne.get("nom_a"), (String) ligne.get("nom_b"))
+    final String nomA = (String) ligne.get("nom_a");
+    final String nomB = (String) ligne.get("nom_b");
+    final boolean nomsDuMemeLieu =
+        CorrespondanceSalle.estDoublonSalle(nomA, nomB)
+            || NomsDeLieu.designentFortementLeMemeLieu(nomA, nomB, (String) ligne.get("villes"));
+    return nomsDuMemeLieu
         && !QualificatifSalle.qualificatifsDivergents(
             (String) ligne.get("brut_a"), (String) ligne.get("brut_b"))
-        && coordonneesConnuesEtProches(
-            (Double) ligne.get("lat_a"),
-            (Double) ligne.get("lon_a"),
-            (Double) ligne.get("lat_b"),
-            (Double) ligne.get("lon_b"));
+        && positionsCompatibles(ligne);
+  }
+
+  private static boolean positionsCompatibles(final Map<String, Object> ligne) {
+    final Double latA = (Double) ligne.get("lat_a");
+    final Double lonA = (Double) ligne.get("lon_a");
+    final Double latB = (Double) ligne.get("lat_b");
+    final Double lonB = (Double) ligne.get("lon_b");
+    if (coordonneesConnuesEtProches(latA, lonA, latB, lonB)) {
+      return true;
+    }
+    return ((Number) ligne.get("nb_partages")).intValue() >= NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE
+        && DistanceGeo.connuesEtProches(
+            latA, lonA, latB, lonB, DISTANCE_MAX_FUSION_CONCERTS_PARTAGES_METRES);
   }
 
   /**

@@ -126,6 +126,76 @@ class FusionSallesClePorteeServiceIntegrationTest extends AbstractWorkerIntegrat
         "Q3354551", wikidataId, "Le wikidata_id déjà connu doit être préservé après fusion");
   }
 
+  private void poserVille(final UUID salleId, final String ville) {
+    jdbc.update(
+        "UPDATE salles SET ville = :ville WHERE id = CAST(:id AS uuid)",
+        Map.of("ville", ville, "id", salleId.toString()));
+  }
+
+  private boolean existeSalle(final UUID salleId) {
+    return jdbc.queryForObject(
+            "SELECT count(*) FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salleId.toString()),
+            Integer.class)
+        > 0;
+  }
+
+  // Ultra Vomit : 20 h 30 chez Ticketmaster, 20 h chez Eventim ; les deux salles portent le
+  // nom que chaque billetterie leur donne, à 43 m l'une de l'autre.
+  @Test
+  void fusionner_nomsDeDeuxBilletteriesEtHeuresDecalees_fusionne() {
+    final UUID tm = creerSalle("Theatre des Cordeliers", "26", "Q63966559", LAT, LON);
+    final UUID eventim =
+        creerSalle("Les Cordeliers Romans sur Isere", "26", null, LAT + 0.0003, LON + 0.0002);
+    poserVille(eventim, "Romans-sur-Isère");
+    creerConcert("ultra vomit", "20:30", "26", tm);
+    creerConcert("ultra vomit", "20:00", "26", eventim);
+
+    assertEquals(1, fusionSallesClePortee.fusionner());
+    assertTrue(existeSalle(tm));
+    assertFalse(existeSalle(eventim));
+  }
+
+  @Test
+  void fusionner_heuresSepareesDeTroisHeures_neFusionnePas() {
+    final UUID tm = creerSalle("Theatre des Cordeliers", "26", null, LAT, LON);
+    final UUID eventim =
+        creerSalle("Les Cordeliers Romans sur Isere", "26", null, LAT + 0.0003, LON + 0.0002);
+    poserVille(eventim, "Romans-sur-Isère");
+    creerConcert("ultra vomit", "17:00", "26", tm);
+    creerConcert("ultra vomit", "20:00", "26", eventim);
+
+    assertEquals(0, fusionSallesClePortee.fusionner());
+  }
+
+  // L'Empreinte : la position Ticketmaster est à 2,3 km de l'adresse réelle, trois concerts
+  // identiques sur les deux fiches.
+  @Test
+  void fusionner_deuxConcertsPartagesPositionAKilometres_fusionne() {
+    final UUID tm = creerSalle("L Empreinte", "77", null, LAT, LON);
+    final UUID eventim =
+        creerSalle("Lempreinte Savigny le Temple Cedex", "77", null, LAT + 0.0207, LON);
+    poserVille(eventim, "Savigny le Temple");
+    creerConcert("slope", "20:00", "77", tm);
+    creerConcert("slope", "20:00", "77", eventim);
+    creerConcert("kalika", "20:00", "77", tm);
+    creerConcert("kalika", "20:00", "77", eventim);
+
+    assertEquals(1, fusionSallesClePortee.fusionner());
+  }
+
+  @Test
+  void fusionner_unSeulConcertPartagePositionAKilometres_neFusionnePas() {
+    final UUID tm = creerSalle("L Empreinte", "77", null, LAT, LON);
+    final UUID eventim =
+        creerSalle("Lempreinte Savigny le Temple Cedex", "77", null, LAT + 0.0207, LON);
+    poserVille(eventim, "Savigny le Temple");
+    creerConcert("slope", "20:00", "77", tm);
+    creerConcert("slope", "20:00", "77", eventim);
+
+    assertEquals(0, fusionSallesClePortee.fusionner());
+  }
+
   private void creerLieu(final UUID salleId, final String source, final String identifiant) {
     jdbc.update(
         "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
