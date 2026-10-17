@@ -44,8 +44,7 @@ class CauseEchecHttpTest {
   @Test
   void depuis_finDeFluxPrematuree_retourneConnexionFermee() {
     final var echec =
-        new ResourceAccessException(
-            "I/O error", new IOException("EOF reached while reading"));
+        new ResourceAccessException("I/O error", new IOException("EOF reached while reading"));
 
     assertEquals("connexion fermée par le serveur", CauseEchecHttp.depuis(echec));
   }
