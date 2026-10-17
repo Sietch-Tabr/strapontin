@@ -67,14 +67,61 @@ public final class LimiteurDebit {
     final Deque<Long> journal = journaux.get(cle, _ -> new ArrayDeque<>());
     final long maintenant = maintenantNanos();
     synchronized (journal) {
-      while (!journal.isEmpty() && maintenant - journal.peekFirst() >= fenetreNanos) {
-        journal.pollFirst();
-      }
+      purger(journal, maintenant);
       if (journal.size() >= capacite) {
         return false;
       }
       journal.addLast(maintenant);
       return true;
+    }
+  }
+
+  /**
+   * Indique si le quota de la clé est atteint, sans rien consommer ni créer
+   * de suivi pour une clé inconnue.
+   *
+   * @param cle identifiant de l'appelant
+   * @return {@code true} si une requête de plus serait refusée
+   */
+  public boolean estEpuise(final String cle) {
+    final Deque<Long> journal = journaux.getIfPresent(cle);
+    if (journal == null) {
+      return false;
+    }
+    synchronized (journal) {
+      purger(journal, maintenantNanos());
+      return journal.size() >= capacite;
+    }
+  }
+
+  /**
+   * Compte un événement pour la clé sans le refuser (échec constaté après coup).
+   *
+   * @param cle identifiant de l'appelant
+   * @return {@code true} si ce décompte vient d'atteindre le quota
+   */
+  public boolean enregistrer(final String cle) {
+    final Deque<Long> journal = journaux.get(cle, _ -> new ArrayDeque<>());
+    final long maintenant = maintenantNanos();
+    synchronized (journal) {
+      purger(journal, maintenant);
+      journal.addLast(maintenant);
+      return journal.size() == capacite;
+    }
+  }
+
+  /**
+   * Efface le suivi d'une clé.
+   *
+   * @param cle identifiant de l'appelant
+   */
+  public void oublier(final String cle) {
+    journaux.invalidate(cle);
+  }
+
+  private void purger(final Deque<Long> journal, final long maintenant) {
+    while (!journal.isEmpty() && maintenant - journal.peekFirst() >= fenetreNanos) {
+      journal.pollFirst();
     }
   }
 

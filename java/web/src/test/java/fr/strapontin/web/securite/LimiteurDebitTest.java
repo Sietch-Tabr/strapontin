@@ -102,4 +102,29 @@ class LimiteurDebitTest {
     horloge.avancer(Duration.ofMinutes(30));
     assertTrue(limiteur.autoriser("a"));
   }
+
+  @Test
+  void estEpuise_cleInconnue_neCreePasDeSuiviEtRetourneFaux() {
+    final LimiteurDebit limiteur = limiteur(1, new HorlogeManuelle());
+    assertFalse(limiteur.estEpuise("a"));
+    assertTrue(limiteur.autoriser("a"));
+  }
+
+  @Test
+  void enregistrer_quotaAtteint_signaleLeSeuilUneSeuleFois() {
+    final LimiteurDebit limiteur = limiteur(2, new HorlogeManuelle());
+    assertFalse(limiteur.enregistrer("a"));
+    assertTrue(limiteur.enregistrer("a"));
+    assertTrue(limiteur.estEpuise("a"));
+    assertFalse(limiteur.enregistrer("a"));
+  }
+
+  @Test
+  void oublier_apresEpuisement_liberLaCle() {
+    final LimiteurDebit limiteur = limiteur(1, new HorlogeManuelle());
+    limiteur.enregistrer("a");
+    assertTrue(limiteur.estEpuise("a"));
+    limiteur.oublier("a");
+    assertFalse(limiteur.estEpuise("a"));
+  }
 }

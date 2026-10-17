@@ -4,17 +4,22 @@
  */
 package fr.strapontin.web.securite;
 
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,20 +41,35 @@ public class AuthController {
   private static final Logger LOG = LoggerFactory.getLogger(AuthController.class);
   private static final String CLE_ERREUR = "erreur";
 
+  private static final int MAX_ECHECS_PAR_COMPTE = 10;
+  private static final Duration FENETRE_ECHECS_COMPTE = Duration.ofMinutes(15);
+
   private final AuthenticationManager authenticationManager;
   private final TotpChallengeService totpChallengeService;
+  private final LogAdminService logAdminService;
+  // Seuls les mauvais mots de passe comptent, quelle que soit l'IP : l'IP seule laisse passer
+  // des essais répartis sur plusieurs adresses contre un même compte.
+  private final LimiteurDebit echecsParCompte =
+      new LimiteurDebit(
+          MAX_ECHECS_PAR_COMPTE,
+          FENETRE_ECHECS_COMPTE,
+          FENETRE_ECHECS_COMPTE.plusMinutes(5),
+          10_000);
 
   /**
    * @param authenticationManager gestionnaire d'authentification Spring
    *     Security
    * @param totpChallengeService vérification du challenge TOTP (code + compteur
    *     d'échecs)
+   * @param logAdminService journalisation du verrouillage temporaire d'un compte
    */
   public AuthController(
       final AuthenticationManager authenticationManager,
-      final TotpChallengeService totpChallengeService) {
+      final TotpChallengeService totpChallengeService,
+      final LogAdminService logAdminService) {
     this.authenticationManager = authenticationManager;
     this.totpChallengeService = totpChallengeService;
+    this.logAdminService = logAdminService;
   }
 
   /**
@@ -58,15 +78,36 @@ public class AuthController {
    * @param req les credentials ({@code identifiant} + {@code motDePasse})
    * @param httpRequest la requête HTTP (pour créer la session)
    * @return l'utilisateur authentifié ou 401 si les credentials sont invalides
+   * @throws ErreurMetier (429) si le compte est verrouillé temporairement après des échecs répétés
    */
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(
       @Valid @RequestBody final LoginRequest req, final HttpServletRequest httpRequest) {
 
+    final String cleCompte = req.identifiant().strip().toLowerCase(Locale.ROOT);
+    if (echecsParCompte.estEpuise(cleCompte)) {
+      throw new ErreurMetier(
+          "Trop de tentatives. Réessayez dans quelques minutes.",
+          HttpStatus.TOO_MANY_REQUESTS.value());
+    }
+
     final UsernamePasswordAuthenticationToken tokenNonAuthentifie =
         UsernamePasswordAuthenticationToken.unauthenticated(req.identifiant(), req.motDePasse());
     tokenNonAuthentifie.setDetails(new WebAuthenticationDetails(httpRequest));
-    final Authentication auth = authenticationManager.authenticate(tokenNonAuthentifie);
+    final Authentication auth;
+    try {
+      auth = authenticationManager.authenticate(tokenNonAuthentifie);
+    } catch (BadCredentialsException e) {
+      if (echecsParCompte.enregistrer(cleCompte)) {
+        logAdminService.logAdmin(
+            "warn",
+            "auth",
+            "Compte verrouillé temporairement après échecs répétés : " + cleCompte,
+            Map.of("identifiant", cleCompte));
+      }
+      throw e;
+    }
+    echecsParCompte.oublier(cleCompte);
 
     final EtablisseurSession.SessionOuverte sessionOuverte =
         EtablisseurSession.ouvrir(auth, httpRequest, "Principal inattendu après authentification");

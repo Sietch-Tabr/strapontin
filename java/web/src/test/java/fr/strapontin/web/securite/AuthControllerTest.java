@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.admin.LogAdminService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.WebAuthenticationDetails;
@@ -37,12 +40,15 @@ class AuthControllerTest {
   private AuthController authController;
   private AuthenticationManager authenticationManager;
   private TotpChallengeService totpChallengeService;
+  private LogAdminService logAdminService;
 
   @BeforeEach
   void setUp() {
     authenticationManager = mock(AuthenticationManager.class);
     totpChallengeService = mock(TotpChallengeService.class);
-    authController = new AuthController(authenticationManager, totpChallengeService);
+    logAdminService = mock(LogAdminService.class);
+    authController =
+        new AuthController(authenticationManager, totpChallengeService, logAdminService);
   }
 
   // --- verifierTotp ---
@@ -308,6 +314,97 @@ class AuthControllerTest {
     assertThrows(
         IllegalStateException.class,
         () -> authController.login(new LoginRequest("alice", "motdepasse12345"), httpRequest));
+  }
+
+  // --- verrouillage par compte ---
+
+  private HttpServletRequest requeteLogin() {
+    final HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    when(httpRequest.getSession(false)).thenReturn(null);
+    when(httpRequest.getSession(true)).thenReturn(mock(HttpSession.class));
+    return httpRequest;
+  }
+
+  private void echouerDixFois(final String identifiant) {
+    when(authenticationManager.authenticate(any()))
+        .thenThrow(new BadCredentialsException("mauvais mot de passe"));
+    for (int i = 0; i < 10; i++) {
+      assertThrows(
+          BadCredentialsException.class,
+          () ->
+              authController.login(
+                  new LoginRequest(identifiant, "mauvais-mot-de-passe"), requeteLogin()));
+    }
+  }
+
+  @Test
+  void login_dixEchecsSurLeMemeCompte_verrouilleLeCompteEtLeJournalise() {
+    echouerDixFois("alice");
+
+    final var erreur =
+        assertThrows(
+            ErreurMetier.class,
+            () ->
+                authController.login(new LoginRequest("alice", "motdepasse12345"), requeteLogin()));
+
+    assertEquals(429, erreur.getStatus());
+    verify(logAdminService, times(1)).logAdmin(eq("warn"), eq("auth"), contains("alice"), anyMap());
+    // La tentative verrouillée n'atteint jamais le gestionnaire d'authentification.
+    verify(authenticationManager, times(10)).authenticate(any());
+  }
+
+  @Test
+  void login_verrouillageInsensibleALaCasse() {
+    echouerDixFois("Alice");
+
+    final var erreur =
+        assertThrows(
+            ErreurMetier.class,
+            () ->
+                authController.login(new LoginRequest("ALICE", "motdepasse12345"), requeteLogin()));
+
+    assertEquals(429, erreur.getStatus());
+  }
+
+  @Test
+  void login_autreCompte_nEstPasAffecte() {
+    echouerDixFois("alice");
+    reset(authenticationManager);
+    final UtilisateurDetails principal =
+        new UtilisateurDetails("u2", "bob", "bob@test.fr", "hash", "user", false, false, false);
+    final Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+
+    final var reponse =
+        authController.login(new LoginRequest("bob", "motdepasse12345"), requeteLogin());
+
+    assertEquals(200, reponse.getStatusCode().value());
+  }
+
+  @Test
+  void login_neufEchecsPuisSucces_remetLeCompteurAZero() {
+    when(authenticationManager.authenticate(any()))
+        .thenThrow(new BadCredentialsException("mauvais mot de passe"));
+    for (int i = 0; i < 9; i++) {
+      assertThrows(
+          BadCredentialsException.class,
+          () -> authController.login(new LoginRequest("alice", "faux"), requeteLogin()));
+    }
+    reset(authenticationManager);
+    final UtilisateurDetails principal =
+        new UtilisateurDetails("u1", "alice", "alice@test.fr", "hash", "user", false, false, false);
+    final Authentication auth = mock(Authentication.class);
+    when(auth.getPrincipal()).thenReturn(principal);
+    when(authenticationManager.authenticate(any())).thenReturn(auth);
+    authController.login(new LoginRequest("alice", "motdepasse12345"), requeteLogin());
+
+    when(authenticationManager.authenticate(any()))
+        .thenThrow(new BadCredentialsException("mauvais mot de passe"));
+    assertThrows(
+        BadCredentialsException.class,
+        () -> authController.login(new LoginRequest("alice", "faux"), requeteLogin()));
+    verify(logAdminService, never()).logAdmin(eq("warn"), eq("auth"), anyString(), anyMap());
   }
 
   // --- moi ---
