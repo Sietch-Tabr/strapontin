@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -557,7 +558,8 @@ class NotificationDigestServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(201);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     final NotificationDigestService serviceAvecFabriques =
         new NotificationDigestService(
@@ -573,7 +575,7 @@ class NotificationDigestServiceTest {
 
     serviceAvecFabriques.executerDigest("quotidien");
 
-    verify(pushServiceMock).send(any(Notification.class));
+    verify(pushServiceMock).send(any(Notification.class), eq(Encoding.AES128GCM));
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
@@ -618,7 +620,7 @@ class NotificationDigestServiceTest {
             (_, _, _) -> pushServiceMock)
         .executerDigest("quotidien");
 
-    verify(pushServiceMock, never()).send(any(Notification.class));
+    verify(pushServiceMock, never()).send(any(Notification.class), any(Encoding.class));
   }
 
   private static Map<String, Object> ligneTest(final String userId) {

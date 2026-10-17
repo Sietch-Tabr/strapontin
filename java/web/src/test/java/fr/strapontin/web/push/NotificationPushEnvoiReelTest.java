@@ -75,9 +75,11 @@ class NotificationPushEnvoiReelTest {
           throws GeneralSecurityException {
         return new PushService(clePublique, clePrivee, sujet) {
           @Override
-          public HttpResponse send(final Notification notification) {
+          public HttpResponse send(final Notification notification, final Encoding encodage) {
             try {
-              requetesEmises.add(preparePost(notification, Encoding.AES128GCM));
+              // L'encodage demandé par le service : send(Notification) seul retombe sur l'ancien
+              // « aesgcm », que Firebase refuse (« crypto-key header had invalid format »).
+              requetesEmises.add(preparePost(notification, encodage));
             } catch (Exception e) {
               throw new IllegalStateException(e);
             }

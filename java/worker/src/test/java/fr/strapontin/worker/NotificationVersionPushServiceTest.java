@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -104,7 +105,8 @@ class NotificationVersionPushServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(201);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
@@ -132,7 +134,8 @@ class NotificationVersionPushServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(500);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
@@ -158,7 +161,8 @@ class NotificationVersionPushServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(410);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     new NotificationVersionPushService(
             configService, jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)

@@ -10,6 +10,7 @@ import fr.strapontin.core.UtilitairesChaine;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -170,7 +171,7 @@ public class NotificationVersionPushService {
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload));
+      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
     } catch (Exception e) {
       suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
       return false;

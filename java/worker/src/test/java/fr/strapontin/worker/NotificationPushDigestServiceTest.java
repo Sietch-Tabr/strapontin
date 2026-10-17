@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -76,7 +77,8 @@ class NotificationPushDigestServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(statutHttp);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
     return pushServiceMock;
   }
 
@@ -97,7 +99,7 @@ class NotificationPushDigestServiceTest {
   private static PushService pushServiceRetournant(final int statutHttp, final String corps)
       throws Exception {
     final PushService pushServiceMock = pushServiceRetournant(statutHttp);
-    final HttpResponse reponse = pushServiceMock.send(mock(Notification.class));
+    final HttpResponse reponse = pushServiceMock.send(mock(Notification.class), Encoding.AES128GCM);
     when(reponse.getEntity()).thenReturn(new StringEntity(corps, StandardCharsets.UTF_8));
     return pushServiceMock;
   }
@@ -152,7 +154,8 @@ class NotificationPushDigestServiceTest {
   void envoyerPush_exceptionRepetee_revoqueAuSeuil() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(EchecPush.SEUIL_ECHECS_CONSECUTIFS);
     final PushService pushServiceMock = mock(PushService.class);
-    when(pushServiceMock.send(any(Notification.class))).thenThrow(new IOException("timeout"));
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenThrow(new IOException("timeout"));
 
     new NotificationPushDigestService(
             configServiceAvecVapid(),
