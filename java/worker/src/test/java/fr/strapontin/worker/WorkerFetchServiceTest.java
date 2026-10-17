@@ -109,7 +109,7 @@ class WorkerFetchServiceTest {
             mock(SignalementDatesFestivalEcartees.class));
     fetchService =
         new WorkerFetchService(
-            sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
+            sources, List.of(), persisterConcerts, recalculerMatchesService, rapportage, commun);
   }
 
   @Test

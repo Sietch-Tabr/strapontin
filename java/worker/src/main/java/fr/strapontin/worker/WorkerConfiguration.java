@@ -6,9 +6,14 @@ package fr.strapontin.worker;
 
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.ClientSiteSalle;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.sources.ProduitsEcartes;
 import fr.strapontin.sources.ResolveurNomCanonique;
+import fr.strapontin.sources.SiteAllmol;
+import fr.strapontin.sources.SiteEmbSannois;
+import fr.strapontin.sources.SiteLeTriton;
+import fr.strapontin.sources.SiteUsineAChapeaux;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -127,6 +132,63 @@ public class WorkerConfiguration {
                 Map.of("depts", depts),
                 String.class));
     return source;
+  }
+
+  /**
+   * Lecteur de pages partagé par les sites de salles : un seul rythme (une requête toutes les deux
+   * secondes) pour l'ensemble de la lecture quotidienne.
+   *
+   * @return lecteur au {@code User-Agent} du robot
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  ClientSiteSalle clientSiteSalle() {
+    return new ClientSiteSalle();
+  }
+
+  /**
+   * @param client lecteur de pages partagé
+   * @return site du Triton (Les Lilas)
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  SiteLeTriton siteLeTriton(final ClientSiteSalle client) {
+    return new SiteLeTriton(client);
+  }
+
+  /**
+   * @param client lecteur de pages partagé
+   * @return site de l'EMB (Sannois)
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  SiteEmbSannois siteEmbSannois(final ClientSiteSalle client) {
+    return new SiteEmbSannois(client);
+  }
+
+  /**
+   * @param client lecteur de pages partagé
+   * @return site de L'Usine à Chapeaux (Rambouillet)
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  SiteUsineAChapeaux siteUsineAChapeaux(final ClientSiteSalle client) {
+    return new SiteUsineAChapeaux(client);
+  }
+
+  /**
+   * @param client lecteur de pages partagé
+   * @return billetterie Allmol Tickets (Antilles, Guyane)
+   */
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  SiteAllmol siteAllmol(final ClientSiteSalle client) {
+    return new SiteAllmol(client);
   }
 
   /**

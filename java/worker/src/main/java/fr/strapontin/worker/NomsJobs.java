@@ -23,6 +23,7 @@ final class NomsJobs {
           Map.entry("fetchArtistesBatch", "fetch:artistes:batch"),
           Map.entry("fetchRegion", "fetch:region"),
           Map.entry("fetchSallesAll", "fetch:salles:all"),
+          Map.entry("fetchSitesSalles", "fetch:sites-salles"),
           Map.entry("purgerConcerts", "purger:concerts"),
           Map.entry("purgerSalles", "purger:salles"),
           Map.entry("purgerArtistes", "purger:artistes"),

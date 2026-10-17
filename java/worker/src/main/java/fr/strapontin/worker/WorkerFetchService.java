@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.sources.SourceConcerts;
+import fr.strapontin.sources.SourceSiteSalle;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
 import java.util.List;
@@ -25,6 +26,7 @@ public class WorkerFetchService {
   private final FetchUnArtisteExecutor fetchUnArtisteExecutor;
   private final FetchRegionExecutor fetchRegionExecutor;
   private final FetchSallesExecutor fetchSallesExecutor;
+  private final FetchSitesSallesExecutor fetchSitesSallesExecutor;
 
   /**
    * Injection Spring : sources de fetch, persistance/recalcul, reporting
@@ -32,6 +34,7 @@ public class WorkerFetchService {
    */
   public WorkerFetchService(
       final List<SourceConcerts> sources,
+      final List<SourceSiteSalle> sitesSalles,
       final PersisterConcerts persisterConcerts,
       final RecalculerMatchesService recalculerMatchesService,
       final FetchRapportage rapportage,
@@ -48,6 +51,9 @@ public class WorkerFetchService {
     this.fetchSallesExecutor =
         new FetchSallesExecutor(
             sources, persisterConcerts, recalculerMatchesService, rapportage, commun);
+    this.fetchSitesSallesExecutor =
+        new FetchSitesSallesExecutor(
+            sitesSalles, persisterConcerts, recalculerMatchesService, rapportage, commun);
   }
 
   /**
@@ -124,5 +130,13 @@ public class WorkerFetchService {
    */
   public void executerFetchSallesAll(final List<String> salleIdsCibles) {
     fetchSallesExecutor.executerToutes(salleIdsCibles);
+  }
+
+  /**
+   * Lecture quotidienne des sites de salles qui vendent hors Ticketmaster et Eventim — voir {@link
+   * FetchSitesSallesExecutor}.
+   */
+  public void executerFetchSitesSalles() {
+    fetchSitesSallesExecutor.executer();
   }
 }
