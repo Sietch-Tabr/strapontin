@@ -43,7 +43,6 @@
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.1</springdoc.version>
-        <bucket4j.version>8.21.0</bucket4j.version>
         <jsoup.version>1.23.2</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
@@ -268,12 +267,6 @@
                 <version>${springdoc.version}</version>
             </dependency>
 
-            <!-- Limitation de débit (connexion, réinitialisation, journalisation client) -->
-            <dependency>
-                <groupId>com.bucket4j</groupId>
-                <artifactId>bucket4j_jdk17-core</artifactId>
-                <version>${bucket4j.version}</version>
-            </dependency>
             <!-- Lecture des pages HTML des sites de salles (analyseur HTML seul : la vulnérabilité
                  connue de 1.23.2 vise l'analyseur XML, jamais utilisé ici) -->
             <dependency>

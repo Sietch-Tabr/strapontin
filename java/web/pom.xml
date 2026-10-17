@@ -89,12 +89,6 @@
             <artifactId>bcprov-jdk18on</artifactId>
         </dependency>
 
-        <!-- Limitation de débit (connexion, réinitialisation, journalisation client) -->
-        <dependency>
-            <groupId>com.bucket4j</groupId>
-            <artifactId>bucket4j_jdk17-core</artifactId>
-        </dependency>
-
         <!-- Validation des entrées (Bean Validation / Jakarta) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
