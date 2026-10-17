@@ -24,7 +24,7 @@
     </modules>
 
     <properties>
-        <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
+        <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
         <revision>3.0.6</revision>
         <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

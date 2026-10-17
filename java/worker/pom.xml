@@ -46,7 +46,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Registre Prometheus + métriques métier ciblées (#953) -->
+        <!-- Registre Prometheus + métriques métier ciblées -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
