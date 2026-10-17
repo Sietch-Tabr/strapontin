@@ -509,6 +509,61 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     return id;
   }
 
+  private UUID seanceSource(
+      final UUID salleId, final String artiste, final String heure, final String source) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id) VALUES"
+                + " (:artiste, CAST(:date AS date), CAST(:heure AS time), 'new morning',"
+                + " CAST(:salleId AS uuid)) RETURNING id",
+            Map.of(
+                "artiste", artiste,
+                "date", DATE_FUTURE,
+                "heure", heure,
+                "salleId", salleId.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), CAST(:source AS source_concert), :url, :artiste, 'New"
+            + " Morning')",
+        Map.of(
+            "id", id.toString(),
+            "source", source,
+            "url", "https://" + source + "/" + id,
+            "artiste", artiste));
+    return id;
+  }
+
+  // Nubiyan Twist au New Morning : 20 h 30 chez Ticketmaster, 19 h 30 chez Eventim.
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_ecartDUneHeure_fusionneDansLaFicheTm() {
+    final UUID newMorning = creerSalle("New Morning");
+    final UUID tm = seanceSource(newMorning, "nubiyan twist", "20:30", "ticketmaster");
+    final UUID ev = seanceSource(newMorning, "nubiyan twist", "19:30", "eventim");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+    assertTrue(existe(tm));
+    assertFalse(existe(ev));
+  }
+
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_matineeEtSoiree_neFusionnePas() {
+    final UUID newMorning = creerSalle("New Morning");
+    seanceSource(newMorning, "nubiyan twist", "15:00", "ticketmaster");
+    seanceSource(newMorning, "nubiyan twist", "20:00", "eventim");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+  }
+
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_memeSourceDesDeuxCotes_neFusionnePas() {
+    final UUID newMorning = creerSalle("New Morning");
+    seanceSource(newMorning, "nubiyan twist", "19:30", "eventim");
+    seanceSource(newMorning, "nubiyan twist", "20:00", "eventim");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+  }
+
   // Lady Macbeth de Mzensk : « of Mtsensk » chez Ticketmaster, « de Mzensk » chez Eventim.
   @Test
   void fusionnerMemeCreneauDeuxSources_memeSpectacleDeuxIntitules_fusionne() {

@@ -152,6 +152,49 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
+   * Même séance publiée par deux billetteries à des heures proches (ouverture des portes et début :
+   * 20 h 30 chez Ticketmaster, 20 h chez Eventim) : seuls événements de leur artiste, salle et
+   * jour, l'un Ticketmaster seul, l'autre Eventim seul, à moins d'une heure d'écart, dans une
+   * salle non signalée comme mélangeant plusieurs lieux.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerMemeSeanceDeuxSourcesHeuresProches() {
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            """
+            WITH ev AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm,
+                     bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+              GROUP BY e.id),
+            groupes AS (
+              SELECT salle_id, date, artiste_norm FROM ev GROUP BY salle_id, date, artiste_norm
+              HAVING count(*) = 2
+                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
+                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1)
+            SELECT t.id AS cible, v.id AS source
+            FROM groupes g
+            JOIN salles s ON s.id = g.salle_id
+            JOIN ev t ON t.salle_id = g.salle_id AND t.date = g.date
+                     AND t.artiste_norm = g.artiste_norm AND t.tm AND NOT t.evt
+            JOIN ev v ON v.salle_id = g.salle_id AND v.date = g.date
+                     AND v.artiste_norm = g.artiste_norm AND v.evt AND NOT v.tm
+            WHERE abs(extract(epoch FROM (t.heure - v.heure))) <= :ecartSecondes
+              AND\
+            """
+                + SalleFiable.condition("s"),
+            Map.of("ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+    for (final Map<String, Object> paire : paires) {
+      fusionner(
+          (UUID) paire.get("cible"),
+          (UUID) paire.get("source"),
+          "même séance, deux sources, heures proches");
+    }
+    return paires.size();
+  }
+
+  /**
    * Concert déplacé : la fiche absente de l'ancienne salle rejoint l'unique
    * événement vivant de même artiste, date, heure, département et source dans
    * une autre salle ; ambigu, ou salle publiant encore la manifestation

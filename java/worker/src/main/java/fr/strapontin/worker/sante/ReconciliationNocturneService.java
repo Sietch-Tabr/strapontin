@@ -103,6 +103,7 @@ public class ReconciliationNocturneService {
     final int fichesPerimeesFusionnees =
         fusionEvenementsArtiste.fusionnerFichesPerimees()
             + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
+            + fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()
             + fusionEvenementsArtiste.fusionnerConcertsDeplaces();
     final int sallesFusionnees =
         fusionSallesClePortee.fusionnerMemesLieux(controleIntegrite.pairesMemeLieuFortes())
