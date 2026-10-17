@@ -392,6 +392,78 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             "SELECT ville FROM salles WHERE nom = 'Zenith Avec Ville'", Map.of(), String.class));
   }
 
+  private void creerSalleTm(final String nom, final String salleCle, final String venueId) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES (:cle, :nom, :cle, '75')"
+                + " RETURNING id",
+            Map.of("cle", salleCle, "nom", nom),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', :venue)",
+        Map.of("id", id.toString(), "venue", venueId));
+  }
+
+  private static ConcertBrut concertTmDeSalle(
+      final String salle, final String venueId, final String url) {
+    return ConcertBrut.nouveau()
+        .artiste("Zebrahead")
+        .date("2098-11-20")
+        .heure("20:30")
+        .salle(salle)
+        .ville("Paris")
+        .dept("75")
+        .url(url)
+        .source("ticketmaster")
+        .salleSourceId("ticketmaster:" + venueId)
+        .construire();
+  }
+
+  private void rattacherObservation(final String url, final String salleBrut) {
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " SELECT id, CAST('ticketmaster' AS source_concert), :url, 'Zebrahead', :salle"
+            + " FROM evenements",
+        Map.of("url", url, "salle", salleBrut));
+  }
+
+  private long nombreEvenements() {
+    return jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class);
+  }
+
+  // Fiche d'un concert déplacé (déjà fusionnée dans l'événement de la nouvelle salle) que la
+  // billetterie republie sous l'ancien nom : aucun événement n'est recréé dans l'ancienne salle.
+  @Test
+  void persisterConcerts_ficheDeLAncienneSalleRepubliee_neRecreePasDEvenement() {
+    creerSalleTm("Alhambra", "alhambra", "venueAlh");
+    creerSalleTm("La Maroquinerie", "la maroquinerie", "venueMaro");
+    persisterConcerts.persisterConcerts(
+        List.of(concertTmDeSalle("Alhambra", "venueAlh", "https://tm/2")));
+    rattacherObservation("https://tm/1", "La Maroquinerie");
+
+    persisterConcerts.persisterConcerts(
+        List.of(concertTmDeSalle("La Maroquinerie", "venueMaro", "https://tm/1")));
+
+    assertEquals(1, nombreEvenements());
+  }
+
+  // Une fiche qui change réellement de salle (vue sous le nom de la salle de l'événement) crée
+  // l'événement de la nouvelle salle ; la fusion des concerts déplacés le rattache ensuite.
+  @Test
+  void persisterConcerts_ficheVueSousLeNomDeLaSalleDeLEvenement_creeLeNouvelEvenement() {
+    creerSalleTm("Alhambra", "alhambra", "venueAlh");
+    creerSalleTm("La Maroquinerie", "la maroquinerie", "venueMaro");
+    persisterConcerts.persisterConcerts(
+        List.of(concertTmDeSalle("Alhambra", "venueAlh", "https://tm/2")));
+    rattacherObservation("https://tm/1", "Alhambra");
+
+    persisterConcerts.persisterConcerts(
+        List.of(concertTmDeSalle("La Maroquinerie", "venueMaro", "https://tm/1")));
+
+    assertEquals(2, nombreEvenements());
+  }
+
   // « Grand Palais » géocodé en Charente pour un concert du 75 : homonyme, point écarté.
   @Test
   void persisterConcerts_geocodageHorsDuDepartement_creeLaSalleSansCoordonnees() {
