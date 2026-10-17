@@ -44,6 +44,11 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
  */
 class NotificationPushDigestServiceTest {
 
+  // Hors plage silencieuse : ces tests vérifient l'envoi, pas la rétention de nuit.
+  private static final java.time.Clock HORLOGE_JOURNEE =
+      java.time.Clock.fixed(
+          java.time.Instant.parse("2026-10-17T12:00:00Z"), java.time.ZoneOffset.UTC);
+
   static {
     FournisseurBouncyCastle.garantir();
   }
@@ -123,7 +128,11 @@ class NotificationPushDigestServiceTest {
     final PushService pushServiceMock = pushServiceRetournant(403);
 
     new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+            configServiceAvecVapid(),
+            jdbc,
+            logsAdminWorker,
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc, never()).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -138,7 +147,11 @@ class NotificationPushDigestServiceTest {
         pushServiceRetournant(429, "{\"reason\":\"TooManyProviderTokenUpdates\"}");
 
     new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+            configServiceAvecVapid(),
+            jdbc,
+            logsAdminWorker,
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -163,7 +176,8 @@ class NotificationPushDigestServiceTest {
             configServiceAvecVapid(),
             jdbc,
             mock(LogsAdminWorker.class),
-            (_, _, _) -> pushServiceMock)
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -178,7 +192,8 @@ class NotificationPushDigestServiceTest {
             configServiceAvecVapid(),
             jdbc,
             mock(LogsAdminWorker.class),
-            (_, _, _) -> pushServiceMock)
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -199,7 +214,8 @@ class NotificationPushDigestServiceTest {
                 configServiceAvecVapid(),
                 jdbc,
                 mock(LogsAdminWorker.class),
-                (_, _, _) -> pushServiceMock)
+                (_, _, _) -> pushServiceMock,
+                HORLOGE_JOURNEE)
             .envoyerPush("u1", unConcert());
 
     assertTrue(envoye);

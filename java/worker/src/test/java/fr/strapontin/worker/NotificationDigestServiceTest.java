@@ -46,6 +46,11 @@ import tools.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class NotificationDigestServiceTest {
 
+  // Hors plage silencieuse : ces tests vérifient l'envoi, pas la rétention de nuit.
+  private static final java.time.Clock HORLOGE_JOURNEE =
+      java.time.Clock.fixed(
+          java.time.Instant.parse("2026-10-17T12:00:00Z"), java.time.ZoneOffset.UTC);
+
   static {
     // Le provider BouncyCastle est normalement enregistré par WorkerApplication#main au
     // démarrage réel — jamais exécuté dans ce test unitaire pur, alors que la construction
@@ -571,7 +576,8 @@ class NotificationDigestServiceTest {
             _ -> {
               throw new IllegalStateException("Resend non configuré en test");
             },
-            (_, _, _) -> pushServiceMock);
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE);
 
     serviceAvecFabriques.executerDigest("quotidien");
 
@@ -617,7 +623,8 @@ class NotificationDigestServiceTest {
             _ -> {
               throw new IllegalStateException("Resend non configuré en test");
             },
-            (_, _, _) -> pushServiceMock)
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .executerDigest("quotidien");
 
     verify(pushServiceMock, never()).send(any(Notification.class), any(Encoding.class));

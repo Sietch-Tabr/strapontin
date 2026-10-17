@@ -6,6 +6,7 @@ package fr.strapontin.worker;
 
 import com.resend.Resend;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -110,10 +111,35 @@ public class NotificationDigestService {
       final GestionQuotaResendWorker gestionQuotaResendWorker,
       final FabriqueResend fabriqueResend,
       final FabriquePushService fabriquePushService) {
+    this(
+        configService,
+        jdbc,
+        jackson,
+        logsAdminWorker,
+        gestionQuotaResendWorker,
+        fabriqueResend,
+        fabriquePushService,
+        Clock.systemUTC());
+  }
+
+  /**
+   * Constructeur de test avec horloge : la plage silencieuse du push dépend de l'heure, un test
+   * ne doit pas en dépendre.
+   */
+  /* package-private : instancié uniquement par les tests du même package. */
+  NotificationDigestService(
+      final ConfigServiceWorker configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper jackson,
+      final LogsAdminWorker logsAdminWorker,
+      final GestionQuotaResendWorker gestionQuotaResendWorker,
+      final FabriqueResend fabriqueResend,
+      final FabriquePushService fabriquePushService,
+      final Clock horloge) {
     this.jdbc = jdbc;
     this.pushDigestService =
         new NotificationPushDigestService(
-            configService, jdbc, logsAdminWorker, fabriquePushService);
+            configService, jdbc, logsAdminWorker, fabriquePushService, horloge);
     this.emailDigestService =
         new NotificationEmailDigestService(configService, gestionQuotaResendWorker, fabriqueResend);
     this.matchesLoader = new MatchesNonNotifiesLoader(jdbc);
@@ -168,7 +194,7 @@ public class NotificationDigestService {
    * digest, met à jour {@code notifie_le} .
    *
    * @param frequence {@code "temps_reel"} (après chaque recalcul),
-   *     {@code "quotidien"} (cron 8h) ou {@code "hebdomadaire"} (dimanche 10h)
+   *     {@code "quotidien"} (cron 12h) ou {@code "hebdomadaire"} (dimanche 12h)
    */
   public void executerDigest(final String frequence) {
     LOG.info("notifier:digest démarré frequence={}", frequence);
@@ -208,6 +234,15 @@ public class NotificationDigestService {
       pushDigestService.remonterBilanPush();
       LOG.info("notifier:digest terminé users={} concerts={}", nbUtilisateurs, nbMatchesNotifies);
     }
+  }
+
+  /**
+   * Envoie à 7 h les push retenus pendant la plage silencieuse (22 h à 7 h, heure de Paris).
+   */
+  public void envoyerPushDifferes() {
+    final int utilisateurs = pushDigestService.envoyerDifferes();
+    pushDigestService.remonterBilanPush();
+    LOG.info("notifier:digest — push retenus envoyés, utilisateurs={}", utilisateurs);
   }
 
   /**
