@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -73,19 +74,49 @@ class UserConfigServiceTest {
   }
 
   @Test
-  void majNotifications_frequenceJamaisEtPushCoche_forcePushAFaux() {
+  void majNotifications_frequenceJamaisEtContenuCoche_estRefusee() {
     final RequeteNotifications requete =
         new RequeteNotifications("jamais", false, false, true, true, false);
 
-    service.majNotifications("user-1", requete);
-
-    final Map<String, Object> params = parametresEcrits();
-    assertThat(params).containsEntry("notifArtistesPush", false);
-    assertThat(params).containsEntry("notifSallesPush", false);
+    assertThatThrownBy(() -> service.majNotifications("user-1", requete))
+        .isInstanceOf(ErreurMetier.class)
+        .hasMessageContaining("Jamais");
   }
 
   @Test
-  void majNotifications_frequenceQuotidienneEtPushCoche_conserveLePush() {
+  void majNotifications_frequenceJamaisEtNouvelleVersion_estRefusee() {
+    final RequeteNotifications requete =
+        new RequeteNotifications("jamais", false, false, false, false, true);
+
+    assertThatThrownBy(() -> service.majNotifications("user-1", requete))
+        .isInstanceOf(ErreurMetier.class);
+  }
+
+  @Test
+  void majNotifications_pushCocheSansAppareilAbonne_estRefusee() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(0);
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", false, false, true, false, false);
+
+    assertThatThrownBy(() -> service.majNotifications("user-1", requete))
+        .isInstanceOf(ErreurMetier.class)
+        .hasMessageContaining("appareil");
+  }
+
+  @Test
+  void majNotifications_emailCocheSansEnvoiPossible_estRefusee() {
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
+    final RequeteNotifications requete =
+        new RequeteNotifications("quotidien", true, false, false, false, false);
+
+    assertThatThrownBy(() -> service.majNotifications("user-1", requete))
+        .isInstanceOf(ErreurMetier.class)
+        .hasMessageContaining("emails");
+  }
+
+  @Test
+  void majNotifications_frequenceQuotidienneEtPushCocheAvecAppareil_conserveLePush() {
+    when(jdbc.queryForObject(anyString(), anyMap(), eq(Integer.class))).thenReturn(1);
     final RequeteNotifications requete =
         new RequeteNotifications("quotidien", false, false, true, false, false);
 
@@ -118,6 +149,7 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceValideAvecCanal_metAJourLaConfig() {
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test"));
     final RequeteNotifications requete =
         new RequeteNotifications("temps_reel", true, false, false, false, false);
 
@@ -128,6 +160,7 @@ class UserConfigServiceTest {
 
   @Test
   void majNotifications_frequenceHebdomadaire_metAJourLaConfig() {
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test"));
     service.majNotifications(
         "user-1", new RequeteNotifications("hebdomadaire", true, false, false, false, false));
 

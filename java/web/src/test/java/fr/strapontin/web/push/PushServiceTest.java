@@ -77,7 +77,10 @@ class PushServiceTest {
     service.abonner("u1", abonnementValide());
 
     verify(jdbc)
-        .update(org.mockito.ArgumentMatchers.contains("INSERT INTO push_abonnements"), anyMap());
+        .update(
+            org.mockito.ArgumentMatchers.contains("INSERT INTO push_abonnements"),
+            org.mockito.ArgumentMatchers.any(
+                org.springframework.jdbc.core.namedparam.SqlParameterSource.class));
     verify(logAdminService).logAdmin(eq("info"), eq("push"), anyString(), anyMap());
   }
 

@@ -211,39 +211,70 @@ public class UserConfigService {
    *
    * @param userId identifiant de l'utilisateur
    * @param requete données de la requête
-   * @throws ErreurMetier si la fréquence est invalide ou aucun canal de
-   *     notification sélectionné
+   * @throws ErreurMetier si la fréquence est invalide, ou si la combinaison n'a aucun effet :
+   *     « Jamais » avec un contenu coché, aucun contenu avec une fréquence, une case push sans
+   *     appareil abonné, une case email sans envoi d'emails possible
    */
   public void majNotifications(final String userId, final RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
       throw new ErreurMetier("Valeur invalide.");
     }
-    final boolean aucunCanal =
-        !requete.notifArtistes()
-            && !requete.notifSalles()
-            && !requete.notifArtistesPush()
-            && !requete.notifSallesPush();
-    if (!"jamais".equals(requete.frequenceNotifications()) && aucunCanal) {
-      throw new ErreurMetier(
-          "Activez au moins un type de contenu pour recevoir des notifications.");
-    }
+    final boolean jamais = "jamais".equals(requete.frequenceNotifications());
+    final boolean contenuEmail = requete.notifArtistes() || requete.notifSalles();
+    final boolean contenuPush = requete.notifArtistesPush() || requete.notifSallesPush();
+    verifierCombinaisonNotifications(userId, requete, jamais, contenuEmail, contenuPush);
 
-    final boolean pushPermis = pushPermis(requete.frequenceNotifications());
     final Map<String, Object> champs = new HashMap<>();
     champs.put("frequenceNotifications", requete.frequenceNotifications());
     champs.put("notifArtistes", requete.notifArtistes());
     champs.put("notifSalles", requete.notifSalles());
-    champs.put("notifArtistesPush", pushPermis && requete.notifArtistesPush());
-    champs.put("notifSallesPush", pushPermis && requete.notifSallesPush());
+    champs.put("notifArtistesPush", requete.notifArtistesPush());
+    champs.put("notifSallesPush", requete.notifSallesPush());
     champs.put("notifNouvelleVersion", requete.notifNouvelleVersion());
     upsertConfig(userId, champs);
 
     journaliserMajNotifications(userId, requete);
   }
 
+  // Une combinaison sans effet est refusée plutôt que mémorisée : « Jamais » ne sert aucun canal,
+  // une case ne se coche que si son canal peut servir (appareil abonné, envoi d'emails possible).
+  private void verifierCombinaisonNotifications(
+      final String userId,
+      final RequeteNotifications requete,
+      final boolean jamais,
+      final boolean contenuEmail,
+      final boolean contenuPush) {
+    if (jamais && (contenuEmail || contenuPush || requete.notifNouvelleVersion())) {
+      throw new ErreurMetier(
+          "Avec « Jamais », aucune notification n'est envoyée : décochez les types de contenu ou"
+              + " choisissez une fréquence.");
+    }
+    if (!jamais && !contenuEmail && !contenuPush) {
+      throw new ErreurMetier(
+          "Activez au moins un type de contenu pour recevoir des notifications.");
+    }
+    if ((contenuPush || requete.notifNouvelleVersion()) && nombreAppareilsPush(userId) == 0) {
+      throw new ErreurMetier(
+          "Aucun appareil n'est abonné aux notifications push : activez-les d'abord sur cet"
+              + " appareil.");
+    }
+    if (contenuEmail && configService.lireConfig("RESEND_API_KEY").isEmpty()) {
+      throw new ErreurMetier("Les emails ne sont pas disponibles pour le moment.");
+    }
+  }
+
+  private int nombreAppareilsPush(final String userId) {
+    final Integer nombre =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM push_abonnements WHERE user_id = :userId",
+            Map.of(CLE_USER_ID, userId),
+            Integer.class);
+    return nombre == null ? 0 : nombre;
+  }
+
   /**
-   * Indique si la fréquence autorise un canal push : « jamais » coupe
-   * aussi le push, qu'aucune livraison ni aucun garde-fou ne traiterait.
+   * Indique si la fréquence autorise un canal : « jamais » coupe tous les
+   * canaux, qu'aucune livraison ni aucun garde-fou ne traiterait.
    * @param frequence fréquence de notification choisie
    * @return {@code false} pour « jamais »
    */
