@@ -62,7 +62,10 @@ class RegleIdentifiantParcoursTest {
         mock(FindByIndexNameSessionRepository.class);
     final UserController changement =
         new UserController(
-            mock(UtilisateurRepository.class), mock(PasswordEncoder.class), sessions);
+            mock(UtilisateurRepository.class),
+            mock(PasswordEncoder.class),
+            sessions,
+            mock(LogAdminService.class));
     final Authentication auth = mock(Authentication.class);
     when(auth.getPrincipal())
         .thenReturn(

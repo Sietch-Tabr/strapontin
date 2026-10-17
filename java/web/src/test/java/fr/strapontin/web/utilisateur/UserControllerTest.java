@@ -5,8 +5,10 @@
 package fr.strapontin.web.utilisateur;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
@@ -39,12 +41,15 @@ class UserControllerTest {
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private HttpServletRequest httpRequest;
   @Mock private FindByIndexNameSessionRepository<Session> sessionRepository;
+  @Mock private LogAdminService logAdminService;
 
   private UserController controller;
 
   @BeforeEach
   void setUp() {
-    controller = new UserController(utilisateurRepository, passwordEncoder, sessionRepository);
+    controller =
+        new UserController(
+            utilisateurRepository, passwordEncoder, sessionRepository, logAdminService);
   }
 
   private Authentication authPour(final String userId, final String role) {
@@ -147,6 +152,37 @@ class UserControllerTest {
     assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
     verify(sessionRepository, never()).findByPrincipalName(anyString());
     verify(utilisateurRepository, never()).changerMotDePasse(anyString(), anyString());
+  }
+
+  @Test
+  void changerMotDePasse_cinqMotsDePasseActuelsIncorrects_bloqueEtJournaliseUneFois() {
+    when(passwordEncoder.matches("faux", "")).thenReturn(false);
+    final RequeteMotDePasse requete = new RequeteMotDePasse("faux", "nouveau123456789");
+    final Authentication auth = authPour("user-1", "user");
+
+    for (int i = 0; i < 5; i++) {
+      assertEquals(
+          HttpStatus.BAD_REQUEST, controller.changerMotDePasse(requete, auth).getStatusCode());
+    }
+    final ResponseEntity<Map<String, Object>> sixieme = controller.changerMotDePasse(requete, auth);
+
+    assertEquals(HttpStatus.TOO_MANY_REQUESTS, sixieme.getStatusCode());
+    verify(logAdminService, times(1)).logAdmin(eq("warn"), eq("auth"), anyString(), anyMap());
+    verify(passwordEncoder, times(5)).matches(anyString(), anyString());
+  }
+
+  @Test
+  void changerMotDePasse_blocage_nAffectePasUnAutreUtilisateur() {
+    when(passwordEncoder.matches("faux", "")).thenReturn(false);
+    final RequeteMotDePasse requete = new RequeteMotDePasse("faux", "nouveau123456789");
+    for (int i = 0; i < 6; i++) {
+      controller.changerMotDePasse(requete, authPour("user-1", "user"));
+    }
+
+    final ResponseEntity<Map<String, Object>> rep =
+        controller.changerMotDePasse(requete, authPour("user-2", "user"));
+
+    assertEquals(HttpStatus.BAD_REQUEST, rep.getStatusCode());
   }
 
   @Test
