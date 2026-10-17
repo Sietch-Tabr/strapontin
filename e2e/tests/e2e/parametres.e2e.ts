@@ -525,88 +525,160 @@ test.describe("Scénario: API compte — mot de passe", () => {
   });
 });
 
-test.describe("Scénario: notifications push sans appareil abonné", () => {
-  // Push activés, aucun appareil abonné : l'utilisateur ne reçoit rien sans le savoir.
-  test("notifications_pushSansAppareil_afficheUnAvertissement", async ({
+// Configuration servie telle quelle, sauf les préférences de notification du scénario : sans clé
+// Resend (dev), la case Email serait désactivée.
+async function servirConfigNotifications(
+  page: import("@playwright/test").Page,
+  surcharges: Record<string, unknown>,
+) {
+  await page.route("**/api/user/config", async (route) => {
+    if (route.request().method() !== "GET") {
+      return route.continue();
+    }
+    const reponse = await route.fetch();
+    const config = await reponse.json();
+    return route.fulfill({
+      response: reponse,
+      json: { ...config, resendDisponible: true, ...surcharges },
+    });
+  });
+}
+
+async function servirPush(
+  page: import("@playwright/test").Page,
+  abonnements: unknown[],
+) {
+  await page.route("**/api/push/abonnements", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(abonnements),
+    }),
+  );
+  await page.route("**/api/push", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ disponible: true, clePublique: "cle" }),
+        })
+      : route.continue(),
+  );
+}
+
+test.describe("Scénario: notifications par canal", () => {
+  // Sans appareil abonné, le canal push est décoché et ses cases ne se cochent pas : l'utilisateur
+  // ne croit pas recevoir ce qu'il ne recevra pas.
+  test("notifications_sansAppareil_canalPushDecocheEtCasesDesactivees", async ({
     page,
   }) => {
-    await page.route("**/api/push/abonnements", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: "[]",
-      }),
-    );
-    await page.route("**/api/push", (route) =>
-      route.request().method() === "GET"
-        ? route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ disponible: true, clePublique: "cle" }),
-          })
-        : route.continue(),
-    );
-    // Fréquence et cases réelles servies par la configuration : sans clé Resend
-    // (dev), les boutons de fréquence sont désactivés et ne se cochent pas.
-    await page.route("**/api/user/config", async (route) => {
-      if (route.request().method() !== "GET") {
-        return route.continue();
-      }
-      const reponse = await route.fetch();
-      const config = await reponse.json();
-      return route.fulfill({
-        response: reponse,
-        json: {
-          ...config,
-          resendDisponible: true,
-          frequenceNotifications: "quotidien",
-          notifArtistesPush: true,
-        },
-      });
+    await servirPush(page, []);
+    await servirConfigNotifications(page, {
+      frequenceNotifications: "quotidien",
+      notifArtistes: true,
+      notifArtistesPush: false,
+      notifSallesPush: false,
     });
     await page.goto("/parametres#notifications");
     const section = page.locator("section#notifications");
     await expect(section).toBeVisible();
 
     await expect(
-      section.getByText("Aucun appareil n'est abonné aux notifications push"),
+      section.getByText("Aucun appareil n'est abonné"),
     ).toBeVisible();
+    await expect(
+      section.getByRole("checkbox", {
+        name: "Recevoir les notifications push",
+      }),
+    ).not.toBeChecked();
+    await expect(
+      section.getByRole("checkbox", { name: "Concerts des artistes suivis" }).nth(1),
+    ).toBeDisabled();
   });
-});
 
-test.describe("Scénario: fréquence « jamais » et canaux push", () => {
-  test("notifications_frequenceJamais_decochePushDuFormulaire", async ({
+  test("notifications_frequenceJamais_decocheEtDesactiveLesDeuxCanaux", async ({
     page,
   }) => {
-    await page.route("**/api/user/config", async (route) => {
-      if (route.request().method() !== "GET") {
-        return route.continue();
-      }
-      const reponse = await route.fetch();
-      const config = await reponse.json();
-      return route.fulfill({
-        response: reponse,
-        json: {
-          ...config,
-          resendDisponible: true,
-          frequenceNotifications: "quotidien",
-          notifArtistes: true,
-          notifArtistesPush: true,
-          notifSallesPush: true,
-        },
-      });
+    await servirPush(page, [
+      {
+        endpoint: "https://fcm.googleapis.com/fcm/send/autre-appareil",
+        creeLe: "2026-10-01T10:00:00Z",
+        appareil: "Firefox sur Linux",
+        enEchecDepuis: null,
+        cause: null,
+      },
+    ]);
+    await servirConfigNotifications(page, {
+      frequenceNotifications: "quotidien",
+      notifArtistes: true,
+      notifArtistesPush: true,
+      notifSallesPush: true,
     });
     await page.goto("/parametres#notifications");
     const section = page.locator("section#notifications");
     await expect(section).toBeVisible();
-    const pushArtistes = section.getByLabel("Push — artistes suivis");
-    const pushSalles = section.getByLabel("Push — salles suivies");
+    const emailArtistes = section
+      .getByRole("checkbox", { name: "Concerts des artistes suivis" })
+      .nth(0);
+    const pushArtistes = section
+      .getByRole("checkbox", { name: "Concerts des artistes suivis" })
+      .nth(1);
+    await expect(emailArtistes).toBeChecked();
     await expect(pushArtistes).toBeChecked();
 
     await section.getByRole("radio", { name: "Jamais" }).check();
 
+    await expect(emailArtistes).not.toBeChecked();
     await expect(pushArtistes).not.toBeChecked();
-    await expect(pushSalles).not.toBeChecked();
+    await expect(
+      section.getByRole("checkbox", { name: "Recevoir les notifications push" }),
+    ).not.toBeChecked();
+  });
+
+  test("notifications_recapitulatifsAnnoncesAMidi", async ({ page }) => {
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+    await expect(
+      section.getByRole("radio", { name: "Récapitulatif quotidien (12h)" }),
+    ).toBeVisible();
+    await expect(
+      section.getByRole("radio", {
+        name: "Récapitulatif hebdomadaire (dimanche 12h)",
+      }),
+    ).toBeVisible();
+    await expect(
+      section.getByText("entre 22h et 7h", { exact: false }),
+    ).toBeVisible();
+  });
+
+  // Un appareil dont les envois sont refusés est visible dès le premier refus, avec sa cause.
+  test("notifications_appareilEnEchec_afficheLeRefusEtSaCause", async ({
+    page,
+  }) => {
+    await servirPush(page, [
+      {
+        endpoint: "https://fcm.googleapis.com/fcm/send/appareil-en-echec",
+        creeLe: "2026-10-01T10:00:00Z",
+        appareil: "Chrome sur Android",
+        enEchecDepuis: "2026-10-16T09:00:00Z",
+        cause:
+          "le service de notification de votre navigateur a refusé les notifications à plusieurs reprises",
+      },
+    ]);
+    await servirConfigNotifications(page, {
+      frequenceNotifications: "quotidien",
+    });
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+
+    await expect(section.getByText("Chrome sur Android")).toBeVisible();
+    await expect(section.getByText("Envois refusés")).toBeVisible();
+    await expect(
+      section.getByText("a refusé les notifications", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      section.getByRole("button", { name: "Révoquer" }),
+    ).toBeVisible();
   });
 });
 

@@ -875,3 +875,25 @@ test.describe("Scénario: admin — onglet Communication", () => {
     await expect(publier).toBeEnabled();
   });
 });
+
+test.describe("Scénario: admin — renouvellement des clés VAPID", () => {
+  // Le test ne confirme jamais : régénérer les clés retire les appareils push réels.
+  test("admin_vapid_dialogue_confirmationBloqueeSansMotif", async ({ page }) => {
+    await page.goto("/admin#configuration");
+    await expect(page.locator("section#configuration")).toBeVisible();
+
+    await page
+      .getByRole("button", { name: /Régénérer les clés VAPID/ })
+      .click();
+    const dialogue = page.locator("dialog#dialog-vapid");
+    await expect(dialogue).toBeVisible();
+    const confirmer = dialogue.getByRole("button", { name: "Régénérer" });
+    await expect(confirmer).toBeDisabled();
+
+    await dialogue.getByLabel("Motif (obligatoire)").fill("Rotation annuelle");
+    await expect(confirmer).toBeEnabled();
+
+    await dialogue.getByRole("button", { name: "Annuler" }).click();
+    await expect(dialogue).toBeHidden();
+  });
+});
