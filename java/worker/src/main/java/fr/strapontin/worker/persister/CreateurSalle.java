@@ -62,14 +62,15 @@ final class CreateurSalle {
             .addValue(CLE_NOM, concert.salle())
             .addValue("nomNorm", nomNorm)
             .addValue(CLE_DEPT, concert.dept())
+            .addValue("ville", concert.ville())
             .addValue(
                 "latitude", coordsGeocodees.map(ClientNominatim.Coordonnees::latitude).orElse(null))
             .addValue(
                 "longitude",
                 coordsGeocodees.map(ClientNominatim.Coordonnees::longitude).orElse(null));
     jdbc.update(
-        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, latitude, longitude,"
-            + " origine_position) VALUES (:salleCle, :nom, :nomNorm, :dept, :latitude,"
+        "INSERT INTO salles (salle_cle, nom, nom_norm, dept, ville, latitude, longitude,"
+            + " origine_position) VALUES (:salleCle, :nom, :nomNorm, :dept, :ville, :latitude,"
             + " :longitude, CASE WHEN CAST(:latitude AS double precision) IS NOT NULL"
             + " THEN 'geocodage' END)"
             + " ON CONFLICT (salle_cle) DO NOTHING",

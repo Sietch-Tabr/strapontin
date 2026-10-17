@@ -377,6 +377,21 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertNull(salleCreee.get("longitude"));
   }
 
+  @Test
+  void persisterConcerts_salleInconnue_creeLaSalleAvecLaVilleDuConcert() {
+    when(clientNominatim.geocoder("Zenith Avec Ville, Paris")).thenReturn(Optional.empty());
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            concertAvecSourceId(
+                "Artiste Ville", "2098-09-23", "Zenith Avec Ville", "ticketmaster:venue-v", null)));
+
+    assertEquals(
+        "Paris",
+        jdbc.queryForObject(
+            "SELECT ville FROM salles WHERE nom = 'Zenith Avec Ville'", Map.of(), String.class));
+  }
+
   // « Grand Palais » géocodé en Charente pour un concert du 75 : homonyme, point écarté.
   @Test
   void persisterConcerts_geocodageHorsDuDepartement_creeLaSalleSansCoordonnees() {

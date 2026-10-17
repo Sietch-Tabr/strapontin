@@ -19,12 +19,12 @@ import org.springframework.stereotype.Service;
  * @since 2.6.0
  * @author Kwaite
  */
-// 11 collaborateurs indépendants : chacun est une vérification/un
+// 12 collaborateurs indépendants : chacun est une vérification/un
 // enrichissement autonome du job nocturne, sans regroupement thématique naturel
 // (contrairement à FetchRapportage côté fetch) — un tel regroupement serait un
 // simple contournement du seuil, pas une amélioration de conception.
 // HealthCheckArtistesTM/HealthCheckSallesTM (déjà des beans Spring, voir leur
-// propre Javadoc) ont réduit le compte de 12 à 11.
+// propre Javadoc) ont réduit le compte de 12 à 11 ; CompleteurVillesSalles le remonte à 12.
 @SuppressWarnings("PMD.ExcessiveParameterList")
 @Service
 public class ReconciliationNocturneService {
@@ -40,9 +40,10 @@ public class ReconciliationNocturneService {
   private final ControleIntegriteService controleIntegrite;
   private final HealthCheckArtistesTM healthCheckArtistesTM;
   private final HealthCheckSallesTM healthCheckSallesTM;
+  private final CompleteurVillesSalles completeurVillesSalles;
 
   /**
-   * Assemble les 11 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 12 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -56,7 +57,8 @@ public class ReconciliationNocturneService {
       final SuggestionMotsGenericsService suggestionMotsGenerics,
       final ControleIntegriteService controleIntegrite,
       final HealthCheckArtistesTM healthCheckArtistesTM,
-      final HealthCheckSallesTM healthCheckSallesTM) {
+      final HealthCheckSallesTM healthCheckSallesTM,
+      final CompleteurVillesSalles completeurVillesSalles) {
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
@@ -68,6 +70,7 @@ public class ReconciliationNocturneService {
     this.controleIntegrite = controleIntegrite;
     this.healthCheckArtistesTM = healthCheckArtistesTM;
     this.healthCheckSallesTM = healthCheckSallesTM;
+    this.completeurVillesSalles = completeurVillesSalles;
   }
 
   /**
@@ -82,6 +85,9 @@ public class ReconciliationNocturneService {
     healthCheckArtistesTM.verifierVivacite();
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     healthCheckSallesTM.alerterLieuxEventimSuspects();
+
+    // Avant l'enrichissement et les rapprochements : ils comparent des villes et des départements.
+    completeurVillesSalles.completer();
 
     final int enrichisArtistes = enrichissementArtistes.enrichir();
     final int enrichisSalles = enrichissementSalles.enrichir();
