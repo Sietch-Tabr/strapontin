@@ -7,9 +7,8 @@ package fr.strapontin.web.client;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.HashMap;
@@ -44,8 +43,8 @@ public class ClientController {
 
   private final LogAdminService logAdminService;
 
-  private final Cache<String, Bucket> bucketsParUtilisateur =
-      Caffeine.newBuilder().expireAfterWrite(FENETRE.plusMinutes(1)).maximumSize(10_000).build();
+  private final LimiteurDebit limiteurErreurs =
+      new LimiteurDebit(MAX_ERREURS_PAR_HEURE, FENETRE, FENETRE.plusMinutes(1), 10_000);
   // Une erreur récurrente (boucle, polling) remonte le même message en rafale.
   private final Cache<String, Boolean> messagesRecents =
       Caffeine.newBuilder().expireAfterWrite(FENETRE).maximumSize(10_000).build();
@@ -85,8 +84,7 @@ public class ClientController {
         != null) {
       return ResponseEntity.status(201).body(Map.of("succes", true));
     }
-    final Bucket bucket = bucketsParUtilisateur.get(cleUtilisateur, _ -> creerBucket());
-    if (!bucket.tryConsume(1)) {
+    if (!limiteurErreurs.autoriser(cleUtilisateur)) {
       return ResponseEntity.status(429).body(Map.of("erreur", "Trop d'erreurs signalées."));
     }
 
@@ -98,16 +96,6 @@ public class ClientController {
     logAdminService.logAdmin("error", "client-js", "[" + type + "] " + message, meta);
 
     return ResponseEntity.status(201).body(Map.of("succes", true));
-  }
-
-  private static Bucket creerBucket() {
-    return Bucket.builder()
-        .addLimit(
-            Bandwidth.builder()
-                .capacity(MAX_ERREURS_PAR_HEURE)
-                .refillIntervally(MAX_ERREURS_PAR_HEURE, FENETRE)
-                .build())
-        .build();
   }
 
   private static String normaliserType(final Object typeBrut) {

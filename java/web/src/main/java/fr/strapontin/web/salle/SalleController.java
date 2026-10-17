@@ -6,12 +6,9 @@ package fr.strapontin.web.salle;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -45,11 +42,12 @@ public class SalleController {
   private final SalleService salleService;
   private final EmailService emailService;
 
-  private final Cache<String, Bucket> bucketsSignalement =
-      Caffeine.newBuilder()
-          .expireAfterWrite(Duration.ofHours(1).plusMinutes(1))
-          .maximumSize(10_000)
-          .build();
+  private final LimiteurDebit limiteurSignalement =
+      new LimiteurDebit(
+          MAX_SIGNALEMENTS_PAR_HEURE,
+          Duration.ofHours(1),
+          Duration.ofHours(1).plusMinutes(1),
+          10_000);
 
   /**
    * @param salleService service de gestion des salles
@@ -143,8 +141,7 @@ public class SalleController {
     final String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
 
     final String ip = request.getRemoteAddr();
-    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
-    if (!bucket.tryConsume(1)) {
+    if (!limiteurSignalement.autoriser(ip)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
@@ -164,17 +161,8 @@ public class SalleController {
   @Profile("dev")
   @DeleteMapping("/rate-limits/signalement")
   public ResponseEntity<Void> reinitialiserBucketsSignalement() {
-    bucketsSignalement.invalidateAll();
+    limiteurSignalement.reinitialiser();
     return ResponseEntity.noContent().build();
-  }
-
-  private Bucket creerBucketSignalement() {
-    final Bandwidth limite =
-        Bandwidth.builder()
-            .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
-            .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))
-            .build();
-    return Bucket.builder().addLimit(limite).build();
   }
 
   private static UtilisateurDetails utilisateur(final Authentication auth) {

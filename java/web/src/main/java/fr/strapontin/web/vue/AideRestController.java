@@ -6,13 +6,10 @@ package fr.strapontin.web.vue;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -42,11 +39,12 @@ public class AideRestController {
   private final EmailService emailService;
   private final ConfigService configService;
 
-  private final Cache<String, Bucket> bucketsSignalement =
-      Caffeine.newBuilder()
-          .expireAfterWrite(Duration.ofHours(1).plusMinutes(1))
-          .maximumSize(10_000)
-          .build();
+  private final LimiteurDebit limiteurSignalement =
+      new LimiteurDebit(
+          MAX_SIGNALEMENTS_PAR_HEURE,
+          Duration.ofHours(1),
+          Duration.ofHours(1).plusMinutes(1),
+          10_000);
 
   /**
    * @param emailService service d'envoi d'emails
@@ -89,8 +87,7 @@ public class AideRestController {
     }
 
     final String ip = request.getRemoteAddr();
-    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
-    if (!bucket.tryConsume(1)) {
+    if (!limiteurSignalement.autoriser(ip)) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
@@ -101,14 +98,5 @@ public class AideRestController {
             : "question";
     emailService.envoyerSignalement(typeValide, msg, utilisateur.email());
     return ResponseEntity.noContent().build();
-  }
-
-  private Bucket creerBucketSignalement() {
-    final Bandwidth limite =
-        Bandwidth.builder()
-            .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
-            .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))
-            .build();
-    return Bucket.builder().addLimit(limite).build();
   }
 }
