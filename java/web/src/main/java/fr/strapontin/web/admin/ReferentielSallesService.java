@@ -70,9 +70,29 @@ public class ReferentielSallesService {
    * @param dept filtre département exact, peut être null
    * @param statut filtre a_jour/a_verifier/invalide, peut être null
    * @param wikidataManquant filtre les salles sans wikidata_id
+   * @param ids restreint la liste à ces salles (comparaison de deux salles signalées), peut être
+   *     null ou vide
    */
   public record FiltresRechercheSalles(
-      int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {}
+      int page,
+      String nom,
+      String ville,
+      String dept,
+      String statut,
+      boolean wikidataManquant,
+      List<UUID> ids) {
+
+    /** Sans restriction à des salles précises. */
+    public FiltresRechercheSalles(
+        final int page,
+        final String nom,
+        final String ville,
+        final String dept,
+        final String statut,
+        final boolean wikidataManquant) {
+      this(page, nom, ville, dept, statut, wikidataManquant, List.of());
+    }
+  }
 
   /**
    * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
@@ -113,6 +133,10 @@ public class ReferentielSallesService {
     ajouterFiltreExact(where, params, "statut", filtresRecherche.statut());
     if (filtresRecherche.wikidataManquant()) {
       where.append(" AND wikidata_id IS NULL ");
+    }
+    if (filtresRecherche.ids() != null && !filtresRecherche.ids().isEmpty()) {
+      where.append(" AND id IN (:ids) ");
+      params.put("ids", filtresRecherche.ids());
     }
     return new FiltresSalles(where, params);
   }

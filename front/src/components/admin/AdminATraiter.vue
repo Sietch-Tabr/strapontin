@@ -1,6 +1,6 @@
 <template>
   <div>
-    <AdminSignalements @voir-fiche="voirFiche" />
+    <AdminSignalements @voir-fiche="voirFiche" @comparer="comparer" />
     <AdminConcerts />
   </div>
 </template>
@@ -13,6 +13,14 @@ import AdminSignalements from "./AdminSignalements.vue";
 import AdminConcerts from "./AdminConcerts.vue";
 
 const router = useRouter();
+
+// Les deux salles s'affichent côte à côte dans le Référentiel, prêtes à être fusionnées.
+function comparer(ids) {
+  router.push({
+    hash: "#referentiel",
+    query: { entite: "salle", ids: ids.join(",") },
+  });
+}
 
 function voirFiche(entite) {
   router.push({

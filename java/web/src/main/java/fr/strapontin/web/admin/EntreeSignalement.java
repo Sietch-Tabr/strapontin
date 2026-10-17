@@ -9,7 +9,9 @@ import java.time.Instant;
 /**
  * Entrée de la vue unifiée des signalements ; la catégorie (mécanisme
  * d'origine) détermine l'action possible, le type est décrit par
- * {@link CatalogueSignalements}. detecteLe et details peuvent être null.
+ * {@link CatalogueSignalements}. detecteLe, details et autreSalle peuvent être null ;
+ * autreSalle désigne la seconde salle d'un signalement qui en met deux en cause
+ * (doublon, même lieu, élément Wikidata partagé).
  * @since 2.9.0
  * @author Kwaite
  */
@@ -20,7 +22,8 @@ public record EntreeSignalement(
     EntiteSignalee entite,
     String confiance,
     Instant detecteLe,
-    String details) {
+    String details,
+    EntiteSignalee autreSalle) {
 
   /**
    * Entité concernée : salle, artiste, utilisateur, ou invariant (anomalie

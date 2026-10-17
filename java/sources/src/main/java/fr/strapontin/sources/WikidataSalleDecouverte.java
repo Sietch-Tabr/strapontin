@@ -6,8 +6,10 @@ package fr.strapontin.sources;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import fr.strapontin.core.CorrespondanceSalle;
+import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.Normalisation;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -78,14 +80,14 @@ final class WikidataSalleDecouverte {
 
   // Rempli par decouvrir() sur divergence GPS, vidé par preleverAmbiguites() —
   // même patron que WikidataArtisteSource.ambiguites.
-  private final Set<UUID> ambiguites = new HashSet<>();
+  private final Map<UUID, Map<String, Object>> ambiguites = new HashMap<>();
 
   private final ClientSparqlWikidata client;
   private final Cache<String, EnrichissementSalle> cache;
 
   /* package-private : appelé par WikidataSalleSource (même package). */
-  Set<UUID> preleverAmbiguites() {
-    final Set<UUID> resultat = new HashSet<>(ambiguites);
+  Map<UUID, Map<String, Object>> preleverAmbiguites() {
+    final Map<UUID, Map<String, Object>> resultat = new HashMap<>(ambiguites);
     ambiguites.clear();
     return resultat;
   }
@@ -239,7 +241,7 @@ final class WikidataSalleDecouverte {
           "Wikidata découverte salle — rejet coordonnées divergentes nom={} salleId={}",
           nomRecherche,
           salle.id());
-      ambiguites.add(salle.id());
+      ambiguites.put(salle.id(), detailsDivergence(salle, itemUri, itemLabel, coordLat, coordLon));
       return Optional.empty();
     }
 
@@ -249,6 +251,29 @@ final class WikidataSalleDecouverte {
             qid, labelCorrespondant, communeLabel, null, null, coordLat, coordLon);
     cache.put(qid, enrichissement);
     return Optional.of(enrichissement);
+  }
+
+  // Le candidat rejeté et l'écart constaté : sans eux le signalement n'est pas exploitable.
+  private static Map<String, Object> detailsDivergence(
+      final SalleAEnrichir salle,
+      final String itemUri,
+      final String itemLabel,
+      final Double coordLat,
+      final Double coordLon) {
+    final Map<String, Object> details = new LinkedHashMap<>();
+    details.put("wikidataId", itemUri.substring(itemUri.lastIndexOf('/') + 1));
+    if (itemLabel != null && !itemLabel.isBlank()) {
+      details.put("libelleWikidata", itemLabel);
+    }
+    if (salle.latitude() != null
+        && salle.longitude() != null
+        && coordLat != null
+        && coordLon != null) {
+      details.put(
+          "ecartMetres",
+          Math.round(DistanceGeo.metres(salle.latitude(), salle.longitude(), coordLat, coordLon)));
+    }
+    return details;
   }
 
   // regroupe les deux garde-fous de localisation (ville, département) et leur

@@ -126,7 +126,7 @@ public class EnrichissementArtistesService {
       if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) {
         continue;
       }
-      for (final UUID artisteId : avecAmbiguites.preleverAmbiguites()) {
+      for (final UUID artisteId : avecAmbiguites.preleverAmbiguites().keySet()) {
         signalementMatchingService.signaler(
             "wikidata_ambiguite", "artiste", artisteId, "basse", null);
       }

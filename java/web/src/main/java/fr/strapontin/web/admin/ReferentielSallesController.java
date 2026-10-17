@@ -8,6 +8,8 @@ import static fr.strapontin.web.ControllerUtils.erreur;
 import static fr.strapontin.web.ControllerUtils.parseUuid;
 
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -95,7 +97,8 @@ public class ReferentielSallesController {
   /**
    * Liste paginée du référentiel salles — mêmes filtres que {@link
    * ReferentielSallesService.FiltresRechercheSalles}.
-   * @return 200 avec la page de résultats
+   * @param ids identifiants à isoler (séparés par des virgules ou répétés), optionnel
+   * @return 200 avec la page de résultats, 400 si un identifiant n'est pas un UUID
    */
   @GetMapping("/salles")
   public ResponseEntity<ReponseReferentielSalles> lister(
@@ -104,11 +107,20 @@ public class ReferentielSallesController {
       @RequestParam(required = false) final String ville,
       @RequestParam(required = false) final String dept,
       @RequestParam(required = false) final String statut,
-      @RequestParam(defaultValue = "false") final boolean wikidataManquant) {
+      @RequestParam(defaultValue = "false") final boolean wikidataManquant,
+      @RequestParam(required = false) final List<String> ids) {
+    final List<UUID> identifiants = new ArrayList<>();
+    for (final String brut : ids == null ? List.<String>of() : ids) {
+      final UUID id = parseUuid(brut);
+      if (id == null) {
+        return ResponseEntity.badRequest().build();
+      }
+      identifiants.add(id);
+    }
     return ResponseEntity.ok(
         service.lister(
             new ReferentielSallesService.FiltresRechercheSalles(
-                page, nom, ville, dept, statut, wikidataManquant)));
+                page, nom, ville, dept, statut, wikidataManquant, identifiants)));
   }
 
   /**

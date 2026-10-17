@@ -50,13 +50,13 @@ public final class CatalogueSignalements {
     ajouter(
         "doublon_salle",
         "Doublon de salle probable",
-        "Deux salles semblent désigner le même lieu : les fusionner depuis le référentiel, ou les"
+        "Deux salles semblent désigner le même lieu : les comparer puis les fusionner, ou les"
             + " déclarer distinctes.");
     ajouter(
         "meme_lieu_salles",
         "Deux salles au même endroit",
-        "Deux salles ont des lieux sources à la même position : les fusionner si c'est le même"
-            + " lieu, sinon les déclarer distinctes.");
+        "Deux salles ont des lieux sources à la même position : les comparer puis les fusionner"
+            + " si c'est le même lieu, sinon marquer l'anomalie comme traitée.");
     ajouter(
         "position_wikidata_incoherente",
         "Wikidata d'un homonyme",
@@ -147,7 +147,9 @@ public final class CatalogueSignalements {
         "collision_wikidata_salle",
         "Wikidata partagé par deux salles",
         "Deux salles se voient attribuer le même élément Wikidata sans être assez proches pour"
-            + " être fusionnées automatiquement.");
+            + " être fusionnées automatiquement. Ouvrir l'élément pour juger : s'il désigne le"
+            + " même lieu, les comparer puis les fusionner ; sinon réinitialiser l'enrichissement"
+            + " de la salle signalée depuis le référentiel.");
     ajouter(
         "collision_wikidata_artiste",
         "Wikidata partagé par deux artistes",
@@ -159,7 +161,10 @@ public final class CatalogueSignalements {
     ajouter(
         "wikidata_coordonnees_divergentes",
         "Coordonnées Wikidata divergentes",
-        "Les coordonnées Wikidata de la salle s'écartent de celles de ses concerts.");
+        "Un élément Wikidata correspondant au nom de la salle a été écarté, car sa position"
+            + " s'écarte de celle de la salle (écart indiqué). L'ouvrir pour juger : si c'est bien"
+            + " la salle, sa position enregistrée est probablement fausse ; sinon rien à faire, la"
+            + " salle reste sans élément Wikidata.");
     ajouter(
         "source_orpheline",
         "Source sans concert",

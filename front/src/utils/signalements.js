@@ -86,11 +86,14 @@ function versTexte(v) {
 
 /// Actions proposées sur place pour un signalement, dans l'ordre d'affichage.
 /// @param signalement entrée renvoyée par l'API
-/// @return codes parmi `supprimerConcert`, `resoudre`, `fauxPositif`, `sallesDistinctes`,
-///         `ignorerEcart`, `repartir`, `voirFiche`
+/// @return codes parmi `comparer`, `supprimerConcert`, `resoudre`, `fauxPositif`,
+///         `sallesDistinctes`, `ignorerEcart`, `repartir`, `voirFiche`
 export function actionsSignalement(signalement) {
   const actions = [];
   const entite = signalement.entite ?? {};
+  if (signalement.autreSalle && entite.type === "salle") {
+    actions.push("comparer");
+  }
   if (TYPES_REPARTISSABLES.has(signalement.type) && entite.type === "salle") {
     actions.push("repartir");
   }

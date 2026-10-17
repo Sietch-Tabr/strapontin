@@ -8,6 +8,20 @@
         réactiver.
       </p>
 
+      <div v-if="idsInitiaux.length" class="alerte alerte-info">
+        <p>
+          Comparaison des deux salles signalées. Elles sont déjà sélectionnées :
+          « Fusionner » ouvre le choix de la salle à conserver.
+        </p>
+        <button
+          type="button"
+          class="bouton bouton-texte bouton-petit"
+          @click="emit('quitter-comparaison')"
+        >
+          Afficher toutes les salles
+        </button>
+      </div>
+
       <div class="source-vue-entete">
         <input
           v-model="filtreNom"
@@ -310,9 +324,11 @@ defineOptions({ name: "AdminSalles" });
 
 const props = defineProps({
   rechercheInitiale: { type: String, default: "" },
+  idsInitiaux: { type: Array, default: () => [] },
 });
+const emit = defineEmits(["quitter-comparaison"]);
 
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
@@ -358,6 +374,21 @@ const {
   cleTotal: "totalSalles",
   messageFusionne: "Salles fusionnées.",
   libellePluriel: "salles",
-  filtresExtra: () => ({ ville: filtreVille.value, dept: filtreDept.value }),
+  filtresExtra: () => ({
+    ville: filtreVille.value,
+    dept: filtreDept.value,
+    ids: props.idsInitiaux.join(","),
+  }),
+});
+
+// Les deux salles comparées arrivent sélectionnées : la fusion est à un clic.
+watch(items, (liste) => {
+  if (
+    props.idsInitiaux.length === 2 &&
+    liste.length === 2 &&
+    selection.length === 0
+  ) {
+    liste.forEach((salle) => selection.push(salle.id));
+  }
 });
 </script>

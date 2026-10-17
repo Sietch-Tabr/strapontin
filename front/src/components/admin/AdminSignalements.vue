@@ -31,9 +31,13 @@
             {{ decrireType(catalogue, s.type).explication }}
           </p>
           <dl
-            v-if="formaterDetails(s.details).length"
+            v-if="s.autreSalle || formaterDetails(s.details).length"
             class="signalement-details texte-note"
           >
+            <template v-if="s.autreSalle">
+              <dt>autre salle</dt>
+              <dd>{{ s.autreSalle.nom }}</dd>
+            </template>
             <template v-for="(d, i) in formaterDetails(s.details)" :key="i">
               <dt v-if="d.cle">{{ d.cle }}</dt>
               <dd>
@@ -51,7 +55,21 @@
           <div class="source-actions">
             <template v-for="action in actionsSignalement(s)" :key="action">
               <button
-                v-if="action === 'repartir'"
+                v-if="action === 'comparer'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                :aria-label="
+                  'Comparer et fusionner : ' +
+                  libelleEntite(s.entite) +
+                  ' et ' +
+                  s.autreSalle.nom
+                "
+                @click="emit('comparer', [s.entite.id, s.autreSalle.id])"
+              >
+                Comparer et fusionner
+              </button>
+              <button
+                v-else-if="action === 'repartir'"
                 type="button"
                 class="bouton bouton-secondaire bouton-petit"
                 @click="
@@ -111,7 +129,7 @@
               <button
                 v-else-if="action === 'voirFiche'"
                 type="button"
-                class="bouton bouton-texte bouton-petit"
+                class="bouton bouton-secondaire bouton-petit"
                 @click="emit('voir-fiche', s.entite)"
               >
                 Voir la fiche
@@ -166,7 +184,7 @@ import EtatChargement from "../EtatChargement.vue";
 import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
 import DialogueConfirmation from "../DialogueConfirmation.vue";
 
-const emit = defineEmits(["voir-fiche", "total"]);
+const emit = defineEmits(["voir-fiche", "comparer", "total"]);
 
 const { afficherToast } = useToasts();
 

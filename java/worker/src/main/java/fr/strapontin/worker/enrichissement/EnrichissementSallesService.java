@@ -154,10 +154,16 @@ public class EnrichissementSallesService {
       if (!(source instanceof SourceAvecAmbiguitesDecouverte avecAmbiguites)) {
         continue;
       }
-      for (final UUID salleId : avecAmbiguites.preleverAmbiguites()) {
-        signalementMatchingService.signaler(
-            "wikidata_coordonnees_divergentes", "salle", salleId, "basse", null);
-      }
+      avecAmbiguites
+          .preleverAmbiguites()
+          .forEach(
+              (salleId, details) ->
+                  signalementMatchingService.signaler(
+                      "wikidata_coordonnees_divergentes",
+                      "salle",
+                      salleId,
+                      "basse",
+                      details.isEmpty() ? null : details));
     }
   }
 

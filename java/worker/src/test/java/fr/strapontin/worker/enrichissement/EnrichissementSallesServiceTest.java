@@ -714,7 +714,9 @@ class EnrichissementSallesServiceTest {
                 .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
     when(wikidata.enrichirLot(any())).thenReturn(Map.of());
     when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
-        .thenReturn(java.util.Set.of(salleId));
+        .thenReturn(
+            java.util.Map.of(
+                salleId, java.util.Map.of("wikidataId", "Q4724424", "ecartMetres", 4200L)));
     final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
 
     final EnrichissementSallesService service =
@@ -729,7 +731,11 @@ class EnrichissementSallesServiceTest {
 
     verify(signalement)
         .signaler(
-            eq("wikidata_coordonnees_divergentes"), eq("salle"), eq(salleId), anyString(), any());
+            eq("wikidata_coordonnees_divergentes"),
+            eq("salle"),
+            eq(salleId),
+            anyString(),
+            eq(java.util.Map.of("wikidataId", "Q4724424", "ecartMetres", 4200L)));
   }
 
   // le streak de chronicité (persisté dans app_config) doit survivre entre deux cycles

@@ -44,13 +44,37 @@ class ReferentielSallesControllerTest {
         .thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
 
     final ResponseEntity<ReponseReferentielSalles> reponse =
-        controller.lister(0, "Zenith", null, null, null, false);
+        controller.lister(0, "Zenith", null, null, null, false, null);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service)
         .lister(
             new ReferentielSallesService.FiltresRechercheSalles(
                 0, "Zenith", null, null, null, false));
+  }
+
+  @Test
+  void lister_idsFournis_lesTransmetAuService() {
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
+    final var filtres =
+        new ReferentielSallesService.FiltresRechercheSalles(
+            0, null, null, null, null, false, List.of(a, b));
+    when(service.lister(filtres)).thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
+
+    final var reponse =
+        controller.lister(0, null, null, null, null, false, List.of(a.toString(), b.toString()));
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(service).lister(filtres);
+  }
+
+  @Test
+  void lister_idInvalide_retourne400SansInterrogerLeService() {
+    final var reponse = controller.lister(0, null, null, null, null, false, List.of("pas-un-uuid"));
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(service, never()).lister(any());
   }
 
   @Test

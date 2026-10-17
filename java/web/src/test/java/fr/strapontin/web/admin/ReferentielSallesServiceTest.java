@@ -106,6 +106,24 @@ class ReferentielSallesServiceTest {
     verify(jdbc).query(contains("wikidata_id IS NULL"), anyMap(), any(RowMapper.class));
   }
 
+  @Test
+  @SuppressWarnings("unchecked")
+  void lister_idsFournis_restreintLaListeAuxSallesDemandees() {
+    when(jdbc.query(anyString(), anyMap(), any(RowMapper.class))).thenReturn(List.of());
+
+    service.lister(
+        new FiltresRechercheSalles(
+            0,
+            null,
+            null,
+            null,
+            null,
+            false,
+            List.of(java.util.UUID.randomUUID(), java.util.UUID.randomUUID())));
+
+    verify(jdbc).query(contains("id IN (:ids)"), anyMap(), any(RowMapper.class));
+  }
+
   // page au-delà du total (offset trop grand) : aucune ligne ne porte total_filtre, un second
   // aller-retour COUNT reste nécessaire pour ne pas afficher un total à zéro trompeur.
   @Test

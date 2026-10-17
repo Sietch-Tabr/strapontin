@@ -138,4 +138,15 @@ describe("actionsSignalement", () => {
       }),
     ).toEqual(["repartir", "resoudre", "voirFiche"]);
   });
+
+  it("propose de comparer deux salles quand le signalement en nomme une seconde", () => {
+    expect(
+      actionsSignalement({
+        categorie: "doublon_salle",
+        type: "doublon_salle",
+        entite: { type: "salle", id: "a", nom: "Zénith" },
+        autreSalle: { type: "salle", id: "b", nom: "Zénith de Paris" },
+      }),
+    ).toEqual(["comparer", "sallesDistinctes", "voirFiche"]);
+  });
 });

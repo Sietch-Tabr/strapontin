@@ -32,27 +32,34 @@ public class SignalementsAdminService {
                NULLIF(concat_ws(' · ', c.artiste, to_char(c.date, 'DD/MM/YYYY'), c.salle), ''),
                CASE WHEN t.entite_type = 'departement'
                     THEN 'Département ' || (t.details::jsonb ->> 'departement') END)
-               AS entite_nom
+               AS entite_nom,
+             NULLIF(concat_ws(' · ', COALESCE(o.nom_affiche, o.nom),
+                              NULLIF(concat_ws(' ', o.ville, o.dept), '')), '') AS autre_salle_nom
       FROM (
         SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
                sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
                sm.confiance AS confiance, sm.detecte_le AS detecte_le,
-               sm.details::text AS details, sm.details ->> 'userId' AS utilisateur_id
+               NULLIF((sm.details - 'salleExistante' - 'autreSalleId')::text, '{}') AS details,
+               sm.details ->> 'userId' AS utilisateur_id,
+               COALESCE(sm.details ->> 'salleExistante', sm.details ->> 'autreSalleId')
+                   AS autre_salle_id
         FROM signalements_matching sm WHERE sm.resolu_le IS NULL
         UNION ALL
         SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
-               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL, NULL
+               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL, NULL,
+               NULL
         FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
         UNION ALL
         SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
-               s.id::text, 'moyenne', NULL, s.contamination_signalee, NULL
+               s.id::text, 'moyenne', NULL, s.contamination_signalee, NULL, NULL
         FROM salles s WHERE s.contamination_signalee IS NOT NULL
         UNION ALL
         SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
-               NULL, s.doublon_signale::text, NULL
+               NULL, NULL, NULL, s.doublon_signale::text
         FROM salles s WHERE s.doublon_signale IS NOT NULL
       ) t
       LEFT JOIN salles s ON t.entite_type = 'salle' AND s.id::text = t.entite_id
+      LEFT JOIN salles o ON o.id::text = t.autre_salle_id
       LEFT JOIN artistes a ON t.entite_type = 'artiste' AND a.id::text = t.entite_id
       LEFT JOIN concerts c ON t.entite_type = 'evenement' AND c.id::text = t.entite_id
       -- L'entité d'un signalement est un UUID, dérivé de l'identifiant texte du compte.
@@ -111,7 +118,11 @@ public class SignalementsAdminService {
             rs.getString("entite_type"), rs.getString("entite_id"), rs.getString("entite_nom")),
         rs.getString("confiance"),
         detecteLe != null ? detecteLe.toInstant() : null,
-        rs.getString("details"));
+        rs.getString("details"),
+        rs.getString("autre_salle_nom") != null
+            ? new EntreeSignalement.EntiteSignalee(
+                "salle", rs.getString("autre_salle_id"), rs.getString("autre_salle_nom"))
+            : null);
   }
 
   private long totalActifs() {

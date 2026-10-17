@@ -35,7 +35,7 @@ public class WikidataSalleSource
   private final WikidataSalleDecouverte decouverte;
 
   @Override
-  public Set<UUID> preleverAmbiguites() {
+  public Map<UUID, Map<String, Object>> preleverAmbiguites() {
     return decouverte.preleverAmbiguites();
   }
 

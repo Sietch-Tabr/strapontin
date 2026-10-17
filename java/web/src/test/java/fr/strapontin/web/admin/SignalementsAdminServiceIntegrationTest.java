@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
@@ -249,6 +250,57 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
             Long.class);
     assertEquals(1L, paires);
     assertEquals(0, service.lister(0).total());
+  }
+
+  @Test
+  void lister_doublonDeSalle_nommeLAutreSalleSansExposerSonUuid() {
+    final UUID salleA = creerSalle("theatre montparnasse");
+    final UUID salleB = creerSalle("theatre de poche montparnasse");
+    jdbc.update(
+        "UPDATE salles SET nom_affiche = 'Théâtre de Poche', ville = 'Paris', dept = '75'"
+            + " WHERE id = CAST(:b AS uuid)",
+        Map.of("b", salleB.toString()));
+    jdbc.update(
+        "UPDATE salles SET doublon_signale = CAST(:b AS uuid) WHERE id = CAST(:a AS uuid)",
+        Map.of("a", salleA.toString(), "b", salleB.toString()));
+
+    final EntreeSignalement entree = service.lister(0).signalements().getFirst();
+
+    assertEquals(salleB.toString(), entree.autreSalle().id());
+    assertEquals("Théâtre de Poche · Paris 75", entree.autreSalle().nom());
+    assertNull(entree.details(), "l'UUID de l'autre salle ne doit plus être affiché");
+  }
+
+  @Test
+  void lister_wikidataPartage_nommeLAutreSalleEtGardeLeResteDesDetails() {
+    final UUID porteuse = creerSalle("zenith");
+    final UUID signalee = creerSalle("zenith de paris");
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('collision_wikidata_salle', 'salle', CAST(:id AS uuid), 'basse',"
+            + " CAST(:details AS jsonb))",
+        Map.of(
+            "id",
+            signalee.toString(),
+            "details",
+            "{\"wikidataId\": \"Q123\", \"salleExistante\": \"" + porteuse + "\"}"));
+
+    final EntreeSignalement entree = service.lister(0).signalements().getFirst();
+
+    assertEquals(porteuse.toString(), entree.autreSalle().id());
+    assertTrue(entree.details().contains("Q123"));
+    assertFalse(entree.details().contains(porteuse.toString()));
+  }
+
+  @Test
+  void lister_signalementSansAutreSalle_laisseLeChampVide() {
+    final UUID salle = creerSalle("olympia");
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
+            + " VALUES ('wikidata_coordonnees_divergentes', 'salle', CAST(:id AS uuid), 'basse')",
+        Map.of("id", salle.toString()));
+
+    assertNull(service.lister(0).signalements().getFirst().autreSalle());
   }
 
   private long signalerConcert(final String type) {
