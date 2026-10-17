@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.worker.jobs.NotifierDigestJob;
+import fr.strapontin.worker.jobs.NotifierVersionJob;
 import java.util.TimeZone;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobDetail;
@@ -17,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
  * Planification du digest de notifications, à l'heure de Paris : quotidien à
  * 12h, hebdomadaire le dimanche à 12h (fréquence portée par les données du
  * déclencheur), et à 7h l'envoi des push retenus pendant la plage silencieuse
- * (22h à 7h).
+ * (22h à 7h) ; à 11h, l'annonce d'une nouvelle version.
  * @since 3.0.3
  * @author Kwaite
  */
@@ -58,6 +59,26 @@ public class PlanificateurNotifications {
         .withIdentity("triggerNotifierPushDifferes")
         .usingJobData(NotifierDigestJob.CLE_FREQUENCE, NotifierDigestJob.FREQUENCE_PUSH_DIFFERES)
         .withSchedule(CronScheduleBuilder.cronSchedule("0 0 7 * * ?").inTimeZone(PARIS))
+        .build();
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  JobDetail jobDetailNotifierVersion() {
+    return Planificateur.creerJobDetail(NotifierVersionJob.class, "notifierVersion");
+  }
+
+  // Chaque jour à 11h : une version déployée dans la journée est annoncée le lendemain, jamais
+  // deux fois au même utilisateur (notifications_version).
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  Trigger triggerNotifierVersion(final JobDetail jobDetailNotifierVersion) {
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailNotifierVersion)
+        .withIdentity("triggerNotifierVersion")
+        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 11 * * ?").inTimeZone(PARIS))
         .build();
   }
 

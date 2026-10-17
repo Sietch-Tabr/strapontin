@@ -5,16 +5,19 @@
 package fr.strapontin.worker.jobs;
 
 import fr.strapontin.worker.NotificationVersionPushService;
+import fr.strapontin.worker.WorkerStatsService;
+import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : envoi push "nouvelle version disponible", déclenché
- * uniquement à la demande depuis l'admin (détail : CLAUDE.md, Jobs
- * background) — jamais planifié sur cron.
+ * Job Quartz : envoi push "nouvelle version disponible" — chaque jour à 11h
+ * (version courante de l'application, une seule annonce par version et par
+ * utilisateur) ou sur demande depuis l'admin avec la version transmise.
  * @since 3.0.0
  * @author Kwaite
  */
@@ -25,6 +28,8 @@ public class NotifierVersionJob extends QuartzJobBean {
   private static final Logger LOG = LoggerFactory.getLogger(NotifierVersionJob.class);
 
   private NotificationVersionPushService notificationVersionPushService;
+  private WorkerStatsService workerStatsService;
+  private BuildProperties buildProperties;
 
   /** Constructeur par défaut, instancié par Spring. */
   public NotifierVersionJob() {
@@ -40,19 +45,31 @@ public class NotifierVersionJob extends QuartzJobBean {
     this.notificationVersionPushService = notificationVersionPushService;
   }
 
+  /**
+   * @param workerStatsService enregistrement de l'exécution du job
+   */
+  @Autowired
+  public void setWorkerStatsService(final WorkerStatsService workerStatsService) {
+    this.workerStatsService = workerStatsService;
+  }
+
+  /**
+   * @param buildProperties version courante, utilisée sans version transmise
+   */
+  @Autowired
+  public void setBuildProperties(final BuildProperties buildProperties) {
+    this.buildProperties = buildProperties;
+  }
+
   @Override
   protected void executeInternal(final JobExecutionContext context) {
-    final String version = context.getMergedJobDataMap().getString(CLE_VERSION);
-    if (version == null || version.isBlank()) {
-      LOG.warn("notifier:version — version absente dans la JobDataMap");
-      return;
-    }
-    try {
-      final int nbEnvoyes = notificationVersionPushService.notifierVersion(version);
-      LOG.info("notifier:version terminé version={} nbEnvoyes={}", version, nbEnvoyes);
-    } catch (Exception e) {
-      LOG.error("notifier:version échoué version={}", version, e);
-      throw e;
-    }
+    final String transmise = context.getMergedJobDataMap().getString(CLE_VERSION);
+    final String version =
+        transmise == null || transmise.isBlank() ? buildProperties.getVersion() : transmise;
+    workerStatsService.executerAvecStats(
+        LOG,
+        "notifier:version",
+        () -> new ResultatPersistance(notificationVersionPushService.notifierVersion(version), 0));
+    LOG.info("notifier:version terminé version={}", version);
   }
 }

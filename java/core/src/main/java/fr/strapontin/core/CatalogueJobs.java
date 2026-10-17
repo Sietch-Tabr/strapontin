@@ -84,6 +84,12 @@ public final class CatalogueJobs {
         "Recalcule pour chaque utilisateur les concerts de ses artistes et salles suivis.",
         Theme.NOTIFICATIONS);
     ajouter(
+        "notifier:version",
+        "Annonce d'une nouvelle version",
+        "Prévient une seule fois par version, chaque jour à 11 h, les utilisateurs qui l'ont"
+            + " demandé (notification push).",
+        Theme.NOTIFICATIONS);
+    ajouter(
         "notifier:digest",
         "Envoi des notifications",
         "Envoie par email et push les nouveaux concerts de chaque utilisateur.",

@@ -44,6 +44,7 @@ public class WorkerSuiviCyclesService {
           Map.entry("purger:artistes", Duration.ofHours(48)),
           Map.entry("purger:logs-admin", Duration.ofHours(48)),
           Map.entry("notifier:digest", Duration.ofHours(48)),
+          Map.entry("notifier:version", Duration.ofHours(48)),
           Map.entry("revoquer:admins", Duration.ofHours(4)),
           Map.entry("reconciliation:nocturne", Duration.ofHours(48)));
 

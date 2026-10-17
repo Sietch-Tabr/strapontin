@@ -33,6 +33,7 @@ final class NomsJobs {
           Map.entry("revoquerAdmins", "revoquer:admins"),
           Map.entry("recalculerMatches", "recalculer:matches"),
           Map.entry("notifierDigest", "notifier:digest"),
+          Map.entry("notifierVersion", "notifier:version"),
           Map.entry("reconciliationNocturne", "reconciliation:nocturne"),
           Map.entry("suiviCyclesJobs", "suivi:cycles-jobs"));
 

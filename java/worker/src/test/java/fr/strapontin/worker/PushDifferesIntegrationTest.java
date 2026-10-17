@@ -14,6 +14,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.FournisseurBouncyCastle;
 import fr.strapontin.sources.TicketmasterSource;
 import java.time.Clock;
 import java.time.Instant;
@@ -57,6 +58,8 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    // Le fournisseur est enregistré au démarrage du worker, pas par le contexte de test.
+    FournisseurBouncyCastle.garantir();
     jdbc.update("DELETE FROM push_differes", Map.of());
     jdbc.update("DELETE FROM push_abonnements", Map.of());
     jdbc.update("DELETE FROM evenements", Map.of());
