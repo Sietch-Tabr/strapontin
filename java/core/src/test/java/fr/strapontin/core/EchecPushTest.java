@@ -72,8 +72,11 @@ class EchecPushTest {
   }
 
   @Test
-  void causeLisible_403_mentionneLeRefusDuService() {
-    assertTrue(EchecPush.causeLisible(403).contains("refuse"));
+  void causeLisible_403_n_impute_pas_la_cause_au_seul_abonnement() {
+    final String cause = EchecPush.causeLisible(403);
+    assertTrue(cause.contains("refusé"));
+    assertTrue(cause.contains("notre application"));
+    assertTrue(!cause.contains("expiré"));
     assertTrue(EchecPush.causeLisible(null).contains("injoignable"));
   }
 

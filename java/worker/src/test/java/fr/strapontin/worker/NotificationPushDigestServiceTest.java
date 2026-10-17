@@ -33,6 +33,7 @@ import org.apache.http.entity.StringEntity;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Tests unitaires de {@link NotificationPushDigestService} : révocation
@@ -108,7 +109,8 @@ class NotificationPushDigestServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
         .thenReturn(List.of(abonnement(1)));
-    when(jdbc.queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class)))
+    when(jdbc.queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
         .thenReturn(echecs);
     return jdbc;
   }
@@ -181,7 +183,8 @@ class NotificationPushDigestServiceTest {
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
     verify(jdbc, never())
-        .queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class));
+        .queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class));
   }
 
   // Sans remise à zéro, deux échecs isolés à des semaines d'écart finiraient par

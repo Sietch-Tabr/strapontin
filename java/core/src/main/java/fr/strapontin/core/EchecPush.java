@@ -24,15 +24,20 @@ public final class EchecPush {
   /** Envois consécutifs en échec au-delà desquels l'appareil est révoqué. */
   public static final int SEUIL_ECHECS_CONSECUTIFS = 5;
 
-  /** Incrémente le compteur d'un abonnement {@code :id} et renvoie sa valeur. */
+  /**
+   * Incrémente le compteur d'un abonnement {@code :id}, date l'échec et en garde le {@code
+   * :statut} HTTP (null sans réponse), puis renvoie le compteur.
+   */
   public static final String SQL_INCREMENTER_ECHECS =
-      "UPDATE push_abonnements SET echecs_consecutifs = echecs_consecutifs + 1"
+      "UPDATE push_abonnements SET echecs_consecutifs = echecs_consecutifs + 1,"
+          + " dernier_echec_le = now(), dernier_echec_statut = :statut"
           + " WHERE id = :id RETURNING echecs_consecutifs";
 
   /** Remet à zéro le compteur d'un abonnement {@code :id} après un envoi réussi. */
   public static final String SQL_REINITIALISER_ECHECS =
-      "UPDATE push_abonnements SET echecs_consecutifs = 0"
-          + " WHERE id = :id AND echecs_consecutifs <> 0";
+      "UPDATE push_abonnements SET echecs_consecutifs = 0, dernier_echec_le = NULL,"
+          + " dernier_echec_statut = NULL"
+          + " WHERE id = :id AND (echecs_consecutifs <> 0 OR dernier_echec_le IS NOT NULL)";
 
   /** Supprime l'abonnement {@code :id}. */
   public static final String SQL_SUPPRIMER_ABONNEMENT =
@@ -145,8 +150,9 @@ public final class EchecPush {
           + " effacées ou application désinstallée)";
     }
     if (statut == STATUT_INTERDIT) {
-      return "le service de notification de votre navigateur refuse désormais l'abonnement"
-          + " (abonnement expiré ou clés de l'application renouvelées)";
+      return "le service de notification de votre navigateur a refusé les notifications à"
+          + " plusieurs reprises (la cause peut être l'abonnement de cet appareil ou notre"
+          + " application)";
     }
     if (statut == STATUT_TROP_VOLUMINEUX || statut == STATUT_TROP_DE_REQUETES) {
       return "le service de notification de votre navigateur a refusé les notifications à"

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Tests unitaires de {@link NotificationVersionPushService} (#1231).
@@ -144,7 +145,9 @@ class NotificationVersionPushServiceTest {
     final int nbEnvoyes = service.notifierVersion("3.0.0");
 
     assertEquals(0, nbEnvoyes);
-    verify(jdbc).queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class));
+    verify(jdbc)
+        .queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class));
   }
 
   @Test

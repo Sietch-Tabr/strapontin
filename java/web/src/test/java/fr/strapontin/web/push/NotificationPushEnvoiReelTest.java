@@ -7,6 +7,7 @@ package fr.strapontin.web.push;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -38,6 +39,7 @@ import org.apache.http.message.BasicHttpResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Envoi push réel depuis le module web : vraies clés VAPID, chargement des
@@ -139,7 +141,8 @@ class NotificationPushEnvoiReelTest {
   @Test
   void envoyerNotificationTest_cinquiemeEchecConsecutif_appareilRevoque() throws Exception {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnement()));
-    when(jdbc.queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class)))
+    when(jdbc.queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
         .thenReturn(5);
     statutRenvoye = 403;
 
