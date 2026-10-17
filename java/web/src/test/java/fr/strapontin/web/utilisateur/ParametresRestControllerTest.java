@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -100,6 +101,59 @@ class ParametresRestControllerTest {
     verify(parametresService)
         .demanderChangementEmail(
             any(UtilisateurDetails.class), eq("bob@test.fr"), eq("https://strapontin.kwaite.fr"));
+  }
+
+  private void preparerEnvoiPossible() {
+    when(parametresService.emailDejaUtilise(anyString(), anyString())).thenReturn(false);
+    when(parametresService.emailDisponible()).thenReturn(true);
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.kwaite.fr"));
+  }
+
+  @Test
+  void emailChange_quatriemeDemandeDuMemeCompteDansLHeure_retourne429() {
+    preparerEnvoiPossible();
+    for (int i = 0; i < 3; i++) {
+      assertEquals(
+          200,
+          controller
+              .emailChange(new RequeteEmailChange("dest" + i + "@test.fr"), auth)
+              .getStatusCode()
+              .value());
+    }
+
+    final var reponse = controller.emailChange(new RequeteEmailChange("dest9@test.fr"), auth);
+
+    assertEquals(429, reponse.getStatusCode().value());
+    verify(parametresService, times(3)).demanderChangementEmail(any(), anyString(), anyString());
+  }
+
+  @Test
+  void emailChange_troisiemeConfirmationVersLaMemeAdresse_retourne429MemeDepuisUnAutreCompte() {
+    preparerEnvoiPossible();
+    final UtilisateurDetails autre =
+        new UtilisateurDetails("u2", "bob", "bob@test.fr", "hash", "user", false, false, false);
+    final Authentication authAutre = mock(Authentication.class);
+    when(authAutre.getPrincipal()).thenReturn(autre);
+    controller.emailChange(new RequeteEmailChange("tiers@test.fr"), auth);
+    controller.emailChange(new RequeteEmailChange("tiers@test.fr"), authAutre);
+
+    final var reponse = controller.emailChange(new RequeteEmailChange("Tiers@Test.fr"), auth);
+
+    assertEquals(429, reponse.getStatusCode().value());
+    verify(parametresService, times(2)).demanderChangementEmail(any(), anyString(), anyString());
+  }
+
+  @Test
+  void emailChange_demandeInvalide_neConsommePasLeQuota() {
+    preparerEnvoiPossible();
+    for (int i = 0; i < 5; i++) {
+      controller.emailChange(new RequeteEmailChange("alice@test.fr"), auth);
+    }
+
+    final var reponse = controller.emailChange(new RequeteEmailChange("bob@test.fr"), auth);
+
+    assertEquals(200, reponse.getStatusCode().value());
   }
 
   @Test

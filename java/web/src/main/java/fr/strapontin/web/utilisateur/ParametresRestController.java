@@ -7,9 +7,11 @@ package fr.strapontin.web.utilisateur;
 import static fr.strapontin.web.ControllerUtils.erreur;
 
 import fr.strapontin.web.config.ConfigService;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -32,8 +34,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/parametres")
 public class ParametresRestController {
 
+  private static final int MAX_CHANGEMENTS_PAR_COMPTE_PAR_HEURE = 3;
+  private static final int MAX_CONFIRMATIONS_PAR_DESTINATAIRE_PAR_JOUR = 2;
+
   private final ParametresService parametresService;
   private final ConfigService configService;
+  // Le destinataire peut être un tiers : la limite par adresse protège sa boîte quel que soit le
+  // compte.
+  private final LimiteurDebit changementsParCompte =
+      new LimiteurDebit(
+          MAX_CHANGEMENTS_PAR_COMPTE_PAR_HEURE, Duration.ofHours(1), Duration.ofHours(2), 10_000);
+  private final LimiteurDebit confirmationsParDestinataire =
+      new LimiteurDebit(
+          MAX_CONFIRMATIONS_PAR_DESTINATAIRE_PAR_JOUR,
+          Duration.ofDays(1),
+          Duration.ofDays(2),
+          10_000);
 
   /**
    * @param parametresService service métier des paramètres
@@ -62,7 +78,8 @@ public class ParametresRestController {
    * via {@link #confirmerEmail}.
    * @param corps corps JSON avec {@code email} (nouvelle adresse)
    * @param auth contexte d'authentification
-   * @return 200 {@code {succes: true}} ou 400/503 {@code {erreur}}
+   * @return 200 {@code {succes: true}} ou 400/429/503 {@code {erreur}} (429 au-delà de 3
+   *     demandes par heure et par compte, ou de 2 confirmations par jour vers une même adresse)
    */
   @PostMapping("/email-change")
   public ResponseEntity<Map<String, Object>> emailChange(
@@ -83,6 +100,11 @@ public class ParametresRestController {
     if (baseUrl.isEmpty()) {
       return erreur(
           503, "L'envoi d'email n'est pas configuré. Impossible de confirmer le changement.");
+    }
+
+    if (!changementsParCompte.autoriser(details.id())
+        || !confirmationsParDestinataire.autoriser(emailNorm)) {
+      return erreur(429, "Trop de demandes de changement d'adresse. Réessayez plus tard.");
     }
 
     parametresService.demanderChangementEmail(details, emailNorm, baseUrl.get());
