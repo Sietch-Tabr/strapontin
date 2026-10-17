@@ -85,14 +85,11 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     return resultats;
   }
 
-  // return en dernière position de boucle nécessaire : arrête la recherche au
-  // premier candidat valide plutôt que de poursuivre l'itération sans effet
-  // utile.
-  @SuppressWarnings({"unchecked", "PMD.AvoidBranchingStatementAsLastInLoop"})
+  @SuppressWarnings("unchecked")
   private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
+      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=25";
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) {
         return Optional.empty();
@@ -102,19 +99,31 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
         return Optional.empty();
       }
 
+      Map<String, Object> retenu = null;
+      double fansRetenu = -1;
       for (final Map<String, Object> candidat : dataList) {
         final String nomCandidat = (String) candidat.get("name");
         if (nomCandidat == null
+            || candidat.get("id") == null
             || !Normalisation.normaliserTexte(nomCandidat).equals(artiste.nomNorm())) {
           continue;
         }
-        final Object idCandidat = candidat.get("id");
-        if (idCandidat == null) {
-          continue;
+        // Le plus suivi des homonymes exacts : un artiste récent de quelques dizaines de fans ne
+        // prend pas la place du groupe connu.
+        final double fans = candidat.get("nb_fan") instanceof Number n ? n.doubleValue() : 0;
+        if (fans > fansRetenu) {
+          retenu = candidat;
+          fansRetenu = fans;
         }
+      }
+      if (retenu != null) {
         return Optional.of(
             new EnrichissementArtiste(
-                artiste.wikidataId(), nomCandidat, String.valueOf(idCandidat), null, null));
+                artiste.wikidataId(),
+                (String) retenu.get("name"),
+                String.valueOf(retenu.get("id")),
+                null,
+                null));
       }
       return Optional.empty();
     } catch (Exception e) {
