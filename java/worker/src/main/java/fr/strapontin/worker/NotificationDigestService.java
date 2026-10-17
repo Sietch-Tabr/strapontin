@@ -317,13 +317,14 @@ public class NotificationDigestService {
                             || ("SALLE".equals(c.source()) && config.notifSallesPush()))
                 .toList()
             : List.of();
-    final boolean emailOk = envoyerEmail(email, concertsEmail);
+    final boolean emailOk = envoyerEmail(userId, email, concertsEmail);
     final boolean pushOk = pushDigestService.envoyerPush(userId, concertsPush);
     return new ResultatDigest(emailOk, pushOk, concertsEmail, concertsPush);
   }
 
-  private boolean envoyerEmail(final String email, final List<ConcertNotif> concerts) {
-    return emailDigestService.envoyerEmail(email, concerts);
+  private boolean envoyerEmail(
+      final String userId, final String email, final List<ConcertNotif> concerts) {
+    return emailDigestService.envoyerEmail(userId, email, concerts);
   }
 
   private void logAdminDigest(final int nbEmails, final int nbPush, final int nbErreurs) {

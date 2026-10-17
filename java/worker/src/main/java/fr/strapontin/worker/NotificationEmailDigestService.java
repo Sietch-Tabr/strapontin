@@ -47,7 +47,9 @@ class NotificationEmailDigestService {
 
   /* package-private : appelé par NotificationDigestService (même package). */
   boolean envoyerEmail(
-      final String email, final List<NotificationDigestService.ConcertNotif> concerts) {
+      final String userId,
+      final String email,
+      final List<NotificationDigestService.ConcertNotif> concerts) {
     if (concerts.isEmpty()) {
       return false;
     }
@@ -82,10 +84,10 @@ class NotificationEmailDigestService {
               .text(sujet)
               .build();
       resend.emails().send(options);
-      LOG.info("Digest email envoyé : {} ({} concert(s))", email, nb);
+      LOG.info("Digest email envoyé : userId={} ({} concert(s))", userId, nb);
       return true;
     } catch (Exception e) {
-      LOG.error("Échec envoi digest email : {}", email, e);
+      LOG.error("Échec envoi digest email : userId={}", userId, e);
       return false;
     }
   }
