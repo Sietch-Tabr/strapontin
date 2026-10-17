@@ -593,8 +593,7 @@ tr:hover td {
   font-weight: normal;
   cursor: pointer;
 }
-.form-checkboxes input[type="checkbox"],
-.case-grille input[type="checkbox"] {
+.form-checkboxes input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   width: 1.25rem;
@@ -609,8 +608,7 @@ tr:hover td {
     border-color 0.15s;
   vertical-align: middle;
 }
-.form-checkboxes input[type="checkbox"]:checked,
-.case-grille input[type="checkbox"]:checked {
+.form-checkboxes input[type="checkbox"]:checked {
   background: var(--primary);
   border-color: var(--primary);
   background-image: var(--icone-coche);
@@ -618,8 +616,7 @@ tr:hover td {
   background-repeat: no-repeat;
   background-size: 75%;
 }
-.form-checkboxes input[type="checkbox"]:disabled,
-.case-grille input[type="checkbox"]:disabled {
+.form-checkboxes input[type="checkbox"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

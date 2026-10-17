@@ -184,34 +184,6 @@
           </li>
         </ul>
       </div>
-
-      <div class="param-bloc">
-        <h3 class="param-libelle">Abonnements notifications push</h3>
-        <ul class="liste-appareils">
-          <li
-            v-for="abonnement in abonnementsPush"
-            :key="abonnement.endpoint"
-            class="ligne-appareil"
-          >
-            <span class="appareil-info">
-              <span class="param-aide"
-                >Abonné depuis le
-                {{ formaterDateHeure(abonnement.creeLe) }}</span
-              >
-            </span>
-            <button
-              type="button"
-              class="bouton bouton-danger bouton-petit"
-              @click="revoquerAbonnementPush(abonnement.endpoint)"
-            >
-              Révoquer
-            </button>
-          </li>
-          <li v-if="abonnementsPush.length === 0" class="param-aide">
-            Aucun abonnement push actif.
-          </li>
-        </ul>
-      </div>
     </template>
   </section>
 </template>
@@ -246,7 +218,6 @@ const totpDesactCode = ref("");
 const mdpActuel = ref("");
 const mdpNouveau = ref("");
 const appareils = ref([]);
-const abonnementsPush = ref([]);
 const controleur = new AbortController();
 
 function formaterDateHeure(iso) {
@@ -279,18 +250,6 @@ async function chargerAppareils() {
   }
 }
 
-async function chargerAbonnementsPush() {
-  try {
-    const rep = await appelApi("/api/push/abonnements", {
-      signal: controleur.signal,
-    });
-    if (rep.ok) abonnementsPush.value = await lireJson(rep);
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Impossible de charger les abonnements push.", "erreur");
-  }
-}
-
 async function revoquerAppareil(appareilId) {
   try {
     const rep = await appelApi(`/api/user/appareils/${appareilId}`, {
@@ -302,28 +261,6 @@ async function revoquerAppareil(appareilId) {
         (a) => a.appareilId !== appareilId,
       );
       afficherToast("Appareil révoqué.", "succes");
-    } else {
-      afficherToast("Erreur lors de la révocation.", "erreur");
-    }
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Erreur réseau lors de la révocation.", "erreur");
-  }
-}
-
-async function revoquerAbonnementPush(endpoint) {
-  try {
-    const rep = await appelApi("/api/push", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint }),
-      signal: controleur.signal,
-    });
-    if (rep.ok) {
-      abonnementsPush.value = abonnementsPush.value.filter(
-        (a) => a.endpoint !== endpoint,
-      );
-      afficherToast("Abonnement push révoqué.", "succes");
     } else {
       afficherToast("Erreur lors de la révocation.", "erreur");
     }
@@ -462,7 +399,6 @@ async function changerMotDePasse() {
 onMounted(() => {
   charger();
   chargerAppareils();
-  chargerAbonnementsPush();
 });
 
 onUnmounted(() => controleur.abort());

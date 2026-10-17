@@ -61,13 +61,27 @@
             </h2>
             <ul>
               <li>
-                <strong>Email</strong> : récapitulatif quotidien à 8h ou à
-                chaque mise à jour. À activer dans
-                <RouterLink to="/parametres">Paramètres</RouterLink>.
+                <strong>Fréquence</strong>, dans
+                <RouterLink to="/parametres">Paramètres</RouterLink> :
+                <template
+                  v-for="(option, i) in FREQUENCES"
+                  :key="option.valeur"
+                >
+                  {{ option.libelle.charAt(0).toLowerCase()
+                  }}{{ option.libelle.slice(1)
+                  }}{{ i < FREQUENCES.length - 1 ? " ; " : "." }}
+                </template>
+                Elle s'applique à l'email comme au push.
               </li>
               <li>
-                <strong>Push</strong> : notification instantanée sur votre
-                appareil. Désactivé par défaut.
+                <strong>Email</strong> : activé par défaut sur un nouveau
+                compte, en récapitulatif hebdomadaire des concerts des artistes
+                suivis. Chaque contenu (artistes, salles) se coche à part.
+              </li>
+              <li>
+                <strong>Push</strong> : notification sur votre appareil,
+                désactivée par défaut ; il faut d'abord activer les
+                notifications sur au moins un appareil. {{ PLAGE_SILENCIEUSE }}
               </li>
             </ul>
           </div>
@@ -125,7 +139,7 @@
             <ul>
               <li>
                 <strong>Mes spectacles</strong> : vos prochains concerts
-                filtrables par catégorie, genre et mois.
+                filtrables par classification, genre et mois.
               </li>
               <li>
                 <strong>Découverte</strong> : tous les concerts de vos
@@ -336,6 +350,7 @@ import { ref, shallowRef, onMounted } from "vue";
 import { useToasts } from "../composables/useToasts.js";
 import { useOnboarding } from "../composables/useOnboarding.js";
 import ChecklistPremiersPas from "../components/ChecklistPremiersPas.vue";
+import { FREQUENCES, PLAGE_SILENCIEUSE } from "../utils/notifications.js";
 
 const { afficherToast } = useToasts();
 const { ouvrir: revoirOnboarding } = useOnboarding();
