@@ -131,6 +131,62 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(List.of("concert_double_salles_distinctes"), actifs());
   }
 
+  private void evenementAvecSource(
+      final UUID salle, final String artiste, final String heure, final String source) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                + " VALUES (:artiste, CURRENT_DATE + 30, CAST(:heure AS time), 'madeleine',"
+                + " CAST(:salle AS uuid), '75') RETURNING id",
+            Map.of("artiste", artiste, "heure", heure, "salle", salle.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), CAST(:source AS source_concert), :url, :artiste, 'Madeleine')",
+        Map.of(
+            "id", id.toString(),
+            "source", source,
+            "url", "https://" + source + "/" + id,
+            "artiste", artiste));
+  }
+
+  // L'église de la Madeleine : deux programmes Eventim pour un seul concert du soir.
+  @Test
+  void verifier_deuxFichesEventimAuMemeCreneau_signaleSansFusionner() {
+    final UUID salle = creerSalle();
+    evenementAvecSource(salle, "les 4 saisons de vivaldi", "20:00", "eventim");
+    evenementAvecSource(salle, "vivaldi ave maria concerto adagios", "20:00", "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of("creneau_double_meme_source"), actifs());
+    assertEquals(
+        2L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  @Test
+  void verifier_deuxFichesDeSourcesDifferentesAuMemeCreneau_neSignalePasCeType() {
+    final UUID salle = creerSalle();
+    evenementAvecSource(salle, "spectacle a", "20:00", "eventim");
+    evenementAvecSource(salle, "spectacle b", "20:00", "ticketmaster");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_troisFichesAuMemeCreneau_neSignalePas() {
+    final UUID salle = creerSalle();
+    evenementAvecSource(salle, "a", "20:00", "eventim");
+    evenementAvecSource(salle, "b", "20:00", "eventim");
+    evenementAvecSource(salle, "c", "20:00", "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   @Test
   void verifier_donneesSaines_aucunSignalement() {
     evenement(creerSalle(), "artiste", "75");

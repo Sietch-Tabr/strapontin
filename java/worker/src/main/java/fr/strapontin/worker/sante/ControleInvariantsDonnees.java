@@ -48,7 +48,8 @@ final class ControleInvariantsDonnees {
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publier(
-            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes());
+            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
+        + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource());
   }
 
   private int publier(
@@ -144,6 +145,47 @@ final class ControleInvariantsDonnees {
                   "artiste", rs.getString("artiste_norm"),
                   "date", rs.getString("date"),
                   "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Deux fiches de la même billetterie au même créneau et dans la même salle, sans artiste
+  // reconnu : un seul lieu ne reçoit pas deux concerts à la fois, mais la billetterie peut
+  // vendre un même concert sous plusieurs programmes. Détecté seulement, jamais fusionné : le
+  // calendrier de la salle seul tranche.
+  private Map<UUID, Map<String, Object>> creneauxDoublesMemeSource() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        WITH ev AS (
+          SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm, e.first_seen,
+                 bool_and(o.source = 'eventim') AS eventim_seul
+          FROM evenements e JOIN observations o ON o.evenement_id = e.id
+          WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+            AND e.artiste_id IS NULL
+          GROUP BY e.id)
+        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+               e1.artiste_norm AS titre_a, e2.artiste_norm AS titre_b, s.nom AS salle,
+               e1.date::text AS date, e1.heure::text AS heure
+        FROM ev e1
+        JOIN ev e2 ON e2.salle_id = e1.salle_id AND e2.date = e1.date AND e2.heure = e1.heure
+                  AND e1.id < e2.id
+        JOIN salles s ON s.id = e1.salle_id
+        WHERE e1.eventim_seul AND e2.eventim_seul
+          AND (SELECT count(*) FROM ev x
+               WHERE x.salle_id = e1.salle_id AND x.date = e1.date AND x.heure = e1.heure) = 2
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  "salle", rs.getString("salle"),
+                  "date", rs.getString("date"),
+                  "heure", rs.getString("heure"),
+                  "intitules", rs.getString("titre_a") + " / " + rs.getString("titre_b"),
                   "jumeau", rs.getObject("jumeau", UUID.class).toString()));
         });
     return anomalies;

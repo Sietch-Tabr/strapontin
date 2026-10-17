@@ -86,6 +86,12 @@ public final class CatalogueSignalements {
             + " est probablement resté sur la mauvaise salle. Répartir ses lieux, puis supprimer"
             + " le concert en trop.");
     ajouter(
+        "creneau_double_meme_source",
+        "Deux fiches au même créneau",
+        "Deux fiches de la même billetterie occupent la même salle au même créneau : vérifier le"
+            + " calendrier de la salle. Si un seul concert y est annoncé, supprimer la fiche en"
+            + " trop depuis les concerts ; sinon marquer comme traité.");
+    ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
         "Des concerts éligibles n'ont pas été notifiés à ce compte alors qu'un canal est"
