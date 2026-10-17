@@ -527,10 +527,14 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
             + " (CAST(:id AS uuid), CAST(:source AS source_concert), :url, :artiste, 'New"
             + " Morning')",
         Map.of(
-            "id", id.toString(),
-            "source", source,
-            "url", "https://" + source + "/" + id,
-            "artiste", artiste));
+            "id",
+            id.toString(),
+            "source",
+            source,
+            "url",
+            "https://" + source + "/" + id,
+            "artiste",
+            artiste));
     return id;
   }
 

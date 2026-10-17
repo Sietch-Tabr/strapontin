@@ -4,8 +4,8 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.NomVille;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.HashMap;
 import java.util.List;

@@ -133,7 +133,8 @@ class BilanFetchTest {
 
   @Test
   void evaluer_sansCauseAttribuee_messageInchange() {
-    final var entree = new BilanFetch(SEUIL, 1).evaluer("fetch:region", "Eventim", SEUIL).orElseThrow();
+    final var entree =
+        new BilanFetch(SEUIL, 1).evaluer("fetch:region", "Eventim", SEUIL).orElseThrow();
 
     org.junit.jupiter.api.Assertions.assertFalse(entree.message().contains(" : "));
   }

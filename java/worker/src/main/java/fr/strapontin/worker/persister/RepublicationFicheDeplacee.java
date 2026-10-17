@@ -59,7 +59,8 @@ final class RepublicationFicheDeplacee {
     return nomsVus.stream()
         .map(Normalisation::normaliserTexte)
         .anyMatch(
-            vu -> vu.equals(concert.salleNorm())
-                || CorrespondanceSalle.estDoublonSalle(vu, concert.salleNorm()));
+            vu ->
+                vu.equals(concert.salleNorm())
+                    || CorrespondanceSalle.estDoublonSalle(vu, concert.salleNorm()));
   }
 }

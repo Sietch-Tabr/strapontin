@@ -144,10 +144,14 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
         "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
             + " (CAST(:id AS uuid), CAST(:source AS source_concert), :url, :artiste, 'Madeleine')",
         Map.of(
-            "id", id.toString(),
-            "source", source,
-            "url", "https://" + source + "/" + id,
-            "artiste", artiste));
+            "id",
+            id.toString(),
+            "source",
+            source,
+            "url",
+            "https://" + source + "/" + id,
+            "artiste",
+            artiste));
   }
 
   // L'église de la Madeleine : deux programmes Eventim pour un seul concert du soir.
@@ -160,8 +164,7 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     controle.verifier();
 
     assertEquals(List.of("creneau_double_meme_source"), actifs());
-    assertEquals(
-        2L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(2L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
   }
 
   @Test

@@ -97,8 +97,7 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
     assertEquals("Nantes", villeSalle(salleId));
     assertEquals(
         1L,
-        jdbc.queryForObject(
-            "SELECT count(DISTINCT ville) FROM evenements", Map.of(), Long.class));
+        jdbc.queryForObject("SELECT count(DISTINCT ville) FROM evenements", Map.of(), Long.class));
   }
 
   @Test

@@ -141,7 +141,8 @@ public record BilanFetch(
     return Optional.of(new EntreeLog(niveau, message, meta));
   }
 
-  // Causes triées de la plus fréquente à la plus rare : « connexion refusée × 9, délai dépassé × 3 ».
+  // Causes triées de la plus fréquente à la plus rare : « connexion refusée × 9, délai dépassé × 3
+  // ».
   private String decrireCauses() {
     if (causes.isEmpty()) {
       return "";

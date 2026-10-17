@@ -21,7 +21,8 @@ public final class NomVille {
   private static final Pattern ESPACES = Pattern.compile("\\s+");
   private static final Pattern SEPARATEURS = Pattern.compile("(?<=[\\s'’-])|(?=[\\s'’-])");
   private static final Set<String> PARTICULES =
-      Set.of("de", "du", "des", "la", "le", "les", "en", "sur", "sous", "aux", "au", "et", "l", "d");
+      Set.of(
+          "de", "du", "des", "la", "le", "les", "en", "sur", "sous", "aux", "au", "et", "l", "d");
 
   private NomVille() {}
 
