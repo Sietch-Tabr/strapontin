@@ -219,12 +219,14 @@ public class WorkerConfiguration {
    * salle (voir {@code persister.ResolveurSalleParConcert}) — jamais sur le
    * chemin courant de résolution.
    *
-   * @return instance avec RestClient et cadenceur (1 req/s) par défaut
+   * @param jdbc accès à la base partagée entre web et worker
+   * @return instance dont le cadencement (1 req/s) est partagé avec le module web
    */
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  ClientNominatim clientNominatim() {
-    return new ClientNominatim();
+  ClientNominatim clientNominatim(final NamedParameterJdbcTemplate jdbc) {
+    return new ClientNominatim(
+        new CadenceurAppelsPartage(jdbc, "nominatim", ClientNominatim.DELAI_MIN_ENTRE_APPELS_MS));
   }
 }

@@ -7,7 +7,10 @@ package fr.strapontin.web.artiste;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +42,9 @@ class ArtisteControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = new ArtisteController(artisteService);
+    controller =
+        new ArtisteController(
+            artisteService, new BudgetRecherchesExternes(mock(LogAdminService.class)));
     final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     auth = mock(Authentication.class);
@@ -85,5 +90,26 @@ class ArtisteControllerTest {
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(artisteService).supprimer("user-1", artisteId);
+  }
+
+  @Test
+  void listerArtistes_rechercheTropFrequente_leveErreur429() {
+    for (int i = 0; i < 15; i++) {
+      controller.listerArtistes("daft", auth);
+    }
+
+    final ErreurMetier erreur =
+        assertThrows(ErreurMetier.class, () -> controller.listerArtistes("daft", auth));
+
+    assertEquals(429, erreur.getStatus());
+  }
+
+  @Test
+  void listerArtistes_sansRecherche_neConsommePasLePlafond() {
+    for (int i = 0; i < 30; i++) {
+      controller.listerArtistes("", auth);
+    }
+
+    assertEquals(200, controller.listerArtistes("daft", auth).getStatusCode().value());
   }
 }

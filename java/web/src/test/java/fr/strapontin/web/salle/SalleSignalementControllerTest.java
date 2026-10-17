@@ -7,6 +7,8 @@ package fr.strapontin.web.salle;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +38,9 @@ class SalleSignalementControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = new SalleController(salleService, emailService);
+    controller =
+        new SalleController(
+            salleService, emailService, new BudgetRecherchesExternes(mock(LogAdminService.class)));
     final UtilisateurDetails utilisateur =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     when(auth.getPrincipal()).thenReturn(utilisateur);

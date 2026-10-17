@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.admin.LogAdminService;
@@ -46,7 +47,13 @@ class ArtisteServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new ArtisteService(artisteRepository, objectMapper, restClient, logAdminService);
+    service =
+        new ArtisteService(
+            artisteRepository,
+            objectMapper,
+            restClient,
+            logAdminService,
+            new BudgetRecherchesExternes(logAdminService));
   }
 
   @Test

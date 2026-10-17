@@ -5,8 +5,15 @@
 package fr.strapontin.web.salle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import fr.strapontin.sources.CadenceurAppels;
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +35,11 @@ class SalleRechercheNominatimServiceTest {
   void setUp() {
     service =
         new SalleRechercheNominatimService(
-            mock(ConfigService.class), mock(RestClient.class), new ObjectMapper());
+            mock(ConfigService.class),
+            mock(RestClient.class),
+            new ObjectMapper(),
+            new BudgetRecherchesExternes(mock(LogAdminService.class)),
+            mock(CadenceurAppels.class));
   }
 
   // une salle taguée leisure/tourism (pas amenity) mais dont extratags.amenity confirme
@@ -94,5 +105,36 @@ class SalleRechercheNominatimServiceTest {
 
     assertEquals(1, resultats.size());
     assertEquals("Rockstore", resultats.get(0).salle());
+  }
+
+  @Test
+  void rechercher_plafondGlobalAtteint_neContacteNiLeCadenceurNiNominatim() {
+    final BudgetRecherchesExternes budget = mock(BudgetRecherchesExternes.class);
+    when(budget.consommer(BudgetRecherchesExternes.Service.NOMINATIM)).thenReturn(false);
+    final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
+    final RestClient restClient = mock(RestClient.class);
+    final SalleRechercheNominatimService limite =
+        new SalleRechercheNominatimService(
+            mock(ConfigService.class), restClient, new ObjectMapper(), budget, cadenceur);
+
+    assertTrue(limite.rechercher("olympia").isEmpty());
+
+    verifyNoInteractions(cadenceur, restClient);
+  }
+
+  @Test
+  void rechercher_plafondRespecte_attendLeCreneauPartageAvantLAppel() {
+    final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
+    final SalleRechercheNominatimService avecCadence =
+        new SalleRechercheNominatimService(
+            mock(ConfigService.class),
+            mock(RestClient.class),
+            new ObjectMapper(),
+            new BudgetRecherchesExternes(mock(LogAdminService.class)),
+            cadenceur);
+
+    avecCadence.rechercher("olympia");
+
+    verify(cadenceur).attendre();
   }
 }

@@ -6,6 +6,8 @@ package fr.strapontin.web.salle;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
@@ -37,9 +39,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SalleController {
 
   private static final int MAX_SIGNALEMENTS_PAR_HEURE = 3;
+  private static final int LONGUEUR_MIN_RECHERCHE = 2;
 
   private final SalleService salleService;
   private final EmailService emailService;
+  private final BudgetRecherchesExternes budgetRecherches;
 
   private final LimiteurDebit limiteurSignalement =
       new LimiteurDebit(
@@ -51,10 +55,15 @@ public class SalleController {
   /**
    * @param salleService service de gestion des salles
    * @param emailService service d'envoi d'emails
+   * @param budgetRecherches plafonds des recherches qui interrogent un service externe
    */
-  public SalleController(final SalleService salleService, final EmailService emailService) {
+  public SalleController(
+      final SalleService salleService,
+      final EmailService emailService,
+      final BudgetRecherchesExternes budgetRecherches) {
     this.salleService = salleService;
     this.emailService = emailService;
+    this.budgetRecherches = budgetRecherches;
   }
 
   /**
@@ -64,12 +73,17 @@ public class SalleController {
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification
    * @return la liste des salles et les suggestions
+   * @throws ErreurMetier (429) si l'utilisateur enchaîne trop de recherches
    */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(
       @RequestParam(name = "q", required = false, defaultValue = "") final String recherche,
       final Authentication auth) {
     final String userId = utilisateur(auth).id();
+    if (recherche.strip().length() >= LONGUEUR_MIN_RECHERCHE
+        && !budgetRecherches.autoriserUtilisateur(userId)) {
+      throw new ErreurMetier("Trop de recherches. Patientez quelques secondes.", 429);
+    }
     return ResponseEntity.ok(salleService.lister(userId, recherche));
   }
 

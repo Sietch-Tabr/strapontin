@@ -8,6 +8,7 @@ import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.WorkerTriggerUtils;
@@ -56,6 +57,7 @@ public class ArtisteService {
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
   private final LogAdminService logAdminService;
+  private final BudgetRecherchesExternes budgetRecherches;
 
   /**
    * @param artisteRepository accès aux données artistes
@@ -63,16 +65,19 @@ public class ArtisteService {
    * @param restClient client HTTP partagé (timeout 5s/10s défini dans {@link
    *     fr.strapontin.web.WebConfiguration})
    * @param logAdminService journalisation des actions admin
+   * @param budgetRecherches plafonds globaux des recherches vers Wikidata et Deezer
    */
   public ArtisteService(
       final ArtisteRepository artisteRepository,
       final ObjectMapper objectMapper,
       final RestClient restClient,
-      final LogAdminService logAdminService) {
+      final LogAdminService logAdminService,
+      final BudgetRecherchesExternes budgetRecherches) {
     this.artisteRepository = artisteRepository;
     this.objectMapper = objectMapper;
     this.restClient = restClient;
     this.logAdminService = logAdminService;
+    this.budgetRecherches = budgetRecherches;
   }
 
   /**
@@ -305,6 +310,9 @@ public class ArtisteService {
    */
   /* package-private : substituable par mock partiel en test (même package). */
   List<SuggestionArtiste> rechercherWikidata(final String terme) {
+    if (!budgetRecherches.consommer(BudgetRecherchesExternes.Service.WIKIDATA)) {
+      return List.of();
+    }
     try {
       final String url =
           WIKIDATA_API_URL
@@ -397,6 +405,9 @@ public class ArtisteService {
    */
   /* package-private : substituable par mock partiel en test (même package). */
   List<SuggestionArtiste> rechercherDeezer(final String terme) {
+    if (!budgetRecherches.consommer(BudgetRecherchesExternes.Service.DEEZER)) {
+      return List.of();
+    }
     try {
       final String url =
           DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";
