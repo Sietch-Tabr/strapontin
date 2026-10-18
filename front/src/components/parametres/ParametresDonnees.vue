@@ -21,22 +21,21 @@
         >
       </p>
       <a href="/api/preferences" class="bouton bouton-secondaire"
-        >Télécharger (JSON)</a
+        >Télécharger</a
       >
     </div>
 
     <div class="param-bloc">
       <h3 class="param-libelle">Importer des préférences</h3>
-      <p class="param-aide">
-        Importez un fichier JSON exporté par Strapontin. Mode Fusionner conserve
-        vos données existantes ; mode Écraser les remplace.
-      </p>
+      <p class="param-aide">Importez un fichier JSON exporté par Strapontin.</p>
       <form
         class="form-vertical form-compact"
         @submit.prevent="importerPreferences"
       >
         <div class="form-groupe">
-          <label for="import-fichier">Fichier JSON</label>
+          <label for="import-fichier" class="lecteur-ecran"
+            >Fichier de préférences</label
+          >
           <div class="form-fichier">
             <input
               id="import-fichier"
@@ -60,23 +59,30 @@
           </div>
           <p class="form-aide">Fichier .json exporté depuis Strapontin</p>
         </div>
-        <div class="form-groupe">
-          <label for="import-mode">Mode</label>
-          <select id="import-mode" v-model="importMode">
-            <option value="fusionner">
-              Fusionner (conserver les données existantes)
-            </option>
-            <option value="ecraser">
-              Écraser (remplacer artistes et salles)
-            </option>
-          </select>
-          <p
-            v-if="importMode === 'ecraser'"
-            class="form-aide form-aide-avertissement"
+        <fieldset class="form-groupe mode-import">
+          <legend>Mode d'import</legend>
+          <div
+            v-for="mode in MODES_IMPORT"
+            :key="mode.valeur"
+            class="mode-import-option"
           >
-            Attention : vos artistes et salles actuels seront remplacés.
-          </p>
-        </div>
+            <button
+              type="button"
+              class="bouton bouton-bascule"
+              :class="{ actif: importMode === mode.valeur }"
+              :aria-pressed="importMode === mode.valeur ? 'true' : 'false'"
+              @click="importMode = mode.valeur"
+            >
+              {{ mode.libelle }}
+            </button>
+            <p
+              class="form-aide"
+              :class="{ 'form-aide-avertissement': mode.destructif }"
+            >
+              {{ mode.explication }}
+            </p>
+          </div>
+        </fieldset>
         <div class="form-groupe form-checkboxes">
           <label>
             <input v-model="importerConfig" type="checkbox" />
@@ -169,6 +175,23 @@ const {
 const chargement = ref(true);
 const stats = shallowRef(null);
 const importFichierRef = ref(null);
+// La valeur « ecraser » est celle du contrat avec le serveur ; l'interface dit « Remplacer ».
+const MODES_IMPORT = [
+  {
+    valeur: "fusionner",
+    libelle: "Fusionner",
+    explication:
+      "Ajoute les artistes et salles du fichier à ceux que vous suivez déjà.",
+    destructif: false,
+  },
+  {
+    valeur: "ecraser",
+    libelle: "Remplacer",
+    explication:
+      "Attention : remplace tous vos artistes et salles suivis par ceux du fichier ; ceux qui n'y figurent pas sont retirés.",
+    destructif: true,
+  },
+];
 const importMode = ref("fusionner");
 const importerConfig = ref(false);
 const confirmationSuppression = ref("");
@@ -268,6 +291,29 @@ onMounted(charger);
 </script>
 
 <style scoped>
+.mode-import {
+  border: none;
+  padding: 0;
+}
+
+.mode-import legend {
+  font-size: var(--texte-m);
+  font-weight: 500;
+  margin-bottom: var(--espace-3);
+}
+
+.mode-import-option {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espace-3) var(--espace-6);
+  margin-bottom: var(--espace-4);
+}
+
+.mode-import-option .form-aide {
+  margin: 0;
+}
+
 .form-fichier {
   display: flex;
   align-items: center;

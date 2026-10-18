@@ -59,7 +59,9 @@ test.describe("Scénario: paramètres — boutons de formulaire", () => {
     });
   }
 
-  test("parametres_compte_champCodeTotp_proportionneAuCode", async ({ page }) => {
+  test("parametres_compte_champCodeTotp_proportionneAuCode", async ({
+    page,
+  }) => {
     await page.goto("/parametres#compte");
     const champ = page.locator("input#totp-desact-code");
     // Le compte de test n'a le TOTP actif que pendant certains scénarios.
@@ -69,6 +71,39 @@ test.describe("Scénario: paramètres — boutons de formulaire", () => {
     await expect(page.locator("#aide-totp-desact")).toContainText(
       "application d'authentification",
     );
+  });
+});
+
+test.describe("Scénario: paramètres — Données, libellés et mode d'import", () => {
+  test("parametres_donnees_export_sIntituleTelecharger", async ({ page }) => {
+    await page.goto("/parametres#donnees");
+    await expect(
+      page.getByRole("link", { name: "Télécharger", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator("section#donnees")).not.toContainText(
+      "Fichier JSON",
+    );
+    await expect(page.locator("section#donnees")).not.toContainText("Écraser");
+  });
+
+  // Les deux modes sont visibles en même temps, chacun avec son effet ; le remplacement, qui
+  // supprime des données, est signalé avant l'import.
+  test("parametres_donnees_modeImport_boutonsBasculeAvecExplications", async ({
+    page,
+  }) => {
+    await page.goto("/parametres#donnees");
+    const groupe = page.getByRole("group", { name: "Mode d'import" });
+    const fusionner = groupe.getByRole("button", { name: "Fusionner" });
+    const remplacer = groupe.getByRole("button", { name: "Remplacer" });
+    await expect(fusionner).toHaveAttribute("aria-pressed", "true");
+    await expect(remplacer).toHaveAttribute("aria-pressed", "false");
+    await expect(groupe).toContainText("Ajoute les artistes et salles");
+    await expect(groupe).toContainText(
+      "Attention : remplace tous vos artistes",
+    );
+    await remplacer.click();
+    await expect(remplacer).toHaveAttribute("aria-pressed", "true");
+    await expect(fusionner).toHaveAttribute("aria-pressed", "false");
   });
 });
 
