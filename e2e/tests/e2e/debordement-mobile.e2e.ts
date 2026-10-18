@@ -67,6 +67,9 @@ test.describe("Scénario: aucun débordement horizontal sur mobile", () => {
   }) => {
     await page.goto("/admin?entite=salle#referentiel");
     await attendreChargement(page);
+    // Le tableau est reconstruit à la fin des requêtes de la page : un clic avant tombe sur un
+    // bouton qui disparaît.
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Lieu Eventim" }).first().click();
     await expect(page.getByRole("dialog")).toBeVisible();
     expect(await largeurExcedentaire(page)).toBeLessThanOrEqual(0);

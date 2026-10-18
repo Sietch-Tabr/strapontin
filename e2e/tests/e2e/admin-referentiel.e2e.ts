@@ -113,9 +113,9 @@ test.describe("Scénario: admin — onglet Référentiel (salles et artistes)", 
     if (isMobile) test.skip();
     await page.goto("/admin");
     await ouvrirReferentiel(page, "Salles");
-    const checkbox = page.locator(
-      "section#salles .source-filtre-checkbox input",
-    );
+    const checkbox = page
+      .locator("section#salles")
+      .getByRole("checkbox", { name: "Sans Wikidata" });
     await expect(checkbox).toBeVisible();
     await checkbox.check();
     await expect(checkbox).toBeChecked();

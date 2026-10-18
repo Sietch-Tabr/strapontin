@@ -43,6 +43,9 @@ test.describe("Scénario: paramètres — boutons de formulaire", () => {
       await page.goto(`/parametres#${section}`);
       await expect(page.locator(`section#${section}`)).toBeVisible();
       const formulaires = page.locator(`section#${section} form.form-vertical`);
+      // Le contenu de la section se charge après son apparition : on attend le premier formulaire
+      // avant de compter, sinon le décompte lit une section encore vide.
+      await expect(formulaires.first()).toBeVisible();
       const nombre = await formulaires.count();
       expect(nombre).toBeGreaterThan(0);
       for (let i = 0; i < nombre; i++) {
@@ -622,6 +625,40 @@ async function servirPush(
   page: import("@playwright/test").Page,
   abonnements: unknown[],
 ) {
+  // Le dev est servi en HTTP sur une IP privée, contexte non sécurisé où le navigateur
+  // n'expose ni service worker ni push : la section push ne s'affiche qu'avec cette émulation.
+  await page.addInitScript(() => {
+    if (!("serviceWorker" in navigator)) {
+      Object.defineProperty(navigator, "serviceWorker", {
+        configurable: true,
+        value: {
+          register: () => Promise.resolve(),
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          ready: Promise.resolve({
+            pushManager: { getSubscription: () => Promise.resolve(null) },
+          }),
+        },
+      });
+    }
+    if (!("PushManager" in window)) {
+      Object.defineProperty(window, "PushManager", {
+        configurable: true,
+        value: class {},
+      });
+    }
+    // En contexte non sécurisé la permission réelle est « denied » : on la force à « default ».
+    if (!("Notification" in window)) {
+      Object.defineProperty(window, "Notification", {
+        configurable: true,
+        value: {},
+      });
+    }
+    Object.defineProperty(window.Notification, "permission", {
+      configurable: true,
+      get: () => "default",
+    });
+  });
   await page.route("**/api/push/abonnements", (route) =>
     route.fulfill({
       status: 200,

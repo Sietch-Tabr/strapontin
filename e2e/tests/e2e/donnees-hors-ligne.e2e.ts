@@ -5,6 +5,8 @@ import { test, expect, type Page } from "@playwright/test";
 // et naviguent dans l'application déjà chargée, ce qui exerce la couche de données gardées
 // (localStorage) dans les cinq navigateurs, WebKit compris.
 
+// Le lien s'appelle « Mes spectacles » sur ordinateur et « Spectacles » dans la barre mobile.
+const LIEN_SPECTACLES = /^(Mes )?spectacles$/i;
 const PREFIXE_CACHE = "strapontin:cache:";
 
 async function attendreFinDeChargement(page: Page) {
@@ -27,7 +29,7 @@ async function visiterEnLigne(page: Page, chemin: string) {
   await attendreFinDeChargement(page);
 }
 
-async function ouvrirLien(page: Page, nom: string) {
+async function ouvrirLien(page: Page, nom: string | RegExp) {
   await page.getByRole("link", { name: nom }).first().click();
   await attendreFinDeChargement(page);
 }
@@ -37,7 +39,7 @@ async function ouvrirLien(page: Page, nom: string) {
 // sont gardées. On revient sur l'accueil, d'où l'on rouvrira Mes spectacles hors ligne.
 async function preparerDeuxPagesGardees(page: Page) {
   await visiterEnLigne(page, "/");
-  await ouvrirLien(page, "Mes spectacles");
+  await ouvrirLien(page, LIEN_SPECTACLES);
   await expect(page.getByText(/\d+ concerts? à venir/)).toBeVisible();
   await ouvrirLien(page, "Accueil");
   expect(await nbEntreesGardees(page)).toBeGreaterThanOrEqual(2);
@@ -51,7 +53,7 @@ test.describe("Scénario: données gardées — connexion absente", () => {
     await preparerDeuxPagesGardees(page);
 
     await context.setOffline(true);
-    await page.getByRole("link", { name: "Mes spectacles" }).first().click();
+    await page.getByRole("link", { name: LIEN_SPECTACLES }).first().click();
 
     await expect(
       page.getByText("Connexion absente ou trop lente", { exact: false }),
@@ -68,12 +70,16 @@ test.describe("Scénario: données gardées — connexion absente", () => {
   }) => {
     await preparerDeuxPagesGardees(page);
     await context.setOffline(true);
-    await page.getByRole("link", { name: "Mes spectacles" }).first().click();
+    await page.getByRole("link", { name: LIEN_SPECTACLES }).first().click();
     const bandeau = page.getByText("Connexion absente ou trop lente", {
       exact: false,
     });
     await expect(bandeau).toBeVisible({ timeout: 10000 });
 
+    // Le bandeau apparaît avant la fin de la navigation : on attend la page visée, sinon le
+    // retour du réseau interrompt la navigation et la page rechargée reste sur l'accueil.
+    await expect(page).toHaveURL(/\/spectacles$/);
+    await expect(page.getByText(/\d+ concerts? à venir/)).toBeVisible();
     await context.setOffline(false);
 
     // Retour du réseau : la page se recharge d'elle-même (événement online ou sonde de 15 s).
@@ -93,7 +99,7 @@ test.describe("Scénario: données gardées — connexion absente", () => {
     }, PREFIXE_CACHE);
 
     await context.setOffline(true);
-    await page.getByRole("link", { name: "Mes spectacles" }).first().click();
+    await page.getByRole("link", { name: LIEN_SPECTACLES }).first().click();
 
     // Aucune copie : pas de bandeau trompeur, l'erreur habituelle s'affiche.
     await expect(page.getByText("Impossible de", { exact: false }).first()).toBeVisible({

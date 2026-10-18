@@ -14,6 +14,8 @@ for (const { chemin, formulaire } of PAGES) {
     }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.goto(chemin);
+      // Un clic pendant le chargement initial peut tomber sur un rendu qui est ensuite refait.
+      await page.waitForLoadState("networkidle");
       const bouton = page.getByRole("button", { name: /^Filtres/ });
       const form = page.locator(formulaire);
 

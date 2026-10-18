@@ -87,6 +87,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import { messagesCouverture } from "../../utils/couverture.js";
 import { useDepartementsSansConcert } from "../../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "ParametresPreferences" });
 
@@ -100,7 +101,6 @@ const { enregistrerTheme, lireThemeCookie } = useTheme();
 
 const chargement = ref(true);
 const departements = ref("");
-import { messagesCouverture } from "../../utils/couverture.js";
 const { departementsSansConcert, chargerDepartementsSansConcert } =
   useDepartementsSansConcert();
 const filtreDisponibles = ref(false);
