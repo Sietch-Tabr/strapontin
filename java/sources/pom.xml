@@ -35,6 +35,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Lecture des pages HTML des sites de salles -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+        </dependency>
+
         <!-- Cache TTL pour resolver nom canonique -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>

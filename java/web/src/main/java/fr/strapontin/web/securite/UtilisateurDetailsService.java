@@ -60,7 +60,7 @@ public class UtilisateurDetailsService implements UserDetailsService {
         Map.of("identifiant", identifiant),
         rs -> {
           if (!rs.next()) {
-            LOG.debug("Identifiant non trouvé : {}", identifiant);
+            LOG.debug("Identifiant non trouvé : identifiantHash={}", identifiant.hashCode());
             throw new UsernameNotFoundException("Identifiant ou mot de passe incorrect");
           }
           return new UtilisateurDetails(

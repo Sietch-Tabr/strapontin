@@ -208,33 +208,27 @@ public class UserConfigService {
 
   /**
    * Met à jour les préférences de notification.
-   *
    * @param userId identifiant de l'utilisateur
    * @param requete données de la requête
-   * @throws ErreurMetier si la fréquence est invalide ou aucun canal de
-   *     notification sélectionné
+   * @throws ErreurMetier si la fréquence est invalide ou la combinaison sans
+   *     effet (« Jamais » avec un contenu, canal sans appareil ni envoi possible)
    */
   public void majNotifications(final String userId, final RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
       throw new ErreurMetier("Valeur invalide.");
     }
-    final boolean aucunCanal =
-        !requete.notifArtistes()
-            && !requete.notifSalles()
-            && !requete.notifArtistesPush()
-            && !requete.notifSallesPush();
-    if (!"jamais".equals(requete.frequenceNotifications()) && aucunCanal) {
-      throw new ErreurMetier(
-          "Activez au moins un type de contenu pour recevoir des notifications.");
-    }
+    final boolean jamais = "jamais".equals(requete.frequenceNotifications());
+    final boolean contenuEmail = requete.notifArtistes() || requete.notifSalles();
+    final boolean contenuPush = requete.notifArtistesPush() || requete.notifSallesPush();
+    new VerificationNotifications(jdbc, configService)
+        .verifier(userId, requete, jamais, contenuEmail, contenuPush);
 
-    final boolean pushPermis = pushPermis(requete.frequenceNotifications());
     final Map<String, Object> champs = new HashMap<>();
     champs.put("frequenceNotifications", requete.frequenceNotifications());
     champs.put("notifArtistes", requete.notifArtistes());
     champs.put("notifSalles", requete.notifSalles());
-    champs.put("notifArtistesPush", pushPermis && requete.notifArtistesPush());
-    champs.put("notifSallesPush", pushPermis && requete.notifSallesPush());
+    champs.put("notifArtistesPush", requete.notifArtistesPush());
+    champs.put("notifSallesPush", requete.notifSallesPush());
     champs.put("notifNouvelleVersion", requete.notifNouvelleVersion());
     upsertConfig(userId, champs);
 
@@ -242,8 +236,8 @@ public class UserConfigService {
   }
 
   /**
-   * Indique si la fréquence autorise un canal push : « jamais » coupe
-   * aussi le push, qu'aucune livraison ni aucun garde-fou ne traiterait.
+   * Indique si la fréquence autorise un canal : « jamais » coupe tous les
+   * canaux, qu'aucune livraison ni aucun garde-fou ne traiterait.
    * @param frequence fréquence de notification choisie
    * @return {@code false} pour « jamais »
    */

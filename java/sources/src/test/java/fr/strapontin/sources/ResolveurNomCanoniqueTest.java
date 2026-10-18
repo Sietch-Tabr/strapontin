@@ -81,6 +81,33 @@ class ResolveurNomCanoniqueTest {
     serveur.verify();
   }
 
+  // « FLO » (27 216 fans) est loin derrière « Flö » (37 fans) dans le classement de pertinence :
+  // la fenêtre doit l'atteindre, et le plus suivi des homonymes exacts l'emporte.
+  @Test
+  void resoudreNomCanonique_artiste_homonymeExactPlusSuiviHorsDesCinqPremiers_leRetient() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("&limit=25")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[{"name":"Flo & Robert","nb_fan":120},{"name":"Flo & Joan","nb_fan":80},
+                {"name":"F.L.O","nb_fan":300},{"name":"F.l.o.","nb_fan":40},
+                {"name":"Flö","nb_fan":37},{"name":"Flo Rida","nb_fan":9000},
+                {"name":"Flora","nb_fan":500},{"name":"FLO","nb_fan":27216}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final ResolveurNomCanonique resolveur = resolveurAvecServeur(serveur, restClient);
+    final ResultatResolution resultat = resolveur.resoudreNomCanonique("artiste", "Flo");
+
+    assertEquals("FLO", resultat.nom());
+    serveur.verify();
+  }
+
   @Test
   void resoudreNomCanonique_artiste_deezerAucunResultat_retourneInchange() {
     final RestClient.Builder builder = RestClient.builder();

@@ -4,6 +4,8 @@
  */
 package fr.strapontin.web.artiste;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -29,19 +31,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/artistes")
 public class ArtisteController {
 
+  private static final int LONGUEUR_MIN_RECHERCHE = 2;
+
   private final ArtisteService artisteService;
+  private final BudgetRecherchesExternes budgetRecherches;
 
   /**
    * @param artisteService service de gestion des artistes
+   * @param budgetRecherches plafonds des recherches qui interrogent un service
+   *     externe
    */
-  public ArtisteController(final ArtisteService artisteService) {
+  public ArtisteController(
+      final ArtisteService artisteService, final BudgetRecherchesExternes budgetRecherches) {
     this.artisteService = artisteService;
+    this.budgetRecherches = budgetRecherches;
   }
 
   /**
-   * Liste les artistes suivis, avec suggestions de recherche si {@code q} est
-   * fourni.
-   *
+   * Liste les artistes suivis, avec suggestions si {@code q} est fourni ;
+   * 429 si l'utilisateur enchaîne trop de recherches.
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification Spring Security
    * @return la liste des artistes et les suggestions
@@ -51,6 +59,10 @@ public class ArtisteController {
       @RequestParam(name = "q", required = false, defaultValue = "") final String recherche,
       final Authentication auth) {
     final String userId = utilisateur(auth).id();
+    if (recherche.strip().length() >= LONGUEUR_MIN_RECHERCHE
+        && !budgetRecherches.autoriserUtilisateur(userId)) {
+      throw new ErreurMetier("Trop de recherches. Patientez quelques secondes.", 429);
+    }
     return ResponseEntity.ok(artisteService.lister(userId, recherche));
   }
 

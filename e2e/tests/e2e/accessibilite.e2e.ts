@@ -144,7 +144,7 @@ test.describe("Scénario: accessibilité — champs nommés", () => {
   test("preferences_champDepartements_aUnNomAccessible", async ({ page }) => {
     await page.goto("/parametres#preferences");
     await expect(
-      page.getByRole("textbox", { name: "Départements de découverte" }),
+      page.getByRole("textbox", { name: "Départements", exact: true }),
     ).toBeVisible();
   });
 });

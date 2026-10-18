@@ -115,4 +115,27 @@ class BilanFetchTest {
     assertTrue(
         new BilanFetch(60, 0, 30).evaluer("reconciliation:nocturne", "Wikidata", SEUIL).isEmpty());
   }
+
+  @Test
+  void evaluer_causesAttribuees_lesNommeDansLeMessageEtLesMeta() {
+    final BilanFetch bilan =
+        new BilanFetch(
+            252, 12, 0, java.util.Map.of("connexion refusée", 9, "échange TLS interrompu", 3));
+
+    final var entree = bilan.evaluer("fetch:artistes:batch", "Eventim", SEUIL).orElseThrow();
+
+    org.junit.jupiter.api.Assertions.assertTrue(
+        entree.message().endsWith(" : connexion refusée × 9, échange TLS interrompu × 3"));
+    org.junit.jupiter.api.Assertions.assertEquals(
+        java.util.Map.of("connexion refusée", 9, "échange TLS interrompu", 3),
+        entree.meta().get("causes"));
+  }
+
+  @Test
+  void evaluer_sansCauseAttribuee_messageInchange() {
+    final var entree =
+        new BilanFetch(SEUIL, 1).evaluer("fetch:region", "Eventim", SEUIL).orElseThrow();
+
+    org.junit.jupiter.api.Assertions.assertFalse(entree.message().contains(" : "));
+  }
 }

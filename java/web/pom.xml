@@ -67,7 +67,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Registre Prometheus (#953) -->
+        <!-- Registre Prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
@@ -87,12 +87,6 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-        </dependency>
-
-        <!-- Limitation de débit (connexion, réinitialisation, journalisation client) -->
-        <dependency>
-            <groupId>com.bucket4j</groupId>
-            <artifactId>bucket4j_jdk17-core</artifactId>
         </dependency>
 
         <!-- Validation des entrées (Bean Validation / Jakarta) -->
@@ -163,7 +157,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
-                    <!-- #820 : génère META-INF/build-info.properties (bean BuildProperties)
+                    <!-- Génère META-INF/build-info.properties (bean BuildProperties)
                          pour lire la version courante dynamiquement plutôt qu'une constante
                          à maintenir manuellement à chaque release. -->
                     <execution>

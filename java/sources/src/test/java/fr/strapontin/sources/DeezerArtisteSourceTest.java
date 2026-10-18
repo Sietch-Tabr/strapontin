@@ -56,6 +56,32 @@ class DeezerArtisteSourceTest {
   }
 
   @Test
+  void enrichirLot_decouverteHomonymesExacts_retientLePlusSuivi() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir artiste = new ArtisteAEnrichir(id, "Flo", "flo", null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist?q=Flo")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[{"id":261428531,"name":"Flö","nb_fan":37},
+                {"id":168790157,"name":"FLO","nb_fan":27216}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final Map<UUID, EnrichissementArtiste> resultat =
+        new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
+
+    assertEquals("168790157", resultat.get(id).deezerId());
+    serveur.verify();
+  }
+
+  @Test
   void enrichirLot_decouverteNomDifferent_ignoreCandidat() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();

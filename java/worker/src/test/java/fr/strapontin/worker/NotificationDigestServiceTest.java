@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -44,6 +45,11 @@ import tools.jackson.databind.ObjectMapper;
  */
 @ExtendWith(MockitoExtension.class)
 class NotificationDigestServiceTest {
+
+  // Hors plage silencieuse : ces tests vérifient l'envoi, pas la rétention de nuit.
+  private static final java.time.Clock HORLOGE_JOURNEE =
+      java.time.Clock.fixed(
+          java.time.Instant.parse("2026-10-17T12:00:00Z"), java.time.ZoneOffset.UTC);
 
   static {
     // Le provider BouncyCastle est normalement enregistré par WorkerApplication#main au
@@ -467,6 +473,49 @@ class NotificationDigestServiceTest {
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
+  // La règle du projet interdit toute donnée personnelle dans les journaux : le compte est
+  // identifié par son identifiant, jamais par son adresse.
+  @Test
+  void executerDigest_emailEnvoye_leJournalIdentifieLeCompteSansSonAdresse() throws Exception {
+    when(jdbc.queryForList(contains("FROM user_matches"), anyMap()))
+        .thenReturn(List.of(ligneTest("u1")));
+    when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.of("re_test123"));
+    when(configService.lireConfig("CONTACT_EMAIL"))
+        .thenReturn(Optional.of("contact@strapontin.fr"));
+    when(configService.lireConfig("PUBLIC_BASE_URL"))
+        .thenReturn(Optional.of("https://strapontin.fr"));
+    when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.empty());
+    when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
+    when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
+    final Resend resendMock = mock(Resend.class);
+    when(resendMock.emails()).thenReturn(mock(Emails.class));
+    final NotificationDigestService serviceAvecFabriques =
+        new NotificationDigestService(
+            configService,
+            jdbc,
+            new ObjectMapper(),
+            logsAdminWorker,
+            gestionQuotaResendWorker,
+            _ -> resendMock,
+            (_, _, _) -> {
+              throw new java.security.GeneralSecurityException("VAPID non configuré en test");
+            });
+    final Logger logger = (Logger) LoggerFactory.getLogger(NotificationEmailDigestService.class);
+    final ListAppender<ILoggingEvent> evenements = new ListAppender<>();
+    evenements.start();
+    logger.addAppender(evenements);
+    try {
+      serviceAvecFabriques.executerDigest("quotidien");
+    } finally {
+      logger.detachAppender(evenements);
+    }
+
+    final List<String> messages =
+        evenements.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
+    assertTrue(messages.stream().anyMatch(m -> m.contains("u1")));
+    assertTrue(messages.stream().noneMatch(m -> m.contains("@")));
+  }
+
   // quota Resend atteint — le canal email doit être ignoré sans jamais contacter la
   // fabrique Resend, comme le fait déjà l'absence de RESEND_API_KEY.
   @Test
@@ -514,7 +563,8 @@ class NotificationDigestServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(201);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     final NotificationDigestService serviceAvecFabriques =
         new NotificationDigestService(
@@ -523,14 +573,16 @@ class NotificationDigestServiceTest {
             new ObjectMapper(),
             logsAdminWorker,
             gestionQuotaResendWorker,
-            _ -> {
-              throw new IllegalStateException("Resend non configuré en test");
-            },
-            (_, _, _) -> pushServiceMock);
+            new NotificationDigestService.Fabriques(
+                _ -> {
+                  throw new IllegalStateException("Resend non configuré en test");
+                },
+                (_, _, _) -> pushServiceMock,
+                HORLOGE_JOURNEE));
 
     serviceAvecFabriques.executerDigest("quotidien");
 
-    verify(pushServiceMock).send(any(Notification.class));
+    verify(pushServiceMock).send(any(Notification.class), eq(Encoding.AES128GCM));
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
@@ -569,13 +621,15 @@ class NotificationDigestServiceTest {
             new ObjectMapper(),
             logsAdminWorker,
             gestionQuotaResendWorker,
-            _ -> {
-              throw new IllegalStateException("Resend non configuré en test");
-            },
-            (_, _, _) -> pushServiceMock)
+            new NotificationDigestService.Fabriques(
+                _ -> {
+                  throw new IllegalStateException("Resend non configuré en test");
+                },
+                (_, _, _) -> pushServiceMock,
+                HORLOGE_JOURNEE))
         .executerDigest("quotidien");
 
-    verify(pushServiceMock, never()).send(any(Notification.class));
+    verify(pushServiceMock, never()).send(any(Notification.class), any(Encoding.class));
   }
 
   private static Map<String, Object> ligneTest(final String userId) {

@@ -4,10 +4,12 @@
  */
 package fr.strapontin.web.admin;
 
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -41,7 +43,8 @@ public class ReferentielArtistesService {
                  ELSE 'invalide'
                END AS statut,
                MAX(CASE WHEN asrc.source = 'ticketmaster' THEN asrc.identifiant_externe END)
-                 AS tm_identifiant_externe
+                 AS tm_identifiant_externe,
+               MIN(asrc.necessite_intervention_le) AS intervention_depuis
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id
         LEFT JOIN artiste_sources asrc ON asrc.artiste_id = a.id
@@ -121,7 +124,7 @@ public class ReferentielArtistesService {
         jdbc.query(
             CTE_ARTISTES_AGREGES
                 + "SELECT id, nom, nom_affiche, wikidata_id, deezer_id, nb_concerts, sources,"
-                + " statut, tm_identifiant_externe, COUNT(*) OVER() AS total_filtre FROM"
+                + " statut, tm_identifiant_externe, intervention_depuis, COUNT(*) OVER() AS total_filtre FROM"
                 + " artistes_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
@@ -137,7 +140,10 @@ public class ReferentielArtistesService {
                   rs.getString("statut"),
                   rs.getString("wikidata_id"),
                   rs.getString("deezer_id"),
-                  rs.getString("tm_identifiant_externe"));
+                  rs.getString("tm_identifiant_externe"),
+                  Optional.ofNullable(rs.getObject("intervention_depuis", OffsetDateTime.class))
+                      .map(OffsetDateTime::toInstant)
+                      .orElse(null));
             });
     return new PageArtistes(artistes, total[0]);
   }

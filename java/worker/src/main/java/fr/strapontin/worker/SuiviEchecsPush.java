@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -74,7 +75,9 @@ final class SuiviEchecsPush {
     final Integer echecs =
         jdbc.queryForObject(
             EchecPush.SQL_INCREMENTER_ECHECS,
-            Map.of(CLE_ID, abonnement.get(CLE_ID)),
+            new MapSqlParameterSource()
+                .addValue(CLE_ID, abonnement.get(CLE_ID))
+                .addValue("statut", statut),
             Integer.class);
     if (EchecPush.seuilAtteint(echecs)) {
       revoquer(

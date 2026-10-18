@@ -38,6 +38,9 @@ public class FusionEvenementsArtisteService {
   // fetch manqué ponctuellement ne suffit pas).
   /* package-private : visibilité élargie pour les tests (même package). */
   static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
+  // Écart d'heure maximal entre l'ancienne et la nouvelle fiche d'une même
+  // séance : au-delà, ce sont deux séances (matinée et soirée).
+  private static final int ECART_MAX_HEURE_CHANGEE_SECONDES = 3600;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -114,6 +117,82 @@ public class FusionEvenementsArtisteService {
             """,
             Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
     return fusionnerSiVivantUnique(lignes, "fiche source périmée");
+  }
+
+  /**
+   * Séance dont l'heure a changé : la fiche qui n'est plus publiée (absente
+   * depuis plusieurs cycles) rejoint l'unique fiche vivante du même artiste, de
+   * la même salle et du même jour, à moins d'une heure d'écart — quelle que soit
+   * la source de l'une ou l'autre. Deux séances réelles d'un même jour (matinée,
+   * soirée) sont plus éloignées ; plusieurs vivantes possibles : ignoré.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerSeancesHeureChangee() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            SELECT p.id AS perime, min(v.id::text) AS vivant, count(DISTINCT v.id) AS nb_vivants
+            FROM evenements p
+            JOIN evenements v
+              ON v.id <> p.id
+             AND v.salle_id = p.salle_id
+             AND v.date = p.date
+             AND (v.artiste_norm = p.artiste_norm
+                  OR (v.artiste_id IS NOT NULL AND v.artiste_id = p.artiste_id))
+             AND v.heure IS NOT NULL AND p.heure IS NOT NULL
+             AND abs(extract(epoch FROM (v.heure - p.heure))) <= :ecartSecondes
+            WHERE p.date >= CURRENT_DATE AND p.salle_id IS NOT NULL
+              AND p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+            GROUP BY p.id
+            """,
+            Map.of(
+                "seuil", SEUIL_ABSENCES_FICHE_PERIMEE,
+                "ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+    return fusionnerSiVivantUnique(lignes, "séance dont l'heure a changé");
+  }
+
+  /**
+   * Même séance publiée par deux billetteries à des heures proches (ouverture
+   * des portes et début : 20 h 30 chez Ticketmaster, 20 h chez Eventim) : seuls
+   * événements de leur artiste, salle et jour, l'un Ticketmaster seul, l'autre
+   * Eventim seul, à moins d'une heure d'écart, dans une salle non signalée comme
+   * mélangeant plusieurs lieux.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerMemeSeanceDeuxSourcesHeuresProches() {
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            """
+            WITH ev AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm,
+                     bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+              GROUP BY e.id),
+            groupes AS (
+              SELECT salle_id, date, artiste_norm FROM ev GROUP BY salle_id, date, artiste_norm
+              HAVING count(*) = 2
+                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
+                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1)
+            SELECT t.id AS cible, v.id AS source
+            FROM groupes g
+            JOIN salles s ON s.id = g.salle_id
+            JOIN ev t ON t.salle_id = g.salle_id AND t.date = g.date
+                     AND t.artiste_norm = g.artiste_norm AND t.tm AND NOT t.evt
+            JOIN ev v ON v.salle_id = g.salle_id AND v.date = g.date
+                     AND v.artiste_norm = g.artiste_norm AND v.evt AND NOT v.tm
+            WHERE abs(extract(epoch FROM (t.heure - v.heure))) <= :ecartSecondes
+              AND\
+            """
+                + SalleFiable.condition("s"),
+            Map.of("ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+    for (final Map<String, Object> paire : paires) {
+      fusionner(
+          (UUID) paire.get("cible"),
+          (UUID) paire.get("source"),
+          "même séance, deux sources, heures proches");
+    }
+    return paires.size();
   }
 
   /**

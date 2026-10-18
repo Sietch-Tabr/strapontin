@@ -37,31 +37,26 @@ public class SourcesService {
   private final ObjectMapper objectMapper;
   private final EventimSource eventim;
   private final SalleService salleService;
-  private final SourcesSallesListingService sourcesSallesListingService;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper désérialiseur JSON (quota TM)
    * @param eventim client Eventim (test d'un lieu saisi à la main)
    * @param salleService service salle (upsert, mise à jour, déclenchement worker)
-   * @param sourcesSallesListingService pagination des salles pour l'onglet Sources
    */
   public SourcesService(
       final NamedParameterJdbcTemplate jdbc,
       final ObjectMapper objectMapper,
       final EventimSource eventim,
-      final SalleService salleService,
-      final SourcesSallesListingService sourcesSallesListingService) {
+      final SalleService salleService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.eventim = eventim;
     this.salleService = salleService;
-    this.sourcesSallesListingService = sourcesSallesListingService;
   }
 
   /**
-   * Retourne les statuts agrégés de toutes les sources — les listes de
-   * salles sont paginées séparément via {@link #listerSalles}.
+   * Retourne les statuts agrégés de toutes les sources.
    * @return map {@code {sources}}
    */
   public Map<String, Object> lireSources() {
@@ -295,18 +290,5 @@ public class SourcesService {
       LOG.debug("Impossible de compter {} : {}", descriptionEchec, e.getMessage());
       return 0;
     }
-  }
-
-  /**
-   * Liste paginée des salles pour l'onglet admin « Sources ».
-   * @param eventim true pour les salles avec lieu Eventim interrogé, false
-   *     pour sans identifiant TM ni Eventim (candidates à une config manuelle)
-   * @param page numéro de page (0-indexé)
-   * @param nom filtre nom partiel, peut être null
-   * @return page de résultats
-   */
-  public ReponseSallesSources listerSalles(
-      final boolean eventim, final int page, final String nom) {
-    return sourcesSallesListingService.lister(eventim, page, nom);
   }
 }

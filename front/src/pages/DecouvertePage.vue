@@ -181,12 +181,12 @@
     </p>
 
     <p
-      v-if="departementsSansConcert.length"
+      v-for="message in messagesCouverture(departementsSansConcert)"
+      :key="message.cle"
       class="alerte alerte-info"
       role="status"
     >
-      Aucun concert n'est proposé pour l'instant par nos sources (Ticketmaster,
-      Eventim) dans : {{ departementsSansConcert.join(", ") }}.
+      {{ message.texte }}
     </p>
 
     <EtatChargement v-if="chargement && !donnees" />
@@ -335,6 +335,7 @@ const genreLocal = ref("");
 const classificationLocal = ref("");
 const triLocal = ref("date");
 
+import { messagesCouverture } from "../utils/couverture.js";
 const { departementsSansConcert, chargerDepartementsSansConcert } =
   useDepartementsSansConcert();
 onMounted(chargerDepartementsSansConcert);

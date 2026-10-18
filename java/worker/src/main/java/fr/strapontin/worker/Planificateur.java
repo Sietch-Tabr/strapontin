@@ -7,6 +7,7 @@ package fr.strapontin.worker;
 import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.FetchSallesAllJob;
+import fr.strapontin.worker.jobs.FetchSitesSallesJob;
 import fr.strapontin.worker.jobs.GererComptesInactifsJob;
 import fr.strapontin.worker.jobs.GererInvitesExpiresJob;
 import fr.strapontin.worker.jobs.PurgerArtistesJob;
@@ -17,6 +18,7 @@ import fr.strapontin.worker.jobs.RecalculerMatchesJob;
 import fr.strapontin.worker.jobs.ReconciliationNocturneJob;
 import fr.strapontin.worker.jobs.RevoquerAdminsJob;
 import fr.strapontin.worker.jobs.SuiviCyclesJobsJob;
+import java.util.TimeZone;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
@@ -50,6 +52,11 @@ public class Planificateur {
 
   @Value("${worker.cron.fetch-salles:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronFetchSalles;
+
+  // Une lecture par jour, en journée : un concert découvert la nuit pourrait
+  // réveiller un utilisateur en fréquence « à chaque nouveau concert ».
+  @Value("${worker.cron.fetch-sites-salles:0 0 14 * * ?}")
+  private String cronFetchSitesSalles;
 
   @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronRecalculerMatches;
@@ -115,6 +122,28 @@ public class Planificateur {
   @Bean
   Trigger triggerFetchSallesAll(final JobDetail jobDetailFetchSallesAll) {
     return creerTrigger(jobDetailFetchSallesAll, "triggerFetchSallesAll", cronFetchSalles);
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  JobDetail jobDetailFetchSitesSalles() {
+    return creerJobDetail(FetchSitesSallesJob.class, "fetchSitesSalles");
+  }
+
+  /* package-private : Bean Spring, jamais appelé directement hors du
+   * conteneur. */
+  @Bean
+  Trigger triggerFetchSitesSalles(final JobDetail jobDetailFetchSitesSalles) {
+    // Fuseau explicite : « en journée » vaut pour Paris, quel que soit le fuseau
+    // du serveur.
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailFetchSitesSalles)
+        .withIdentity("triggerFetchSitesSalles")
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(cronFetchSitesSalles)
+                .inTimeZone(TimeZone.getTimeZone("Europe/Paris")))
+        .build();
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du

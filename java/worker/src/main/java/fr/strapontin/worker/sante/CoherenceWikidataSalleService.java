@@ -13,6 +13,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,27 +54,29 @@ public class CoherenceWikidataSalleService {
   // Au-delà, une position publiée par une source ne désigne plus le même
   // lieu que l'élément Wikidata (centre-ville au lieu de la commune de la salle).
   private static final double ECART_SIGNALEMENT_METRES = 1000;
-  private static final int JOURS_ENTRE_SIGNALEMENTS_POSITION = 30;
-  private static final String MESSAGE_POSITION_SOURCE_ELOIGNEE =
-      "position de source éloignée de l'élément Wikidata salle=";
+  private static final int MAX_LIEUX_DECRITS = 8;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
   private final LogsAdminWorker logsAdminWorker;
+  private final SignalementMatchingService signalements;
 
   /**
    * @param jdbc accès JDBC
    * @param wikidata résolution de la commune Wikidata (code INSEE) pour la
    *     revalidation
    * @param logsAdminWorker journalisation des incohérences détectées
+   * @param signalements signalements « À traiter » des positions de source éloignées
    */
   public CoherenceWikidataSalleService(
       final NamedParameterJdbcTemplate jdbc,
       final WikidataSalleSource wikidata,
-      final LogsAdminWorker logsAdminWorker) {
+      final LogsAdminWorker logsAdminWorker,
+      final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
     this.wikidata = wikidata;
     this.logsAdminWorker = logsAdminWorker;
+    this.signalements = signalements;
   }
 
   /**
@@ -199,22 +203,24 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Signale, sans rien modifier, les salles dont la position vient d'une
-   * source (billetterie ou géocodage) mais se trouve à plus d'un kilomètre
-   * de leur élément Wikidata : l'un des deux désigne un autre lieu.
-   * Un même écart n'est rappelé qu'une fois par mois.
+   * Signale dans « À traiter », sans rien modifier, les salles dont la position
+   * vient d'une source (billetterie ou géocodage) mais se trouve à plus d'un
+   * kilomètre de leur élément Wikidata : l'un des deux désigne un autre lieu.
+   * Le signalement se referme de lui-même quand l'écart disparaît.
    * @return nombre de salles à la position divergente
    */
   public int signalerPositionsDivergentes() {
     final List<SalleAEnrichir> salles = sallesPositionneesParUneSource();
-    if (salles.isEmpty()) {
-      return 0;
-    }
-    final Map<UUID, EnrichissementSalle> elements = wikidata.enrichirLot(salles);
+    final Map<UUID, EnrichissementSalle> elements =
+        salles.isEmpty() ? Map.of() : wikidata.enrichirLot(salles);
+    // Une salle dont l'élément n'a pas pu être lu garde son signalement :
+    // l'absence de réponse de Wikidata ne prouve pas que l'écart a disparu.
+    final Set<UUID> encoreEnAnomalie = new HashSet<>();
     int divergentes = 0;
     for (final SalleAEnrichir salle : salles) {
       final EnrichissementSalle element = elements.get(salle.id());
       if (element == null || element.latitude() == null || element.longitude() == null) {
+        encoreEnAnomalie.add(salle.id());
         continue;
       }
       final double ecart =
@@ -222,9 +228,16 @@ public class CoherenceWikidataSalleService {
               salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
       if (ecart > ECART_SIGNALEMENT_METRES) {
         divergentes++;
-        signalerPositionDivergente(salle, ecart);
+        encoreEnAnomalie.add(salle.id());
+        signalements.signaler(
+            "position_source_eloignee",
+            "salle",
+            salle.id(),
+            "moyenne",
+            detailsPositionDivergente(salle, element, ecart));
       }
     }
+    signalements.clore("position_source_eloignee", encoreEnAnomalie);
     LOG.info(
         "coherence:wikidata:positions-sources candidates={} divergentes={}",
         salles.size(),
@@ -241,38 +254,44 @@ public class CoherenceWikidataSalleService {
         (rs, _) -> versSalleAEnrichir(rs));
   }
 
-  private void signalerPositionDivergente(final SalleAEnrichir salle, final double ecart) {
-    final Boolean dejaSignalee =
-        jdbc.queryForObject(
-            """
-            SELECT EXISTS (SELECT 1 FROM logs_admin
-                           WHERE source = 'coherence-wikidata' AND niveau = 'warn'
-                             AND message LIKE :motif
-                             AND meta ->> 'salleId' = :id
-                             AND ts > now() - make_interval(days => :jours))
-            """,
-            Map.of(
-                "motif",
-                MESSAGE_POSITION_SOURCE_ELOIGNEE + "%",
-                "id",
-                salle.id().toString(),
-                "jours",
-                JOURS_ENTRE_SIGNALEMENTS_POSITION),
-            Boolean.class);
-    if (Boolean.TRUE.equals(dejaSignalee)) {
-      return;
-    }
-    logsAdminWorker.inserer(
-        "warn",
-        SOURCE_LOG,
-        MESSAGE_POSITION_SOURCE_ELOIGNEE + salle.nom(),
-        Map.of(
-            "salleId",
-            salle.id().toString(),
-            CLE_WIKIDATA_ID,
-            salle.wikidataId(),
-            "ecartMetres",
-            Math.round(ecart)));
+  // Tout ce que l'administrateur doit voir pour juger : l'élément, les deux
+  // positions, et chaque lieu source avec son écart à l'élément (le lieu faux
+  // est celui qui s'en éloigne).
+  private Map<String, Object> detailsPositionDivergente(
+      final SalleAEnrichir salle, final EnrichissementSalle element, final double ecart) {
+    final Map<String, Object> details = new LinkedHashMap<>();
+    details.put(CLE_WIKIDATA_ID, salle.wikidataId());
+    details.put("ecartMetres", Math.round(ecart));
+    details.put("latitudeSalle", salle.latitude());
+    details.put("longitudeSalle", salle.longitude());
+    details.put("latitudeWikidata", element.latitude());
+    details.put("longitudeWikidata", element.longitude());
+    details.put("lieuxSources", decrireLieuxSources(salle.id(), element));
+    return details;
+  }
+
+  private List<String> decrireLieuxSources(final UUID salleId, final EnrichissementSalle element) {
+    return jdbc.query(
+        """
+        SELECT source, COALESCE(libelle_source, identifiant_externe) AS lieu, latitude, longitude
+        FROM salle_sources
+        WHERE salle_id = CAST(:id AS uuid) AND latitude IS NOT NULL AND longitude IS NOT NULL
+        ORDER BY source, identifiant_externe
+        LIMIT :max
+        """,
+        Map.of("id", salleId.toString(), "max", MAX_LIEUX_DECRITS),
+        (rs, _) ->
+            rs.getString("source")
+                + " "
+                + rs.getString("lieu")
+                + " : "
+                + Math.round(
+                    DistanceGeo.metres(
+                        rs.getDouble("latitude"),
+                        rs.getDouble("longitude"),
+                        element.latitude(),
+                        element.longitude()))
+                + " m de l'élément");
   }
 
   private List<SalleAEnrichir> sallesPositionneesParWikidata() {

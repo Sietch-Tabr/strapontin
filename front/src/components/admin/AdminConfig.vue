@@ -303,7 +303,8 @@
           <p class="param-aide">
             Les clés VAPID permettent d'authentifier le serveur auprès des
             services de notification push. Régénérer les clés invalide tous les
-            abonnements existants. Les utilisateurs devront se réabonner.
+            abonnements existants : les utilisateurs concernés sont prévenus par
+            email, avec le motif saisi, et devront se réabonner.
           </p>
         </details>
         <template
@@ -335,6 +336,34 @@
           >
             Régénérer les clés VAPID (invalide tous les abonnements push)
           </button>
+          <p
+            v-if="resultatVapid"
+            class="alerte"
+            :class="
+              resultatVapid.nbComptesNonPrevenus > 0
+                ? 'alerte-avertissement'
+                : 'alerte-succes'
+            "
+            role="status"
+          >
+            {{ resultatVapid.nbAppareils }} appareil{{
+              resultatVapid.nbAppareils > 1
+                ? "s ont été retirés"
+                : " a été retiré"
+            }}
+            ; {{ resultatVapid.nbComptesPrevenus }} compte{{
+              resultatVapid.nbComptesPrevenus > 1
+                ? "s ont été prévenus"
+                : " a été prévenu"
+            }}
+            par email<template v-if="resultatVapid.nbComptesNonPrevenus > 0"
+              >, mais {{ resultatVapid.nbComptesNonPrevenus }} compte{{
+                resultatVapid.nbComptesNonPrevenus > 1 ? "s n'ont" : " n'a"
+              }}
+              pas pu l'être (quota d'emails atteint ou envoi en échec) :
+              consulter les logs admin pour les identifiants</template
+            >.
+          </p>
         </div>
       </div>
 
@@ -370,14 +399,28 @@
       Régénérer les clés VAPID ?
     </h2>
     <p class="dialog-corps">
-      Tous les abonnements push existants seront invalidés. Les utilisateurs
-      devront se réabonner aux notifications.
+      Tous les abonnements push existants seront invalidés. Chaque utilisateur
+      qui perd un appareil recevra un email avec le motif ci-dessous et devra se
+      réabonner aux notifications.
     </p>
+    <div class="form-champ">
+      <label class="form-label" for="vapid-motif">Motif (obligatoire)</label>
+      <input
+        id="vapid-motif"
+        v-model="motifVapid"
+        type="text"
+        class="form-control"
+        maxlength="300"
+        autocomplete="off"
+        required
+      />
+    </div>
     <div class="dialog-pied">
       <button
         id="dialog-vapid-confirmer"
         type="button"
         class="bouton bouton-danger"
+        :disabled="motifVapid.trim() === ''"
         @click="confirmerVapid"
       >
         Régénérer
@@ -458,6 +501,8 @@ const DESCRIPTIONS_CONFIG = {
 };
 
 const chargement = ref(true);
+const motifVapid = ref("");
+const resultatVapid = ref(null);
 const configs = shallowRef([]);
 const appConfigSecretPresente = ref(false);
 const etatTm = ref(null);
@@ -679,6 +724,7 @@ async function sauvegarderConfig(cle, event) {
 }
 
 function ouvrirDialogVapid() {
+  motifVapid.value = "";
   ouvrirDialogVapidModal();
 }
 
@@ -687,12 +733,23 @@ function fermerDialogVapid() {
 }
 
 async function confirmerVapid() {
+  const motif = motifVapid.value.trim();
+  if (motif === "") return;
   fermerDialogVapid();
   try {
-    const rep = await appelApi("/api/admin/vapid/generer", { method: "POST" });
+    const rep = await appelApi("/api/admin/vapid/generer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ motif }),
+    });
     const corps = await lireJson(rep);
     if (rep.ok) {
       const nb = corps.nbAbonnementsSupprimes ?? 0;
+      resultatVapid.value = {
+        nbAppareils: nb,
+        nbComptesPrevenus: corps.nbComptesPrevenus ?? 0,
+        nbComptesNonPrevenus: corps.nbComptesNonPrevenus ?? 0,
+      };
       afficherToast(
         `Clés des notifications push régénérées : ${nb} appareil${nb !== 1 ? "s devront" : " devra"} réactiver les notifications push.`,
         "succes",

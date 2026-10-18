@@ -43,4 +43,32 @@ class NomsDeLieuMemeLieuTest {
   void designentFortementLeMemeLieu_lieuxVoisinsDistincts_faux(final String a, final String b) {
     assertFalse(NomsDeLieu.designentFortementLeMemeLieu(n(a), n(b), "paris"));
   }
+
+  // Relevés en prod le 16/10/2026 : la même salle sous le nom de chaque billetterie.
+  @ParameterizedTest
+  @CsvSource(
+      delimiter = '|',
+      value = {
+        "Théâtre des Cordeliers|Les Cordeliers Romans sur Isere|Romans sur Isère",
+        "Le Mas D'Hiver|Le Mas Dhiver Puget sur Argens|Puget sur Argens",
+        "L'Empreinte|Lempreinte Savigny le Temple Cedex|Savigny le Temple"
+      })
+  void designentFortementLeMemeLieu_memeSalleSousLeNomDeChaqueBilletterie_vrai(
+      final String a, final String b, final String ville) {
+    assertTrue(NomsDeLieu.designentFortementLeMemeLieu(n(a), n(b), n(ville)));
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      delimiter = '|',
+      value = {
+        "Théâtre du Chariot|Théâtre du Châtelet|Paris",
+        "Théâtre de Poche Montparnasse|Théâtre Montparnasse|Paris",
+        "Le Millenaire Savigny le Temple|Lempreinte Savigny le Temple Cedex|Savigny le Temple",
+        "Théâtre de Paris|Théâtre de Paris Nord|Paris"
+      })
+  void designentFortementLeMemeLieu_lieuxDistinctsMemeVille_faux(
+      final String a, final String b, final String ville) {
+    assertFalse(NomsDeLieu.designentFortementLeMemeLieu(n(a), n(b), n(ville)));
+  }
 }

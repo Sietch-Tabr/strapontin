@@ -84,7 +84,7 @@
             <button
               v-if="!filtreMasques"
               type="button"
-              class="bouton bouton-texte bouton-petit groupe-action"
+              class="bouton bouton-texte bouton-mini groupe-action"
               :aria-label="'Masquer tous les concerts de ' + groupe.artiste"
               @click="masquerGroupe(groupe)"
             >
@@ -93,7 +93,7 @@
             <button
               v-else
               type="button"
-              class="bouton bouton-texte bouton-petit groupe-action"
+              class="bouton bouton-texte bouton-mini groupe-action"
               :aria-label="'Réafficher tous les concerts de ' + groupe.artiste"
               @click="demasquerGroupe(groupe)"
             >
@@ -168,7 +168,7 @@
                 <button
                   v-if="filtreMasques"
                   type="button"
-                  class="bouton bouton-texte bouton-petit"
+                  class="bouton bouton-texte bouton-mini"
                   aria-label="Réafficher ce concert"
                   @click="demasquerConcert(concert, groupe)"
                 >
@@ -177,7 +177,7 @@
                 <button
                   v-else
                   type="button"
-                  class="bouton bouton-texte bouton-petit"
+                  class="bouton bouton-texte bouton-mini"
                   aria-label="Masquer ce concert"
                   @click="masquerConcert(concert, groupe)"
                 >

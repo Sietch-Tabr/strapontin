@@ -83,7 +83,8 @@ public class WorkerFetchCommun {
           + "   AND (CAST(:tousClassementsTicketmaster AS boolean)      OR"
           + " coalesce(evenements.classification, '') || '|' || coalesce(evenements.genre, '')     "
           + "    || '|' || coalesce(evenements.sous_genre, '') IN (:classementsTicketmaster)))   OR"
-          + " (o.source = 'eventim' AND evenements.date <= CAST(:horizonEventim AS date))))";
+          + " (o.source = 'eventim' AND evenements.date <= CAST(:horizonEventim AS date))   OR"
+          + " (o.source = 'site_salle' AND evenements.date <= CAST(:horizonSite AS date))))";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ResolveurNomCanonique resolveur;
@@ -217,12 +218,12 @@ public class WorkerFetchCommun {
   }
 
   /**
-   * Met à jour le compteur d'absences des événements des salles retraitées
-   * ce cycle, limité aux dates effectivement couvertes par chaque source.
+   * Met à jour le compteur d'absences des événements des salles retraitées ce
+   * cycle, limité aux dates couvertes par chaque source (source absente de
+   * {@code horizons} = aucune absence).
    * @param ids identifiants (texte) des salles traitées dans ce cycle
    * @param debutCycle horodatage capturé avant la persistance du lot
-   * @param horizons dernière date couverte par nom de source ({@code
-   *     "ticketmaster"}, {@code "eventim"}) ; source absente = aucune absence
+   * @param horizons dernière date couverte par nom de source
    */
   /* package-private : appelé par les exécuteurs de fetch (même package). */
   void mettreAJourAbsencesSalles(
@@ -255,6 +256,7 @@ public class WorkerFetchCommun {
             .addValue("ids", ids)
             .addValue("horizonTicketmaster", horizons.get("ticketmaster"), Types.DATE)
             .addValue("horizonEventim", horizons.get("eventim"), Types.DATE)
+            .addValue("horizonSite", horizons.get("site_salle"), Types.DATE)
             .addValue("tousClassementsTicketmaster", tous)
             // Liste jamais vide : IN () n'est pas du SQL valide.
             .addValue(

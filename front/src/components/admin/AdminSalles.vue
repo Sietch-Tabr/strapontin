@@ -7,6 +7,21 @@
         l'enrichissement automatique Wikidata/OSM — laissez vide pour le
         réactiver.
       </p>
+      <p class="param-aide">{{ AIDE_STATUTS_SALLES }}</p>
+
+      <div v-if="idsInitiaux.length" class="alerte alerte-info">
+        <p>
+          Comparaison des deux salles signalées. Elles sont déjà sélectionnées :
+          « Fusionner » ouvre le choix de la salle à conserver.
+        </p>
+        <button
+          type="button"
+          class="bouton bouton-texte bouton-petit"
+          @click="emit('quitter-comparaison')"
+        >
+          Afficher toutes les salles
+        </button>
+      </div>
 
       <div class="source-vue-entete">
         <input
@@ -51,6 +66,17 @@
             @change="rechargerPage0"
           />
           Sans Wikidata
+        </label>
+        <label
+          class="source-filtre-checkbox"
+          title="Salles qu'aucune source n'alimente : un état normal (salle ajoutée à la main), pas une anomalie"
+        >
+          <input
+            v-model="filtreSansSource"
+            type="checkbox"
+            @change="rechargerPage0"
+          />
+          Sans source
         </label>
         <button
           type="button"
@@ -121,6 +147,9 @@
                     <span v-if="!salle.sources.length" class="etat-vide-texte"
                       >—</span
                     >
+                    <p v-if="salle.lieuEventim" class="texte-note">
+                      Lieu Eventim : {{ salle.lieuEventim }}
+                    </p>
                   </td>
                   <td data-label="Statut">
                     <span
@@ -128,6 +157,18 @@
                       :class="classeStatut(salle.statut)"
                       >{{ libelleStatut(salle.statut) }}</span
                     >
+                    <template v-if="salle.suspicions?.length">
+                      <p
+                        v-for="suspicion in salle.suspicions"
+                        :key="suspicion.source"
+                        class="texte-note"
+                      >
+                        {{ decrireSuspicion(suspicion, formaterInstant) }}
+                      </p>
+                      <p class="texte-note">
+                        {{ interpreterSuspicion(salle.nbConcerts) }}
+                      </p>
+                    </template>
                   </td>
                   <td data-label="Wikidata">
                     <a
@@ -148,6 +189,20 @@
                       @click="ouvrirEdition(salle)"
                     >
                       Éditer
+                    </button>
+                    <button
+                      type="button"
+                      class="bouton bouton-secondaire bouton-petit"
+                      title="Nom exact du lieu chez Eventim : voir, modifier, tester, lancer un fetch"
+                      @click="
+                        lieuEventim.ouvrir({
+                          id: salle.id,
+                          nom: salle.nomAffiche || salle.nom,
+                          lieuEventim: salle.lieuEventim,
+                        })
+                      "
+                    >
+                      Lieu Eventim
                     </button>
                     <button
                       v-if="salle.nbConcerts > 0"
@@ -303,6 +358,7 @@
     </div>
   </dialog>
   <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
+  <DialogueLieuEventim ref="lieuEventim" @enregistre="charger" />
 </template>
 
 <script setup>
@@ -310,15 +366,27 @@ defineOptions({ name: "AdminSalles" });
 
 const props = defineProps({
   rechercheInitiale: { type: String, default: "" },
+  idsInitiaux: { type: Array, default: () => [] },
 });
+const emit = defineEmits(["quitter-comparaison"]);
 
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
+import DialogueLieuEventim from "./DialogueLieuEventim.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
-import { classeStatut, libelleStatut } from "../../utils/statutReferentiel.js";
+import { formaterInstant } from "../../composables/useDates.js";
+import {
+  AIDE_STATUTS_SALLES,
+  classeStatut,
+  decrireSuspicion,
+  interpreterSuspicion,
+  libelleStatut,
+} from "../../utils/statutReferentiel.js";
 
 const repartition = ref(null);
+const lieuEventim = ref(null);
+const filtreSansSource = ref(false);
 const filtreVille = ref("");
 const filtreDept = ref("");
 
@@ -358,6 +426,22 @@ const {
   cleTotal: "totalSalles",
   messageFusionne: "Salles fusionnées.",
   libellePluriel: "salles",
-  filtresExtra: () => ({ ville: filtreVille.value, dept: filtreDept.value }),
+  filtresExtra: () => ({
+    ville: filtreVille.value,
+    dept: filtreDept.value,
+    ids: props.idsInitiaux.join(","),
+    sansSource: filtreSansSource.value ? "true" : "",
+  }),
+});
+
+// Les deux salles comparées arrivent sélectionnées : la fusion est à un clic.
+watch(items, (liste) => {
+  if (
+    props.idsInitiaux.length === 2 &&
+    liste.length === 2 &&
+    selection.length === 0
+  ) {
+    liste.forEach((salle) => selection.push(salle.id));
+  }
 });
 </script>

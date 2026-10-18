@@ -19,8 +19,10 @@
     </div>
     <AdminSalles
       v-if="entite === 'salle'"
-      :key="'salle:' + recherche"
+      :key="'salle:' + recherche + ':' + ids.join(',')"
       :recherche-initiale="recherche"
+      :ids-initiaux="ids"
+      @quitter-comparaison="quitterComparaison"
     />
     <AdminArtistes
       v-else
@@ -54,6 +56,17 @@ const entite = computed(() =>
 const recherche = computed(() =>
   typeof route.query.recherche === "string" ? route.query.recherche : "",
 );
+
+// Deux salles signalées à comparer, transmises par l'URL depuis « À traiter ».
+const ids = computed(() =>
+  typeof route.query.ids === "string" && route.query.ids
+    ? route.query.ids.split(",")
+    : [],
+);
+
+function quitterComparaison() {
+  router.replace({ hash: "#referentiel", query: { entite: "salle" } });
+}
 
 function basculer(valeur) {
   router.replace({ hash: "#referentiel", query: { entite: valeur } });

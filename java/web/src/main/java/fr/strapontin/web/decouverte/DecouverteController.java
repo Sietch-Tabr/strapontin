@@ -5,9 +5,8 @@
 package fr.strapontin.web.decouverte;
 
 import fr.strapontin.web.concert.FiltreConcerts;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.Map;
@@ -40,11 +39,8 @@ public class DecouverteController {
    * utilisateur), pour éviter qu'un double-clic/script consomme le quota
    * TM. Défense en profondeur (endpoint déjà {@code ROLE_ADMIN}).
    */
-  private final Bucket bucketFetcher =
-      Bucket.builder()
-          .addLimit(
-              Bandwidth.builder().capacity(1).refillIntervally(1, Duration.ofMinutes(5)).build())
-          .build();
+  private final LimiteurDebit limiteurFetcher =
+      new LimiteurDebit(1, Duration.ofMinutes(5), Duration.ofMinutes(10), 1);
 
   /**
    * @param decouverteService service de découverte
@@ -78,7 +74,7 @@ public class DecouverteController {
   @PostMapping("/fetcher")
   public ResponseEntity<Map<String, Object>> fetcher(
       @Valid @RequestBody final RequeteFetch requete) {
-    if (!bucketFetcher.tryConsume(1)) {
+    if (!limiteurFetcher.autoriser("global")) {
       return ResponseEntity.status(429)
           .body(Map.of("erreur", "Trop de relances récentes. Réessayez dans quelques minutes."));
     }

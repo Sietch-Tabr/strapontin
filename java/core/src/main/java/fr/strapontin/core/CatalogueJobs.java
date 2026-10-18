@@ -73,9 +73,21 @@ public final class CatalogueJobs {
         "Parcourt les départements suivis pour alimenter la page Découverte.",
         Theme.RECUPERATION);
     ajouter(
+        "fetch:sites-salles",
+        "Concerts des sites de salles",
+        "Lit chaque jour, en journée, le site des salles qui vendent hors Ticketmaster et"
+            + " Eventim.",
+        Theme.RECUPERATION);
+    ajouter(
         "recalculer:matches",
         "Correspondances utilisateurs",
         "Recalcule pour chaque utilisateur les concerts de ses artistes et salles suivis.",
+        Theme.NOTIFICATIONS);
+    ajouter(
+        "notifier:version",
+        "Annonce d'une nouvelle version",
+        "Prévient une seule fois par version, chaque jour à 11 h, les utilisateurs qui l'ont"
+            + " demandé (notification push).",
         Theme.NOTIFICATIONS);
     ajouter(
         "notifier:digest",

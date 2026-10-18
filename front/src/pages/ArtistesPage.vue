@@ -23,14 +23,22 @@
       <button
         type="submit"
         class="bouton bouton-secondaire"
-        :disabled="q.trim().length < 2"
+        :disabled="!etat.peutLancer"
       >
         Rechercher
       </button>
     </form>
+    <p class="form-aide">{{ CONSIGNE_RECHERCHE }}</p>
+    <p
+      v-if="!etat.peutLancer"
+      class="form-aide form-aide-avertissement"
+      role="status"
+    >
+      {{ etat.explication }}
+    </p>
     <p class="form-aide">
-      Saisissez au moins 2 caractères. La recherche propose les artistes déjà en
-      base, puis des suggestions Wikidata et Deezer.
+      La recherche propose les artistes déjà en base, puis des suggestions
+      Wikidata et Deezer.
     </p>
 
     <div
@@ -55,20 +63,18 @@
         <ul class="liste-cartes">
           <li
             v-for="s in donnees.suggestions"
-            :key="s.nom + (s.wikidataId || '')"
+            :key="s.source + s.nom + (s.wikidataId || '')"
             class="carte-item"
           >
             <div>
               <p class="carte-nom">
                 {{ s.nom }}
-                <span
-                  v-if="s.source === 'wikidata'"
-                  class="badge-source badge-source-metadonnees"
-                  >wikidata</span
-                >
+                <span class="badge-source badge-source-metadonnees">{{
+                  libelleSourceSuggestion(s.source)
+                }}</span>
               </p>
-              <p v-if="s.description" class="carte-sous-titre">
-                {{ s.description }}
+              <p v-if="detailSuggestion(s)" class="carte-sous-titre">
+                {{ detailSuggestion(s) }}
               </p>
             </div>
             <button
@@ -176,10 +182,18 @@ import { appelApi, lireJson } from "../utils/api.js";
 import { notificationsJoignables } from "../composables/useEtatNotifications.js";
 defineOptions({ name: "ArtistesPage" });
 
-import { ref, shallowRef, onMounted, onUnmounted } from "vue";
+import { computed, ref, shallowRef, onMounted, onUnmounted } from "vue";
+import {
+  CONSIGNE_RECHERCHE,
+  etatRecherche,
+} from "../utils/consigneRecherche.js";
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import {
+  detailSuggestion,
+  libelleSourceSuggestion,
+} from "../utils/suggestionsArtistes.js";
 
 const { afficherToast } = useToasts();
 
@@ -190,6 +204,7 @@ const qSoumis = ref("");
 const erreur = ref("");
 const artisteASupprimer = ref(null);
 const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog();
+const etat = computed(() => etatRecherche(q.value));
 const controleur = new AbortController();
 
 async function charger(recherche = "") {

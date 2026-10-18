@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class PersisteurConcertsDb {
 
+  private static final Logger LOG = LoggerFactory.getLogger(PersisteurConcertsDb.class);
+
   private static final String CLE_SALLE = "salle";
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
@@ -36,6 +40,7 @@ public class PersisteurConcertsDb {
   private final EnregistreurPositionsLieux enregistreurPositions;
   private final RepriseIdentifiantsEventim repriseIdentifiantsEventim;
   private final RechercheEvenementExistant rechercheEvenement;
+  private final RepublicationFicheDeplacee republicationFiche;
 
   private record ResolutionEvenement(UUID id, boolean nouveau) {}
 
@@ -51,6 +56,7 @@ public class PersisteurConcertsDb {
     this.enregistreurPositions = new EnregistreurPositionsLieux(jdbc);
     this.repriseIdentifiantsEventim = new RepriseIdentifiantsEventim(jdbc);
     this.rechercheEvenement = new RechercheEvenementExistant(jdbc);
+    this.republicationFiche = new RepublicationFicheDeplacee(jdbc);
   }
 
   /**
@@ -294,7 +300,8 @@ public class PersisteurConcertsDb {
             ORDER BY (CASE WHEN url ~* '/pack/' THEN 10 ELSE 0 END
                       + CASE source::text
                           WHEN 'ticketmaster' THEN 1 WHEN 'eventim' THEN 2 WHEN 'digitick' THEN 3
-                          ELSE 4 END)
+                          ELSE 4 END),
+                     updated_at DESC, first_seen, id
             LIMIT 1
             """,
             Map.of("id", evenementId.toString()),
@@ -318,7 +325,12 @@ public class PersisteurConcertsDb {
 
     int inserts = 0;
     int updates = 0;
+    int republications = 0;
     for (final ValeurConcert concert : valeurs) {
+      if (republicationFiche.estRepublication(concert)) {
+        republications++;
+        continue;
+      }
       final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert);
       upsertObservation(resolution.id(), concert);
       enregistrerPlateau(resolution.id(), concert);
@@ -328,6 +340,9 @@ public class PersisteurConcertsDb {
         mettreAJourChampsEvenement(resolution.id(), concert);
         updates++;
       }
+    }
+    if (republications > 0) {
+      LOG.info("{} fiche(s) d'une ancienne salle republiée(s) ignorée(s)", republications);
     }
     return new PersisterConcerts.ResultatPersistance(inserts, updates);
   }

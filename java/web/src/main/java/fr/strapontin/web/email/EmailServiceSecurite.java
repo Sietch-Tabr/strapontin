@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.email;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -187,5 +188,38 @@ public class EmailServiceSecurite {
     }
     LOG.info("communication d'incident envoyée par email : {}/{}", envoyes, destinataires.size());
     return envoyes;
+  }
+
+  /**
+   * Prévient chaque compte qui perd ses appareils push après un renouvellement
+   * des clés.
+   * @param destinataires adresses des comptes concernés
+   * @param motif raison du renouvellement
+   * @return adresses auxquelles l'email est effectivement parti (les autres :
+   *     quota atteint, envoi en échec ou service d'emails non configuré)
+   */
+  public List<String> envoyerPushReinitialise(
+      final List<String> destinataires, final String motif) {
+    final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
+    if (ctx.isEmpty()) {
+      LOG.warn("RESEND_API_KEY absent — avertissement de renouvellement des clés VAPID non envoyé");
+      return List.of();
+    }
+    final String titre = "Vos notifications push sont à réactiver";
+    final String corps = EmailTemplatesSecurite.pushReinitialise(motif, ctx.get().baseUrl());
+    final List<String> prevenus = new ArrayList<>();
+    for (final String destinataire : destinataires) {
+      try {
+        if (emailSender.envoyer(
+            ctx.get(), destinataire, ctx.get().expediteur(), titre, corps, titre)) {
+          prevenus.add(destinataire);
+        }
+      } catch (Exception e) {
+        LOG.error("Échec envoi renouvellement VAPID : emailHash={}", destinataire.hashCode(), e);
+      }
+    }
+    LOG.info(
+        "renouvellement VAPID signalé par email : {}/{}", prevenus.size(), destinataires.size());
+    return prevenus;
   }
 }

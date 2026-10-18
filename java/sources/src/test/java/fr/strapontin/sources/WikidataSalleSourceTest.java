@@ -1298,8 +1298,12 @@ class WikidataSalleSourceTest {
     final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertTrue(resultat.isEmpty());
-    assertEquals(Set.of(id), src.preleverAmbiguites());
-    assertEquals(Set.of(), src.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
+    final Map<UUID, Map<String, Object>> ambiguites = src.preleverAmbiguites();
+    assertEquals(Set.of(id), ambiguites.keySet());
+    assertEquals("Q4724424", ambiguites.get(id).get("wikidataId"));
+    assertEquals("Alhambra", ambiguites.get(id).get("libelleWikidata"));
+    assertTrue((Long) ambiguites.get(id).get("ecartMetres") > 500);
+    assertEquals(Map.of(), src.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
     serveur.verify();
   }
 
@@ -1334,7 +1338,7 @@ class WikidataSalleSourceTest {
     final Map<UUID, EnrichissementSalle> resultat = src.enrichirLot(List.of(salle));
 
     assertEquals("Q3406734", resultat.get(id).wikidataId());
-    assertEquals(Set.of(), src.preleverAmbiguites());
+    assertEquals(Map.of(), src.preleverAmbiguites());
     serveur.verify();
   }
 

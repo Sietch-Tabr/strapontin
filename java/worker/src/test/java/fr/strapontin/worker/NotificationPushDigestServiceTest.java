@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -32,6 +33,7 @@ import org.apache.http.entity.StringEntity;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Tests unitaires de {@link NotificationPushDigestService} : révocation
@@ -41,6 +43,11 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  * @author Kwaite
  */
 class NotificationPushDigestServiceTest {
+
+  // Hors plage silencieuse : ces tests vérifient l'envoi, pas la rétention de nuit.
+  private static final java.time.Clock HORLOGE_JOURNEE =
+      java.time.Clock.fixed(
+          java.time.Instant.parse("2026-10-17T12:00:00Z"), java.time.ZoneOffset.UTC);
 
   static {
     FournisseurBouncyCastle.garantir();
@@ -76,7 +83,8 @@ class NotificationPushDigestServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(statutHttp);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
     return pushServiceMock;
   }
 
@@ -97,7 +105,7 @@ class NotificationPushDigestServiceTest {
   private static PushService pushServiceRetournant(final int statutHttp, final String corps)
       throws Exception {
     final PushService pushServiceMock = pushServiceRetournant(statutHttp);
-    final HttpResponse reponse = pushServiceMock.send(mock(Notification.class));
+    final HttpResponse reponse = pushServiceMock.send(mock(Notification.class), Encoding.AES128GCM);
     when(reponse.getEntity()).thenReturn(new StringEntity(corps, StandardCharsets.UTF_8));
     return pushServiceMock;
   }
@@ -106,7 +114,8 @@ class NotificationPushDigestServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
         .thenReturn(List.of(abonnement(1)));
-    when(jdbc.queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class)))
+    when(jdbc.queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
         .thenReturn(echecs);
     return jdbc;
   }
@@ -119,7 +128,11 @@ class NotificationPushDigestServiceTest {
     final PushService pushServiceMock = pushServiceRetournant(403);
 
     new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+            configServiceAvecVapid(),
+            jdbc,
+            logsAdminWorker,
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc, never()).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -134,7 +147,11 @@ class NotificationPushDigestServiceTest {
         pushServiceRetournant(429, "{\"reason\":\"TooManyProviderTokenUpdates\"}");
 
     new NotificationPushDigestService(
-            configServiceAvecVapid(), jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)
+            configServiceAvecVapid(),
+            jdbc,
+            logsAdminWorker,
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -152,13 +169,15 @@ class NotificationPushDigestServiceTest {
   void envoyerPush_exceptionRepetee_revoqueAuSeuil() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(EchecPush.SEUIL_ECHECS_CONSECUTIFS);
     final PushService pushServiceMock = mock(PushService.class);
-    when(pushServiceMock.send(any(Notification.class))).thenThrow(new IOException("timeout"));
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenThrow(new IOException("timeout"));
 
     new NotificationPushDigestService(
             configServiceAvecVapid(),
             jdbc,
             mock(LogsAdminWorker.class),
-            (_, _, _) -> pushServiceMock)
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
@@ -173,12 +192,14 @@ class NotificationPushDigestServiceTest {
             configServiceAvecVapid(),
             jdbc,
             mock(LogsAdminWorker.class),
-            (_, _, _) -> pushServiceMock)
+            (_, _, _) -> pushServiceMock,
+            HORLOGE_JOURNEE)
         .envoyerPush("u1", unConcert());
 
     verify(jdbc).update(contains("DELETE FROM push_abonnements"), anyMap());
     verify(jdbc, never())
-        .queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class));
+        .queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class));
   }
 
   // Sans remise à zéro, deux échecs isolés à des semaines d'écart finiraient par
@@ -193,7 +214,8 @@ class NotificationPushDigestServiceTest {
                 configServiceAvecVapid(),
                 jdbc,
                 mock(LogsAdminWorker.class),
-                (_, _, _) -> pushServiceMock)
+                (_, _, _) -> pushServiceMock,
+                HORLOGE_JOURNEE)
             .envoyerPush("u1", unConcert());
 
     assertTrue(envoye);

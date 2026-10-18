@@ -52,7 +52,9 @@ class CoherenceWikidataSalleServiceTest {
     jdbc = mock(NamedParameterJdbcTemplate.class);
     wikidata = mock(WikidataSalleSource.class);
     logsAdminWorker = mock(LogsAdminWorker.class);
-    service = new CoherenceWikidataSalleService(jdbc, wikidata, logsAdminWorker);
+    service =
+        new CoherenceWikidataSalleService(
+            jdbc, wikidata, logsAdminWorker, mock(SignalementMatchingService.class));
   }
 
   @SuppressWarnings("unchecked")

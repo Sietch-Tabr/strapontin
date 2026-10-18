@@ -4,11 +4,7 @@
  */
 package fr.strapontin.web.securite;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.web.admin.LogAdminService;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,11 +41,10 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
 
   private final LogAdminService logAdminService;
 
-  private final Cache<String, Bucket> buckets =
-      Caffeine.newBuilder()
-          .expireAfterWrite(FENETRE_RESET.plusMinutes(5))
-          .maximumSize(10_000)
-          .build();
+  private final LimiteurDebit limiteurLogin =
+      new LimiteurDebit(MAX_TENTATIVES_LOGIN, FENETRE_LOGIN, FENETRE_RESET.plusMinutes(5), 10_000);
+  private final LimiteurDebit limiteurReset =
+      new LimiteurDebit(MAX_TENTATIVES_RESET, FENETRE_RESET, FENETRE_RESET.plusMinutes(5), 10_000);
 
   /**
    * @param logAdminService journalisation des tentatives bloquées
@@ -71,12 +66,11 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
     }
 
     final String ip = request.getRemoteAddr();
-    final String cleBucket = ip + ":" + chemin;
+    final String cleBucket = AdresseClient.cle(ip) + ":" + chemin;
     final boolean estReset = URL_RESET_PASSWORD.equals(chemin);
-    final Bucket bucket =
-        buckets.get(cleBucket, _ -> estReset ? creerBucketReset() : creerBucketLogin());
+    final LimiteurDebit limiteur = estReset ? limiteurReset : limiteurLogin;
 
-    if (bucket.tryConsume(1)) {
+    if (limiteur.autoriser(cleBucket)) {
       chain.doFilter(request, response);
     } else {
       logAdminService.logAdmin(
@@ -91,23 +85,5 @@ public class RateLimitingLoginFilter extends OncePerRequestFilter {
           .getWriter()
           .write("{\"erreur\":\"Trop de tentatives. Réessayez dans quelques minutes.\"}");
     }
-  }
-
-  private Bucket creerBucketLogin() {
-    final Bandwidth limite =
-        Bandwidth.builder()
-            .capacity(MAX_TENTATIVES_LOGIN)
-            .refillIntervally(MAX_TENTATIVES_LOGIN, FENETRE_LOGIN)
-            .build();
-    return Bucket.builder().addLimit(limite).build();
-  }
-
-  private Bucket creerBucketReset() {
-    final Bandwidth limite =
-        Bandwidth.builder()
-            .capacity(MAX_TENTATIVES_RESET)
-            .refillIntervally(MAX_TENTATIVES_RESET, FENETRE_RESET)
-            .build();
-    return Bucket.builder().addLimit(limite).build();
   }
 }

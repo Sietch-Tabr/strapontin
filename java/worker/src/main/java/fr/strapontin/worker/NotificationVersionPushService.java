@@ -7,9 +7,12 @@ package fr.strapontin.worker;
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
@@ -21,8 +24,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Envoi push VAPID "nouvelle version disponible" — action admin manuelle,
- * distincte du digest de matching ({@link NotificationPushDigestService}),
+ * Envoi push VAPID "nouvelle version disponible" — automatique chaque jour à
+ * 11h (une seule annonce par version et par utilisateur) ou sur action admin,
+ * distinct du digest de matching ({@link NotificationPushDigestService}),
  * avec la même règle de révocation des appareils en échec.
  * @since 3.0.0
  * @author Kwaite
@@ -37,7 +41,7 @@ public class NotificationVersionPushService {
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
-  private final NotificationDigestService.FabriquePushService fabriquePushService;
+  private final FabriquePushService fabriquePushService;
   private final SuiviEchecsPush suiviEchecs;
 
   /**
@@ -69,7 +73,7 @@ public class NotificationVersionPushService {
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,
-      final NotificationDigestService.FabriquePushService fabriquePushService) {
+      final FabriquePushService fabriquePushService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
@@ -78,9 +82,9 @@ public class NotificationVersionPushService {
   }
 
   /**
-   * Envoie la notification "nouvelle version" à tous les utilisateurs
-   * opt-in ({@code notif_nouvelle_version}) ayant au moins un abonnement
-   * push actif.
+   * Envoie la notification "nouvelle version" aux utilisateurs opt-in
+   * ({@code notif_nouvelle_version}) ayant au moins un abonnement push actif et
+   * qui n'ont pas déjà reçu cette version.
    * @param version version applicative à annoncer (ex. {@code "3.0.0"})
    * @return le nombre d'abonnements notifiés avec succès
    */
@@ -92,7 +96,7 @@ public class NotificationVersionPushService {
       return 0;
     }
 
-    final List<Map<String, Object>> abonnements = chargerAbonnementsOptIn();
+    final List<Map<String, Object>> abonnements = chargerAbonnementsOptIn(version);
     if (abonnements.isEmpty()) {
       return 0;
     }
@@ -109,7 +113,7 @@ public class NotificationVersionPushService {
 
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     final String payload = construirePayload(version, baseUrl);
-    final int nbEnvoyes = envoyerAAbonnements(pushService, abonnements, payload);
+    final int nbEnvoyes = envoyerAAbonnements(pushService, abonnements, payload, version);
 
     logsAdminWorker.inserer(
         "info",
@@ -119,15 +123,20 @@ public class NotificationVersionPushService {
     return nbEnvoyes;
   }
 
-  private List<Map<String, Object>> chargerAbonnementsOptIn() {
+  // Un utilisateur déjà notifié de cette version, ou dont la fréquence est «
+  // Jamais », est écarté.
+  private List<Map<String, Object>> chargerAbonnementsOptIn(final String version) {
     return jdbc.queryForList(
         """
         SELECT pa.id, pa.user_id, pa.endpoint, pa.p256dh, pa.auth
         FROM push_abonnements pa
         JOIN user_config uc ON uc.user_id = pa.user_id
         WHERE uc.notif_nouvelle_version = true
+          AND uc.frequence_notifications <> 'jamais'
+          AND NOT EXISTS (SELECT 1 FROM notifications_version nv
+                          WHERE nv.user_id = pa.user_id AND nv.version = :version)
         """,
-        Map.of());
+        Map.of("version", version));
   }
 
   private static String construirePayload(final String version, final String baseUrl) {
@@ -142,12 +151,23 @@ public class NotificationVersionPushService {
   private int envoyerAAbonnements(
       final PushService pushService,
       final List<Map<String, Object>> abonnements,
-      final String payload) {
+      final String payload,
+      final String version) {
     int nbEnvoyes = 0;
+    final Set<String> notifies = new LinkedHashSet<>();
     for (final Map<String, Object> ab : abonnements) {
       if (envoyerAUnAbonnement(pushService, ab, payload)) {
         nbEnvoyes++;
+        notifies.add((String) ab.get("user_id"));
       }
+    }
+    // Un seul appareil atteint suffit : l'utilisateur est prévenu, pas de seconde
+    // annonce.
+    for (final String userId : notifies) {
+      jdbc.update(
+          "INSERT INTO notifications_version (user_id, version) VALUES (:userId, :version)"
+              + " ON CONFLICT DO NOTHING",
+          Map.of("userId", userId, "version", version));
     }
     return nbEnvoyes;
   }
@@ -170,7 +190,7 @@ public class NotificationVersionPushService {
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload));
+      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
     } catch (Exception e) {
       suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
       return false;

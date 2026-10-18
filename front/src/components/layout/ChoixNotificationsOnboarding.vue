@@ -21,7 +21,7 @@
 
     <template v-if="pushPossible">
       <p v-if="pushActif" class="form-aide" role="status">
-        Notifications push activées sur cet appareil.
+        Notifications push activées sur cet appareil. {{ PLAGE_SILENCIEUSE }}
       </p>
       <button
         v-else
@@ -45,6 +45,8 @@ import { appelApi, lireJson } from "../../utils/api.js";
 import {
   avecEmailArtistes,
   avecPushArtistes,
+  FREQUENCES,
+  PLAGE_SILENCIEUSE,
 } from "../../utils/notifications.js";
 import {
   abonnerAppareil,
@@ -62,11 +64,9 @@ const controleur = new AbortController();
 const pushPossible = computed(
   () => pushPrisEnCharge() && cleVapid.value !== null,
 );
-const LIBELLES_FREQUENCE = {
-  hebdomadaire: "Un récapitulatif chaque dimanche à 10h.",
-  quotidien: "Un récapitulatif chaque jour à 8h.",
-  temps_reel: "Un message à chaque nouveau concert.",
-};
+const LIBELLES_FREQUENCE = Object.fromEntries(
+  FREQUENCES.map((f) => [f.valeur, f.resume]),
+);
 const libelleFrequence = computed(() =>
   config.value?.notifArtistes
     ? (LIBELLES_FREQUENCE[config.value.frequenceNotifications] ?? "")

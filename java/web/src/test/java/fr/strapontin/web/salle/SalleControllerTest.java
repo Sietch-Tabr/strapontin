@@ -5,12 +5,16 @@
 package fr.strapontin.web.salle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.ErreurMetier;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import java.util.List;
@@ -46,7 +50,9 @@ class SalleControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = new SalleController(salleService, emailService);
+    controller =
+        new SalleController(
+            salleService, emailService, new BudgetRecherchesExternes(mock(LogAdminService.class)));
     final UtilisateurDetails ud =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     auth = mock(Authentication.class);
@@ -116,5 +122,17 @@ class SalleControllerTest {
 
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(salleService).supprimer("user-1", salleId);
+  }
+
+  @Test
+  void listerSalles_rechercheTropFrequente_leveErreur429() {
+    for (int i = 0; i < 15; i++) {
+      controller.listerSalles("zenith", auth);
+    }
+
+    final ErreurMetier erreur =
+        assertThrows(ErreurMetier.class, () -> controller.listerSalles("zenith", auth));
+
+    assertEquals(429, erreur.getStatus());
   }
 }

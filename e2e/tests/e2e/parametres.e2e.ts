@@ -33,6 +33,83 @@ test.describe("Scénario: paramètres — sections", () => {
   });
 });
 
+test.describe("Scénario: paramètres — boutons de formulaire", () => {
+  // Un bouton de formulaire garde la largeur de son libellé : il ne s'étire pas sur celle du
+  // formulaire (28 rem), sauf `bouton-pleine-largeur`.
+  for (const section of ["preferences", "compte", "donnees"]) {
+    test(`parametres_${section}_boutonsDeFormulaire_gardentLaLargeurDeLeurLibelle`, async ({
+      page,
+    }) => {
+      await page.goto(`/parametres#${section}`);
+      await expect(page.locator(`section#${section}`)).toBeVisible();
+      const formulaires = page.locator(`section#${section} form.form-vertical`);
+      // Le contenu de la section se charge après son apparition : on attend le premier formulaire
+      // avant de compter, sinon le décompte lit une section encore vide.
+      await expect(formulaires.first()).toBeVisible();
+      const nombre = await formulaires.count();
+      expect(nombre).toBeGreaterThan(0);
+      for (let i = 0; i < nombre; i++) {
+        const formulaire = formulaires.nth(i);
+        const largeurFormulaire = (await formulaire.boundingBox())!.width;
+        const boutons = formulaire.locator(
+          ":scope > button.bouton:not(.bouton-pleine-largeur)",
+        );
+        for (let j = 0; j < (await boutons.count()); j++) {
+          const largeurBouton = (await boutons.nth(j).boundingBox())!.width;
+          expect(largeurBouton).toBeLessThan(largeurFormulaire * 0.8);
+        }
+      }
+    });
+  }
+
+  test("parametres_compte_champCodeTotp_proportionneAuCode", async ({
+    page,
+  }) => {
+    await page.goto("/parametres#compte");
+    const champ = page.locator("input#totp-desact-code");
+    // Le compte de test n'a le TOTP actif que pendant certains scénarios.
+    if ((await champ.count()) === 0) test.skip();
+    expect((await champ.boundingBox())!.width).toBeLessThan(200);
+    await expect(champ).not.toHaveAttribute("placeholder", /.+/);
+    await expect(page.locator("#aide-totp-desact")).toContainText(
+      "application d'authentification",
+    );
+  });
+});
+
+test.describe("Scénario: paramètres — Données, libellés et mode d'import", () => {
+  test("parametres_donnees_export_sIntituleTelecharger", async ({ page }) => {
+    await page.goto("/parametres#donnees");
+    await expect(
+      page.getByRole("link", { name: "Télécharger", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator("section#donnees")).not.toContainText(
+      "Fichier JSON",
+    );
+    await expect(page.locator("section#donnees")).not.toContainText("Écraser");
+  });
+
+  // Les deux modes sont visibles en même temps, chacun avec son effet ; le remplacement, qui
+  // supprime des données, est signalé avant l'import.
+  test("parametres_donnees_modeImport_boutonsBasculeAvecExplications", async ({
+    page,
+  }) => {
+    await page.goto("/parametres#donnees");
+    const groupe = page.getByRole("group", { name: "Mode d'import" });
+    const fusionner = groupe.getByRole("button", { name: "Fusionner" });
+    const remplacer = groupe.getByRole("button", { name: "Remplacer" });
+    await expect(fusionner).toHaveAttribute("aria-pressed", "true");
+    await expect(remplacer).toHaveAttribute("aria-pressed", "false");
+    await expect(groupe).toContainText("Ajoute les artistes et salles");
+    await expect(groupe).toContainText(
+      "Attention : remplace tous vos artistes",
+    );
+    await remplacer.click();
+    await expect(remplacer).toHaveAttribute("aria-pressed", "true");
+    await expect(fusionner).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
 test.describe("Scénario: navigation SPA vers paramètres", () => {
   test("accueil_vers_parametres_desktop_affiche_page", async ({
     page,
@@ -525,88 +602,198 @@ test.describe("Scénario: API compte — mot de passe", () => {
   });
 });
 
-test.describe("Scénario: notifications push sans appareil abonné", () => {
-  // Push activés, aucun appareil abonné : l'utilisateur ne reçoit rien sans le savoir.
-  test("notifications_pushSansAppareil_afficheUnAvertissement", async ({
-    page,
-  }) => {
-    await page.route("**/api/push/abonnements", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: "[]",
-      }),
-    );
-    await page.route("**/api/push", (route) =>
-      route.request().method() === "GET"
-        ? route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ disponible: true, clePublique: "cle" }),
-          })
-        : route.continue(),
-    );
-    // Fréquence et cases réelles servies par la configuration : sans clé Resend
-    // (dev), les boutons de fréquence sont désactivés et ne se cochent pas.
-    await page.route("**/api/user/config", async (route) => {
-      if (route.request().method() !== "GET") {
-        return route.continue();
-      }
-      const reponse = await route.fetch();
-      const config = await reponse.json();
-      return route.fulfill({
-        response: reponse,
-        json: {
-          ...config,
-          resendDisponible: true,
-          frequenceNotifications: "quotidien",
-          notifArtistesPush: true,
+// Configuration servie telle quelle, sauf les préférences de notification du scénario : sans clé
+// Resend (dev), la case Email serait désactivée.
+async function servirConfigNotifications(
+  page: import("@playwright/test").Page,
+  surcharges: Record<string, unknown>,
+) {
+  await page.route("**/api/user/config", async (route) => {
+    if (route.request().method() !== "GET") {
+      return route.continue();
+    }
+    const reponse = await route.fetch();
+    const config = await reponse.json();
+    return route.fulfill({
+      response: reponse,
+      json: { ...config, resendDisponible: true, ...surcharges },
+    });
+  });
+}
+
+async function servirPush(
+  page: import("@playwright/test").Page,
+  abonnements: unknown[],
+) {
+  // Le dev est servi en HTTP sur une IP privée, contexte non sécurisé où le navigateur
+  // n'expose ni service worker ni push : la section push ne s'affiche qu'avec cette émulation.
+  await page.addInitScript(() => {
+    if (!("serviceWorker" in navigator)) {
+      Object.defineProperty(navigator, "serviceWorker", {
+        configurable: true,
+        value: {
+          register: () => Promise.resolve(),
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          ready: Promise.resolve({
+            pushManager: { getSubscription: () => Promise.resolve(null) },
+          }),
         },
       });
+    }
+    if (!("PushManager" in window)) {
+      Object.defineProperty(window, "PushManager", {
+        configurable: true,
+        value: class {},
+      });
+    }
+    // En contexte non sécurisé la permission réelle est « denied » : on la force à « default ».
+    if (!("Notification" in window)) {
+      Object.defineProperty(window, "Notification", {
+        configurable: true,
+        value: {},
+      });
+    }
+    Object.defineProperty(window.Notification, "permission", {
+      configurable: true,
+      get: () => "default",
+    });
+  });
+  await page.route("**/api/push/abonnements", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(abonnements),
+    }),
+  );
+  await page.route("**/api/push", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ disponible: true, clePublique: "cle" }),
+        })
+      : route.continue(),
+  );
+}
+
+test.describe("Scénario: notifications par canal", () => {
+  // Sans appareil abonné, le canal push est décoché et ses cases ne se cochent pas : l'utilisateur
+  // ne croit pas recevoir ce qu'il ne recevra pas.
+  test("notifications_sansAppareil_canalPushDecocheEtCasesDesactivees", async ({
+    page,
+  }) => {
+    await servirPush(page, []);
+    await servirConfigNotifications(page, {
+      frequenceNotifications: "quotidien",
+      notifArtistes: true,
+      notifArtistesPush: false,
+      notifSallesPush: false,
     });
     await page.goto("/parametres#notifications");
     const section = page.locator("section#notifications");
     await expect(section).toBeVisible();
 
     await expect(
-      section.getByText("Aucun appareil n'est abonné aux notifications push"),
+      section.getByText("Aucun appareil n'est abonné"),
     ).toBeVisible();
+    await expect(
+      section.getByRole("checkbox", {
+        name: "Recevoir les notifications push",
+      }),
+    ).not.toBeChecked();
+    await expect(
+      section
+        .getByRole("checkbox", { name: "Concerts des artistes suivis" })
+        .nth(1),
+    ).toBeDisabled();
   });
-});
 
-test.describe("Scénario: fréquence « jamais » et canaux push", () => {
-  test("notifications_frequenceJamais_decochePushDuFormulaire", async ({
+  test("notifications_frequenceJamais_decocheEtDesactiveLesDeuxCanaux", async ({
     page,
   }) => {
-    await page.route("**/api/user/config", async (route) => {
-      if (route.request().method() !== "GET") {
-        return route.continue();
-      }
-      const reponse = await route.fetch();
-      const config = await reponse.json();
-      return route.fulfill({
-        response: reponse,
-        json: {
-          ...config,
-          resendDisponible: true,
-          frequenceNotifications: "quotidien",
-          notifArtistes: true,
-          notifArtistesPush: true,
-          notifSallesPush: true,
-        },
-      });
+    await servirPush(page, [
+      {
+        endpoint: "https://fcm.googleapis.com/fcm/send/autre-appareil",
+        creeLe: "2026-10-01T10:00:00Z",
+        appareil: "Firefox sur Linux",
+        enEchecDepuis: null,
+        cause: null,
+      },
+    ]);
+    await servirConfigNotifications(page, {
+      frequenceNotifications: "quotidien",
+      notifArtistes: true,
+      notifArtistesPush: true,
+      notifSallesPush: true,
     });
     await page.goto("/parametres#notifications");
     const section = page.locator("section#notifications");
     await expect(section).toBeVisible();
-    const pushArtistes = section.getByLabel("Push — artistes suivis");
-    const pushSalles = section.getByLabel("Push — salles suivies");
+    const emailArtistes = section
+      .getByRole("checkbox", { name: "Concerts des artistes suivis" })
+      .nth(0);
+    const pushArtistes = section
+      .getByRole("checkbox", { name: "Concerts des artistes suivis" })
+      .nth(1);
+    await expect(emailArtistes).toBeChecked();
     await expect(pushArtistes).toBeChecked();
 
     await section.getByRole("radio", { name: "Jamais" }).check();
 
+    await expect(emailArtistes).not.toBeChecked();
     await expect(pushArtistes).not.toBeChecked();
-    await expect(pushSalles).not.toBeChecked();
+    await expect(
+      section.getByRole("checkbox", {
+        name: "Recevoir les notifications push",
+      }),
+    ).not.toBeChecked();
+  });
+
+  test("notifications_recapitulatifsAnnoncesAMidi", async ({ page }) => {
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+    await expect(
+      section.getByRole("radio", { name: "Récapitulatif quotidien (12h)" }),
+    ).toBeVisible();
+    await expect(
+      section.getByRole("radio", {
+        name: "Récapitulatif hebdomadaire (dimanche 12h)",
+      }),
+    ).toBeVisible();
+    await expect(
+      section.getByText("entre 22h et 7h", { exact: false }),
+    ).toBeVisible();
+  });
+
+  // Un appareil dont les envois sont refusés est visible dès le premier refus, avec sa cause.
+  test("notifications_appareilEnEchec_afficheLeRefusEtSaCause", async ({
+    page,
+  }) => {
+    await servirPush(page, [
+      {
+        endpoint: "https://fcm.googleapis.com/fcm/send/appareil-en-echec",
+        creeLe: "2026-10-01T10:00:00Z",
+        appareil: "Chrome sur Android",
+        enEchecDepuis: "2026-10-16T09:00:00Z",
+        cause:
+          "le service de notification de votre navigateur a refusé les notifications à plusieurs reprises",
+      },
+    ]);
+    await servirConfigNotifications(page, {
+      frequenceNotifications: "quotidien",
+    });
+    await page.goto("/parametres#notifications");
+    const section = page.locator("section#notifications");
+
+    await expect(section.getByText("Chrome sur Android")).toBeVisible();
+    await expect(section.getByText("Envois refusés")).toBeVisible();
+    await expect(
+      section.getByText("a refusé les notifications", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      section.getByRole("button", { name: "Révoquer" }),
+    ).toBeVisible();
   });
 });
 
@@ -677,7 +864,10 @@ test.describe("Scénario: champ identifiant — pattern HTML", () => {
     const identTmp = `e2e.ui-${Date.now()}`.slice(0, 30);
     try {
       await page.locator("input#identifiant").fill(identTmp);
-      await page.locator("form.form-inline button[type='submit']").click();
+      await page
+        .locator("form", { has: page.locator("input#identifiant") })
+        .locator("button[type='submit']")
+        .click();
       await expect(
         page
           .locator(".alerte-succes")

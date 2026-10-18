@@ -10,6 +10,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.utilisateur.UserController;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +33,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class TotpEnrollmentController {
 
   private static final String SESSION_TOTP_SETUP = "TOTP_SECRET_SETUP";
+  private static final int MAX_ECHECS_DESACTIVATION = 5;
+  private static final Duration FENETRE_ECHECS_DESACTIVATION = Duration.ofMinutes(15);
 
   private final TotpService totpService;
   private final UserController userController;
   private final LogAdminService logAdminService;
+  // Une session déjà ouverte (volée, par exemple) ne doit pas pouvoir deviner le
+  // code TOTP.
+  private final LimiteurDebit echecsDesactivation =
+      new LimiteurDebit(
+          MAX_ECHECS_DESACTIVATION,
+          FENETRE_ECHECS_DESACTIVATION,
+          FENETRE_ECHECS_DESACTIVATION.plusMinutes(5),
+          10_000);
 
   /**
    * @param totpService service TOTP (génération, vérification)
@@ -123,17 +134,29 @@ public class TotpEnrollmentController {
    *
    * @param corps corps JSON avec {@code code} (6 chiffres)
    * @param auth contexte d'authentification
-   * @return 200 {@code {succes: true}} ou 400 {@code {erreur: "..."}}
+   * @return 200 {@code {succes: true}}, 400 {@code {erreur: "..."}}, ou 429
+   *     après 5 codes incorrects en 15 minutes
    */
   @PostMapping("/desactiver")
   public ResponseEntity<Map<String, Object>> desactiver(
       @Valid @RequestBody final TotpChallengeRequest corps, final Authentication auth) {
     final UtilisateurDetails details = (UtilisateurDetails) auth.getPrincipal();
+    if (echecsDesactivation.estEpuise(details.id())) {
+      return erreur(429, "Trop de tentatives. Réessayez dans quelques minutes.");
+    }
     final String secret = userController.lireSecretTotp(details.id());
 
     if (!totpService.verifierCode(secret, corps.code())) {
+      if (echecsDesactivation.enregistrer(details.id())) {
+        logAdminService.logAdmin(
+            "warn",
+            "auth",
+            "Désactivation du TOTP bloquée après échecs répétés : " + details.identifiant(),
+            Map.of("userId", details.id()));
+      }
       return erreur(400, "Code TOTP incorrect.");
     }
+    echecsDesactivation.oublier(details.id());
 
     userController.desactiverTotp(details.id());
     logAdminService.logAdmin(

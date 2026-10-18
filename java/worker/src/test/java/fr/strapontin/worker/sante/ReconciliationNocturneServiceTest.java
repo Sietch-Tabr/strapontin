@@ -93,7 +93,9 @@ class ReconciliationNocturneServiceTest {
             suggestionMotsGenerics,
             controleIntegrite,
             new HealthCheckArtistesTM(jdbc, tm, logsAdminWorker),
-            new HealthCheckSallesTM(jdbc, tm, logsAdminWorker));
+            new HealthCheckSallesTM(jdbc, tm, logsAdminWorker),
+            mock(CompleteurVillesSalles.class),
+            mock(CouvertureDepartements.class));
   }
 
   private static Map<String, Object> ligneSalleSuspecte(

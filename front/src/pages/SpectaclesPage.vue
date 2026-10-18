@@ -2,13 +2,17 @@
   <div>
     <div class="page-entete">
       <h1>Mes spectacles</h1>
-      <p v-if="donnees" class="page-sous-titre">
-        {{ donnees.totalConcerts }} concert{{
-          donnees.totalConcerts !== 1 ? "s" : ""
-        }}
-        à venir
+      <p class="page-sous-titre">
+        Tous les concerts à venir de vos artistes et de vos salles, à filtrer
+        par source, période ou état.
       </p>
     </div>
+    <p v-if="donnees" class="texte-secondaire" role="status">
+      {{ donnees.totalConcerts }} concert{{
+        donnees.totalConcerts !== 1 ? "s" : ""
+      }}
+      à venir
+    </p>
 
     <div class="chips">
       <a

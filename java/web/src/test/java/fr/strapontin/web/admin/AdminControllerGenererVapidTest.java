@@ -44,20 +44,26 @@ class AdminControllerGenererVapidTest {
 
   @Test
   void genererVapid_succes_exposeClePubliqueEtNbAbonnementsSupprimes() throws Exception {
-    when(vapidService.genererVapid()).thenReturn(new VapidService.ResultatVapid("cle-pub", 3));
+    when(vapidService.genererVapid("Fuite de la clé privée"))
+        .thenReturn(new VapidService.ResultatVapid("cle-pub", 3, 2, 1));
 
-    final ResponseEntity<Map<String, Object>> reponse = controller.genererVapid();
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.genererVapid(new RequeteVapid("Fuite de la clé privée"));
 
     assertEquals(200, reponse.getStatusCode().value());
     assertEquals("cle-pub", reponse.getBody().get("clePublique"));
     assertEquals(3, reponse.getBody().get("nbAbonnementsSupprimes"));
+    assertEquals(2, reponse.getBody().get("nbComptesPrevenus"));
+    assertEquals(1, reponse.getBody().get("nbComptesNonPrevenus"));
   }
 
   @Test
   void genererVapid_exceptionService_retourne500() throws Exception {
-    when(vapidService.genererVapid()).thenThrow(new RuntimeException("erreur génération clé"));
+    when(vapidService.genererVapid("Fuite de la clé privée"))
+        .thenThrow(new RuntimeException("erreur génération clé"));
 
-    final ResponseEntity<Map<String, Object>> reponse = controller.genererVapid();
+    final ResponseEntity<Map<String, Object>> reponse =
+        controller.genererVapid(new RequeteVapid("Fuite de la clé privée"));
 
     assertEquals(500, reponse.getStatusCode().value());
   }

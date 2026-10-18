@@ -44,13 +44,43 @@ class ReferentielSallesControllerTest {
         .thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
 
     final ResponseEntity<ReponseReferentielSalles> reponse =
-        controller.lister(0, "Zenith", null, null, null, false);
+        controller.lister(
+            new CriteresListeSalles(0, "Zenith", null, null, null, false, null, false));
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service)
         .lister(
             new ReferentielSallesService.FiltresRechercheSalles(
                 0, "Zenith", null, null, null, false));
+  }
+
+  @Test
+  void lister_idsFournis_lesTransmetAuService() {
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
+    final var filtres =
+        new ReferentielSallesService.FiltresRechercheSalles(
+            0, null, null, null, null, false, List.of(a, b));
+    when(service.lister(filtres)).thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
+
+    final var reponse =
+        controller.lister(
+            new CriteresListeSalles(
+                0, null, null, null, null, false, List.of(a.toString(), b.toString()), false));
+
+    assertEquals(200, reponse.getStatusCode().value());
+    verify(service).lister(filtres);
+  }
+
+  @Test
+  void lister_idInvalide_retourne400SansInterrogerLeService() {
+    final var reponse =
+        controller.lister(
+            new CriteresListeSalles(
+                0, null, null, null, null, false, List.of("pas-un-uuid"), false));
+
+    assertEquals(400, reponse.getStatusCode().value());
+    verify(service, never()).lister(any());
   }
 
   @Test
@@ -155,5 +185,51 @@ class ReferentielSallesControllerTest {
         controller.fusionner(source.toString(), cible.toString());
 
     assertEquals(200, reponse.getStatusCode().value());
+  }
+
+  // La liaison des paramètres de requête au record (valeurs absentes, liste séparée par des
+  // virgules) ne se voit pas en appelant la méthode directement.
+  @Test
+  void lister_parametresDeRequete_sontLiesAuxFiltres() throws Exception {
+    final UUID a = UUID.randomUUID();
+    final UUID b = UUID.randomUUID();
+    final var filtres =
+        new ReferentielSallesService.FiltresRechercheSalles(
+            2, "zenith", null, "75", null, true, List.of(a, b), true);
+    when(service.lister(filtres)).thenReturn(new ReponseReferentielSalles(List.of(), 2, 3, 120));
+
+    org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
+        .build()
+        .perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                    "/api/admin/salles")
+                .param("page", "2")
+                .param("nom", "zenith")
+                .param("dept", "75")
+                .param("wikidataManquant", "true")
+                .param("ids", a + "," + b)
+                .param("sansSource", "true"))
+        .andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+
+    verify(service).lister(filtres);
+  }
+
+  @Test
+  void lister_sansAucunParametre_appliqueLesDefauts() throws Exception {
+    final var defauts =
+        new ReferentielSallesService.FiltresRechercheSalles(
+            0, null, null, null, null, false, List.of(), false);
+    when(service.lister(defauts)).thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
+
+    org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
+        .build()
+        .perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                "/api/admin/salles"))
+        .andExpect(
+            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+
+    verify(service).lister(defauts);
   }
 }

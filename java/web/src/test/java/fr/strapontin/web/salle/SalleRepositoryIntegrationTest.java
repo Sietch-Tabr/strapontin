@@ -200,4 +200,31 @@ class SalleRepositoryIntegrationTest extends AbstractWebIntegrationTest {
 
     assertTrue(resultats.isEmpty());
   }
+
+  @Test
+  void listerPourUtilisateur_salleSansAucuneSource_neEstPasCouverte() {
+    jdbc.update("DELETE FROM user_salles", Map.of());
+    jdbc.update("DELETE FROM users WHERE id = 'u-couv'", Map.of());
+    jdbc.update(
+        "INSERT INTO users (id, username, email) VALUES ('u-couv', 'ucouv', 'c@t.fr')", Map.of());
+    final UUID couverte = creerSalle("zenith couverte");
+    final UUID nonCouverte = creerSalle("salle locale");
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'tm-couv')",
+        Map.of("id", couverte.toString()));
+    for (final UUID salle : List.of(couverte, nonCouverte)) {
+      jdbc.update(
+          "INSERT INTO user_salles (user_id, salle_id) VALUES ('u-couv', CAST(:id AS uuid))",
+          Map.of("id", salle.toString()));
+    }
+
+    final List<SalleUtilisateur> suivies = repository.listerPourUtilisateur("u-couv");
+
+    assertEquals(2, suivies.size());
+    assertTrue(suivies.stream().filter(s -> s.id().equals(couverte)).findFirst().get().couverte());
+    assertEquals(
+        false,
+        suivies.stream().filter(s -> s.id().equals(nonCouverte)).findFirst().get().couverte());
+  }
 }

@@ -8,6 +8,7 @@ import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -35,10 +36,16 @@ public class PasswordResetController {
 
   private static final Logger LOG = LoggerFactory.getLogger(PasswordResetController.class);
 
+  private static final int MAX_DEMANDES_PAR_ADRESSE = 3;
+
   private final AuthenticationManager authenticationManager;
   private final AuthService authService;
   private final ConfigService configService;
   private final LogAdminService logAdminService;
+  // Clé = adresse saisie, qu'elle corresponde ou non à un compte : le refus ne
+  // révèle rien.
+  private final LimiteurDebit demandesParAdresse =
+      new LimiteurDebit(MAX_DEMANDES_PAR_ADRESSE, Duration.ofHours(1), Duration.ofHours(2), 10_000);
 
   /**
    * @param authenticationManager ouverture de session lors d'une activation
@@ -59,9 +66,8 @@ public class PasswordResetController {
 
   /**
    * Déclenche l'envoi d'un email de réinitialisation de mot de passe.
-   *
-   * <p>Retourne toujours 200 pour éviter l'énumération de comptes.
-   *
+   * Retourne toujours 200 pour éviter l'énumération de comptes ; au-delà de 3
+   * demandes par heure pour une même adresse, la demande est ignorée.
    * @param req le corps contenant l'adresse email
    * @return 200 dans tous les cas
    */
@@ -71,9 +77,12 @@ public class PasswordResetController {
     if (req.email() != null && !req.email().isBlank()) {
       resoudreBaseUrl()
           .ifPresentOrElse(
-              baseUrl ->
-                  authService.motDePasseOublie(
-                      req.email().strip().toLowerCase(Locale.ROOT), baseUrl),
+              baseUrl -> {
+                final String email = req.email().strip().toLowerCase(Locale.ROOT);
+                if (demandesParAdresse.autoriser(email)) {
+                  authService.motDePasseOublie(email, baseUrl);
+                }
+              },
               () ->
                   logAdminService.logAdmin(
                       "error",

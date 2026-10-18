@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -53,17 +54,21 @@ public class PushController {
   }
 
   /**
-   * Enregistre un nouvel abonnement push.
-   *
+   * Enregistre un nouvel abonnement push (201 ; 400/429 si invalide ou cap).
    * @param requete corps JSON avec endpoint et clés
    * @param auth contexte d'authentification
-   * @return 201 si créé — 400/429 si invalide/cap (via
-   *     {@link GlobalExceptionHandler} )
+   * @param userAgent navigateur de l'appareil, pour le nommer dans la liste
+   * @return 201 si créé
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
-      @Valid @RequestBody final RequeteAbonnement requete, final Authentication auth) {
-    pushService.abonner(((UtilisateurDetails) auth.getPrincipal()).id(), requete);
+      @Valid @RequestBody final RequeteAbonnement requete,
+      final Authentication auth,
+      @RequestHeader(value = "User-Agent", required = false) final String userAgent) {
+    pushService.abonner(
+        ((UtilisateurDetails) auth.getPrincipal()).id(),
+        requete,
+        LibelleAppareil.depuisUserAgent(userAgent));
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
 

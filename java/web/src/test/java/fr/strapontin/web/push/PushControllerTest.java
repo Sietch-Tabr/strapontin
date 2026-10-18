@@ -70,11 +70,15 @@ class PushControllerTest {
     final RequeteAbonnement requete =
         new RequeteAbonnement("https://push.exemple/abc", new ClesAbonnement("p256dh", "auth"));
 
-    final ResponseEntity<Map<String, Object>> rep = controller.abonner(requete, auth);
+    final ResponseEntity<Map<String, Object>> rep =
+        controller.abonner(
+            requete,
+            auth,
+            "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0");
 
     assertEquals(HttpStatus.CREATED, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("ok"));
-    verify(pushService).abonner("user-1", requete);
+    verify(pushService).abonner("user-1", requete, "Firefox sur Linux");
   }
 
   @Test
@@ -84,11 +88,11 @@ class PushControllerTest {
         new RequeteAbonnement("https://push.exemple/abc", new ClesAbonnement("p256dh", "auth"));
     doThrow(new ErreurMetier("Cap d'abonnements atteint.", 429))
         .when(pushService)
-        .abonner(anyString(), any());
+        .abonner(anyString(), any(), any());
 
     final ErreurMetier e =
         org.junit.jupiter.api.Assertions.assertThrows(
-            ErreurMetier.class, () -> controller.abonner(requete, auth));
+            ErreurMetier.class, () -> controller.abonner(requete, auth, null));
     assertEquals(429, e.getStatus());
   }
 

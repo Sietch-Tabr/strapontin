@@ -14,12 +14,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
 import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -82,7 +84,7 @@ public class NotificationPushService {
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload));
+      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
     } catch (Exception e) {
       return compterEchec(ab, userId, null, e.getMessage());
     }
@@ -113,7 +115,9 @@ public class NotificationPushService {
     final String raison = EchecPush.raison(status, corps);
     final Integer echecs =
         jdbc.queryForObject(
-            EchecPush.SQL_INCREMENTER_ECHECS, Map.of(CLE_ID, ab.get(CLE_ID)), Integer.class);
+            EchecPush.SQL_INCREMENTER_ECHECS,
+            new MapSqlParameterSource().addValue(CLE_ID, ab.get(CLE_ID)).addValue("statut", status),
+            Integer.class);
     if (EchecPush.seuilAtteint(echecs)) {
       supprimerAbonnement(
           ab,

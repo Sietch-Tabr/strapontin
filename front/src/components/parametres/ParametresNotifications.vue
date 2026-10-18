@@ -4,183 +4,192 @@
 
     <EtatChargement v-if="chargement" />
     <template v-else>
-      <div class="param-bloc">
-        <h3 class="param-libelle">Notifications email</h3>
-        <form class="form-vertical" @submit.prevent="sauvegarderNotifications">
-          <fieldset class="form-checkboxes" :disabled="!resendDisponible">
-            <legend class="form-label">Fréquence des emails</legend>
-            <label class="notif-radio">
-              <input
-                v-model="frequenceNotifications"
-                type="radio"
-                value="jamais"
-              />
-              <span>Jamais</span>
-            </label>
-            <label class="notif-radio">
-              <input
-                v-model="frequenceNotifications"
-                type="radio"
-                value="quotidien"
-              />
-              <span>Récapitulatif quotidien (8h)</span>
-            </label>
-            <label class="notif-radio">
-              <input
-                v-model="frequenceNotifications"
-                type="radio"
-                value="hebdomadaire"
-              />
-              <span>Récapitulatif hebdomadaire (dimanche 10h)</span>
-            </label>
-            <label class="notif-radio">
-              <input
-                v-model="frequenceNotifications"
-                type="radio"
-                value="temps_reel"
-              />
-              <span>À chaque nouveau concert</span>
-            </label>
-            <p v-if="!resendDisponible" class="form-aide">
-              Les emails ne sont pas disponibles (clé Resend non configurée).
+      <form class="form-vertical" @submit.prevent="sauvegarderNotifications">
+        <div class="param-bloc">
+          <fieldset class="form-checkboxes">
+            <legend class="form-label">Fréquence</legend>
+            <p class="param-aide">
+              Elle s'applique à l'email comme au push. {{ PLAGE_SILENCIEUSE }}
             </p>
+            <label
+              v-for="option in FREQUENCES"
+              :key="option.valeur"
+              class="notif-radio"
+            >
+              <input v-model="frequence" type="radio" :value="option.valeur" />
+              <span>{{ option.libelle }}</span>
+            </label>
           </fieldset>
+        </div>
 
-          <fieldset class="notif-grille">
-            <legend class="form-label">Concerts à notifier</legend>
-            <div class="notif-grille__entete texte-discret" aria-hidden="true">
-              <span></span>
-              <span>Email</span>
-              <span>Push</span>
-            </div>
-            <div class="notif-grille__ligne">
-              <span class="notif-grille__libelle">Artistes suivis</span>
-              <label class="case-grille notif-grille__case">
-                <span class="lecteur-ecran">Email — artistes suivis</span>
-                <input
-                  v-model="notifArtistes"
-                  type="checkbox"
-                  :disabled="!resendDisponible"
-                />
-              </label>
-              <label class="case-grille notif-grille__case">
-                <span class="lecteur-ecran">Push — artistes suivis</span>
-                <input v-model="notifArtistesPush" type="checkbox" />
-              </label>
-            </div>
-            <div class="notif-grille__ligne">
-              <span class="notif-grille__libelle">Salles suivies</span>
-              <label class="case-grille notif-grille__case">
-                <span class="lecteur-ecran">Email — salles suivies</span>
-                <input
-                  v-model="notifSalles"
-                  type="checkbox"
-                  :disabled="!resendDisponible"
-                />
-              </label>
-              <label class="case-grille notif-grille__case">
-                <span class="lecteur-ecran">Push — salles suivies</span>
-                <input v-model="notifSallesPush" type="checkbox" />
-              </label>
-            </div>
-            <div class="notif-grille__ligne">
-              <span class="notif-grille__libelle"
-                >Nouvelle version de l'application</span
-              >
-              <span></span>
-              <label class="case-grille notif-grille__case">
-                <span class="lecteur-ecran"
-                  >Push — nouvelle version de l'application</span
-                >
-                <input v-model="notifNouvelleVersion" type="checkbox" />
-              </label>
-            </div>
-          </fieldset>
-
-          <p v-if="pushSansAppareil" class="alerte alerte-avertissement">
-            Aucun appareil n'est abonné aux notifications push : celles de vos
-            artistes et salles ne vous parviennent pas. Activez-les ci-dessous
-            sur au moins un appareil.
+        <div class="param-bloc">
+          <h3 class="param-libelle">Email</h3>
+          <div class="form-checkboxes">
+            <label>
+              <input
+                v-model="canalEmail"
+                type="checkbox"
+                :disabled="!resendDisponible"
+              />
+              <span>Recevoir les notifications par email</span>
+            </label>
+          </div>
+          <p v-if="!resendDisponible" class="param-aide">
+            Les emails ne sont pas disponibles pour le moment.
           </p>
+          <div class="form-checkboxes notif-contenus">
+            <label>
+              <input
+                v-model="notifArtistes"
+                type="checkbox"
+                :disabled="!canalEmail"
+              />
+              <span>Concerts des artistes suivis</span>
+            </label>
+            <label>
+              <input
+                v-model="notifSalles"
+                type="checkbox"
+                :disabled="!canalEmail"
+              />
+              <span>Concerts des salles suivies</span>
+            </label>
+          </div>
+        </div>
 
-          <button type="submit" class="bouton bouton-primaire">
-            Enregistrer
-          </button>
-        </form>
-      </div>
-
-      <div v-if="pushSupporte" class="param-bloc param-bloc-push">
-        <h3 class="param-libelle">Notifications push</h3>
-        <div v-if="!vapidDisponible">
-          <p class="param-aide">
+        <div v-if="pushSupporte" class="param-bloc">
+          <h3 class="param-libelle">Push</h3>
+          <p v-if="!vapidDisponible" class="param-aide">
             Les notifications push ne sont pas configurées (clé VAPID manquante
             dans la configuration admin).
           </p>
-        </div>
-        <div v-else-if="pushPermission === 'denied'">
-          <p class="param-aide">
+          <p v-else-if="pushPermission === 'denied'" class="param-aide">
             Les notifications sont bloquées dans votre navigateur. Pour les
             activer, modifiez les permissions du site dans les paramètres de
             votre navigateur.
           </p>
+          <template v-else>
+            <div class="form-checkboxes">
+              <label>
+                <input
+                  type="checkbox"
+                  :checked="canalPush"
+                  :disabled="pushEnCours"
+                  @change="basculerPush($event)"
+                />
+                <span>Recevoir les notifications push</span>
+              </label>
+            </div>
+            <p v-if="nbAppareilsAbonnes === 0" class="param-aide">
+              Aucun appareil n'est abonné : en cochant, vous activez les
+              notifications sur cet appareil.
+            </p>
+            <div class="form-checkboxes notif-contenus">
+              <label>
+                <input
+                  v-model="notifArtistesPush"
+                  type="checkbox"
+                  :disabled="!canalPush"
+                />
+                <span>Concerts des artistes suivis</span>
+              </label>
+              <label>
+                <input
+                  v-model="notifSallesPush"
+                  type="checkbox"
+                  :disabled="!canalPush"
+                />
+                <span>Concerts des salles suivies</span>
+              </label>
+              <label>
+                <input
+                  v-model="notifNouvelleVersion"
+                  type="checkbox"
+                  :disabled="!canalPush"
+                />
+                <span>Nouvelle version de l'application</span>
+              </label>
+            </div>
+            <p v-if="messagePush" class="alerte alerte-info" role="status">
+              {{ messagePush }}
+            </p>
+          </template>
         </div>
-        <div v-else-if="pushNonEnregistre">
-          <p class="param-aide">
-            Cet appareil n'est plus enregistré pour les notifications push : il
-            ne les reçoit plus. Réactivez-les pour l'enregistrer à nouveau.
-          </p>
+
+        <button type="submit" class="bouton bouton-primaire">
+          Enregistrer
+        </button>
+      </form>
+
+      <div v-if="pushSupporte && vapidDisponible" class="param-bloc">
+        <h3 class="param-libelle">Appareils avec notifications push</h3>
+        <ul class="liste-appareils">
+          <li
+            v-for="abonnement in abonnements"
+            :key="abonnement.endpoint"
+            class="ligne-appareil"
+          >
+            <span class="appareil-info">
+              <span>
+                {{ abonnement.appareil || "Appareil inconnu" }}
+                <span
+                  v-if="abonnement.endpoint === endpointNavigateur"
+                  class="badge badge-nouveau"
+                  >Cet appareil</span
+                >
+                <span
+                  v-if="abonnement.enEchecDepuis"
+                  class="badge badge-avertissement"
+                  >Envois refusés</span
+                >
+              </span>
+              <span class="param-aide"
+                >Abonné depuis le
+                {{ formaterDateHeure(abonnement.creeLe) }}</span
+              >
+              <span v-if="abonnement.enEchecDepuis" class="param-aide">
+                Dernier envoi refusé le
+                {{ formaterDateHeure(abonnement.enEchecDepuis) }} :
+                {{ abonnement.cause }}.
+              </span>
+            </span>
+            <button
+              type="button"
+              class="bouton bouton-danger bouton-petit"
+              @click="revoquerAppareil(abonnement)"
+            >
+              Révoquer
+            </button>
+          </li>
+          <li v-if="abonnements.length === 0" class="param-aide">
+            Aucun appareil abonné aux notifications push.
+          </li>
+        </ul>
+        <div class="param-actions">
           <button
+            v-if="
+              pushNonEnregistre || (!pushAbonne && pushPermission !== 'denied')
+            "
             type="button"
             class="bouton bouton-secondaire"
-            :disabled="pushEnCours || frequenceNotifications === 'jamais'"
-            @click="abonnerPush"
+            :disabled="pushEnCours"
+            @click="activerSurCetAppareil"
           >
-            Réactiver les notifications push
+            Activer sur cet appareil
           </button>
-        </div>
-        <div v-else-if="pushAbonne">
-          <p class="param-aide">
-            Les notifications push sont activées sur cet appareil.
-          </p>
-          <div class="param-actions">
-            <button
-              type="button"
-              class="bouton bouton-secondaire bouton-petit"
-              :disabled="testEnCours"
-              @click="testerPush"
-            >
-              Envoyer une notification de test
-            </button>
-            <button
-              type="button"
-              class="bouton bouton-secondaire"
-              :disabled="pushEnCours"
-              @click="desabonnerPush"
-            >
-              Désactiver les notifications push
-            </button>
-          </div>
-        </div>
-        <div v-else>
-          <p class="param-aide">
-            Recevez une notification sur cet appareil dès qu'un nouveau concert
-            correspond à vos préférences.
-          </p>
-          <p v-if="frequenceNotifications === 'jamais'" class="param-aide">
-            Activez d'abord une fréquence de notification ci-dessus — sur
-            "Jamais", aucune notification push ne serait envoyée.
-          </p>
           <button
+            v-if="pushAbonne"
             type="button"
             class="bouton bouton-secondaire"
-            :disabled="pushEnCours || frequenceNotifications === 'jamais'"
-            @click="abonnerPush"
+            :disabled="testEnCours"
+            @click="testerPush"
           >
-            Activer les notifications push
+            Envoyer une notification de test
           </button>
         </div>
       </div>
     </template>
+    <DialogueConfirmation ref="dialogueConfirmation" />
   </section>
 </template>
 
@@ -190,82 +199,110 @@ defineOptions({ name: "ParametresNotifications" });
 
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useToasts } from "../../composables/useToasts.js";
+import DialogueConfirmation from "../DialogueConfirmation.vue";
 import EtatChargement from "../EtatChargement.vue";
+import { FREQUENCES, PLAGE_SILENCIEUSE } from "../../utils/notifications.js";
 import {
   abonnerAppareil,
-  lireEndpointsServeur,
   lireVapid,
   pushPrisEnCharge,
 } from "../../composables/useAbonnementPush.js";
 
 const { afficherToast } = useToasts();
 
+const dialogueConfirmation = ref(null);
 const chargement = ref(true);
 const resendDisponible = ref(false);
-const frequenceNotifications = ref("jamais");
+const frequence = ref("jamais");
 const notifArtistes = ref(false);
 const notifSalles = ref(false);
 const notifArtistesPush = ref(false);
 const notifSallesPush = ref(false);
+const notifNouvelleVersion = ref(false);
+// Dernières préférences enregistrées : la révocation du dernier appareil retire le push sans
+// enregistrer les autres modifications en cours dans le formulaire.
+let enregistrees = null;
 
-// Le serveur coupe le push avec « jamais » : le formulaire affiche le même état.
-watch(frequenceNotifications, (frequence) => {
-  if (frequence === "jamais") {
+// Un canal est actif dès qu'un de ses contenus est coché : « Jamais » ne sert aucun canal.
+const canalEmail = computed({
+  get: () => notifArtistes.value || notifSalles.value,
+  set: (actif) => {
+    notifArtistes.value = actif;
+    notifSalles.value = actif;
+    if (actif && frequence.value === "jamais") frequence.value = "hebdomadaire";
+  },
+});
+const canalPush = computed(
+  () => notifArtistesPush.value || notifSallesPush.value,
+);
+
+watch(frequence, (valeur) => {
+  if (valeur === "jamais") {
+    notifArtistes.value = false;
+    notifSalles.value = false;
     notifArtistesPush.value = false;
     notifSallesPush.value = false;
+    notifNouvelleVersion.value = false;
   }
 });
-const notifNouvelleVersion = ref(false);
 
 const pushSupporte = ref(false);
 const vapidDisponible = ref(false);
 const pushPermission = ref("default");
-// Abonnement du navigateur, et sa présence côté serveur : un appareil révoqué
-// par le serveur reste abonné dans le navigateur sans plus rien recevoir.
 const endpointNavigateur = ref(null);
-// Abonnements push du compte, tous appareils confondus (null : inconnu).
-const endpointsServeur = ref(null);
-const nbAppareilsAbonnes = computed(
-  () => endpointsServeur.value?.length ?? null,
-);
+// Appareils abonnés du compte, tous navigateurs confondus.
+const abonnements = ref([]);
+const nbAppareilsAbonnes = computed(() => abonnements.value.length);
 const pushAbonne = computed(
   () =>
     endpointNavigateur.value !== null &&
-    (endpointsServeur.value === null ||
-      endpointsServeur.value.includes(endpointNavigateur.value)),
+    abonnements.value.some((a) => a.endpoint === endpointNavigateur.value),
 );
 const pushNonEnregistre = computed(
   () => endpointNavigateur.value !== null && !pushAbonne.value,
 );
-const pushSansAppareil = computed(
-  () =>
-    nbAppareilsAbonnes.value === 0 &&
-    vapidDisponible.value &&
-    frequenceNotifications.value !== "jamais" &&
-    (notifArtistesPush.value || notifSallesPush.value),
-);
+const messagePush = ref("");
 const pushEnCours = ref(false);
 const testEnCours = ref(false);
 let swRegistration = null;
 let cleVapidPublique = null;
 const controleur = new AbortController();
 
+function formaterDateHeure(iso) {
+  return new Date(iso).toLocaleString("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+function instantane() {
+  return {
+    frequenceNotifications: frequence.value,
+    notifArtistes: notifArtistes.value,
+    notifSalles: notifSalles.value,
+    notifArtistesPush: notifArtistesPush.value,
+    notifSallesPush: notifSallesPush.value,
+    notifNouvelleVersion: notifNouvelleVersion.value,
+  };
+}
+
 async function charger() {
   try {
     const [repConfig, vapid] = await Promise.all([
       appelApi("/api/user/config", { signal: controleur.signal }),
       lireVapid(controleur.signal),
-      compterAppareilsAbonnes(),
+      chargerAbonnements(),
     ]);
     if (repConfig.ok) {
       const config = await lireJson(repConfig);
       resendDisponible.value = config.resendDisponible ?? false;
-      frequenceNotifications.value = config.frequenceNotifications ?? "jamais";
+      frequence.value = config.frequenceNotifications ?? "jamais";
       notifArtistes.value = config.notifArtistes ?? false;
       notifSalles.value = config.notifSalles ?? false;
       notifArtistesPush.value = config.notifArtistesPush ?? false;
       notifSallesPush.value = config.notifSallesPush ?? false;
       notifNouvelleVersion.value = config.notifNouvelleVersion ?? false;
+      enregistrees = instantane();
     }
     vapidDisponible.value = vapid.disponible;
     cleVapidPublique = vapid.clePublique;
@@ -279,8 +316,17 @@ async function charger() {
   }
 }
 
-async function compterAppareilsAbonnes() {
-  endpointsServeur.value = await lireEndpointsServeur(controleur.signal);
+async function chargerAbonnements() {
+  try {
+    const rep = await appelApi("/api/push/abonnements", {
+      signal: controleur.signal,
+    });
+    if (rep.ok) abonnements.value = await lireJson(rep);
+  } catch (e) {
+    if (e.name !== "AbortError") {
+      afficherToast("Impossible de charger les appareils push.", "erreur");
+    }
+  }
 }
 
 async function initialiserPush() {
@@ -302,21 +348,20 @@ async function initialiserPush() {
   }
 }
 
+async function enregistrer(corps) {
+  const rep = await appelApi("/api/user/config/notifications", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corps),
+    signal: controleur.signal,
+  });
+  if (rep.ok) enregistrees = { ...corps };
+  return rep;
+}
+
 async function sauvegarderNotifications() {
   try {
-    const rep = await appelApi("/api/user/config/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        frequenceNotifications: frequenceNotifications.value,
-        notifArtistes: notifArtistes.value,
-        notifSalles: notifSalles.value,
-        notifArtistesPush: notifArtistesPush.value,
-        notifSallesPush: notifSallesPush.value,
-        notifNouvelleVersion: notifNouvelleVersion.value,
-      }),
-      signal: controleur.signal,
-    });
+    const rep = await enregistrer(instantane());
     if (rep.ok) {
       afficherToast("Préférences de notification enregistrées.", "succes");
     } else {
@@ -329,29 +374,89 @@ async function sauvegarderNotifications() {
   }
 }
 
+function retirerPushDuFormulaire() {
+  notifArtistesPush.value = false;
+  notifSallesPush.value = false;
+  notifNouvelleVersion.value = false;
+}
+
+// Cocher le canal sans appareil abonné propose l'abonnement de cet appareil, et la case ne
+// reste cochée qu'une fois l'abonnement réussi ; décocher propose de révoquer cet appareil.
+async function basculerPush(evenement) {
+  const coche = evenement.target.checked;
+  messagePush.value = "";
+  if (coche) {
+    const abouti = await activerPush();
+    if (!abouti) evenement.target.checked = false;
+    return;
+  }
+  retirerPushDuFormulaire();
+  if (pushAbonne.value) {
+    const confirme = await dialogueConfirmation.value?.demander({
+      titre: "Révoquer aussi cet appareil ?",
+      message:
+        "Les notifications push sont décochées. Révoquer cet appareil le désabonne aussi ; sinon il reste abonné sans rien recevoir.",
+      action: "Révoquer cet appareil",
+    });
+    if (confirme) await desabonnerCetAppareil();
+  } else if (nbAppareilsAbonnes.value > 0) {
+    messagePush.value =
+      "D'autres appareils restent abonnés : révoquez-les dans la liste ci-dessous pour les désabonner.";
+  }
+}
+
+async function activerPush() {
+  if (frequence.value === "jamais") frequence.value = "hebdomadaire";
+  if (nbAppareilsAbonnes.value === 0) {
+    const abonne = await abonnerPush();
+    if (!abonne) return false;
+  }
+  notifArtistesPush.value = true;
+  notifSallesPush.value = true;
+  return true;
+}
+
+async function activerSurCetAppareil() {
+  const abonne = await abonnerPush();
+  if (abonne && !canalPush.value) {
+    afficherToast(
+      "Cet appareil est abonné. Cochez « Recevoir les notifications push » pour choisir les contenus.",
+      "succes",
+    );
+  }
+}
+
 async function abonnerPush() {
-  if (!swRegistration || !cleVapidPublique) return;
+  if (!swRegistration || !cleVapidPublique) {
+    messagePush.value =
+      "Les notifications push ne sont pas disponibles sur cet appareil.";
+    return false;
+  }
   pushEnCours.value = true;
   try {
     const resultat = await abonnerAppareil(cleVapidPublique, controleur.signal);
     if (resultat.statut === "refuse") {
       pushPermission.value = resultat.permission;
-    } else if (resultat.statut === "ok") {
-      endpointNavigateur.value = resultat.endpoint;
-      await compterAppareilsAbonnes();
-      afficherToast("Notifications push activées.", "succes");
-    } else {
-      afficherToast(
-        resultat.message ||
-          "Impossible d'activer les notifications push sur cet appareil.",
-        "erreur",
-      );
+      return false;
     }
+    if (resultat.statut === "ok") {
+      endpointNavigateur.value = resultat.endpoint;
+      await chargerAbonnements();
+      afficherToast("Notifications push activées.", "succes");
+      return true;
+    }
+    afficherToast(
+      resultat.message ||
+        "Impossible d'activer les notifications push sur cet appareil.",
+      "erreur",
+    );
+    return false;
   } catch (_) {
     afficherToast(
       "Impossible d'activer les notifications push sur cet appareil.",
       "erreur",
     );
+    return false;
   } finally {
     pushEnCours.value = false;
   }
@@ -379,11 +484,9 @@ async function testerPush() {
     } else {
       const corps = await lireJson(rep);
       afficherToast(corps.erreur || "L'envoi n'a pas abouti.", "erreur");
-      // Abonnement retiré par le serveur : l'état affiché doit le refléter.
-      if (["APPAREIL_INCONNU", "APPAREIL_REVOQUE"].includes(corps.raison)) {
-        await compterAppareilsAbonnes();
-      }
     }
+    await chargerAbonnements();
+    await retirerPushSiAucunAppareil();
   } catch (_) {
     afficherToast("Erreur réseau.", "erreur");
   } finally {
@@ -391,11 +494,10 @@ async function testerPush() {
   }
 }
 
-async function desabonnerPush() {
-  if (!swRegistration) return;
+async function desabonnerCetAppareil() {
   pushEnCours.value = true;
   try {
-    const abonnement = await swRegistration.pushManager.getSubscription();
+    const abonnement = await swRegistration?.pushManager.getSubscription();
     if (abonnement) {
       await appelApi("/api/push", {
         method: "DELETE",
@@ -406,9 +508,10 @@ async function desabonnerPush() {
       await abonnement.unsubscribe();
     }
     endpointNavigateur.value = null;
-    await compterAppareilsAbonnes();
     document.cookie = "push_opt_in=; path=/; max-age=0; SameSite=Strict";
-    afficherToast("Notifications push désactivées.", "succes");
+    await chargerAbonnements();
+    await retirerPushSiAucunAppareil();
+    afficherToast("Cet appareil est désabonné.", "succes");
   } catch (_) {
     afficherToast(
       "Impossible de désactiver les notifications push sur cet appareil.",
@@ -419,47 +522,89 @@ async function desabonnerPush() {
   }
 }
 
+async function revoquerAppareil(abonnement) {
+  try {
+    const rep = await appelApi("/api/push", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: abonnement.endpoint }),
+      signal: controleur.signal,
+    });
+    if (!rep.ok) {
+      afficherToast("Impossible de révoquer cet appareil.", "erreur");
+      return;
+    }
+    if (abonnement.endpoint === endpointNavigateur.value) {
+      const local = await swRegistration?.pushManager.getSubscription();
+      await local?.unsubscribe();
+      endpointNavigateur.value = null;
+    }
+    await chargerAbonnements();
+    afficherToast("Appareil révoqué.", "succes");
+    await retirerPushSiAucunAppareil();
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    afficherToast("Erreur réseau lors de la révocation.", "erreur");
+  }
+}
+
+// Sans appareil, les cases push n'ont plus d'effet : elles sont décochées et enregistrées.
+async function retirerPushSiAucunAppareil() {
+  if (nbAppareilsAbonnes.value > 0 || !enregistrees) return;
+  const avait =
+    enregistrees.notifArtistesPush ||
+    enregistrees.notifSallesPush ||
+    enregistrees.notifNouvelleVersion;
+  retirerPushDuFormulaire();
+  if (!avait) return;
+  const rep = await enregistrer({
+    ...enregistrees,
+    notifArtistesPush: false,
+    notifSallesPush: false,
+    notifNouvelleVersion: false,
+  });
+  if (rep.ok) {
+    messagePush.value =
+      "Plus aucun appareil n'est abonné : les notifications push ont été désactivées.";
+  }
+}
+
 onMounted(charger);
 onUnmounted(() => controleur.abort());
 </script>
 
 <style scoped>
-.param-bloc-push {
-  margin-top: var(--espace-12);
+.liste-appareils {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
 }
 
-.notif-grille__entete,
-.notif-grille__ligne {
-  display: grid;
-  grid-template-columns: 1fr 3rem 3rem;
+.ligne-appareil {
+  display: flex;
   align-items: center;
-  gap: 0;
-  clear: left;
+  justify-content: space-between;
+  gap: var(--espace-8);
+  padding: var(--espace-4) 0;
+  border-bottom: 1px solid var(--border);
 }
 
-.notif-grille__entete {
-  font-weight: 500;
-  text-align: center;
-  margin-bottom: var(--espace-2);
+.ligne-appareil:last-child {
+  border-bottom: none;
 }
 
-.notif-grille__entete span:first-child {
-  text-align: left;
-}
-
-.notif-grille__ligne {
-  padding: var(--espace-2) 0;
-}
-
-.notif-grille__libelle {
+.appareil-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
   font-size: var(--texte-m);
 }
 
-.notif-grille__case {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
+.notif-contenus {
+  margin-top: var(--espace-6);
 }
 
 .notif-radio {

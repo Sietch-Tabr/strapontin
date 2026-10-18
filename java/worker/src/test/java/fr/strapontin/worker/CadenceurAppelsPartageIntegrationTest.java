@@ -90,4 +90,15 @@ class CadenceurAppelsPartageIntegrationTest extends AbstractWorkerIntegrationTes
         ecoule < 150,
         "aucune attente artificielle attendue au-delà du round-trip, observé=" + ecoule + "ms");
   }
+
+  @Test
+  void attendre_premierAppelApresInactivite_neBloquePas() {
+    final CadenceurAppels cadenceur = new CadenceurAppelsPartage(jdbc, CLE_TEST, 1000);
+
+    final long debut = System.currentTimeMillis();
+    cadenceur.attendre();
+    final long ecoule = System.currentTimeMillis() - debut;
+
+    assertTrue(ecoule < 500, "aucune attente attendue à vide, observé=" + ecoule + "ms");
+  }
 }

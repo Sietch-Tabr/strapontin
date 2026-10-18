@@ -49,8 +49,9 @@ public class WikidataArtisteSource
   private final Cache<String, EnrichissementArtiste> cache;
 
   @Override
-  public Set<UUID> preleverAmbiguites() {
-    final Set<UUID> resultat = new HashSet<>(ambiguites);
+  public Map<UUID, Map<String, Object>> preleverAmbiguites() {
+    final Map<UUID, Map<String, Object>> resultat = new HashMap<>();
+    ambiguites.forEach(id -> resultat.put(id, Map.of()));
     ambiguites.clear();
     return resultat;
   }

@@ -89,12 +89,29 @@ public class WorkerStatsService {
       final long dureeMs,
       final ResultatPersistance resultat,
       final String erreur) {
+    enregistrerStatJob(typeJob, dureeMs, resultat, erreur, false);
+  }
+
+  /**
+   * Comme la version sans indicateur, avec {@code retryCible} : le volume
+   * partiel d'un retry ciblé n'est ni comparé à un cycle complet ni compté
+   * dans la moyenne de référence ; {@code erreur} est null si le job a réussi.
+   * @param typeJob type de job (ex. "fetch:region")
+   * @param dureeMs durée d'exécution en millisecondes
+   * @param resultat bilan de persistance
+   */
+  public void enregistrerStatJob(
+      final String typeJob,
+      final long dureeMs,
+      final ResultatPersistance resultat,
+      final String erreur,
+      final boolean retryCible) {
     final Instant maintenant = Instant.now();
     signalerJobNonRepertorie(typeJob);
     enregistrerMetriqueDuree(typeJob, dureeMs);
-    enregistrerLignesFetchJobs(typeJob, maintenant, dureeMs, resultat, erreur);
+    enregistrerLignesFetchJobs(typeJob, maintenant, dureeMs, resultat, erreur, retryCible);
     if (typeJob.startsWith("fetch:")) {
-      remonterBilansFetch(typeJob, resultat, erreur, maintenant);
+      remonterBilansFetch(typeJob, resultat, erreur, maintenant, retryCible);
     }
   }
 
@@ -124,7 +141,8 @@ public class WorkerStatsService {
       final Instant maintenant,
       final long dureeMs,
       final ResultatPersistance resultat,
-      final String erreur) {
+      final String erreur,
+      final boolean retryCible) {
     try {
       final Map<String, Object> params = new LinkedHashMap<>();
       params.put("typeJob", typeJob);
@@ -137,6 +155,7 @@ public class WorkerStatsService {
       params.put("nbInseres", resultat.nbInseres());
       params.put("nbMisAJour", resultat.nbMisAJour());
       params.put("erreur", erreur);
+      params.put("retryCible", retryCible);
       jdbc.update(
           """
           INSERT INTO fetch_jobs (type_job, derniere_exec, duree_ms, nb_inseres, nb_mis_a_jour, erreur)
@@ -152,8 +171,8 @@ public class WorkerStatsService {
       jdbc.update(
           """
           INSERT INTO fetch_jobs_historique
-            (type_job, exec_le, duree_ms, nb_inseres, nb_mis_a_jour, erreur)
-          VALUES (:typeJob, :now, :dureeMs, :nbInseres, :nbMisAJour, :erreur)
+            (type_job, exec_le, duree_ms, nb_inseres, nb_mis_a_jour, erreur, retry_cible)
+          VALUES (:typeJob, :now, :dureeMs, :nbInseres, :nbMisAJour, :erreur, :retryCible)
           """,
           params);
     } catch (Exception e) {
@@ -165,7 +184,21 @@ public class WorkerStatsService {
       final String typeJob,
       final ResultatPersistance resultat,
       final String erreur,
-      final Instant maintenant) {
+      final Instant maintenant,
+      final boolean retryCible) {
+    boolean bilanLoggue = remonterBilansDesSources(typeJob);
+    bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
+    bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
+    if (!bilanLoggue && erreur == null && resultat.nbInseres() == 0 && resultat.nbMisAJour() == 0) {
+      remonterResultatVide(typeJob);
+    }
+    if (erreur == null && !retryCible) {
+      deriveVolumeFetchService.verifier(
+          typeJob, resultat.nbInseres() + resultat.nbMisAJour(), maintenant);
+    }
+  }
+
+  private boolean remonterBilansDesSources(final String typeJob) {
     boolean bilanLoggue = false;
     for (final SourceConcerts source : sources) {
       if (source instanceof SourceAvecBilanFetch avecBilan) {
@@ -175,15 +208,7 @@ public class WorkerStatsService {
         bilanLoggue |= remonterContainmentsEventim(typeJob, eventimSource);
       }
     }
-    bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
-    bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
-    if (!bilanLoggue && erreur == null && resultat.nbInseres() == 0 && resultat.nbMisAJour() == 0) {
-      remonterResultatVide(typeJob);
-    }
-    if (erreur == null) {
-      deriveVolumeFetchService.verifier(
-          typeJob, resultat.nbInseres() + resultat.nbMisAJour(), maintenant);
-    }
+    return bilanLoggue;
   }
 
   /**
@@ -253,17 +278,35 @@ public class WorkerStatsService {
    */
   public void executerAvecStatsToleretErreur(
       final Logger callerLog, final String typeJob, final Supplier<ResultatJob> travail) {
+    executerAvecStatsToleretErreur(callerLog, typeJob, false, travail);
+  }
+
+  /**
+   * Comme la version sans indicateur, en précisant si l'exécution est un
+   * retry ciblé.
+   * @param callerLog logger de l'appelant, pour journaliser sous son nom
+   * @param typeJob type de job
+   * @param retryCible {@code true} pour un retry des lots en échec
+   * @param travail travail à exécuter, retournant bilan + erreur optionnelle
+   */
+  public void executerAvecStatsToleretErreur(
+      final Logger callerLog,
+      final String typeJob,
+      final boolean retryCible,
+      final Supplier<ResultatJob> travail) {
     final long debut = System.currentTimeMillis();
     try {
       final ResultatJob rj = travail.get();
-      enregistrerStatJob(typeJob, System.currentTimeMillis() - debut, rj.resultat(), rj.erreur());
+      enregistrerStatJob(
+          typeJob, System.currentTimeMillis() - debut, rj.resultat(), rj.erreur(), retryCible);
     } catch (Exception e) {
       callerLog.error("{} échoué", typeJob, e);
       enregistrerStatJob(
           typeJob,
           System.currentTimeMillis() - debut,
           new ResultatPersistance(0, 0),
-          e.getMessage());
+          e.getMessage(),
+          retryCible);
     }
   }
 

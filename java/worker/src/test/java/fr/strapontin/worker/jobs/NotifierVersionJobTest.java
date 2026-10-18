@@ -5,44 +5,43 @@
 package fr.strapontin.worker.jobs;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.worker.NotificationVersionPushService;
+import fr.strapontin.worker.ExecutionNotificationVersion;
 import org.junit.jupiter.api.Test;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 
 class NotifierVersionJobTest {
 
-  @Test
-  void executeInternal_versionPresente_delegueAuService() {
-    final NotificationVersionPushService service = mock(NotificationVersionPushService.class);
-    final NotifierVersionJob job = new NotifierVersionJob();
-    job.setNotificationVersionPushService(service);
-
-    final JobDataMap donnees = new JobDataMap();
-    donnees.put(NotifierVersionJob.CLE_VERSION, "3.0.0");
+  private static JobExecutionContext contexte(final JobDataMap donnees) {
     final JobExecutionContext context = mock(JobExecutionContext.class);
     when(context.getMergedJobDataMap()).thenReturn(donnees);
-
-    job.executeInternal(context);
-
-    verify(service).notifierVersion("3.0.0");
+    return context;
   }
 
   @Test
-  void executeInternal_versionAbsente_neDelegueRien() {
-    final NotificationVersionPushService service = mock(NotificationVersionPushService.class);
+  void executeInternal_versionTransmise_laPasseALExecution() {
+    final ExecutionNotificationVersion execution = mock(ExecutionNotificationVersion.class);
     final NotifierVersionJob job = new NotifierVersionJob();
-    job.setNotificationVersionPushService(service);
+    job.setExecution(execution);
+    final JobDataMap donnees = new JobDataMap();
+    donnees.put(NotifierVersionJob.CLE_VERSION, "3.0.0");
 
-    final JobExecutionContext context = mock(JobExecutionContext.class);
-    when(context.getMergedJobDataMap()).thenReturn(new JobDataMap());
+    job.executeInternal(contexte(donnees));
 
-    job.executeInternal(context);
+    verify(execution).executer("3.0.0");
+  }
 
-    verify(service, never()).notifierVersion(org.mockito.ArgumentMatchers.any());
+  @Test
+  void executeInternal_versionAbsente_transmetNull() {
+    final ExecutionNotificationVersion execution = mock(ExecutionNotificationVersion.class);
+    final NotifierVersionJob job = new NotifierVersionJob();
+    job.setExecution(execution);
+
+    job.executeInternal(contexte(new JobDataMap()));
+
+    verify(execution).executer(null);
   }
 }

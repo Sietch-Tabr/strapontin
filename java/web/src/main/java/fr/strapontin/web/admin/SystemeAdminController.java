@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailServiceAdmin;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
@@ -111,13 +112,15 @@ public class SystemeAdminController {
   /**
    * Génère une nouvelle paire de clés VAPID EC P-256.
    *
-   * @return 200 avec la clé publique générée et le nombre d'abonnements push
-   *     invalidés
+   * @param requete motif du renouvellement, obligatoire
+   * @return 200 avec la clé publique générée, le nombre d'abonnements push
+   *     invalidés et les comptes prévenus ou non
    */
   @PostMapping("/vapid/generer")
-  public ResponseEntity<Map<String, Object>> genererVapid() {
+  public ResponseEntity<Map<String, Object>> genererVapid(
+      @Valid @RequestBody final RequeteVapid requete) {
     try {
-      final VapidService.ResultatVapid resultat = vapidService.genererVapid();
+      final VapidService.ResultatVapid resultat = vapidService.genererVapid(requete.motif());
       return ResponseEntity.ok(
           Map.of(
               CLE_SUCCES,
@@ -127,7 +130,13 @@ public class SystemeAdminController {
               "clePublique",
               resultat.clePublique(),
               "nbAbonnementsSupprimes",
-              resultat.nbAbonnementsSupprimes()));
+              resultat.nbAbonnementsSupprimes(),
+              "nbComptesPrevenus",
+              resultat.nbComptesPrevenus(),
+              "nbComptesNonPrevenus",
+              resultat.nbComptesNonPrevenus()));
+    } catch (ErreurMetier e) {
+      throw e;
     } catch (Exception e) {
       LOG.error("Erreur génération clés VAPID", e);
       return erreur(500, "Erreur lors de la génération des clés VAPID.");

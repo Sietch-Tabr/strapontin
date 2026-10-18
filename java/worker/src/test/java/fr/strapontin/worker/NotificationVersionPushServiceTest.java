@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Tests unitaires de {@link NotificationVersionPushService} (#1231).
@@ -104,7 +106,8 @@ class NotificationVersionPushServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(201);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
@@ -132,7 +135,8 @@ class NotificationVersionPushServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(500);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
@@ -141,7 +145,9 @@ class NotificationVersionPushServiceTest {
     final int nbEnvoyes = service.notifierVersion("3.0.0");
 
     assertEquals(0, nbEnvoyes);
-    verify(jdbc).queryForObject(contains("echecs_consecutifs + 1"), anyMap(), eq(Integer.class));
+    verify(jdbc)
+        .queryForObject(
+            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class));
   }
 
   @Test
@@ -158,7 +164,8 @@ class NotificationVersionPushServiceTest {
     final StatusLine statusLineMock = mock(StatusLine.class);
     when(statusLineMock.getStatusCode()).thenReturn(410);
     when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class))).thenReturn(reponseMock);
+    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
+        .thenReturn(reponseMock);
 
     new NotificationVersionPushService(
             configService, jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)

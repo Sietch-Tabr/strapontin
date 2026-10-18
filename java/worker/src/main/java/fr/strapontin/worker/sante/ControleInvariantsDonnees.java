@@ -23,6 +23,9 @@ final class ControleInvariantsDonnees {
 
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
   private static final String CONFIANCE_HAUTE = "haute";
+  private static final String SALLE = "salle";
+  private static final String DATE = "date";
+  private static final String JUMEAU = "jumeau";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
@@ -42,13 +45,15 @@ final class ControleInvariantsDonnees {
     return publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
         + publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
         + publier("notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
-        + publier("salle_multi_departements", "salle", sallesMultiDepartements())
-        + publier("salle_suivie_contaminee", "salle", sallesSuiviesContaminees())
+        + publier("salle_multi_departements", SALLE, sallesMultiDepartements())
+        + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publier(
-            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes());
+            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
+        + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
+        + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
   }
 
   private int publier(
@@ -141,10 +146,86 @@ final class ControleInvariantsDonnees {
           anomalies.put(
               rs.getObject("recent", UUID.class),
               Map.of(
-                  "artiste", rs.getString("artiste_norm"),
-                  "date", rs.getString("date"),
-                  "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
-                  "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+                  "artiste",
+                  rs.getString("artiste_norm"),
+                  DATE,
+                  rs.getString(DATE),
+                  "salles",
+                  rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Deux fiches de la même billetterie au même créneau et dans la même salle,
+  // sans artiste reconnu : un seul lieu ne reçoit pas deux concerts à la fois,
+  // mais la billetterie peut vendre un même concert sous plusieurs programmes.
+  // Détecté seulement, jamais fusionné : le calendrier de la salle seul tranche.
+  private Map<UUID, Map<String, Object>> creneauxDoublesMemeSource() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        WITH ev AS (
+          SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm, e.first_seen,
+                 bool_and(o.source = 'eventim') AS eventim_seul
+          FROM evenements e JOIN observations o ON o.evenement_id = e.id
+          WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+            AND e.artiste_id IS NULL
+          GROUP BY e.id)
+        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+               e1.artiste_norm AS titre_a, e2.artiste_norm AS titre_b, s.nom AS salle,
+               e1.date::text AS date, e1.heure::text AS heure
+        FROM ev e1
+        JOIN ev e2 ON e2.salle_id = e1.salle_id AND e2.date = e1.date AND e2.heure = e1.heure
+                  AND e1.id < e2.id
+        JOIN salles s ON s.id = e1.salle_id
+        WHERE e1.eventim_seul AND e2.eventim_seul
+          AND (SELECT count(*) FROM ev x
+               WHERE x.salle_id = e1.salle_id AND x.date = e1.date AND x.heure = e1.heure) = 2
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  SALLE,
+                  rs.getString(SALLE),
+                  DATE,
+                  rs.getString(DATE),
+                  "heure",
+                  rs.getString("heure"),
+                  "intitules",
+                  rs.getString("titre_a") + " / " + rs.getString("titre_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Deux artistes dont le nom ne diffère que par les espaces (« Krash Karma » /
+  // « Krashkarma ») : doublon probable, créé quand une variante a été suivie
+  // sans retrouver l'artiste existant. Détecté seulement : deux artistes
+  // distincts peuvent s'écrire ainsi, un admin tranche. Une paire déjà examinée
+  // (signalement clos) n'est plus signalée.
+  private Map<UUID, Map<String, Object>> artistesMemeNomSansEspaces() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT a.id AS id, a.nom AS nom, b.nom AS autre
+        FROM artistes a
+        JOIN artistes b ON a.id < b.id AND replace(a.nom_norm, ' ', '') = replace(b.nom_norm, ' ', '')
+        WHERE NOT EXISTS (
+          SELECT 1 FROM signalements_matching sm
+          WHERE sm.type = 'artistes_meme_nom_sans_espaces' AND sm.entite_id = a.id
+            AND sm.resolu_le IS NOT NULL)
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("id", UUID.class),
+              Map.of("nom", rs.getString("nom"), "autreArtiste", rs.getString("autre")));
         });
     return anomalies;
   }

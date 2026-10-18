@@ -25,8 +25,8 @@ Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapont
 - **Spring Boot 4.1.1** + **Vue 3 + Vite 8.1** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Vitest 4** (`front/vitest.config.js`, #781) : tests unitaires des fonctions pures partagées entre composants (`front/src/utils/`), sans montage de composant ni jsdom — complémentaire à Playwright (flux utilisateur, rendu réel), pas redondant. Config dédiée séparée de `vite.config.js` pour ne pas embarquer les plugins Vue/PWA dans l'exécution des tests.
 - `npm run build`/`npm ci` émettent des warnings connus et non actionnables (vite-plugin-pwa, workbox) : [`front/CLAUDE.md`](front/CLAUDE.md).
-- **Spring Security 7** — auth session, TOTP 2FA optionnel (bucket4j rate-limiting) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
-- **Spring Data JDBC** + PostgreSQL 18 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP). Tuning mémoire (`shared_buffers`/`work_mem`/`effective_cache_size`) laissé aux valeurs par défaut PostgreSQL — base ~16 MB (juillet 2026), aucun gain mesurable à un tuning mémoire à ce volume.
+- **Spring Security 7** — auth session, TOTP 2FA optionnel (limitation de débit en fenêtre glissante, `securite.LimiteurDebit`) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
+- **Spring Data JDBC** + PostgreSQL 18 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP). Tuning mémoire laissé par défaut (base ~16 MB en juillet 2026, aucun gain mesurable).
 - **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)
 - **Flyway 13** — migrations DB, un seul jeu (`java/web/src/main/resources/db/migration/`) appliqué aussi par les tests worker. Conventions : [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md).
 - **Resend** — notifications email (tier gratuit 3 000/mois) ; gabarits HTML via `EmailTemplates.java` (text blocks Java). Garde-fous de quota/anti-boucle : [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md).
@@ -54,7 +54,7 @@ Utiliser le skill `/deploy-dev` (build Maven avec tests + scp JARs vers `/opt/st
 CLI : `tea` (pas `gh` — Codeberg est Gitea, incompatible avec `gh`). `tea issue view N` → toujours `-f "index,title,body"` (body absent par défaut). Labels : `Bug`, `Feature`, `Question`, `Task`, `Duplicate`, `Invalid`. PR : `Closes #N` **dans le corps** (`--description`), pas seulement le titre — Gitea ferme les issues via le corps, jamais via le titre.
 
 `main` : Woodpecker déploie sur prod à chaque push (**jamais de push manuel sans build valide**). Features : branche `feature/xxx` → PR → merge. Pipeline (`.woodpecker/ci.yaml`) : test (Maven) + test-front (Vitest) → build-front → lint-front → static-analysis → build → backup → deploy, restreints à `main`. Le repo doit être marqué "trusted" (Settings → repo) pour autoriser les volumes Maven.
-⚠️ **Agent CI (LXC 111, 2 Go RAM)** : les steps `front/` (`build-front`/`lint-front`) et `static-analysis` (Checkstyle+PMD) restent entièrement sérialisés : jamais deux `npm ci` concurrents sur le workspace partagé (`ENOTEMPTY` sur `node_modules`), jamais `static-analysis` en parallèle d'un step `front/` (OOM), `MAVEN_OPTS: -Xmx768m` sur `static-analysis` (mémoire résiduelle des Testcontainers de `test`). Aucune preuve que 2 Go permette de paralléliser.
+⚠️ **Agent CI (LXC 111, 2 Go RAM)** : les steps `front/` (`build-front`/`lint-front`) et `static-analysis` (Checkstyle+PMD) restent entièrement sérialisés : jamais deux `npm ci` concurrents sur le workspace partagé (`ENOTEMPTY` sur `node_modules`), jamais `static-analysis` en parallèle d'un step `front/` (OOM), `MAVEN_OPTS: -Xmx768m` sur `static-analysis` (mémoire résiduelle des Testcontainers de `test`).
 
 ## Sauvegarde et restauration
 
@@ -85,11 +85,12 @@ Chiffrement AES-256-GCM (`core.ConfigCipher`, clé dérivée de `APP_CONFIG_SECR
 ⚠️ Changer les clés VAPID → supprimer `push_abonnements` d'abord.
 Clés applicatives (`TICKETMASTER_API_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `CONTACT_EMAIL`, `PUBLIC_BASE_URL`, `VAPID_*`) configurables depuis `/admin`.
 `RESEND_WEBHOOK_SECRET` : clé de signature Svix pour l'endpoint `POST /api/webhooks/resend` (bounces email). À copier depuis le dashboard Resend → Webhooks.
-`ResendWebhooksAdminService` (admin) : liste/rejoue un événement webhook Resend en échec (`Webhooks.listEvents`/`replayEvent`, resend-java 4.23.0) — le `webhookId` n'est jamais configuré explicitement, résolu à chaque appel en filtrant `webhooks().list()` sur l'endpoint `PUBLIC_BASE_URL + "/api/webhooks/resend"` déjà connu.
+`ResendWebhooksAdminService` (rejeu des webhooks Resend en échec) : [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md).
 
 ## Sources de données
 
 - **Ticketmaster Discovery v2**, **Eventim France** : sources principales (Eventim par lieu/villes : [`sources…/sources/CLAUDE.md`](java/sources/src/main/java/fr/strapontin/sources/CLAUDE.md)).
+- **Sites de salles** (`SourceSiteSalle`) : Le Triton, EMB, Usine à Chapeaux, Allmol (Antilles, Guyane), un passage par jour, `robots.txt` respecté ([`sources…/sources/CLAUDE.md`](java/sources/src/main/java/fr/strapontin/sources/CLAUDE.md)).
 - **Digitick** : retirée (v3.0.1, #1263), billetteries migrées vers Eventim ; valeur d'enum `digitick` conservée (non retirable en PostgreSQL), observations seules d'événements à venir conservées.
 - **Deezer Search API** : autocomplete artiste (`/artistes`), sans clé ; remplace MusicBrainz.
 - **Wikidata (SPARQL) + OSM (Nominatim)** : enrichissement nocturne (noms canoniques, alias, Deezer ID) ; identifiant Wikidata d'une salle lu sur l'objet OSM que Nominatim trouve autour de sa position (`NominatimSalleSource`, 1 req/s) ; Overpass retiré en 3.0.2 (instance publique saturée) ; rotation hebdomadaire `jour_batch`.

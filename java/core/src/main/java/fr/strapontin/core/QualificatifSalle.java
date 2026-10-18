@@ -24,6 +24,11 @@ public final class QualificatifSalle {
   private static final Pattern ABREVIATION_THEATRE =
       Pattern.compile("^th\\.?\\s+", Pattern.CASE_INSENSITIVE);
 
+  // « Divers lieux » regroupe plusieurs sites d'un quartier : ce n'est la
+  // salle interne d'aucun complexe.
+  private static final Pattern PSEUDO_LIEU =
+      Pattern.compile("^(?:(?:divers|plusieurs|differents|multiples|autres) )?lieux(?: divers)?$");
+
   private QualificatifSalle() {}
 
   // Le séparateur ne survit pas à normaliserTexte (tirets remplacés par une
@@ -51,7 +56,10 @@ public final class QualificatifSalle {
       return null;
     }
     final String qualif = nomBrut.substring(separateur.end()).trim();
-    return qualif.isEmpty() ? null : qualif;
+    if (qualif.isEmpty() || PSEUDO_LIEU.matcher(Normalisation.normaliserTexte(qualif)).matches()) {
+      return null;
+    }
+    return qualif;
   }
 
   private static MatchResult dernierSeparateur(final String nomBrut) {
@@ -75,7 +83,7 @@ public final class QualificatifSalle {
    */
   public static String extraireBase(final String nomBrut) {
     final MatchResult separateur = dernierSeparateur(nomBrut);
-    if (separateur == null) {
+    if (separateur == null || extraireQualificatif(nomBrut) == null) {
       return null;
     }
     final String base =

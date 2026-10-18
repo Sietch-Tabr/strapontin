@@ -6,6 +6,7 @@ package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
@@ -154,6 +155,44 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
     assertEquals(0, service.lister(0).total());
   }
 
+  // « Marquer comme traité » reconnaît l'absence de couverture : la nuit suivante, le département
+  // n'est plus signalé tant qu'il reste sans concert.
+  @Test
+  void resoudre_departementSansConcert_reconnaitLAbsenceDeCouverture() {
+    jdbc.update("DELETE FROM couverture_departements", Map.of());
+    jdbc.update(
+        "INSERT INTO couverture_departements (dept, nb_concerts, sans_concert_depuis)"
+            + " VALUES ('973', 0, CURRENT_DATE)",
+        Map.of());
+    final long id =
+        jdbc.queryForObject(
+            "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+                + " VALUES ('departement_sans_concert', 'departement', CAST(:id AS uuid),"
+                + " 'moyenne', CAST('{\"departement\": \"973\"}' AS jsonb)) RETURNING id",
+            Map.of("id", UUID.randomUUID().toString()),
+            Long.class);
+
+    assertTrue(service.resoudre(id));
+
+    assertTrue(
+        jdbc.queryForObject(
+            "SELECT couverture_connue_le IS NOT NULL FROM couverture_departements"
+                + " WHERE dept = '973'",
+            Map.of(),
+            Boolean.class));
+  }
+
+  @Test
+  void lister_departementSansConcert_nommeLeDepartement() {
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('departement_sans_concert', 'departement', CAST(:id AS uuid),"
+            + " 'moyenne', CAST('{\"departement\": \"976\"}' AS jsonb))",
+        Map.of("id", UUID.randomUUID().toString()));
+
+    assertEquals("Département 976", service.lister(0).signalements().getFirst().entite().nom());
+  }
+
   @Test
   void resoudre_signalementInconnu_retourneFalse() {
     assertEquals(false, service.resoudre(999_999L));
@@ -211,6 +250,115 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
             Long.class);
     assertEquals(1L, paires);
     assertEquals(0, service.lister(0).total());
+  }
+
+  @Test
+  void lister_doublonDeSalle_nommeLAutreSalleSansExposerSonUuid() {
+    final UUID salleA = creerSalle("theatre montparnasse");
+    final UUID salleB = creerSalle("theatre de poche montparnasse");
+    jdbc.update(
+        "UPDATE salles SET nom_affiche = 'Théâtre de Poche', ville = 'Paris', dept = '75'"
+            + " WHERE id = CAST(:b AS uuid)",
+        Map.of("b", salleB.toString()));
+    jdbc.update(
+        "UPDATE salles SET doublon_signale = CAST(:b AS uuid) WHERE id = CAST(:a AS uuid)",
+        Map.of("a", salleA.toString(), "b", salleB.toString()));
+
+    final EntreeSignalement entree = service.lister(0).signalements().getFirst();
+
+    assertEquals(salleB.toString(), entree.autreSalle().id());
+    assertEquals("Théâtre de Poche · Paris 75", entree.autreSalle().nom());
+    assertNull(entree.details(), "l'UUID de l'autre salle ne doit plus être affiché");
+  }
+
+  @Test
+  void lister_wikidataPartage_nommeLAutreSalleEtGardeLeResteDesDetails() {
+    final UUID porteuse = creerSalle("zenith");
+    final UUID signalee = creerSalle("zenith de paris");
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('collision_wikidata_salle', 'salle', CAST(:id AS uuid), 'basse',"
+            + " CAST(:details AS jsonb))",
+        Map.of(
+            "id",
+            signalee.toString(),
+            "details",
+            "{\"wikidataId\": \"Q123\", \"salleExistante\": \"" + porteuse + "\"}"));
+
+    final EntreeSignalement entree = service.lister(0).signalements().getFirst();
+
+    assertEquals(porteuse.toString(), entree.autreSalle().id());
+    assertTrue(entree.details().contains("Q123"));
+    assertFalse(entree.details().contains(porteuse.toString()));
+  }
+
+  @Test
+  void lister_signalementSansAutreSalle_laisseLeChampVide() {
+    final UUID salle = creerSalle("olympia");
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
+            + " VALUES ('wikidata_coordonnees_divergentes', 'salle', CAST(:id AS uuid), 'basse')",
+        Map.of("id", salle.toString()));
+
+    assertNull(service.lister(0).signalements().getFirst().autreSalle());
+  }
+
+  private long signalerPositionEloignee(final UUID salle) {
+    return jdbc.queryForObject(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('position_source_eloignee', 'salle', CAST(:id AS uuid), 'moyenne',"
+            + " CAST('{\"latitudeWikidata\": 43.5686, \"longitudeWikidata\": 3.9519}' AS jsonb))"
+            + " RETURNING id",
+        Map.of("id", salle.toString()),
+        Long.class);
+  }
+
+  @Test
+  void alignerPositionSurWikidata_signalementActif_poseLaPositionDeWikidataEtCloture() {
+    final UUID salle = creerSalle("sud de france arena");
+    jdbc.update(
+        "UPDATE salles SET latitude = 43.6108, longitude = 3.8767, origine_position = 'sources'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    final long signalement = signalerPositionEloignee(salle);
+
+    assertTrue(service.alignerPositionSurWikidata(signalement));
+
+    final Map<String, Object> position =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude, origine_position FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()));
+    assertEquals(43.5686, (Double) position.get("latitude"), 1e-9);
+    assertEquals(3.9519, (Double) position.get("longitude"), 1e-9);
+    assertEquals("wikidata", position.get("origine_position"));
+    assertEquals(false, service.alignerPositionSurWikidata(signalement), "déjà clos");
+  }
+
+  @Test
+  void alignerPositionSurWikidata_autreType_neModifieRien() {
+    final UUID salle = creerSalle("olympia");
+    jdbc.update(
+        "UPDATE salles SET latitude = 48.87, longitude = 2.33, origine_position = 'sources'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    final long autre =
+        jdbc.queryForObject(
+            "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+                + " VALUES ('wikidata_coordonnees_divergentes', 'salle', CAST(:id AS uuid),"
+                + " 'basse', CAST('{\"latitudeWikidata\": 1.0, \"longitudeWikidata\": 1.0}'"
+                + " AS jsonb)) RETURNING id",
+            Map.of("id", salle.toString()),
+            Long.class);
+
+    assertEquals(false, service.alignerPositionSurWikidata(autre));
+
+    assertEquals(
+        48.87,
+        jdbc.queryForObject(
+            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Double.class),
+        1e-9);
   }
 
   private long signalerConcert(final String type) {

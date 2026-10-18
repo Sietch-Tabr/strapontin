@@ -99,7 +99,7 @@ git branch -d <branche> && git push origin --delete <branche>
 
 ## 8. Wiki et mémoire
 
-- Wiki, page Roadmap : marquer le jalon livré et dire ce qu'il apporte, en langage clair pour un utilisateur ou un admin. Pas de numéros de PR, de pipeline ni de détail d'incident. Commit et push dans le dépôt du wiki.
+- Wiki, page Roadmap : marquer le jalon livré et dire ce qu'il apporte, en langage clair pour un utilisateur ou un admin. Pas de numéros de PR, de pipeline ni de détail d'incident. Commit et push dans le dépôt du wiki, puis contrôle : `git ls-remote origin main` doit donner le même hash que `git rev-parse HEAD`. Sinon, le signaler à l'utilisateur sans conclure la clôture : `origin/main` local ne prouve pas que le serveur a reçu les commits.
 - Mémoire : merge, numéro et statut de la pipeline, incidents éventuels et suite donnée. Un incident de déploiement donne lieu à un ticket (`/ticket`).
 
 ## 9. Fin

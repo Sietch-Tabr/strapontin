@@ -172,6 +172,7 @@ class FetchSallesExecutor {
         .executerAvecStatsToleretErreur(
             LOG,
             "fetch:salles:all",
+            retry,
             () -> {
               // Quota Ticketmaster bas : ses identifiants seuls sont écartés.
               final boolean ticketmasterAutorise = commun.obtenirGestionQuotaTM().cronAutorise();

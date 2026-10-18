@@ -37,12 +37,14 @@ public class WorkerSuiviCyclesService {
           Map.entry("fetch:salles:all", Duration.ofHours(8)),
           Map.entry("recalculer:matches", Duration.ofHours(8)),
           Map.entry("fetch:region", Duration.ofHours(48)),
+          Map.entry("fetch:sites-salles", Duration.ofHours(48)),
           Map.entry("purger:concerts", Duration.ofHours(48)),
           Map.entry("purger:concerts-non-confirmes", Duration.ofHours(48)),
           Map.entry("purger:salles", Duration.ofHours(48)),
           Map.entry("purger:artistes", Duration.ofHours(48)),
           Map.entry("purger:logs-admin", Duration.ofHours(48)),
           Map.entry("notifier:digest", Duration.ofHours(48)),
+          Map.entry("notifier:version", Duration.ofHours(48)),
           Map.entry("revoquer:admins", Duration.ofHours(4)),
           Map.entry("reconciliation:nocturne", Duration.ofHours(48)));
 

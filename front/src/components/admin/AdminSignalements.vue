@@ -31,18 +31,57 @@
             {{ decrireType(catalogue, s.type).explication }}
           </p>
           <dl
-            v-if="formaterDetails(s.details).length"
+            v-if="s.autreSalle || formaterDetails(s.details).length"
             class="signalement-details texte-note"
           >
+            <template v-if="s.autreSalle">
+              <dt>autre salle</dt>
+              <dd>{{ s.autreSalle.nom }}</dd>
+            </template>
             <template v-for="(d, i) in formaterDetails(s.details)" :key="i">
               <dt v-if="d.cle">{{ d.cle }}</dt>
-              <dd>{{ d.valeur }}</dd>
+              <dd>
+                <a
+                  v-if="d.lien"
+                  :href="d.lien"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ d.valeur }}</a
+                >
+                <template v-else>{{ d.valeur }}</template>
+              </dd>
             </template>
           </dl>
           <div class="source-actions">
             <template v-for="action in actionsSignalement(s)" :key="action">
               <button
-                v-if="action === 'repartir'"
+                v-if="action === 'comparer'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                :aria-label="
+                  'Comparer et fusionner : ' +
+                  libelleEntite(s.entite) +
+                  ' et ' +
+                  s.autreSalle.nom
+                "
+                @click="emit('comparer', [s.entite.id, s.autreSalle.id])"
+              >
+                Comparer et fusionner
+              </button>
+              <button
+                v-else-if="action === 'aligner'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                :aria-label="
+                  'Aligner la position sur Wikidata : ' +
+                  libelleEntite(s.entite)
+                "
+                @click="alignerPosition(s)"
+              >
+                Aligner sur Wikidata
+              </button>
+              <button
+                v-else-if="action === 'repartir'"
                 type="button"
                 class="bouton bouton-secondaire bouton-petit"
                 @click="
@@ -102,7 +141,7 @@
               <button
                 v-else-if="action === 'voirFiche'"
                 type="button"
-                class="bouton bouton-texte bouton-petit"
+                class="bouton bouton-secondaire bouton-petit"
                 @click="emit('voir-fiche', s.entite)"
               >
                 Voir la fiche
@@ -157,7 +196,7 @@ import EtatChargement from "../EtatChargement.vue";
 import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
 import DialogueConfirmation from "../DialogueConfirmation.vue";
 
-const emit = defineEmits(["voir-fiche", "total"]);
+const emit = defineEmits(["voir-fiche", "comparer", "total"]);
 
 const { afficherToast } = useToasts();
 
@@ -251,6 +290,19 @@ async function supprimerConcert(signalement) {
   return poster(
     `/api/admin/signalements/${signalement.id}/supprimer-concert`,
     "Concert supprimé.",
+  );
+}
+
+async function alignerPosition(signalement) {
+  const confirme = await dialogueConfirmation.value?.demander({
+    titre: "Aligner la position sur Wikidata ?",
+    message: `La position de ${libelleEntite(signalement.entite)} deviendra celle de son élément Wikidata, puis sera réalignée chaque nuit. À faire seulement si l'élément désigne bien cette salle.`,
+    action: "Aligner",
+  });
+  if (!confirme) return;
+  return poster(
+    `/api/admin/signalements/${signalement.id}/aligner-position-wikidata`,
+    "Position alignée sur Wikidata.",
   );
 }
 

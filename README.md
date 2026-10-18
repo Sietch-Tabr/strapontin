@@ -17,7 +17,7 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 **Suivi**
 
 - Artistes et salles favoris (jusqu'à 500 artistes et 200 salles)
-- Concerts récupérés automatiquement chez Ticketmaster et Eventim, 11 fois par jour
+- Concerts récupérés automatiquement chez Ticketmaster et Eventim, 11 fois par jour, et une fois par jour sur le site de quelques salles hors de ces billetteries
 - Un même concert publié par plusieurs billetteries n'apparaît qu'une fois
 - Prévente, complet, report et annulation signalés sur chaque concert
 - Page Découverte : les concerts des départements choisis, même sans suivre l'artiste

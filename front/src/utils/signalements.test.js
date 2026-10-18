@@ -59,6 +59,33 @@ describe("formaterDetails", () => {
   it("ignore l'absence de détails", () => {
     expect(formaterDetails(null)).toEqual([]);
   });
+
+  it("fait d'une URL http(s) un lien", () => {
+    expect(
+      formaterDetails('{"url": "https://www.eventim.fr/event/x-1/"}'),
+    ).toEqual([
+      {
+        cle: "url",
+        valeur: "https://www.eventim.fr/event/x-1/",
+        lien: "https://www.eventim.fr/event/x-1/",
+      },
+    ]);
+  });
+
+  it("ne fait jamais un lien d'un autre schéma", () => {
+    const [couple] = formaterDetails('{"url": "javascript:alert(1)"}');
+    expect(couple.lien).toBeUndefined();
+  });
+
+  it("renvoie vers Wikidata pour un identifiant d'élément", () => {
+    const [couple] = formaterDetails('{"wikidataId": "Q123456"}');
+    expect(couple.lien).toBe("https://www.wikidata.org/wiki/Q123456");
+  });
+
+  it("ne lie pas un texte qui ressemble seulement à un identifiant", () => {
+    const [couple] = formaterDetails('{"nom": "Q123 Arena"}');
+    expect(couple.lien).toBeUndefined();
+  });
 });
 
 describe("actionsSignalement", () => {
@@ -110,5 +137,26 @@ describe("actionsSignalement", () => {
         entite: { type: "salle", id: "4", nom: "Comédie" },
       }),
     ).toEqual(["repartir", "resoudre", "voirFiche"]);
+  });
+
+  it("propose de comparer deux salles quand le signalement en nomme une seconde", () => {
+    expect(
+      actionsSignalement({
+        categorie: "doublon_salle",
+        type: "doublon_salle",
+        entite: { type: "salle", id: "a", nom: "Zénith" },
+        autreSalle: { type: "salle", id: "b", nom: "Zénith de Paris" },
+      }),
+    ).toEqual(["comparer", "sallesDistinctes", "voirFiche"]);
+  });
+
+  it("propose d'aligner la position d'une salle éloignée de son élément Wikidata", () => {
+    expect(
+      actionsSignalement({
+        categorie: "nouveau",
+        type: "position_source_eloignee",
+        entite: { type: "salle", id: "a", nom: "Sud de France Arena" },
+      }),
+    ).toEqual(["aligner", "resoudre", "voirFiche"]);
   });
 });

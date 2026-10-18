@@ -20,12 +20,26 @@
         minlength="2"
         autocomplete="off"
       />
-      <button type="submit" class="bouton bouton-secondaire">Rechercher</button>
+      <button
+        type="submit"
+        class="bouton bouton-secondaire"
+        :disabled="!etat.peutLancer"
+      >
+        Rechercher
+      </button>
     </form>
+    <p class="form-aide">{{ CONSIGNE_RECHERCHE }}</p>
+    <p
+      v-if="!etat.peutLancer"
+      class="form-aide form-aide-avertissement"
+      role="status"
+    >
+      {{ etat.explication }}
+    </p>
     <p class="form-aide">
-      Saisissez au moins 2 caractères. La recherche porte sur les concerts en
-      base et les suggestions OpenStreetMap/Ticketmaster. Si une salle
-      n'apparaît pas, vous pouvez l'ajouter directement par nom.
+      La recherche porte sur les concerts en base et les suggestions
+      OpenStreetMap/Ticketmaster. Si une salle n'apparaît pas, vous pouvez
+      l'ajouter directement par nom.
     </p>
 
     <div
@@ -114,9 +128,14 @@
             :key="salle.id"
             class="carte-item"
           >
-            <span class="carte-nom">
-              {{ salle.nom }}
-            </span>
+            <div>
+              <span class="carte-nom">
+                {{ salle.nom }}
+              </span>
+              <p v-if="salle.couverte === false" class="carte-sous-titre">
+                {{ MESSAGE_SALLE_NON_COUVERTE }}
+              </p>
+            </div>
             <button
               type="button"
               class="bouton bouton-danger bouton-petit"
@@ -242,10 +261,15 @@ import { appelApi, lireJson } from "../utils/api.js";
 import { notificationsJoignables } from "../composables/useEtatNotifications.js";
 defineOptions({ name: "SallesPage" });
 
-import { ref, shallowRef, onMounted, onUnmounted } from "vue";
+import { computed, ref, shallowRef, onMounted, onUnmounted } from "vue";
+import {
+  CONSIGNE_RECHERCHE,
+  etatRecherche,
+} from "../utils/consigneRecherche.js";
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import { MESSAGE_SALLE_NON_COUVERTE } from "../utils/couverture.js";
 
 const { afficherToast } = useToasts();
 
@@ -260,6 +284,7 @@ const signalementEnCours = ref(false);
 const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog();
 const { dialogRef: dialogSignalementRef, ouvrir: ouvrirDialogSignalement } =
   useDialog();
+const etat = computed(() => etatRecherche(q.value));
 const controleur = new AbortController();
 
 async function charger(recherche = "") {

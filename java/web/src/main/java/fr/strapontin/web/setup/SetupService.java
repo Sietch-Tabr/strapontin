@@ -129,7 +129,7 @@ public class SetupService {
     configurerContactEtBaseUrl(requete, email);
 
     genererVapid();
-    LOG.info("Premier administrateur créé : {}", identifiant);
+    LOG.info("Premier administrateur créé : userId={}", userId);
   }
 
   private static void validerRequeteSetup(final String email, final String motDePasse) {

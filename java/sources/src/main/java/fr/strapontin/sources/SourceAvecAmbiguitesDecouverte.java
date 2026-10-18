@@ -4,7 +4,7 @@
  */
 package fr.strapontin.sources;
 
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -22,7 +22,8 @@ public interface SourceAvecAmbiguitesDecouverte {
    * Retourne les identifiants signalés comme ambigus depuis le dernier
    * prélèvement et remet l'ensemble à zéro.
    *
-   * @return les identifiants ambigus depuis le dernier prélèvement
+   * @return pour chaque identifiant ambigu depuis le dernier prélèvement, les
+   *     éléments qui l'expliquent (candidat rejeté, écart), éventuellement vides
    */
-  Set<UUID> preleverAmbiguites();
+  Map<UUID, Map<String, Object>> preleverAmbiguites();
 }

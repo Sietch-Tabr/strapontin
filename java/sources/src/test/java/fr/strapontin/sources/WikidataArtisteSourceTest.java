@@ -334,8 +334,8 @@ class WikidataArtisteSourceTest {
     assertTrue(resultat.isEmpty());
     serveur.verify();
     // #1194 : l'ambiguïté doit être distinguable d'une non-découverte ordinaire.
-    assertEquals(Set.of(id), source.preleverAmbiguites());
-    assertEquals(Set.of(), source.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
+    assertEquals(Set.of(id), source.preleverAmbiguites().keySet());
+    assertEquals(Map.of(), source.preleverAmbiguites(), "prélevé — ne doit pas resignaler");
   }
 
   @Test

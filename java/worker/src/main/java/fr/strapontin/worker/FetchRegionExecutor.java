@@ -66,7 +66,7 @@ class FetchRegionExecutor {
     rapportage
         .workerStatsService()
         .executerAvecStatsToleretErreur(
-            LOG, "fetch:region", () -> executerCycle(retry, deptsCibles));
+            LOG, "fetch:region", retry, () -> executerCycle(retry, deptsCibles));
   }
 
   private WorkerStatsService.ResultatJob executerCycle(

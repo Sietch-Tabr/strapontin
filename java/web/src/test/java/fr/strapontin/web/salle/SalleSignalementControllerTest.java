@@ -7,6 +7,8 @@ package fr.strapontin.web.salle;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.email.EmailService;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 
 /**
@@ -37,7 +38,9 @@ class SalleSignalementControllerTest {
 
   @BeforeEach
   void setUp() {
-    controller = new SalleController(salleService, emailService);
+    controller =
+        new SalleController(
+            salleService, emailService, new BudgetRecherchesExternes(mock(LogAdminService.class)));
     final UtilisateurDetails utilisateur =
         new UtilisateurDetails("user-1", "kwaite", "k@test.fr", "", "user", false, false, false);
     when(auth.getPrincipal()).thenReturn(utilisateur);
@@ -47,9 +50,7 @@ class SalleSignalementControllerTest {
   void signalerManquante_nomValide_retourne204() {
     final var rep =
         controller.signalerManquante(
-            new RequeteSignalementSalle("La Cigale", "Paris 75018", "", ""),
-            auth,
-            requete("10.1.0.1"));
+            new RequeteSignalementSalle("La Cigale", "Paris 75018", "", ""), auth);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(emailService)
         .envoyerSignalementSalleManquante(
@@ -59,11 +60,9 @@ class SalleSignalementControllerTest {
 
   @Test
   void signalerManquante_troisSignalementsSuccessifs_sontAcceptes() {
-    final var request = requete("10.1.0.2");
     for (int i = 0; i < 3; i++) {
       final var rep =
-          controller.signalerManquante(
-              new RequeteSignalementSalle("Salle " + i, "", "", ""), auth, request);
+          controller.signalerManquante(new RequeteSignalementSalle("Salle " + i, "", "", ""), auth);
       assertEquals(
           HttpStatus.NO_CONTENT, rep.getStatusCode(), "Le signalement " + (i + 1) + " doit passer");
     }
@@ -71,25 +70,26 @@ class SalleSignalementControllerTest {
 
   @Test
   void signalerManquante_quatriemeSignalement_retourneRateLimit() {
-    final var request = requete("10.1.0.3");
     for (int i = 0; i < 3; i++) {
-      controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, request);
+      controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth);
     }
     final var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle("Salle", "", "", ""), auth, request);
+        controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth);
     assertEquals(HttpStatus.TOO_MANY_REQUESTS, rep.getStatusCode());
   }
 
   @Test
-  void signalerManquante_ipsDifferentes_bucketsIndependants() {
-    final var ip1 = requete("10.1.0.4");
-    final var ip2 = requete("10.1.0.5");
+  void signalerManquante_utilisateursDifferents_quotasIndependants() {
+    final Authentication autre = mock(Authentication.class);
+    when(autre.getPrincipal())
+        .thenReturn(
+            new UtilisateurDetails(
+                "user-2", "autre", "autre@test.fr", "", "user", false, false, false));
     for (int i = 0; i < 3; i++) {
-      controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, ip1);
+      controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth);
     }
     final var rep =
-        controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), auth, ip2);
+        controller.signalerManquante(new RequeteSignalementSalle("Salle", "", "", ""), autre);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
   }
 
@@ -101,17 +101,10 @@ class SalleSignalementControllerTest {
   @Test
   void signalerManquante_champsFacultatifsBlancs_passeEtStrip() {
     final var rep =
-        controller.signalerManquante(
-            new RequeteSignalementSalle("Salle", "  ", "  ", "  "), auth, requete("10.1.0.10"));
+        controller.signalerManquante(new RequeteSignalementSalle("Salle", "  ", "  ", "  "), auth);
     assertEquals(HttpStatus.NO_CONTENT, rep.getStatusCode());
     verify(emailService)
         .envoyerSignalementSalleManquante(
             new EmailService.SignalementSalleManquante("Salle", "", "", "", "k@test.fr"));
-  }
-
-  private static MockHttpServletRequest requete(final String ip) {
-    final var request = new MockHttpServletRequest();
-    request.setRemoteAddr(ip);
-    return request;
   }
 }

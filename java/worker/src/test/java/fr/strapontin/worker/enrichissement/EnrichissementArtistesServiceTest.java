@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -349,7 +348,7 @@ class EnrichissementArtistesServiceTest {
                 .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
     when(wikidata.enrichirLot(any())).thenReturn(Map.of());
     when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
-        .thenReturn(Set.of(artisteId));
+        .thenReturn(Map.of(artisteId, Map.of()));
     final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
 
     final EnrichissementArtistesService service =

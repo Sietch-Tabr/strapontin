@@ -30,28 +30,29 @@
       </div>
 
       <div class="param-bloc">
-        <h3 id="label-identifiant" class="param-libelle">
-          Identifiant de connexion
-        </h3>
-        <form class="form-inline" @submit.prevent="sauvegarderIdentifiant">
-          <label for="identifiant" class="lecteur-ecran"
-            >Identifiant de connexion</label
-          >
-          <input
-            id="identifiant"
-            v-model="identifiant"
-            type="text"
-            :minlength="IDENTIFIANT_MIN"
-            :maxlength="IDENTIFIANT_MAX"
-            :pattern="IDENTIFIANT_MOTIF"
-            autocomplete="username"
-            aria-describedby="aide-identifiant"
-          />
-          <button type="submit" class="bouton bouton-secondaire">
-            Modifier
-          </button>
+        <h3 class="param-libelle">Identifiant de connexion</h3>
+        <form
+          class="form-vertical form-compact"
+          @submit.prevent="sauvegarderIdentifiant"
+        >
+          <div class="form-groupe">
+            <label for="identifiant">Identifiant</label>
+            <input
+              id="identifiant"
+              v-model="identifiant"
+              type="text"
+              :minlength="IDENTIFIANT_MIN"
+              :maxlength="IDENTIFIANT_MAX"
+              :pattern="IDENTIFIANT_MOTIF"
+              autocomplete="username"
+              aria-describedby="aide-identifiant"
+            />
+            <p id="aide-identifiant" class="form-aide">
+              {{ AIDE_IDENTIFIANT }}
+            </p>
+          </div>
+          <button type="submit" class="bouton bouton-primaire">Modifier</button>
         </form>
-        <p id="aide-identifiant" class="param-aide">{{ AIDE_IDENTIFIANT }}</p>
       </div>
 
       <div class="param-bloc">
@@ -63,18 +64,23 @@
             @submit.prevent="desactiverTotp"
           >
             <div class="form-groupe">
-              <label for="totp-desact-code">Code de confirmation</label>
+              <label for="totp-desact-code">Code de l'application</label>
               <input
                 id="totp-desact-code"
                 v-model="totpDesactCode"
                 type="text"
+                class="champ-code-totp"
                 inputmode="numeric"
                 pattern="[0-9]{6}"
                 maxlength="6"
                 autocomplete="one-time-code"
-                placeholder="123456"
+                aria-describedby="aide-totp-desact"
                 required
               />
+              <p id="aide-totp-desact" class="form-aide">
+                Pour désactiver le TOTP, saisissez le code à 6 chiffres affiché
+                par votre application d'authentification.
+              </p>
             </div>
             <button type="submit" class="bouton bouton-danger bouton-petit">
               Désactiver le TOTP
@@ -145,9 +151,7 @@
               }}
             </span>
           </div>
-          <button type="submit" class="bouton bouton-secondaire">
-            Changer
-          </button>
+          <button type="submit" class="bouton bouton-primaire">Changer</button>
         </form>
       </div>
 
@@ -181,34 +185,6 @@
           </li>
           <li v-if="appareils.length === 0" class="param-aide">
             Aucun appareil enregistré.
-          </li>
-        </ul>
-      </div>
-
-      <div class="param-bloc">
-        <h3 class="param-libelle">Abonnements notifications push</h3>
-        <ul class="liste-appareils">
-          <li
-            v-for="abonnement in abonnementsPush"
-            :key="abonnement.endpoint"
-            class="ligne-appareil"
-          >
-            <span class="appareil-info">
-              <span class="param-aide"
-                >Abonné depuis le
-                {{ formaterDateHeure(abonnement.creeLe) }}</span
-              >
-            </span>
-            <button
-              type="button"
-              class="bouton bouton-danger bouton-petit"
-              @click="revoquerAbonnementPush(abonnement.endpoint)"
-            >
-              Révoquer
-            </button>
-          </li>
-          <li v-if="abonnementsPush.length === 0" class="param-aide">
-            Aucun abonnement push actif.
           </li>
         </ul>
       </div>
@@ -246,7 +222,6 @@ const totpDesactCode = ref("");
 const mdpActuel = ref("");
 const mdpNouveau = ref("");
 const appareils = ref([]);
-const abonnementsPush = ref([]);
 const controleur = new AbortController();
 
 function formaterDateHeure(iso) {
@@ -279,18 +254,6 @@ async function chargerAppareils() {
   }
 }
 
-async function chargerAbonnementsPush() {
-  try {
-    const rep = await appelApi("/api/push/abonnements", {
-      signal: controleur.signal,
-    });
-    if (rep.ok) abonnementsPush.value = await lireJson(rep);
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Impossible de charger les abonnements push.", "erreur");
-  }
-}
-
 async function revoquerAppareil(appareilId) {
   try {
     const rep = await appelApi(`/api/user/appareils/${appareilId}`, {
@@ -302,28 +265,6 @@ async function revoquerAppareil(appareilId) {
         (a) => a.appareilId !== appareilId,
       );
       afficherToast("Appareil révoqué.", "succes");
-    } else {
-      afficherToast("Erreur lors de la révocation.", "erreur");
-    }
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Erreur réseau lors de la révocation.", "erreur");
-  }
-}
-
-async function revoquerAbonnementPush(endpoint) {
-  try {
-    const rep = await appelApi("/api/push", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ endpoint }),
-      signal: controleur.signal,
-    });
-    if (rep.ok) {
-      abonnementsPush.value = abonnementsPush.value.filter(
-        (a) => a.endpoint !== endpoint,
-      );
-      afficherToast("Abonnement push révoqué.", "succes");
     } else {
       afficherToast("Erreur lors de la révocation.", "erreur");
     }
@@ -462,13 +403,16 @@ async function changerMotDePasse() {
 onMounted(() => {
   charger();
   chargerAppareils();
-  chargerAbonnementsPush();
 });
 
 onUnmounted(() => controleur.abort());
 </script>
 
 <style scoped>
+.champ-code-totp {
+  width: 9rem;
+}
+
 .liste-appareils {
   list-style: none;
   margin: 0;

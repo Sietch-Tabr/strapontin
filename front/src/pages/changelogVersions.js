@@ -4,6 +4,64 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.0.6 — 18 octobre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Les concerts de trois salles absentes de Ticketmaster et d'Eventim (Le Triton, l'EMB de Sannois et L'Usine à Chapeaux) et ceux de la billetterie Allmol Tickets (Antilles et Guyane) sont maintenant relevés une fois par jour sur leur propre site, dans le respect de leurs consignes d'accès.",
+          "Quand un département ou une salle suivie est mal couvert par nos billetteries, l'application le dit au lieu d'afficher « aucun concert » : c'est fréquent outre-mer, où les concerts passent surtout par des billetteries locales.",
+          "Un concert annoncé à une heure légèrement différente par deux billetteries, ou republié après un changement de salle, n'apparaît plus en double.",
+          "Le concert d'un hommage ou d'un tribute n'est plus rattaché à l'artiste qu'il imite, et les noms de ville des salles sont mieux renseignés.",
+        ],
+      },
+      {
+        categorie: "Notifications",
+        items: [
+          "Aucune notification push entre 22 h et 7 h (heure de Paris) : celles qui tombent la nuit sont envoyées à 7 h. Les emails ne changent pas.",
+          "Paramètres > Notifications se règle canal par canal : fréquence, email, push avec la liste de vos appareils, leur dernier refus éventuel et un bouton pour activer le push sur l'appareil en cours.",
+          "Une notification vous prévient quand une nouvelle version de l'application est disponible, sauf si vous avez choisi « Jamais ».",
+          "Le chiffrement des notifications push suit le format attendu par les navigateurs, que certains refusaient.",
+          "Les digests du jour partent à 12 h.",
+        ],
+      },
+      {
+        categorie: "Hors ligne et connexion lente",
+        items: [
+          "Sans connexion, ou avec une connexion trop lente, l'application affiche vos derniers concerts connus avec leur ancienneté, au lieu d'une page vide. Ils sont remplacés d'eux-mêmes dès que la connexion revient.",
+          "Une connexion lente est signalée par un message au bout de quelques secondes.",
+          "Ces données sont effacées de l'appareil à la déconnexion.",
+        ],
+      },
+      {
+        categorie: "Compte et sécurité",
+        items: [
+          "Les essais répétés sont limités : connexion à un même compte (10 échecs en 15 minutes), mot de passe oublié (3 demandes par heure et par adresse), changement d'adresse email, changement de mot de passe et désactivation de la double authentification (5 essais), recherches d'artistes et de salles (15 par minute).",
+          "Le formulaire de l'identifiant, celui des départements et celui du mot de passe suivent la même disposition, et le champ du code de désactivation de la double authentification explique à quoi il sert.",
+        ],
+      },
+      {
+        categorie: "Interface",
+        items: [
+          "Les boutons de Paramètres ont la largeur de leur libellé, et l'import de préférences propose « Fusionner » ou « Remplacer » avec l'effet de chacun affiché à côté.",
+          "« Masquer » et « Réafficher » sont plus petits et soulignés pour se reconnaître comme des boutons sans survol ; le lien de l'Aide qui rouvre le tour guidé le dit mieux.",
+          "En thème sombre, le bouton principal et l'option active sont moins éclatants tout en restant lisibles.",
+          "Mes spectacles explique ce qu'il contient, et Mes artistes comme Mes salles disent qu'il faut cliquer sur « Rechercher » après avoir saisi au moins 2 caractères.",
+          "La recherche d'artistes retrouve « Krash Karma » sous « Krashkarma » et inversement, et chaque résultat indique sa provenance et, quand elle existe, sa popularité.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "À traiter : les adresses d'une anomalie s'ouvrent d'un clic, une anomalie de doublon ou de Wikidata partagé nomme l'autre salle et propose de les comparer puis de les fusionner, et une position de salle éloignée de son élément Wikidata peut être alignée sur lui.",
+          "Le Référentiel des salles gère le lieu Eventim de chaque salle (voir, modifier, tester, lancer un fetch), filtre les salles sans source et explique chaque statut « À vérifier » ou « Invalide » (source, nombre de fetchs vides, date).",
+          "L'onglet Sources liste les départements sans aucun concert à venir, que l'on peut déclarer légitimes.",
+          "Les essais de connexion trop nombreux sur un compte et les dépassements de limite sont consignés dans les logs.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.0.5 — 15 octobre 2026",
     categories: [
       {

@@ -11,15 +11,21 @@ import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
 import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -40,7 +46,8 @@ class NotificationPushDigestService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final SuiviEchecsPush suiviEchecs;
-  private final NotificationDigestService.FabriquePushService fabriquePushService;
+  private final FabriquePushService fabriquePushService;
+  private final Clock horloge;
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans
   // logs_admin.
   private final CompteurBilanFetch compteurPush = new CompteurBilanFetch();
@@ -51,7 +58,18 @@ class NotificationPushDigestService {
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,
-      final NotificationDigestService.FabriquePushService fabriquePushService) {
+      final FabriquePushService fabriquePushService) {
+    this(configService, jdbc, logsAdminWorker, fabriquePushService, Clock.systemUTC());
+  }
+
+  /* package-private : horloge injectable pour les tests de la plage silencieuse. */
+  NotificationPushDigestService(
+      final ConfigServiceWorker configService,
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final FabriquePushService fabriquePushService,
+      final Clock horloge) {
+    this.horloge = horloge;
     this.configService = configService;
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
@@ -92,6 +110,12 @@ class NotificationPushDigestService {
     if (abonnements.isEmpty()) {
       return false;
     }
+    // Retenu jusqu'à 7 h : la trace durable est la ligne de push_differes, le
+    // concert peut donc être marqué notifié sans que le push soit perdu.
+    if (PlageSilencieusePush.estActive(Instant.now(horloge))) {
+      differer(userId, concerts);
+      return true;
+    }
 
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
@@ -107,6 +131,84 @@ class NotificationPushDigestService {
       LOG.info("Push digest envoyé : {} ({} abonnement(s))", userId, nbEnvoyes);
     }
     return nbEnvoyes > 0;
+  }
+
+  private void differer(
+      final String userId, final List<NotificationDigestService.ConcertNotif> concerts) {
+    for (final NotificationDigestService.ConcertNotif concert : concerts) {
+      jdbc.update(
+          """
+          INSERT INTO push_differes (user_id, concert_id, source)
+          VALUES (:userId, CAST(:concertId AS uuid), :source)
+          ON CONFLICT DO NOTHING
+          """,
+          new MapSqlParameterSource()
+              .addValue("userId", userId)
+              .addValue("concertId", concert.concertId())
+              .addValue("source", concert.source()));
+    }
+    LOG.info(
+        "Push retenu jusqu'à 7 h (plage silencieuse) : {} concert(s) pour {}",
+        concerts.size(),
+        userId);
+  }
+
+  /**
+   * Envoie les push retenus pendant la plage silencieuse, un digest par
+   * utilisateur. Sans effet dans la plage elle-même : rien ne part avant 7 h.
+   * @return nombre d'utilisateurs dont les push retenus sont partis
+   */
+  /* package-private : appelé par NotificationDigestService (même package). */
+  int envoyerDifferes() {
+    if (PlageSilencieusePush.estActive(Instant.now(horloge))) {
+      return 0;
+    }
+    jdbc.update("DELETE FROM push_differes WHERE cree_le < now() - interval '2 days'", Map.of());
+    final Map<String, List<NotificationDigestService.ConcertNotif>> parUtilisateur =
+        chargerDifferes();
+    int envoyes = 0;
+    for (final Map.Entry<String, List<NotificationDigestService.ConcertNotif>> entree :
+        parUtilisateur.entrySet()) {
+      final String userId = entree.getKey();
+      // Sans appareil abonné, rien ne peut plus partir : la trace est abandonnée.
+      if (envoyerPush(userId, entree.getValue()) || !aUnAbonnement(userId)) {
+        jdbc.update("DELETE FROM push_differes WHERE user_id = :userId", Map.of("userId", userId));
+        envoyes++;
+      }
+    }
+    return envoyes;
+  }
+
+  private Map<String, List<NotificationDigestService.ConcertNotif>> chargerDifferes() {
+    final Map<String, List<NotificationDigestService.ConcertNotif>> parUtilisateur =
+        new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT pd.user_id, pd.source, CAST(c.id AS text) AS concert_id,
+               COALESCE(a.nom, c.artiste) AS artiste, CAST(c.date AS text) AS date,
+               c.salle, c.ville, c.url, c.artiste_norm, c.statut
+        FROM push_differes pd
+        JOIN concerts c ON c.id = pd.concert_id
+        LEFT JOIN artistes a ON a.id = c.artiste_id
+        ORDER BY pd.user_id, c.date
+        """,
+        Map.of(),
+        rs -> {
+          parUtilisateur
+              .computeIfAbsent(rs.getString("user_id"), _ -> new ArrayList<>())
+              .add(
+                  new NotificationDigestService.ConcertNotif(
+                      rs.getString("artiste"),
+                      rs.getString("date"),
+                      rs.getString("salle"),
+                      rs.getString("ville"),
+                      rs.getString("url"),
+                      rs.getString("concert_id"),
+                      rs.getString("artiste_norm"),
+                      rs.getString("source"),
+                      rs.getString("statut")));
+        });
+    return parUtilisateur;
   }
 
   /**
@@ -178,7 +280,7 @@ class NotificationPushDigestService {
       final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
       final Subscription subscription =
           new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload));
+      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
     } catch (Exception e) {
       compteurPush.enregistrerErreur();
       suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);

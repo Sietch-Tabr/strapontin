@@ -58,4 +58,22 @@ class CompteurBilanFetchTest {
     assertEquals(1, compteur.preleverBilan().reponsesVides());
     assertEquals(0, compteur.preleverBilan().reponsesVides());
   }
+
+  @Test
+  void preleverBilan_erreursAvecCause_regroupeParCauseEtRemetAZero() {
+    final CompteurBilanFetch compteur = new CompteurBilanFetch();
+    compteur.enregistrerAppel();
+    compteur.enregistrerAppel();
+    compteur.enregistrerAppel();
+    compteur.enregistrerErreur("connexion refusée");
+    compteur.enregistrerErreur("connexion refusée");
+    compteur.enregistrerErreur("délai dépassé");
+
+    final BilanFetch bilan = compteur.preleverBilan();
+
+    org.junit.jupiter.api.Assertions.assertEquals(3, bilan.erreursHttp());
+    org.junit.jupiter.api.Assertions.assertEquals(
+        java.util.Map.of("connexion refusée", 2, "délai dépassé", 1), bilan.causes());
+    org.junit.jupiter.api.Assertions.assertTrue(compteur.preleverBilan().causes().isEmpty());
+  }
 }

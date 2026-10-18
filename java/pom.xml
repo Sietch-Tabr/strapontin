@@ -24,8 +24,8 @@
     </modules>
 
     <properties>
-        <!-- Version CI-friendly (#764) : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.0.5</revision>
+        <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
+        <revision>3.0.6</revision>
         <java.version>26</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
@@ -43,7 +43,7 @@
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
         <springdoc.version>3.1.1</springdoc.version>
-        <bucket4j.version>8.21.0</bucket4j.version>
+        <jsoup.version>1.23.2</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
         <!-- Propriété dédiée à l'agent JaCoCo, distincte de argLine : le module worker fixe déjà
@@ -267,11 +267,12 @@
                 <version>${springdoc.version}</version>
             </dependency>
 
-            <!-- Limitation de débit (connexion, réinitialisation, journalisation client) -->
+            <!-- Lecture des pages HTML des sites de salles (analyseur HTML seul : la vulnérabilité
+                 connue de 1.23.2 vise l'analyseur XML, jamais utilisé ici) -->
             <dependency>
-                <groupId>com.bucket4j</groupId>
-                <artifactId>bucket4j_jdk17-core</artifactId>
-                <version>${bucket4j.version}</version>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>${jsoup.version}</version>
             </dependency>
 
             <dependency>

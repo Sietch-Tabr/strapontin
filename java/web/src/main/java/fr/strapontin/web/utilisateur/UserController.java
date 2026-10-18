@@ -6,11 +6,14 @@ package fr.strapontin.web.utilisateur;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
+import fr.strapontin.web.admin.LogAdminService;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.RegleIdentifiant;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import java.time.Duration;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -39,24 +42,38 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
   private static final int LONGUEUR_MIN_MOT_DE_PASSE = 12;
+  private static final int MAX_ECHECS_MOT_DE_PASSE = 5;
+  private static final Duration FENETRE_ECHECS_MOT_DE_PASSE = Duration.ofMinutes(15);
 
   private final UtilisateurRepository utilisateurRepository;
   private final PasswordEncoder passwordEncoder;
   private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+  private final LogAdminService logAdminService;
+  // Une session déjà ouverte (volée, par exemple) ne doit pas pouvoir deviner le
+  // mot de passe actuel.
+  private final LimiteurDebit echecsMotDePasseActuel =
+      new LimiteurDebit(
+          MAX_ECHECS_MOT_DE_PASSE,
+          FENETRE_ECHECS_MOT_DE_PASSE,
+          FENETRE_ECHECS_MOT_DE_PASSE.plusMinutes(5),
+          10_000);
 
   /**
    * @param utilisateurRepository accès aux données utilisateur
    * @param passwordEncoder encodeur bcrypt
    * @param sessionRepository dépôt de sessions JDBC (révocation
    *     multi-appareils)
+   * @param logAdminService journalisation du blocage après échecs répétés
    */
   public UserController(
       final UtilisateurRepository utilisateurRepository,
       final PasswordEncoder passwordEncoder,
-      final FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+      final FindByIndexNameSessionRepository<? extends Session> sessionRepository,
+      final LogAdminService logAdminService) {
     this.utilisateurRepository = utilisateurRepository;
     this.passwordEncoder = passwordEncoder;
     this.sessionRepository = sessionRepository;
+    this.logAdminService = logAdminService;
   }
 
   /**
@@ -104,11 +121,12 @@ public class UserController {
   }
 
   /**
-   * Change le mot de passe et révoque toutes les sessions
-   * actives (tous appareils, pas seulement la requête en cours).
+   * Change le mot de passe et révoque toutes les sessions actives (tous
+   * appareils, pas seulement la requête en cours).
    * @param requete corps JSON avec motDePasseActuel/Nouveau
    * @param auth contexte d'authentification
-   * @return 200 si changé, 400 si invalide/mdp actuel incorrect
+   * @return 200 si changé, 400 si invalide/mdp actuel incorrect, 429 après 5
+   *     mots de passe actuels incorrects en 15 minutes
    */
   @PostMapping("/password")
   public ResponseEntity<Map<String, Object>> changerMotDePasse(
@@ -125,9 +143,20 @@ public class UserController {
               + LONGUEUR_MIN_MOT_DE_PASSE
               + " caractères.");
     }
+    if (echecsMotDePasseActuel.estEpuise(details.id())) {
+      return erreur(429, "Trop de tentatives. Réessayez dans quelques minutes.");
+    }
     if (!passwordEncoder.matches(requete.motDePasseActuel(), details.motDePasse())) {
+      if (echecsMotDePasseActuel.enregistrer(details.id())) {
+        logAdminService.logAdmin(
+            "warn",
+            "auth",
+            "Changement de mot de passe bloqué après échecs répétés : " + details.identifiant(),
+            Map.of("userId", details.id()));
+      }
       return erreur(400, "Mot de passe actuel incorrect.");
     }
+    echecsMotDePasseActuel.oublier(details.id());
 
     utilisateurRepository.changerMotDePasse(
         details.id(), passwordEncoder.encode(requete.motDePasseNouveau()));

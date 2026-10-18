@@ -20,6 +20,8 @@ version, reprise de `front/src/pages/changelogVersions.js`.
 
 Pour chaque page concernée : comparer avec l'implémentation réelle, proposer les mises à jour, attendre validation, éditer.
 
+Les modifications du wiki sont committées et poussées dans `strapontin-wiki/` au jalon même, jamais accumulées. Contrôle obligatoire après le push : `git ls-remote origin main` doit donner le même hash que `git rev-parse HEAD`. Sinon, s'arrêter et le signaler : `origin/main` local ne prouve rien, il peut afficher un commit que le serveur n'a plus (panne Codeberg de l'automne 2026, dernier commit sain `1086a4c`).
+
 ## 3. CLAUDE.md
 
 Mettre à jour `CLAUDE.md` si l'architecture, la stack, les commandes, les jobs Quartz, les sources de données ou les conventions ont changé. Le détail propre à un package va dans le `CLAUDE.md` imbriqué de son dossier (`persister/`, `sante/`, `core/`…), pas à la racine : la racine reste sous 20 Ko (`wc -c CLAUDE.md`).

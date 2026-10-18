@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.admin.LogAdminService;
@@ -46,7 +47,13 @@ class ArtisteServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new ArtisteService(artisteRepository, objectMapper, restClient, logAdminService);
+    service =
+        new ArtisteService(
+            artisteRepository,
+            objectMapper,
+            restClient,
+            logAdminService,
+            new BudgetRecherchesExternes(logAdminService));
   }
 
   @Test
@@ -98,7 +105,8 @@ class ArtisteServiceTest {
     final Map<String, Object> candidat = new HashMap<>();
     candidat.put("id", artisteExistant);
     candidat.put("nom_norm", "krash karma");
-    when(artisteRepository.chercherCandidatsParTokens(any())).thenReturn(List.of(candidat));
+    when(artisteRepository.chercherCandidatsParTokens(any(), anyString()))
+        .thenReturn(List.of(candidat));
     when(artisteRepository.existePourUtilisateur("u1", artisteExistant)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
 
@@ -114,7 +122,8 @@ class ArtisteServiceTest {
     final Map<String, Object> candidat = new HashMap<>();
     candidat.put("id", artisteId);
     candidat.put("nom_norm", "radiohead");
-    when(artisteRepository.chercherCandidatsParTokens(any())).thenReturn(List.of(candidat));
+    when(artisteRepository.chercherCandidatsParTokens(any(), anyString()))
+        .thenReturn(List.of(candidat));
     when(artisteRepository.upsertArtiste("Radiohead", "radiohead")).thenReturn(artisteId);
     when(artisteRepository.existePourUtilisateur("u1", artisteId)).thenReturn(false);
     when(artisteRepository.compterPourUtilisateur("u1")).thenReturn(0);
@@ -212,6 +221,65 @@ class ArtisteServiceTest {
   @Test
   void contientCorrespondancePartielle_aucuneCorrespondance_retourneFalse() {
     assertFalse(ArtisteService.contientCorrespondancePartielle("radiohead", Set.of("yaelnaim")));
+  }
+
+  // « Krash Karma » (Wikidata) et « Krashkarma » (Deezer) ne diffèrent que par l'espace : un seul
+  // résultat, celui de Wikidata, qui porte la description.
+  @Test
+  void lister_variantesDEspacementEntreSources_neGardeQueLaPremiere() {
+    when(artisteRepository.listerPourUtilisateur("user1")).thenReturn(List.of());
+    when(artisteRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+
+    final ArtisteService espion = Mockito.spy(service);
+    doReturn(List.of(new SuggestionArtiste("Krash Karma", "wikidata", "band", "Q684361")))
+        .when(espion)
+        .rechercherWikidata("Krash Karma");
+    doReturn(
+            List.of(
+                new SuggestionArtiste("Krashkarma", "deezer", null, null, 1385),
+                new SuggestionArtiste("Kash Karma", "deezer", null, null, 12)))
+        .when(espion)
+        .rechercherDeezer("Krash Karma");
+
+    final var reponse = espion.lister("user1", "Krash Karma");
+
+    assertEquals(
+        List.of("Krash Karma", "Kash Karma"),
+        reponse.suggestions().stream().map(SuggestionArtiste::nom).toList());
+  }
+
+  @Test
+  void lister_recherchePuisArtisteDejaSuiviSansEspace_leSignaleCommeDejaSuivi() {
+    final ArtisteUtilisateur suivi = mock(ArtisteUtilisateur.class);
+    when(suivi.artisteAffiche()).thenReturn("Krashkarma");
+    when(artisteRepository.listerPourUtilisateur("user1")).thenReturn(List.of(suivi));
+    when(artisteRepository.rechercherEnBase(anyString())).thenReturn(List.of());
+    final ArtisteService espion = Mockito.spy(service);
+    doReturn(List.of()).when(espion).rechercherWikidata("Krash Karma");
+    doReturn(List.of()).when(espion).rechercherDeezer("Krash Karma");
+
+    assertTrue(espion.lister("user1", "Krash Karma").dejaLeSuivi());
+  }
+
+  @Test
+  void parseDeezerResultats_garde_laPopulariteEtLaFicheLaPlusPopulaire() {
+    final String json =
+        """
+        {"data":[
+          {"id":392181181,"name":"Krash Karma","nb_fan":0},
+          {"id":648729,"name":"Krashkarma","nb_fan":1385},
+          {"id":1,"name":"Krashkarma","nb_fan":3}
+        ]}
+        """;
+
+    final List<SuggestionArtiste> resultats =
+        ArtisteServiceParsing.parseDeezerResultats(new ObjectMapper(), json);
+
+    assertEquals(2, resultats.size());
+    assertEquals("Krashkarma", resultats.get(0).nom());
+    assertEquals(1385, resultats.get(0).fans());
+    assertEquals("Krash Karma", resultats.get(1).nom());
+    assertEquals(0, resultats.get(1).fans());
   }
 
   // Wikidata et Deezer partent en parallèle dès que la recherche en base ne suffit pas — un

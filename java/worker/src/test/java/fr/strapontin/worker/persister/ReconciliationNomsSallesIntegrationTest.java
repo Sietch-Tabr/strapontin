@@ -92,6 +92,31 @@ class ReconciliationNomsSallesIntegrationTest extends AbstractWorkerIntegrationT
   }
 
   @Test
+  void absorberRenommagesSalles_mappingUniqueDeuxGraphiesDUnMemeNom_gardeLaMeilleureEntreLesLots() {
+    mapper("ticketmaster", "ticketmaster:liberte");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Le Liberté Rennes' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()));
+
+    absorber("ticketmaster", "ticketmaster:liberte", "Le Liberte - Rennes");
+    assertEquals("Le Liberté Rennes", nom());
+    absorber("ticketmaster", "ticketmaster:liberte", "Le Liberté Rennes");
+    assertEquals("Le Liberté Rennes", nom());
+  }
+
+  @Test
+  void absorberRenommagesSalles_mappingUniqueGraphieStrictementMeilleure_appliqueLaGraphie() {
+    mapper("ticketmaster", "ticketmaster:zenith");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Zenith Toulouse Metropole' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()));
+
+    absorber("ticketmaster", "ticketmaster:zenith", "Zénith Toulouse Métropole");
+
+    assertEquals("Zénith Toulouse Métropole", nom());
+  }
+
+  @Test
   void absorberRenommagesSalles_nomEventimDUneSalleAvecMappingTicketmaster_neRenommePas() {
     mapper("ticketmaster", "ticketmaster:olympia");
     mapper("eventim", "eventim:internal:lolympia");

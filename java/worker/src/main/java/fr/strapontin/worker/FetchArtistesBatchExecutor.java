@@ -68,7 +68,7 @@ class FetchArtistesBatchExecutor {
     rapportage
         .workerStatsService()
         .executerAvecStatsToleretErreur(
-            LOG, "fetch:artistes:batch", () -> executerCycle(artisteIdsCibles));
+            LOG, "fetch:artistes:batch", retry, () -> executerCycle(artisteIdsCibles));
   }
 
   /**

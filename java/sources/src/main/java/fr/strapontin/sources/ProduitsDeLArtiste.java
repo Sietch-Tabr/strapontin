@@ -4,6 +4,7 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.core.Hommage;
 import fr.strapontin.core.Normalisation;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -113,8 +114,9 @@ final class ProduitsDeLArtiste {
   }
 
   /**
-   * Faux pour « Autres artistes - Festival » sans l'artiste recherché ; vrai
-   * si le titre nomme l'événement lui-même (« Les Voix de Carmen »).
+   * Faux pour « Autres artistes - Festival » sans l'artiste recherché, et pour
+   * un hommage (« tribute ») à l'artiste recherché ; vrai si le titre nomme
+   * l'événement lui-même (« Les Voix de Carmen »).
    * @param produit produit Eventim sous forme de Map imbriquée
    * @param artiste nom de l'artiste recherché
    * @return {@code false} si le titre désigne un autre artiste
@@ -124,6 +126,9 @@ final class ProduitsDeLArtiste {
     final String titre = (String) produit.get(CLE_NOM);
     if (titre == null || artiste == null) {
       return true;
+    }
+    if (Hommage.estHommage(titre) && !Hommage.estHommage(artiste)) {
+      return false;
     }
     final String partieArtiste =
         " " + Normalisation.normaliserTexte(MapeurProduitEventim.extraireNomArtiste(titre)) + " ";

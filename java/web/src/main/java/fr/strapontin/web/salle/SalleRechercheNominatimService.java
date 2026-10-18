@@ -4,6 +4,10 @@
  */
 package fr.strapontin.web.salle;
 
+import fr.strapontin.sources.CadenceurAppels;
+import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.CadenceurAppelsPartage;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URLEncoder;
@@ -14,7 +18,9 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
@@ -49,20 +55,45 @@ class SalleRechercheNominatimService {
   private final ConfigService configService;
   private final RestClient restClient;
   private final ObjectMapper objectMapper;
+  private final BudgetRecherchesExternes budgetRecherches;
+  private final CadenceurAppels cadenceur;
 
   /**
    * @param configService lecture de l'email de contact (User-Agent Nominatim)
    * @param restClient client HTTP partagé
    * @param objectMapper désérialiseur JSON
+   * @param budgetRecherches plafond global des recherches vers Nominatim
+   * @param jdbc base partagée avec le worker, qui coordonne la seconde entre les
+   *     deux processus
    */
   /* package-private : instancié uniquement par SalleService (même package). */
+  @Autowired
   SalleRechercheNominatimService(
       final ConfigService configService,
       final RestClient restClient,
-      final ObjectMapper objectMapper) {
+      final ObjectMapper objectMapper,
+      final BudgetRecherchesExternes budgetRecherches,
+      final NamedParameterJdbcTemplate jdbc) {
+    this(
+        configService,
+        restClient,
+        objectMapper,
+        budgetRecherches,
+        new CadenceurAppelsPartage(jdbc, "nominatim", ClientNominatim.DELAI_MIN_ENTRE_APPELS_MS));
+  }
+
+  /* package-private : injection d'un cadenceur de test. */
+  SalleRechercheNominatimService(
+      final ConfigService configService,
+      final RestClient restClient,
+      final ObjectMapper objectMapper,
+      final BudgetRecherchesExternes budgetRecherches,
+      final CadenceurAppels cadenceur) {
     this.configService = configService;
     this.restClient = restClient;
     this.objectMapper = objectMapper;
+    this.budgetRecherches = budgetRecherches;
+    this.cadenceur = cadenceur;
   }
 
   /**
@@ -75,7 +106,11 @@ class SalleRechercheNominatimService {
    */
   /* package-private : appelé par SalleService (même package). */
   List<ResultatSalle> rechercher(final String terme) {
+    if (!budgetRecherches.consommer(BudgetRecherchesExternes.Service.NOMINATIM)) {
+      return List.of();
+    }
     try {
+      cadenceur.attendre();
       final String contact =
           configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
       final String url =

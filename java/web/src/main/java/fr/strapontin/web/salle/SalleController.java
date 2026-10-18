@@ -6,13 +6,11 @@ package fr.strapontin.web.salle;
 
 import static fr.strapontin.web.ControllerUtils.erreur;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import fr.strapontin.web.BudgetRecherchesExternes;
+import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.email.EmailService;
+import fr.strapontin.web.securite.LimiteurDebit;
 import fr.strapontin.web.securite.UtilisateurDetails;
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.Map;
@@ -41,29 +39,37 @@ import org.springframework.web.bind.annotation.RestController;
 public class SalleController {
 
   private static final int MAX_SIGNALEMENTS_PAR_HEURE = 3;
+  private static final int LONGUEUR_MIN_RECHERCHE = 2;
 
   private final SalleService salleService;
   private final EmailService emailService;
+  private final BudgetRecherchesExternes budgetRecherches;
 
-  private final Cache<String, Bucket> bucketsSignalement =
-      Caffeine.newBuilder()
-          .expireAfterWrite(Duration.ofHours(1).plusMinutes(1))
-          .maximumSize(10_000)
-          .build();
+  private final LimiteurDebit limiteurSignalement =
+      new LimiteurDebit(
+          MAX_SIGNALEMENTS_PAR_HEURE,
+          Duration.ofHours(1),
+          Duration.ofHours(1).plusMinutes(1),
+          10_000);
 
   /**
    * @param salleService service de gestion des salles
    * @param emailService service d'envoi d'emails
+   * @param budgetRecherches plafonds des recherches qui interrogent un service
+   *     externe
    */
-  public SalleController(final SalleService salleService, final EmailService emailService) {
+  public SalleController(
+      final SalleService salleService,
+      final EmailService emailService,
+      final BudgetRecherchesExternes budgetRecherches) {
     this.salleService = salleService;
     this.emailService = emailService;
+    this.budgetRecherches = budgetRecherches;
   }
 
   /**
-   * Liste les salles suivies, avec suggestions de recherche si {@code q} est
-   * fourni.
-   *
+   * Liste les salles suivies, avec suggestions si {@code q} est fourni ; 429
+   * si l'utilisateur enchaîne trop de recherches.
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification
    * @return la liste des salles et les suggestions
@@ -73,6 +79,10 @@ public class SalleController {
       @RequestParam(name = "q", required = false, defaultValue = "") final String recherche,
       final Authentication auth) {
     final String userId = utilisateur(auth).id();
+    if (recherche.strip().length() >= LONGUEUR_MIN_RECHERCHE
+        && !budgetRecherches.autoriserUtilisateur(userId)) {
+      throw new ErreurMetier("Trop de recherches. Patientez quelques secondes.", 429);
+    }
     return ResponseEntity.ok(salleService.lister(userId, recherche));
   }
 
@@ -124,14 +134,11 @@ public class SalleController {
    * Signale une salle absente (email admin + confirmation), rate-limité.
    * @param requete corps JSON avec nom, ville, urlSite, commentaire
    * @param auth contexte d'authentification
-   * @param request la requête HTTP (pour rate limiting par IP)
    * @return 204 si transmis, 400 si invalide, 429 si rate limit atteint
    */
   @PostMapping("/signaler")
   public ResponseEntity<Map<String, Object>> signalerManquante(
-      @Valid @RequestBody final RequeteSignalementSalle requete,
-      final Authentication auth,
-      final HttpServletRequest request) {
+      @Valid @RequestBody final RequeteSignalementSalle requete, final Authentication auth) {
     final UtilisateurDetails utilisateur = utilisateur(auth);
 
     // @Valid rejette une requête invalide avant l'exécution de cette méthode —
@@ -142,9 +149,7 @@ public class SalleController {
     final String urlSite = requete.urlSite() == null ? "" : requete.urlSite().strip();
     final String commentaire = requete.commentaire() == null ? "" : requete.commentaire().strip();
 
-    final String ip = request.getRemoteAddr();
-    final Bucket bucket = bucketsSignalement.get(ip, _ -> creerBucketSignalement());
-    if (!bucket.tryConsume(1)) {
+    if (!limiteurSignalement.autoriser(utilisateur.id())) {
       return erreur(429, "Trop de signalements. Réessayez dans une heure.");
     }
 
@@ -164,17 +169,8 @@ public class SalleController {
   @Profile("dev")
   @DeleteMapping("/rate-limits/signalement")
   public ResponseEntity<Void> reinitialiserBucketsSignalement() {
-    bucketsSignalement.invalidateAll();
+    limiteurSignalement.reinitialiser();
     return ResponseEntity.noContent().build();
-  }
-
-  private Bucket creerBucketSignalement() {
-    final Bandwidth limite =
-        Bandwidth.builder()
-            .capacity(MAX_SIGNALEMENTS_PAR_HEURE)
-            .refillIntervally(MAX_SIGNALEMENTS_PAR_HEURE, Duration.ofHours(1))
-            .build();
-    return Bucket.builder().addLimit(limite).build();
   }
 
   private static UtilisateurDetails utilisateur(final Authentication auth) {

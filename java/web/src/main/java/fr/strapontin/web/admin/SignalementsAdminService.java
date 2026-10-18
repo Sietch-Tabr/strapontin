@@ -29,28 +29,37 @@ public class SignalementsAdminService {
   private static final String SQL_LISTE =
       """
       SELECT t.*, COALESCE(s.nom_affiche, s.nom, a.nom_affiche, a.nom, u.username,
-               concat_ws(' · ', c.artiste, to_char(c.date, 'DD/MM/YYYY'), c.salle))
-               AS entite_nom
+               NULLIF(concat_ws(' · ', c.artiste, to_char(c.date, 'DD/MM/YYYY'), c.salle), ''),
+               CASE WHEN t.entite_type = 'departement'
+                    THEN 'Département ' || (t.details::jsonb ->> 'departement') END)
+               AS entite_nom,
+             NULLIF(concat_ws(' · ', COALESCE(o.nom_affiche, o.nom),
+                              NULLIF(concat_ws(' ', o.ville, o.dept), '')), '') AS autre_salle_nom
       FROM (
         SELECT 'nouveau' AS categorie, sm.id::text AS id, sm.type AS type,
                sm.entite_type AS entite_type, sm.entite_id::text AS entite_id,
                sm.confiance AS confiance, sm.detecte_le AS detecte_le,
-               sm.details::text AS details, sm.details ->> 'userId' AS utilisateur_id
+               NULLIF((sm.details - 'salleExistante' - 'autreSalleId')::text, '{}') AS details,
+               sm.details ->> 'userId' AS utilisateur_id,
+               COALESCE(sm.details ->> 'salleExistante', sm.details ->> 'autreSalleId')
+                   AS autre_salle_id
         FROM signalements_matching sm WHERE sm.resolu_le IS NULL
         UNION ALL
         SELECT 'necessite_intervention', a.artiste_id::text, 'necessite_intervention',
-               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL, NULL
+               'artiste', a.artiste_id::text, 'moyenne', a.necessite_intervention_le, NULL, NULL,
+               NULL
         FROM artiste_sources a WHERE a.necessite_intervention_le IS NOT NULL
         UNION ALL
         SELECT 'contamination_salle', s.id::text, 'contamination_salle', 'salle',
-               s.id::text, 'moyenne', NULL, s.contamination_signalee, NULL
+               s.id::text, 'moyenne', NULL, s.contamination_signalee, NULL, NULL
         FROM salles s WHERE s.contamination_signalee IS NOT NULL
         UNION ALL
         SELECT 'doublon_salle', s.id::text, 'doublon_salle', 'salle', s.id::text, 'moyenne',
-               NULL, s.doublon_signale::text, NULL
+               NULL, NULL, NULL, s.doublon_signale::text
         FROM salles s WHERE s.doublon_signale IS NOT NULL
       ) t
       LEFT JOIN salles s ON t.entite_type = 'salle' AND s.id::text = t.entite_id
+      LEFT JOIN salles o ON o.id::text = t.autre_salle_id
       LEFT JOIN artistes a ON t.entite_type = 'artiste' AND a.id::text = t.entite_id
       LEFT JOIN concerts c ON t.entite_type = 'evenement' AND c.id::text = t.entite_id
       -- L'entité d'un signalement est un UUID, dérivé de l'identifiant texte du compte.
@@ -60,6 +69,7 @@ public class SignalementsAdminService {
       LIMIT :taille OFFSET :offset
       """;
   private static final String CLE_ID = "id";
+  private static final String ENTITE_SALLE = "salle";
   private static final String NIVEAU_INFO = "info";
   private static final String SOURCE_ADMIN = "admin";
   // Signalements dont l'action attendue est la suppression du concert désigné.
@@ -109,7 +119,11 @@ public class SignalementsAdminService {
             rs.getString("entite_type"), rs.getString("entite_id"), rs.getString("entite_nom")),
         rs.getString("confiance"),
         detecteLe != null ? detecteLe.toInstant() : null,
-        rs.getString("details"));
+        rs.getString("details"),
+        rs.getString("autre_salle_nom") != null
+            ? new EntreeSignalement.EntiteSignalee(
+                ENTITE_SALLE, rs.getString("autre_salle_id"), rs.getString("autre_salle_nom"))
+            : null);
   }
 
   private long totalActifs() {
@@ -129,17 +143,31 @@ public class SignalementsAdminService {
 
   /**
    * Marque un signalement de la table {@code signalements_matching} comme
-   * résolu manuellement.
+   * résolu manuellement ; pour un département sans concert, l'absence de
+   * couverture est aussi reconnue (plus de signalement tant qu'il reste vide).
    *
    * @param id identifiant numérique du signalement
    * @return {@code true} si un signalement actif correspondant a été résolu
    */
   public boolean resoudre(final long id) {
+    final List<String> departements =
+        jdbc.queryForList(
+            "SELECT details ->> 'departement' FROM signalements_matching WHERE id = :id"
+                + " AND resolu_le IS NULL AND type = 'departement_sans_concert'",
+            Map.of(CLE_ID, id),
+            String.class);
     final int lignes =
         jdbc.update(
             "UPDATE signalements_matching SET resolu_le = now()"
                 + " WHERE id = :id AND resolu_le IS NULL",
             Map.of("id", id));
+    if (lignes > 0 && !departements.isEmpty()) {
+      // Absence reconnue : le département n'est plus signalé tant qu'il reste sans
+      // concert.
+      jdbc.update(
+          "UPDATE couverture_departements SET couverture_connue_le = now() WHERE dept = :dept",
+          Map.of("dept", departements.get(0)));
+    }
     if (lignes > 0) {
       logAdminService.logAdmin(
           NIVEAU_INFO,
@@ -178,6 +206,47 @@ public class SignalementsAdminService {
         SOURCE_ADMIN,
         "concert signalé supprimé",
         Map.of("signalementId", id, "concertId", concerts.get(0)));
+    return true;
+  }
+
+  /**
+   * Aligne la position d'une salle sur son élément Wikidata, à partir des
+   * coordonnées relevées par le signalement « position de source éloignée »,
+   * puis le clôt. La salle est dès lors réalignée chaque nuit sur l'élément.
+   * @param id identifiant numérique du signalement
+   * @return {@code true} si la position a été alignée
+   */
+  @Transactional
+  public boolean alignerPositionSurWikidata(final long id) {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT entite_id::text AS salle,"
+                + " CAST(details ->> 'latitudeWikidata' AS double precision) AS latitude,"
+                + " CAST(details ->> 'longitudeWikidata' AS double precision) AS longitude"
+                + " FROM signalements_matching WHERE id = :id AND resolu_le IS NULL"
+                + " AND type = 'position_source_eloignee'",
+            Map.of(CLE_ID, id));
+    if (lignes.isEmpty() || lignes.getFirst().get("latitude") == null) {
+      return false;
+    }
+    final Map<String, Object> ligne = lignes.getFirst();
+    jdbc.update(
+        "UPDATE salles SET latitude = :latitude, longitude = :longitude,"
+            + " origine_position = 'wikidata' WHERE id = CAST(:salle AS uuid)",
+        Map.of(
+            "latitude",
+            ligne.get("latitude"),
+            "longitude",
+            ligne.get("longitude"),
+            ENTITE_SALLE,
+            ligne.get(ENTITE_SALLE)));
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now() WHERE id = :id", Map.of(CLE_ID, id));
+    logAdminService.logAdmin(
+        NIVEAU_INFO,
+        SOURCE_ADMIN,
+        "position de salle alignée sur Wikidata",
+        Map.of("signalementId", id, "salleId", ligne.get(ENTITE_SALLE)));
     return true;
   }
 

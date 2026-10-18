@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -147,5 +148,44 @@ class TotpEnrollmentControllerTest {
 
     assertEquals(HttpStatus.OK, rep.getStatusCode());
     verify(userController).desactiverTotp("user-1");
+  }
+
+  @Test
+  void desactiver_cinqCodesIncorrects_bloqueEtJournaliseUneFois() {
+    stubPrincipal();
+    when(userController.lireSecretTotp("user-1")).thenReturn("SECRET");
+    when(totpService.verifierCode("SECRET", "000000")).thenReturn(false);
+
+    for (int i = 0; i < 5; i++) {
+      assertEquals(
+          HttpStatus.BAD_REQUEST,
+          controller.desactiver(new TotpChallengeRequest("000000"), auth).getStatusCode());
+    }
+    final ResponseEntity<Map<String, Object>> sixieme =
+        controller.desactiver(new TotpChallengeRequest("000000"), auth);
+
+    assertEquals(HttpStatus.TOO_MANY_REQUESTS, sixieme.getStatusCode());
+    verify(logAdminService, times(1))
+        .logAdmin(eq("warn"), eq("auth"), anyString(), org.mockito.ArgumentMatchers.anyMap());
+    verify(totpService, times(5)).verifierCode("SECRET", "000000");
+    verify(userController, never()).desactiverTotp(anyString());
+  }
+
+  @Test
+  void desactiver_codeCorrectApresQuelquesEchecs_remetLeCompteurAZero() {
+    stubPrincipal();
+    when(userController.lireSecretTotp("user-1")).thenReturn("SECRET");
+    when(totpService.verifierCode("SECRET", "000000")).thenReturn(false);
+    when(totpService.verifierCode("SECRET", "123456")).thenReturn(true);
+    for (int i = 0; i < 4; i++) {
+      controller.desactiver(new TotpChallengeRequest("000000"), auth);
+    }
+    controller.desactiver(new TotpChallengeRequest("123456"), auth);
+
+    for (int i = 0; i < 4; i++) {
+      assertEquals(
+          HttpStatus.BAD_REQUEST,
+          controller.desactiver(new TotpChallengeRequest("000000"), auth).getStatusCode());
+    }
   }
 }

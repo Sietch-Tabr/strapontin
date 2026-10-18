@@ -50,13 +50,13 @@ public final class CatalogueSignalements {
     ajouter(
         "doublon_salle",
         "Doublon de salle probable",
-        "Deux salles semblent désigner le même lieu : les fusionner depuis le référentiel, ou les"
+        "Deux salles semblent désigner le même lieu : les comparer puis les fusionner, ou les"
             + " déclarer distinctes.");
     ajouter(
         "meme_lieu_salles",
         "Deux salles au même endroit",
-        "Deux salles ont des lieux sources à la même position : les fusionner si c'est le même"
-            + " lieu, sinon les déclarer distinctes.");
+        "Deux salles ont des lieux sources à la même position : les comparer puis les fusionner"
+            + " si c'est le même lieu, sinon marquer l'anomalie comme traitée.");
     ajouter(
         "position_wikidata_incoherente",
         "Wikidata d'un homonyme",
@@ -68,6 +68,14 @@ public final class CatalogueSignalements {
         "Salle hors de son département",
         "La position de cette salle est loin de son département : corriger son département ou"
             + " réinitialiser son enrichissement depuis le référentiel.");
+    ajouter(
+        "position_source_eloignee",
+        "Position de source éloignée de Wikidata",
+        "La position de la salle, publiée par une billetterie, est à plus d'un kilomètre de son"
+            + " élément Wikidata (écart, positions et lieux sources indiqués). Ouvrir l'élément :"
+            + " s'il désigne bien la salle, aligner sa position sur Wikidata ; sinon réinitialiser"
+            + " son enrichissement depuis le référentiel. La position d'un lieu source est"
+            + " réécrite par la billetterie à chaque cycle : elle ne se corrige pas à la main.");
     ajouter(
         "necessite_intervention",
         "Artiste Ticketmaster douteux",
@@ -85,6 +93,19 @@ public final class CatalogueSignalements {
         "Le même concert existe sur deux salles déclarées distinctes : un lieu de billetterie"
             + " est probablement resté sur la mauvaise salle. Répartir ses lieux, puis supprimer"
             + " le concert en trop.");
+    ajouter(
+        "creneau_double_meme_source",
+        "Deux fiches au même créneau",
+        "Deux fiches de la même billetterie occupent la même salle au même créneau : vérifier le"
+            + " calendrier de la salle. Si un seul concert y est annoncé, supprimer la fiche en"
+            + " trop depuis les concerts ; sinon marquer comme traité.");
+    ajouter(
+        "departement_sans_concert",
+        "Département sans concert",
+        "Aucun concert à venir dans ce département : aucune de nos billetteries n'y programme ou"
+            + " ne le couvre. Marquer comme traité une fois l'absence de couverture reconnue ; le"
+            + " département ne sera signalé de nouveau que s'il retrouve des concerts puis les"
+            + " perd.");
     ajouter(
         "notifications_non_envoyees",
         "Notifications non envoyées",
@@ -134,7 +155,9 @@ public final class CatalogueSignalements {
         "collision_wikidata_salle",
         "Wikidata partagé par deux salles",
         "Deux salles se voient attribuer le même élément Wikidata sans être assez proches pour"
-            + " être fusionnées automatiquement.");
+            + " être fusionnées automatiquement. Ouvrir l'élément pour juger : s'il désigne le"
+            + " même lieu, les comparer puis les fusionner ; sinon réinitialiser l'enrichissement"
+            + " de la salle signalée depuis le référentiel.");
     ajouter(
         "collision_wikidata_artiste",
         "Wikidata partagé par deux artistes",
@@ -146,7 +169,16 @@ public final class CatalogueSignalements {
     ajouter(
         "wikidata_coordonnees_divergentes",
         "Coordonnées Wikidata divergentes",
-        "Les coordonnées Wikidata de la salle s'écartent de celles de ses concerts.");
+        "Un élément Wikidata correspondant au nom de la salle a été écarté, car sa position"
+            + " s'écarte de celle de la salle (écart indiqué). L'ouvrir pour juger : si c'est bien"
+            + " la salle, sa position enregistrée est probablement fausse ; sinon rien à faire, la"
+            + " salle reste sans élément Wikidata.");
+    ajouter(
+        "artistes_meme_nom_sans_espaces",
+        "Artistes au même nom, à l'espace près",
+        "Deux artistes ne diffèrent que par les espaces de leur nom (« Krash Karma » et"
+            + " « Krashkarma ») : probablement le même, à fusionner depuis le référentiel des"
+            + " artistes ; sinon marquer l'anomalie comme traitée.");
     ajouter(
         "source_orpheline",
         "Source sans concert",

@@ -165,7 +165,7 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
         );
         return;
       }
-      await expect(dialog).toContainText("chaque dimanche à 10h");
+      await expect(dialog).toContainText("chaque dimanche à 12h");
 
       await email.uncheck();
       await expect(dialog).toContainText("Aucun email ne vous sera envoyé.");
@@ -226,7 +226,9 @@ test.describe("Scénario: modale d'onboarding — nouveau compte", () => {
 
       await page.goto("/aide");
       await page
-        .getByRole("button", { name: "Revoir la présentation de bienvenue" })
+        .getByRole("button", {
+          name: "Revoir le tour guidé des premières étapes",
+        })
         .click();
       await expect(dialog).toBeVisible({ timeout: 3000 });
     } finally {

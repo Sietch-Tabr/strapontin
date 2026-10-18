@@ -5,35 +5,39 @@
     <EtatChargement v-if="chargement" />
     <template v-else>
       <div class="param-bloc">
-        <h3 id="label-departements" class="param-libelle">
-          Départements de découverte
-        </h3>
-        <p class="param-aide">
-          Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page
-          Découverte. Pour la Corse, utilisez 2A ou 2B.
-        </p>
-        <form class="form-inline" @submit.prevent="sauvegarderDepartements">
-          <input
-            v-model="departements"
-            name="departements"
-            aria-labelledby="label-departements"
-            type="text"
-            placeholder="75, 92, 93…"
-            autocomplete="off"
-            maxlength="1000"
-          />
+        <h3 class="param-libelle">Départements de découverte</h3>
+        <form
+          class="form-vertical form-compact"
+          @submit.prevent="sauvegarderDepartements"
+        >
+          <div class="form-groupe">
+            <label for="departements">Départements</label>
+            <input
+              id="departements"
+              v-model="departements"
+              name="departements"
+              type="text"
+              placeholder="75, 92, 93…"
+              autocomplete="off"
+              maxlength="1000"
+              aria-describedby="aide-departements"
+            />
+            <p id="aide-departements" class="form-aide">
+              Séparés par des virgules (ex. : 75, 92, 93). Utilisés par la page
+              Découverte. Pour la Corse, utilisez 2A ou 2B.
+            </p>
+          </div>
           <button type="submit" class="bouton bouton-primaire">
             Enregistrer
           </button>
         </form>
         <p
-          v-if="departementsSansConcert.length"
+          v-for="message in messagesCouverture(departementsSansConcert)"
+          :key="message.cle"
           class="alerte alerte-info"
           role="status"
         >
-          Aucun concert n'est proposé pour l'instant par nos sources
-          (Ticketmaster, Eventim) dans :
-          {{ departementsSansConcert.join(", ") }}.
+          {{ message.texte }}
         </p>
       </div>
 
@@ -83,6 +87,7 @@
 
 <script setup>
 import { appelApi, lireJson } from "../../utils/api.js";
+import { messagesCouverture } from "../../utils/couverture.js";
 import { useDepartementsSansConcert } from "../../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "ParametresPreferences" });
 

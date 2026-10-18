@@ -35,6 +35,9 @@ public class ReferentielSallesService {
         SELECT s.id, s.nom, s.nom_affiche, s.ville, s.dept, s.wikidata_id, p.nom AS nom_parent,
                COUNT(DISTINCT c.id) FILTER (WHERE c.date >= CURRENT_DATE) AS nb_concerts,
                COALESCE(string_agg(DISTINCT ss.source, ','), '') AS sources,
+               string_agg(DISTINCT ss.libelle_source, ' | ')
+                 FILTER (WHERE ss.source = 'eventim' AND ss.libelle_source IS NOT NULL)
+                 AS lieu_eventim,
                CASE
                  WHEN MIN(ss.suspect_depuis) IS NULL THEN 'a_jour'
                  WHEN MIN(ss.suspect_depuis) < now() - interval '24 hours' THEN 'invalide'
@@ -64,15 +67,45 @@ public class ReferentielSallesService {
   }
 
   /**
+   * Filtres de la liste (nom, ville, département, statut a_jour, a_verifier ou
+   * invalide : null = sans filtre) ; {@code ids} restreint à des salles précises
+   * (comparaison), {@code sansSource} ne garde que les salles sans aucune source.
    * @param page numéro de page (0-indexé)
-   * @param nom filtre nom partiel, peut être null
-   * @param ville filtre ville partielle, peut être null
-   * @param dept filtre département exact, peut être null
-   * @param statut filtre a_jour/a_verifier/invalide, peut être null
    * @param wikidataManquant filtre les salles sans wikidata_id
    */
   public record FiltresRechercheSalles(
-      int page, String nom, String ville, String dept, String statut, boolean wikidataManquant) {}
+      int page,
+      String nom,
+      String ville,
+      String dept,
+      String statut,
+      boolean wikidataManquant,
+      List<UUID> ids,
+      boolean sansSource) {
+
+    /** Sans filtre sur les sources. */
+    public FiltresRechercheSalles(
+        final int page,
+        final String nom,
+        final String ville,
+        final String dept,
+        final String statut,
+        final boolean wikidataManquant,
+        final List<UUID> ids) {
+      this(page, nom, ville, dept, statut, wikidataManquant, ids, false);
+    }
+
+    /** Sans restriction à des salles précises. */
+    public FiltresRechercheSalles(
+        final int page,
+        final String nom,
+        final String ville,
+        final String dept,
+        final String statut,
+        final boolean wikidataManquant) {
+      this(page, nom, ville, dept, statut, wikidataManquant, List.of(), false);
+    }
+  }
 
   /**
    * Liste paginée du référentiel salles, filtrée par nom/ville/dept/statut.
@@ -105,7 +138,7 @@ public class ReferentielSallesService {
   private record FiltresSalles(StringBuilder where, Map<String, Object> params) {}
 
   private FiltresSalles construireFiltresSalles(final FiltresRechercheSalles filtresRecherche) {
-    final StringBuilder where = new StringBuilder(60).append(" WHERE 1=1 ");
+    final StringBuilder where = new StringBuilder(120).append(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
     ajouterFiltreLike(where, params, "nom", filtresRecherche.nom());
     ajouterFiltreLike(where, params, "ville", filtresRecherche.ville());
@@ -113,6 +146,13 @@ public class ReferentielSallesService {
     ajouterFiltreExact(where, params, "statut", filtresRecherche.statut());
     if (filtresRecherche.wikidataManquant()) {
       where.append(" AND wikidata_id IS NULL ");
+    }
+    if (filtresRecherche.sansSource()) {
+      where.append(" AND sources = '' ");
+    }
+    if (filtresRecherche.ids() != null && !filtresRecherche.ids().isEmpty()) {
+      where.append(" AND id IN (:ids) ");
+      params.put("ids", filtresRecherche.ids());
     }
     return new FiltresSalles(where, params);
   }
@@ -148,7 +188,8 @@ public class ReferentielSallesService {
         jdbc.query(
             CTE_SALLES_AGREGEES
                 + "SELECT id, nom, nom_affiche, ville, dept, wikidata_id, nb_concerts, sources,"
-                + " statut, nom_parent, COUNT(*) OVER() AS total_filtre FROM salles_agr"
+                + " statut, nom_parent, lieu_eventim, COUNT(*) OVER() AS total_filtre"
+                + " FROM salles_agr"
                 + where
                 + " ORDER BY nb_concerts DESC, nom ASC LIMIT :taille OFFSET :offset",
             paramsPage,
@@ -164,9 +205,11 @@ public class ReferentielSallesService {
                   lireSources(rs.getString("sources")),
                   rs.getString("statut"),
                   rs.getString("wikidata_id"),
-                  rs.getString("nom_parent"));
+                  rs.getString("nom_parent"),
+                  List.of(),
+                  rs.getString("lieu_eventim"));
             });
-    return new PageSalles(salles, total[0]);
+    return new PageSalles(SuspicionsSalles.ajouter(jdbc, salles), total[0]);
   }
 
   private long compterSallesFiltrees(final StringBuilder where, final Map<String, Object> params) {

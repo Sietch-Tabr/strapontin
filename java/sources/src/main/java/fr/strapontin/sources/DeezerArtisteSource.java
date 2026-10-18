@@ -28,6 +28,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
 
   private static final Logger LOG = LoggerFactory.getLogger(DeezerArtisteSource.class);
 
+  private static final String CHAMP_NOM = "name";
   private static final String DEEZER_BASE = "https://api.deezer.com";
 
   private final RestClient restClient;
@@ -85,14 +86,11 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
     return resultats;
   }
 
-  // return en dernière position de boucle nécessaire : arrête la recherche au
-  // premier candidat valide plutôt que de poursuivre l'itération sans effet
-  // utile.
-  @SuppressWarnings({"unchecked", "PMD.AvoidBranchingStatementAsLastInLoop"})
+  @SuppressWarnings("unchecked")
   private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=5";
+      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=25";
       final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
       if (data == null) {
         return Optional.empty();
@@ -102,26 +100,43 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
         return Optional.empty();
       }
 
-      for (final Map<String, Object> candidat : dataList) {
-        final String nomCandidat = (String) candidat.get("name");
-        if (nomCandidat == null
-            || !Normalisation.normaliserTexte(nomCandidat).equals(artiste.nomNorm())) {
-          continue;
-        }
-        final Object idCandidat = candidat.get("id");
-        if (idCandidat == null) {
-          continue;
-        }
-        return Optional.of(
-            new EnrichissementArtiste(
-                artiste.wikidataId(), nomCandidat, String.valueOf(idCandidat), null, null));
-      }
-      return Optional.empty();
+      return plusSuiviDesHomonymesExacts(dataList, artiste.nomNorm())
+          .map(
+              retenu ->
+                  new EnrichissementArtiste(
+                      artiste.wikidataId(),
+                      (String) retenu.get(CHAMP_NOM),
+                      String.valueOf(retenu.get("id")),
+                      null,
+                      null));
     } catch (Exception e) {
       compteurBilan.enregistrerErreur();
       LOG.warn("Deezer découverte erreur nom={} : {}", artiste.nom(), e.getMessage());
       return Optional.empty();
     }
+  }
+
+  // Le plus suivi des homonymes exacts : un artiste récent de quelques
+  // dizaines de fans ne prend pas la place du groupe connu.
+  private static Optional<Map<String, Object>> plusSuiviDesHomonymesExacts(
+      final List<Map<String, Object>> candidats, final String nomNorm) {
+    Map<String, Object> retenu = null;
+    double fansRetenu = -1;
+    for (final Map<String, Object> candidat : candidats) {
+      final String nomCandidat = (String) candidat.get(CHAMP_NOM);
+      if (nomCandidat == null
+          || candidat.get("id") == null
+          || !Normalisation.normaliserTexte(nomCandidat).equals(nomNorm)) {
+        continue;
+      }
+      final double fans =
+          candidat.get("nb_fan") instanceof Number nombre ? nombre.doubleValue() : 0;
+      if (fans > fansRetenu) {
+        retenu = candidat;
+        fansRetenu = fans;
+      }
+    }
+    return Optional.ofNullable(retenu);
   }
 
   private static String encode(final String texte) {
@@ -138,10 +153,10 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
               .uri(DEEZER_BASE + "/artist/" + artiste.deezerId())
               .retrieve()
               .body(Map.class);
-      if (data == null || data.get("name") == null || data.containsKey("error")) {
+      if (data == null || data.get(CHAMP_NOM) == null || data.containsKey("error")) {
         return Optional.empty();
       }
-      final String nomCanonique = (String) data.get("name");
+      final String nomCanonique = (String) data.get(CHAMP_NOM);
       return Optional.of(
           new EnrichissementArtiste(
               artiste.wikidataId(), nomCanonique, artiste.deezerId(), null, null));

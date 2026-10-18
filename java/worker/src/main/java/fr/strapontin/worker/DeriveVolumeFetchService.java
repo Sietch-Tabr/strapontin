@@ -104,7 +104,7 @@ public class DeriveVolumeFetchService {
         """
         SELECT nb_inseres + nb_mis_a_jour AS volume
         FROM fetch_jobs_historique
-        WHERE type_job = :typeJob AND erreur IS NULL AND exec_le < :avant
+        WHERE type_job = :typeJob AND erreur IS NULL AND NOT retry_cible AND exec_le < :avant
         ORDER BY exec_le DESC
         LIMIT :limite
         """,

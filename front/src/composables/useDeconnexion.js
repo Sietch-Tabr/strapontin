@@ -1,4 +1,4 @@
-import { appelApi } from "../utils/api.js";
+import { appelApi, purgerCacheHorsLigne } from "../utils/api.js";
 import { useToasts } from "./useToasts.js";
 
 // Déconnexion partagée entre SidebarNav.vue (desktop) et DrawerNav.vue (mobile) —
@@ -13,6 +13,8 @@ export function useDeconnexion() {
       // du cookie SESSION, plutôt que de dépendre du filtre de logout par défaut de
       // Spring Security (non désactivé mais non testé/documenté comme chemin officiel).
       await appelApi("/api/auth/logout", { method: "POST" });
+      // Déconnecté : aucune donnée de ce compte ne reste lisible sur l'appareil.
+      purgerCacheHorsLigne();
       window.location.href = "/login";
     } catch (_) {
       afficherToast("Erreur réseau lors de la déconnexion.", "erreur");
