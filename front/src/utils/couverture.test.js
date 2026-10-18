@@ -10,14 +10,14 @@ describe("messagesCouverture", () => {
     const [message] = messagesCouverture(["974"]);
     expect(message.cle).toBe("outre-mer");
     expect(message.texte).toContain("974");
-    expect(message.texte).toContain("n'est pas couvert");
+    expect(message.texte).toContain("couvrent mal ce département");
     expect(message.texte).toContain("ne veut pas dire qu'il n'y en a pas");
   });
 
   test("messagesCouverture_plusieursDepartementsOutreMer_accordeAuPluriel", () => {
     const [message] = messagesCouverture(["971", "972"]);
     expect(message.texte).toContain("971, 972");
-    expect(message.texte).toContain("ces départements ne sont pas couverts");
+    expect(message.texte).toContain("couvrent mal ces départements");
   });
 
   test("messagesCouverture_metropole_garde_leMessageHabituel", () => {

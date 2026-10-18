@@ -9,8 +9,8 @@ export const versionsChangelog = [
       {
         categorie: "Concerts et salles",
         items: [
-          "Les concerts de quatre salles absentes de Ticketmaster et d'Eventim (Le Triton, l'EMB de Sannois, L'Usine à Chapeaux et Allmol) sont maintenant relevés une fois par jour sur leur propre site, dans le respect de leurs consignes d'accès.",
-          "Quand un département ou une salle suivie n'est couvert par aucune de nos billetteries, l'application le dit au lieu d'afficher « aucun concert » : c'est le cas des départements d'outre-mer, dont les concerts passent surtout par des billetteries locales.",
+          "Les concerts de trois salles absentes de Ticketmaster et d'Eventim (Le Triton, l'EMB de Sannois et L'Usine à Chapeaux) et ceux de la billetterie Allmol Tickets (Antilles et Guyane) sont maintenant relevés une fois par jour sur leur propre site, dans le respect de leurs consignes d'accès.",
+          "Quand un département ou une salle suivie est mal couvert par nos billetteries, l'application le dit au lieu d'afficher « aucun concert » : c'est fréquent outre-mer, où les concerts passent surtout par des billetteries locales.",
           "Un concert annoncé à une heure légèrement différente par deux billetteries, ou republié après un changement de salle, n'apparaît plus en double.",
           "Le concert d'un hommage ou d'un tribute n'est plus rattaché à l'artiste qu'il imite, et les noms de ville des salles sont mieux renseignés.",
         ],

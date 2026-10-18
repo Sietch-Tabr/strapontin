@@ -15,10 +15,9 @@ export function messagesCouverture(departements) {
     messages.push({
       cle: "outre-mer",
       texte:
-        `Aucun concert n'est affiché pour ${outreMer.join(", ")} : ` +
-        `${pluriel ? "ces départements ne sont" : "ce département n'est"} pas couvert` +
-        `${pluriel ? "s" : ""} par nos billetteries (Ticketmaster, Eventim), ` +
-        "alors que leurs concerts se vendent surtout sur des billetteries locales. " +
+        `Aucun concert n'est affiché pour ${outreMer.join(", ")} : nos sources couvrent mal ` +
+        `${pluriel ? "ces départements" : "ce département"}, dont les concerts se vendent ` +
+        "surtout sur des billetteries locales. " +
         "L'absence de concert ici ne veut pas dire qu'il n'y en a pas.",
     });
   }
