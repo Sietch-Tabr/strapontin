@@ -18,6 +18,7 @@ import fr.strapontin.worker.jobs.RecalculerMatchesJob;
 import fr.strapontin.worker.jobs.ReconciliationNocturneJob;
 import fr.strapontin.worker.jobs.RevoquerAdminsJob;
 import fr.strapontin.worker.jobs.SuiviCyclesJobsJob;
+import java.util.TimeZone;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.Job;
 import org.quartz.JobBuilder;
@@ -134,7 +135,14 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerFetchSitesSalles(final JobDetail jobDetailFetchSitesSalles) {
-    return creerTrigger(jobDetailFetchSitesSalles, "triggerFetchSitesSalles", cronFetchSitesSalles);
+    // Fuseau explicite : « en journée » vaut pour Paris, quel que soit le fuseau du serveur.
+    return TriggerBuilder.newTrigger()
+        .forJob(jobDetailFetchSitesSalles)
+        .withIdentity("triggerFetchSitesSalles")
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(cronFetchSitesSalles)
+                .inTimeZone(TimeZone.getTimeZone("Europe/Paris")))
+        .build();
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
