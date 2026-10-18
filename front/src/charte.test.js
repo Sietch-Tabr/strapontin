@@ -15,7 +15,11 @@ const ROLES_BOUTON = [
   "bouton-danger",
   "bouton-bascule",
 ];
-const MODIFICATEURS_BOUTON = ["bouton-petit", "bouton-pleine-largeur"];
+const MODIFICATEURS_BOUTON = [
+  "bouton-petit",
+  "bouton-mini",
+  "bouton-pleine-largeur",
+];
 const ETATS = ["actif"];
 // Éléments de navigation (barre du bas) : ils suivent le style des liens de navigation.
 const NAVIGATION = ["nav-bas-plus"];

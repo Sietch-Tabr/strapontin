@@ -10,10 +10,10 @@
       <p class="aide-pied texte-secondaire">
         <button
           type="button"
-          class="bouton bouton-texte"
+          class="bouton bouton-secondaire"
           @click="revoirOnboarding"
         >
-          Revoir la présentation de bienvenue
+          Revoir le tour guidé des premières étapes
         </button>
       </p>
 

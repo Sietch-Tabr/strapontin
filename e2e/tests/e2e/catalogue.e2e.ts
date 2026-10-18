@@ -483,6 +483,35 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
 // #818 : masquerArtiste/demasquerArtiste filtrent désormais sur artisteId (référentiel) plutôt
 // qu'artisteNorm (texte par source) — vérifie que le flux group-level fonctionne toujours avec
 // le nouveau contrat API, et qu'un artisteId invalide est bien rejeté en 400.
+test.describe("Scénario: accueil — action Masquer reconnaissable", () => {
+  // « Masquer » est une action secondaire : plus petite que « Billets », et soulignée pour
+  // être reconnue comme cliquable sans survol (tactile).
+  test("accueil_masquer_plusPetitQueBillets_etSouligne", async ({ page }) => {
+    await page.goto("/");
+    const ligne = page.locator(".concert-ligne").first();
+    await expect(ligne).toBeVisible({ timeout: 15000 });
+    const masquer = ligne.locator('button[aria-label="Masquer ce concert"]');
+    const billets = ligne.getByRole("link", { name: "Billets" });
+    await expect(masquer).toBeVisible();
+    const style = (el: typeof masquer) =>
+      el.evaluate((n) => {
+        const c = getComputedStyle(n);
+        return {
+          taille: parseFloat(c.fontSize),
+          soulignement: c.textDecorationLine,
+        };
+      });
+    const styleMasquer = await style(masquer);
+    if ((await billets.count()) > 0) {
+      const styleBillets = await billets.first().evaluate((n) => {
+        return parseFloat(getComputedStyle(n).fontSize);
+      });
+      expect(styleMasquer.taille).toBeLessThan(styleBillets);
+    }
+    expect(styleMasquer.soulignement).toContain("underline");
+  });
+});
+
 test.describe("Scénario: catalogue — masquage par artiste (#818)", () => {
   test("accueil_masquerPuisDemasquerArtiste_disparaitPuisReapparait", async ({
     page,

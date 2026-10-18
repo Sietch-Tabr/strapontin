@@ -31,12 +31,12 @@ Un rôle = un style, partout. Contrôlée par `src/charte.test.js` (Vitest, bloq
 |---|---|---|
 | Action principale (une par zone ou dialogue) | `bouton bouton-primaire` | Enregistrer, Envoyer, Notifier, Confirmer |
 | Action secondaire | `bouton bouton-secondaire` | Billets, Rafraîchir, Fermer (dialogue sans autre choix) |
-| Annulation, action discrète | `bouton bouton-texte` | Annuler, Masquer, Réafficher, Déconnexion |
+| Annulation, action discrète (soulignée : cliquable sans survol) | `bouton bouton-texte` | Annuler, Masquer, Réafficher, Déconnexion |
 | Action destructive ou irréversible | `bouton bouton-danger` | Supprimer, Fusionner, Révoquer, Effacer, Publier un incident |
 | Choix parmi des options (`aria-pressed`) | `bouton bouton-bascule` + `actif` sur l'option retenue | Thème, niveaux de logs, Salles/Artistes |
 | Icône seule (`aria-label` obligatoire) | `bouton-icone` | fermeture de toast ou de bannière |
 
-- Taille : `bouton-petit` dans les zones denses (lignes de tableau, cartes, en-têtes de groupe), sinon taille normale ; tous les boutons d'une même zone ont la même taille. `bouton-pleine-largeur` réservé aux pages d'authentification. Un lien stylé en bouton suit les mêmes règles.
+- Taille : `bouton-petit` dans les zones denses (lignes de tableau, cartes, en-têtes de groupe), `bouton-mini` pour une action secondaire posée à côté d'une action plus importante (Masquer près de Billets), sinon taille normale ; tous les boutons d'une même zone ont la même taille. `bouton-pleine-largeur` réservé aux pages d'authentification. Un lien stylé en bouton suit les mêmes règles.
 - Dialogue : action d'abord (principale ou destructive), « Annuler » ensuite en `bouton-texte`. Confirmation simple : composant partagé `DialogueConfirmation.vue` (`demander({ titre, message, action })` → promesse booléenne).
 - Boutons dans `styles/components.css` uniquement ; badges (`badge-*`) et alertes (`alerte-*`) dans les feuilles partagées `styles/*.css`. Un composant peut placer un élément de la charte (position, marges, flex, largeur), jamais en changer l'aspect.
 - Autres éléments partagés : badge `badge` + variante sémantique (`badge-succes`, `badge-avertissement`, `badge-danger`, `badge-info`, statuts de concert) ; alerte `alerte alerte-{info,succes,avertissement,erreur}` ; champ `form-champ` > `form-label` + `form-control` ; dialogue `dialog-titre`, `dialog-corps`, `dialog-pied` ; bloc de réglage `param-bloc` (`param-bloc-danger` pour une action exceptionnelle).

@@ -160,6 +160,11 @@ select.champ-compact {
   padding: var(--espace-3) var(--espace-6);
   font-size: var(--texte-s);
 }
+/* Action secondaire posée à côté d'une action plus importante (Masquer près de Billets). */
+.bouton-mini {
+  padding: var(--espace-2) var(--espace-4);
+  font-size: var(--texte-xs);
+}
 /* ── Lien de navigation (barre latérale, tiroir mobile) ──── */
 .nav-lien {
   display: flex;
@@ -534,6 +539,9 @@ tr:hover td {
   background: none;
   border: none;
   color: var(--fg-muted);
+  /* Le soulignement signale l'action sans survol, donc aussi au toucher. */
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   transition:
     background 0.15s,
     color 0.15s;
