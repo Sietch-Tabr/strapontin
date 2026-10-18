@@ -29,7 +29,9 @@ public class SiteEmbSannois extends SourceSiteSalle {
   /* package-private : utilisée par les tests. */
   static final String ADRESSE_AGENDA = "https://embsannois.fr/agenda/";
   /* package-private : utilisée par les tests. */
-  static final LieuSite LIEU = new LieuSite("EMB Sannois", "Sannois", "95", "95110");
+  // Nom réel du lieu (EMB n'en est que le sigle) : « EMB Sannois » ne se
+  // rapprochait pas de la fiche Eventim et créait une salle en double.
+  static final LieuSite LIEU = new LieuSite("Espace Michel Berger", "Sannois", "95", "95110");
 
   private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.uuuu");
   private static final Pattern MOTIF_HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");

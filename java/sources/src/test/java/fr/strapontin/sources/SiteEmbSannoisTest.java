@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.CorrespondanceSalle;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -57,10 +58,17 @@ class SiteEmbSannoisTest {
   void extraire_chaqueConcert_serattacheALaSalleDuSite() {
     assertTrue(!concerts.isEmpty());
     for (final ConcertBrut concert : concerts) {
-      assertEquals("EMB Sannois", concert.salle());
+      assertEquals("Espace Michel Berger", concert.salle());
       assertEquals("95", concert.dept());
       assertEquals("site_salle:emb", concert.salleSourceId());
       assertEquals("95110", concert.position().codePostal());
     }
+  }
+
+  @Test
+  void lieu_compareAuNomPublieParEventim_estLaMemeSalle() {
+    assertTrue(
+        CorrespondanceSalle.estDoublonSalle(
+            "espace michel berger", "emb espace michel berger sannois"));
   }
 }
