@@ -7,6 +7,7 @@
         l'enrichissement automatique Wikidata/Deezer — laissez vide pour le
         réactiver.
       </p>
+      <p class="param-aide">{{ AIDE_STATUTS_ARTISTES }}</p>
 
       <div class="source-vue-entete">
         <input
@@ -104,6 +105,10 @@
                       :class="classeStatut(artiste.statut)"
                       >{{ libelleStatut(artiste.statut) }}</span
                     >
+                    <p v-if="artiste.interventionDepuis" class="texte-note">
+                      Nom Ticketmaster douteux depuis
+                      {{ formaterInstant(artiste.interventionDepuis) }}
+                    </p>
                   </td>
                   <td data-label="Wikidata">
                     <a
@@ -359,7 +364,12 @@ import EtatChargement from "../EtatChargement.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
 import { useDialog } from "../../composables/useDialog.js";
 import { useToasts } from "../../composables/useToasts.js";
-import { classeStatut, libelleStatut } from "../../utils/statutReferentiel.js";
+import { formaterInstant } from "../../composables/useDates.js";
+import {
+  AIDE_STATUTS_ARTISTES,
+  classeStatut,
+  libelleStatut,
+} from "../../utils/statutReferentiel.js";
 
 const {
   chargement,

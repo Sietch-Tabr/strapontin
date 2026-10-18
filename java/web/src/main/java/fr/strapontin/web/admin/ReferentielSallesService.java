@@ -5,6 +5,8 @@
 package fr.strapontin.web.admin;
 
 import fr.strapontin.core.SalleHierarchie;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -188,9 +190,52 @@ public class ReferentielSallesService {
                   lireSources(rs.getString("sources")),
                   rs.getString("statut"),
                   rs.getString("wikidata_id"),
-                  rs.getString("nom_parent"));
+                  rs.getString("nom_parent"),
+                  List.of());
             });
-    return new PageSalles(salles, total[0]);
+    return new PageSalles(avecSuspicions(salles), total[0]);
+  }
+
+  // Seules les salles dont le statut n'est pas « à jour » ont une source suspecte à expliquer.
+  private List<SalleReferentiel> avecSuspicions(final List<SalleReferentiel> salles) {
+    final List<UUID> suspectes =
+        salles.stream()
+            .filter(s -> !"a_jour".equals(s.statut()))
+            .map(SalleReferentiel::id)
+            .toList();
+    if (suspectes.isEmpty()) {
+      return salles;
+    }
+    final Map<UUID, List<SalleReferentiel.SuspicionSource>> parSalle = new HashMap<>();
+    jdbc.query(
+        "SELECT salle_id, source, nb_zero_consecutifs, suspect_depuis FROM salle_sources"
+            + " WHERE salle_id IN (:ids) AND suspect_depuis IS NOT NULL ORDER BY suspect_depuis",
+        Map.of("ids", suspectes),
+        rs -> {
+          parSalle
+              .computeIfAbsent(rs.getObject("salle_id", UUID.class), _ -> new ArrayList<>())
+              .add(
+                  new SalleReferentiel.SuspicionSource(
+                      rs.getString("source"),
+                      rs.getInt("nb_zero_consecutifs"),
+                      rs.getObject("suspect_depuis", OffsetDateTime.class).toInstant()));
+        });
+    return salles.stream()
+        .map(
+            s ->
+                new SalleReferentiel(
+                    s.id(),
+                    s.nom(),
+                    s.nomAffiche(),
+                    s.ville(),
+                    s.dept(),
+                    s.nbConcerts(),
+                    s.sources(),
+                    s.statut(),
+                    s.wikidataId(),
+                    s.nomParent(),
+                    parSalle.getOrDefault(s.id(), List.of())))
+        .toList();
   }
 
   private long compterSallesFiltrees(final StringBuilder where, final Map<String, Object> params) {
