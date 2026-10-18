@@ -18,8 +18,9 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
 import java.sql.ResultSet;
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,14 +105,14 @@ class PushServiceTest {
   @SuppressWarnings("unchecked")
   void listerAbonnements_delegueAuJdbcAvecLUserId() {
     final Instant creeLe = Instant.now();
-    final Timestamp ts = Timestamp.from(creeLe);
+    final OffsetDateTime horodatage = creeLe.atOffset(ZoneOffset.UTC);
     when(jdbc.query(anyString(), anyMap(), org.mockito.ArgumentMatchers.any(RowMapper.class)))
         .thenAnswer(
             invocation -> {
               final RowMapper<PushService.AbonnementDto> mapper = invocation.getArgument(2);
               final ResultSet rs = mock(ResultSet.class);
               when(rs.getString("endpoint")).thenReturn("https://push.exemple/abc");
-              when(rs.getTimestamp("cree_le")).thenReturn(ts);
+              when(rs.getObject("cree_le", OffsetDateTime.class)).thenReturn(horodatage);
               return List.of(mapper.mapRow(rs, 0));
             });
 
