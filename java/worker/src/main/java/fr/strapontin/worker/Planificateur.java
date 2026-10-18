@@ -53,8 +53,8 @@ public class Planificateur {
   @Value("${worker.cron.fetch-salles:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
   private String cronFetchSalles;
 
-  // Une lecture par jour, en journée : un concert découvert la nuit pourrait réveiller un
-  // utilisateur en fréquence « à chaque nouveau concert ».
+  // Une lecture par jour, en journée : un concert découvert la nuit pourrait
+  // réveiller un utilisateur en fréquence « à chaque nouveau concert ».
   @Value("${worker.cron.fetch-sites-salles:0 0 14 * * ?}")
   private String cronFetchSitesSalles;
 
@@ -135,7 +135,8 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerFetchSitesSalles(final JobDetail jobDetailFetchSitesSalles) {
-    // Fuseau explicite : « en journée » vaut pour Paris, quel que soit le fuseau du serveur.
+    // Fuseau explicite : « en journée » vaut pour Paris, quel que soit le fuseau
+    // du serveur.
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailFetchSitesSalles)
         .withIdentity("triggerFetchSitesSalles")

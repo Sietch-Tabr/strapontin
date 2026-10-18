@@ -40,6 +40,7 @@ final class ReassignationSousSalles {
    * plutôt que laissée pointer vers la source supprimée, et signalée pour
    * revue manuelle (cas limite non exclu par le seul cas direct géré).
    */
+  /* package-private : appelé par FusionSallesClePorteeService (même package). */
   void reassignerSansCycle(final UUID cibleId, final UUID sourceId) {
     final List<UUID> enfants =
         jdbc.query(

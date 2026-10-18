@@ -17,8 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Départements sans concert à venir, pour l'onglet admin « Sources » — HTTP pur, délègue à {@link
- * CouvertureDepartementsAdminService}, accessible aux seuls {@code ADMIN}.
+ * Départements sans concert à venir, pour l'onglet admin « Sources » — HTTP
+ * pur, délègue à {@link CouvertureDepartementsAdminService}, accessible aux
+ * seuls {@code ADMIN}.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -52,7 +53,8 @@ public class CouvertureDepartementsAdminController {
    * Déclare légitime l'absence de concert d'un département.
    *
    * @param dept code du département
-   * @return 200 si enregistré, 400 si le code est invalide, 404 si le département a des concerts
+   * @return 200 si enregistré, 400 si le code est invalide, 404 si le
+   *     département a des concerts
    */
   @PostMapping("/{dept}/reconnaitre")
   public ResponseEntity<Map<String, Object>> reconnaitre(@PathVariable final String dept) {
@@ -66,10 +68,12 @@ public class CouvertureDepartementsAdminController {
   }
 
   /**
-   * Annule la reconnaissance de l'absence : le département sera de nouveau signalé.
+   * Annule la reconnaissance de l'absence : le département sera de nouveau
+   * signalé.
    *
    * @param dept code du département
-   * @return 200 si levée, 400 si le code est invalide, 404 si aucune reconnaissance à lever
+   * @return 200 si levée, 400 si le code est invalide, 404 si aucune
+   *     reconnaissance à lever
    */
   @PostMapping("/{dept}/rouvrir")
   public ResponseEntity<Map<String, Object>> rouvrir(@PathVariable final String dept) {

@@ -8,10 +8,9 @@ import java.time.Instant;
 
 /**
  * Entrée de la vue unifiée des signalements ; la catégorie (mécanisme
- * d'origine) détermine l'action possible, le type est décrit par
- * {@link CatalogueSignalements}. detecteLe, details et autreSalle peuvent être null ;
- * autreSalle désigne la seconde salle d'un signalement qui en met deux en cause
- * (doublon, même lieu, élément Wikidata partagé).
+ * d'origine) détermine l'action, le type est décrit par {@link
+ * CatalogueSignalements}. detecteLe, details et autreSalle (la seconde salle
+ * d'un doublon, d'un même lieu ou d'un Wikidata partagé) peuvent être null.
  * @since 2.9.0
  * @author Kwaite
  */

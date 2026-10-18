@@ -39,8 +39,8 @@ public class ParametresRestController {
 
   private final ParametresService parametresService;
   private final ConfigService configService;
-  // Le destinataire peut être un tiers : la limite par adresse protège sa boîte quel que soit le
-  // compte.
+  // Le destinataire peut être un tiers : la limite par adresse protège sa boîte
+  // quel que soit le compte.
   private final LimiteurDebit changementsParCompte =
       new LimiteurDebit(
           MAX_CHANGEMENTS_PAR_COMPTE_PAR_HEURE, Duration.ofHours(1), Duration.ofHours(2), 10_000);
@@ -73,13 +73,12 @@ public class ParametresRestController {
   }
 
   /**
-   * Déclenche un flux de confirmation pour un changement
-   * d'adresse email, appliqué après validation du lien (24h)
-   * via {@link #confirmerEmail}.
+   * Déclenche un flux de confirmation pour un changement d'adresse email,
+   * appliqué après validation du lien (24h) via {@link #confirmerEmail} ; 429
+   * au-delà de 3 demandes par heure par compte ou de 2 par jour par adresse.
    * @param corps corps JSON avec {@code email} (nouvelle adresse)
    * @param auth contexte d'authentification
-   * @return 200 {@code {succes: true}} ou 400/429/503 {@code {erreur}} (429 au-delà de 3
-   *     demandes par heure et par compte, ou de 2 confirmations par jour vers une même adresse)
+   * @return 200 {@code {succes: true}} ou 400/429/503 {@code {erreur}}
    */
   @PostMapping("/email-change")
   public ResponseEntity<Map<String, Object>> emailChange(

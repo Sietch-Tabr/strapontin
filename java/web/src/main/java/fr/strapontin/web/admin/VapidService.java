@@ -49,11 +49,10 @@ public class VapidService {
   }
 
   /**
-   * Génère une nouvelle paire de clés VAPID EC P-256, les persiste, retire tous les abonnements
-   * push et prévient par email chaque compte qui perd un appareil, quel que soit son autre canal.
-   *
-   * @param motif raison du renouvellement, obligatoire : journalisée et donnée aux utilisateurs
-   * @return clé publique, abonnements supprimés, comptes prévenus et comptes qui ne l'ont pas été
+   * Génère une nouvelle paire de clés VAPID EC P-256, les persiste, retire
+   * tous les abonnements push et prévient par email chaque compte concerné.
+   * @param motif raison du renouvellement (obligatoire, donnée aux comptes)
+   * @return clé publique, abonnements supprimés, comptes prévenus ou non
    * @throws GeneralSecurityException si la génération de clés échoue
    * @throws ErreurMetier si le motif est vide
    */
@@ -82,7 +81,8 @@ public class VapidService {
     final List<String> idsPrevenus = new ArrayList<>();
     comptes.forEach(
         (userId, email) -> (prevenus.contains(email) ? idsPrevenus : idsNonPrevenus).add(userId));
-    // Prévenus par ce message : l'avertissement générique de canal perdu ferait doublon.
+    // Prévenus par ce message : l'avertissement générique de canal perdu ferait
+    // doublon.
     if (!idsPrevenus.isEmpty()) {
       jdbc.update(
           "UPDATE user_config SET avertissement_canal_perdu_le = now()"
@@ -132,12 +132,10 @@ public class VapidService {
   }
 
   /**
-   * Résultat de la génération des clés VAPID.
-   *
-   * @param clePublique clé publique EC P-256 en Base64 URL-safe
-   * @param nbAbonnementsSupprimes nombre d'abonnements push invalidés
-   * @param nbComptesPrevenus comptes à qui l'email d'information est parti
-   * @param nbComptesNonPrevenus comptes sans email parti (quota atteint, envoi en échec)
+   * Résultat de la génération des clés VAPID : clé publique EC P-256 en
+   * Base64 URL-safe, abonnements invalidés, comptes dont l'email est parti ou
+   * non (quota atteint, envoi en échec).
+   * @param clePublique clé publique
    */
   public record ResultatVapid(
       String clePublique,

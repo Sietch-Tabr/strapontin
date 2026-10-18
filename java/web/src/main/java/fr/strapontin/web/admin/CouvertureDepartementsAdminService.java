@@ -12,8 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Vue admin des départements sans concert à venir, relevés chaque nuit par le worker
- * ({@code couverture_departements}) : lesquels sont à examiner, lesquels ont une absence reconnue.
+ * Vue admin des départements sans concert à venir, relevés chaque nuit par le
+ * worker ({@code couverture_departements}) : lesquels sont à examiner,
+ * lesquels ont une absence reconnue.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -67,8 +68,8 @@ public class CouvertureDepartementsAdminService {
   }
 
   /**
-   * Déclare légitime l'absence de concert d'un département : plus de signalement tant qu'il reste
-   * à zéro.
+   * Déclare légitime l'absence de concert d'un département : plus de signalement
+   * tant qu'il reste à zéro.
    *
    * @param dept code du département
    * @return {@code true} si le département est bien sans concert
@@ -93,8 +94,8 @@ public class CouvertureDepartementsAdminService {
   }
 
   /**
-   * Annule la reconnaissance d'une absence : le département est de nouveau signalé au prochain
-   * relevé nocturne.
+   * Annule la reconnaissance d'une absence : le département est de nouveau
+   * signalé au prochain relevé nocturne.
    *
    * @param dept code du département
    * @return {@code true} si une reconnaissance a été levée

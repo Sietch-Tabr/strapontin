@@ -55,7 +55,8 @@ public class SalleController {
   /**
    * @param salleService service de gestion des salles
    * @param emailService service d'envoi d'emails
-   * @param budgetRecherches plafonds des recherches qui interrogent un service externe
+   * @param budgetRecherches plafonds des recherches qui interrogent un service
+   *     externe
    */
   public SalleController(
       final SalleService salleService,
@@ -67,13 +68,11 @@ public class SalleController {
   }
 
   /**
-   * Liste les salles suivies, avec suggestions de recherche si {@code q} est
-   * fourni.
-   *
+   * Liste les salles suivies, avec suggestions si {@code q} est fourni ; 429
+   * si l'utilisateur enchaîne trop de recherches.
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification
    * @return la liste des salles et les suggestions
-   * @throws ErreurMetier (429) si l'utilisateur enchaîne trop de recherches
    */
   @GetMapping
   public ResponseEntity<ReponseSalles> listerSalles(

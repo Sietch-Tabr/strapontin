@@ -9,7 +9,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Corps de la requête de renouvellement des clés VAPID.
- * @param motif raison du renouvellement, journalisée et donnée aux utilisateurs prévenus
+ * @param motif raison du renouvellement, journalisée et donnée aux
+ *     utilisateurs prévenus
  * @since 3.0.6
  * @author Kwaite
  */

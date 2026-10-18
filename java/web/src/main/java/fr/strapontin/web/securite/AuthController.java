@@ -47,8 +47,9 @@ public class AuthController {
   private final AuthenticationManager authenticationManager;
   private final TotpChallengeService totpChallengeService;
   private final LogAdminService logAdminService;
-  // Seuls les mauvais mots de passe comptent, quelle que soit l'IP : l'IP seule laisse passer
-  // des essais répartis sur plusieurs adresses contre un même compte.
+  // Seuls les mauvais mots de passe comptent, quelle que soit l'IP : l'IP seule
+  // laisse passer des essais répartis sur plusieurs adresses contre un même
+  // compte.
   private final LimiteurDebit echecsParCompte =
       new LimiteurDebit(
           MAX_ECHECS_PAR_COMPTE,
@@ -73,12 +74,11 @@ public class AuthController {
   }
 
   /**
-   * Authentifie un utilisateur et crée une session persistante.
-   *
+   * Authentifie un utilisateur et crée une session persistante ; 429 si le
+   * compte est verrouillé temporairement après des échecs répétés.
    * @param req les credentials ({@code identifiant} + {@code motDePasse})
    * @param httpRequest la requête HTTP (pour créer la session)
    * @return l'utilisateur authentifié ou 401 si les credentials sont invalides
-   * @throws ErreurMetier (429) si le compte est verrouillé temporairement après des échecs répétés
    */
   @PostMapping("/api/auth/login")
   public ResponseEntity<UtilisateurDto> login(

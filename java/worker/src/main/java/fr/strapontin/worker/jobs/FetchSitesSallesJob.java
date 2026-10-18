@@ -11,8 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : lecture quotidienne, en journée, des sites de salles qui vendent hors
- * Ticketmaster et Eventim.
+ * Job Quartz : lecture quotidienne, en journée, des sites de salles qui
+ * vendent hors Ticketmaster et Eventim.
  * @since 3.0.6
  * @author Kwaite
  */

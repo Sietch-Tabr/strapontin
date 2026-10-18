@@ -129,8 +129,9 @@ final class AbsorptionRenommagesSalles {
     return strictementMeilleur ? meilleur : null;
   }
 
-  // Une source publie parfois deux graphies d'un même identifiant selon la requête : seule une
-  // graphie strictement meilleure remplace l'actuelle, sinon la salle alterne à chaque lot.
+  // Une source publie parfois deux graphies d'un même identifiant selon la
+  // requête : seule une graphie strictement meilleure remplace l'actuelle, sinon
+  // la salle alterne à chaque lot.
   private static boolean estVarianteDeNom(final String candidat, final String nomActuel) {
     return nomActuel != null
         && Normalisation.normaliserTexte(candidat).equals(Normalisation.normaliserTexte(nomActuel));

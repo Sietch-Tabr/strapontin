@@ -135,8 +135,8 @@ public class WorkerConfiguration {
   }
 
   /**
-   * Lecteur de pages partagé par les sites de salles : un seul rythme (une requête toutes les deux
-   * secondes) pour l'ensemble de la lecture quotidienne.
+   * Lecteur de pages partagé par les sites de salles : un seul rythme (une
+   * requête toutes les deux secondes) pour l'ensemble de la lecture quotidienne.
    *
    * @return lecteur au {@code User-Agent} du robot
    */

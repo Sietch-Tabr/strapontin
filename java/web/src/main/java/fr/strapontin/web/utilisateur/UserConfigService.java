@@ -208,12 +208,10 @@ public class UserConfigService {
 
   /**
    * Met à jour les préférences de notification.
-   *
    * @param userId identifiant de l'utilisateur
    * @param requete données de la requête
-   * @throws ErreurMetier si la fréquence est invalide, ou si la combinaison n'a aucun effet :
-   *     « Jamais » avec un contenu coché, aucun contenu avec une fréquence, une case push sans
-   *     appareil abonné, une case email sans envoi d'emails possible
+   * @throws ErreurMetier si la fréquence est invalide ou la combinaison sans
+   *     effet (« Jamais » avec un contenu, canal sans appareil ni envoi possible)
    */
   public void majNotifications(final String userId, final RequeteNotifications requete) {
     if (!FREQUENCES_VALIDES.contains(requete.frequenceNotifications())) {
@@ -222,7 +220,8 @@ public class UserConfigService {
     final boolean jamais = "jamais".equals(requete.frequenceNotifications());
     final boolean contenuEmail = requete.notifArtistes() || requete.notifSalles();
     final boolean contenuPush = requete.notifArtistesPush() || requete.notifSallesPush();
-    verifierCombinaisonNotifications(userId, requete, jamais, contenuEmail, contenuPush);
+    new VerificationNotifications(jdbc, configService)
+        .verifier(userId, requete, jamais, contenuEmail, contenuPush);
 
     final Map<String, Object> champs = new HashMap<>();
     champs.put("frequenceNotifications", requete.frequenceNotifications());
@@ -234,53 +233,6 @@ public class UserConfigService {
     upsertConfig(userId, champs);
 
     journaliserMajNotifications(userId, requete);
-  }
-
-  // Une combinaison sans effet est refusée plutôt que mémorisée : « Jamais » ne sert aucun canal,
-  // une case ne se coche que si son canal peut servir (appareil abonné, envoi d'emails possible).
-  private void verifierCombinaisonNotifications(
-      final String userId,
-      final RequeteNotifications requete,
-      final boolean jamais,
-      final boolean contenuEmail,
-      final boolean contenuPush) {
-    final boolean nouvelleVersion = requete.notifNouvelleVersion();
-    verifierFrequenceEtContenu(jamais, contenuEmail || contenuPush, nouvelleVersion);
-    verifierCanauxDisponibles(userId, contenuEmail, contenuPush || nouvelleVersion);
-  }
-
-  private static void verifierFrequenceEtContenu(
-      final boolean jamais, final boolean unContenu, final boolean nouvelleVersion) {
-    if (jamais && (unContenu || nouvelleVersion)) {
-      throw new ErreurMetier(
-          "Avec « Jamais », aucune notification n'est envoyée : décochez les types de contenu ou"
-              + " choisissez une fréquence.");
-    }
-    if (!jamais && !unContenu) {
-      throw new ErreurMetier(
-          "Activez au moins un type de contenu pour recevoir des notifications.");
-    }
-  }
-
-  private void verifierCanauxDisponibles(
-      final String userId, final boolean contenuEmail, final boolean usagePush) {
-    if (usagePush && nombreAppareilsPush(userId) == 0) {
-      throw new ErreurMetier(
-          "Aucun appareil n'est abonné aux notifications push : activez-les d'abord sur cet"
-              + " appareil.");
-    }
-    if (contenuEmail && configService.lireConfig("RESEND_API_KEY").isEmpty()) {
-      throw new ErreurMetier("Les emails ne sont pas disponibles pour le moment.");
-    }
-  }
-
-  private int nombreAppareilsPush(final String userId) {
-    final Integer nombre =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM push_abonnements WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class);
-    return nombre == null ? 0 : nombre;
   }
 
   /**

@@ -9,9 +9,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Ligne du référentiel salles pour l'onglet admin « Salles ». {@code suspicions}
- * explique un statut « À vérifier » ou « Invalide » : une entrée par source suspecte ;
- * {@code lieuEventim} est le nom exact du lieu interrogé chez Eventim (null s'il n'y en a pas).
+ * Ligne du référentiel salles pour l'onglet admin « Salles ». {@code
+ * suspicions} explique un statut « À vérifier » ou « Invalide » : une entrée
+ * par source suspecte ; {@code lieuEventim} est le nom exact du lieu interrogé
+ * chez Eventim (null s'il n'y en a pas).
  * @since 2.6.0
  * @author Kwaite
  */

@@ -11,10 +11,10 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Reconnaît la republication, par une billetterie, de l'ancienne fiche d'un concert déplacé : sa
- * fiche (même source, même adresse) est déjà rattachée à l'événement d'une autre salle, tout en
- * ayant été vue sous le nom de l'ancienne. L'accepter recréerait chaque nuit un événement fantôme
- * dans l'ancienne salle, et défairait toute fusion manuelle.
+ * Reconnaît la republication de l'ancienne fiche d'un concert déplacé : sa
+ * fiche (même source, même adresse) est déjà rattachée à l'événement d'une
+ * autre salle, tout en ayant été vue sous le nom de l'ancienne. L'accepter
+ * recréerait chaque nuit un événement fantôme et défairait toute fusion.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -29,8 +29,8 @@ final class RepublicationFicheDeplacee {
 
   /**
    * @param concert concert entrant, salle déjà résolue
-   * @return {@code true} si sa fiche est déjà celle d'un événement d'une autre salle, vue sous le
-   *     nom de la salle du concert entrant
+   * @return {@code true} si sa fiche est déjà celle d'un événement d'une autre
+   *     salle, vue sous le nom de la salle du concert entrant
    */
   /* package-private : appelé par PersisteurConcertsDb (même package). */
   boolean estRepublication(final ValeurConcert concert) {

@@ -67,16 +67,11 @@ public class ReferentielSallesService {
   }
 
   /**
+   * Filtres de la liste (nom, ville, département, statut a_jour, a_verifier ou
+   * invalide : null = sans filtre) ; {@code ids} restreint à des salles précises
+   * (comparaison), {@code sansSource} ne garde que les salles sans aucune source.
    * @param page numéro de page (0-indexé)
-   * @param nom filtre nom partiel, peut être null
-   * @param ville filtre ville partielle, peut être null
-   * @param dept filtre département exact, peut être null
-   * @param statut filtre a_jour/a_verifier/invalide, peut être null
    * @param wikidataManquant filtre les salles sans wikidata_id
-   * @param ids restreint la liste à ces salles (comparaison de deux salles signalées), peut être
-   *     null ou vide
-   * @param sansSource ne garde que les salles qu'aucune source n'alimente (état normal : salle
-   *     ajoutée à la main, ou connue seulement par ses concerts)
    */
   public record FiltresRechercheSalles(
       int page,
@@ -143,7 +138,7 @@ public class ReferentielSallesService {
   private record FiltresSalles(StringBuilder where, Map<String, Object> params) {}
 
   private FiltresSalles construireFiltresSalles(final FiltresRechercheSalles filtresRecherche) {
-    final StringBuilder where = new StringBuilder(60).append(" WHERE 1=1 ");
+    final StringBuilder where = new StringBuilder(120).append(" WHERE 1=1 ");
     final Map<String, Object> params = new HashMap<>();
     ajouterFiltreLike(where, params, "nom", filtresRecherche.nom());
     ajouterFiltreLike(where, params, "ville", filtresRecherche.ville());

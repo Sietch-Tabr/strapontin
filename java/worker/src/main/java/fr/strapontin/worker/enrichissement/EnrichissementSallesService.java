@@ -347,8 +347,9 @@ public class EnrichissementSallesService {
     return false;
   }
 
-  // Un élément dont le libellé ne désigne pas notre salle (Théâtre du Châtelet proposé au Théâtre
-  // du Chariot) est une proposition fausse : ni conflit à journaliser, ni doublon à signaler.
+  // Un élément dont le libellé ne désigne pas notre salle (Théâtre du Châtelet
+  // proposé au Théâtre du Chariot) est une proposition fausse : ni conflit à
+  // journaliser, ni doublon à signaler.
   private static boolean libelleDesigneLaSalle(final String nomSalle, final String libelle) {
     if (libelle == null || libelle.isBlank()) {
       return true;

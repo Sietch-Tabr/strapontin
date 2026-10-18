@@ -63,7 +63,8 @@ class SalleRechercheNominatimService {
    * @param restClient client HTTP partagé
    * @param objectMapper désérialiseur JSON
    * @param budgetRecherches plafond global des recherches vers Nominatim
-   * @param jdbc base partagée avec le worker, qui coordonne la seconde entre les deux processus
+   * @param jdbc base partagée avec le worker, qui coordonne la seconde entre les
+   *     deux processus
    */
   /* package-private : instancié uniquement par SalleService (même package). */
   @Autowired

@@ -46,7 +46,7 @@ class NotificationPushDigestService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final SuiviEchecsPush suiviEchecs;
-  private final NotificationDigestService.FabriquePushService fabriquePushService;
+  private final FabriquePushService fabriquePushService;
   private final Clock horloge;
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans
   // logs_admin.
@@ -58,7 +58,7 @@ class NotificationPushDigestService {
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,
-      final NotificationDigestService.FabriquePushService fabriquePushService) {
+      final FabriquePushService fabriquePushService) {
     this(configService, jdbc, logsAdminWorker, fabriquePushService, Clock.systemUTC());
   }
 
@@ -67,7 +67,7 @@ class NotificationPushDigestService {
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,
-      final NotificationDigestService.FabriquePushService fabriquePushService,
+      final FabriquePushService fabriquePushService,
       final Clock horloge) {
     this.horloge = horloge;
     this.configService = configService;
@@ -110,8 +110,8 @@ class NotificationPushDigestService {
     if (abonnements.isEmpty()) {
       return false;
     }
-    // Retenu jusqu'à 7 h : la trace durable est la ligne de push_differes, le concert peut donc
-    // être marqué notifié sans que le push soit perdu.
+    // Retenu jusqu'à 7 h : la trace durable est la ligne de push_differes, le
+    // concert peut donc être marqué notifié sans que le push soit perdu.
     if (PlageSilencieusePush.estActive(Instant.now(horloge))) {
       differer(userId, concerts);
       return true;
@@ -154,8 +154,8 @@ class NotificationPushDigestService {
   }
 
   /**
-   * Envoie les push retenus pendant la plage silencieuse, un digest par utilisateur. Sans effet
-   * dans la plage elle-même : rien ne part avant 7 h.
+   * Envoie les push retenus pendant la plage silencieuse, un digest par
+   * utilisateur. Sans effet dans la plage elle-même : rien ne part avant 7 h.
    * @return nombre d'utilisateurs dont les push retenus sont partis
    */
   /* package-private : appelé par NotificationDigestService (même package). */

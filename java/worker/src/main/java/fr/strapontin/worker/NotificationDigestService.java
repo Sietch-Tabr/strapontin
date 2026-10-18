@@ -4,20 +4,13 @@
  */
 package fr.strapontin.worker;
 
-import com.resend.Resend;
 import fr.strapontin.worker.quota.GestionQuotaResendWorker;
 import java.time.Clock;
-import java.time.Instant;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import nl.martijndwars.webpush.PushService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -35,44 +28,10 @@ public class NotificationDigestService {
 
   private static final Logger LOG = LoggerFactory.getLogger(NotificationDigestService.class);
 
-  private final NamedParameterJdbcTemplate jdbc;
   private final NotificationPushDigestService pushDigestService;
   private final NotificationEmailDigestService emailDigestService;
   private final MatchesNonNotifiesLoader matchesLoader;
   private final NotificationDigestStats stats;
-
-  /**
-   * Fabrique du client Resend — indirection nécessaire pour rendre
-   * {@code envoyerEmail} testable sur son chemin nominal de succès, le SDK
-   * Resend n'étant pas injectable directement.
-   */
-  /* package-private : fabrique interne substituable en test, utilisée
-   * uniquement par cette classe. */
-  @FunctionalInterface
-  interface FabriqueResend {
-    /**
-     * @param cle clé API Resend
-     * @return client Resend prêt à l'emploi
-     */
-    Resend creer(String cle);
-  }
-
-  /** Fabrique du client push VAPID — même motif que {@link FabriqueResend}. */
-  /* package-private : fabrique interne substituable en test, utilisée aussi par
-   * NotificationPushDigestService (même package). */
-  @FunctionalInterface
-  interface FabriquePushService {
-    /**
-     * @param clePublique clé publique VAPID
-     * @param clePrivee clé privée VAPID
-     * @param sujet identifiant {@code mailto:} /{@code https:} requis par la
-     *     spec VAPID
-     * @return client push prêt à l'emploi
-     * @throws java.security.GeneralSecurityException si les clés sont invalides
-     */
-    PushService creer(String clePublique, String clePrivee, String sujet)
-        throws java.security.GeneralSecurityException;
-  }
 
   /**
    * Constructeur Spring — : les fabriques Resend/PushService ne sont
@@ -93,8 +52,8 @@ public class NotificationDigestService {
         jackson,
         logsAdminWorker,
         gestionQuotaResendWorker,
-        Resend::new,
-        PushService::new);
+        FabriqueResend.parDefaut(),
+        FabriquePushService.parDefaut());
   }
 
   /**
@@ -117,14 +76,18 @@ public class NotificationDigestService {
         jackson,
         logsAdminWorker,
         gestionQuotaResendWorker,
-        fabriqueResend,
-        fabriquePushService,
-        Clock.systemUTC());
+        new Fabriques(fabriqueResend, fabriquePushService, Clock.systemUTC()));
   }
 
   /**
-   * Constructeur de test avec horloge : la plage silencieuse du push dépend de l'heure, un test
-   * ne doit pas en dépendre.
+   * Fabriques d'envoi et horloge : la plage silencieuse du push dépend de
+   * l'heure, un test ne doit pas en dépendre.
+   */
+  /* package-private : utilisé par les tests du même package. */
+  record Fabriques(FabriqueResend resend, FabriquePushService push, Clock horloge) {}
+
+  /**
+   * Constructeur de test avec horloge.
    */
   /* package-private : instancié uniquement par les tests du même package. */
   NotificationDigestService(
@@ -133,15 +96,13 @@ public class NotificationDigestService {
       final ObjectMapper jackson,
       final LogsAdminWorker logsAdminWorker,
       final GestionQuotaResendWorker gestionQuotaResendWorker,
-      final FabriqueResend fabriqueResend,
-      final FabriquePushService fabriquePushService,
-      final Clock horloge) {
-    this.jdbc = jdbc;
+      final Fabriques fabriques) {
     this.pushDigestService =
         new NotificationPushDigestService(
-            configService, jdbc, logsAdminWorker, fabriquePushService, horloge);
+            configService, jdbc, logsAdminWorker, fabriques.push(), fabriques.horloge());
     this.emailDigestService =
-        new NotificationEmailDigestService(configService, gestionQuotaResendWorker, fabriqueResend);
+        new NotificationEmailDigestService(
+            configService, gestionQuotaResendWorker, fabriques.resend());
     this.matchesLoader = new MatchesNonNotifiesLoader(jdbc);
     this.stats = new NotificationDigestStats(jdbc, jackson);
   }
@@ -157,28 +118,6 @@ public class NotificationDigestService {
       String artisteNorm,
       String source,
       String statut) {}
-
-  /**
-   * Résultat d'un envoi de digest, avec le sous-ensemble de concerts
-   * effectivement tenté par canal — nécessaire pour ne marquer
-   * {@code notification_envoyee_le} que sur les concerts réellement délivrés
-   * par un canal en succès, pas sur l'ensemble du digest dès qu'un seul canal a
-   * réussi.
-   */
-  private record ResultatDigest(
-      boolean emailOk,
-      boolean pushOk,
-      List<ConcertNotif> concertsEmail,
-      List<ConcertNotif> concertsPush) {
-
-    // Email ou push sans objet, sans service d'envoi configuré ou (push) sans
-    // appareil abonné : pas un échec, l'utilisateur n'a aucun canal joignable.
-    /* package-private : appelé par traiterDigestUtilisateur (même classe). */
-    boolean sansCanal(final boolean abonnePush, final boolean emailDisponible) {
-      return (concertsEmail.isEmpty() || !emailDisponible)
-          && (concertsPush.isEmpty() || !abonnePush);
-    }
-  }
 
   /* package-private : type de retour interne, utilisé par
    * NotificationPushDigestService (même package). */
@@ -214,11 +153,10 @@ public class NotificationDigestService {
         return;
       }
 
-      final Instant maintenant = Instant.now();
       for (final Map.Entry<String, List<ConcertNotif>> entree :
           groupes.parUtilisateur().entrySet()) {
         final BilanDigestUtilisateur bilan =
-            traiterDigestUtilisateur(entree.getKey(), entree.getValue(), groupes, maintenant);
+            traiterDigestUtilisateur(entree.getKey(), entree.getValue(), groupes);
         nbEmailsOk += bilan.emailOk() ? 1 : 0;
         nbPushOk += bilan.pushOk() ? 1 : 0;
         nbErreurs += bilan.erreur() ? 1 : 0;
@@ -237,7 +175,8 @@ public class NotificationDigestService {
   }
 
   /**
-   * Envoie à 7 h les push retenus pendant la plage silencieuse (22 h à 7 h, heure de Paris).
+   * Envoie à 7 h les push retenus pendant la plage silencieuse (22 h à 7 h,
+   * heure de Paris).
    */
   public void envoyerPushDifferes() {
     final int utilisateurs = pushDigestService.envoyerDifferes();
@@ -258,9 +197,8 @@ public class NotificationDigestService {
   private BilanDigestUtilisateur traiterDigestUtilisateur(
       final String userId,
       final List<ConcertNotif> concerts,
-      final MatchesNonNotifiesLoader.MatchesGroupes groupes,
-      final Instant maintenant) {
-    final Set<UUID> concertIdsNotifies = new LinkedHashSet<>();
+      final MatchesNonNotifiesLoader.MatchesGroupes groupes) {
+    List<String> concertIdsNotifies = List.of();
     boolean emailOk = false;
     boolean pushOk = false;
     boolean erreur = false;
@@ -281,12 +219,7 @@ public class NotificationDigestService {
       // Seuls les concerts du canal effectivement en succès sont marqués
       // notifiés : un digest mixte email+push où un seul canal échoue ne doit
       // pas marquer à tort les concerts du canal en échec comme notifiés.
-      if (res.emailOk()) {
-        res.concertsEmail().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
-      }
-      if (res.pushOk()) {
-        res.concertsPush().forEach(c -> concertIdsNotifies.add(UUID.fromString(c.concertId())));
-      }
+      concertIdsNotifies = res.concertIdsNotifies();
     } catch (Exception e) {
       erreur = true;
       LOG.error("notifier:digest erreur envoi pour user={} : {}", userId, e.getMessage());
@@ -302,29 +235,9 @@ public class NotificationDigestService {
           userId);
       matchesNotifies = 0;
     } else {
-      matchesNotifies = marquerMatchesNotifies(userId, concertIdsNotifies, maintenant);
+      matchesNotifies = matchesLoader.marquerNotifies(userId, concertIdsNotifies);
     }
     return new BilanDigestUtilisateur(emailOk, pushOk, erreur, matchesNotifies);
-  }
-
-  private int marquerMatchesNotifies(
-      final String userId, final Set<UUID> concertIdsNotifies, final Instant maintenant) {
-    return jdbc.update(
-        """
-        UPDATE user_matches um
-        SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
-        FROM concerts c
-        WHERE c.id = um.concert_id
-          AND um.user_id = :userId
-          AND um.concert_id IN (:concertIds)
-        """,
-        new MapSqlParameterSource()
-            .addValue("userId", userId)
-            // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en
-            // paramètre de bind — OffsetDateTime est le seul type JSR-310
-            // supporté automatiquement en écriture.
-            .addValue("maintenant", maintenant.atOffset(java.time.ZoneOffset.UTC))
-            .addValue("concertIds", concertIdsNotifies));
   }
 
   private ResultatDigest envoyerDigest(

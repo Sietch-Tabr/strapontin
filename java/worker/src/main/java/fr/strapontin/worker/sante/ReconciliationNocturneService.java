@@ -90,7 +90,8 @@ public class ReconciliationNocturneService {
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     healthCheckSallesTM.alerterLieuxEventimSuspects();
 
-    // Avant l'enrichissement et les rapprochements : ils comparent des villes et des départements.
+    // Avant l'enrichissement et les rapprochements : ils comparent des villes et
+    // des départements.
     completeurVillesSalles.completer();
 
     final int enrichisArtistes = enrichissementArtistes.enrichir();

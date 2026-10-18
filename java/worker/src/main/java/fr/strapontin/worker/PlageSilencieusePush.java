@@ -9,14 +9,15 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 /**
- * Plage horaire pendant laquelle aucune notification push n'est envoyée : de 22 h à 7 h, heure de
- * Paris. Les envois retenus partent à 7 h.
+ * Plage horaire pendant laquelle aucune notification push n'est envoyée : de
+ * 22 h à 7 h, heure de Paris. Les envois retenus partent à 7 h.
  * @since 3.0.6
  * @author Kwaite
  */
 final class PlageSilencieusePush {
 
   /** Fuseau de référence des utilisateurs (heure d'été et d'hiver comprises). */
+  /* package-private : partagé avec les planificateurs et les tests (même package). */
   static final ZoneId FUSEAU = ZoneId.of("Europe/Paris");
 
   private static final int HEURE_DEBUT = 22;

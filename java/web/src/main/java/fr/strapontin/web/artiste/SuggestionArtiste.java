@@ -16,8 +16,7 @@ public record SuggestionArtiste(
     String nom, String source, String description, String wikidataId, Integer fans) {
 
   /**
-   * Construit une suggestion sans popularité (sources {@code "base"} et {@code "wikidata"}).
-   *
+   * Suggestion sans popularité (sources {@code "base"} et {@code "wikidata"}).
    * @param nom nom affiché
    * @param source origine de la suggestion
    * @param description description Wikidata, peut être {@code null}

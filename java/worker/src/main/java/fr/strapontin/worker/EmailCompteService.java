@@ -30,7 +30,7 @@ public class EmailCompteService {
 
   private final ConfigServiceWorker configService;
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
-  private final NotificationDigestService.FabriqueResend fabriqueResend;
+  private final FabriqueResend fabriqueResend;
 
   /**
    * @param configService lecture de RESEND_API_KEY/CONTACT_EMAIL/PUBLIC_BASE_URL
@@ -48,7 +48,7 @@ public class EmailCompteService {
   EmailCompteService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker,
-      final NotificationDigestService.FabriqueResend fabriqueResend) {
+      final FabriqueResend fabriqueResend) {
     this.configService = configService;
     this.gestionQuotaResendWorker = gestionQuotaResendWorker;
     this.fabriqueResend = fabriqueResend;

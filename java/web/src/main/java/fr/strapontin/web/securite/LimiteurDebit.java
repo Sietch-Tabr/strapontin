@@ -8,9 +8,11 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Limiteur de débit par clé en fenêtre glissante : sur n'importe quelle
@@ -25,9 +27,15 @@ public final class LimiteurDebit {
   private final int capacite;
   private final long fenetreNanos;
   private final Clock horloge;
-  // L'accès rafraîchit l'expiration : un journal n'est jamais évincé avant que ses dates soient
-  // périmées.
-  private final Cache<String, Deque<Long>> journaux;
+  // L'accès rafraîchit l'expiration : un journal n'est jamais évincé avant que
+  // ses dates soient périmées.
+  private final Cache<String, Journal> journaux;
+
+  /** Dates des requêtes récentes d'une clé, protégées par leur propre verrou. */
+  private static final class Journal {
+    private final ReentrantLock verrou = new ReentrantLock();
+    private final Deque<Long> dates = new ArrayDeque<>();
+  }
 
   /**
    * @param capacite nombre de requêtes autorisées sur toute fenêtre glissante
@@ -40,6 +48,7 @@ public final class LimiteurDebit {
     this(capacite, fenetre, expiration, tailleMax, Clock.systemUTC());
   }
 
+  /* package-private : horloge injectée par les tests (même package). */
   LimiteurDebit(
       final int capacite,
       final Duration fenetre,
@@ -57,22 +66,24 @@ public final class LimiteurDebit {
   }
 
   /**
-   * Enregistre une requête de la clé si la fenêtre glissante le permet. Une
+   * Enregistre une requête de la clé si la fenêtre glissante le permet ; une
    * requête refusée n'est pas comptée.
-   *
-   * @param cle identifiant de l'appelant (adresse, utilisateur, couple adresse et chemin)
-   * @return {@code true} si la requête est autorisée, {@code false} si le quota est épuisé
+   * @param cle identifiant de l'appelant (adresse, utilisateur, chemin)
+   * @return {@code true} si autorisée, {@code false} si le quota est épuisé
    */
   public boolean autoriser(final String cle) {
-    final Deque<Long> journal = journaux.get(cle, _ -> new ArrayDeque<>());
+    final Journal journal = journaux.get(cle, _ -> new Journal());
     final long maintenant = maintenantNanos();
-    synchronized (journal) {
-      purger(journal, maintenant);
-      if (journal.size() >= capacite) {
+    journal.verrou.lock();
+    try {
+      purger(journal.dates, maintenant);
+      if (journal.dates.size() >= capacite) {
         return false;
       }
-      journal.addLast(maintenant);
+      journal.dates.addLast(maintenant);
       return true;
+    } finally {
+      journal.verrou.unlock();
     }
   }
 
@@ -84,13 +95,16 @@ public final class LimiteurDebit {
    * @return {@code true} si une requête de plus serait refusée
    */
   public boolean estEpuise(final String cle) {
-    final Deque<Long> journal = journaux.getIfPresent(cle);
+    final Journal journal = journaux.getIfPresent(cle);
     if (journal == null) {
       return false;
     }
-    synchronized (journal) {
-      purger(journal, maintenantNanos());
-      return journal.size() >= capacite;
+    journal.verrou.lock();
+    try {
+      purger(journal.dates, maintenantNanos());
+      return journal.dates.size() >= capacite;
+    } finally {
+      journal.verrou.unlock();
     }
   }
 
@@ -101,12 +115,15 @@ public final class LimiteurDebit {
    * @return {@code true} si ce décompte vient d'atteindre le quota
    */
   public boolean enregistrer(final String cle) {
-    final Deque<Long> journal = journaux.get(cle, _ -> new ArrayDeque<>());
+    final Journal journal = journaux.get(cle, _ -> new Journal());
     final long maintenant = maintenantNanos();
-    synchronized (journal) {
-      purger(journal, maintenant);
-      journal.addLast(maintenant);
-      return journal.size() == capacite;
+    journal.verrou.lock();
+    try {
+      purger(journal.dates, maintenant);
+      journal.dates.addLast(maintenant);
+      return journal.dates.size() == capacite;
+    } finally {
+      journal.verrou.unlock();
     }
   }
 
@@ -119,9 +136,9 @@ public final class LimiteurDebit {
     journaux.invalidate(cle);
   }
 
-  private void purger(final Deque<Long> journal, final long maintenant) {
-    while (!journal.isEmpty() && maintenant - journal.peekFirst() >= fenetreNanos) {
-      journal.pollFirst();
+  private void purger(final Deque<Long> dates, final long maintenant) {
+    while (!dates.isEmpty() && maintenant - dates.peekFirst() >= fenetreNanos) {
+      dates.pollFirst();
     }
   }
 
@@ -131,7 +148,7 @@ public final class LimiteurDebit {
   }
 
   private long maintenantNanos() {
-    final var instant = horloge.instant();
+    final Instant instant = horloge.instant();
     return instant.getEpochSecond() * 1_000_000_000L + instant.getNano();
   }
 }

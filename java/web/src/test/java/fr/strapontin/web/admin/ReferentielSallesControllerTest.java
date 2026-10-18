@@ -201,7 +201,8 @@ class ReferentielSallesControllerTest {
     org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
         .build()
         .perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/admin/salles")
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                    "/api/admin/salles")
                 .param("page", "2")
                 .param("nom", "zenith")
                 .param("dept", "75")
@@ -223,7 +224,9 @@ class ReferentielSallesControllerTest {
 
     org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
         .build()
-        .perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/admin/salles"))
+        .perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                "/api/admin/salles"))
         .andExpect(
             org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
 

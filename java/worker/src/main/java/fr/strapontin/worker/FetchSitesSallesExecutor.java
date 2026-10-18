@@ -17,9 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Pipeline du job {@code fetch:sites-salles} : lecture du site de chaque salle qui vend hors
- * Ticketmaster et Eventim, dédoublonnage, persistance, absences. Un site à la fois, une fois par
- * jour : un site qui n'a pas répondu en entier ne compte aucune absence.
+ * Pipeline du job {@code fetch:sites-salles} : lecture du site de chaque salle
+ * qui vend hors Ticketmaster et Eventim, dédoublonnage, persistance, absences.
+ * Un site à la fois, une fois par jour : un site qui n'a pas répondu en entier
+ * ne compte aucune absence.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -27,7 +28,8 @@ class FetchSitesSallesExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(FetchSitesSallesExecutor.class);
   private static final String TYPE_JOB = "fetch:sites-salles";
-  // Le site liste tout ce qu'il programme : aucune date à venir n'est hors de sa portée.
+  // Le site liste tout ce qu'il programme : aucune date à venir n'est hors de sa
+  // portée.
   private static final int ANNEES_DE_COUVERTURE = 10;
 
   private final List<SourceSiteSalle> sites;
@@ -81,8 +83,9 @@ class FetchSitesSallesExecutor {
   private ResultatPersistance traiterSite(final SourceSiteSalle site) {
     final List<ConcertBrut> lus = site.lireProgrammation();
     final List<String> sallesDuSite = sallesDuSite(site.identifiantSite());
-    // Une page qui ne donne plus rien alors que la base connaît des concerts à venir est plus
-    // probablement une mise en page changée qu'un programme vidé : aucune absence n'est comptée.
+    // Une page qui ne donne plus rien alors que la base connaît des concerts à
+    // venir est plus probablement une mise en page changée qu'un programme vidé :
+    // aucune absence n'est comptée.
     if (lus.isEmpty() && aDesConcertsAVenir(sallesDuSite)) {
       throw new IllegalStateException(
           "aucun concert lu alors que la base en connaît à venir : mise en page modifiée ?");
@@ -115,15 +118,17 @@ class FetchSitesSallesExecutor {
     return nombre != null && nombre > 0;
   }
 
-  // Les dates de mise à jour sont celles de la base : l'horloge de la JVM peut en différer de
-  // quelques millisecondes, et un concert tout juste écrit passerait pour non revu.
+  // Les dates de mise à jour sont celles de la base : l'horloge de la JVM peut
+  // en différer de quelques millisecondes, et un concert tout juste écrit
+  // passerait pour non revu.
   private String horlogeDeLaBase() {
     return commun
         .obtenirJdbc()
         .queryForObject("SELECT clock_timestamp()::text", Map.of(), String.class);
   }
 
-  // Une salle rattachée au site (« triton ») ou à l'une de ses salles (« allmol:zion park »).
+  // Une salle rattachée au site (« triton ») ou à l'une de ses salles («
+  // allmol:zion park »).
   private List<String> sallesDuSite(final String identifiantSite) {
     return commun
         .obtenirJdbc()

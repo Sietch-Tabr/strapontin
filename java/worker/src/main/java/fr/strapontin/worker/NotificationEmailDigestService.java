@@ -24,14 +24,14 @@ class NotificationEmailDigestService {
 
   private final ConfigServiceWorker configService;
   private final GestionQuotaResendWorker gestionQuotaResendWorker;
-  private final NotificationDigestService.FabriqueResend fabriqueResend;
+  private final FabriqueResend fabriqueResend;
 
   /* package-private : instancié uniquement par NotificationDigestService (même
    * package). */
   NotificationEmailDigestService(
       final ConfigServiceWorker configService,
       final GestionQuotaResendWorker gestionQuotaResendWorker,
-      final NotificationDigestService.FabriqueResend fabriqueResend) {
+      final FabriqueResend fabriqueResend) {
     this.configService = configService;
     this.gestionQuotaResendWorker = gestionQuotaResendWorker;
     this.fabriqueResend = fabriqueResend;

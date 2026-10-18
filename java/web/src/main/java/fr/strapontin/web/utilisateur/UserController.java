@@ -49,8 +49,8 @@ public class UserController {
   private final PasswordEncoder passwordEncoder;
   private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
   private final LogAdminService logAdminService;
-  // Une session déjà ouverte (volée, par exemple) ne doit pas pouvoir deviner le mot de passe
-  // actuel.
+  // Une session déjà ouverte (volée, par exemple) ne doit pas pouvoir deviner le
+  // mot de passe actuel.
   private final LimiteurDebit echecsMotDePasseActuel =
       new LimiteurDebit(
           MAX_ECHECS_MOT_DE_PASSE,
@@ -121,12 +121,12 @@ public class UserController {
   }
 
   /**
-   * Change le mot de passe et révoque toutes les sessions
-   * actives (tous appareils, pas seulement la requête en cours).
+   * Change le mot de passe et révoque toutes les sessions actives (tous
+   * appareils, pas seulement la requête en cours).
    * @param requete corps JSON avec motDePasseActuel/Nouveau
    * @param auth contexte d'authentification
-   * @return 200 si changé, 400 si invalide/mdp actuel incorrect, 429 après 5 mots de passe
-   *     actuels incorrects en 15 minutes
+   * @return 200 si changé, 400 si invalide/mdp actuel incorrect, 429 après 5
+   *     mots de passe actuels incorrects en 15 minutes
    */
   @PostMapping("/password")
   public ResponseEntity<Map<String, Object>> changerMotDePasse(

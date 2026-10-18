@@ -4,9 +4,13 @@
  */
 package fr.strapontin.web.artiste;
 
+import fr.strapontin.core.Normalisation;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,9 +73,10 @@ final class ArtisteServiceParsing {
     return resultats;
   }
 
-  // Deezer renvoie parfois deux fiches de même nom : la plus populaire, vue en premier, est gardée.
-  private static java.util.function.Predicate<Map<String, Object>> distinctParNom() {
-    final java.util.Set<String> vus = new java.util.HashSet<>();
+  // Deezer renvoie parfois deux fiches de même nom : la plus populaire, vue en
+  // premier, est gardée.
+  private static Predicate<Map<String, Object>> distinctParNom() {
+    final Set<String> vus = new HashSet<>();
     return a -> vus.add((String) a.get("name"));
   }
 
@@ -108,5 +113,24 @@ final class ArtisteServiceParsing {
       LOG.warn("Deezer parsing JSON échoué");
     }
     return resultats;
+  }
+
+  /* package-private : appelé par ArtisteService (même package). */
+  static String compacter(final String nom) {
+    return Normalisation.normaliserTexte(nom).replace(" ", "");
+  }
+
+  /* package-private : appelé par ArtisteService (même package). */
+  static void ajouterSuggestionsInedites(
+      final List<SuggestionArtiste> cible,
+      final Set<String> nomsDejaPresents,
+      final List<SuggestionArtiste> source) {
+    for (final SuggestionArtiste r : source) {
+      final String norm = compacter(r.nom());
+      if (!nomsDejaPresents.contains(norm)) {
+        cible.add(r);
+        nomsDejaPresents.add(norm);
+      }
+    }
   }
 }

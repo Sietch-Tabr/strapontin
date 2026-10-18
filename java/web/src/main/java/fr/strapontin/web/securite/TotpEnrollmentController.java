@@ -39,7 +39,8 @@ public class TotpEnrollmentController {
   private final TotpService totpService;
   private final UserController userController;
   private final LogAdminService logAdminService;
-  // Une session déjà ouverte (volée, par exemple) ne doit pas pouvoir deviner le code TOTP.
+  // Une session déjà ouverte (volée, par exemple) ne doit pas pouvoir deviner le
+  // code TOTP.
   private final LimiteurDebit echecsDesactivation =
       new LimiteurDebit(
           MAX_ECHECS_DESACTIVATION,
@@ -133,8 +134,8 @@ public class TotpEnrollmentController {
    *
    * @param corps corps JSON avec {@code code} (6 chiffres)
    * @param auth contexte d'authentification
-   * @return 200 {@code {succes: true}}, 400 {@code {erreur: "..."}}, ou 429 après 5 codes
-   *     incorrects en 15 minutes
+   * @return 200 {@code {succes: true}}, 400 {@code {erreur: "..."}}, ou 429
+   *     après 5 codes incorrects en 15 minutes
    */
   @PostMapping("/desactiver")
   public ResponseEntity<Map<String, Object>> desactiver(

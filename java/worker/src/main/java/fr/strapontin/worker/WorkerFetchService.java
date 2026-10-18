@@ -133,8 +133,8 @@ public class WorkerFetchService {
   }
 
   /**
-   * Lecture quotidienne des sites de salles qui vendent hors Ticketmaster et Eventim — voir {@link
-   * FetchSitesSallesExecutor}.
+   * Lecture quotidienne des sites de salles qui vendent hors Ticketmaster et
+   * Eventim — voir {@link FetchSitesSallesExecutor}.
    */
   public void executerFetchSitesSalles() {
     fetchSitesSallesExecutor.executer();

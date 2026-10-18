@@ -16,9 +16,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Couverture des départements : relève chaque nuit le nombre de concerts à venir de chacun et
- * signale ceux qui n'en ont plus aucun, tant que l'admin n'a pas reconnu cette absence. Un
- * département qui retrouve des concerts referme son signalement et réarme le suivi.
+ * Couverture des départements : relève chaque nuit le nombre de concerts à
+ * venir de chacun et signale ceux qui n'en ont plus aucun, tant que l'admin
+ * n'a pas reconnu cette absence. Un département qui retrouve des concerts
+ * referme son signalement et réarme le suivi.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -83,7 +84,8 @@ public class CouvertureDepartements {
     return comptes;
   }
 
-  // Un département qui retrouve des concerts oublie la reconnaissance de son absence passée.
+  // Un département qui retrouve des concerts oublie la reconnaissance de son
+  // absence passée.
   private void enregistrer(final String dept, final int nombre) {
     jdbc.update(
         """

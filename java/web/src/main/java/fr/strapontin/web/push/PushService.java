@@ -10,8 +10,8 @@ import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -97,8 +97,8 @@ public class PushService {
   }
 
   /**
-   * Enregistre un abonnement push en gardant l'appareil qui l'a créé, pour que l'utilisateur
-   * puisse le reconnaître dans sa liste.
+   * Enregistre un abonnement push en gardant l'appareil qui l'a créé, pour que
+   * l'utilisateur puisse le reconnaître dans sa liste.
    * @param userId identifiant de l'utilisateur
    * @param requete données de l'abonnement
    * @param appareil navigateur et système de l'appareil, null si inconnus
@@ -136,12 +136,11 @@ public class PushService {
   }
 
   /**
-   * Partie transactionnelle et isolée de {@link #abonner}. {@code
-   * REQUIRES_NEW} garantit une transaction dédiée même appelée depuis une
-   * transaction déjà ouverte.
+   * Partie transactionnelle et isolée de {@link #abonner} ({@code
+   * REQUIRES_NEW} : transaction dédiée même depuis une transaction ouverte).
    * @param userId identifiant de l'utilisateur
    * @param requete données de l'abonnement (déjà validées)
-   * @param appareil navigateur et système de l'appareil, null si inconnus
+   * @param appareil navigateur et système, null si inconnus
    * @throws ErreurMetier 429 si le cap est atteint
    */
   @Transactional(isolation = Isolation.SERIALIZABLE, propagation = Propagation.REQUIRES_NEW)
@@ -204,11 +203,12 @@ public class PushService {
             + " FROM push_abonnements WHERE user_id = :userId ORDER BY cree_le DESC",
         Map.of(CLE_USER_ID, userId),
         (rs, _) -> {
-          final Timestamp dernierEchec = rs.getTimestamp("dernier_echec_le");
+          final OffsetDateTime dernierEchec =
+              rs.getObject("dernier_echec_le", OffsetDateTime.class);
           final int statut = rs.getInt("dernier_echec_statut");
           return new AbonnementDto(
               rs.getString("endpoint"),
-              rs.getTimestamp("cree_le").toInstant(),
+              rs.getObject("cree_le", OffsetDateTime.class).toInstant(),
               rs.getString("appareil"),
               dernierEchec != null ? dernierEchec.toInstant() : null,
               dernierEchec == null ? null : EchecPush.causeLisible(rs.wasNull() ? null : statut));
@@ -216,13 +216,11 @@ public class PushService {
   }
 
   /**
-   * Abonnement push exposé côté client.
-   *
+   * Abonnement push exposé côté client ; {@code appareil} est null si inconnu,
+   * {@code enEchecDepuis} et {@code cause} (dernier refus) tant que les envois
+   * aboutissent.
    * @param endpoint URL de l'endpoint push (identifiant de révocation)
-   * @param creeLe date de création de l'abonnement
-   * @param appareil navigateur et système de l'appareil, null si inconnus
-   * @param enEchecDepuis date du dernier envoi refusé, null si les envois aboutissent
-   * @param cause explication du dernier refus pour l'utilisateur, null sans échec
+   * @param creeLe date de création
    */
   public record AbonnementDto(
       String endpoint, Instant creeLe, String appareil, Instant enEchecDepuis, String cause) {}

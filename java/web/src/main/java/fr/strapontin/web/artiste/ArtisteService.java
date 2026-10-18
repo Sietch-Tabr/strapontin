@@ -100,20 +100,22 @@ public class ArtisteService {
       final String rechercheNorm = Normalisation.normaliserTexte(recherche);
       // Clés sans espaces : « Krash Karma » et « Krashkarma » sont le même artiste.
       final Set<String> nomsSuivisNorm =
-          artistes.stream().map(a -> compacter(a.artisteAffiche())).collect(Collectors.toSet());
+          artistes.stream()
+              .map(a -> ArtisteServiceParsing.compacter(a.artisteAffiche()))
+              .collect(Collectors.toSet());
 
       final List<String> enBase =
           artisteRepository.rechercherEnBase("%" + rechercheNorm.replace(" ", "") + "%");
 
       final List<SuggestionArtiste> resultatsSuggestions =
           enBase.stream()
-              .filter(a -> !nomsSuivisNorm.contains(compacter(a)))
+              .filter(a -> !nomsSuivisNorm.contains(ArtisteServiceParsing.compacter(a)))
               .map(a -> new SuggestionArtiste(a, "base"))
               .collect(Collectors.toCollection(ArrayList::new));
 
       final Set<String> nomsDejaPresents =
           resultatsSuggestions.stream()
-              .map(s -> compacter(s.nom()))
+              .map(s -> ArtisteServiceParsing.compacter(s.nom()))
               .collect(Collectors.toCollection(HashSet::new));
       nomsDejaPresents.addAll(nomsSuivisNorm);
 
@@ -128,8 +130,10 @@ public class ArtisteService {
             CompletableFuture.supplyAsync(() -> rechercherWikidata(recherche));
         final CompletableFuture<List<SuggestionArtiste>> futureDeezer =
             CompletableFuture.supplyAsync(() -> rechercherDeezer(recherche));
-        ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureWikidata.join());
-        ajouterSuggestionsInedites(resultatsSuggestions, nomsDejaPresents, futureDeezer.join());
+        ArtisteServiceParsing.ajouterSuggestionsInedites(
+            resultatsSuggestions, nomsDejaPresents, futureWikidata.join());
+        ArtisteServiceParsing.ajouterSuggestionsInedites(
+            resultatsSuggestions, nomsDejaPresents, futureDeezer.join());
       }
 
       suggestions = resultatsSuggestions;
@@ -137,23 +141,6 @@ public class ArtisteService {
     }
 
     return new ReponseArtistes(artistes, suggestions, dejaLeSuivi);
-  }
-
-  private static String compacter(final String nom) {
-    return Normalisation.normaliserTexte(nom).replace(" ", "");
-  }
-
-  private static void ajouterSuggestionsInedites(
-      final List<SuggestionArtiste> cible,
-      final Set<String> nomsDejaPresents,
-      final List<SuggestionArtiste> source) {
-    for (final SuggestionArtiste r : source) {
-      final String norm = compacter(r.nom());
-      if (!nomsDejaPresents.contains(norm)) {
-        cible.add(r);
-        nomsDejaPresents.add(norm);
-      }
-    }
   }
 
   /**

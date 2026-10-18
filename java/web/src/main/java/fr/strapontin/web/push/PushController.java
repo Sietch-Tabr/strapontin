@@ -54,13 +54,11 @@ public class PushController {
   }
 
   /**
-   * Enregistre un nouvel abonnement push.
-   *
+   * Enregistre un nouvel abonnement push (201 ; 400/429 si invalide ou cap).
    * @param requete corps JSON avec endpoint et clés
    * @param auth contexte d'authentification
    * @param userAgent navigateur de l'appareil, pour le nommer dans la liste
-   * @return 201 si créé — 400/429 si invalide/cap (via
-   *     {@link GlobalExceptionHandler} )
+   * @return 201 si créé
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(

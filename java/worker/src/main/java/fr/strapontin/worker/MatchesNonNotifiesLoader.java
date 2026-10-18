@@ -4,10 +4,13 @@
  */
 package fr.strapontin.worker;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -125,5 +128,25 @@ class MatchesNonNotifiesLoader {
                   (String) ligne.get("statut")));
     }
     return new MatchesGroupes(emailsUtilisateurs, configsUtilisateurs, parUtilisateur);
+  }
+
+  /* package-private : appelé par NotificationDigestService (même package). */
+  int marquerNotifies(final String userId, final List<String> concertIds) {
+    return jdbc.update(
+        """
+        UPDATE user_matches um
+        SET notification_envoyee_le = :maintenant, statut_notifie = c.statut
+        FROM concerts c
+        WHERE c.id = um.concert_id
+          AND um.user_id = :userId
+          AND um.concert_id IN (:concertIds)
+        """,
+        new MapSqlParameterSource()
+            .addValue("userId", userId)
+            // pgjdbc n'infère pas le type SQL d'un java.time.Instant nu en
+            // paramètre de bind — OffsetDateTime est le seul type JSR-310
+            // supporté automatiquement en écriture.
+            .addValue("maintenant", Instant.now().atOffset(java.time.ZoneOffset.UTC))
+            .addValue("concertIds", concertIds.stream().map(UUID::fromString).distinct().toList()));
   }
 }

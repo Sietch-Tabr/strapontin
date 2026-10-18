@@ -40,12 +40,13 @@ public class FusionSallesClePorteeService {
   // peut partager un nom quasi identique entre deux halls physiquement
   // distincts de plusieurs centaines de mètres.
   private static final double DISTANCE_MAX_FUSION_METRES = 500;
-  // Une position de billetterie peut être fausse de plusieurs kilomètres (centre-ville au lieu de
-  // la salle) : deux concerts identiques et des noms qui désignent le même lieu suffisent alors.
+  // Une position de billetterie peut être fausse de plusieurs kilomètres
+  // (centre-ville au lieu de la salle) : deux concerts identiques et des noms
+  // qui désignent le même lieu suffisent alors.
   private static final double DISTANCE_MAX_FUSION_CONCERTS_PARTAGES_METRES = 5_000;
   private static final int NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE = 2;
-  // Deux billetteries publient la même séance à 30 ou 60 minutes d'écart (ouverture des portes
-  // et début) ; au-delà, ce sont deux séances.
+  // Deux billetteries publient la même séance à 30 ou 60 minutes d'écart
+  // (ouverture des portes et début) ; au-delà, ce sont deux séances.
   private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final String CLE_CIBLE = "cible";
   private static final int NB_SALLES_PAIRE = 2;
@@ -166,12 +167,10 @@ public class FusionSallesClePorteeService {
     final Double lonA = (Double) ligne.get("lon_a");
     final Double latB = (Double) ligne.get("lat_b");
     final Double lonB = (Double) ligne.get("lon_b");
-    if (coordonneesConnuesEtProches(latA, lonA, latB, lonB)) {
-      return true;
-    }
-    return ((Number) ligne.get("nb_partages")).intValue() >= NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE
-        && DistanceGeo.connuesEtProches(
-            latA, lonA, latB, lonB, DISTANCE_MAX_FUSION_CONCERTS_PARTAGES_METRES);
+    return coordonneesConnuesEtProches(latA, lonA, latB, lonB)
+        || (((Number) ligne.get("nb_partages")).intValue() >= NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE
+            && DistanceGeo.connuesEtProches(
+                latA, lonA, latB, lonB, DISTANCE_MAX_FUSION_CONCERTS_PARTAGES_METRES));
   }
 
   /**

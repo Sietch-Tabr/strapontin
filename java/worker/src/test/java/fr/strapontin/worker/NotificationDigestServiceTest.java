@@ -573,11 +573,12 @@ class NotificationDigestServiceTest {
             new ObjectMapper(),
             logsAdminWorker,
             gestionQuotaResendWorker,
-            _ -> {
-              throw new IllegalStateException("Resend non configuré en test");
-            },
-            (_, _, _) -> pushServiceMock,
-            HORLOGE_JOURNEE);
+            new NotificationDigestService.Fabriques(
+                _ -> {
+                  throw new IllegalStateException("Resend non configuré en test");
+                },
+                (_, _, _) -> pushServiceMock,
+                HORLOGE_JOURNEE));
 
     serviceAvecFabriques.executerDigest("quotidien");
 
@@ -620,11 +621,12 @@ class NotificationDigestServiceTest {
             new ObjectMapper(),
             logsAdminWorker,
             gestionQuotaResendWorker,
-            _ -> {
-              throw new IllegalStateException("Resend non configuré en test");
-            },
-            (_, _, _) -> pushServiceMock,
-            HORLOGE_JOURNEE)
+            new NotificationDigestService.Fabriques(
+                _ -> {
+                  throw new IllegalStateException("Resend non configuré en test");
+                },
+                (_, _, _) -> pushServiceMock,
+                HORLOGE_JOURNEE))
         .executerDigest("quotidien");
 
     verify(pushServiceMock, never()).send(any(Notification.class), any(Encoding.class));

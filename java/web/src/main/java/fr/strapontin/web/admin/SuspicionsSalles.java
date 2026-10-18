@@ -23,7 +23,8 @@ final class SuspicionsSalles {
   private SuspicionsSalles() {}
 
   /**
-   * Seules les salles dont le statut n'est pas « à jour » ont une source suspecte à expliquer.
+   * Seules les salles dont le statut n'est pas « à jour » ont une source
+   * suspecte à expliquer.
    *
    * @param jdbc accès JDBC
    * @param salles lignes de la page

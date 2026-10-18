@@ -72,9 +72,10 @@ final class ControleDispersionGeo {
         + horsDepartementSignalees;
   }
 
-  // Position Wikidata loin de tous les lieux sources : élément d'un homonyme (« Espace des Arts »
-  // de Chalon) ou d'un lieu voisin (église luthérienne Saint-Pierre). Un lieu proche de l'élément,
-  // même accepté par un admin, le confirme : les lieux plus éloignés sont alors les faux.
+  // Position Wikidata loin de tous les lieux sources : élément d'un homonyme («
+  // Espace des Arts » de Chalon) ou d'un lieu voisin (église luthérienne
+  // Saint-Pierre). Un lieu proche de l'élément, même accepté par un admin, le
+  // confirme : les lieux plus éloignés sont alors les faux.
   private int verifierPositionsWikidata() {
     final Map<UUID, Double> plusProche = new LinkedHashMap<>();
     final Map<UUID, String> elements = new LinkedHashMap<>();

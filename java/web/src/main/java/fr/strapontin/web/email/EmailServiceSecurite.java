@@ -191,11 +191,12 @@ public class EmailServiceSecurite {
   }
 
   /**
-   * Prévient chaque compte qui perd ses appareils push après un renouvellement des clés.
+   * Prévient chaque compte qui perd ses appareils push après un renouvellement
+   * des clés.
    * @param destinataires adresses des comptes concernés
    * @param motif raison du renouvellement
-   * @return adresses auxquelles l'email est effectivement parti (les autres : quota atteint,
-   *     envoi en échec ou service d'emails non configuré)
+   * @return adresses auxquelles l'email est effectivement parti (les autres :
+   *     quota atteint, envoi en échec ou service d'emails non configuré)
    */
   public List<String> envoyerPushReinitialise(
       final List<String> destinataires, final String motif) {

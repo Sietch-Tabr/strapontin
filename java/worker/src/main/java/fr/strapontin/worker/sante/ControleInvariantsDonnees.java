@@ -23,6 +23,9 @@ final class ControleInvariantsDonnees {
 
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
   private static final String CONFIANCE_HAUTE = "haute";
+  private static final String SALLE = "salle";
+  private static final String DATE = "date";
+  private static final String JUMEAU = "jumeau";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
@@ -42,8 +45,8 @@ final class ControleInvariantsDonnees {
     return publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
         + publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
         + publier("notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
-        + publier("salle_multi_departements", "salle", sallesMultiDepartements())
-        + publier("salle_suivie_contaminee", "salle", sallesSuiviesContaminees())
+        + publier("salle_multi_departements", SALLE, sallesMultiDepartements())
+        + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
@@ -143,18 +146,22 @@ final class ControleInvariantsDonnees {
           anomalies.put(
               rs.getObject("recent", UUID.class),
               Map.of(
-                  "artiste", rs.getString("artiste_norm"),
-                  "date", rs.getString("date"),
-                  "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
-                  "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+                  "artiste",
+                  rs.getString("artiste_norm"),
+                  DATE,
+                  rs.getString(DATE),
+                  "salles",
+                  rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
         });
     return anomalies;
   }
 
-  // Deux fiches de la même billetterie au même créneau et dans la même salle, sans artiste
-  // reconnu : un seul lieu ne reçoit pas deux concerts à la fois, mais la billetterie peut
-  // vendre un même concert sous plusieurs programmes. Détecté seulement, jamais fusionné : le
-  // calendrier de la salle seul tranche.
+  // Deux fiches de la même billetterie au même créneau et dans la même salle,
+  // sans artiste reconnu : un seul lieu ne reçoit pas deux concerts à la fois,
+  // mais la billetterie peut vendre un même concert sous plusieurs programmes.
+  // Détecté seulement, jamais fusionné : le calendrier de la salle seul tranche.
   private Map<UUID, Map<String, Object>> creneauxDoublesMemeSource() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -183,19 +190,25 @@ final class ControleInvariantsDonnees {
           anomalies.put(
               rs.getObject("recent", UUID.class),
               Map.of(
-                  "salle", rs.getString("salle"),
-                  "date", rs.getString("date"),
-                  "heure", rs.getString("heure"),
-                  "intitules", rs.getString("titre_a") + " / " + rs.getString("titre_b"),
-                  "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+                  SALLE,
+                  rs.getString(SALLE),
+                  DATE,
+                  rs.getString(DATE),
+                  "heure",
+                  rs.getString("heure"),
+                  "intitules",
+                  rs.getString("titre_a") + " / " + rs.getString("titre_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
         });
     return anomalies;
   }
 
-  // Deux artistes dont le nom ne diffère que par les espaces (« Krash Karma » / « Krashkarma ») :
-  // doublon probable, créé quand une variante a été suivie sans retrouver l'artiste existant.
-  // Détecté seulement : deux artistes distincts peuvent s'écrire ainsi, un admin tranche. Une
-  // paire déjà examinée (signalement clos) n'est plus signalée.
+  // Deux artistes dont le nom ne diffère que par les espaces (« Krash Karma » /
+  // « Krashkarma ») : doublon probable, créé quand une variante a été suivie
+  // sans retrouver l'artiste existant. Détecté seulement : deux artistes
+  // distincts peuvent s'écrire ainsi, un admin tranche. Une paire déjà examinée
+  // (signalement clos) n'est plus signalée.
   private Map<UUID, Map<String, Object>> artistesMemeNomSansEspaces() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(

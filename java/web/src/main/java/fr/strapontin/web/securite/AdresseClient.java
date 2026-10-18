@@ -27,14 +27,16 @@ public final class AdresseClient {
 
   /**
    * @param adresse adresse distante de la requête, éventuellement {@code null}
-   * @return l'adresse IPv4 telle quelle, le préfixe /64 d'une adresse IPv6, ou {@code "inconnu"}
+   * @return l'adresse IPv4 telle quelle, le préfixe /64 d'une adresse IPv6, ou
+   *     {@code "inconnu"}
    */
   public static String cle(final String adresse) {
     if (adresse == null || adresse.isBlank()) {
       return INCONNUE;
     }
     final String brute = adresse.strip();
-    // Sans deux-points ce n'est pas un littéral IPv6 : aucune résolution DNS n'est tentée.
+    // Sans deux-points ce n'est pas un littéral IPv6 : aucune résolution DNS n'est
+    // tentée.
     if (!brute.contains(":")) {
       return brute;
     }
@@ -43,13 +45,13 @@ public final class AdresseClient {
       if (resolue instanceof Inet4Address) {
         return resolue.getHostAddress();
       }
-      if (resolue instanceof Inet6Address) {
-        return prefixe64(resolue.getAddress());
-      }
+      return resolue instanceof Inet6Address
+          ? prefixe64(resolue.getAddress())
+          : brute.toLowerCase(Locale.ROOT);
     } catch (UnknownHostException _) {
       // Littéral non analysable : la valeur brute sert de clé.
+      return brute.toLowerCase(Locale.ROOT);
     }
-    return brute.toLowerCase(Locale.ROOT);
   }
 
   private static String prefixe64(final byte[] octets) {

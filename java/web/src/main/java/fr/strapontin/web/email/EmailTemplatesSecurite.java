@@ -122,12 +122,13 @@ final class EmailTemplatesSecurite {
   }
 
   /**
-   * Prévient un utilisateur que ses appareils push ont tous été retirés après le renouvellement
-   * des clés de l'application, et lui dit comment les réactiver.
+   * Prévient un utilisateur que ses appareils push ont tous été retirés après le
+   * renouvellement des clés de l'application, et lui dit comment les réactiver.
    * @param motif raison du renouvellement, saisie par l'administrateur
    * @param baseUrl adresse publique de l'application
    * @return le corps HTML de l'email
    */
+  /* package-private : appelé par EmailServiceSecurite (même package). */
   static String pushReinitialise(final String motif, final String baseUrl) {
     final String corps =
         """

@@ -213,8 +213,8 @@ public class CoherenceWikidataSalleService {
     final List<SalleAEnrichir> salles = sallesPositionneesParUneSource();
     final Map<UUID, EnrichissementSalle> elements =
         salles.isEmpty() ? Map.of() : wikidata.enrichirLot(salles);
-    // Une salle dont l'élément n'a pas pu être lu garde son signalement : l'absence de réponse
-    // de Wikidata ne prouve pas que l'écart a disparu.
+    // Une salle dont l'élément n'a pas pu être lu garde son signalement :
+    // l'absence de réponse de Wikidata ne prouve pas que l'écart a disparu.
     final Set<UUID> encoreEnAnomalie = new HashSet<>();
     int divergentes = 0;
     for (final SalleAEnrichir salle : salles) {
@@ -254,8 +254,9 @@ public class CoherenceWikidataSalleService {
         (rs, _) -> versSalleAEnrichir(rs));
   }
 
-  // Tout ce que l'administrateur doit voir pour juger : l'élément, les deux positions, et chaque
-  // lieu source avec son écart à l'élément (le lieu faux est celui qui s'en éloigne).
+  // Tout ce que l'administrateur doit voir pour juger : l'élément, les deux
+  // positions, et chaque lieu source avec son écart à l'élément (le lieu faux
+  // est celui qui s'en éloigne).
   private Map<String, Object> detailsPositionDivergente(
       final SalleAEnrichir salle, final EnrichissementSalle element, final double ecart) {
     final Map<String, Object> details = new LinkedHashMap<>();

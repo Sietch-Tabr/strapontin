@@ -4,14 +4,9 @@
  */
 package fr.strapontin.worker.jobs;
 
-import fr.strapontin.worker.NotificationVersionPushService;
-import fr.strapontin.worker.WorkerStatsService;
-import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
+import fr.strapontin.worker.ExecutionNotificationVersion;
 import org.quartz.JobExecutionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.info.BuildProperties;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
@@ -23,13 +18,10 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  */
 public class NotifierVersionJob extends QuartzJobBean {
 
+  /** Clé des données du déclencheur portant la version à annoncer. */
   public static final String CLE_VERSION = "version";
 
-  private static final Logger LOG = LoggerFactory.getLogger(NotifierVersionJob.class);
-
-  private NotificationVersionPushService notificationVersionPushService;
-  private WorkerStatsService workerStatsService;
-  private BuildProperties buildProperties;
+  private ExecutionNotificationVersion execution;
 
   /** Constructeur par défaut, instancié par Spring. */
   public NotifierVersionJob() {
@@ -37,39 +29,15 @@ public class NotifierVersionJob extends QuartzJobBean {
   }
 
   /**
-   * @param notificationVersionPushService service d'envoi injecté par Spring
+   * @param execution exécution du job, injectée par Spring
    */
   @Autowired
-  public void setNotificationVersionPushService(
-      final NotificationVersionPushService notificationVersionPushService) {
-    this.notificationVersionPushService = notificationVersionPushService;
-  }
-
-  /**
-   * @param workerStatsService enregistrement de l'exécution du job
-   */
-  @Autowired
-  public void setWorkerStatsService(final WorkerStatsService workerStatsService) {
-    this.workerStatsService = workerStatsService;
-  }
-
-  /**
-   * @param buildProperties version courante, utilisée sans version transmise
-   */
-  @Autowired
-  public void setBuildProperties(final BuildProperties buildProperties) {
-    this.buildProperties = buildProperties;
+  public void setExecution(final ExecutionNotificationVersion execution) {
+    this.execution = execution;
   }
 
   @Override
   protected void executeInternal(final JobExecutionContext context) {
-    final String transmise = context.getMergedJobDataMap().getString(CLE_VERSION);
-    final String version =
-        transmise == null || transmise.isBlank() ? buildProperties.getVersion() : transmise;
-    workerStatsService.executerAvecStats(
-        LOG,
-        "notifier:version",
-        () -> new ResultatPersistance(notificationVersionPushService.notifierVersion(version), 0));
-    LOG.info("notifier:version terminé version={}", version);
+    execution.executer(context.getMergedJobDataMap().getString(CLE_VERSION));
   }
 }

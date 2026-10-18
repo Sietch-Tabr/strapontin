@@ -38,7 +38,8 @@ public class ArtisteController {
 
   /**
    * @param artisteService service de gestion des artistes
-   * @param budgetRecherches plafonds des recherches qui interrogent un service externe
+   * @param budgetRecherches plafonds des recherches qui interrogent un service
+   *     externe
    */
   public ArtisteController(
       final ArtisteService artisteService, final BudgetRecherchesExternes budgetRecherches) {
@@ -47,13 +48,11 @@ public class ArtisteController {
   }
 
   /**
-   * Liste les artistes suivis, avec suggestions de recherche si {@code q} est
-   * fourni.
-   *
+   * Liste les artistes suivis, avec suggestions si {@code q} est fourni ;
+   * 429 si l'utilisateur enchaîne trop de recherches.
    * @param recherche terme de recherche (optionnel, min 2 caractères)
    * @param auth contexte d'authentification Spring Security
    * @return la liste des artistes et les suggestions
-   * @throws ErreurMetier (429) si l'utilisateur enchaîne trop de recherches
    */
   @GetMapping
   public ResponseEntity<ReponseArtistes> listerArtistes(

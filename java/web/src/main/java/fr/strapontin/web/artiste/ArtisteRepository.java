@@ -119,13 +119,12 @@ class ArtisteRepository {
   }
 
   /**
-   * Recherche les artistes du référentiel dont le {@code nom_norm} partage
-   * un des tokens fournis — pré-filtre SQL avant correspondance floue
-   * ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
+   * Artistes dont le {@code nom_norm} partage un token fourni ou égale le nom
+   * sans espaces (« krashkarma » pour « krash karma ») : pré-filtre SQL avant
+   * la correspondance floue.
    * @param tokens tokens significatifs (≥3 caractères) du nom recherché
-   * @param compact nom recherché sans espaces : retrouve aussi « krashkarma » quand on cherche
-   *     « krash karma » (aucun token commun)
-   * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si ni token ni nom
+   * @param compact nom recherché sans espaces
+   * @return jusqu'à 50 candidats {@code (id, nom_norm)}
    */
   /* package-private : accès SQL réservé à ArtisteService (même package),
    * pattern service/repository. */
@@ -136,7 +135,7 @@ class ArtisteRepository {
     }
 
     final List<String> tokensList = new ArrayList<>(tokens);
-    final StringBuilder whereTokens = new StringBuilder(50).append('(');
+    final StringBuilder whereTokens = new StringBuilder(100).append('(');
     for (int i = 0; i < tokensList.size(); i++) {
       whereTokens.append("nom_norm LIKE :t").append(i).append(" OR ");
     }

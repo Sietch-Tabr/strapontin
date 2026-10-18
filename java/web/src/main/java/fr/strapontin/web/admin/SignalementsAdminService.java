@@ -69,6 +69,7 @@ public class SignalementsAdminService {
       LIMIT :taille OFFSET :offset
       """;
   private static final String CLE_ID = "id";
+  private static final String ENTITE_SALLE = "salle";
   private static final String NIVEAU_INFO = "info";
   private static final String SOURCE_ADMIN = "admin";
   // Signalements dont l'action attendue est la suppression du concert désigné.
@@ -121,7 +122,7 @@ public class SignalementsAdminService {
         rs.getString("details"),
         rs.getString("autre_salle_nom") != null
             ? new EntreeSignalement.EntiteSignalee(
-                "salle", rs.getString("autre_salle_id"), rs.getString("autre_salle_nom"))
+                ENTITE_SALLE, rs.getString("autre_salle_id"), rs.getString("autre_salle_nom"))
             : null);
   }
 
@@ -161,7 +162,8 @@ public class SignalementsAdminService {
                 + " WHERE id = :id AND resolu_le IS NULL",
             Map.of("id", id));
     if (lignes > 0 && !departements.isEmpty()) {
-      // Absence reconnue : le département n'est plus signalé tant qu'il reste sans concert.
+      // Absence reconnue : le département n'est plus signalé tant qu'il reste sans
+      // concert.
       jdbc.update(
           "UPDATE couverture_departements SET couverture_connue_le = now() WHERE dept = :dept",
           Map.of("dept", departements.get(0)));
@@ -232,16 +234,19 @@ public class SignalementsAdminService {
         "UPDATE salles SET latitude = :latitude, longitude = :longitude,"
             + " origine_position = 'wikidata' WHERE id = CAST(:salle AS uuid)",
         Map.of(
-            "latitude", ligne.get("latitude"),
-            "longitude", ligne.get("longitude"),
-            "salle", ligne.get("salle")));
+            "latitude",
+            ligne.get("latitude"),
+            "longitude",
+            ligne.get("longitude"),
+            ENTITE_SALLE,
+            ligne.get(ENTITE_SALLE)));
     jdbc.update(
         "UPDATE signalements_matching SET resolu_le = now() WHERE id = :id", Map.of(CLE_ID, id));
     logAdminService.logAdmin(
         NIVEAU_INFO,
         SOURCE_ADMIN,
         "position de salle alignée sur Wikidata",
-        Map.of("signalementId", id, "salleId", ligne.get("salle")));
+        Map.of("signalementId", id, "salleId", ligne.get(ENTITE_SALLE)));
     return true;
   }
 

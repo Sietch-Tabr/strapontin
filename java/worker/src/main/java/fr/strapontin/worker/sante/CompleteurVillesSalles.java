@@ -18,9 +18,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Tient les villes des salles et des événements : une seule orthographe par commune, la ville de
- * chaque salle renseignée depuis ses concerts puis ses lieux sources, un département déduit du
- * code postal. Une salle dont la ville reste inconnue est signalée dans le journal admin.
+ * Tient les villes des salles et des événements : une seule orthographe par
+ * commune, la ville de chaque salle renseignée depuis ses concerts puis ses
+ * lieux sources, un département déduit du code postal. Une salle dont la ville
+ * reste inconnue est signalée dans le journal admin.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -46,8 +47,8 @@ public class CompleteurVillesSalles {
   }
 
   /**
-   * Exécute les quatre étapes dans l'ordre : orthographe, ville depuis les concerts, ville depuis
-   * les lieux sources, département depuis le code postal.
+   * Exécute les quatre étapes dans l'ordre : orthographe, ville depuis les
+   * concerts, ville depuis les lieux sources, département depuis le code postal.
    * @return nombre de valeurs corrigées ou renseignées
    */
   public int completer() {

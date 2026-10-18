@@ -9,8 +9,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Ligne du référentiel artistes pour l'onglet admin « Artistes ». {@code interventionDepuis}
- * date du doute sur l'artiste Ticketmaster qui explique un statut « Invalide » (sinon null).
+ * Ligne du référentiel artistes pour l'onglet admin « Artistes ». {@code
+ * interventionDepuis} date du doute sur l'artiste Ticketmaster qui explique un
+ * statut « Invalide » (sinon null).
  * @since 2.6.0
  * @author Kwaite
  */

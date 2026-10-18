@@ -69,8 +69,8 @@ public class PlanificateurNotifications {
     return Planificateur.creerJobDetail(NotifierVersionJob.class, "notifierVersion");
   }
 
-  // Chaque jour à 11h : une version déployée dans la journée est annoncée le lendemain, jamais
-  // deux fois au même utilisateur (notifications_version).
+  // Chaque jour à 11h : une version déployée dans la journée est annoncée le
+  // lendemain, jamais deux fois au même utilisateur (notifications_version).
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean

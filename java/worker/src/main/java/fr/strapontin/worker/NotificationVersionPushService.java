@@ -41,7 +41,7 @@ public class NotificationVersionPushService {
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
-  private final NotificationDigestService.FabriquePushService fabriquePushService;
+  private final FabriquePushService fabriquePushService;
   private final SuiviEchecsPush suiviEchecs;
 
   /**
@@ -73,7 +73,7 @@ public class NotificationVersionPushService {
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker,
-      final NotificationDigestService.FabriquePushService fabriquePushService) {
+      final FabriquePushService fabriquePushService) {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
@@ -123,7 +123,8 @@ public class NotificationVersionPushService {
     return nbEnvoyes;
   }
 
-  // Un utilisateur déjà notifié de cette version, ou dont la fréquence est « Jamais », est écarté.
+  // Un utilisateur déjà notifié de cette version, ou dont la fréquence est «
+  // Jamais », est écarté.
   private List<Map<String, Object>> chargerAbonnementsOptIn(final String version) {
     return jdbc.queryForList(
         """
@@ -160,7 +161,8 @@ public class NotificationVersionPushService {
         notifies.add((String) ab.get("user_id"));
       }
     }
-    // Un seul appareil atteint suffit : l'utilisateur est prévenu, pas de seconde annonce.
+    // Un seul appareil atteint suffit : l'utilisateur est prévenu, pas de seconde
+    // annonce.
     for (final String userId : notifies) {
       jdbc.update(
           "INSERT INTO notifications_version (user_id, version) VALUES (:userId, :version)"

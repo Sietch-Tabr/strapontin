@@ -36,9 +36,9 @@ public final class CadenceurAppelsPartage implements CadenceurAppels {
     this.delaiMinMs = delaiMinMs;
   }
 
-  // Attente calculée par PostgreSQL sur sa seule horloge : la comparer
-  // à celle de la JVM la fausserait de leur décalage. La ligne porte le créneau
-  // suivant ; l'attente est celle du créneau réservé, donc nulle après une inactivité.
+  // Attente calculée par PostgreSQL sur sa seule horloge : la comparer à celle
+  // de la JVM la fausserait de leur décalage. La ligne porte le créneau suivant
+  // ; l'attente est celle du créneau réservé, donc nulle après une inactivité.
   @Override
   public void attendre() {
     final Long attenteMs =

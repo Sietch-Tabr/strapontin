@@ -93,14 +93,12 @@ public class WorkerStatsService {
   }
 
   /**
-   * Comme {@link #enregistrerStatJob(String, long, ResultatPersistance, String)}, en
-   * précisant si l'exécution est un retry ciblé : son volume partiel n'est ni comparé à un cycle
-   * complet ni compté dans la moyenne de référence.
+   * Comme la version sans indicateur, avec {@code retryCible} : le volume
+   * partiel d'un retry ciblé n'est ni comparé à un cycle complet ni compté
+   * dans la moyenne de référence ; {@code erreur} est null si le job a réussi.
    * @param typeJob type de job (ex. "fetch:region")
    * @param dureeMs durée d'exécution en millisecondes
-   * @param resultat bilan de persistance (insertions/mises à jour)
-   * @param erreur message d'erreur, ou {@code null} si le job a réussi
-   * @param retryCible {@code true} si l'exécution ne traite que les lots en échec d'un cycle
+   * @param resultat bilan de persistance
    */
   public void enregistrerStatJob(
       final String typeJob,
@@ -188,15 +186,7 @@ public class WorkerStatsService {
       final String erreur,
       final Instant maintenant,
       final boolean retryCible) {
-    boolean bilanLoggue = false;
-    for (final SourceConcerts source : sources) {
-      if (source instanceof SourceAvecBilanFetch avecBilan) {
-        bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
-      }
-      if (source instanceof EventimSource eventimSource) {
-        bilanLoggue |= remonterContainmentsEventim(typeJob, eventimSource);
-      }
-    }
+    boolean bilanLoggue = remonterBilansDesSources(typeJob);
     bilanLoggue |= remonterBilan(typeJob, "deezer", resolveur.preleverBilan());
     bilanLoggue |= remonterBilanConcertsManquesTm(typeJob);
     if (!bilanLoggue && erreur == null && resultat.nbInseres() == 0 && resultat.nbMisAJour() == 0) {
@@ -206,6 +196,19 @@ public class WorkerStatsService {
       deriveVolumeFetchService.verifier(
           typeJob, resultat.nbInseres() + resultat.nbMisAJour(), maintenant);
     }
+  }
+
+  private boolean remonterBilansDesSources(final String typeJob) {
+    boolean bilanLoggue = false;
+    for (final SourceConcerts source : sources) {
+      if (source instanceof SourceAvecBilanFetch avecBilan) {
+        bilanLoggue |= remonterBilan(typeJob, source.nom(), avecBilan.preleverBilan());
+      }
+      if (source instanceof EventimSource eventimSource) {
+        bilanLoggue |= remonterContainmentsEventim(typeJob, eventimSource);
+      }
+    }
+    return bilanLoggue;
   }
 
   /**
@@ -279,11 +282,11 @@ public class WorkerStatsService {
   }
 
   /**
-   * Comme {@link #executerAvecStatsToleretErreur(Logger, String, Supplier)}, en précisant si
-   * l'exécution est un retry ciblé (voir {@link #enregistrerStatJob}).
+   * Comme la version sans indicateur, en précisant si l'exécution est un
+   * retry ciblé.
    * @param callerLog logger de l'appelant, pour journaliser sous son nom
-   * @param typeJob type de job (voir {@link #enregistrerStatJob})
-   * @param retryCible {@code true} si l'exécution ne traite que les lots en échec d'un cycle
+   * @param typeJob type de job
+   * @param retryCible {@code true} pour un retry des lots en échec
    * @param travail travail à exécuter, retournant bilan + erreur optionnelle
    */
   public void executerAvecStatsToleretErreur(

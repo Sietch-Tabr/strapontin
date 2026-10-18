@@ -42,7 +42,8 @@ public class PasswordResetController {
   private final AuthService authService;
   private final ConfigService configService;
   private final LogAdminService logAdminService;
-  // Clé = adresse saisie, qu'elle corresponde ou non à un compte : le refus ne révèle rien.
+  // Clé = adresse saisie, qu'elle corresponde ou non à un compte : le refus ne
+  // révèle rien.
   private final LimiteurDebit demandesParAdresse =
       new LimiteurDebit(MAX_DEMANDES_PAR_ADRESSE, Duration.ofHours(1), Duration.ofHours(2), 10_000);
 
@@ -65,11 +66,8 @@ public class PasswordResetController {
 
   /**
    * Déclenche l'envoi d'un email de réinitialisation de mot de passe.
-   *
-   * <p>Retourne toujours 200 pour éviter l'énumération de comptes. Au-delà de
-   * 3 demandes par heure pour une même adresse, la demande est ignorée sans
-   * qu'on le laisse voir.
-   *
+   * Retourne toujours 200 pour éviter l'énumération de comptes ; au-delà de 3
+   * demandes par heure pour une même adresse, la demande est ignorée.
    * @param req le corps contenant l'adresse email
    * @return 200 dans tous les cas
    */

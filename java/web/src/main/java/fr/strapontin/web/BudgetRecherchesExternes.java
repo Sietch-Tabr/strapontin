@@ -23,7 +23,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class BudgetRecherchesExternes {
 
-  /** Services externes interrogés depuis l'interface, avec leur plafond global par minute. */
+  /**
+   * Services externes interrogés depuis l'interface, avec leur plafond global
+   * par minute.
+   */
   public enum Service {
     /** Nominatim : 1 requête par seconde pour toute l'adresse, partagée avec le worker. */
     NOMINATIM("Nominatim", 20),

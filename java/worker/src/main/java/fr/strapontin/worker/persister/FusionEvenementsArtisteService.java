@@ -38,8 +38,8 @@ public class FusionEvenementsArtisteService {
   // fetch manqué ponctuellement ne suffit pas).
   /* package-private : visibilité élargie pour les tests (même package). */
   static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
-  // Écart d'heure maximal entre l'ancienne et la nouvelle fiche d'une même séance : au-delà, ce
-  // sont deux séances (matinée et soirée).
+  // Écart d'heure maximal entre l'ancienne et la nouvelle fiche d'une même
+  // séance : au-delà, ce sont deux séances (matinée et soirée).
   private static final int ECART_MAX_HEURE_CHANGEE_SECONDES = 3600;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -120,11 +120,11 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Séance dont l'heure a changé : la fiche qui n'est plus publiée (absente depuis plusieurs
-   * cycles) rejoint l'unique fiche vivante du même artiste, de la même salle et du même jour, à
-   * moins d'une heure d'écart — quelle que soit la source de l'une ou l'autre. Deux séances
-   * réelles d'un même jour (matinée, soirée) sont plus éloignées ; plusieurs vivantes
-   * possibles : ignoré.
+   * Séance dont l'heure a changé : la fiche qui n'est plus publiée (absente
+   * depuis plusieurs cycles) rejoint l'unique fiche vivante du même artiste, de
+   * la même salle et du même jour, à moins d'une heure d'écart — quelle que soit
+   * la source de l'une ou l'autre. Deux séances réelles d'un même jour (matinée,
+   * soirée) sont plus éloignées ; plusieurs vivantes possibles : ignoré.
    * @return nombre de fusions effectuées
    */
   public int fusionnerSeancesHeureChangee() {
@@ -152,10 +152,11 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Même séance publiée par deux billetteries à des heures proches (ouverture des portes et début :
-   * 20 h 30 chez Ticketmaster, 20 h chez Eventim) : seuls événements de leur artiste, salle et
-   * jour, l'un Ticketmaster seul, l'autre Eventim seul, à moins d'une heure d'écart, dans une
-   * salle non signalée comme mélangeant plusieurs lieux.
+   * Même séance publiée par deux billetteries à des heures proches (ouverture
+   * des portes et début : 20 h 30 chez Ticketmaster, 20 h chez Eventim) : seuls
+   * événements de leur artiste, salle et jour, l'un Ticketmaster seul, l'autre
+   * Eventim seul, à moins d'une heure d'écart, dans une salle non signalée comme
+   * mélangeant plusieurs lieux.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeSeanceDeuxSourcesHeuresProches() {
