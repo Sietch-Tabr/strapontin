@@ -30,28 +30,29 @@
       </div>
 
       <div class="param-bloc">
-        <h3 id="label-identifiant" class="param-libelle">
-          Identifiant de connexion
-        </h3>
-        <form class="form-inline" @submit.prevent="sauvegarderIdentifiant">
-          <label for="identifiant" class="lecteur-ecran"
-            >Identifiant de connexion</label
-          >
-          <input
-            id="identifiant"
-            v-model="identifiant"
-            type="text"
-            :minlength="IDENTIFIANT_MIN"
-            :maxlength="IDENTIFIANT_MAX"
-            :pattern="IDENTIFIANT_MOTIF"
-            autocomplete="username"
-            aria-describedby="aide-identifiant"
-          />
-          <button type="submit" class="bouton bouton-secondaire">
-            Modifier
-          </button>
+        <h3 class="param-libelle">Identifiant de connexion</h3>
+        <form
+          class="form-vertical form-compact"
+          @submit.prevent="sauvegarderIdentifiant"
+        >
+          <div class="form-groupe">
+            <label for="identifiant">Identifiant</label>
+            <input
+              id="identifiant"
+              v-model="identifiant"
+              type="text"
+              :minlength="IDENTIFIANT_MIN"
+              :maxlength="IDENTIFIANT_MAX"
+              :pattern="IDENTIFIANT_MOTIF"
+              autocomplete="username"
+              aria-describedby="aide-identifiant"
+            />
+            <p id="aide-identifiant" class="form-aide">
+              {{ AIDE_IDENTIFIANT }}
+            </p>
+          </div>
+          <button type="submit" class="bouton bouton-primaire">Modifier</button>
         </form>
-        <p id="aide-identifiant" class="param-aide">{{ AIDE_IDENTIFIANT }}</p>
       </div>
 
       <div class="param-bloc">
@@ -63,18 +64,23 @@
             @submit.prevent="desactiverTotp"
           >
             <div class="form-groupe">
-              <label for="totp-desact-code">Code de confirmation</label>
+              <label for="totp-desact-code">Code de l'application</label>
               <input
                 id="totp-desact-code"
                 v-model="totpDesactCode"
                 type="text"
+                class="champ-code-totp"
                 inputmode="numeric"
                 pattern="[0-9]{6}"
                 maxlength="6"
                 autocomplete="one-time-code"
-                placeholder="123456"
+                aria-describedby="aide-totp-desact"
                 required
               />
+              <p id="aide-totp-desact" class="form-aide">
+                Pour désactiver le TOTP, saisissez le code à 6 chiffres affiché
+                par votre application d'authentification.
+              </p>
             </div>
             <button type="submit" class="bouton bouton-danger bouton-petit">
               Désactiver le TOTP
@@ -145,9 +151,7 @@
               }}
             </span>
           </div>
-          <button type="submit" class="bouton bouton-secondaire">
-            Changer
-          </button>
+          <button type="submit" class="bouton bouton-primaire">Changer</button>
         </form>
       </div>
 
@@ -405,6 +409,10 @@ onUnmounted(() => controleur.abort());
 </script>
 
 <style scoped>
+.champ-code-totp {
+  width: 9rem;
+}
+
 .liste-appareils {
   list-style: none;
   margin: 0;

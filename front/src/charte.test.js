@@ -534,3 +534,39 @@ describe("charte : classes partagées utilisées", () => {
     expect(orphelines).toEqual([]);
   });
 });
+
+describe("charte : boutons à la largeur de leur libellé", () => {
+  // Conteneurs en colonne qui ne reçoivent jamais de bouton direct (cases, cartes) : leur
+  // enfants s'étirent volontairement.
+  const SANS_BOUTON_DIRECT = new Set([".form-checkboxes", ".liste-cartes"]);
+
+  const reglesPartagees = sources
+    .filter((s) => s.nom.startsWith("styles/") && s.nom.endsWith(".css"))
+    .flatMap((s) =>
+      [...sansCommentaires(s.texte).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+        (m) => ({ selecteur: m[1].trim(), corps: m[2] }),
+      ),
+    );
+
+  it("un conteneur en colonne n'étire pas ses boutons sans demande explicite", () => {
+    const colonnes = reglesPartagees.filter(
+      (r) =>
+        /^\.[\w-]+$/.test(r.selecteur) &&
+        /display:\s*flex/.test(r.corps) &&
+        /flex-direction:\s*column/.test(r.corps) &&
+        !/align-items:\s*(?!stretch)/.test(r.corps) &&
+        !SANS_BOUTON_DIRECT.has(r.selecteur),
+    );
+    const fautifs = colonnes
+      .filter(
+        (c) =>
+          !reglesPartagees.some(
+            (r) =>
+              r.selecteur === `${c.selecteur} > .bouton` &&
+              /align-self:\s*(?!stretch)/.test(r.corps),
+          ),
+      )
+      .map((c) => c.selecteur);
+    expect(fautifs).toEqual([]);
+  });
+});

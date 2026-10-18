@@ -581,6 +581,11 @@ tr:hover td {
 .form-compact {
   max-width: 28rem;
 }
+/* Un bouton de formulaire garde la largeur de son libellé : sans cela, l'alignement par défaut
+   d'une colonne flex l'étire sur toute la largeur du formulaire. */
+.form-vertical > .bouton {
+  align-self: flex-start;
+}
 .form-checkboxes {
   display: flex;
   flex-direction: column;

@@ -33,6 +33,45 @@ test.describe("Scénario: paramètres — sections", () => {
   });
 });
 
+test.describe("Scénario: paramètres — boutons de formulaire", () => {
+  // Un bouton de formulaire garde la largeur de son libellé : il ne s'étire pas sur celle du
+  // formulaire (28 rem), sauf `bouton-pleine-largeur`.
+  for (const section of ["preferences", "compte", "donnees"]) {
+    test(`parametres_${section}_boutonsDeFormulaire_gardentLaLargeurDeLeurLibelle`, async ({
+      page,
+    }) => {
+      await page.goto(`/parametres#${section}`);
+      await expect(page.locator(`section#${section}`)).toBeVisible();
+      const formulaires = page.locator(`section#${section} form.form-vertical`);
+      const nombre = await formulaires.count();
+      expect(nombre).toBeGreaterThan(0);
+      for (let i = 0; i < nombre; i++) {
+        const formulaire = formulaires.nth(i);
+        const largeurFormulaire = (await formulaire.boundingBox())!.width;
+        const boutons = formulaire.locator(
+          ":scope > button.bouton:not(.bouton-pleine-largeur)",
+        );
+        for (let j = 0; j < (await boutons.count()); j++) {
+          const largeurBouton = (await boutons.nth(j).boundingBox())!.width;
+          expect(largeurBouton).toBeLessThan(largeurFormulaire * 0.8);
+        }
+      }
+    });
+  }
+
+  test("parametres_compte_champCodeTotp_proportionneAuCode", async ({ page }) => {
+    await page.goto("/parametres#compte");
+    const champ = page.locator("input#totp-desact-code");
+    // Le compte de test n'a le TOTP actif que pendant certains scénarios.
+    if ((await champ.count()) === 0) test.skip();
+    expect((await champ.boundingBox())!.width).toBeLessThan(200);
+    await expect(champ).not.toHaveAttribute("placeholder", /.+/);
+    await expect(page.locator("#aide-totp-desact")).toContainText(
+      "application d'authentification",
+    );
+  });
+});
+
 test.describe("Scénario: navigation SPA vers paramètres", () => {
   test("accueil_vers_parametres_desktop_affiche_page", async ({
     page,
@@ -592,7 +631,9 @@ test.describe("Scénario: notifications par canal", () => {
       }),
     ).not.toBeChecked();
     await expect(
-      section.getByRole("checkbox", { name: "Concerts des artistes suivis" }).nth(1),
+      section
+        .getByRole("checkbox", { name: "Concerts des artistes suivis" })
+        .nth(1),
     ).toBeDisabled();
   });
 
@@ -631,7 +672,9 @@ test.describe("Scénario: notifications par canal", () => {
     await expect(emailArtistes).not.toBeChecked();
     await expect(pushArtistes).not.toBeChecked();
     await expect(
-      section.getByRole("checkbox", { name: "Recevoir les notifications push" }),
+      section.getByRole("checkbox", {
+        name: "Recevoir les notifications push",
+      }),
     ).not.toBeChecked();
   });
 
@@ -749,7 +792,10 @@ test.describe("Scénario: champ identifiant — pattern HTML", () => {
     const identTmp = `e2e.ui-${Date.now()}`.slice(0, 30);
     try {
       await page.locator("input#identifiant").fill(identTmp);
-      await page.locator("form.form-inline button[type='submit']").click();
+      await page
+        .locator("form", { has: page.locator("input#identifiant") })
+        .locator("button[type='submit']")
+        .click();
       await expect(
         page
           .locator(".alerte-succes")
