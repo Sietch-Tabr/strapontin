@@ -154,4 +154,30 @@ class ReferentielStatutDetailIntegrationTest extends AbstractWebIntegrationTest 
     assertNotNull(invalide.interventionDepuis());
     assertNull(ok.interventionDepuis());
   }
+
+  @Test
+  void lister_lieuEventim_estExposeParSalle() {
+    final UUID salle = creerSalle("accor test");
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe, libelle_source)"
+            + " VALUES (CAST(:id AS uuid), 'eventim', 'internal:accor arena', 'Accor Arena')",
+        Map.of("id", salle.toString()));
+
+    assertEquals("Accor Arena", ligne("accor test").lieuEventim());
+  }
+
+  @Test
+  void lister_sansSource_neRemonteQueLesSallesSansAucuneSource() {
+    creerSalle("sans source test");
+    final UUID avecSource = creerSalle("avec source test");
+    ajouterSource(avecSource, "ticketmaster", null);
+
+    final var reponse =
+        salles.lister(
+            new ReferentielSallesService.FiltresRechercheSalles(
+                0, "source test", null, null, null, false, java.util.List.of(), true));
+
+    assertEquals(1, reponse.salles().size());
+    assertEquals("sans source test", reponse.salles().getFirst().nom());
+  }
 }

@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -53,22 +52,6 @@ public class SourcesController {
   @GetMapping("/sources")
   public ResponseEntity<Map<String, Object>> lireSources() {
     return ResponseEntity.ok(sourcesService.lireSources());
-  }
-
-  /**
-   * Liste paginée des salles pour l'onglet admin « Sources ».
-   * @param eventim true pour les salles avec lieu Eventim interrogé, false
-   *     (défaut) pour sans identifiant TM ni Eventim
-   * @param page numéro de page (0-indexé, défaut 0)
-   * @param nom filtre nom partiel
-   * @return 200 avec la page de résultats
-   */
-  @GetMapping("/sources/salles")
-  public ResponseEntity<ReponseSallesSources> listerSalles(
-      @RequestParam(defaultValue = "false") final boolean eventim,
-      @RequestParam(defaultValue = "0") final int page,
-      @RequestParam(required = false) final String nom) {
-    return ResponseEntity.ok(sourcesService.listerSalles(eventim, page, nom));
   }
 
   /**

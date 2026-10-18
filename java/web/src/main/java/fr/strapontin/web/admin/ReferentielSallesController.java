@@ -98,6 +98,7 @@ public class ReferentielSallesController {
    * Liste paginée du référentiel salles — mêmes filtres que {@link
    * ReferentielSallesService.FiltresRechercheSalles}.
    * @param ids identifiants à isoler (séparés par des virgules ou répétés), optionnel
+   * @param sansSource ne garde que les salles qu'aucune source n'alimente
    * @return 200 avec la page de résultats, 400 si un identifiant n'est pas un UUID
    */
   @GetMapping("/salles")
@@ -108,7 +109,8 @@ public class ReferentielSallesController {
       @RequestParam(required = false) final String dept,
       @RequestParam(required = false) final String statut,
       @RequestParam(defaultValue = "false") final boolean wikidataManquant,
-      @RequestParam(required = false) final List<String> ids) {
+      @RequestParam(required = false) final List<String> ids,
+      @RequestParam(defaultValue = "false") final boolean sansSource) {
     final List<UUID> identifiants = new ArrayList<>();
     for (final String brut : ids == null ? List.<String>of() : ids) {
       final UUID id = parseUuid(brut);
@@ -120,7 +122,7 @@ public class ReferentielSallesController {
     return ResponseEntity.ok(
         service.lister(
             new ReferentielSallesService.FiltresRechercheSalles(
-                page, nom, ville, dept, statut, wikidataManquant, identifiants)));
+                page, nom, ville, dept, statut, wikidataManquant, identifiants, sansSource)));
   }
 
   /**

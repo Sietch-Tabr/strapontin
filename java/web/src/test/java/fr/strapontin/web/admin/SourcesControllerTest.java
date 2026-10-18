@@ -10,7 +10,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,16 +73,5 @@ class SourcesControllerTest {
         controller.testerLieuEventim("id-non-utilise", new RequeteLieuEventim("Inconnu"));
 
     assertEquals(404, reponse.getStatusCode().value());
-  }
-
-  @Test
-  void listerSalles_delegueAuServiceAvecLesParametres() {
-    when(sourcesService.listerSalles(true, 2, "olympia"))
-        .thenReturn(new ReponseSallesSources(List.of(), 2, 3, 120));
-
-    final var reponse = controller.listerSalles(true, 2, "olympia");
-
-    assertEquals(200, reponse.getStatusCode().value());
-    verify(sourcesService).listerSalles(true, 2, "olympia");
   }
 }

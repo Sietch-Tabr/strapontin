@@ -67,6 +67,17 @@
           />
           Sans Wikidata
         </label>
+        <label
+          class="source-filtre-checkbox"
+          title="Salles qu'aucune source n'alimente : un état normal (salle ajoutée à la main), pas une anomalie"
+        >
+          <input
+            v-model="filtreSansSource"
+            type="checkbox"
+            @change="rechargerPage0"
+          />
+          Sans source
+        </label>
         <button
           type="button"
           class="bouton bouton-danger bouton-petit"
@@ -136,6 +147,9 @@
                     <span v-if="!salle.sources.length" class="etat-vide-texte"
                       >—</span
                     >
+                    <p v-if="salle.lieuEventim" class="texte-note">
+                      Lieu Eventim : {{ salle.lieuEventim }}
+                    </p>
                   </td>
                   <td data-label="Statut">
                     <span
@@ -175,6 +189,20 @@
                       @click="ouvrirEdition(salle)"
                     >
                       Éditer
+                    </button>
+                    <button
+                      type="button"
+                      class="bouton bouton-secondaire bouton-petit"
+                      title="Nom exact du lieu chez Eventim : voir, modifier, tester, lancer un fetch"
+                      @click="
+                        lieuEventim.ouvrir({
+                          id: salle.id,
+                          nom: salle.nomAffiche || salle.nom,
+                          lieuEventim: salle.lieuEventim,
+                        })
+                      "
+                    >
+                      Lieu Eventim
                     </button>
                     <button
                       v-if="salle.nbConcerts > 0"
@@ -330,6 +358,7 @@
     </div>
   </dialog>
   <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
+  <DialogueLieuEventim ref="lieuEventim" @enregistre="charger" />
 </template>
 
 <script setup>
@@ -344,6 +373,7 @@ const emit = defineEmits(["quitter-comparaison"]);
 import { ref, watch } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import DialogueRepartitionSalle from "./DialogueRepartitionSalle.vue";
+import DialogueLieuEventim from "./DialogueLieuEventim.vue";
 import { useReferentielAdmin } from "../../composables/useReferentielAdmin.js";
 import { formaterInstant } from "../../composables/useDates.js";
 import {
@@ -355,6 +385,8 @@ import {
 } from "../../utils/statutReferentiel.js";
 
 const repartition = ref(null);
+const lieuEventim = ref(null);
+const filtreSansSource = ref(false);
 const filtreVille = ref("");
 const filtreDept = ref("");
 
@@ -398,6 +430,7 @@ const {
     ville: filtreVille.value,
     dept: filtreDept.value,
     ids: props.idsInitiaux.join(","),
+    sansSource: filtreSansSource.value ? "true" : "",
   }),
 });
 

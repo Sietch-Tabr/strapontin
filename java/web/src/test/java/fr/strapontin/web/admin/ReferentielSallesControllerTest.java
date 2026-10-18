@@ -44,7 +44,7 @@ class ReferentielSallesControllerTest {
         .thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
 
     final ResponseEntity<ReponseReferentielSalles> reponse =
-        controller.lister(0, "Zenith", null, null, null, false, null);
+        controller.lister(0, "Zenith", null, null, null, false, null, false);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service)
@@ -63,7 +63,8 @@ class ReferentielSallesControllerTest {
     when(service.lister(filtres)).thenReturn(new ReponseReferentielSalles(List.of(), 0, 1, 0));
 
     final var reponse =
-        controller.lister(0, null, null, null, null, false, List.of(a.toString(), b.toString()));
+        controller.lister(
+            0, null, null, null, null, false, List.of(a.toString(), b.toString()), false);
 
     assertEquals(200, reponse.getStatusCode().value());
     verify(service).lister(filtres);
@@ -71,7 +72,8 @@ class ReferentielSallesControllerTest {
 
   @Test
   void lister_idInvalide_retourne400SansInterrogerLeService() {
-    final var reponse = controller.lister(0, null, null, null, null, false, List.of("pas-un-uuid"));
+    final var reponse =
+        controller.lister(0, null, null, null, null, false, List.of("pas-un-uuid"), false);
 
     assertEquals(400, reponse.getStatusCode().value());
     verify(service, never()).lister(any());

@@ -39,22 +39,15 @@ import tools.jackson.databind.ObjectMapper;
 class SourcesServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
-  private SourcesSallesListingService sourcesSallesListingService;
   private SourcesService sourcesService;
   private EventimSource eventim;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    sourcesSallesListingService = mock(SourcesSallesListingService.class);
     eventim = mock(EventimSource.class);
     sourcesService =
-        new SourcesService(
-            jdbc,
-            new ObjectMapper(),
-            eventim,
-            mock(SalleService.class),
-            sourcesSallesListingService);
+        new SourcesService(jdbc, new ObjectMapper(), eventim, mock(SalleService.class));
   }
 
   @Test
@@ -176,18 +169,6 @@ class SourcesServiceTest {
 
     verify(jdbc, org.mockito.Mockito.times(2))
         .update(argThat((String sql) -> sql.contains("SET libelle_source = NULL")), anyMap());
-  }
-
-  // le détail de la construction SQL (HAVING, colonne id) est testé directement dans
-  // SourcesSallesListingServiceTest — ici, seule la délégation compte.
-  @Test
-  void listerSalles_nominal_delegueAuServiceDeListage() {
-    final ReponseSallesSources attendue = new ReponseSallesSources(List.of(), 0, 1, 0L);
-    when(sourcesSallesListingService.lister(false, 0, "olympia")).thenReturn(attendue);
-
-    final ReponseSallesSources reponse = sourcesService.listerSalles(false, 0, "olympia");
-
-    assertEquals(attendue, reponse);
   }
 
   @Test

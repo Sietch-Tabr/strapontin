@@ -62,11 +62,13 @@ test.describe("Scénario: aucun débordement horizontal sur mobile", () => {
     });
   }
 
-  test("admin_sources_vueEventim_tientDansLaLargeur", async ({ page }) => {
-    await page.goto("/admin#sources");
+  test("admin_referentielSalles_dialogueLieuEventim_tientDansLaLargeur", async ({
+    page,
+  }) => {
+    await page.goto("/admin?entite=salle#referentiel");
     await attendreChargement(page);
-    await page.getByRole("button", { name: "Avec lieu Eventim" }).click();
-    await attendreChargement(page);
+    await page.getByRole("button", { name: "Lieu Eventim" }).first().click();
+    await expect(page.getByRole("dialog")).toBeVisible();
     expect(await largeurExcedentaire(page)).toBeLessThanOrEqual(0);
   });
 });

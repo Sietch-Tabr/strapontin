@@ -434,55 +434,6 @@ test.describe("Scénario: admin — onglet Sources", () => {
     ).toHaveCount(3);
   });
 
-  test("admin_sources_table_salles_visible", async ({ page, isMobile }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
-    await expect(
-      page.locator("table#table-sources-salles, p.etat-vide-texte"),
-    ).toBeVisible();
-  });
-
-  test("admin_sources_recherche_filtre_salles", async ({ page, isMobile }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
-    const table = page.locator("table#table-sources-salles");
-    const videTexte = page.locator("p.etat-vide-texte");
-    const tableOuVide = page.locator(
-      "table#table-sources-salles, p.etat-vide-texte",
-    );
-    await expect(tableOuVide).toBeVisible();
-    if (await table.isVisible()) {
-      await page.locator("input[type='search']").fill("zzzzinexistant");
-      await expect(page.locator("p.etat-vide-texte")).toContainText(
-        "Aucune salle ne correspond",
-        { timeout: 3000 },
-      );
-      await page.locator("input[type='search']").clear();
-    } else {
-      await expect(videTexte).toBeVisible();
-    }
-  });
-
-  test("admin_sources_toggle_lieuEventim", async ({ page, isMobile }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-bascule button", {
-      hasText: "Avec lieu Eventim",
-    });
-    await expect(toggle).toBeVisible();
-    await toggle.click();
-    await expect(
-      page.locator("table#table-sources-salles, p.etat-vide-texte"),
-    ).toBeVisible();
-    await toggle.click();
-  });
-
   test("admin_jobs_quota_tm_absent_depuis_jobs", async ({ page, isMobile }) => {
     if (isMobile) test.skip();
     await page.goto("/admin");
@@ -491,17 +442,76 @@ test.describe("Scénario: admin — onglet Sources", () => {
     ).not.toBeAttached();
   });
 
-  test("admin_sources_bouton_sans_source_libelle", async ({
+  test("admin_sources_nePresentePlusDeListeDeSalles", async ({
+    page,
+    isMobile,
+  }) => {
+    await page.goto("/admin");
+    if (isMobile) {
+      await page.selectOption("select.param-onglets-mobile", "#sources");
+    } else {
+      await page.locator('a[href="#sources"]').click();
+    }
+    await expect(page.locator("section#sources")).toBeVisible();
+    await expect(page.locator(".source-carte")).toHaveCount(4);
+    await expect(page.locator("table#table-sources-salles")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Avec lieu Eventim" }),
+    ).toHaveCount(0);
+  });
+
+  test("admin_referentielSalles_filtreSansSource", async ({
     page,
     isMobile,
   }) => {
     if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
+    await page.goto("/admin?entite=salle#referentiel");
+    const filtre = page.getByLabel("Sans source");
+    await expect(filtre).toBeVisible();
+    await filtre.check();
     await expect(
-      page.locator(".source-vue-bascule button", { hasText: "Sans source" }),
+      page.locator("table[aria-label='Référentiel salles'] tbody tr").first(),
     ).toBeVisible();
+    await filtre.uncheck();
+  });
+
+  // Le lieu Eventim d'une salle se gère depuis le Référentiel : saisie, enregistrement, retrait.
+  test("admin_referentielSalles_lieuEventim_dialogue_enregistreEtRetire", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+    const ctx = await creerContexteAdmin();
+    try {
+      const suffixe = Date.now();
+      const nom = `Narval${suffixe}`;
+      const salle = await creerSalleReferentiel(ctx, nom);
+      const libelle = `LIEU E2E ${suffixe}`;
+
+      await page.goto(
+        `/admin?entite=salle&recherche=${encodeURIComponent(nom)}#referentiel`,
+      );
+      const ligne = page.locator("tbody tr", { hasText: nom });
+      await ligne.getByRole("button", { name: "Lieu Eventim" }).click();
+      const dialogue = page.getByRole("dialog");
+      await expect(dialogue).toContainText(`Lieu Eventim de « ${nom} »`);
+
+      await dialogue.getByLabel("Nom exact du lieu").fill(libelle);
+      await dialogue.getByRole("button", { name: "Enregistrer" }).click();
+      await expect(page.getByText("Lieu Eventim enregistré.")).toBeVisible();
+      await expect(
+        dialogue.getByRole("button", { name: "Lancer un fetch" }),
+      ).toBeVisible();
+      await dialogue.getByRole("button", { name: "Fermer" }).click();
+      await expect(ligne).toContainText(`Lieu Eventim : ${libelle}`);
+
+      const retrait = await ctx.put(`/api/admin/salles/${salle}/lieu-eventim`, {
+        data: { libelle: "" },
+      });
+      expect(retrait.status()).toBe(200);
+    } finally {
+      await ctx.dispose();
+    }
   });
 
   // Ce test effectue un appel HTTP réel vers l'API Eventim — une défaillance réseau
@@ -554,55 +564,8 @@ test.describe("Scénario: admin — onglet Sources", () => {
     }
   });
 
-  test("admin_sources_section_salles_lieuEventim_visible", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
-    const toggle = page.locator(".source-vue-bascule button", {
-      hasText: "Avec lieu Eventim",
-    });
-    await toggle.click();
-    await expect(
-      page.locator("table#table-sources-salles, p.etat-vide-texte"),
-    ).toBeVisible({ timeout: 5000 });
-  });
-
-  test("admin_sources_mobile_bouton_sans_source_libelle", async ({
-    page,
-    isMobile,
-  }) => {
-    if (!isMobile) test.skip();
-    await page.goto("/admin");
-    await page.selectOption("select.param-onglets-mobile", "#sources");
-    await expect(page.locator("section#sources")).toBeVisible();
-    await expect(
-      page.locator(".source-vue-bascule button", { hasText: "Sans source" }),
-    ).toBeVisible();
-  });
-
-  test("admin_sources_bouton_sans_source_navigue_vers_liste", async ({
-    page,
-    isMobile,
-  }) => {
-    if (isMobile) test.skip();
-    await page.goto("/admin");
-    await page.locator('a[href="#sources"]').click();
-    await expect(page.locator("section#sources")).toBeVisible();
-    const btnSansSource = page.locator(".source-vue-bascule button", {
-      hasText: "Sans source",
-    });
-    await btnSansSource.click();
-    await expect(
-      page.locator("table#table-sources-salles, p.etat-vide-texte"),
-    ).toBeVisible({ timeout: 5000 });
-  });
-
-  // Un lieu enregistré à la main fait passer la salle dans la vue « Avec lieu Eventim », et
-  // un lieu déjà rattaché à une autre salle est refusé (jamais un vol silencieux).
+  // Un lieu enregistré à la main apparaît dans le Référentiel salles, et un lieu déjà rattaché
+  // à une autre salle est refusé (jamais un vol silencieux).
   test("admin_sources_lieuEventim_api_enregistrerPuisConflit", async () => {
     const ctx = await creerContexteAdmin();
     try {
@@ -619,14 +582,12 @@ test.describe("Scénario: admin — onglet Sources", () => {
       });
       expect(repA.status()).toBe(200);
       const repListe = await ctx.get(
-        `/api/admin/sources/salles?eventim=true&nom=Ornithorynque${suffixe}`,
+        `/api/admin/salles?nom=Ornithorynque${suffixe}`,
       );
-      const salles: { salleId: string; lieuEventim: string }[] = (
+      const salles: { id: string; lieuEventim: string | null }[] = (
         await repListe.json()
       ).salles;
-      expect(salles.find((s) => s.salleId === salleA)?.lieuEventim).toBe(
-        libelle,
-      );
+      expect(salles.find((s) => s.id === salleA)?.lieuEventim).toBe(libelle);
 
       const repB = await ctx.put(`/api/admin/salles/${salleB}/lieu-eventim`, {
         data: { libelle },
@@ -878,7 +839,9 @@ test.describe("Scénario: admin — onglet Communication", () => {
 
 test.describe("Scénario: admin — renouvellement des clés VAPID", () => {
   // Le test ne confirme jamais : régénérer les clés retire les appareils push réels.
-  test("admin_vapid_dialogue_confirmationBloqueeSansMotif", async ({ page }) => {
+  test("admin_vapid_dialogue_confirmationBloqueeSansMotif", async ({
+    page,
+  }) => {
     await page.goto("/admin#configuration");
     await expect(page.locator("section#configuration")).toBeVisible();
 

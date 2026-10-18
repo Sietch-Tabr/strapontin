@@ -140,197 +140,6 @@
           </div>
         </div>
       </div>
-
-      <div class="param-bloc">
-        <div class="source-vue-entete">
-          <h3 class="param-libelle">Salles</h3>
-          <div
-            class="source-vue-bascule"
-            role="group"
-            aria-label="Vue des salles"
-          >
-            <button
-              type="button"
-              class="bouton bouton-bascule bouton-petit"
-              :class="{ actif: !vueEventim }"
-              :aria-pressed="!vueEventim"
-              @click="basculerVue(false)"
-            >
-              Sans source
-            </button>
-            <button
-              type="button"
-              class="bouton bouton-bascule bouton-petit"
-              :class="{ actif: vueEventim }"
-              :aria-pressed="vueEventim"
-              @click="basculerVue(true)"
-            >
-              Avec lieu Eventim
-            </button>
-          </div>
-        </div>
-        <p class="param-aide">
-          <template v-if="!vueEventim"
-            >Salles sans identifiant Ticketmaster ni Eventim — renseignez le nom
-            exact du lieu tel qu'Eventim l'affiche, puis testez-le.</template
-          >
-          <template v-else
-            >Salles interrogées sur Eventim par le nom exact de leur lieu. Un
-            nom inexact ne renvoie aucun concert : testez avant
-            d'enregistrer.</template
-          >
-        </p>
-
-        <EtatChargement v-if="chargementSalles" />
-        <template v-else>
-          <!-- Hors du v-if salles.length : un filtrage réduisant le résultat à zéro ne doit pas
-             faire disparaître le champ, sinon plus aucun moyen de revenir en arrière. -->
-          <input
-            v-model="recherche"
-            type="search"
-            class="source-recherche"
-            placeholder="Rechercher une salle…"
-            aria-label="Rechercher une salle"
-            @input="
-              page = 0;
-              chargerSalles();
-            "
-          />
-          <div v-if="salles.length">
-            <div class="table-conteneur table-cartes">
-              <table
-                id="table-sources-salles"
-                :aria-label="
-                  vueEventim
-                    ? 'Salles avec lieu Eventim'
-                    : 'Salles sans Ticketmaster ni Eventim'
-                "
-              >
-                <thead>
-                  <tr>
-                    <th>Salle</th>
-                    <th>Ville / Dép.</th>
-                    <th>Lieu Eventim</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="salle in salles" :key="salle.salleId">
-                    <td class="source-salle-nom" data-label="Salle">
-                      {{ salle.nom }}
-                    </td>
-                    <td
-                      class="source-salle-loc texte-secondaire"
-                      data-label="Ville / Dép."
-                    >
-                      <span v-if="salle.ville || salle.dept">{{
-                        [salle.ville, salle.dept].filter(Boolean).join(" ")
-                      }}</span>
-                      <span v-else class="etat-vide-texte">—</span>
-                    </td>
-                    <td data-label="Lieu Eventim">
-                      <div class="source-lieu-inline">
-                        <input
-                          v-model="lieuxEdites[salle.salleId]"
-                          type="text"
-                          class="source-lieu-input champ-compact"
-                          maxlength="200"
-                          placeholder="Nom exact chez Eventim"
-                          :aria-label="'Lieu Eventim pour ' + salle.nom"
-                          @input="statutTester[salle.salleId] = null"
-                          @keydown.enter="sauvegarderLieu(salle)"
-                        />
-                        <span
-                          v-if="statutTester[salle.salleId]"
-                          class="source-test-statut"
-                          :class="
-                            statutTester[salle.salleId]?.startsWith('ok')
-                              ? 'source-test-ok'
-                              : 'source-test-ko'
-                          "
-                          aria-live="polite"
-                        >
-                          {{ formatStatutTest(statutTester[salle.salleId]) }}
-                        </span>
-                      </div>
-                    </td>
-                    <td class="source-actions" data-label="">
-                      <button
-                        type="button"
-                        class="bouton bouton-primaire bouton-petit"
-                        :disabled="enCours[salle.salleId + ':lieu']"
-                        :aria-label="
-                          'Enregistrer le lieu Eventim de ' + salle.nom
-                        "
-                        @click="sauvegarderLieu(salle)"
-                      >
-                        Enregistrer
-                      </button>
-                      <button
-                        type="button"
-                        class="bouton bouton-secondaire bouton-petit"
-                        :disabled="
-                          enCours[salle.salleId + ':test'] ||
-                          !lieuCourant(salle)
-                        "
-                        :aria-label="'Tester le lieu Eventim de ' + salle.nom"
-                        @click="testerLieu(salle)"
-                      >
-                        Tester
-                      </button>
-                      <button
-                        v-if="vueEventim"
-                        type="button"
-                        class="bouton bouton-secondaire bouton-petit"
-                        :disabled="enCours[salle.salleId + ':fetch']"
-                        :aria-label="'Déclencher un fetch pour ' + salle.nom"
-                        @click="fetchSalle(salle)"
-                      >
-                        Fetch
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div v-if="totalPages > 1" class="pagination">
-              <button
-                type="button"
-                class="bouton bouton-secondaire bouton-petit"
-                :disabled="page === 0"
-                @click="allerPage(page - 1)"
-              >
-                ← Précédent
-              </button>
-              <span
-                >Page {{ page + 1 }} / {{ totalPages }} ({{
-                  total
-                }}
-                salles)</span
-              >
-              <button
-                type="button"
-                class="bouton bouton-secondaire bouton-petit"
-                :disabled="page >= totalPages - 1"
-                @click="allerPage(page + 1)"
-              >
-                Suivant →
-              </button>
-            </div>
-          </div>
-          <p v-else class="etat-vide-texte">
-            <template v-if="recherche.trim()"
-              >Aucune salle ne correspond à la recherche.</template
-            >
-            <template v-else-if="!vueEventim"
-              >Toutes les salles ont un identifiant source (Ticketmaster ou
-              Eventim).</template
-            >
-            <template v-else>Aucune salle avec lieu Eventim.</template>
-          </p>
-        </template>
-      </div>
     </template>
   </section>
 </template>
@@ -339,7 +148,7 @@
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminSources" });
 
-import { ref, shallowRef, reactive, onMounted, onUnmounted } from "vue";
+import { ref, shallowRef, onMounted, onUnmounted } from "vue";
 import EtatChargement from "../EtatChargement.vue";
 import { useToasts } from "../../composables/useToasts.js";
 import { formaterInstant, formaterTs } from "../../composables/useDates.js";
@@ -347,24 +156,9 @@ import { formaterInstant, formaterTs } from "../../composables/useDates.js";
 const { afficherToast } = useToasts();
 
 const chargement = ref(true);
-const chargementSalles = ref(true);
 const sources = shallowRef([]);
-const salles = shallowRef([]);
-const page = ref(0);
-const totalPages = ref(1);
-const total = ref(0);
-const vueEventim = ref(false);
-const recherche = ref("");
-const lieuxEdites = reactive({});
-const statutTester = reactive({});
-const enCours = reactive({});
 
 const controleur = new AbortController();
-// controleurSalles : recréé à chaque appel de chargerSalles() — un changement rapide de vue/page
-// (basculerVue/allerPage) annule sinon seulement la requête précédente au démontage, laissant
-// deux réponses de pages différentes s'appliquer dans le désordre.
-let controleurSallesActuel = null;
-
 function pctQuota(source) {
   if (!source.quotaTM || source.quotaTM.total === 0) return 0;
   return Math.round((source.quotaTM.dispo * 100) / source.quotaTM.total);
@@ -375,10 +169,6 @@ function classeBarre(source) {
   if (p > 30) return "barre-ok";
   if (p > 10) return "barre-avertissement";
   return "barre-danger";
-}
-
-function lieuCourant(salle) {
-  return (lieuxEdites[salle.salleId] ?? "").trim();
 }
 
 async function charger() {
@@ -395,155 +185,10 @@ async function charger() {
   } finally {
     chargement.value = false;
   }
-  await chargerSalles();
-}
-
-async function chargerSalles() {
-  controleurSallesActuel?.abort();
-  const controleurCourant = new AbortController();
-  controleurSallesActuel = controleurCourant;
-
-  chargementSalles.value = true;
-  try {
-    const params = new URLSearchParams();
-    params.set("eventim", vueEventim.value);
-    params.set("page", page.value);
-    if (recherche.value.trim()) params.set("nom", recherche.value.trim());
-
-    const rep = await appelApi(`/api/admin/sources/salles?${params}`, {
-      signal: controleurCourant.signal,
-    });
-    if (!rep.ok) return;
-    const d = await lireJson(rep);
-    salles.value = d.salles ?? [];
-    page.value = d.page ?? 0;
-    totalPages.value = d.totalPages ?? 1;
-    total.value = d.total ?? 0;
-    for (const s of salles.value) {
-      if (lieuxEdites[s.salleId] === undefined) {
-        lieuxEdites[s.salleId] = s.lieuEventim ?? "";
-      }
-    }
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Erreur lors du chargement des salles.", "erreur");
-  } finally {
-    if (controleurSallesActuel === controleurCourant)
-      chargementSalles.value = false;
-  }
-}
-
-function basculerVue(eventim) {
-  vueEventim.value = eventim;
-  page.value = 0;
-  recherche.value = "";
-  chargerSalles();
-}
-
-function allerPage(n) {
-  page.value = Math.max(0, Math.min(n, totalPages.value - 1));
-  chargerSalles();
-}
-
-async function sauvegarderLieu(salle) {
-  const cle = salle.salleId + ":lieu";
-  enCours[cle] = true;
-  try {
-    const rep = await appelApi(
-      `/api/admin/salles/${salle.salleId}/lieu-eventim`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ libelle: lieuCourant(salle) }),
-        signal: controleur.signal,
-      },
-    );
-    if (rep.ok) {
-      afficherToast(
-        lieuCourant(salle)
-          ? "Lieu Eventim enregistré."
-          : "Lieu Eventim retiré.",
-        "succes",
-      );
-      await chargerSalles();
-    } else {
-      const data = await lireJson(rep);
-      afficherToast(
-        data.erreur || "Erreur lors de l'enregistrement du lieu.",
-        "erreur",
-      );
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
-  } finally {
-    enCours[cle] = false;
-  }
-}
-
-async function testerLieu(salle) {
-  const libelle = lieuCourant(salle);
-  if (!libelle) return;
-  const cle = salle.salleId + ":test";
-  enCours[cle] = true;
-  statutTester[salle.salleId] = null;
-  try {
-    const rep = await appelApi(
-      `/api/admin/salles/${salle.salleId}/tester-lieu-eventim`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ libelle }),
-        signal: controleur.signal,
-      },
-    );
-    if (rep.ok) {
-      const data = await lireJson(rep);
-      statutTester[salle.salleId] = `ok:${data.nbConcerts ?? 0}`;
-    } else {
-      statutTester[salle.salleId] = "ko";
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") {
-      statutTester[salle.salleId] = "ko";
-    }
-  } finally {
-    enCours[cle] = false;
-  }
-}
-
-function formatStatutTest(statut) {
-  if (!statut) return "";
-  if (statut === "ko") return "Eventim injoignable ✗";
-  const nb = parseInt(statut.split(":")[1] ?? "0", 10);
-  return nb > 0 ? `✓ ${nb} concert${nb > 1 ? "s" : ""}` : "✓ aucun concert";
-}
-
-async function fetchSalle(salle) {
-  const cle = salle.salleId + ":fetch";
-  enCours[cle] = true;
-  try {
-    const rep = await appelApi(`/api/admin/salles/${salle.salleId}/fetch`, {
-      method: "POST",
-      signal: controleur.signal,
-    });
-    if (rep.ok) {
-      afficherToast("Recherche des concerts de la salle lancée.", "succes");
-    } else {
-      const data = await lireJson(rep);
-      afficherToast(data.erreur || "Erreur lors du déclenchement.", "erreur");
-    }
-  } catch (e) {
-    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
-  } finally {
-    enCours[cle] = false;
-  }
 }
 
 onMounted(charger);
-onUnmounted(() => {
-  controleur.abort();
-  controleurSallesActuel?.abort();
-});
+onUnmounted(() => controleur.abort());
 </script>
 
 <style scoped>
@@ -617,50 +262,7 @@ onUnmounted(() => {
   margin: 0 0 var(--espace-2);
 }
 
-.source-vue-bascule {
-  display: flex;
-  gap: var(--espace-3);
-}
-
 .source-carte-detail {
   margin: 0;
-}
-
-.source-lieu-inline {
-  display: flex;
-  align-items: center;
-  gap: var(--espace-3);
-  flex-wrap: wrap;
-}
-
-.source-lieu-input {
-  width: 9rem;
-}
-
-@media (width >= 641px) {
-  .source-lieu-inline {
-    flex-wrap: nowrap;
-  }
-
-  .source-lieu-input {
-    width: 16rem;
-  }
-}
-
-.source-test-statut {
-  font-size: var(--texte-xs);
-  font-weight: 600;
-}
-
-.source-test-ok {
-  color: var(--succes-text);
-}
-
-.source-test-ko {
-  color: var(--danger-text);
-}
-
-.source-salle-loc {
-  white-space: nowrap;
 }
 </style>
