@@ -574,3 +574,50 @@ describe("charte : boutons à la largeur de leur libellé", () => {
     expect(fautifs).toEqual([]);
   });
 });
+
+describe("charte : contraste des actions pleines", () => {
+  const base = sources.find((s) => s.nom === "styles/base.css").texte;
+  const bloc = (selecteur) =>
+    base.match(new RegExp(`${selecteur}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+  const couleur = (corps, variable) =>
+    corps.match(new RegExp(`${variable}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+
+  // Luminance relative et rapport de contraste WCAG 2.x.
+  function luminance(hex) {
+    const [r, g, b] = [1, 3, 5]
+      .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  const contraste = (a, b) => {
+    const [clair, fonce] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (clair + 0.05) / (fonce + 0.05);
+  };
+
+  for (const [theme, selecteur, fond] of [
+    ["clair", ":root", "--bg"],
+    ["sombre", "\\.sombre", "--bg"],
+  ]) {
+    it(`le texte du bouton principal reste lisible en thème ${theme} (AA, 4,5:1)`, () => {
+      const corps = bloc(selecteur);
+      expect(
+        contraste(couleur(corps, "--action-fg"), couleur(corps, "--action-bg")),
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(fond).toBeTruthy();
+    });
+
+    it(`le bouton principal se détache du fond en thème ${theme} (3:1)`, () => {
+      const corps = bloc(selecteur);
+      expect(
+        contraste(couleur(corps, "--action-bg"), couleur(corps, fond)),
+      ).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it("le bouton principal ne domine pas l'écran en thème sombre", () => {
+    const sombre = bloc("\\.sombre");
+    // Le blanc plein de l'interface (--fg) est réservé au texte.
+    expect(couleur(sombre, "--action-bg")).not.toBe(couleur(sombre, "--fg"));
+    expect(luminance(couleur(sombre, "--action-bg"))).toBeLessThan(0.3);
+  });
+});

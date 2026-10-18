@@ -48,6 +48,8 @@
   --border: #e5e7eb;
   --primary: #111827;
   --primary-fg: #ffffff;
+  --action-bg: #111827;
+  --action-fg: #ffffff;
   --accent: #f3f4f6;
   --accent-fg: #111827;
   --danger: #dc2626;
@@ -153,6 +155,8 @@
   --border: #27272a;
   --primary: #fafafa;
   --primary-fg: #09090b;
+  --action-bg: #6b6b73;
+  --action-fg: #fafafa;
   --accent: #27272a;
   --accent-fg: #fafafa;
   --danger-bg: #1c0a0a;
