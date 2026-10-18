@@ -15,6 +15,7 @@
         <BanniereIncident />
         <BanniereSysteme />
         <BandeauCanalPerdu />
+        <BandeauHorsLigne />
         <RouterView />
       </main>
     </div>
@@ -59,7 +60,12 @@
 </template>
 
 <script setup>
-import { appelApi, lireJson } from "./utils/api.js";
+import {
+  appelApi,
+  lireJson,
+  purgerCacheHorsLigne,
+  serveurJoignable,
+} from "./utils/api.js";
 defineOptions({ name: "App" });
 
 import { ref, computed, watchEffect, watch, onMounted } from "vue";
@@ -72,6 +78,7 @@ import DrawerNav from "./components/layout/DrawerNav.vue";
 import BanniereSysteme from "./components/layout/BanniereSysteme.vue";
 import BanniereIncident from "./components/layout/BanniereIncident.vue";
 import BandeauCanalPerdu from "./components/layout/BandeauCanalPerdu.vue";
+import BandeauHorsLigne from "./components/layout/BandeauHorsLigne.vue";
 import ToastContainer from "./components/layout/ToastContainer.vue";
 import OnboardingModal from "./components/layout/OnboardingModal.vue";
 import InstallPwaBanner from "./components/layout/InstallPwaBanner.vue";
@@ -81,9 +88,15 @@ import { useTheme } from "./composables/useTheme.js";
 import { useSession } from "./composables/useSession.js";
 import { useEstMobile } from "./composables/useBreakpoint.js";
 import { useToasts } from "./composables/useToasts.js";
+import {
+  etatConnexion,
+  initialiserSuiviConnexion,
+} from "./composables/useEtatConnexion.js";
+import { creerSurveillanceReconnexion } from "./composables/useReconnexion.js";
 import { ecouterMiseAJourServiceWorker } from "./composables/useMiseAJourServiceWorker.js";
 
 useTheme();
+initialiserSuiviConnexion();
 const estMobile = useEstMobile();
 
 const { session, chargerSession } = useSession();
@@ -94,6 +107,36 @@ const { afficherToast, fermerToast } = useToasts();
 const drawerOuvert = ref(false);
 
 const estPageAuth = computed(() => !!route.meta.authPage);
+
+// Une page de connexion annonce un compte inconnu : aucune donnée gardée d'un précédent compte
+// ne doit survivre à un changement de compte sur le même appareil.
+watch(
+  estPageAuth,
+  (page) => {
+    if (page) purgerCacheHorsLigne();
+  },
+  { immediate: true },
+);
+
+// Tant que seules des données gardées s'affichent, on guette le retour du serveur : l'application
+// se recharge alors pour les remplacer par des données fraîches, sans action de l'utilisateur.
+const surveillanceReconnexion = creerSurveillanceReconnexion({
+  joignable: serveurJoignable,
+  recharger: () => window.location.reload(),
+});
+watch(
+  () => etatConnexion.donneesEnCacheLe,
+  (instant) => {
+    if (instant === null) surveillanceReconnexion.arreter();
+    else surveillanceReconnexion.demarrer();
+  },
+  { immediate: true },
+);
+function sonderSiDonneesGardees() {
+  if (etatConnexion.donneesEnCacheLe !== null) {
+    surveillanceReconnexion.sonderMaintenant();
+  }
+}
 
 const navPrincipal = [
   { href: "/", label: "Accueil", icone: "icon-home" },
@@ -199,6 +242,11 @@ onMounted(async () => {
     }
     afficherToast("Connexion rétablie.", "succes");
     if (!estPageAuth.value) chargerSession();
+    sonderSiDonneesGardees();
+  });
+  // Retour au premier plan (iOS suspend les minuteries en arrière-plan) : sonde sans attendre.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") sonderSiDonneesGardees();
   });
 });
 </script>

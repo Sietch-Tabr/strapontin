@@ -6,13 +6,165 @@
 export const ENTETE_APPLICATION = "X-Requested-With";
 export const VALEUR_ENTETE_APPLICATION = "strapontin";
 
+import { creerCacheHorsLigne, estCachable } from "./cacheHorsLigne.js";
+
+// Un GET sans copie gardée patiente longtemps (une recherche interroge plusieurs services en
+// parallèle) ; avec une copie, on bascule vite sur elle plutôt que de laisser une page vide.
+const DELAI_GET_MS = 20_000;
+const DELAI_GET_SANS_COPIE_MS = 15_000;
+const DELAI_GET_AVEC_COPIE_MS = 5_000;
+const DELAI_SONDE_MS = 5_000;
+const SEUIL_LENTEUR_MS = 3_000;
+// Réponses d'un serveur ou d'un proxy qui redémarre : traitées comme une connexion absente.
+const STATUTS_INDISPONIBLE = new Set([502, 503, 504]);
+export const ENTETE_DONNEES_EN_CACHE = "X-Donnees-En-Cache";
+
+function stockageNavigateur() {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    // Accès refusé (navigation privée, données bloquées) : l'application fonctionne sans copie.
+    return undefined;
+  }
+}
+
+let cache = creerCacheHorsLigne({ stockage: stockageNavigateur() });
+let suivi = { lenteur() {}, donneesEnCache() {} };
+let appelsLents = 0;
+
+/// Branche l'interface sur l'état de la connexion.
+/// @param nouveau `{lenteur(bool), donneesEnCache(instantMs)}`
+export function brancherSuiviConnexion(nouveau) {
+  suivi = { ...suivi, ...nouveau };
+}
+
+/// Remplace le cache (tests).
+export function remplacerCacheHorsLigne(autre) {
+  cache = autre;
+}
+
+/// Efface les données gardées pour le hors ligne (déconnexion, session expirée, autre compte).
+export function purgerCacheHorsLigne() {
+  cache.purger();
+}
+
+// Un délai dépassé se présente comme une erreur réseau (TypeError), jamais comme un AbortError :
+// les appelants réservent ce nom à leur propre annulation.
+async function fetchAvecDelai(url, init, delaiMs) {
+  const controleur = new AbortController();
+  let delaiDepasse = false;
+  const minuterie = setTimeout(() => {
+    delaiDepasse = true;
+    controleur.abort();
+  }, delaiMs);
+  const relayer = () => controleur.abort();
+  if (init.signal?.aborted) controleur.abort();
+  else init.signal?.addEventListener("abort", relayer, { once: true });
+  try {
+    return await fetch(url, { ...init, signal: controleur.signal });
+  } catch (erreur) {
+    if (delaiDepasse) {
+      throw new TypeError("Délai d'attente dépassé", { cause: erreur });
+    }
+    throw erreur;
+  } finally {
+    clearTimeout(minuterie);
+    init.signal?.removeEventListener("abort", relayer);
+  }
+}
+
+function suivreLenteur() {
+  let signale = false;
+  const minuterie = setTimeout(() => {
+    signale = true;
+    appelsLents++;
+    suivi.lenteur(true);
+  }, SEUIL_LENTEUR_MS);
+  return () => {
+    clearTimeout(minuterie);
+    if (signale && --appelsLents === 0) suivi.lenteur(false);
+  };
+}
+
+function reponseDepuisCache(copie) {
+  suivi.donneesEnCache(copie.enregistreLe);
+  return new Response(copie.corps, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      [ENTETE_DONNEES_EN_CACHE]: String(copie.enregistreLe),
+    },
+  });
+}
+
 /// Appel à l'API avec l'en-tête applicatif. Ne rejette que si le serveur est injoignable
-/// (réseau coupé, DNS) : une réponse d'erreur du serveur, JSON ou non, est résolue normalement
-/// et se lit par `ok`/`status`.
-export function appelApi(url, options = {}) {
-  const entetes = new Headers(options.headers);
+/// (réseau coupé, DNS, délai dépassé) : une réponse d'erreur du serveur, JSON ou non, est résolue
+/// normalement et se lit par `ok`/`status`.
+///
+/// Un GET sur une liste de l'utilisateur garde sa dernière réponse réussie ; si le serveur ne
+/// répond pas à temps, cette copie est rendue à la place (en-tête `X-Donnees-En-Cache`). Les
+/// requêtes modifiantes ne sont jamais rejouées ni limitées dans le temps.
+/// @param options options de `fetch`, plus `sansRepli` (jamais de copie : sonde de reconnexion)
+///        et `delaiMs` (délai d'attente d'un GET)
+export async function appelApi(url, options = {}) {
+  const { sansRepli = false, delaiMs, ...init } = options;
+  const entetes = new Headers(init.headers);
   entetes.set(ENTETE_APPLICATION, VALEUR_ENTETE_APPLICATION);
-  return fetch(url, { ...options, headers: entetes });
+  const methode = (init.method ?? "GET").toUpperCase();
+  if (methode !== "GET") return fetch(url, { ...init, headers: entetes });
+
+  const cachable = !sansRepli && estCachable(url);
+  const copie = cachable ? cache.lire(url) : null;
+  const delai =
+    delaiMs ??
+    (!cachable
+      ? DELAI_GET_MS
+      : copie
+        ? DELAI_GET_AVEC_COPIE_MS
+        : DELAI_GET_SANS_COPIE_MS);
+  const finirSuivi = suivreLenteur();
+  try {
+    const reponse = await fetchAvecDelai(
+      url,
+      { ...init, headers: entetes },
+      delai,
+    );
+    if (cachable) {
+      if (reponse.status === 401) {
+        cache.purger();
+      } else if (reponse.ok) {
+        reponse
+          .clone()
+          .text()
+          .then((corps) => cache.ecrire(url, corps))
+          .catch(() => {});
+      } else if (copie && STATUTS_INDISPONIBLE.has(reponse.status)) {
+        return reponseDepuisCache(copie);
+      }
+    }
+    return reponse;
+  } catch (erreur) {
+    if (copie && erreur?.name !== "AbortError")
+      return reponseDepuisCache(copie);
+    throw erreur;
+  } finally {
+    finirSuivi();
+  }
+}
+
+/// Sonde de reconnexion : `true` dès que le serveur répond (même 401), sans jamais passer par
+/// une copie gardée.
+export async function serveurJoignable() {
+  try {
+    const reponse = await appelApi("/api/session", {
+      sansRepli: true,
+      delaiMs: DELAI_SONDE_MS,
+      cache: "no-store",
+    });
+    return reponse.status < 500;
+  } catch {
+    return false;
+  }
 }
 
 export const MESSAGE_SERVEUR_INDISPONIBLE =
