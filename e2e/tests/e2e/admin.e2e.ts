@@ -514,6 +514,42 @@ test.describe("Scénario: admin — onglet Sources", () => {
     }
   });
 
+  test("admin_sources_couvertureDepartements_visible", async ({
+    page,
+    isMobile,
+  }) => {
+    await page.goto("/admin");
+    if (isMobile) {
+      await page.selectOption("select.param-onglets-mobile", "#sources");
+    } else {
+      await page.locator('a[href="#sources"]').click();
+    }
+    const bloc = page.locator("section#sources .param-bloc", {
+      hasText: "Couverture par département",
+    });
+    await expect(bloc).toBeVisible();
+    await expect(
+      bloc.locator(
+        "table[aria-label='Départements sans concert à venir'], p.etat-vide-texte",
+      ),
+    ).toBeVisible();
+  });
+
+  test("admin_couvertureDepartements_api_codeInvalide_retourne400", async () => {
+    const ctx = await creerContexteAdmin();
+    try {
+      const rep = await ctx.post(
+        "/api/admin/couverture-departements/abc123/reconnaitre",
+      );
+      expect(rep.status()).toBe(400);
+      const liste = await ctx.get("/api/admin/couverture-departements");
+      expect(liste.status()).toBe(200);
+      expect(Array.isArray((await liste.json()).departements)).toBe(true);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   // Ce test effectue un appel HTTP réel vers l'API Eventim — une défaillance réseau
   // transitoire peut le faire échouer. retries: 1 tolère un incident passager sans masquer un vrai bug.
   test.describe("admin_sources_api_tester_lieuEventim_connu (réseau externe)", () => {

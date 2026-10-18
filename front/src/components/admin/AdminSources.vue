@@ -140,6 +140,69 @@
           </div>
         </div>
       </div>
+
+      <div class="param-bloc">
+        <h3 class="param-libelle">Couverture par département</h3>
+        <p class="param-aide">
+          Départements sans aucun concert à venir, relevés chaque nuit. Une
+          absence peut être légitime (aucune salle de spectacle, aucune
+          billetterie en ligne) : déclarez-la pour qu'elle ne soit plus
+          signalée. Le département redevient à examiner s'il retrouve puis
+          reperd ses concerts.
+        </p>
+        <p v-if="!departements.length" class="etat-vide-texte">
+          Tous les départements connus ont au moins un concert à venir.
+        </p>
+        <div v-else class="table-conteneur table-cartes">
+          <table aria-label="Départements sans concert à venir">
+            <thead>
+              <tr>
+                <th scope="col">Département</th>
+                <th scope="col">Sans concert depuis</th>
+                <th scope="col">Statut</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="d in departements" :key="d.dept">
+                <td data-label="Département">{{ d.dept }}</td>
+                <td data-label="Sans concert depuis">
+                  {{ d.sansConcertDepuis ?? "—" }}
+                </td>
+                <td data-label="Statut">
+                  <span
+                    class="badge-quota"
+                    :class="{ 'badge-quota-attention': !d.absenceReconnue }"
+                    >{{
+                      d.absenceReconnue ? "Absence reconnue" : "À examiner"
+                    }}</span
+                  >
+                </td>
+                <td class="source-actions" data-label="">
+                  <button
+                    v-if="!d.absenceReconnue"
+                    type="button"
+                    class="bouton bouton-secondaire bouton-petit"
+                    :aria-label="'Déclarer légitime l\'absence : ' + d.dept"
+                    @click="decider(d, 'reconnaitre')"
+                  >
+                    Absence légitime
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="bouton bouton-secondaire bouton-petit"
+                    :aria-label="'Réexaminer le département ' + d.dept"
+                    @click="decider(d, 'rouvrir')"
+                  >
+                    Réexaminer
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </template>
   </section>
 </template>
@@ -157,6 +220,7 @@ const { afficherToast } = useToasts();
 
 const chargement = ref(true);
 const sources = shallowRef([]);
+const departements = shallowRef([]);
 
 const controleur = new AbortController();
 function pctQuota(source) {
@@ -169,6 +233,39 @@ function classeBarre(source) {
   if (p > 30) return "barre-ok";
   if (p > 10) return "barre-avertissement";
   return "barre-danger";
+}
+
+async function chargerCouverture() {
+  try {
+    const rep = await appelApi("/api/admin/couverture-departements", {
+      signal: controleur.signal,
+    });
+    if (!rep.ok) return;
+    departements.value = (await lireJson(rep)).departements ?? [];
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    afficherToast("Erreur lors du chargement de la couverture.", "erreur");
+  }
+}
+
+async function decider(departement, action) {
+  try {
+    const rep = await appelApi(
+      `/api/admin/couverture-departements/${departement.dept}/${action}`,
+      { method: "POST", signal: controleur.signal },
+    );
+    if (rep.ok) {
+      afficherToast("Décision enregistrée.", "succes");
+      await chargerCouverture();
+    } else {
+      afficherToast(
+        "Erreur lors de l'enregistrement de la décision.",
+        "erreur",
+      );
+    }
+  } catch (e) {
+    if (e.name !== "AbortError") afficherToast("Erreur réseau.", "erreur");
+  }
 }
 
 async function charger() {
@@ -187,7 +284,10 @@ async function charger() {
   }
 }
 
-onMounted(charger);
+onMounted(() => {
+  charger();
+  chargerCouverture();
+});
 onUnmounted(() => controleur.abort());
 </script>
 
