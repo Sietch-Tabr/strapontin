@@ -49,7 +49,8 @@ final class ControleInvariantsDonnees {
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
-        + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource());
+        + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
+        + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
   }
 
   private int publier(
@@ -187,6 +188,31 @@ final class ControleInvariantsDonnees {
                   "heure", rs.getString("heure"),
                   "intitules", rs.getString("titre_a") + " / " + rs.getString("titre_b"),
                   "jumeau", rs.getObject("jumeau", UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Deux artistes dont le nom ne diffère que par les espaces (« Krash Karma » / « Krashkarma ») :
+  // doublon probable, créé quand une variante a été suivie sans retrouver l'artiste existant.
+  // Détecté seulement : deux artistes distincts peuvent s'écrire ainsi, un admin tranche. Une
+  // paire déjà examinée (signalement clos) n'est plus signalée.
+  private Map<UUID, Map<String, Object>> artistesMemeNomSansEspaces() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT a.id AS id, a.nom AS nom, b.nom AS autre
+        FROM artistes a
+        JOIN artistes b ON a.id < b.id AND replace(a.nom_norm, ' ', '') = replace(b.nom_norm, ' ', '')
+        WHERE NOT EXISTS (
+          SELECT 1 FROM signalements_matching sm
+          WHERE sm.type = 'artistes_meme_nom_sans_espaces' AND sm.entite_id = a.id
+            AND sm.resolu_le IS NOT NULL)
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("id", UUID.class),
+              Map.of("nom", rs.getString("nom"), "autreArtiste", rs.getString("autre")));
         });
     return anomalies;
   }

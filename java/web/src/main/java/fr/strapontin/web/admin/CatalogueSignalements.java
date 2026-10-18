@@ -174,6 +174,12 @@ public final class CatalogueSignalements {
             + " la salle, sa position enregistrée est probablement fausse ; sinon rien à faire, la"
             + " salle reste sans élément Wikidata.");
     ajouter(
+        "artistes_meme_nom_sans_espaces",
+        "Artistes au même nom, à l'espace près",
+        "Deux artistes ne diffèrent que par les espaces de leur nom (« Krash Karma » et"
+            + " « Krashkarma ») : probablement le même, à fusionner depuis le référentiel des"
+            + " artistes ; sinon marquer l'anomalie comme traitée.");
+    ajouter(
         "source_orpheline",
         "Source sans concert",
         "Un identifiant source n'a jamais produit de concert : mapping probablement erroné.");

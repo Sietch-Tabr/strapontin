@@ -61,9 +61,10 @@ class ArtisteRepository {
   }
 
   /**
-   * Recherche des artistes dans les concerts existants par pattern normalisé.
+   * Recherche des artistes dans les concerts existants par pattern normalisé,
+   * espaces ignorés des deux côtés (« krash karma » retrouve « krashkarma »).
    *
-   * @param pattern valeur LIKE (ex. {@code "%pattern%"})
+   * @param pattern valeur LIKE sur le nom sans espaces (ex. {@code "%krashkarma%"})
    * @return noms d'artistes distincts (max 5)
    */
   /* package-private : accès SQL réservé à ArtisteService (même package),
@@ -72,7 +73,7 @@ class ArtisteRepository {
     return jdbc.queryForList(
         """
         SELECT DISTINCT artiste FROM concerts
-        WHERE artiste_norm LIKE :pattern
+        WHERE replace(artiste_norm, ' ', '') LIKE :pattern
         ORDER BY artiste
         LIMIT 5
         """,
@@ -122,26 +123,26 @@ class ArtisteRepository {
    * un des tokens fournis — pré-filtre SQL avant correspondance floue
    * ({@code CorrespondanceArtiste.estDoublonArtiste}, non exprimable en SQL).
    * @param tokens tokens significatifs (≥3 caractères) du nom recherché
-   * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si {@code tokens} vide
+   * @param compact nom recherché sans espaces : retrouve aussi « krashkarma » quand on cherche
+   *     « krash karma » (aucun token commun)
+   * @return jusqu'à 50 candidats {@code (id, nom_norm)}, vide si ni token ni nom
    */
   /* package-private : accès SQL réservé à ArtisteService (même package),
    * pattern service/repository. */
-  List<Map<String, Object>> chercherCandidatsParTokens(final Set<String> tokens) {
-    if (tokens.isEmpty()) {
+  List<Map<String, Object>> chercherCandidatsParTokens(
+      final Set<String> tokens, final String compact) {
+    if (tokens.isEmpty() && compact.isBlank()) {
       return List.of();
     }
 
     final List<String> tokensList = new ArrayList<>(tokens);
     final StringBuilder whereTokens = new StringBuilder(50).append('(');
     for (int i = 0; i < tokensList.size(); i++) {
-      if (i > 0) {
-        whereTokens.append(" OR ");
-      }
-      whereTokens.append("nom_norm LIKE :t").append(i);
+      whereTokens.append("nom_norm LIKE :t").append(i).append(" OR ");
     }
-    whereTokens.append(')');
+    whereTokens.append("replace(nom_norm, ' ', '') = :compact)");
 
-    final MapSqlParameterSource params = new MapSqlParameterSource();
+    final MapSqlParameterSource params = new MapSqlParameterSource().addValue("compact", compact);
     for (int i = 0; i < tokensList.size(); i++) {
       params.addValue("t" + i, "%" + tokensList.get(i) + "%");
     }

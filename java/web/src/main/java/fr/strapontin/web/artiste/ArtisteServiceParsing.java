@@ -69,6 +69,12 @@ final class ArtisteServiceParsing {
     return resultats;
   }
 
+  // Deezer renvoie parfois deux fiches de même nom : la plus populaire, vue en premier, est gardée.
+  private static java.util.function.Predicate<Map<String, Object>> distinctParNom() {
+    final java.util.Set<String> vus = new java.util.HashSet<>();
+    return a -> vus.add((String) a.get("name"));
+  }
+
   @SuppressWarnings("unchecked")
   /* package-private : appelé par ArtisteService (même package). */
   static List<SuggestionArtiste> parseDeezerResultats(
@@ -87,10 +93,17 @@ final class ArtisteServiceParsing {
                   Integer.compare(
                       ((Number) b.getOrDefault("nb_fan", 0)).intValue(),
                       ((Number) a.getOrDefault("nb_fan", 0)).intValue()))
-          .map(a -> (String) a.get("name"))
-          .filter(name -> name != null && !name.isBlank())
-          .distinct()
-          .forEach(name -> resultats.add(new SuggestionArtiste(name, "deezer")));
+          .filter(a -> a.get("name") instanceof String nom && !nom.isBlank())
+          .filter(distinctParNom())
+          .forEach(
+              a ->
+                  resultats.add(
+                      new SuggestionArtiste(
+                          (String) a.get("name"),
+                          "deezer",
+                          null,
+                          null,
+                          ((Number) a.getOrDefault("nb_fan", 0)).intValue())));
     } catch (Exception _) {
       LOG.warn("Deezer parsing JSON échoué");
     }

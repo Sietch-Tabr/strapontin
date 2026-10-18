@@ -265,4 +265,51 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
     assertEquals(List.of(), actifs());
   }
+
+  private void artiste(final String nom, final String nomNorm) {
+    jdbc.update(
+        "INSERT INTO artistes (nom, nom_norm) VALUES (:nom, :norm)",
+        Map.of("nom", nom, "norm", nomNorm));
+  }
+
+  @Test
+  void verifier_deuxArtistesAuMemeNomSansEspaces_signaleEtRefermeUneFoisFusionnes() {
+    jdbc.update("DELETE FROM artistes", Map.of());
+    artiste("Krash Karma", "krash karma");
+    artiste("Krashkarma", "krashkarma");
+
+    controle.verifier();
+    assertEquals(List.of("artistes_meme_nom_sans_espaces"), actifs());
+
+    jdbc.update("DELETE FROM artistes WHERE nom_norm = 'krashkarma'", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_artistesDeNomsDistincts_neSignaleRien() {
+    jdbc.update("DELETE FROM artistes", Map.of());
+    artiste("Radiohead", "radiohead");
+    artiste("Krashkarma", "krashkarma");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_paireDejaExamineeParUnAdmin_neEstPlusSignalee() {
+    jdbc.update("DELETE FROM artistes", Map.of());
+    artiste("Krash Karma", "krash karma");
+    artiste("Krashkarma", "krashkarma");
+    controle.verifier();
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now()"
+            + " WHERE type = 'artistes_meme_nom_sans_espaces'",
+        Map.of());
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
 }

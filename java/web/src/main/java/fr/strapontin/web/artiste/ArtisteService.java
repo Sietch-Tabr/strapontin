@@ -98,22 +98,22 @@ public class ArtisteService {
 
     if (recherche.length() >= LONGUEUR_MIN_RECHERCHE_EXTERNE) {
       final String rechercheNorm = Normalisation.normaliserTexte(recherche);
+      // Clés sans espaces : « Krash Karma » et « Krashkarma » sont le même artiste.
       final Set<String> nomsSuivisNorm =
-          artistes.stream()
-              .map(a -> Normalisation.normaliserTexte(a.artisteAffiche()))
-              .collect(Collectors.toSet());
+          artistes.stream().map(a -> compacter(a.artisteAffiche())).collect(Collectors.toSet());
 
-      final List<String> enBase = artisteRepository.rechercherEnBase("%" + rechercheNorm + "%");
+      final List<String> enBase =
+          artisteRepository.rechercherEnBase("%" + rechercheNorm.replace(" ", "") + "%");
 
       final List<SuggestionArtiste> resultatsSuggestions =
           enBase.stream()
-              .filter(a -> !nomsSuivisNorm.contains(Normalisation.normaliserTexte(a)))
+              .filter(a -> !nomsSuivisNorm.contains(compacter(a)))
               .map(a -> new SuggestionArtiste(a, "base"))
               .collect(Collectors.toCollection(ArrayList::new));
 
       final Set<String> nomsDejaPresents =
           resultatsSuggestions.stream()
-              .map(s -> Normalisation.normaliserTexte(s.nom()))
+              .map(s -> compacter(s.nom()))
               .collect(Collectors.toCollection(HashSet::new));
       nomsDejaPresents.addAll(nomsSuivisNorm);
 
@@ -133,10 +133,14 @@ public class ArtisteService {
       }
 
       suggestions = resultatsSuggestions;
-      dejaLeSuivi = contientCorrespondancePartielle(rechercheNorm, nomsSuivisNorm);
+      dejaLeSuivi = contientCorrespondancePartielle(rechercheNorm.replace(" ", ""), nomsSuivisNorm);
     }
 
     return new ReponseArtistes(artistes, suggestions, dejaLeSuivi);
+  }
+
+  private static String compacter(final String nom) {
+    return Normalisation.normaliserTexte(nom).replace(" ", "");
   }
 
   private static void ajouterSuggestionsInedites(
@@ -144,7 +148,7 @@ public class ArtisteService {
       final Set<String> nomsDejaPresents,
       final List<SuggestionArtiste> source) {
     for (final SuggestionArtiste r : source) {
-      final String norm = Normalisation.normaliserTexte(r.nom());
+      final String norm = compacter(r.nom());
       if (!nomsDejaPresents.contains(norm)) {
         cible.add(r);
         nomsDejaPresents.add(norm);
@@ -256,7 +260,7 @@ public class ArtisteService {
   public UUID resoudreArtisteId(final String nom, final String normalise) {
     final Set<String> tokens = CorrespondanceSalle.tokensSignificatifs(normalise);
     for (final Map<String, Object> candidat :
-        artisteRepository.chercherCandidatsParTokens(tokens)) {
+        artisteRepository.chercherCandidatsParTokens(tokens, normalise.replace(" ", ""))) {
       final String nomNormCandidat = (String) candidat.get("nom_norm");
       if (nomNormCandidat.equals(normalise)) {
         return artisteRepository.upsertArtiste(nom, normalise);

@@ -63,20 +63,18 @@
         <ul class="liste-cartes">
           <li
             v-for="s in donnees.suggestions"
-            :key="s.nom + (s.wikidataId || '')"
+            :key="s.source + s.nom + (s.wikidataId || '')"
             class="carte-item"
           >
             <div>
               <p class="carte-nom">
                 {{ s.nom }}
-                <span
-                  v-if="s.source === 'wikidata'"
-                  class="badge-source badge-source-metadonnees"
-                  >wikidata</span
-                >
+                <span class="badge-source badge-source-metadonnees">{{
+                  libelleSourceSuggestion(s.source)
+                }}</span>
               </p>
-              <p v-if="s.description" class="carte-sous-titre">
-                {{ s.description }}
+              <p v-if="detailSuggestion(s)" class="carte-sous-titre">
+                {{ detailSuggestion(s) }}
               </p>
             </div>
             <button
@@ -192,6 +190,10 @@ import {
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import {
+  detailSuggestion,
+  libelleSourceSuggestion,
+} from "../utils/suggestionsArtistes.js";
 
 const { afficherToast } = useToasts();
 

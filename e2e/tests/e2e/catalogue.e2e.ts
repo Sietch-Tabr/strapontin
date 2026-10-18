@@ -130,9 +130,17 @@ test.describe("Scénario: catalogue — artistes", () => {
       await page.getByRole("button", { name: "Rechercher" }).click();
 
       const badgeWikidata = page.locator(".badge-source-metadonnees", {
-        hasText: "wikidata",
+        hasText: "Wikidata",
       });
       await expect(badgeWikidata.first()).toBeVisible({ timeout: 25000 });
+      // Chaque résultat dit d'où il vient : aucun n'est un nom nu.
+      const resultats = page.locator("section.section-resultats .carte-item");
+      const total = await resultats.count();
+      for (let i = 0; i < total; i++) {
+        await expect(
+          resultats.nth(i).locator(".badge-source-metadonnees"),
+        ).toBeVisible();
+      }
     },
   );
 });
