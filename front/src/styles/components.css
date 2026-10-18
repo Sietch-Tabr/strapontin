@@ -570,6 +570,10 @@ tr:hover td {
   color: var(--fg-muted);
   margin-bottom: var(--espace-12);
 }
+.form-aide-avertissement {
+  color: var(--avertissement);
+  font-weight: 500;
+}
 .form-inline {
   display: flex;
   gap: var(--espace-4);

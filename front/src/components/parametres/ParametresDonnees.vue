@@ -268,11 +268,6 @@ onMounted(charger);
 </script>
 
 <style scoped>
-.form-aide-avertissement {
-  color: var(--avertissement);
-  font-weight: 500;
-}
-
 .form-fichier {
   display: flex;
   align-items: center;
