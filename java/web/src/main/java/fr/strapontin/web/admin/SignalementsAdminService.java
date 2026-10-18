@@ -208,6 +208,44 @@ public class SignalementsAdminService {
   }
 
   /**
+   * Aligne la position d'une salle sur son élément Wikidata, à partir des
+   * coordonnées relevées par le signalement « position de source éloignée »,
+   * puis le clôt. La salle est dès lors réalignée chaque nuit sur l'élément.
+   * @param id identifiant numérique du signalement
+   * @return {@code true} si la position a été alignée
+   */
+  @Transactional
+  public boolean alignerPositionSurWikidata(final long id) {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT entite_id::text AS salle,"
+                + " CAST(details ->> 'latitudeWikidata' AS double precision) AS latitude,"
+                + " CAST(details ->> 'longitudeWikidata' AS double precision) AS longitude"
+                + " FROM signalements_matching WHERE id = :id AND resolu_le IS NULL"
+                + " AND type = 'position_source_eloignee'",
+            Map.of(CLE_ID, id));
+    if (lignes.isEmpty() || lignes.getFirst().get("latitude") == null) {
+      return false;
+    }
+    final Map<String, Object> ligne = lignes.getFirst();
+    jdbc.update(
+        "UPDATE salles SET latitude = :latitude, longitude = :longitude,"
+            + " origine_position = 'wikidata' WHERE id = CAST(:salle AS uuid)",
+        Map.of(
+            "latitude", ligne.get("latitude"),
+            "longitude", ligne.get("longitude"),
+            "salle", ligne.get("salle")));
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now() WHERE id = :id", Map.of(CLE_ID, id));
+    logAdminService.logAdmin(
+        NIVEAU_INFO,
+        SOURCE_ADMIN,
+        "position de salle alignée sur Wikidata",
+        Map.of("signalementId", id, "salleId", ligne.get("salle")));
+    return true;
+  }
+
+  /**
    * Marque les sources internes actuellement signalées d'une salle comme
    * légitimes (nom d'usage, sigle officiel du même lieu) — plus jamais
    * re-signalées tant que leur identifiant ne change pas.

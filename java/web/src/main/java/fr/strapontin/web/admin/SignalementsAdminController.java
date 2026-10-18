@@ -84,6 +84,21 @@ public class SignalementsAdminController {
   }
 
   /**
+   * Aligne la position d'une salle sur son élément Wikidata (signalement de
+   * position de source éloignée) et clôt le signalement.
+   *
+   * @param id identifiant numérique du signalement
+   * @return 200 si alignée, 404 si aucun signalement actif de ce type
+   */
+  @PostMapping("/{id}/aligner-position-wikidata")
+  public ResponseEntity<Map<String, Object>> alignerPositionWikidata(@PathVariable final long id) {
+    if (!service.alignerPositionSurWikidata(id)) {
+      return erreur(404, "Signalement inconnu, déjà résolu ou sans position Wikidata.");
+    }
+    return ResponseEntity.ok(Map.of(CLE_SUCCES, true));
+  }
+
+  /**
    * Déclare faux positif la contamination signalée sur une salle.
    *
    * @param salleId UUID de la salle

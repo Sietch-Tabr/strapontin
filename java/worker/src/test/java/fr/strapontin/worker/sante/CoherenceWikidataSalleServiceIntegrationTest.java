@@ -6,6 +6,7 @@ package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -200,16 +201,21 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
   private int signalementsPosition() {
     return jdbc.queryForObject(
-        "SELECT count(*) FROM logs_admin WHERE niveau = 'warn'"
-            + " AND message LIKE 'position de source éloignée%'",
-        Map.of(), Integer.class);
+        "SELECT count(*) FROM signalements_matching"
+            + " WHERE type = 'position_source_eloignee' AND resolu_le IS NULL",
+        Map.of(),
+        Integer.class);
   }
 
   // Sud de France Arena : position TM au centre de Montpellier, élément Wikidata à Pérols.
   @Test
-  void signalerPositionsDivergentes_positionDeSourceLoinDeLElement_estSignaleeUneFoisParMois() {
-    jdbc.update("DELETE FROM logs_admin", Map.of());
+  void signalerPositionsDivergentes_positionDeSourceLoinDeLElement_estSignaleeUneSeuleFois() {
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
     final UUID salle = salleParUneSource("sud de france arena", "sources");
+    jdbc.update(
+        "INSERT INTO salle_sources (salle_id, source, identifiant_externe, latitude, longitude)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'rZ7SnyZadrK', 43.6108, 3.8767)",
+        Map.of("id", salle.toString()));
     when(wikidataSalleSource.enrichirLot(any()))
         .thenReturn(
             Map.of(salle, new EnrichissementSalle("Q1", null, null, null, null, 43.5686, 3.9519)));
@@ -218,6 +224,16 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
     assertEquals(1, coherence.signalerPositionsDivergentes());
 
     assertEquals(1, signalementsPosition());
+    final String details =
+        jdbc.queryForObject(
+            "SELECT details::text FROM signalements_matching"
+                + " WHERE type = 'position_source_eloignee'",
+            Map.of(),
+            String.class);
+    assertTrue(details.contains("\"wikidataId\": \"Q"), details);
+    assertTrue(details.contains("ticketmaster rZ7SnyZadrK : 7"), details);
+    assertTrue(details.contains("\"latitudeWikidata\": 43.5686"), details);
+    assertTrue(details.contains("m de l'élément"), details);
     assertEquals(
         43.6108,
         jdbc.queryForObject(
@@ -229,7 +245,7 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
   @Test
   void signalerPositionsDivergentes_positionProcheOuPosee_parWikidata_neSignaleRien() {
-    jdbc.update("DELETE FROM logs_admin", Map.of());
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
     final UUID proche = salleParUneSource("salle proche", "sources");
     salleParUneSource("salle wikidata", "wikidata");
     when(wikidataSalleSource.enrichirLot(any()))
@@ -238,5 +254,38 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
     assertEquals(0, coherence.signalerPositionsDivergentes());
     assertEquals(0, signalementsPosition());
+  }
+
+  @Test
+  void signalerPositionsDivergentes_ecartDisparu_refermeLeSignalement() {
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
+    final UUID salle = salleParUneSource("sud de france arena", "sources");
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(salle, new EnrichissementSalle("Q1", null, null, null, null, 43.5686, 3.9519)));
+    coherence.signalerPositionsDivergentes();
+    assertEquals(1, signalementsPosition());
+
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(salle, new EnrichissementSalle("Q1", null, null, null, null, 43.6112, 3.8770)));
+    coherence.signalerPositionsDivergentes();
+
+    assertEquals(0, signalementsPosition());
+  }
+
+  @Test
+  void signalerPositionsDivergentes_elementIllisible_gardeLeSignalement() {
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
+    final UUID salle = salleParUneSource("sud de france arena", "sources");
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(salle, new EnrichissementSalle("Q1", null, null, null, null, 43.5686, 3.9519)));
+    coherence.signalerPositionsDivergentes();
+
+    when(wikidataSalleSource.enrichirLot(any())).thenReturn(Map.of());
+    coherence.signalerPositionsDivergentes();
+
+    assertEquals(1, signalementsPosition());
   }
 }

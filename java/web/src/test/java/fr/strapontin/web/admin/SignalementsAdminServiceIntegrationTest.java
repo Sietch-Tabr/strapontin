@@ -303,6 +303,64 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
     assertNull(service.lister(0).signalements().getFirst().autreSalle());
   }
 
+  private long signalerPositionEloignee(final UUID salle) {
+    return jdbc.queryForObject(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+            + " VALUES ('position_source_eloignee', 'salle', CAST(:id AS uuid), 'moyenne',"
+            + " CAST('{\"latitudeWikidata\": 43.5686, \"longitudeWikidata\": 3.9519}' AS jsonb))"
+            + " RETURNING id",
+        Map.of("id", salle.toString()),
+        Long.class);
+  }
+
+  @Test
+  void alignerPositionSurWikidata_signalementActif_poseLaPositionDeWikidataEtCloture() {
+    final UUID salle = creerSalle("sud de france arena");
+    jdbc.update(
+        "UPDATE salles SET latitude = 43.6108, longitude = 3.8767, origine_position = 'sources'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    final long signalement = signalerPositionEloignee(salle);
+
+    assertTrue(service.alignerPositionSurWikidata(signalement));
+
+    final Map<String, Object> position =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude, origine_position FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()));
+    assertEquals(43.5686, (Double) position.get("latitude"), 1e-9);
+    assertEquals(3.9519, (Double) position.get("longitude"), 1e-9);
+    assertEquals("wikidata", position.get("origine_position"));
+    assertEquals(false, service.alignerPositionSurWikidata(signalement), "déjà clos");
+  }
+
+  @Test
+  void alignerPositionSurWikidata_autreType_neModifieRien() {
+    final UUID salle = creerSalle("olympia");
+    jdbc.update(
+        "UPDATE salles SET latitude = 48.87, longitude = 2.33, origine_position = 'sources'"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
+    final long autre =
+        jdbc.queryForObject(
+            "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance, details)"
+                + " VALUES ('wikidata_coordonnees_divergentes', 'salle', CAST(:id AS uuid),"
+                + " 'basse', CAST('{\"latitudeWikidata\": 1.0, \"longitudeWikidata\": 1.0}'"
+                + " AS jsonb)) RETURNING id",
+            Map.of("id", salle.toString()),
+            Long.class);
+
+    assertEquals(false, service.alignerPositionSurWikidata(autre));
+
+    assertEquals(
+        48.87,
+        jdbc.queryForObject(
+            "SELECT latitude FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Double.class),
+        1e-9);
+  }
+
   private long signalerConcert(final String type) {
     final UUID concert =
         jdbc.queryForObject(

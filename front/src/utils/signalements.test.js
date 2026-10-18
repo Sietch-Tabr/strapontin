@@ -149,4 +149,14 @@ describe("actionsSignalement", () => {
       }),
     ).toEqual(["comparer", "sallesDistinctes", "voirFiche"]);
   });
+
+  it("propose d'aligner la position d'une salle éloignée de son élément Wikidata", () => {
+    expect(
+      actionsSignalement({
+        categorie: "nouveau",
+        type: "position_source_eloignee",
+        entite: { type: "salle", id: "a", nom: "Sud de France Arena" },
+      }),
+    ).toEqual(["aligner", "resoudre", "voirFiche"]);
+  });
 });

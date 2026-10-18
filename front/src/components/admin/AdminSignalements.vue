@@ -69,6 +69,18 @@
                 Comparer et fusionner
               </button>
               <button
+                v-else-if="action === 'aligner'"
+                type="button"
+                class="bouton bouton-secondaire bouton-petit"
+                :aria-label="
+                  'Aligner la position sur Wikidata : ' +
+                  libelleEntite(s.entite)
+                "
+                @click="alignerPosition(s)"
+              >
+                Aligner sur Wikidata
+              </button>
+              <button
                 v-else-if="action === 'repartir'"
                 type="button"
                 class="bouton bouton-secondaire bouton-petit"
@@ -278,6 +290,19 @@ async function supprimerConcert(signalement) {
   return poster(
     `/api/admin/signalements/${signalement.id}/supprimer-concert`,
     "Concert supprimé.",
+  );
+}
+
+async function alignerPosition(signalement) {
+  const confirme = await dialogueConfirmation.value?.demander({
+    titre: "Aligner la position sur Wikidata ?",
+    message: `La position de ${libelleEntite(signalement.entite)} deviendra celle de son élément Wikidata, puis sera réalignée chaque nuit. À faire seulement si l'élément désigne bien cette salle.`,
+    action: "Aligner",
+  });
+  if (!confirme) return;
+  return poster(
+    `/api/admin/signalements/${signalement.id}/aligner-position-wikidata`,
+    "Position alignée sur Wikidata.",
   );
 }
 

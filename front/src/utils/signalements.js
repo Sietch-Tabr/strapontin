@@ -86,7 +86,7 @@ function versTexte(v) {
 
 /// Actions proposées sur place pour un signalement, dans l'ordre d'affichage.
 /// @param signalement entrée renvoyée par l'API
-/// @return codes parmi `comparer`, `supprimerConcert`, `resoudre`, `fauxPositif`,
+/// @return codes parmi `comparer`, `aligner`, `supprimerConcert`, `resoudre`, `fauxPositif`,
 ///         `sallesDistinctes`, `ignorerEcart`, `repartir`, `voirFiche`
 export function actionsSignalement(signalement) {
   const actions = [];
@@ -96,6 +96,9 @@ export function actionsSignalement(signalement) {
   }
   if (TYPES_REPARTISSABLES.has(signalement.type) && entite.type === "salle") {
     actions.push("repartir");
+  }
+  if (signalement.type === "position_source_eloignee") {
+    actions.push("aligner");
   }
   if (
     TYPES_CONCERT_A_SUPPRIMER.has(signalement.type) &&
