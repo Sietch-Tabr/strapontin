@@ -21,18 +21,20 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Billetterie Allmol Tickets (Antilles, Guyane) : la liste des concerts est celle que le site
- * charge lui-même dans le navigateur, en JSON public. Le titre d'un produit porte l'artiste, mais
- * aussi le département, la date et le lieu (« 971 - 17/10 - REGGAE BEATS @ Lacaz'art ») : ces
- * mentions sont retirées. Les horodatages sont en heure locale du département.
+ * Billetterie Allmol Tickets (Antilles, Guyane) : concerts lus dans le JSON
+ * public que charge le site. Le titre d'un produit porte aussi département,
+ * date et lieu (« 971 - 17/10 - REGGAE BEATS @ Lacaz'art »), retirés.
+ * Horodatages en heure locale du département.
  * @since 3.0.6
  * @author Kwaite
  */
 public class SiteAllmol extends SourceSiteSalle {
 
+  /* package-private : adresse du site, utilisée par les tests. */
   static final String BASE = "https://tickets.allmol.com";
-  // Clé de la catégorie « concerts » du site ; une clé changée donne une liste vide, signalée par
-  // la chute de volume.
+  // Clé de la catégorie « concerts » du site ; une clé changée donne une
+  // liste vide, signalée par la chute de volume.
+  /* package-private : utilisée par les tests. */
   static final String CLE_CATEGORIE_CONCERTS = "J6U6QNNI2YSKZQ";
 
   private static final int TAILLE_PAGE = 100;
@@ -55,6 +57,7 @@ public class SiteAllmol extends SourceSiteSalle {
           "976", ZoneId.of("Indian/Mayotte"));
 
   /** Une page de résultats : nombre total de produits et concerts lus. */
+  /* package-private : testé directement. */
   record PageProduits(int total, int lus, List<ConcertBrut> concerts) {}
 
   /**
@@ -111,7 +114,7 @@ public class SiteAllmol extends SourceSiteSalle {
   }
 
   private static ConcertBrut depuisProduit(final JsonNode produit) {
-    if ("1".equals(texte(produit, "d:event_annuler")) || "1".equals(texte(produit, "d:report"))) {
+    if (annuleOuReporte(produit)) {
       return null;
     }
     final String dept = texte(produit, "d:area_zip");
@@ -139,6 +142,10 @@ public class SiteAllmol extends SourceSiteSalle {
     }
   }
 
+  private static boolean annuleOuReporte(final JsonNode produit) {
+    return "1".equals(texte(produit, "d:event_annuler")) || "1".equals(texte(produit, "d:report"));
+  }
+
   private static String texte(final JsonNode noeud, final String champ) {
     final JsonNode valeur = noeud.path(champ);
     if (valeur.isMissingNode() || valeur.isNull() || valeur.asString().isBlank()) {
@@ -164,7 +171,8 @@ public class SiteAllmol extends SourceSiteSalle {
     return titre.strip();
   }
 
-  // « ZION PARK - Le Gosier », « VÉLODROME GOURDELIANE (BAIE-MAHAULT) » : la commune suit le nom.
+  // « ZION PARK - Le Gosier », « VÉLODROME GOURDELIANE (BAIE-MAHAULT) » :
+  // la commune suit le nom.
   private static LieuSite lieuSite(final String lieuBrut, final String dept) {
     final String lieu = decoder(lieuBrut);
     final Matcher tiret = VILLE_APRES_TIRET.matcher(lieu);

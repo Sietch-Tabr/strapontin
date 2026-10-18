@@ -17,18 +17,20 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 /**
- * Programmation du Triton (Les Lilas) : une fiche par concert dans la page agenda, la date étant
- * celle de l'adresse de la fiche.
+ * Programmation du Triton (Les Lilas) : une fiche par concert dans la
+ * page agenda, la date étant celle de l'adresse de la fiche.
  * @since 3.0.6
  * @author Kwaite
  */
 public class SiteLeTriton extends SourceSiteSalle {
 
+  /* package-private : utilisée par les tests. */
   static final String ADRESSE_AGENDA = "https://letriton.com/agenda";
+  /* package-private : utilisée par les tests. */
   static final LieuSite LIEU = new LieuSite("Le Triton", "Les Lilas", "93", null);
 
   private static final Pattern DATE_DANS_ADRESSE = Pattern.compile("(\\d{4}-\\d{2}-\\d{2})$");
-  private static final Pattern HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");
+  private static final Pattern MOTIF_HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");
 
   /**
    * @param client lecteur de pages du site
@@ -62,31 +64,41 @@ public class SiteLeTriton extends SourceSiteSalle {
       if (!date.find()) {
         continue;
       }
-      try {
-        concerts.add(
-            concert(
-                LIEU,
-                "triton",
-                titre.ownText().strip(),
-                LocalDate.parse(date.group(1)),
-                heure(fiche.selectFirst(".crow__when")),
-                adresse));
-      } catch (DateTimeParseException _) {
+      final LocalDate jour = dateOuNull(date.group(1));
+      if (jour == null) {
         // Adresse dont la fin ressemble à une date invalide : fiche ignorée.
+        continue;
       }
+      concerts.add(
+          concert(
+              LIEU,
+              "triton",
+              titre.ownText().strip(),
+              jour,
+              heure(fiche.selectFirst(".crow__when")),
+              adresse));
     }
     return concerts;
+  }
+
+  private static LocalDate dateOuNull(final String texte) {
+    try {
+      return LocalDate.parse(texte);
+    } catch (DateTimeParseException _) {
+      return null;
+    }
   }
 
   private static LocalTime heure(final Element quand) {
     if (quand == null) {
       return null;
     }
-    final Matcher m = HEURE.matcher(quand.text());
-    if (!m.find()) {
+    final Matcher trouve = MOTIF_HEURE.matcher(quand.text());
+    if (!trouve.find()) {
       return null;
     }
     return LocalTime.of(
-        Integer.parseInt(m.group(1)), m.group(2) == null ? 0 : Integer.parseInt(m.group(2)));
+        Integer.parseInt(trouve.group(1)),
+        trouve.group(2) == null ? 0 : Integer.parseInt(trouve.group(2)));
   }
 }

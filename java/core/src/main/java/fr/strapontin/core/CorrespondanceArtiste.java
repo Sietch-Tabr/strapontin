@@ -100,7 +100,8 @@ public final class CorrespondanceArtiste {
     if (nomA.equals(nomB)) {
       return true;
     }
-    // Un hommage n'est jamais l'artiste qu'il imite, quelle que soit la proximité des noms.
+    // Un hommage n'est jamais l'artiste qu'il imite, quelle que soit la
+    // proximité des noms.
     if (Hommage.estHommage(nomA) != Hommage.estHommage(nomB)) {
       return false;
     }

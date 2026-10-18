@@ -18,19 +18,21 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 /**
- * Programmation de l'EMB (Sannois) : une carte par événement dans la page agenda. Seuls les
- * événements d'un jour, de type « Concert », sont retenus (ateliers, stages et spectacles
- * jeune public écartés).
+ * Programmation de l'EMB (Sannois) : une carte par événement dans la page
+ * agenda. Seuls les événements d'un jour, de type « Concert », sont
+ * retenus (ateliers, stages et spectacles jeune public écartés).
  * @since 3.0.6
  * @author Kwaite
  */
 public class SiteEmbSannois extends SourceSiteSalle {
 
+  /* package-private : utilisée par les tests. */
   static final String ADRESSE_AGENDA = "https://embsannois.fr/agenda/";
+  /* package-private : utilisée par les tests. */
   static final LieuSite LIEU = new LieuSite("EMB Sannois", "Sannois", "95", "95110");
 
   private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd.MM.uuuu");
-  private static final Pattern HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");
+  private static final Pattern MOTIF_HEURE = Pattern.compile("(\\d{1,2})h(\\d{2})?");
   private static final Pattern PREMIERE_PARTIE =
       Pattern.compile("\\s*\\+\\s*1[èe]re\\s+partie.*$", Pattern.CASE_INSENSITIVE);
   private static final Pattern PREFIXE_SOIREE =
@@ -104,11 +106,12 @@ public class SiteEmbSannois extends SourceSiteSalle {
     if (horaire == null) {
       return null;
     }
-    final Matcher m = HEURE.matcher(horaire.text());
-    if (!m.find()) {
+    final Matcher trouve = MOTIF_HEURE.matcher(horaire.text());
+    if (!trouve.find()) {
       return null;
     }
     return LocalTime.of(
-        Integer.parseInt(m.group(1)), m.group(2) == null ? 0 : Integer.parseInt(m.group(2)));
+        Integer.parseInt(trouve.group(1)),
+        trouve.group(2) == null ? 0 : Integer.parseInt(trouve.group(2)));
   }
 }

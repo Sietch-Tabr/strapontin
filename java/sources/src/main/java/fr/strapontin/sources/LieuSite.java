@@ -7,11 +7,8 @@ package fr.strapontin.sources;
 import java.util.Objects;
 
 /**
- * Salle dont le site publie sa propre programmation.
- * @param nom nom de la salle
- * @param ville commune
- * @param dept code du département
- * @param codePostal code postal à cinq chiffres, null si inconnu
+ * Salle dont le site publie sa programmation : nom, commune, département
+ * et code postal à cinq chiffres (null si inconnu).
  * @since 3.0.6
  * @author Kwaite
  */

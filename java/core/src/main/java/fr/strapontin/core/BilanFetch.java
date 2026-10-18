@@ -8,11 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Bilan agrégé d'appels et d'échecs depuis le dernier prélèvement.
+ * Bilan d'appels et d'échecs, avec leurs causes, depuis le dernier prélèvement.
  * @param appels appels tentés
  * @param erreursHttp appels en échec
  * @param reponsesVides appels réussis sans résultat
- * @param causes nombre d'échecs par cause lisible, vide si elles ne sont pas attribuées
  * @since 2.7.0
  * @author Kwaite
  */
@@ -141,8 +140,8 @@ public record BilanFetch(
     return Optional.of(new EntreeLog(niveau, message, meta));
   }
 
-  // Causes triées de la plus fréquente à la plus rare : « connexion refusée × 9, délai dépassé × 3
-  // ».
+  // Causes triées de la plus fréquente à la plus rare :
+  // « connexion refusée × 9, délai dépassé × 3 ».
   private String decrireCauses() {
     if (causes.isEmpty()) {
       return "";

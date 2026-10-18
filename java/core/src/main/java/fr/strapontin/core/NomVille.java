@@ -9,8 +9,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Forme d'affichage d'un nom de commune publié par une source : sans pays ni « Cedex », casse
- * homogène (« Tremblay En France » et « Tremblay en France » s'écrivent pareil).
+ * Forme d'affichage d'un nom de commune publié par une source : sans
+ * pays ni « Cedex », casse homogène (« Tremblay En France » et
+ * « Tremblay en France » s'écrivent pareil).
  * @since 3.0.6
  * @author Kwaite
  */

@@ -24,8 +24,8 @@ public final class QualificatifSalle {
   private static final Pattern ABREVIATION_THEATRE =
       Pattern.compile("^th\\.?\\s+", Pattern.CASE_INSENSITIVE);
 
-  // « Divers lieux » regroupe plusieurs sites d'un quartier : ce n'est la salle interne d'aucun
-  // complexe.
+  // « Divers lieux » regroupe plusieurs sites d'un quartier : ce n'est la
+  // salle interne d'aucun complexe.
   private static final Pattern PSEUDO_LIEU =
       Pattern.compile("^(?:(?:divers|plusieurs|differents|multiples|autres) )?lieux(?: divers)?$");
 

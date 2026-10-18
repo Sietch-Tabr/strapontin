@@ -25,8 +25,9 @@ public final class EchecPush {
   public static final int SEUIL_ECHECS_CONSECUTIFS = 5;
 
   /**
-   * Incrémente le compteur d'un abonnement {@code :id}, date l'échec et en garde le {@code
-   * :statut} HTTP (null sans réponse), puis renvoie le compteur.
+   * Incrémente le compteur d'un abonnement {@code :id}, date l'échec et
+   * en garde le {@code :statut} HTTP (null sans réponse), puis renvoie
+   * le compteur.
    */
   public static final String SQL_INCREMENTER_ECHECS =
       "UPDATE push_abonnements SET echecs_consecutifs = echecs_consecutifs + 1,"

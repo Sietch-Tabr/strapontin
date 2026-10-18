@@ -32,7 +32,7 @@ public final class ClientNominatim {
   private static final String USER_AGENT =
       "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
 
-  /** Écart minimal entre deux appels, à respecter par tous les processus de la même adresse. */
+  /** Écart minimal entre deux appels, à respecter par tous les processus. */
   public static final long DELAI_MIN_ENTRE_APPELS_MS = 1000;
 
   // Environ 2 km de côté à nos latitudes : une position publiée peut s'écarter

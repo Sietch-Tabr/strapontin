@@ -71,9 +71,10 @@ public final class NomsDeLieu {
             fusionnerArticlesElides(nomNormA), fusionnerArticlesElides(nomNormB), contexteLieu);
   }
 
-  // « Théâtre des Cordeliers » / « Les Cordeliers Romans sur Isère » : le mot distinctif du plus
-  // court figure dans l'autre, qui n'ajoute que la ville ou des mots sans portée. Un nom qui n'a
-  // d'autre mot distinctif que sa ville ne désigne aucun lieu précis.
+  // « Théâtre des Cordeliers » / « Les Cordeliers Romans sur Isère » :
+  // le mot distinctif du plus court figure dans l'autre, qui n'ajoute que
+  // la ville ou des mots sans portée. Un nom qui n'a d'autre mot
+  // distinctif que sa ville ne désigne aucun lieu précis.
   private static boolean memeCoeurDeNom(
       final String nomNormA, final String nomNormB, final String contexteLieu) {
     final Set<String> contexte =

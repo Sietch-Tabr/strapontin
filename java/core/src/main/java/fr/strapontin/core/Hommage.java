@@ -8,8 +8,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Reconnaît l'intitulé d'un concert d'hommage (« tribute ») : un groupe qui reprend le répertoire
- * d'un artiste n'est pas cet artiste, et ne doit ni lui être rattaché ni notifier ses abonnés.
+ * Reconnaît l'intitulé d'un concert d'hommage (« tribute ») : un groupe
+ * qui reprend le répertoire d'un artiste n'est pas cet artiste, et ne
+ * doit ni lui être rattaché ni notifier ses abonnés.
  * @since 3.0.6
  * @author Kwaite
  */

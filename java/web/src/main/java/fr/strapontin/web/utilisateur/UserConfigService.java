@@ -244,16 +244,27 @@ public class UserConfigService {
       final boolean jamais,
       final boolean contenuEmail,
       final boolean contenuPush) {
-    if (jamais && (contenuEmail || contenuPush || requete.notifNouvelleVersion())) {
+    final boolean nouvelleVersion = requete.notifNouvelleVersion();
+    verifierFrequenceEtContenu(jamais, contenuEmail || contenuPush, nouvelleVersion);
+    verifierCanauxDisponibles(userId, contenuEmail, contenuPush || nouvelleVersion);
+  }
+
+  private static void verifierFrequenceEtContenu(
+      final boolean jamais, final boolean unContenu, final boolean nouvelleVersion) {
+    if (jamais && (unContenu || nouvelleVersion)) {
       throw new ErreurMetier(
           "Avec « Jamais », aucune notification n'est envoyée : décochez les types de contenu ou"
               + " choisissez une fréquence.");
     }
-    if (!jamais && !contenuEmail && !contenuPush) {
+    if (!jamais && !unContenu) {
       throw new ErreurMetier(
           "Activez au moins un type de contenu pour recevoir des notifications.");
     }
-    if ((contenuPush || requete.notifNouvelleVersion()) && nombreAppareilsPush(userId) == 0) {
+  }
+
+  private void verifierCanauxDisponibles(
+      final String userId, final boolean contenuEmail, final boolean usagePush) {
+    if (usagePush && nombreAppareilsPush(userId) == 0) {
       throw new ErreurMetier(
           "Aucun appareil n'est abonné aux notifications push : activez-les d'abord sur cet"
               + " appareil.");

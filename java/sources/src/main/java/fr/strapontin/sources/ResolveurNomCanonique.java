@@ -47,8 +47,9 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   // (id=1590752, nb_fan=1 547 139), présent en 2e position. Élargir la fenêtre
   // de candidats permet de les comparer entre eux plutôt que de prendre le
   // premier venu.
-  // Large : un artiste connu peut être loin derrière des homonymes récents dans le classement de
-  // pertinence de Deezer (« FLO » à la huitième place pour « Flo »).
+  // Large : un artiste connu peut être loin derrière des homonymes récents
+  // dans le classement de pertinence de Deezer (« FLO » à la huitième place
+  // pour « Flo »).
   private static final int LIMITE_CANDIDATS_DEEZER = 25;
   private static final String TYPE_ARTISTE = "artiste";
 

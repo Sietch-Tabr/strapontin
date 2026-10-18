@@ -23,8 +23,8 @@ public record LieuBrut(
     String sallePubliee) {
 
   /**
-   * Valide le nom de salle ; position inconnue et nom publié = salle à défaut, ville mise sous sa
-   * forme d'affichage ({@link NomVille}).
+   * Valide le nom de salle ; position inconnue et nom publié = salle à
+   * défaut, ville mise sous sa forme d'affichage ({@link NomVille}).
    */
   public LieuBrut {
     Objects.requireNonNull(salle, "salle");

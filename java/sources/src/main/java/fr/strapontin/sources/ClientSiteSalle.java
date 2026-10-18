@@ -15,9 +15,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 /**
- * Lecture polie des pages publiques d'un site de salle : {@code User-Agent} de robot honnête,
- * {@code robots.txt} respecté, délai entre deux requêtes. Un site qui refuse l'accès (429, 403)
- * n'est pas relancé dans le même passage.
+ * Lecture polie des pages publiques d'un site de salle : {@code
+ * User-Agent} de robot honnête, {@code robots.txt} respecté, délai entre
+ * deux requêtes. Un site qui refuse l'accès (429, 403) n'est pas relancé
+ * dans le même passage.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -26,6 +27,7 @@ public class ClientSiteSalle {
   private static final Logger LOG = LoggerFactory.getLogger(ClientSiteSalle.class);
 
   /** {@code User-Agent} déclaré à chaque site, avec une adresse où nous joindre. */
+  /* package-private : vérifié par les tests du même package. */
   static final String USER_AGENT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   private static final String AGENT_ROBOTS = "strapontinbot";
@@ -54,6 +56,7 @@ public class ClientSiteSalle {
    * @param restClient client HTTP (injection de test)
    * @param delaiEntreRequetes pause avant chaque requête après la première
    */
+  /* package-private : injection de test (même package). */
   ClientSiteSalle(final RestClient restClient, final Duration delaiEntreRequetes) {
     this.restClient = Objects.requireNonNull(restClient, "restClient");
     this.delaiEntreRequetes = Objects.requireNonNull(delaiEntreRequetes, "delaiEntreRequetes");

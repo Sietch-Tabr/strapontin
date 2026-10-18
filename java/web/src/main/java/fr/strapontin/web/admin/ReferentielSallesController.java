@@ -14,12 +14,12 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -97,22 +97,14 @@ public class ReferentielSallesController {
   /**
    * Liste paginée du référentiel salles — mêmes filtres que {@link
    * ReferentielSallesService.FiltresRechercheSalles}.
-   * @param ids identifiants à isoler (séparés par des virgules ou répétés), optionnel
-   * @param sansSource ne garde que les salles qu'aucune source n'alimente
+   * @param criteres paramètres de requête (voir {@link CriteresListeSalles})
    * @return 200 avec la page de résultats, 400 si un identifiant n'est pas un UUID
    */
   @GetMapping("/salles")
   public ResponseEntity<ReponseReferentielSalles> lister(
-      @RequestParam(defaultValue = "0") final int page,
-      @RequestParam(required = false) final String nom,
-      @RequestParam(required = false) final String ville,
-      @RequestParam(required = false) final String dept,
-      @RequestParam(required = false) final String statut,
-      @RequestParam(defaultValue = "false") final boolean wikidataManquant,
-      @RequestParam(required = false) final List<String> ids,
-      @RequestParam(defaultValue = "false") final boolean sansSource) {
+      @ModelAttribute final CriteresListeSalles criteres) {
     final List<UUID> identifiants = new ArrayList<>();
-    for (final String brut : ids == null ? List.<String>of() : ids) {
+    for (final String brut : criteres.ids()) {
       final UUID id = parseUuid(brut);
       if (id == null) {
         return ResponseEntity.badRequest().build();
@@ -122,7 +114,14 @@ public class ReferentielSallesController {
     return ResponseEntity.ok(
         service.lister(
             new ReferentielSallesService.FiltresRechercheSalles(
-                page, nom, ville, dept, statut, wikidataManquant, identifiants, sansSource)));
+                criteres.page(),
+                criteres.nom(),
+                criteres.ville(),
+                criteres.dept(),
+                criteres.statut(),
+                criteres.wikidataManquant(),
+                identifiants,
+                criteres.sansSource())));
   }
 
   /**

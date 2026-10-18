@@ -13,14 +13,16 @@ import javax.net.ssl.SSLException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Cause lisible d'un appel HTTP en échec (réseau, refus du service, limitation de débit), pour
- * attribuer les échecs d'une source plutôt que de les compter en bloc.
+ * Cause lisible d'un appel HTTP en échec (réseau, refus du service,
+ * limitation de débit), pour attribuer les échecs d'une source plutôt
+ * que de les compter en bloc.
  * @since 3.0.6
  * @author Kwaite
  */
 final class CauseEchecHttp {
 
   /** Cause par défaut d'une erreur non reconnue. */
+  /* package-private : valeur de repli des sources du même package. */
   static final String AUTRE = "autre erreur";
 
   private static final int STATUT_LIMITATION = 429;
@@ -35,8 +37,8 @@ final class CauseEchecHttp {
    */
   /* package-private : appelé par les sources HTTP du même package. */
   static String depuis(final Throwable echec) {
-    for (Throwable t = echec; t != null; t = t.getCause()) {
-      final String cause = causeDe(t);
+    for (Throwable maillon = echec; maillon != null; maillon = maillon.getCause()) {
+      final String cause = causeDe(maillon);
       if (cause != null) {
         return cause;
       }
@@ -44,23 +46,24 @@ final class CauseEchecHttp {
     return AUTRE;
   }
 
-  private static String causeDe(final Throwable t) {
-    if (t instanceof RestClientResponseException reponse) {
+  private static String causeDe(final Throwable maillon) {
+    if (maillon instanceof RestClientResponseException reponse) {
       return causeStatut(reponse.getStatusCode().value());
     }
-    if (t instanceof ConnectException) {
+    if (maillon instanceof ConnectException) {
       return "connexion refusée";
     }
-    if (t instanceof SocketTimeoutException || t instanceof HttpTimeoutException) {
+    if (maillon instanceof SocketTimeoutException || maillon instanceof HttpTimeoutException) {
       return "délai dépassé";
     }
-    if (t instanceof UnknownHostException) {
+    if (maillon instanceof UnknownHostException) {
       return "résolution DNS impossible";
     }
-    if (t instanceof SSLException) {
+    if (maillon instanceof SSLException) {
       return "échange TLS interrompu";
     }
-    final String message = t.getMessage() == null ? "" : t.getMessage().toUpperCase(Locale.ROOT);
+    final String message =
+        maillon.getMessage() == null ? "" : maillon.getMessage().toUpperCase(Locale.ROOT);
     return message.contains("EOF") ? "connexion fermée par le serveur" : null;
   }
 

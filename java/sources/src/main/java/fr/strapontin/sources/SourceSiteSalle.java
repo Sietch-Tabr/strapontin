@@ -15,15 +15,16 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Source de concerts lue sur le site d'une salle qui vend hors Ticketmaster et Eventim : une
- * classe par site, une lecture par jour, jamais à la demande d'un utilisateur. Ajouter un site =
- * une sous-classe et un bean Spring.
+ * Source de concerts lue sur le site d'une salle qui vend hors
+ * Ticketmaster et Eventim : une classe par site, une lecture par jour,
+ * jamais à la demande d'un utilisateur. Ajouter un site = une
+ * sous-classe et un bean Spring.
  * @since 3.0.6
  * @author Kwaite
  */
 public abstract class SourceSiteSalle implements SourceConcerts, SourceAvecBilanFetch {
 
-  /** Valeur de {@code observations.source} et préfixe des identifiants de salle de ces sites. */
+  /** Valeur de {@code observations.source} et préfixe des identifiants de salle. */
   public static final String SOURCE = "site_salle";
 
   private static final DateTimeFormatter HEURE = DateTimeFormatter.ofPattern("HH:mm");
@@ -39,7 +40,7 @@ public abstract class SourceSiteSalle implements SourceConcerts, SourceAvecBilan
   }
 
   /**
-   * @return identifiant court du site, sans espace ni deux-points (ex. {@code "triton"})
+   * @return identifiant court, sans espace ni deux-points (ex. {@code "triton"})
    */
   public abstract String identifiantSite();
 
@@ -67,8 +68,8 @@ public abstract class SourceSiteSalle implements SourceConcerts, SourceAvecBilan
   }
 
   /**
-   * Lit le site : tous les concerts qu'il annonce, ou une exception si la lecture a échoué (un
-   * concert attendu et non reçu n'est alors pas absent).
+   * Lit le site : tous les concerts qu'il annonce, ou une exception si la
+   * lecture a échoué (un concert attendu et non reçu n'est alors pas absent).
    * @return les concerts annoncés par le site
    */
   public final List<ConcertBrut> lireProgrammation() {
@@ -90,12 +91,8 @@ public abstract class SourceSiteSalle implements SourceConcerts, SourceAvecBilan
   }
 
   /**
-   * @param lieu salle de l'événement
-   * @param identifiantSalle identifiant de la salle chez ce site (sans préfixe)
-   * @param artiste nom d'artiste ou d'affiche
-   * @param date jour du concert
-   * @param heure heure de début, null si le site n'en donne pas
-   * @param url page de l'événement ou de sa billetterie
+   * Concert d'un événement du site : salle, identifiant de salle chez ce site
+   * (sans préfixe), artiste ou affiche, jour, heure (null si inconnue), page.
    * @return le concert brut, rattaché à la salle du site
    */
   protected static ConcertBrut concert(
@@ -116,14 +113,8 @@ public abstract class SourceSiteSalle implements SourceConcerts, SourceAvecBilan
   }
 
   /**
-   * Comme {@link #concert(LieuSite, String, String, LocalDate, LocalTime, String)}, avec la
-   * position que le site publie pour la salle.
-   * @param lieu salle de l'événement
-   * @param identifiantSalle identifiant de la salle chez ce site (sans préfixe)
-   * @param artiste nom d'artiste ou d'affiche
-   * @param date jour du concert
-   * @param heure heure de début, null si le site n'en donne pas
-   * @param url page de l'événement ou de sa billetterie
+   * Comme le concert sans position, avec celle que le site publie pour la
+   * salle.
    * @param position position publiée de la salle
    * @return le concert brut, rattaché à la salle du site
    */

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -26,48 +27,41 @@ final class LibelleAppareil {
       return null;
     }
     final String ua = userAgent.toLowerCase(Locale.ROOT);
-    final String navigateur = navigateur(ua);
-    final String systeme = systeme(ua);
+    final String navigateur = reconnaitre(NAVIGATEURS, ua);
+    final String systeme = reconnaitre(SYSTEMES, ua);
     if (navigateur == null) {
       return systeme;
     }
     return systeme == null ? navigateur : navigateur + " sur " + systeme;
   }
 
-  // Ordre significatif : Edge, Opera et Chrome se disent aussi « Safari » ; Chrome se dit « Chrome
-  // ».
-  private static String navigateur(final String ua) {
-    if (ua.contains("edg/") || ua.contains("edga/") || ua.contains("edgios/")) {
-      return "Edge";
-    }
-    if (ua.contains("opr/") || ua.contains("opera")) {
-      return "Opera";
-    }
-    if (ua.contains("firefox/") || ua.contains("fxios/")) {
-      return "Firefox";
-    }
-    if (ua.contains("chrome/") || ua.contains("crios/")) {
-      return "Chrome";
-    }
-    return ua.contains("safari/") ? "Safari" : null;
-  }
+  /** Libellé affiché et marqueurs, en minuscules, qui le font reconnaître. */
+  private record Reconnaissance(String libelle, List<String> marqueurs) {}
 
-  private static String systeme(final String ua) {
-    if (ua.contains("iphone") || ua.contains("ipad")) {
-      return "iOS";
-    }
-    if (ua.contains("android")) {
-      return "Android";
-    }
-    if (ua.contains("windows")) {
-      return "Windows";
-    }
-    if (ua.contains("cros")) {
-      return "ChromeOS";
-    }
-    if (ua.contains("macintosh") || ua.contains("mac os x")) {
-      return "macOS";
-    }
-    return ua.contains("linux") ? "Linux" : null;
+  // Ordre significatif : Edge, Opera et Chrome se disent aussi « Safari » ; Chrome se dit
+  // « Chrome ».
+  private static final List<Reconnaissance> NAVIGATEURS =
+      List.of(
+          new Reconnaissance("Edge", List.of("edg/", "edga/", "edgios/")),
+          new Reconnaissance("Opera", List.of("opr/", "opera")),
+          new Reconnaissance("Firefox", List.of("firefox/", "fxios/")),
+          new Reconnaissance("Chrome", List.of("chrome/", "crios/")),
+          new Reconnaissance("Safari", List.of("safari/")));
+
+  private static final List<Reconnaissance> SYSTEMES =
+      List.of(
+          new Reconnaissance("iOS", List.of("iphone", "ipad")),
+          new Reconnaissance("Android", List.of("android")),
+          new Reconnaissance("Windows", List.of("windows")),
+          new Reconnaissance("ChromeOS", List.of("cros")),
+          new Reconnaissance("macOS", List.of("macintosh", "mac os x")),
+          new Reconnaissance("Linux", List.of("linux")));
+
+  private static String reconnaitre(final List<Reconnaissance> candidats, final String ua) {
+    return candidats.stream()
+        .filter(c -> c.marqueurs().stream().anyMatch(ua::contains))
+        .map(Reconnaissance::libelle)
+        .findFirst()
+        .orElse(null);
   }
 }

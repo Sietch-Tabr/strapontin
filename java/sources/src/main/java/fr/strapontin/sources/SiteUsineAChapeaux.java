@@ -19,15 +19,18 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 /**
- * Programmation de L'Usine à Chapeaux (Rambouillet) : la page « concerts » liste, dans l'ordre du
- * document, une date, un titre puis des étiquettes. Le site ne donne pas l'heure ; les ateliers,
- * tables rondes et formations (étiquettes dédiées) sont écartés.
+ * Programmation de L'Usine à Chapeaux (Rambouillet) : la page
+ * « concerts » liste, dans l'ordre du document, une date, un titre puis
+ * des étiquettes. Le site ne donne pas l'heure ; les ateliers, tables
+ * rondes et formations (étiquettes dédiées) sont écartés.
  * @since 3.0.6
  * @author Kwaite
  */
 public class SiteUsineAChapeaux extends SourceSiteSalle {
 
+  /* package-private : utilisée par les tests. */
   static final String ADRESSE_CONCERTS = "https://www.usineachapeaux.fr/concerts/";
+  /* package-private : utilisée par les tests. */
   static final LieuSite LIEU = new LieuSite("L'Usine à Chapeaux", "Rambouillet", "78", "78120");
 
   private static final Pattern DATE_FRANCAISE =
@@ -49,7 +52,7 @@ public class SiteUsineAChapeaux extends SourceSiteSalle {
           Map.entry("novembre", 11),
           Map.entry("décembre", 12));
 
-  /** Événement en cours de lecture : date vue, puis titre et étiquettes qui la suivent. */
+  /** Événement en cours de lecture : date vue, puis titre et étiquettes. */
   private static final class Brouillon {
     private final LocalDate date;
     private String titre;
@@ -84,20 +87,7 @@ public class SiteUsineAChapeaux extends SourceSiteSalle {
     final List<Brouillon> evenements = new ArrayList<>();
     Brouillon courant = null;
     for (final Element element : page.getAllElements()) {
-      if (element.is(".elementor-widget-dce-rawphp span")) {
-        final LocalDate date = dateFrancaise(element.text());
-        if (date != null) {
-          courant = new Brouillon(date);
-          evenements.add(courant);
-        }
-      } else if (courant != null && element.is("h4.mec-event-title a")) {
-        if (courant.titre == null) {
-          courant.titre = element.text().strip();
-          courant.adresse = element.attr("href");
-        }
-      } else if (courant != null && element.is(".elementor-post-info__terms-list-item")) {
-        courant.etiquettes.add(element.text().strip().toLowerCase(Locale.ROOT));
-      }
+      courant = lireElement(element, courant, evenements);
     }
     return evenements.stream()
         .filter(e -> e.titre != null && !e.titre.isEmpty() && estUnConcert(e))
@@ -105,18 +95,48 @@ public class SiteUsineAChapeaux extends SourceSiteSalle {
         .toList();
   }
 
+  // Les éléments de la page se suivent : une date ouvre un événement, dont
+  // le titre et les étiquettes viennent ensuite. Renvoie l'événement en
+  // cours après cet élément.
+  private static Brouillon lireElement(
+      final Element element, final Brouillon courant, final List<Brouillon> evenements) {
+    if (element.is(".elementor-widget-dce-rawphp span")) {
+      final LocalDate date = dateFrancaise(element.text());
+      if (date == null) {
+        return courant;
+      }
+      final Brouillon ouvert = new Brouillon(date);
+      evenements.add(ouvert);
+      return ouvert;
+    }
+    if (courant == null) {
+      return null;
+    }
+    if (element.is("h4.mec-event-title a")) {
+      if (courant.titre == null) {
+        courant.titre = element.text().strip();
+        courant.adresse = element.attr("href");
+      }
+    } else if (element.is(".elementor-post-info__terms-list-item")) {
+      courant.etiquettes.add(element.text().strip().toLowerCase(Locale.ROOT));
+    }
+    return courant;
+  }
+
   private static boolean estUnConcert(final Brouillon evenement) {
     return evenement.etiquettes.stream().noneMatch(ETIQUETTES_NON_CONCERT::contains);
   }
 
   private static LocalDate dateFrancaise(final String texte) {
-    final Matcher m = DATE_FRANCAISE.matcher(texte.strip().toLowerCase(Locale.ROOT));
-    if (!m.matches() || !MOIS.containsKey(m.group(2))) {
+    final Matcher date = DATE_FRANCAISE.matcher(texte.strip().toLowerCase(Locale.ROOT));
+    if (!date.matches() || !MOIS.containsKey(date.group(2))) {
       return null;
     }
     try {
       return LocalDate.of(
-          Integer.parseInt(m.group(3)), MOIS.get(m.group(2)), Integer.parseInt(m.group(1)));
+          Integer.parseInt(date.group(3)),
+          MOIS.get(date.group(2)),
+          Integer.parseInt(date.group(1)));
     } catch (DateTimeException _) {
       return null;
     }

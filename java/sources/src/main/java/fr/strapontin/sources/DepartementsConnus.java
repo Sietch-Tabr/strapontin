@@ -7,7 +7,8 @@ package fr.strapontin.sources;
 import java.util.Set;
 
 /**
- * Départements que les sources interrogent : métropole (la Corse sous le code 20) et outre-mer.
+ * Départements que les sources interrogent : métropole (la Corse sous
+ * le code 20) et outre-mer.
  * @since 3.0.6
  * @author Kwaite
  */
