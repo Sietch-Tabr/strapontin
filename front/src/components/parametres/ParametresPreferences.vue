@@ -32,13 +32,12 @@
           </button>
         </form>
         <p
-          v-if="departementsSansConcert.length"
+          v-for="message in messagesCouverture(departementsSansConcert)"
+          :key="message.cle"
           class="alerte alerte-info"
           role="status"
         >
-          Aucun concert n'est proposé pour l'instant par nos sources
-          (Ticketmaster, Eventim) dans :
-          {{ departementsSansConcert.join(", ") }}.
+          {{ message.texte }}
         </p>
       </div>
 
@@ -101,6 +100,7 @@ const { enregistrerTheme, lireThemeCookie } = useTheme();
 
 const chargement = ref(true);
 const departements = ref("");
+import { messagesCouverture } from "../../utils/couverture.js";
 const { departementsSansConcert, chargerDepartementsSansConcert } =
   useDepartementsSansConcert();
 const filtreDisponibles = ref(false);

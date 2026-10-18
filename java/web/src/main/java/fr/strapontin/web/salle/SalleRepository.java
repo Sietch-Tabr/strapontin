@@ -51,7 +51,11 @@ class SalleRepository {
   List<SalleUtilisateur> listerPourUtilisateur(final String userId) {
     return jdbc.query(
         """
-        SELECT us.salle_id AS id, s.nom, us.created_at
+        SELECT us.salle_id AS id, s.nom, us.created_at,
+               EXISTS (SELECT 1 FROM salle_sources ss
+                       WHERE ss.salle_id = s.id
+                         AND ss.source::text IN ('ticketmaster', 'eventim', 'site_salle'))
+                 AS couverte
         FROM user_salles us
         JOIN salles s ON s.id = us.salle_id
         WHERE us.user_id = :userId
@@ -62,7 +66,8 @@ class SalleRepository {
             new SalleUtilisateur(
                 rs.getObject("id", UUID.class),
                 rs.getString(CLE_NOM),
-                rs.getTimestamp("created_at").toInstant()));
+                rs.getTimestamp("created_at").toInstant(),
+                rs.getBoolean("couverte")));
   }
 
   /**

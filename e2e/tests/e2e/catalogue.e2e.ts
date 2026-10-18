@@ -210,6 +210,21 @@ test.describe("Scénario: catalogue — salles", () => {
   );
 });
 
+test.describe("Scénario: catalogue — couverture des salles suivies", () => {
+  // Une salle qu'aucune source ne connaît est signalée comme non couverte, pour que l'absence
+  // de concert ne passe pas pour une absence de programmation.
+  test("salles_api_chaqueSalleSuivieExposeLeDrapeauCouverte", async ({
+    page,
+  }) => {
+    const rep = await page.request.get("/api/salles");
+    expect(rep.ok()).toBe(true);
+    const salles = (await rep.json()).salles as { couverte: unknown }[];
+    for (const salle of salles) {
+      expect(typeof salle.couverte).toBe("boolean");
+    }
+  });
+});
+
 test.describe("Scénario: catalogue — recherche salle caractères spéciaux", () => {
   test("api_recherche_salle_apostrophe_retourne_200_sans_erreur", async ({
     request,

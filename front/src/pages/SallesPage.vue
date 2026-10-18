@@ -128,9 +128,14 @@
             :key="salle.id"
             class="carte-item"
           >
-            <span class="carte-nom">
-              {{ salle.nom }}
-            </span>
+            <div>
+              <span class="carte-nom">
+                {{ salle.nom }}
+              </span>
+              <p v-if="salle.couverte === false" class="carte-sous-titre">
+                {{ MESSAGE_SALLE_NON_COUVERTE }}
+              </p>
+            </div>
             <button
               type="button"
               class="bouton bouton-danger bouton-petit"
@@ -264,6 +269,7 @@ import {
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import { MESSAGE_SALLE_NON_COUVERTE } from "../utils/couverture.js";
 
 const { afficherToast } = useToasts();
 
