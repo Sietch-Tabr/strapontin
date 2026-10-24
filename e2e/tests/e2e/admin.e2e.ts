@@ -430,9 +430,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
         1,
       );
     }
-    expect(await page.locator(".source-carte").count()).toBeGreaterThanOrEqual(
-      4,
-    );
+    await expect
+      .poll(() => page.locator(".source-carte").count())
+      .toBeGreaterThanOrEqual(4);
     await expect(page.locator(".source-carte-large")).toHaveCount(1);
     await expect(page.locator(".source-carte-large")).toContainText(
       "Ticketmaster",
@@ -458,9 +458,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
       await page.locator('a[href="#sources"]').click();
     }
     await expect(page.locator("section#sources")).toBeVisible();
-    expect(await page.locator(".source-carte").count()).toBeGreaterThanOrEqual(
-      4,
-    );
+    await expect
+      .poll(() => page.locator(".source-carte").count())
+      .toBeGreaterThanOrEqual(4);
     await expect(page.locator("table#table-sources-salles")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Avec lieu Eventim" }),
