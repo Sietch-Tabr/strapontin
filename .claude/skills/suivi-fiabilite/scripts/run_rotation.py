@@ -29,6 +29,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from lot_rotation import COLONNE_CURSEUR
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROTATION_DIR = SCRIPT_DIR / "rotation"
 SNAPSHOTS_DIR = SCRIPT_DIR.parent / "snapshots"
@@ -86,8 +88,8 @@ def compter_lignes_donnees(sortie_psql: str) -> int:
     return max(nb - 1, 0)
 
 
-def dernier_id(sortie_psql: str) -> str | None:
-    """Extrait la valeur de la première colonne (id) de la dernière ligne de données."""
+def dernier_id(sortie_psql: str, colonne: int = 0) -> str | None:
+    """Extrait la valeur de la colonne du curseur (première par défaut) de la dernière ligne de données."""
     lignes = [l for l in sortie_psql.strip().splitlines() if l.strip()]
     lignes_donnees = [
         l
@@ -99,7 +101,7 @@ def dernier_id(sortie_psql: str) -> str | None:
     if len(lignes_donnees) < 2:  # en-tête + au moins 1 ligne
         return None
     derniere = lignes_donnees[-1]
-    return derniere.split("|")[0].strip()
+    return derniere.split("|")[colonne].strip()
 
 
 def executer_rotation(nom: str, curseurs: dict) -> None:
@@ -141,7 +143,7 @@ def executer_rotation(nom: str, curseurs: dict) -> None:
         etat["tour_complet_le"] = date.today().isoformat()
         print(f"(tour complet — snapshot : {fichier})")
     else:
-        nouveau_curseur = dernier_id(sortie)
+        nouveau_curseur = dernier_id(sortie, COLONNE_CURSEUR.get(nom, 0))
         if nouveau_curseur:
             etat["curseur"] = nouveau_curseur
         print(f"(snapshot : {fichier})")
