@@ -55,6 +55,22 @@ class DeezerArtisteSourceTest {
     serveur.verify();
   }
 
+  // Sellig : humoriste, dont l'homonyme musicien de 56 fans avait reçu le deezer_id.
+  @Test
+  void enrichirLot_artisteDeSpectacleNonMusical_neDecouvrePasParNom() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir humoriste =
+        new ArtisteAEnrichir(id, "Sellig", "sellig", "Q16676017", null, true);
+
+    final Map<UUID, EnrichissementArtiste> resultat =
+        new DeezerArtisteSource(builder.build()).enrichirLot(List.of(humoriste));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverteNomAccentue_encodeLeNomUneSeuleFois() {
     final RestClient.Builder builder = RestClient.builder();

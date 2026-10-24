@@ -101,6 +101,28 @@ class ResolveurNomCanoniqueTest {
     serveur.verify();
   }
 
+  // Le Zèbre de Belleville : « Rose » devenait « ROSÉ », la chanteuse de BLACKPINK.
+  @Test
+  void resoudreNomCanonique_artisteHomonymeAuxAccentsPres_gardeLeNomDeLaBilletterie() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/search/artist")))
+        .andRespond(
+            withSuccess(
+                """
+                {"data":[{"name":"ROSÉ","nb_fan":9000000}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final ResultatResolution resultat =
+        resolveurAvecServeur(serveur, restClient).resoudreNomCanonique("artiste", "Rose");
+
+    assertEquals("Rose", resultat.nom());
+    assertEquals(SourceResolution.INCHANGE, resultat.source());
+  }
+
   // « FLO » (27 216 fans) est loin derrière « Flö » (37 fans) dans le classement de pertinence :
   // la fenêtre doit l'atteindre, et le plus suivi des homonymes exacts l'emporte.
   @Test

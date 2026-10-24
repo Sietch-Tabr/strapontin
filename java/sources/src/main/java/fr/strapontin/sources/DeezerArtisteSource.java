@@ -86,6 +86,11 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
 
   @SuppressWarnings("unchecked")
   private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
+    if (artiste.spectacleNonMusical()) {
+      // Un humoriste n'a pas de fiche Deezer : l'homonyme exact serait un musicien
+      // sans rapport, seul le P2722 de Wikidata peut en décider.
+      return Optional.empty();
+    }
     compteurBilan.enregistrerAppel();
     try {
       final Map<String, Object> data =

@@ -121,6 +121,9 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       }
 
       final String resultat = (String) meilleurCandidat.get("name");
+      if (homonymeAuxAccentsPres(resultat, nom)) {
+        return null;
+      }
       if (!resultat.equals(nom)) {
         LOG.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
       }
@@ -130,6 +133,13 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       LOG.warn("Deezer erreur artiste='{}' : {}", nom, e.getMessage());
       return null;
     }
+  }
+
+  // « Rose » n'est pas « ROSÉ » : un nom qui ne diffère que par les accents
+  // désigne peut-être un autre artiste, sans preuve du contraire.
+  private static boolean homonymeAuxAccentsPres(final String candidat, final String nom) {
+    return !candidat.equalsIgnoreCase(nom)
+        && Normalisation.normaliserTexte(candidat).equals(Normalisation.normaliserTexte(nom));
   }
 
   /**
