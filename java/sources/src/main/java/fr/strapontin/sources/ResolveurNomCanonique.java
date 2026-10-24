@@ -10,7 +10,6 @@ import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.DistanceTexte;
 import fr.strapontin.core.Normalisation;
-import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -103,11 +102,11 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   @SuppressWarnings("unchecked")
   private String rechercherDeezerArtiste(final String nom) {
-    final String uri =
-        DEEZER_BASE + "/search/artist?q=" + encode(nom) + "&limit=" + LIMITE_CANDIDATS_DEEZER;
+    final String gabarit = DEEZER_BASE + "/search/artist?q={nom}&limit=" + LIMITE_CANDIDATS_DEEZER;
     compteurBilan.enregistrerAppel();
     try {
-      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data =
+          restClient.get().uri(gabarit, nom).retrieve().body(Map.class);
       if (data == null) {
         return null;
       }
@@ -122,6 +121,9 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       }
 
       final String resultat = (String) meilleurCandidat.get("name");
+      if (homonymeAuxAccentsPres(resultat, nom)) {
+        return null;
+      }
       if (!resultat.equals(nom)) {
         LOG.info("Deezer résolution artiste='{}' → '{}'", nom, resultat);
       }
@@ -131,6 +133,13 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
       LOG.warn("Deezer erreur artiste='{}' : {}", nom, e.getMessage());
       return null;
     }
+  }
+
+  // « Rose » n'est pas « ROSÉ » : un nom qui ne diffère que par les accents
+  // désigne peut-être un autre artiste, sans preuve du contraire.
+  private static boolean homonymeAuxAccentsPres(final String candidat, final String nom) {
+    return !candidat.equalsIgnoreCase(nom)
+        && Normalisation.normaliserTexte(candidat).equals(Normalisation.normaliserTexte(nom));
   }
 
   /**
@@ -210,10 +219,6 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
   @Override
   public BilanFetch preleverBilan() {
     return compteurBilan.preleverBilan();
-  }
-
-  private static String encode(final String texte) {
-    return URLEncoder.encode(texte, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   /**

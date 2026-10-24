@@ -100,6 +100,25 @@ public final class CatalogueSignalements {
             + " calendrier de la salle. Si un seul concert y est annoncé, supprimer la fiche en"
             + " trop depuis les concerts ; sinon marquer comme traité.");
     ajouter(
+        "produit_eventim_double",
+        "Un produit Eventim sur deux fiches",
+        "Le même produit Eventim est porté par deux fiches du même jour dans la même salle, que la"
+            + " fusion automatique n'a pas réunies (heures éloignées, artistes différents, plus de"
+            + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop depuis"
+            + " les concerts, ou marquer comme traité si ce sont deux séances.");
+    ajouter(
+        "salle_sans_ville",
+        "Salle sans commune",
+        "Cette salle a des concerts à venir mais aucune commune : leurs fiches s'affichent sans"
+            + " ville. L'enrichissement nocturne ne l'a pas trouvée : renseigner la commune depuis"
+            + " le référentiel des salles ; le signalement se referme seul.");
+    ajouter(
+        "fiches_figees",
+        "Fiches à venir sans mise à jour",
+        "Des fiches à venir du périmètre des utilisateurs n'ont été revues par aucun fetch depuis"
+            + " deux semaines, sans absence comptée : vérifier que la source les interroge"
+            + " (départements, classements, salles) ; le signalement se referme seul.");
+    ajouter(
         "departement_sans_concert",
         "Département sans concert",
         "Aucun concert à venir dans ce département : aucune de nos billetteries n'y programme ou"

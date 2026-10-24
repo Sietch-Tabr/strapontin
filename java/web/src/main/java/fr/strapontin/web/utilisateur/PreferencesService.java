@@ -10,8 +10,6 @@ import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.artiste.ArtisteService;
 import fr.strapontin.web.salle.SalleService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -360,9 +358,7 @@ public class PreferencesService {
               .forEach(
                   venueId ->
                       envoyerPostWorker(
-                          WORKER_URL
-                              + "/salle?identifiants="
-                              + URLEncoder.encode("tm:" + venueId, StandardCharsets.UTF_8)));
+                          WORKER_URL + "/salle?identifiants={identifiants}", "tm:" + venueId));
         };
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
       TransactionSynchronizationManager.registerSynchronization(
@@ -377,9 +373,9 @@ public class PreferencesService {
     }
   }
 
-  private void envoyerPostWorker(final String url) {
+  private void envoyerPostWorker(final String gabaritUrl, final Object... variables) {
     WorkerTriggerUtils.declencherWorkerAsync(
-        restClient, LOG, url, "Déclenchement worker impossible : " + url);
+        restClient, LOG, gabaritUrl, "Déclenchement worker impossible : " + gabaritUrl, variables);
   }
 
   /** Résultat d'un import de préférences. */

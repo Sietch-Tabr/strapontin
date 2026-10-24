@@ -48,7 +48,7 @@ CORES="2"
 APP_DIR="/opt/strapontin"
 APP_USER="strapontin"
 DB_NAME="strapontin"
-JAVA_VERSION="26"
+JAVA_VERSION="27"
 PG_VERSION="18"
 NAS_MOUNT_PATH="/mnt/synology/backup/Strapontin"
 
@@ -204,7 +204,7 @@ APT_CONF
 "
 
 # ---------------------------------------------------------------
-# 5. Java 25 (Adoptium Temurin)
+# 5. Java (Adoptium Temurin)
 # ---------------------------------------------------------------
 
 echo "[5] Installation Java $JAVA_VERSION (Adoptium Temurin)..."

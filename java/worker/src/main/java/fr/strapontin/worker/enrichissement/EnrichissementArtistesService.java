@@ -163,7 +163,9 @@ public class EnrichissementArtistesService {
   private List<ArtisteAEnrichir> selectionnerCandidats() {
     return jdbc.query(
         """
-        SELECT a.id, a.nom, a.nom_norm, a.deezer_id, a.wikidata_id
+        SELECT a.id, a.nom, a.nom_norm, a.deezer_id, a.wikidata_id,
+               EXISTS (SELECT 1 FROM evenements e WHERE e.artiste_id = a.id
+                       AND e.classification IN ('theatre', 'divers')) AS spectacle_non_musical
         FROM artistes a
         LEFT JOIN concerts c ON c.artiste_id = a.id AND c.date >= CURRENT_DATE
         WHERE (a.wikidata_id IS NULL OR a.alias_wikidata IS NULL)
@@ -178,7 +180,8 @@ public class EnrichissementArtistesService {
                 rs.getString("nom"),
                 rs.getString("nom_norm"),
                 rs.getString("wikidata_id"),
-                rs.getString("deezer_id")));
+                rs.getString("deezer_id"),
+                rs.getBoolean("spectacle_non_musical")));
   }
 
   private static List<ArtisteAEnrichir> appliquerConnus(
@@ -196,7 +199,12 @@ public class EnrichissementArtistesService {
                       ? enrichissementConnu.deezerId()
                       : candidat.deezerId();
               return new ArtisteAEnrichir(
-                  candidat.id(), candidat.nom(), candidat.nomNorm(), wikidataId, deezerId);
+                  candidat.id(),
+                  candidat.nom(),
+                  candidat.nomNorm(),
+                  wikidataId,
+                  deezerId,
+                  candidat.spectacleNonMusical());
             })
         .toList();
   }

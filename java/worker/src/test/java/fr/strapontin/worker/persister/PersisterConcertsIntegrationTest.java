@@ -512,6 +512,162 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count);
   }
 
+  private static ConcertBrut produitEventim(
+      final String titre, final String heure, final String date, final String slug) {
+    return ConcertBrut.nouveau()
+        .artiste(titre)
+        .date(date)
+        .heure(heure)
+        .salle("Seine Musicale")
+        .ville("Boulogne-Billancourt")
+        .dept("92")
+        .url("https://www.eventim.fr/event/" + slug)
+        .source("eventim")
+        .classification("music")
+        .genre("Danse")
+        .construire();
+  }
+
+  @Test
+  void persisterConcerts_produitEventimTitreEtHeureModifies_garde_uneSeuleFiche() {
+    persisterConcerts.persisterConcerts(
+        List.of(
+            produitEventim("Bejart Ballet Lausanne", "20:30", "2098-03-05", "bejart-22173044")));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:00", "2098-03-05", "bolero-22173044")));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    final Map<String, Object> fiche =
+        jdbc.queryForMap("SELECT artiste_norm, heure::text AS heure FROM evenements", Map.of());
+    assertEquals("bolero", fiche.get("artiste_norm"));
+    assertEquals("20:00:00", fiche.get("heure"));
+    assertEquals(
+        1L, jdbc.queryForObject("SELECT COUNT(*) FROM observations", Map.of(), Long.class));
+  }
+
+  @Test
+  void persisterConcerts_produitEventimSurFicheDeuxSources_neChangeNiHeureNiTitre() {
+    final ConcertBrut ticketmaster =
+        ConcertBrut.nouveau()
+            .artiste("Bejart Ballet Lausanne")
+            .date("2098-03-05")
+            .heure("20:30")
+            .salle("Seine Musicale")
+            .ville("Boulogne-Billancourt")
+            .dept("92")
+            .url("https://www.ticketmaster.fr/idmanif/1")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Danse")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(ticketmaster));
+    persisterConcerts.persisterConcerts(
+        List.of(
+            produitEventim("Bejart Ballet Lausanne", "20:30", "2098-03-05", "bejart-22173044")));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:00", "2098-03-05", "bolero-22173044")));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    final Map<String, Object> fiche =
+        jdbc.queryForMap("SELECT artiste_norm, heure::text AS heure FROM evenements", Map.of());
+    assertEquals("bejart ballet lausanne", fiche.get("artiste_norm"));
+    assertEquals("20:30:00", fiche.get("heure"));
+    assertEquals(
+        2L, jdbc.queryForObject("SELECT COUNT(*) FROM observations", Map.of(), Long.class));
+  }
+
+  private static ConcertBrut pageSiteSalle(final String titre, final String url) {
+    return ConcertBrut.nouveau()
+        .artiste(titre)
+        .date("2098-11-07")
+        .heure("20:00")
+        .salle("Usine a Chapeaux")
+        .ville("Rennes")
+        .dept("35")
+        .url(url)
+        .source("site_salle")
+        .classification("music")
+        .construire();
+  }
+
+  @Test
+  void persisterConcerts_pageDeSalleAuTitreModifie_garde_uneSeuleFiche() {
+    final String url = "https://usineachapeaux.fr/agenda/concert-1";
+    persisterConcerts.persisterConcerts(
+        List.of(pageSiteSalle("Blue Katrice x Chandail Chandail x Mona Guba", url)));
+    persisterConcerts.persisterConcerts(
+        List.of(pageSiteSalle("Mona Guba x Blue Katrice x Chandail Chandail", url)));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "mona guba x blue katrice x chandail chandail",
+        jdbc.queryForObject("SELECT artiste_norm FROM evenements", Map.of(), String.class));
+  }
+
+  // Le Balajo : « System of a Down - Live Tribute by … » rattaché à l'artiste imité avant que
+  // le titre d'hommage soit reconnu.
+  @Test
+  void persisterConcerts_hommageDejaRattacheAUnArtisteSuivi_detacheEtSupprimeLesMatches() {
+    final UUID artisteId =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('System of a Down', 'system of a down')"
+                + " RETURNING id",
+            Map.of(),
+            UUID.class);
+    final UUID evenementId =
+        seedEvenementAvecObservation(
+            "System of a Down",
+            "system of a down",
+            "2098-11-18",
+            "20:00",
+            "Le Balajo",
+            "le balajo",
+            "75",
+            null,
+            artisteId,
+            "eventim",
+            "https://www.eventim.fr/event/system-of-a-down-22026717");
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u9', 'u9', 'u9@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id) VALUES ('u9', CAST(:id AS uuid))",
+        Map.of("id", evenementId.toString()));
+
+    final ConcertBrut hommage =
+        ConcertBrut.nouveau()
+            .artiste("System of a Down - Live Tribute by Steeven Corsini")
+            .date("2098-11-18")
+            .heure("20:00")
+            .salle("Le Balajo")
+            .ville("Paris")
+            .dept("75")
+            .url("https://www.eventim.fr/event/system-of-a-down-live-tribute-22026717")
+            .source("eventim")
+            .classification("music")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(hommage));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    final Map<String, Object> fiche =
+        jdbc.queryForMap("SELECT artiste_id, artiste_norm FROM evenements", Map.of());
+    assertNull(fiche.get("artiste_id"));
+    assertEquals("system of a down live tribute by steeven corsini", fiche.get("artiste_norm"));
+    assertEquals(
+        0L, jdbc.queryForObject("SELECT COUNT(*) FROM user_matches", Map.of(), Long.class));
+  }
+
+  @Test
+  void persisterConcerts_memeProduitEventimAUneAutreDate_creeUneAutreFiche() {
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:30", "2098-03-05", "bolero-22173044")));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:30", "2098-03-06", "bolero-22173044")));
+
+    assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+  }
+
   @Test
   void persisterConcerts_statutPreventeApresDeuxCyclesEventimSuccessifs_resteProtege() {
     // Eventim envoie systématiquement un statut null (pas de distinction prévente/vente
@@ -1515,6 +1671,46 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals("rescheduled", ligne.get("statut"), "le statut à jour doit être conservé");
   }
 
+  // Izia à l'Olympia : la date est reportée d'un an, la correspondance déjà notifiée repart.
+  @Test
+  void persisterConcerts_dateReporteeParTicketmaster_reArmeLaNotificationDeLaCorrespondance() {
+    final String url = "https://www.ticketmaster.fr/fr/manifestation/izia/idmanif/653099";
+    final ConcertBrut.Constructeur base =
+        ConcertBrut.nouveau()
+            .artiste("Izia")
+            .heure("20:00")
+            .salle("Olympia")
+            .ville("Paris")
+            .dept("75")
+            .url(url)
+            .source("ticketmaster")
+            .classification("music");
+    persisterConcerts.persisterConcerts(
+        List.of(base.date("2098-11-18").statut("onsale").construire()));
+    final UUID evenementId = jdbc.queryForObject("SELECT id FROM evenements", Map.of(), UUID.class);
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u8', 'u8', 'u8@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id, notification_envoyee_le)"
+            + " VALUES ('u8', CAST(:id AS uuid), now())",
+        Map.of("id", evenementId.toString()));
+
+    persisterConcerts.persisterConcerts(
+        List.of(base.date("2099-11-18").statut("rescheduled").construire()));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "2099-11-18",
+        jdbc.queryForObject("SELECT date::text FROM evenements", Map.of(), String.class));
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT notification_envoyee_le FROM user_matches",
+            Map.of(),
+            java.sql.Timestamp.class));
+  }
+
   @Test
   void persisterConcerts_memeUrlTicketmasterMatineeEtSoireeUneAnnulee_neModifiePasLAutre() {
     // Certaines productions (théâtre, cirque) partagent un seul idmanif Ticketmaster pour
@@ -1949,6 +2145,38 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         jdbc.queryForObject(
             "SELECT s.salle_parent_id FROM salles s JOIN evenements e ON e.salle_id = s.id"
                 + " WHERE e.artiste_norm = 'artiste tardieu'",
+            Map.of(),
+            UUID.class));
+  }
+
+  // La Merise : Eventim ajoute la commune au nom, ce n'est pas une salle interne.
+  @Test
+  void persisterConcerts_nomTermineParLaCommune_rattacheALaSalleSansCreerDeSousSalle() {
+    final UUID merise =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES ('la merise', 'La Merise',"
+                + " 'la merise', '78') RETURNING id",
+            Map.of(),
+            UUID.class);
+    persisterConcerts.persisterConcerts(
+        List.of(
+            ConcertBrut.nouveau()
+                .artiste("Artiste Merise")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("La Merise - Trappes")
+                .ville("Trappes")
+                .dept("78")
+                .url("https://eventim.example/merise")
+                .source("eventim")
+                .salleSourceId("eventim:internal:la merise trappes@78190")
+                .construire()));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class));
+    assertEquals(
+        merise,
+        jdbc.queryForObject(
+            "SELECT salle_id FROM evenements WHERE artiste_norm = 'artiste merise'",
             Map.of(),
             UUID.class));
   }

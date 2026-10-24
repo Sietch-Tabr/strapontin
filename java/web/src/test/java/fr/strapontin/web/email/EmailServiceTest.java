@@ -6,13 +6,17 @@ package fr.strapontin.web.email;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.web.config.ConfigService;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Tests unitaires pour {@link EmailService} (emails transactionnels utilisateur).
@@ -50,5 +54,25 @@ class EmailServiceTest {
     when(configService.lireConfig("RESEND_API_KEY")).thenReturn(Optional.empty());
 
     assertFalse(emailService.estDisponible());
+  }
+
+  // L'invité n'a pas encore de compte : le texte brut dit la même chose que le HTML.
+  @Test
+  void envoyerInvitation_texteBrut_invitePlutotQueDeParlerDeCompteDejaCree() {
+    final EmailSender emailSender = mock(EmailSender.class);
+    when(emailSender.obtenirContexte())
+        .thenReturn(
+            Optional.of(
+                new EmailSender.ContexteEmail(
+                    null, "Strapontin <noreply@strapontin.fr>", "https://app.fr")));
+    final ArgumentCaptor<String> texte = ArgumentCaptor.forClass(String.class);
+
+    new EmailService(configService, emailSender)
+        .envoyerInvitation("alice@exemple.fr", "https://app.fr/setup/abc");
+
+    verify(emailSender)
+        .envoyer(any(), anyString(), anyString(), anyString(), anyString(), texte.capture());
+    assertTrue(texte.getValue().contains("Vous avez été invité à rejoindre Strapontin"));
+    assertFalse(texte.getValue().contains("compte a été créé"));
   }
 }

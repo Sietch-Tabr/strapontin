@@ -158,7 +158,7 @@ public class SignalementsAdminService {
             String.class);
     final int lignes =
         jdbc.update(
-            "UPDATE signalements_matching SET resolu_le = now()"
+            "UPDATE signalements_matching SET resolu_le = now(), resolu_manuellement = true"
                 + " WHERE id = :id AND resolu_le IS NULL",
             Map.of("id", id));
     if (lignes > 0 && !departements.isEmpty()) {

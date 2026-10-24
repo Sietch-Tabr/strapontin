@@ -279,6 +279,13 @@ class EventimSourceTest {
   }
 
   @Test
+  void extraireNomArtiste_titreDHommage_gardeLeTitreComplet() {
+    final String titre = "System of a Down - Live Tribute by Steeven Corsini (Smack)";
+
+    assertEquals(titre, EventimSource.extraireNomArtiste(titre));
+  }
+
+  @Test
   void extraireNomArtiste_avecSeparateurDeuxPoints_retournePartieDroite() {
     assertEquals("Artiste", EventimSource.extraireNomArtiste("Artiste : Spectacle 2025"));
   }

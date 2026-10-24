@@ -409,10 +409,11 @@ onMounted(async () => {
   // chargement de la page (chargerSession/charger/scrollVersAncre ci-dessous) — un badge
   // "nouveau" resté affiché un cycle de plus n'est pas grave, une page blanche l'est.
   try {
-    await appelApi("/api/accueil/marquer-vus", {
+    const rep = await appelApi("/api/accueil/marquer-vus", {
       method: "POST",
       signal: controleurComposant.signal,
     });
+    await rep.arrayBuffer();
   } catch (_) {
     // ignoré volontairement
   }

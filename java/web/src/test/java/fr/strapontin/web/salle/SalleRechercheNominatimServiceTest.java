@@ -18,6 +18,10 @@ import fr.strapontin.web.config.ConfigService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.test.web.client.match.MockRestRequestMatchers;
+import org.springframework.test.web.client.response.MockRestResponseCreators;
 import org.springframework.web.client.RestClient;
 import tools.jackson.databind.ObjectMapper;
 
@@ -136,5 +140,28 @@ class SalleRechercheNominatimServiceTest {
     avecCadence.rechercher("olympia");
 
     verify(cadenceur).attendre();
+  }
+
+  @Test
+  void rechercher_accentEtVirgule_encodeUneSeuleFois() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final ConfigService configService = mock(ConfigService.class);
+    when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(java.util.Optional.empty());
+    serveur
+        .expect(
+            MockRestRequestMatchers.requestTo(
+                org.hamcrest.Matchers.containsString("q=Th%C3%A9%C3%A2tre%2C%20Paris&")))
+        .andRespond(MockRestResponseCreators.withSuccess("[]", MediaType.APPLICATION_JSON));
+
+    new SalleRechercheNominatimService(
+            configService,
+            builder.build(),
+            new ObjectMapper(),
+            new BudgetRecherchesExternes(mock(LogAdminService.class)),
+            mock(CadenceurAppels.class))
+        .rechercher("Théâtre, Paris");
+
+    serveur.verify();
   }
 }

@@ -41,8 +41,9 @@ final class EmailTemplates {
     final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
-          Votre compte a été créé. Cliquez sur le bouton ci-dessous pour choisir
-          votre identifiant et votre mot de passe :
+          Vous avez été invité à rejoindre Strapontin. Cliquez sur le bouton
+          ci-dessous pour créer votre compte en choisissant votre identifiant et
+          votre mot de passe :
         </p>
         %s
         <p style="color: %s; font-size: 13px; margin: 16px 0 0">

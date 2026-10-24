@@ -75,7 +75,7 @@ final class AbsorptionRenommagesSalles {
     }
   }
 
-  private record EtatSalle(String nom, int nbMappingsTm, int nbMappings) {}
+  private record EtatSalle(String nom, int nbMappingsTm, int nbMappings, boolean nomEncorePublie) {}
 
   private Map<UUID, EtatSalle> chargerEtats(final Set<UUID> salleIds) {
     final Map<UUID, EtatSalle> etats = new HashMap<>();
@@ -83,7 +83,14 @@ final class AbsorptionRenommagesSalles {
         """
         SELECT s.id, s.nom,
                count(ss.*) FILTER (WHERE ss.source = 'ticketmaster') AS nb_tm,
-               count(ss.*) AS nb
+               count(ss.*) AS nb,
+               EXISTS (SELECT 1 FROM observations o JOIN evenements e ON e.id = o.evenement_id
+                       WHERE e.salle_id = s.id AND o.salle_brut = s.nom
+                         AND o.updated_at > now() - interval '3 days'
+                         AND (o.source = 'ticketmaster' OR NOT EXISTS (
+                               SELECT 1 FROM salle_sources t
+                               WHERE t.salle_id = s.id AND t.source = 'ticketmaster')))
+                 AS nom_encore_publie
         FROM salles s LEFT JOIN salle_sources ss ON ss.salle_id = s.id
         WHERE s.id IN (:ids)
         GROUP BY s.id, s.nom
@@ -92,7 +99,11 @@ final class AbsorptionRenommagesSalles {
         rs -> {
           etats.put(
               rs.getObject("id", UUID.class),
-              new EtatSalle(rs.getString("nom"), rs.getInt("nb_tm"), rs.getInt("nb")));
+              new EtatSalle(
+                  rs.getString("nom"),
+                  rs.getInt("nb_tm"),
+                  rs.getInt("nb"),
+                  rs.getBoolean("nom_encore_publie")));
         });
     return etats;
   }
@@ -118,15 +129,21 @@ final class AbsorptionRenommagesSalles {
     if (meilleur.equals(etat.nom())) {
       return null;
     }
-    final int mappingsReference = referenceTm ? etat.nbMappingsTm() : etat.nbMappings();
-    if (mappingsReference <= MAPPING_UNIQUE && !estVarianteDeNom(meilleur, etat.nom())) {
-      return meilleur;
-    }
     final boolean strictementMeilleur =
         etat.nom() == null
             || ReconciliationNomsSalles.scoreSalle(meilleur)
                 > ReconciliationNomsSalles.scoreSalle(etat.nom());
-    return strictementMeilleur ? meilleur : null;
+    if (strictementMeilleur) {
+      return meilleur;
+    }
+    // Renommage réel : un seul mapping, et l'ancien libellé n'est plus publié
+    // (sinon la source en donne deux et la salle alternerait).
+    final int mappingsReference = referenceTm ? etat.nbMappingsTm() : etat.nbMappings();
+    final boolean renommageReel =
+        mappingsReference <= MAPPING_UNIQUE
+            && !estVarianteDeNom(meilleur, etat.nom())
+            && !etat.nomEncorePublie();
+    return renommageReel ? meilleur : null;
   }
 
   // Une source publie parfois deux graphies d'un même identifiant selon la

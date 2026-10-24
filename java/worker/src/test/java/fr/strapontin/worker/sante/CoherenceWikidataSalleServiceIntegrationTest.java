@@ -243,6 +243,26 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
         1e-9);
   }
 
+  // Zénith Paris - La Villette : position de billetterie à 947 m de l'élément Wikidata.
+  @Test
+  void signalerPositionsDivergentes_ecartDeQuelquesCentainesDeMetres_alignesurWikidata() {
+    jdbc.update("DELETE FROM signalements_matching", Map.of());
+    final UUID salle = salleParUneSource("zenith la villette", "sources");
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(salle, new EnrichissementSalle("Q3", null, null, null, null, 43.6108, 3.8860)));
+
+    assertEquals(0, coherence.signalerPositionsDivergentes());
+
+    final Map<String, Object> position =
+        jdbc.queryForMap(
+            "SELECT longitude, origine_position FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()));
+    assertEquals(3.8860, (Double) position.get("longitude"), 1e-9);
+    assertEquals("wikidata", position.get("origine_position"));
+    assertEquals(0, signalementsPosition());
+  }
+
   @Test
   void signalerPositionsDivergentes_positionProcheOuPosee_parWikidata_neSignaleRien() {
     jdbc.update("DELETE FROM signalements_matching", Map.of());

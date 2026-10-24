@@ -40,8 +40,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
   private UUID creerSalle() {
     return jdbc.queryForObject(
-        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('l embarcadere', 'L''Embarcadère',"
-            + " 'l embarcadere') RETURNING id",
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES ('l embarcadere',"
+            + " 'L''Embarcadère', 'l embarcadere', 'Paris') RETURNING id",
         Map.of(),
         UUID.class);
   }
@@ -114,8 +114,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     final UUID galabru = creerSalle();
     final UUID elysee =
         jdbc.queryForObject(
-            "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('elysee', 'Élysée Montmartre',"
-                + " 'elysee montmartre') RETURNING id",
+            "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES ('elysee',"
+                + " 'Élysée Montmartre', 'elysee montmartre', 'Paris') RETURNING id",
             Map.of(),
             UUID.class);
     jdbc.update(
@@ -165,6 +165,161 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
     assertEquals(List.of("creneau_double_meme_source"), actifs());
     assertEquals(2L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  // Deux fiches eventim au même créneau, résolues à la main puis revues le lendemain.
+  @Test
+  void verifier_creneauDoubleResoluParUnAdmin_neEstPlusSignaleTantQueLaPaireNeChangePas() {
+    final UUID salle = creerSalle();
+    evenementAvecSource(salle, "le presbytere", "20:30", "eventim");
+    evenementAvecSource(salle, "marilyn live", "20:30", "eventim");
+
+    controle.verifier();
+    assertEquals(List.of("creneau_double_meme_source"), actifs());
+
+    jdbc.update(
+        "UPDATE signalements_matching SET resolu_le = now(), resolu_manuellement = true", Map.of());
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  // Un contrôle qui se referme de lui-même ne vaut pas décision : l'anomalie qui revient
+  // est signalée de nouveau.
+  @Test
+  void verifier_creneauDoubleRefermeAutomatiquementPuisRevenu_estSignaleDeNouveau() {
+    final UUID salle = creerSalle();
+    evenementAvecSource(salle, "le presbytere", "20:30", "eventim");
+    evenementAvecSource(salle, "marilyn live", "20:30", "eventim");
+    controle.verifier();
+    jdbc.update("UPDATE signalements_matching SET resolu_le = now()", Map.of());
+
+    controle.verifier();
+
+    assertEquals(List.of("creneau_double_meme_source"), actifs());
+  }
+
+  private void produitEventim(
+      final UUID salle, final String artiste, final String heure, final String produit) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                + " VALUES (:artiste, CURRENT_DATE + 30, CAST(:heure AS time), 'madeleine',"
+                + " CAST(:salle AS uuid), '75') RETURNING id",
+            Map.of("artiste", artiste, "heure", heure, "salle", salle.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), 'eventim', :url, :artiste, 'Madeleine')",
+        Map.of(
+            "id",
+            id.toString(),
+            "url",
+            "https://www.eventim.fr/event/" + artiste.replace(' ', '-') + "-" + produit,
+            "artiste",
+            artiste));
+  }
+
+  @Test
+  void verifier_memeProduitEventimSurTroisFichesDHeuresVoisines_signaleSansFusionner() {
+    final UUID salle = creerSalle();
+    produitEventim(salle, "boleros", "20:00", "22000001");
+    produitEventim(salle, "boleros soiree", "20:15", "22000001");
+    produitEventim(salle, "boleros gala", "20:30", "22000001");
+
+    controle.verifier();
+
+    assertEquals(java.util.Set.of("produit_eventim_double"), java.util.Set.copyOf(actifs()));
+    assertEquals(3L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  // Flashdance à Pleyel : deux séances du même jour sous une seule adresse de produit.
+  @Test
+  void verifier_memeProduitEventimPourUneMatineeEtUneSoiree_neSignaleRien() {
+    final UUID salle = creerSalle();
+    produitEventim(salle, "flashdance", "13:30", "21040341");
+    produitEventim(salle, "flashdance le musical", "17:30", "21040341");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  private UUID creerSalleNommee(final String cle) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES (:cle, :cle, :cle, 'Lyon')"
+            + " RETURNING id",
+        Map.of("cle", cle),
+        UUID.class);
+  }
+
+  private void ficheObservee(final UUID salle, final String dept, final int joursSansVue) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                + " VALUES (:artiste, CURRENT_DATE + 30, '20:00', 'madeleine',"
+                + " CAST(:salle AS uuid), :dept) RETURNING id",
+            Map.of(
+                "artiste", "fiche " + UUID.randomUUID(), "salle", salle.toString(), "dept", dept),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut,"
+            + " updated_at) VALUES (CAST(:id AS uuid), 'ticketmaster', :url, 'a', 's',"
+            + " now() - make_interval(days => :jours))",
+        Map.of("id", id.toString(), "url", "https://tm/" + id, "jours", joursSansVue));
+  }
+
+  @Test
+  void verifier_ficheDeDepartementSuiviSansObservationRecente_signaleLesFichesFigees() {
+    final UUID salle = creerSalle();
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u3', 'u3', 'u3@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES ('u3', ARRAY['75']::text[])",
+        Map.of());
+    ficheObservee(salle, "75", 20);
+
+    controle.verifier();
+
+    assertEquals(List.of("fiches_figees"), actifs());
+  }
+
+  @Test
+  void verifier_ficheFigeeHorsPerimetreOuRecente_neSignaleRien() {
+    final UUID salle = creerSalle();
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u3', 'u3', 'u3@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES ('u3', ARRAY['75']::text[])",
+        Map.of());
+    ficheObservee(salle, "75", 3);
+    ficheObservee(creerSalleNommee("lyon"), "69", 40);
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_salleSansVilleAvecConcertsAVenir_signaleEtRefermeUneFoisLaVilleRenseignee() {
+    final UUID salle =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES ('casino du gosier',"
+                + " 'Casino du Gosier', 'casino du gosier', '971') RETURNING id",
+            Map.of(),
+            UUID.class);
+    evenement(salle, "artiste gosier", "971");
+
+    controle.verifier();
+    assertEquals(List.of("salle_sans_ville"), actifs());
+
+    jdbc.update("UPDATE salles SET ville = 'Le Gosier'", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
   }
 
   @Test

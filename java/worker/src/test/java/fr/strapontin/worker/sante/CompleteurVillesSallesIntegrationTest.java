@@ -131,6 +131,29 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
             String.class));
   }
 
+  // Casino du Gosier : aucun concert ni lieu ne donne la commune, mais « Le Gosier » est connue.
+  @Test
+  void completer_nomContenantUneCommuneConnueDuDepartement_laReprend() {
+    salle("Zion Park", "Le Gosier", "971");
+    final UUID casino = salle("Casino du Gosier", null, "971");
+    final UUID lacaz = salle("La Caz Art", null, "971");
+
+    completeur.completer();
+
+    assertEquals("Le Gosier", villeSalle(casino));
+    assertNull(villeSalle(lacaz));
+  }
+
+  @Test
+  void completer_nomContenantUneCommuneConnueDUnAutreDepartement_laisseLaVilleVide() {
+    salle("Zion Park", "Le Gosier", "971");
+    final UUID autre = salle("Casino du Gosier", null, "972");
+
+    completeur.completer();
+
+    assertNull(villeSalle(autre));
+  }
+
   @Test
   void completer_villeIndeterminable_signaleLaSalleDansLeJournalAdmin() {
     final UUID salleId = salle("Salle D", null, "13");

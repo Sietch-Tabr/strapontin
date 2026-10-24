@@ -10,8 +10,6 @@ import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.CadenceurAppelsPartage;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -113,15 +111,13 @@ class SalleRechercheNominatimService {
       cadenceur.attendre();
       final String contact =
           configService.lireConfig("CONTACT_EMAIL").orElse("contact@strapontin.fr");
-      final String url =
+      final String gabarit =
           NOMINATIM_URL
-              + "?q="
-              + URLEncoder.encode(terme, StandardCharsets.UTF_8)
-              + "&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
+              + "?q={terme}&format=json&limit=6&extratags=1&addressdetails=1&countrycodes=fr";
       final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
-              .uri(url)
+              .uri(gabarit, terme)
               .header("User-Agent", "Strapontin/2.6.3 (contact: " + contact + ")")
               .exchange(
                   (_, resp) ->

@@ -55,6 +55,40 @@ class DeezerArtisteSourceTest {
     serveur.verify();
   }
 
+  // Sellig : humoriste, dont l'homonyme musicien de 56 fans avait reçu le deezer_id.
+  @Test
+  void enrichirLot_artisteDeSpectacleNonMusical_neDecouvrePasParNom() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final UUID id = UUID.randomUUID();
+    final ArtisteAEnrichir humoriste =
+        new ArtisteAEnrichir(id, "Sellig", "sellig", "Q16676017", null, true);
+
+    final Map<UUID, EnrichissementArtiste> resultat =
+        new DeezerArtisteSource(builder.build()).enrichirLot(List.of(humoriste));
+
+    assertTrue(resultat.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void enrichirLot_decouverteNomAccentue_encodeLeNomUneSeuleFois() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(UUID.randomUUID(), "Mylène Farmer", "mylene farmer", null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("q=Myl%C3%A8ne%20Farmer&")))
+        .andRespond(withSuccess("{\"data\":[]}", MediaType.APPLICATION_JSON));
+
+    new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
+
+    serveur.verify();
+  }
+
   @Test
   void enrichirLot_decouverteHomonymesExacts_retientLePlusSuivi() {
     final RestClient.Builder builder = RestClient.builder();

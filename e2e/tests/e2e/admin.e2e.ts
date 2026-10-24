@@ -81,6 +81,12 @@ test.describe("Scénario: admin — sections et contenus", () => {
         await bouton.click();
       }
       await expect(bouton).toHaveAttribute("aria-pressed", "true");
+      // La couleur de fond passe par une transition CSS : on attend la valeur finale.
+      await expect
+        .poll(() =>
+          bouton.evaluate((el) => getComputedStyle(el).backgroundColor),
+        )
+        .not.toBe("rgba(0, 0, 0, 0)");
       fonds.push(
         await bouton.evaluate((el) => getComputedStyle(el).backgroundColor),
       );
@@ -424,14 +430,19 @@ test.describe("Scénario: admin — onglet Sources", () => {
     await page.goto("/admin");
     await page.locator('a[href="#sources"]').click();
     await expect(page.locator("section#sources")).toBeVisible();
-    await expect(page.locator(".source-carte")).toHaveCount(4);
+    // Quatre sources fixes, plus une carte par site de salle qui a des salles.
+    for (const nom of ["Ticketmaster", "Eventim", "Deezer", "Wikidata"]) {
+      await expect(page.locator(".source-nom", { hasText: nom })).toHaveCount(
+        1,
+      );
+    }
+    await expect
+      .poll(() => page.locator(".source-carte").count())
+      .toBeGreaterThanOrEqual(4);
     await expect(page.locator(".source-carte-large")).toHaveCount(1);
     await expect(page.locator(".source-carte-large")).toContainText(
       "Ticketmaster",
     );
-    await expect(
-      page.locator(".source-carte:not(.source-carte-large)"),
-    ).toHaveCount(3);
   });
 
   test("admin_jobs_quota_tm_absent_depuis_jobs", async ({ page, isMobile }) => {
@@ -453,7 +464,9 @@ test.describe("Scénario: admin — onglet Sources", () => {
       await page.locator('a[href="#sources"]').click();
     }
     await expect(page.locator("section#sources")).toBeVisible();
-    await expect(page.locator(".source-carte")).toHaveCount(4);
+    await expect
+      .poll(() => page.locator(".source-carte").count())
+      .toBeGreaterThanOrEqual(4);
     await expect(page.locator("table#table-sources-salles")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Avec lieu Eventim" }),
@@ -738,8 +751,12 @@ test.describe("Scénario: admin — API endpoints", () => {
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(Array.isArray(corps.sources)).toBe(true);
-    expect(corps.sources.length).toBe(4);
     const ids = corps.sources.map((s: { id: string }) => s.id);
+    // Quatre sources fixes, plus un site de salle par préfixe d'identifiant de salle.
+    expect(corps.sources.length).toBeGreaterThanOrEqual(4);
+    expect(
+      ids.filter((id: string) => !id.startsWith("site_salle:")).length,
+    ).toBe(4);
     expect(ids).toContain("ticketmaster");
     expect(ids).toContain("eventim");
     expect(ids).toContain("deezer");

@@ -7,7 +7,7 @@ when:
 
 steps:
   - name: test
-    image: maven:3.9-eclipse-temurin-26
+    image: maven:3.10-eclipse-temurin-27
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
       - /var/run/docker.sock:/var/run/docker.sock
@@ -35,11 +35,11 @@ steps:
   # killer (constaté en reproduction, v2.9.1) — un seul step lourd à la fois sur cet
   # agent.
   - name: static-analysis
-    image: maven:3.9-eclipse-temurin-26
+    image: maven:3.10-eclipse-temurin-27
     depends_on: [test, lint-front]
     environment:
       MAVEN_OPTS: "-Xmx768m"
-      # L'image fixe la JDK 26 du projet : le rappel PMD sur la JDK utilisée pour
+      # L'image fixe la JDK 27 du projet : le rappel PMD sur la JDK utilisée pour
       # résoudre les classes standard n'a pas d'objet ici.
       PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS: "true"
     volumes:
@@ -49,7 +49,35 @@ steps:
       # déconnexion de la JVM, pas immédiatement à la fin du process Maven — laisse ce
       # nettoyage se terminer avant de solliciter à nouveau la mémoire de l'agent.
       - sleep 15
-      - mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests
+      - >-
+        mvn -f java/pom.xml -pl core,sources,web,worker -am
+        compile checkstyle:check pmd:check spotless:check -DskipTests
+    when:
+      - event: push
+        branch: main
+
+  # Analyse des vulnérabilités connues (base OSV) des dépendances Maven et npm, bloquante
+  # comme l'analyse statique. Une exception justifiée se déclare dans osv-scanner.toml.
+  # Sérialisée après static-analysis : l'inventaire Maven ne doit pas se superposer aux
+  # autres steps lourds de l'agent (2 Go).
+  - name: inventaire-dependances
+    image: maven:3.10-eclipse-temurin-27
+    depends_on: [static-analysis]
+    environment:
+      MAVEN_OPTS: "-Xmx512m"
+    volumes:
+      - /var/cache/woodpecker/maven:/root/.m2
+    commands:
+      - bash scripts/analyse-dependances.sh sbom
+    when:
+      - event: push
+        branch: main
+
+  - name: analyse-dependances
+    image: ghcr.io/google/osv-scanner:v2.7.0
+    depends_on: [inventaire-dependances]
+    commands:
+      - /osv-scanner scan source -L java/target/bom.json -L front/package-lock.json
     when:
       - event: push
         branch: main
@@ -76,15 +104,19 @@ steps:
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
-      - rm -rf java/web/src/main/resources/static/assets java/web/src/main/resources/static/index.html java/web/src/main/resources/static/sw.js
+      - >-
+        rm -rf java/web/src/main/resources/static/assets
+        java/web/src/main/resources/static/index.html
+        java/web/src/main/resources/static/sw.js
       - cd front && npm ci && npm run build
     when:
       - event: push
         branch: main
 
   - name: build
-    image: maven:3.9-eclipse-temurin-26
-    depends_on: [test, build-front, static-analysis, lint-front]
+    image: maven:3.10-eclipse-temurin-27
+    depends_on:
+      [test, build-front, static-analysis, lint-front, analyse-dependances]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:

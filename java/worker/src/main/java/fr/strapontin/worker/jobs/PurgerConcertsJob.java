@@ -4,15 +4,15 @@
  */
 package fr.strapontin.worker.jobs;
 
+import fr.strapontin.worker.WorkerPurgePerimetreService;
 import fr.strapontin.worker.WorkerPurgeService;
 import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz : suppression des concerts passés depuis plus de 7 jours, des
- * concerts futurs jamais reconfirmés depuis très longtemps, et des concerts
- * hors de toute portée de fetch, tous les jours à minuit.
+ * Job Quartz de minuit : concerts passés, jamais reconfirmés, hors de portée de
+ * fetch ou hors du périmètre de tout utilisateur.
  *
  * @since 2.0.0
  * @author Kwaite
@@ -20,6 +20,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
 public class PurgerConcertsJob extends QuartzJobBean {
 
   private WorkerPurgeService workerPurgeService;
+  private WorkerPurgePerimetreService workerPurgePerimetreService;
 
   /** Constructeur par défaut, instancié par Spring. */
   public PurgerConcertsJob() {
@@ -34,10 +35,20 @@ public class PurgerConcertsJob extends QuartzJobBean {
     this.workerPurgeService = workerPurgeService;
   }
 
+  /**
+   * @param workerPurgePerimetreService purge hors périmètre injectée par Spring
+   */
+  @Autowired
+  public void setWorkerPurgePerimetreService(
+      final WorkerPurgePerimetreService workerPurgePerimetreService) {
+    this.workerPurgePerimetreService = workerPurgePerimetreService;
+  }
+
   @Override
   protected void executeInternal(final JobExecutionContext context) {
     workerPurgeService.executerPurgerConcerts();
     workerPurgeService.executerPurgerConcertsNonConfirmes();
     workerPurgeService.executerPurgerConcertsHorsPortee();
+    workerPurgePerimetreService.executerPurgerConcertsHorsPerimetre();
   }
 }

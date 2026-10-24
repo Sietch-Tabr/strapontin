@@ -3,6 +3,19 @@ import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 
 test.use({ storageState: FICHIER_AUTH_ADMIN });
 
+// Sans ancre dans l'URL : WebKit double la navigation d'un goto avec fragment.
+async function ouvrirOngletCommunication(
+  page: import("@playwright/test").Page,
+) {
+  await page.goto("/admin");
+  const selecteur = page.locator("select.param-onglets-mobile");
+  if (await selecteur.isVisible()) {
+    await selecteur.selectOption("#communication");
+  } else {
+    await page.locator('a[href="#communication"]').click();
+  }
+}
+
 async function publierBanniere(
   page: import("@playwright/test").Page,
   message: string,
@@ -165,7 +178,7 @@ test.describe("Bannière système overlay", () => {
   // #852 : l'onglet admin n'affichait jamais l'état courant de la bannière.
   test("admin_banniere_onglet_affiche_etat_publie", async ({ page }) => {
     await publierBanniere(page, "Test onglet admin publié", "warning");
-    await page.goto("/admin#communication");
+    await ouvrirOngletCommunication(page);
     await expect(page.locator("section#communication")).toContainText(
       "Test onglet admin publié",
     );
@@ -178,7 +191,7 @@ test.describe("Bannière système overlay", () => {
     page,
   }) => {
     await effacerBanniere(page);
-    await page.goto("/admin#communication");
+    await ouvrirOngletCommunication(page);
     await expect(page.locator("section#communication")).toContainText(
       "Aucune bannière publiée",
     );
@@ -188,7 +201,7 @@ test.describe("Bannière système overlay", () => {
     page,
   }) => {
     await effacerBanniere(page);
-    await page.goto("/admin#communication");
+    await ouvrirOngletCommunication(page);
     await page.locator("#banniere-message").fill("Test formulaire admin");
     await page.locator("#banniere-type").selectOption("error");
     await page.getByRole("button", { name: "Publier", exact: true }).click();
@@ -202,7 +215,7 @@ test.describe("Bannière système overlay", () => {
     page,
   }) => {
     await publierBanniere(page, "Test avant effacement", "info");
-    await page.goto("/admin#communication");
+    await ouvrirOngletCommunication(page);
     await expect(page.locator("section#communication")).toContainText(
       "Test avant effacement",
     );

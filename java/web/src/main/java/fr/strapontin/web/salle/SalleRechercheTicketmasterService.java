@@ -8,8 +8,6 @@ import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.CadenceurAppels;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,17 +94,12 @@ class SalleRechercheTicketmasterService {
 
   private WorkerTriggerUtils.ReponseHttp appelerTicketmasterVenues(
       final String terme, final String tmKey) {
-    final String url =
-        TM_VENUES_URL
-            + "?keyword="
-            + URLEncoder.encode(terme, StandardCharsets.UTF_8)
-            + "&countryCode=FR&size=6&apikey="
-            + URLEncoder.encode(tmKey, StandardCharsets.UTF_8);
+    final String gabarit = TM_VENUES_URL + "?keyword={terme}&countryCode=FR&size=6&apikey={cle}";
 
     cadenceurTicketmaster.attendre();
     return restClient
         .get()
-        .uri(url)
+        .uri(gabarit, terme, tmKey)
         .exchange(
             (_, resp) ->
                 new WorkerTriggerUtils.ReponseHttp(

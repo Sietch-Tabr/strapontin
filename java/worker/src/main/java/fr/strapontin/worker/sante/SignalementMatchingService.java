@@ -26,6 +26,13 @@ public class SignalementMatchingService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SignalementMatchingService.class);
 
+  // Type -> clé des détails qui identifie ce que l'administrateur a tranché.
+  private static final Map<String, String> CLES_DECISION_CONSERVEE =
+      Map.of(
+          "creneau_double_meme_source", "jumeau",
+          "produit_eventim_double", "jumeau",
+          "wikidata_coordonnees_divergentes", "wikidataId");
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
 
@@ -53,6 +60,9 @@ public class SignalementMatchingService {
       final UUID entiteId,
       final String confiance,
       final Map<String, Object> details) {
+    if (decisionDejaPrise(type, entiteId, details)) {
+      return;
+    }
     try {
       final String detailsJson = details != null ? objectMapper.writeValueAsString(details) : null;
       jdbc.update(
@@ -72,6 +82,30 @@ public class SignalementMatchingService {
     } catch (Exception e) {
       LOG.warn("Erreur insertion signalement type={} : {}", type, e.getMessage());
     }
+  }
+
+  // Une paire ou un candidat que l'administrateur a déjà tranché n'est plus signalé
+  // tant qu'il reste le même ; une clôture automatique ne vaut pas décision.
+  private boolean decisionDejaPrise(
+      final String type, final UUID entiteId, final Map<String, Object> details) {
+    final String cle = CLES_DECISION_CONSERVEE.get(type);
+    if (cle == null || details == null || details.get(cle) == null) {
+      return false;
+    }
+    final Long nombre =
+        jdbc.queryForObject(
+            """
+            SELECT count(*) FROM signalements_matching
+            WHERE type = :type AND entite_id = CAST(:entiteId AS uuid)
+              AND resolu_manuellement AND details ->> :cle = :valeur
+            """,
+            new MapSqlParameterSource()
+                .addValue("type", type)
+                .addValue("entiteId", entiteId.toString())
+                .addValue("cle", cle)
+                .addValue("valeur", String.valueOf(details.get(cle))),
+            Long.class);
+    return nombre != null && nombre > 0;
   }
 
   /**

@@ -74,6 +74,23 @@ public final class QualificatifSalle {
   }
 
   /**
+   * Retire du nom la ville qui le termine (« La Merise - Trappes » à Trappes) :
+   * ce n'est pas le qualificatif d'une salle interne, seulement la commune du
+   * lieu que certaines billetteries ajoutent à son nom.
+   * @param nomBrut nom publié, éventuellement qualifié
+   * @param ville commune publiée avec le concert, peut être {@code null}
+   * @return le nom sans la commune finale, sinon le nom inchangé
+   */
+  public static String sansVilleFinale(final String nomBrut, final String ville) {
+    final String qualif = nomBrut == null || ville == null ? null : extraireQualificatif(nomBrut);
+    if (qualif == null
+        || !Normalisation.normaliserTexte(qualif).equals(Normalisation.normaliserTexte(ville))) {
+      return nomBrut;
+    }
+    return nomBrut.substring(0, dernierSeparateur(nomBrut).start()).trim();
+  }
+
+  /**
    * Extrait la partie complexe/base d'un nom qualifié (ex. "La Seine
    * Musicale - Grande Seine" → "La Seine Musicale"), pour résoudre le
    * complexe avant de créer/retrouver la sous-salle correspondante.

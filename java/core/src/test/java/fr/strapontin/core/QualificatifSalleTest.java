@@ -44,4 +44,24 @@ class QualificatifSalleTest {
         QualificatifSalle.qualificatifAbsentDe(
             "La Seine Musicale - Grande Seine", "la seine musicale"));
   }
+
+  @Test
+  void sansVilleFinale_nomTermineParLaCommune_retireLaCommune() {
+    assertEquals("La Merise", QualificatifSalle.sansVilleFinale("La Merise - Trappes", "Trappes"));
+    assertEquals(
+        "Le Cube",
+        QualificatifSalle.sansVilleFinale(
+            "Le Cube - Boulogne Billancourt", "Boulogne-Billancourt"));
+  }
+
+  @Test
+  void sansVilleFinale_qualificatifDeSalleInterne_laisseLeNom() {
+    assertEquals(
+        "La Seine Musicale - Grande Seine",
+        QualificatifSalle.sansVilleFinale(
+            "La Seine Musicale - Grande Seine", "Boulogne-Billancourt"));
+    assertEquals("La Merise", QualificatifSalle.sansVilleFinale("La Merise", "Trappes"));
+    assertEquals(
+        "La Merise - Trappes", QualificatifSalle.sansVilleFinale("La Merise - Trappes", null));
+  }
 }

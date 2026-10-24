@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.ProduitEventim;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -53,6 +54,9 @@ final class ControleInvariantsDonnees {
         + publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
+        + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
+        + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
+        + publier("salle_sans_ville", SALLE, sallesSansVille())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
   }
 
@@ -198,6 +202,97 @@ final class ControleInvariantsDonnees {
                   rs.getString("heure"),
                   "intitules",
                   rs.getString("titre_a") + " / " + rs.getString("titre_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Salle à concerts à venir restée sans commune après la complétion nocturne : ses
+  // concerts s'affichent sans ville.
+  private Map<UUID, Map<String, Object>> sallesSansVille() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT s.id, s.nom, s.dept, count(*) AS nb
+        FROM salles s JOIN evenements e ON e.salle_id = s.id AND e.date >= CURRENT_DATE
+        WHERE s.ville IS NULL OR s.ville = ''
+        GROUP BY s.id, s.nom, s.dept
+        """,
+        Map.of(),
+        rs -> {
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.put(SALLE, rs.getString("nom"));
+          details.put("departement", rs.getString("dept"));
+          details.put("concerts", rs.getLong("nb"));
+          anomalies.put(rs.getObject("id", UUID.class), details);
+        });
+    return anomalies;
+  }
+
+  // Fiche à venir du périmètre d'un utilisateur (département, artiste, salle ou
+  // correspondance) dont aucune observation n'a été revue depuis deux semaines et
+  // dont aucune absence n'est comptée : aucun fetch ne la voit.
+  private Map<UUID, Map<String, Object>> fichesFigees() {
+    final Map<String, Object> details = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT count(*) AS nb, min(e.date)::text AS premiere,
+               string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts
+        FROM evenements e
+        WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
+          AND e.absences_consecutives = 0
+          AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = e.id)
+          AND NOT EXISTS (SELECT 1 FROM observations o
+                          WHERE o.evenement_id = e.id AND o.updated_at > now() - interval '14 days')
+          AND (EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))
+               OR EXISTS (SELECT 1 FROM user_artistes ua WHERE ua.artiste_id = e.artiste_id)
+               OR EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = e.salle_id)
+               OR EXISTS (SELECT 1 FROM user_matches um WHERE um.concert_id = e.id))
+        """,
+        Map.of(),
+        rs -> {
+          if (rs.getLong("nb") > 0) {
+            details.put("fiches", rs.getLong("nb"));
+            details.put("premiere", rs.getString("premiere"));
+            details.put("departements", rs.getString("depts"));
+          }
+        });
+    return globale("fiches_figees", details);
+  }
+
+  // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures voisines
+  // après la fusion : artistes différents ou plus de deux fiches. Deux séances
+  // d'un produit (matinée, soirée) ne comptent pas.
+  private Map<UUID, Map<String, Object>> produitsEventimDoubles() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    final String produit = ProduitEventim.expressionSql("o");
+    jdbc.query(
+        "WITH p AS (SELECT DISTINCT e.id, e.salle_id, e.date, e.heure, e.first_seen, "
+            + produit
+            + " AS produit FROM observations o JOIN evenements e ON e.id = o.evenement_id"
+            + " WHERE o.source = 'eventim' AND e.date >= CURRENT_DATE"
+            + " AND e.salle_id IS NOT NULL AND "
+            + produit
+            + " IS NOT NULL)"
+            + " SELECT CASE WHEN a.first_seen >= b.first_seen THEN a.id ELSE b.id END AS recent,"
+            + " CASE WHEN a.first_seen >= b.first_seen THEN b.id ELSE a.id END AS jumeau,"
+            + " a.produit AS produit, s.nom AS salle, a.date::text AS date"
+            + " FROM p a JOIN p b ON b.produit = a.produit AND b.date = a.date"
+            + " AND b.salle_id = a.salle_id AND a.id < b.id JOIN salles s ON s.id = a.salle_id"
+            + " WHERE a.heure IS NULL OR b.heure IS NULL"
+            + " OR abs(extract(epoch FROM (a.heure - b.heure))) <= 3600",
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  SALLE,
+                  rs.getString(SALLE),
+                  DATE,
+                  rs.getString(DATE),
+                  "produit",
+                  rs.getString("produit"),
                   JUMEAU,
                   rs.getObject(JUMEAU, UUID.class).toString()));
         });

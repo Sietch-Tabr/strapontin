@@ -32,6 +32,7 @@ public class CompleteurVillesSalles {
   private static final int NB_NOMS_SIGNALES = 10;
   private static final String CLE_VILLE = "ville";
   private static final String CLE_BRUTE = "brute";
+  private static final int TAILLE_MIN_COMMUNE = 4;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
@@ -55,9 +56,10 @@ public class CompleteurVillesSalles {
     final int normalisees = normaliserOrthographes();
     final int depuisConcerts = renseignerVilleDepuisConcerts();
     final int depuisLieux = renseignerVilleDepuisLieuxSources();
+    final int depuisNoms = renseignerVilleDepuisNomDeLaSalle();
     final int departements = renseignerDepartementDepuisCodePostal();
     signalerSallesSansVille();
-    final int total = normalisees + depuisConcerts + depuisLieux + departements;
+    final int total = normalisees + depuisConcerts + depuisLieux + depuisNoms + departements;
     if (total > 0) {
       LOG.info(
           "villes des salles : {} orthographes, {} depuis concerts, {} depuis lieux sources,"
@@ -139,6 +141,59 @@ public class CompleteurVillesSalles {
               Map.of(CLE_VILLE, ville, "id", salle.getKey().toString()));
     }
     return renseignees;
+  }
+
+  // « Casino du Gosier » où « Le Gosier » est déjà connue du département : la
+  // commune la plus longue contenue dans le nom, si elle est unique.
+  private int renseignerVilleDepuisNomDeLaSalle() {
+    final Map<String, Map<String, String>> communesParDept = new HashMap<>();
+    jdbc.query(
+        "SELECT DISTINCT dept, ville FROM salles WHERE dept IS NOT NULL AND ville IS NOT NULL",
+        rs -> {
+          final String coeur = sansArticle(Normalisation.normaliserTexte(rs.getString(CLE_VILLE)));
+          if (coeur.length() >= TAILLE_MIN_COMMUNE) {
+            communesParDept
+                .computeIfAbsent(rs.getString("dept"), _ -> new HashMap<>())
+                .put(coeur, rs.getString(CLE_VILLE));
+          }
+        });
+    int renseignees = 0;
+    final List<Map<String, Object>> salles =
+        jdbc.queryForList(
+            "SELECT id, nom_norm, dept FROM salles WHERE ville IS NULL AND dept IS NOT NULL",
+            Map.of());
+    for (final Map<String, Object> salle : salles) {
+      final String ville =
+          communeContenue(
+              " " + salle.get("nom_norm") + " ",
+              communesParDept.getOrDefault((String) salle.get("dept"), Map.of()));
+      if (ville != null) {
+        renseignees +=
+            jdbc.update(
+                "UPDATE salles SET ville = :ville WHERE id = CAST(:id AS uuid) AND ville IS NULL",
+                Map.of(CLE_VILLE, ville, "id", salle.get("id").toString()));
+      }
+    }
+    return renseignees;
+  }
+
+  private static String communeContenue(final String nom, final Map<String, String> communes) {
+    int tailleMax = 0;
+    String retenue = null;
+    boolean ambigue = false;
+    for (final Map.Entry<String, String> commune : communes.entrySet()) {
+      final int taille = commune.getKey().length();
+      if (nom.contains(" " + commune.getKey() + " ") && taille >= tailleMax) {
+        ambigue = taille == tailleMax && !commune.getValue().equals(retenue);
+        tailleMax = taille;
+        retenue = commune.getValue();
+      }
+    }
+    return ambigue ? null : retenue;
+  }
+
+  private static String sansArticle(final String ville) {
+    return ville.replaceFirst("^(le|la|les|l) ", "");
   }
 
   private int renseignerDepartementDepuisCodePostal() {

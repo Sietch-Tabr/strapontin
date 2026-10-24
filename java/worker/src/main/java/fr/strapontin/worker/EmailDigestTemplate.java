@@ -76,6 +76,10 @@ final class EmailDigestTemplate {
         "presale".equals(concert.statut())
             ? " · <span style=\"color:#c026d3;font-weight:600\">Prévente</span>"
             : "";
+    final String report =
+        "rescheduled".equals(concert.statut())
+            ? " · <span style=\"color:#b45309;font-weight:600\">Date reportée</span>"
+            : "";
     final String stylecel =
         artistePrecedent != null && !artistePrecedent.equals(concert.artiste())
             ? "padding:16px 0 10px;border-top:2px solid #ddd;vertical-align:top"
@@ -84,7 +88,7 @@ final class EmailDigestTemplate {
     <tr>
       <td style="%s">
         <div style="font-weight:600;color:#111;font-size:14px">%s</div>
-        <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s</div>
+        <div style="color:#666;font-size:13px;margin-top:2px">%s%s%s%s</div>
         <div style="color:#999;font-size:12px;margin-top:2px">%s</div>
       </td>
     </tr>
@@ -94,6 +98,7 @@ final class EmailDigestTemplate {
             e(concert.artiste()),
             NotificationDigestService.formaterDate(concert.date()),
             prevente,
+            report,
             lien,
             lieu);
   }

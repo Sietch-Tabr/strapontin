@@ -30,7 +30,7 @@ function signalerErreurClient(corps) {
 
 window.addEventListener("error", (e) => {
   signalerErreurClient(
-    construireCorpsErreurJs(e.message, e.filename, e.lineno, e.colno),
+    construireCorpsErreurJs(e.message, e.filename, e.lineno, e.colno, e.error),
   );
 });
 

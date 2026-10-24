@@ -4,6 +4,48 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.0 — 24 octobre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Un concert dont le titre ou l'horaire change chez Eventim, ou dont la page change de titre sur le site d'une salle, reste une seule fiche au lieu d'apparaître en double.",
+          "Quand Ticketmaster reporte une date, vous êtes prévenu du nouveau jour (le digest l'indique : « Date reportée »), et la date d'origine, encore publiée ailleurs, n'est plus affichée comme un autre concert.",
+          "Les spectacles de théâtre et d'humour de vos départements, jusque-là revus trop rarement, sont maintenant mis à jour chaque jour, et ceux qui ne sont plus en vente disparaissent.",
+          "Le concert d'un hommage n'est plus rattaché à l'artiste imité, même quand il vient du programme d'une salle.",
+          "Une salle ne change plus de nom en alternance quand une billetterie en publie deux libellés, et « La Merise - Trappes » n'est plus prise pour une salle distincte de « La Merise ».",
+          "La position d'une salle suit celle de Wikidata dès quelques centaines de mètres d'écart, et l'Opéra royal de Versailles retrouve sa fiche Wikidata.",
+          "Les salles de Guadeloupe lues sur Allmol Tickets gardent leur commune, même composée avec un trait d'union (Baie-Mahault).",
+          "Les recherches contenant un accent ou une virgule fonctionnent de nouveau pour retrouver les salles et les artistes à l'ajout.",
+          "« Rose » n'est plus remplacée par « ROSÉ », et un humoriste ne reçoit plus la fiche Deezer d'un musicien homonyme.",
+        ],
+      },
+      {
+        categorie: "Notifications",
+        items: [
+          "Paramètres > Notifications : les contenus de chaque canal sont décalés sous leur case, la Fréquence a son propre cadre, les appareils sont séparés de l'action « Activer sur cet appareil », et un message signale les modifications non enregistrées.",
+          "Quitter Paramètres > Notifications avec des modifications non enregistrées demande si vous enregistrez, abandonnez ou restez sur la page.",
+        ],
+      },
+      {
+        categorie: "Compte",
+        items: [
+          "L'email d'invitation dit que vous êtes invité à rejoindre Strapontin, puis vous demande de créer votre compte, au lieu d'annoncer un compte déjà créé.",
+        ],
+      },
+      {
+        categorie: "Administration",
+        items: [
+          "L'onglet Sources liste chaque site de salle (Le Triton, EMB Sannois, Usine à Chapeaux, Allmol Tickets) avec ses salles, son dernier passage et son état, et le dernier passage de chaque source lui est propre.",
+          "« Annuler (garder) » dans les concerts à confirmer garde le concert pour de bon : il n'est plus proposé à la suppression.",
+          "Un signalement traité à la main (deux fiches au même créneau, candidat Wikidata écarté) ne revient plus la nuit suivante tant que rien ne change ; un candidat Wikidata situé à des centaines de kilomètres n'est plus signalé.",
+          "Nouveaux signalements : un même produit Eventim sur deux fiches, des fiches à venir restées sans mise à jour, une salle restée sans commune.",
+          "Les erreurs JavaScript remontées par les navigateurs portent leur pile d'appel pour en retrouver l'origine.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.0.6 — 18 octobre 2026",
     categories: [
       {

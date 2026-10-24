@@ -143,6 +143,18 @@ final class AlignementReportTM {
     return heures.size() == UNIQUE ? memeDate.get(0) : null;
   }
 
+  // Une date reportée est une nouvelle information pour qui suit l'artiste ou la
+  // salle : la correspondance déjà notifiée repart au prochain envoi.
+  private void reArmerNotifications(final Representation cible, final ValeurConcert report) {
+    if (cible.date().equals(report.date())) {
+      return;
+    }
+    jdbc.update(
+        "UPDATE user_matches SET notification_envoyee_le = NULL"
+            + " WHERE concert_id = CAST(:id AS uuid) AND notification_envoyee_le IS NOT NULL",
+        Map.of(CLE_ID, cible.id().toString()));
+  }
+
   private void aligner(final ValeurConcert report, final List<Representation> candidats) {
     final List<Representation> memeDate =
         candidats.stream().filter(r -> r.date().equals(report.date())).toList();
@@ -172,6 +184,7 @@ final class AlignementReportTM {
                 CLE_ID,
                 cible.id().toString()));
     if (modifies > 0) {
+      reArmerNotifications(cible, report);
       LOG.info(
           "report Ticketmaster aligné url={} {} {} -> {} {}",
           report.url(),

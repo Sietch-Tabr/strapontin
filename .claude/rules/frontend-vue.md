@@ -56,3 +56,4 @@ L'aspect (couleurs, ombres, icônes, tailles de police, espacements, rayons) ne 
 - Contrôlé par `src/charte.test.js` : couleur ou dimension en dur, règle `.sombre` hors variables, variable non définie ou à repli, classe partagée redéfinie localement, rôle réécrit, distinction sémantique perdue (filtres de niveau des logs).
 - Toute classe d'une feuille partagée doit être utilisée (classes construites par concaténation et noms de `<Transition>` reconnus) : une règle orpheline est supprimée.
 
+- **Quitter une page avec saisie non enregistrée** : `onBeforeRouteLeave` (vue-router) + `DialogueConfirmation.choisir({ titre, message, action, secondaire, annuler })`, qui rend `"action"`, `"secondaire"` ou `"annuler"` (`demander` reste le raccourci booléen) ; `beforeunload` couvre la fermeture de l'onglet. Modèle : `ParametresNotifications.vue` (`modifie` compare le formulaire aux dernières préférences enregistrées).

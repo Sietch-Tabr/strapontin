@@ -56,4 +56,29 @@ class SalleRechercheTicketmasterServiceTest {
     verify(cadenceur).attendre();
     serveur.verify();
   }
+
+  @Test
+  void rechercher_accentVirguleEtCleSpeciale_encodeUneSeuleFois() {
+    final ConfigService configService = mock(ConfigService.class);
+    when(configService.lireConfig("TICKETMASTER_API_KEY")).thenReturn(Optional.of("cle+a/b"));
+
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(
+            MockRestRequestMatchers.requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("keyword=Th%C3%A9%C3%A2tre%2C%20Paris&"),
+                    org.hamcrest.Matchers.containsString("apikey=cle%2Ba%2Fb"))))
+        .andRespond(
+            MockRestResponseCreators.withSuccess(
+                "{\"_embedded\":{\"venues\":[]}}", MediaType.APPLICATION_JSON));
+
+    new SalleRechercheTicketmasterService(
+            configService, restClient, new ObjectMapper(), mock(CadenceurAppels.class))
+        .rechercher("Théâtre, Paris");
+
+    serveur.verify();
+  }
 }

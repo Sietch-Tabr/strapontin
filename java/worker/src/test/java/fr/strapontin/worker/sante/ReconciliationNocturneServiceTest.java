@@ -22,6 +22,7 @@ import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionEvenementsArtisteService;
+import fr.strapontin.worker.persister.FusionProduitsEventimService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
 import java.time.Instant;
@@ -89,6 +90,7 @@ class ReconciliationNocturneServiceTest {
             reconciliateurSalles,
             fusionSallesClePortee,
             fusionEvenementsArtiste,
+            mock(FusionProduitsEventimService.class),
             coherenceMultiSalle,
             suggestionMotsGenerics,
             controleIntegrite,

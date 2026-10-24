@@ -136,6 +136,12 @@ public final class CatalogueJobs {
         "Signale les concerts sans salle ni artiste jamais mis à jour.",
         Theme.PURGES);
     ajouter(
+        "purger:concerts-hors-perimetre",
+        "Concerts hors périmètre",
+        "Supprime les concerts à venir que ni département, ni artiste, ni salle suivis ne"
+            + " concernent et qu'aucun fetch ne revoit.",
+        Theme.PURGES);
+    ajouter(
         "purger:salles",
         "Salles orphelines",
         "Supprime les salles sans concert à venir ni utilisateur qui les suit.",

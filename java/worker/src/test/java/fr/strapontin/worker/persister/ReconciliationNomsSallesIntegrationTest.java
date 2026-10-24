@@ -104,6 +104,54 @@ class ReconciliationNomsSallesIntegrationTest extends AbstractWorkerIntegrationT
     assertEquals("Le Liberté Rennes", nom());
   }
 
+  private void observationTm(final String libelle, final int joursSansVue) {
+    final UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id)"
+                + " VALUES (:norm, CURRENT_DATE + 30, '20:00', 'salle', CAST(:salle AS uuid))"
+                + " RETURNING id",
+            Map.of("norm", "artiste " + UUID.randomUUID(), "salle", salleId.toString()),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut,"
+            + " updated_at) VALUES (CAST(:id AS uuid), 'ticketmaster', :url, 'a', :libelle,"
+            + " now() - make_interval(days => :jours))",
+        Map.of(
+            "id",
+            evenementId.toString(),
+            "url",
+            "https://tm/" + evenementId,
+            "libelle",
+            libelle,
+            "jours",
+            joursSansVue));
+  }
+
+  // Zénith de Lille : Ticketmaster publie deux libellés d'un même lieu selon la requête.
+  @Test
+  void absorberRenommagesSalles_ancienLibelleToujoursPublie_neRenommePasEnAlternance() {
+    mapper("ticketmaster", "ticketmaster:zenith-lille");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Zenith de Lille' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()));
+    observationTm("Zenith de Lille", 0);
+
+    absorber("ticketmaster", "ticketmaster:zenith-lille", "Zenith Arena de Lille");
+    assertEquals("Zenith de Lille", nom());
+  }
+
+  @Test
+  void absorberRenommagesSalles_ancienLibelleNePublieePlusDepuisTroisJours_renomme() {
+    mapper("ticketmaster", "ticketmaster:zenith-lille");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Zenith de Lille' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()));
+    observationTm("Zenith de Lille", 10);
+
+    absorber("ticketmaster", "ticketmaster:zenith-lille", "Zenith Arena de Lille");
+    assertEquals("Zenith Arena de Lille", nom());
+  }
+
   @Test
   void absorberRenommagesSalles_mappingUniqueGraphieStrictementMeilleure_appliqueLaGraphie() {
     mapper("ticketmaster", "ticketmaster:zenith");

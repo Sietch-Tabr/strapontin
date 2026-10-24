@@ -138,7 +138,7 @@ public class WorkerPurgeService {
               jdbc.update(
                   "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE absences_consecutives >= :seuil AND date >= CURRENT_DATE"
-                      + " AND suppression_suggeree_le IS NULL",
+                      + " AND suppression_suggeree_le IS NULL AND maintenu_le IS NULL",
                   Map.of(CLE_SEUIL, SEUIL_PURGE_ABSENCES));
           LOG.info(
               "purger:concerts-non-confirmes terminé signales={} levesObsoletes={}",
@@ -166,7 +166,7 @@ public class WorkerPurgeService {
                   "UPDATE evenements SET suppression_suggeree_le = now()"
                       + " WHERE salle_id IS NULL AND artiste_id IS NULL AND date >= CURRENT_DATE"
                       + " AND updated_at < now() - make_interval(days => :seuilJours)"
-                      + " AND suppression_suggeree_le IS NULL",
+                      + " AND suppression_suggeree_le IS NULL AND maintenu_le IS NULL",
                   Map.of("seuilJours", SEUIL_JOURS_HORS_PORTEE));
           LOG.info("purger:concerts-hors-portee terminé signales={}", signales);
           return new ResultatPersistance(0, signales);

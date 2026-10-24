@@ -99,6 +99,22 @@
               </p>
             </template>
 
+            <template v-else-if="source.id.startsWith('site_salle:')">
+              <p class="source-carte-detail texte-note">
+                {{ source.nbSallesConfigurees ?? 0 }} salle{{
+                  source.nbSallesConfigurees > 1 ? "s" : ""
+                }}
+                lue{{ source.nbSallesConfigurees > 1 ? "s" : "" }} sur ce site.
+              </p>
+              <p
+                v-if="source.etat === 'erreur'"
+                class="badge-quota badge-quota-critique"
+              >
+                Dernier passage en erreur ou sans mise à jour depuis plus de
+                trois jours
+              </p>
+            </template>
+
             <template v-else-if="source.id === 'deezer'">
               <p class="source-carte-detail texte-note">
                 <span v-if="source.nbArtistesConfigures > 0">
