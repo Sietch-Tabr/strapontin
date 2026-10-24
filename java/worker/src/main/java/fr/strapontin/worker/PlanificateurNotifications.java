@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.HorairesJobs;
 import fr.strapontin.worker.jobs.NotifierDigestJob;
 import fr.strapontin.worker.jobs.NotifierVersionJob;
 import java.util.TimeZone;
@@ -25,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class PlanificateurNotifications {
 
-  private static final TimeZone PARIS = TimeZone.getTimeZone(PlageSilencieusePush.FUSEAU);
+  private static final TimeZone PARIS = Planificateur.PARIS;
 
   /** Instancié par Spring. */
   public PlanificateurNotifications() {
@@ -46,7 +47,8 @@ public class PlanificateurNotifications {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailNotifierDigest)
         .withIdentity("triggerNotifierDigest")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 12 * * ?").inTimeZone(PARIS))
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(HorairesJobs.DIGEST_QUOTIDIEN).inTimeZone(PARIS))
         .build();
   }
 
@@ -58,7 +60,8 @@ public class PlanificateurNotifications {
         .forJob(jobDetailNotifierDigest)
         .withIdentity("triggerNotifierPushDifferes")
         .usingJobData(NotifierDigestJob.CLE_FREQUENCE, NotifierDigestJob.FREQUENCE_PUSH_DIFFERES)
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 7 * * ?").inTimeZone(PARIS))
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(HorairesJobs.DIGEST_DIFFERES).inTimeZone(PARIS))
         .build();
   }
 
@@ -78,7 +81,8 @@ public class PlanificateurNotifications {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetailNotifierVersion)
         .withIdentity("triggerNotifierVersion")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 11 * * ?").inTimeZone(PARIS))
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(HorairesJobs.NOTIFIER_VERSION).inTimeZone(PARIS))
         .build();
   }
 
@@ -90,7 +94,8 @@ public class PlanificateurNotifications {
         .forJob(jobDetailNotifierDigest)
         .withIdentity("triggerNotifierDigestHebdomadaire")
         .usingJobData(NotifierDigestJob.CLE_FREQUENCE, "hebdomadaire")
-        .withSchedule(CronScheduleBuilder.cronSchedule("0 0 12 ? * SUN").inTimeZone(PARIS))
+        .withSchedule(
+            CronScheduleBuilder.cronSchedule(HorairesJobs.DIGEST_HEBDOMADAIRE).inTimeZone(PARIS))
         .build();
   }
 }

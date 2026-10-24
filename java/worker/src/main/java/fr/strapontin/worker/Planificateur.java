@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.HorairesJobs;
 import fr.strapontin.worker.jobs.FetchArtistesBatchJob;
 import fr.strapontin.worker.jobs.FetchRegionJob;
 import fr.strapontin.worker.jobs.FetchSallesAllJob;
@@ -39,7 +40,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class Planificateur {
 
-  @Value("${worker.cron.fetch-artistes:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
+  /* package-private : fuseau des triggers, partagé avec PlanificateurNotifications. */
+  static final TimeZone PARIS = TimeZone.getTimeZone(HorairesJobs.FUSEAU);
+
+  @Value("${worker.cron.fetch-artistes:" + HorairesJobs.FETCH_ARTISTES + "}")
   private String cronFetchArtistes;
 
   // cron adaptatif (11x/jour) → 1 batch nocturne unique. DecouverteService est
@@ -47,21 +51,21 @@ public class Planificateur {
   // associée) — les artistes/salles suivis ont leurs propres mécanismes
   // indépendants (fetch:artistes:batch, fetch:salles:all), non affectés par
   // cette fréquence.
-  @Value("${worker.cron.fetch-region:0 0 2 * * ?}")
+  @Value("${worker.cron.fetch-region:" + HorairesJobs.FETCH_REGION + "}")
   private String cronFetchRegion;
 
-  @Value("${worker.cron.fetch-salles:0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
+  @Value("${worker.cron.fetch-salles:" + HorairesJobs.FETCH_SALLES + "}")
   private String cronFetchSalles;
 
   // Une lecture par jour, en journée : un concert découvert la nuit pourrait
   // réveiller un utilisateur en fréquence « à chaque nouveau concert ».
-  @Value("${worker.cron.fetch-sites-salles:0 0 14 * * ?}")
+  @Value("${worker.cron.fetch-sites-salles:" + HorairesJobs.FETCH_SITES_SALLES + "}")
   private String cronFetchSitesSalles;
 
-  @Value("${worker.cron.recalculer-matches:0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?}")
+  @Value("${worker.cron.recalculer-matches:" + HorairesJobs.RECALCULER_MATCHES + "}")
   private String cronRecalculerMatches;
 
-  @Value("${worker.cron.reconciliation-nocturne:0 0 3 * * ?}")
+  @Value("${worker.cron.reconciliation-nocturne:" + HorairesJobs.RECONCILIATION_NOCTURNE + "}")
   private String cronReconciliationNocturne;
 
   /** Constructeur par défaut. */
@@ -77,7 +81,7 @@ public class Planificateur {
     return TriggerBuilder.newTrigger()
         .forJob(jobDetail)
         .withIdentity(identite)
-        .withSchedule(CronScheduleBuilder.cronSchedule(cron))
+        .withSchedule(CronScheduleBuilder.cronSchedule(cron).inTimeZone(PARIS))
         .build();
   }
 
@@ -135,15 +139,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerFetchSitesSalles(final JobDetail jobDetailFetchSitesSalles) {
-    // Fuseau explicite : « en journée » vaut pour Paris, quel que soit le fuseau
-    // du serveur.
-    return TriggerBuilder.newTrigger()
-        .forJob(jobDetailFetchSitesSalles)
-        .withIdentity("triggerFetchSitesSalles")
-        .withSchedule(
-            CronScheduleBuilder.cronSchedule(cronFetchSitesSalles)
-                .inTimeZone(TimeZone.getTimeZone("Europe/Paris")))
-        .build();
+    return creerTrigger(jobDetailFetchSitesSalles, "triggerFetchSitesSalles", cronFetchSitesSalles);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -172,7 +168,8 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerPurgerConcerts(final JobDetail jobDetailPurgerConcerts) {
-    return creerTrigger(jobDetailPurgerConcerts, "triggerPurgerConcerts", "0 0 0 * * ?");
+    return creerTrigger(
+        jobDetailPurgerConcerts, "triggerPurgerConcerts", HorairesJobs.PURGER_CONCERTS);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -186,7 +183,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerPurgerSalles(final JobDetail jobDetailPurgerSalles) {
-    return creerTrigger(jobDetailPurgerSalles, "triggerPurgerSalles", "0 5 0 * * ?");
+    return creerTrigger(jobDetailPurgerSalles, "triggerPurgerSalles", HorairesJobs.PURGER_SALLES);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -200,7 +197,8 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerPurgerArtistes(final JobDetail jobDetailPurgerArtistes) {
-    return creerTrigger(jobDetailPurgerArtistes, "triggerPurgerArtistes", "0 6 0 * * ?");
+    return creerTrigger(
+        jobDetailPurgerArtistes, "triggerPurgerArtistes", HorairesJobs.PURGER_ARTISTES);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -214,7 +212,8 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerPurgerLogsAdmin(final JobDetail jobDetailPurgerLogsAdmin) {
-    return creerTrigger(jobDetailPurgerLogsAdmin, "triggerPurgerLogsAdmin", "0 15 0 * * ?");
+    return creerTrigger(
+        jobDetailPurgerLogsAdmin, "triggerPurgerLogsAdmin", HorairesJobs.PURGER_LOGS_ADMIN);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -229,7 +228,9 @@ public class Planificateur {
   @Bean
   Trigger triggerGererComptesInactifs(final JobDetail jobDetailGererComptesInactifs) {
     return creerTrigger(
-        jobDetailGererComptesInactifs, "triggerGererComptesInactifs", "0 20 0 * * ?");
+        jobDetailGererComptesInactifs,
+        "triggerGererComptesInactifs",
+        HorairesJobs.COMPTES_INACTIFS);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -243,7 +244,8 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerGererInvitesExpires(final JobDetail jobDetailGererInvitesExpires) {
-    return creerTrigger(jobDetailGererInvitesExpires, "triggerGererInvitesExpires", "0 25 0 * * ?");
+    return creerTrigger(
+        jobDetailGererInvitesExpires, "triggerGererInvitesExpires", HorairesJobs.INVITES_EXPIRES);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -257,7 +259,8 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerRevoquerAdmins(final JobDetail jobDetailRevoquerAdmins) {
-    return creerTrigger(jobDetailRevoquerAdmins, "triggerRevoquerAdmins", "0 0 * * * ?");
+    return creerTrigger(
+        jobDetailRevoquerAdmins, "triggerRevoquerAdmins", HorairesJobs.REVOQUER_ADMINS);
   }
 
   /* package-private : Bean Spring, jamais appelé directement hors du
@@ -288,6 +291,7 @@ public class Planificateur {
    * conteneur. */
   @Bean
   Trigger triggerSuiviCyclesJobs(final JobDetail jobDetailSuiviCyclesJobs) {
-    return creerTrigger(jobDetailSuiviCyclesJobs, "triggerSuiviCyclesJobs", "0 30 * * * ?");
+    return creerTrigger(
+        jobDetailSuiviCyclesJobs, "triggerSuiviCyclesJobs", HorairesJobs.SUIVI_CYCLES);
   }
 }

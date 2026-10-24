@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.HorairesJobs;
 import fr.strapontin.web.email.EmailAlerteService;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,7 +53,7 @@ public class WatchdogWorkerService {
    * Vérifie l'activité du worker toutes les heures et envoie une alerte si
    * inactif.
    */
-  @Scheduled(cron = "0 0 * * * *")
+  @Scheduled(cron = HorairesJobs.WATCHDOG_WORKER, zone = HorairesJobs.FUSEAU)
   public void verifier() {
     final Instant derniereExec = lireDerniereExecReussie();
     final boolean inactif =

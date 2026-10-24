@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.HorairesJobs;
 import fr.strapontin.web.config.ConfigService;
 import fr.strapontin.web.email.EmailAlerteService;
 import java.time.Clock;
@@ -66,7 +67,7 @@ public class AlerteLogsAdminService {
    * qu'après envoi réussi : échec Resend, destinataire absent ou plafond de
    * {@value #MAX_DIGESTS_PAR_JOUR} digests par jour reportent les erreurs.
    */
-  @Scheduled(cron = "0 */15 * * * *")
+  @Scheduled(cron = HorairesJobs.ALERTE_LOGS_ADMIN, zone = HorairesJobs.FUSEAU)
   public void verifier() {
     final long curseur = lireCurseur();
     final List<LogAdminService.EntreeLogAdmin> erreurs = logAdminService.lireErreursDepuis(curseur);

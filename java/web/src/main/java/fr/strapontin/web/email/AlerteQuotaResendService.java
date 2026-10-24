@@ -5,6 +5,7 @@
 package fr.strapontin.web.email;
 
 import fr.strapontin.core.CompteurEnvoisResend;
+import fr.strapontin.core.HorairesJobs;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,7 @@ class AlerteQuotaResendService {
    * Resend) et envoie une alerte si franchi et pas encore signalé pour la
    * fenêtre jour/mois courante.
    */
-  @Scheduled(cron = "0 */15 * * * *")
+  @Scheduled(cron = HorairesJobs.ALERTE_QUOTA_RESEND, zone = HorairesJobs.FUSEAU)
   /* package-private : appelé par le scheduler Spring (même package). */
   void verifier() {
     emailSender.recalerQuotaSurUsageReel();
