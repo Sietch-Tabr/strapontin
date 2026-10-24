@@ -37,6 +37,8 @@ class EmailTemplatesTest {
     assertThat(html).contains("href=\"https://exemple.fr/reset/abc\"");
     assertThat(html).contains("Créer mon compte");
     assertThat(html).contains("identifiant");
+    assertThat(html).contains("Vous avez été invité à rejoindre Strapontin");
+    assertThat(html).doesNotContain("compte a été créé");
     assertThat(html).contains("https://app.fr/parametres");
     assertThat(html).contains("color: #111");
   }

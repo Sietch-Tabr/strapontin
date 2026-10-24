@@ -61,8 +61,9 @@ public class EmailService {
         """
         Bienvenue sur Strapontin
 
-        Votre compte a été créé. Cliquez sur le lien ci-dessous pour choisir
-        votre identifiant et votre mot de passe (lien valable 7 jours) :
+        Vous avez été invité à rejoindre Strapontin. Cliquez sur le lien
+        ci-dessous pour créer votre compte en choisissant votre identifiant et
+        votre mot de passe (lien valable 7 jours) :
 
         %s
         """
