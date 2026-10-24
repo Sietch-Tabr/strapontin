@@ -52,7 +52,11 @@ function marquerVue() {
 onMounted(async () => {
   try {
     const rep = await appelApi("/api/incident", { signal: controleur.signal });
-    if (rep.status !== 200) return;
+    if (rep.status !== 200) {
+      // Corps lu : une réponse inachevée annulée au démontage s'affiche en échec dans le réseau.
+      await rep.arrayBuffer();
+      return;
+    }
     incident.value = await lireJson(rep);
     vue.value = lireVue(incident.value.id);
   } catch (e) {

@@ -42,7 +42,10 @@ import { versionsChangelog } from "./changelogVersions.js";
 
 onMounted(async () => {
   try {
-    await appelApi("/api/changelog/marquer-vue", { method: "POST" });
+    const rep = await appelApi("/api/changelog/marquer-vue", {
+      method: "POST",
+    });
+    await rep.arrayBuffer();
   } catch (e) {
     console.error("Échec marquage changelog vu", e);
   }
