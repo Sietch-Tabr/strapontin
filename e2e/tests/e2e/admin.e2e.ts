@@ -81,6 +81,12 @@ test.describe("Scénario: admin — sections et contenus", () => {
         await bouton.click();
       }
       await expect(bouton).toHaveAttribute("aria-pressed", "true");
+      // La couleur de fond passe par une transition CSS : on attend la valeur finale.
+      await expect
+        .poll(() =>
+          bouton.evaluate((el) => getComputedStyle(el).backgroundColor),
+        )
+        .not.toBe("rgba(0, 0, 0, 0)");
       fonds.push(
         await bouton.evaluate((el) => getComputedStyle(el).backgroundColor),
       );
