@@ -9,6 +9,7 @@ import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.EventimSource;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.salle.SalleService;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,8 @@ public class SourcesService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SourcesService.class);
   private static final String CLE_UUID = "uuid";
+  private static final String SOURCE_TM = "ticketmaster";
+  private static final String SOURCE_EVENTIM = "eventim";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -137,35 +140,49 @@ public class SourcesService {
   }
 
   private List<StatutSource> construireSources() {
-    final Instant dernierFetch = lireDernierFetch();
     final QuotaTM quotaTM = lireQuotaTMDepuisBase();
     final String etatQuota = calculerEtatQuota(quotaTM);
 
     final List<StatutSource> sources = new ArrayList<>();
     sources.add(
         new StatutSource(
-            "ticketmaster",
+            SOURCE_TM,
             "Ticketmaster",
             "concerts",
             quotaTM,
             etatQuota,
-            dernierFetch,
-            compterSallesParSource("ticketmaster"),
-            compterArtistesParSource("ticketmaster")));
+            lireDernierPassage(SOURCE_TM),
+            compterSallesParSource(SOURCE_TM),
+            compterArtistesParSource(SOURCE_TM),
+            null));
     sources.add(
         new StatutSource(
-            "eventim",
+            SOURCE_EVENTIM,
             "Eventim",
             "concerts",
             null,
             null,
-            dernierFetch,
-            compterSallesParSource("eventim"),
-            compterArtistesParSource("eventim")));
-    sources.add(
+            lireDernierPassage(SOURCE_EVENTIM),
+            compterSallesParSource(SOURCE_EVENTIM),
+            compterArtistesParSource(SOURCE_EVENTIM),
+            null));
+    sources.addAll(construireSourcesSitesSalles());
+    sources.addAll(construireSourcesMetadonnees());
+    return sources;
+  }
+
+  private List<StatutSource> construireSourcesMetadonnees() {
+    return List.of(
         new StatutSource(
-            "deezer", "Deezer", "metadonnees", null, null, null, null, compterArtistesDeezer()));
-    sources.add(
+            "deezer",
+            "Deezer",
+            "metadonnees",
+            null,
+            null,
+            null,
+            null,
+            compterArtistesDeezer(),
+            null),
         new StatutSource(
             "wikidata",
             "Wikidata",
@@ -174,8 +191,8 @@ public class SourcesService {
             null,
             null,
             compterSallesWikidata(),
-            compterArtistesWikidata()));
-    return sources;
+            compterArtistesWikidata(),
+            null));
   }
 
   private QuotaTM lireQuotaTMDepuisBase() {
@@ -203,15 +220,87 @@ public class SourcesService {
     return pct < 10 ? "critique" : pct < 20 ? "attention" : "ok";
   }
 
-  private Instant lireDernierFetch() {
+  // Dernière observation mise à jour par la source, propre à chacune (le dernier
+  // job réussi est commun à toutes les sources de concerts).
+  private Instant lireDernierPassage(final String source) {
     try {
       return jdbc.queryForObject(
-          "SELECT MAX(derniere_exec) FROM fetch_jobs WHERE erreur IS NULL OR erreur = ''",
-          Map.of(),
+          "SELECT MAX(updated_at) FROM observations WHERE source = CAST(:source AS source_concert)",
+          Map.of("source", source),
           Instant.class);
     } catch (Exception e) {
-      LOG.debug("Impossible de lire le dernier fetch : {}", e.getMessage());
+      LOG.debug("Impossible de lire le dernier passage de {} : {}", source, e.getMessage());
       return null;
+    }
+  }
+
+  // Un site se reconnaît au préfixe de l'identifiant de ses salles : une nouvelle
+  // source apparaît dès sa première salle.
+  private List<StatutSource> construireSourcesSitesSalles() {
+    final boolean jobEnErreur = dernierJobSitesEnErreur();
+    return jdbc.query(
+        """
+        SELECT sites.site, count(DISTINCT sites.salle_id) AS nb_salles,
+               (SELECT max(o.updated_at)
+                FROM observations o
+                JOIN evenements e ON e.id = o.evenement_id
+                JOIN salle_sources s2 ON s2.salle_id = e.salle_id AND s2.source = 'site_salle'
+                WHERE o.source = 'site_salle'
+                  AND split_part(s2.identifiant_externe, ':', 1) = sites.site) AS dernier_passage
+        FROM (SELECT split_part(identifiant_externe, ':', 1) AS site, salle_id
+              FROM salle_sources WHERE source = 'site_salle') sites
+        GROUP BY sites.site
+        ORDER BY sites.site
+        """,
+        Map.of(),
+        (rs, _) -> {
+          final Instant dernier =
+              rs.getTimestamp("dernier_passage") != null
+                  ? rs.getTimestamp("dernier_passage").toInstant()
+                  : null;
+          final String site = rs.getString("site");
+          return new StatutSource(
+              "site_salle:" + site,
+              nomSiteSalle(site),
+              "concerts",
+              null,
+              null,
+              dernier,
+              rs.getInt("nb_salles"),
+              null,
+              etatSite(jobEnErreur, dernier));
+        });
+  }
+
+  private static String nomSiteSalle(final String site) {
+    return switch (site) {
+      case "triton" -> "Le Triton";
+      case "emb" -> "EMB Sannois";
+      case "usine" -> "Usine à Chapeaux";
+      case "allmol" -> "Allmol Tickets";
+      default -> site.isEmpty() ? site : Character.toUpperCase(site.charAt(0)) + site.substring(1);
+    };
+  }
+
+  // Lus une fois par jour : sans observation depuis trois jours, ou après un dernier
+  // passage en erreur, un site est à examiner.
+  private static String etatSite(final boolean jobEnErreur, final Instant dernier) {
+    final boolean silencieux =
+        dernier == null || dernier.isBefore(Instant.now().minus(Duration.ofDays(3)));
+    return jobEnErreur || silencieux ? "erreur" : "ok";
+  }
+
+  private boolean dernierJobSitesEnErreur() {
+    try {
+      final List<String> erreurs =
+          jdbc.queryForList(
+              "SELECT coalesce(erreur, '') FROM fetch_jobs WHERE type_job = 'fetch:sites-salles'",
+              Map.of(),
+              String.class);
+      return !erreurs.isEmpty() && !erreurs.get(0).isEmpty();
+    } catch (Exception e) {
+      LOG.debug("Impossible de lire le dernier passage des sites : {}", e.getMessage());
+      return false;
     }
   }
 

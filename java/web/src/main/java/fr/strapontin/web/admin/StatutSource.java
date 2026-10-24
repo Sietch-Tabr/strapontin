@@ -8,7 +8,8 @@ import fr.strapontin.core.QuotaTM;
 import java.time.Instant;
 
 /**
- * Statut agrégé d'une source de données pour l'onglet admin Sources.
+ * Statut agrégé d'une source pour l'onglet admin Sources ; {@code etat} vaut
+ * {@code erreur} ou {@code ok} pour un site de salle, {@code null} sinon.
  * @since 2.3.0
  * @author Kwaite
  */
@@ -20,4 +21,5 @@ public record StatutSource(
     String etatQuota,
     Instant dernierFetch,
     Integer nbSallesConfigurees,
-    Integer nbArtistesConfigures) {}
+    Integer nbArtistesConfigures,
+    String etat) {}
