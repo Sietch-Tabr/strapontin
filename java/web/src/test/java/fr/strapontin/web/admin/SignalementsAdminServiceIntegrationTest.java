@@ -155,6 +155,25 @@ class SignalementsAdminServiceIntegrationTest extends AbstractWebIntegrationTest
     assertEquals(0, service.lister(0).total());
   }
 
+  @Test
+  void resoudre_signalementActif_memoriseLaDecisionDeLAdministrateur() {
+    final long id =
+        jdbc.queryForObject(
+            "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
+                + " VALUES ('creneau_double_meme_source', 'evenement', CAST(:id AS uuid), 'haute')"
+                + " RETURNING id",
+            Map.of("id", UUID.randomUUID().toString()),
+            Long.class);
+
+    service.resoudre(id);
+
+    assertTrue(
+        jdbc.queryForObject(
+            "SELECT resolu_manuellement FROM signalements_matching WHERE id = :id",
+            Map.of("id", id),
+            Boolean.class));
+  }
+
   // « Marquer comme traité » reconnaît l'absence de couverture : la nuit suivante, le département
   // n'est plus signalé tant qu'il reste sans concert.
   @Test

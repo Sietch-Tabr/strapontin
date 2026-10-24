@@ -239,9 +239,8 @@ final class WikidataSalleDecouverte {
           "Wikidata découverte salle — rejet coordonnées divergentes nom={} salleId={}",
           nomRecherche,
           salle.id());
-      ambiguites.put(
-          salle.id(),
-          DetailsDivergenceWikidata.detailsDe(salle, itemUri, itemLabel, coordLat, coordLon));
+      DetailsDivergenceWikidata.detailsASignaler(salle, itemUri, itemLabel, coordLat, coordLon)
+          .ifPresent(details -> ambiguites.put(salle.id(), details));
       return Optional.empty();
     }
 
