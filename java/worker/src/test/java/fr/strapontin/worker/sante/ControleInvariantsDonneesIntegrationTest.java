@@ -40,8 +40,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
   private UUID creerSalle() {
     return jdbc.queryForObject(
-        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('l embarcadere', 'L''Embarcadère',"
-            + " 'l embarcadere') RETURNING id",
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES ('l embarcadere',"
+            + " 'L''Embarcadère', 'l embarcadere', 'Paris') RETURNING id",
         Map.of(),
         UUID.class);
   }
@@ -114,8 +114,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     final UUID galabru = creerSalle();
     final UUID elysee =
         jdbc.queryForObject(
-            "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('elysee', 'Élysée Montmartre',"
-                + " 'elysee montmartre') RETURNING id",
+            "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES ('elysee',"
+                + " 'Élysée Montmartre', 'elysee montmartre', 'Paris') RETURNING id",
             Map.of(),
             UUID.class);
     jdbc.update(
@@ -234,7 +234,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
   private UUID creerSalleNommee(final String cle) {
     return jdbc.queryForObject(
-        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:cle, :cle, :cle) RETURNING id",
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES (:cle, :cle, :cle, 'Lyon')"
+            + " RETURNING id",
         Map.of("cle", cle),
         UUID.class);
   }
@@ -287,6 +288,24 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
     controle.verifier();
 
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_salleSansVilleAvecConcertsAVenir_signaleEtRefermeUneFoisLaVilleRenseignee() {
+    final UUID salle =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES ('casino du gosier',"
+                + " 'Casino du Gosier', 'casino du gosier', '971') RETURNING id",
+            Map.of(),
+            UUID.class);
+    evenement(salle, "artiste gosier", "971");
+
+    controle.verifier();
+    assertEquals(List.of("salle_sans_ville"), actifs());
+
+    jdbc.update("UPDATE salles SET ville = 'Le Gosier'", Map.of());
+    controle.verifier();
     assertEquals(List.of(), actifs());
   }
 

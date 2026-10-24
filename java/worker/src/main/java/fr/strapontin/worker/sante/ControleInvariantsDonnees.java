@@ -56,6 +56,7 @@ final class ControleInvariantsDonnees {
         + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
         + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
         + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
+        + publier("salle_sans_ville", SALLE, sallesSansVille())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
   }
 
@@ -203,6 +204,28 @@ final class ControleInvariantsDonnees {
                   rs.getString("titre_a") + " / " + rs.getString("titre_b"),
                   JUMEAU,
                   rs.getObject(JUMEAU, UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Salle à concerts à venir restée sans commune après la complétion nocturne : ses
+  // concerts s'affichent sans ville.
+  private Map<UUID, Map<String, Object>> sallesSansVille() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT s.id, s.nom, s.dept, count(*) AS nb
+        FROM salles s JOIN evenements e ON e.salle_id = s.id AND e.date >= CURRENT_DATE
+        WHERE s.ville IS NULL OR s.ville = ''
+        GROUP BY s.id, s.nom, s.dept
+        """,
+        Map.of(),
+        rs -> {
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.put(SALLE, rs.getString("nom"));
+          details.put("departement", rs.getString("dept"));
+          details.put("concerts", rs.getLong("nb"));
+          anomalies.put(rs.getObject("id", UUID.class), details);
         });
     return anomalies;
   }

@@ -78,6 +78,19 @@ class SiteAllmolTest {
         concert.url());
   }
 
+  // La commune porte elle-même un trait d'union (« Baie-Mahault »).
+  @Test
+  void extraire_communeAvecTraitDUnionApresUnTiret_estGardee() {
+    final ConcertBrut concert =
+        concerts.stream()
+            .filter(c -> c.artiste().startsWith("JOE DWET FILE"))
+            .findFirst()
+            .orElseThrow();
+
+    assertEquals("Vélodrôme de Gourde-Liane", concert.salle());
+    assertEquals("Baie-Mahault", concert.ville());
+  }
+
   @Test
   void extraire_departementDeLaMartinique_gardeSonCode() {
     // Le seul produit 972 de la réponse (Nefertiti) est annulé : il ne doit rien produire.

@@ -44,7 +44,7 @@ public class SiteAllmol extends SourceSiteSalle {
   private static final Pattern LIEU_DANS_TITRE = Pattern.compile("\\s+@\\s+.*$");
   private static final Pattern EN_CONCERT =
       Pattern.compile("\\s+en\\s+(?:concert|live)\\b.*$", Pattern.CASE_INSENSITIVE);
-  private static final Pattern VILLE_APRES_TIRET = Pattern.compile("^(.*?)\\s+[-–]\\s+([^-–]+)$");
+  private static final Pattern VILLE_APRES_TIRET = Pattern.compile("^(.*)\\s+[-–]\\s+(.+)$");
   private static final Pattern VILLE_ENTRE_PARENTHESES =
       Pattern.compile("^(.*?)\\s*\\(([^)]+)\\)$");
   private static final Pattern DEPT_OUTRE_MER = Pattern.compile("97\\d");
