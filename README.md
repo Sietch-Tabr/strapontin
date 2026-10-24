@@ -40,7 +40,7 @@ Ne ratez plus les concerts de vos artistes préférés. Strapontin agrège autom
 
 ## Stack
 
-- [Spring Boot 4](https://spring.io/projects/spring-boot), Java 26 : API REST (`web`) et jobs de récupération (`worker`)
+- [Spring Boot 4](https://spring.io/projects/spring-boot), Java 27 : API REST (`web`) et jobs de récupération (`worker`)
 - [Vue 3](https://vuejs.org/) + [Vite](https://vite.dev/) : application côté client
 - [Spring Security 7](https://spring.io/projects/spring-security) + Spring Session JDBC : authentification, sessions persistantes
 - [Quartz](https://www.quartz-scheduler.org/) : planification des jobs
