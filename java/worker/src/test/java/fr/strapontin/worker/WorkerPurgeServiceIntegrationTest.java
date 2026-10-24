@@ -151,4 +151,28 @@ class WorkerPurgeServiceIntegrationTest extends AbstractWorkerIntegrationTest {
             .addValue("invite", invite)
             .addValue("derniereConnexion", derniereConnexion, Types.TIMESTAMP));
   }
+
+  private void evenementTresAbsent(final String artiste, final boolean maintenu) {
+    jdbc.update(
+        "INSERT INTO evenements (artiste_norm, date, salle_norm, absences_consecutives,"
+            + " maintenu_le) VALUES (:artiste, CURRENT_DATE + 30, 'salle', 60,"
+            + " CASE WHEN :maintenu THEN now() END)",
+        Map.of("artiste", artiste, "maintenu", maintenu));
+  }
+
+  // Rabah Asma : séance réelle que sa billetterie ne renvoie plus, conservée par un admin.
+  @Test
+  void executerPurgerConcertsNonConfirmes_seanceMaintenue_neEstPlusSignaleeASupprimer() {
+    evenementTresAbsent("rabah asma", true);
+    evenementTresAbsent("annule", false);
+
+    service.executerPurgerConcertsNonConfirmes();
+
+    assertEquals(
+        List.of("annule"),
+        jdbc.queryForList(
+            "SELECT artiste_norm FROM evenements WHERE suppression_suggeree_le IS NOT NULL",
+            Map.of(),
+            String.class));
+  }
 }

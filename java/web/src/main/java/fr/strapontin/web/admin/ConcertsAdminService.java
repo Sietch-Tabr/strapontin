@@ -113,9 +113,8 @@ public class ConcertsAdminService {
   }
 
   /**
-   * Annule le flag de suppression d'un concert (faux positif) — remet aussi le
-   * compteur d'absences à zéro pour éviter un re-flag immédiat au cycle de
-   * purge suivant.
+   * Annule le flag de suppression d'un concert (faux positif) et le déclare
+   * maintenu : remis à zéro, il n'est plus jamais signalé à supprimer.
    *
    * @param id UUID du concert
    * @return {@code true} si un concert flagué correspondant a été restauré
@@ -125,7 +124,8 @@ public class ConcertsAdminService {
         jdbc.update(
             """
             UPDATE evenements
-            SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL
+            SET suppression_suggeree_le = NULL, absences_consecutives = 0, absence_detectee_le = NULL,
+                maintenu_le = now()
             WHERE id = CAST(:id AS uuid) AND suppression_suggeree_le IS NOT NULL
             """,
             Map.of("id", id.toString()));

@@ -6,6 +6,8 @@ package fr.strapontin.web.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.time.LocalDate;
@@ -84,5 +86,22 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
     assertEquals("Vincent Dedienne", reponse.concerts().get(0).artiste());
     assertNotNull(reponse.concerts().get(0).suppressionSuggereeLe());
     assertEquals(1L, reponse.total());
+  }
+
+  @Test
+  void annulerSuppression_concertFlague_leDeclareMaintenu() {
+    creerConcertFlague("Rabah Asma");
+    final UUID id = jdbc.queryForObject("SELECT id FROM evenements", Map.of(), UUID.class);
+
+    assertTrue(service.annulerSuppression(id));
+
+    final Map<String, Object> ligne =
+        jdbc.queryForMap(
+            "SELECT maintenu_le IS NOT NULL AS maintenu, suppression_suggeree_le,"
+                + " absences_consecutives FROM evenements",
+            Map.of());
+    assertEquals(true, ligne.get("maintenu"));
+    assertNull(ligne.get("suppression_suggeree_le"));
+    assertEquals(0, ligne.get("absences_consecutives"));
   }
 }

@@ -193,7 +193,7 @@ async function annuler(concert) {
     );
     if (rep.ok) {
       afficherToast(
-        "Concert conservé, compteur d'absences réinitialisé.",
+        "Concert conservé, il ne sera plus signalé à supprimer.",
         "succes",
       );
       await charger();
