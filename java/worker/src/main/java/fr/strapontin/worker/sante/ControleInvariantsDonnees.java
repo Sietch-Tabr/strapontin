@@ -232,7 +232,7 @@ final class ControleInvariantsDonnees {
 
   // Fiche à venir du périmètre d'un utilisateur (département, artiste, salle ou
   // correspondance) dont aucune observation n'a été revue depuis deux semaines et
-  // qu'aucun compteur d'absences n'a encore signalée : aucun fetch ne la voit.
+  // dont aucune absence n'est comptée : aucun fetch ne la voit.
   private Map<UUID, Map<String, Object>> fichesFigees() {
     final Map<String, Object> details = new LinkedHashMap<>();
     jdbc.query(
@@ -241,6 +241,7 @@ final class ControleInvariantsDonnees {
                string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts
         FROM evenements e
         WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
+          AND e.absences_consecutives = 0
           AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = e.id)
           AND NOT EXISTS (SELECT 1 FROM observations o
                           WHERE o.evenement_id = e.id AND o.updated_at > now() - interval '14 days')
@@ -260,9 +261,9 @@ final class ControleInvariantsDonnees {
     return globale("fiches_figees", details);
   }
 
-  // Un même produit Eventim porté par deux fiches du même jour et de la même salle
-  // après la fusion nocturne : heures éloignées, artistes reconnus différents ou
-  // plus de deux fiches. Détecté seulement, le calendrier de la salle seul tranche.
+  // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures voisines
+  // après la fusion : artistes différents ou plus de deux fiches. Deux séances
+  // d'un produit (matinée, soirée) ne comptent pas.
   private Map<UUID, Map<String, Object>> produitsEventimDoubles() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     final String produit = ProduitEventim.expressionSql("o");
@@ -278,7 +279,9 @@ final class ControleInvariantsDonnees {
             + " CASE WHEN a.first_seen >= b.first_seen THEN b.id ELSE a.id END AS jumeau,"
             + " a.produit AS produit, s.nom AS salle, a.date::text AS date"
             + " FROM p a JOIN p b ON b.produit = a.produit AND b.date = a.date"
-            + " AND b.salle_id = a.salle_id AND a.id < b.id JOIN salles s ON s.id = a.salle_id",
+            + " AND b.salle_id = a.salle_id AND a.id < b.id JOIN salles s ON s.id = a.salle_id"
+            + " WHERE a.heure IS NULL OR b.heure IS NULL"
+            + " OR abs(extract(epoch FROM (a.heure - b.heure))) <= 3600",
         Map.of(),
         rs -> {
           anomalies.put(

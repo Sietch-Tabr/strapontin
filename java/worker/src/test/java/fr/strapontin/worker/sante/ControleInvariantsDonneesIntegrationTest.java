@@ -221,15 +221,28 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
-  void verifier_memeProduitEventimSurDeuxFichesDeHeuresEloignees_signaleSansFusionner() {
+  void verifier_memeProduitEventimSurTroisFichesDHeuresVoisines_signaleSansFusionner() {
     final UUID salle = creerSalle();
-    produitEventim(salle, "boleros", "15:30", "22000001");
-    produitEventim(salle, "boleros soiree", "20:30", "22000001");
+    produitEventim(salle, "boleros", "20:00", "22000001");
+    produitEventim(salle, "boleros soiree", "20:15", "22000001");
+    produitEventim(salle, "boleros gala", "20:30", "22000001");
 
     controle.verifier();
 
-    assertEquals(List.of("produit_eventim_double"), actifs());
-    assertEquals(2L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(java.util.Set.of("produit_eventim_double"), java.util.Set.copyOf(actifs()));
+    assertEquals(3L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  // Flashdance à Pleyel : deux séances du même jour sous une seule adresse de produit.
+  @Test
+  void verifier_memeProduitEventimPourUneMatineeEtUneSoiree_neSignaleRien() {
+    final UUID salle = creerSalle();
+    produitEventim(salle, "flashdance", "13:30", "21040341");
+    produitEventim(salle, "flashdance le musical", "17:30", "21040341");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
   }
 
   private UUID creerSalleNommee(final String cle) {
