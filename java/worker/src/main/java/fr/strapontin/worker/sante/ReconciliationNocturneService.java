@@ -111,6 +111,7 @@ public class ReconciliationNocturneService {
     // fournirait la coïncidence qui fusionne deux salles distinctes.
     final int fichesPerimeesFusionnees =
         fusionProduitsEventim.fusionner()
+            + fusionProduitsEventim.marquerFichesDOrigineDesReports()
             + fusionEvenementsArtiste.fusionnerFichesPerimees()
             + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
             + fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()

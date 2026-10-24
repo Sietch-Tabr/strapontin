@@ -36,6 +36,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 class NotificationPushDigestService {
 
+  private static final String SEP = " · ";
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushDigestService.class);
   private static final String CLE_ENDPOINT = "endpoint";
   private static final int NB_CONCERTS_SINGULIER = 1;
@@ -329,7 +330,7 @@ class NotificationPushDigestService {
             : concerts.size() + " nouveaux concerts";
     final String corps =
         concerts.size() == 1
-            ? ("presale".equals(premier.statut()) ? "Prévente · " : "")
+            ? avecSeparateur(NotificationDigestService.etiquetteStatut(premier.statut()), "", SEP)
                 + NotificationDigestService.formaterDate(premier.date())
                 + (premier.ville() != null ? " · " + premier.ville() : "")
             : construireLignesPreventePush(concerts);
@@ -353,6 +354,12 @@ class NotificationPushDigestService {
             UtilitairesChaine.echapperJson(url));
   }
 
+  // Libellé encadré des séparateurs donnés, rien s'il est vide.
+  private static String avecSeparateur(
+      final String etiquette, final String avant, final String apres) {
+    return etiquette.isEmpty() ? "" : avant + etiquette + apres;
+  }
+
   /**
    * Construit le corps texte du push (une ligne par concert), ligne vide
    * à chaque changement d'artiste (regroupement visuel).
@@ -372,9 +379,9 @@ class NotificationPushDigestService {
       }
       corps
           .append(c.artiste())
-          .append(" · ")
+          .append(SEP)
           .append(NotificationDigestService.formaterDate(c.date()))
-          .append("presale".equals(c.statut()) ? " · Prévente" : "");
+          .append(avecSeparateur(NotificationDigestService.etiquetteStatut(c.statut()), SEP, ""));
       artistePrecedent = c.artiste();
     }
     return corps.toString();

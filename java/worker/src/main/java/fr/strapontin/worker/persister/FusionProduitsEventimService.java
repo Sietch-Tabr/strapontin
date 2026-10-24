@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.ProduitEventim;
+import fr.strapontin.worker.LogsAdminWorker;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,16 +27,20 @@ public class FusionProduitsEventimService {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final FusionEvenementsArtisteService fusionEvenements;
+  private final LogsAdminWorker logsAdminWorker;
 
   /**
    * @param jdbc accès JDBC
    * @param fusionEvenements fusion d'une paire d'événements
+   * @param logsAdminWorker trace des fiches marquées
    */
   public FusionProduitsEventimService(
       final NamedParameterJdbcTemplate jdbc,
-      final FusionEvenementsArtisteService fusionEvenements) {
+      final FusionEvenementsArtisteService fusionEvenements,
+      final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.fusionEvenements = fusionEvenements;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /**
@@ -92,5 +97,56 @@ public class FusionProduitsEventimService {
             + " AND (o.updated_at < n.updated_at"
             + " OR (o.updated_at = n.updated_at AND o.id < n.id))",
         Map.of("id", evenementId.toString()));
+  }
+
+  /**
+   * Fiche d'origine d'une date reportée : Ticketmaster a déplacé la séance (statut
+   * reporté, nouvelle date) alors qu'une autre billetterie publie encore la date
+   * d'origine. Seule fiche de la salle et de l'artiste à une heure voisine, au
+   * moins un mois avant le report, elle passe indisponible plutôt que d'être
+   * affichée comme un concert distinct.
+   * @return nombre de fiches d'origine marquées
+   */
+  public int marquerFichesDOrigineDesReports() {
+    final int marquees =
+        jdbc.update(
+            """
+            WITH t AS (
+              SELECT e.id, e.salle_id, e.artiste_id, e.artiste_norm, e.date, e.heure
+              FROM evenements e
+              WHERE e.statut = 'rescheduled' AND e.date >= CURRENT_DATE
+                AND e.salle_id IS NOT NULL
+                AND EXISTS (SELECT 1 FROM observations o
+                            WHERE o.evenement_id = e.id AND o.source = 'ticketmaster')),
+            origine AS (
+              SELECT e.id, e.salle_id, e.artiste_id, e.artiste_norm, e.date, e.heure
+              FROM evenements e
+              WHERE e.date >= CURRENT_DATE AND e.statut IS DISTINCT FROM 'cancelled'
+                AND e.salle_id IS NOT NULL
+                AND NOT EXISTS (SELECT 1 FROM observations o
+                                WHERE o.evenement_id = e.id AND o.source = 'ticketmaster')),
+            paires AS (
+              SELECT o.id AS origine, t.id AS reporte
+              FROM t JOIN origine o ON o.salle_id = t.salle_id
+               AND o.date <= t.date - 30 AND o.date > t.date - 800
+               AND (o.heure IS NULL OR t.heure IS NULL
+                    OR abs(extract(epoch FROM (o.heure - t.heure))) <= :ecartSecondes)
+               AND ((o.artiste_id IS NOT NULL AND o.artiste_id = t.artiste_id)
+                    OR o.artiste_norm = t.artiste_norm))
+            UPDATE evenements SET statut = 'cancelled'
+            WHERE id IN (
+              SELECT p.origine FROM paires p
+              WHERE (SELECT count(*) FROM paires q WHERE q.origine = p.origine) = 1
+                AND (SELECT count(*) FROM paires q WHERE q.reporte = p.reporte) = 1)
+            """,
+            Map.of("ecartSecondes", ECART_MAX_HEURE_SECONDES));
+    if (marquees > 0) {
+      logsAdminWorker.inserer(
+          "info",
+          "reconciliation-nocturne",
+          marquees + " fiche(s) d'origine d'une date reportée marquée(s) indisponible(s)",
+          Map.of("fiches", marquees));
+    }
+    return marquees;
   }
 }

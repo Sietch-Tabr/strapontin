@@ -288,4 +288,19 @@ public class NotificationDigestService {
   static String formaterDate(final String dateIso) {
     return NotificationDigestStats.formaterDate(dateIso);
   }
+
+  /**
+   * Libellé court d'un statut à signaler dans un digest, ou une chaîne vide
+   * quand le statut n'a rien de notable.
+   * @param statut statut de vente du concert, peut être {@code null}
+   * @return le libellé, ou une chaîne vide
+   */
+  /* package-private : appelé par NotificationPushDigestService (même package). */
+  static String etiquetteStatut(final String statut) {
+    return switch (statut == null ? "" : statut) {
+      case "presale" -> "Prévente";
+      case "rescheduled" -> "Date reportée";
+      default -> "";
+    };
+  }
 }

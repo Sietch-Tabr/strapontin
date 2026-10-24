@@ -803,4 +803,79 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
 
     assertEquals(0, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
   }
+
+  private void statut(final UUID id, final String statut, final String date) {
+    jdbc.update(
+        "UPDATE evenements SET statut = :statut, date = CAST(:date AS date)"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("statut", statut, "date", date, "id", id.toString()));
+  }
+
+  // Izia : Ticketmaster déplace la date d'un an, Eventim publie encore la date d'origine.
+  @Test
+  void marquerFichesDOrigineDesReports_dateReporteeParTmEtOrigineChezEventim_marqueIndisponible() {
+    final UUID reportee =
+        ficheAvecObservations(
+            salle, "izia", "20:30", new String[] {"ticketmaster", "https://tm/idmanif/9", "1"});
+    statut(reportee, "rescheduled", LocalDate.now().plusMonths(12).toString());
+    final UUID origine =
+        ficheAvecObservations(
+            salle,
+            "izia",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/izia-22000007", "1"});
+
+    assertEquals(1, fusionProduitsEventim.marquerFichesDOrigineDesReports());
+    assertEquals(
+        "cancelled",
+        jdbc.queryForObject(
+            "SELECT statut::text FROM evenements WHERE id = CAST(:id AS uuid)",
+            Map.of("id", origine.toString()),
+            String.class));
+    assertEquals(
+        "rescheduled",
+        jdbc.queryForObject(
+            "SELECT statut::text FROM evenements WHERE id = CAST(:id AS uuid)",
+            Map.of("id", reportee.toString()),
+            String.class));
+  }
+
+  @Test
+  void marquerFichesDOrigineDesReports_deuxFichesEventimPossibles_neMarqueRien() {
+    final UUID reportee =
+        ficheAvecObservations(
+            salle, "izia", "20:30", new String[] {"ticketmaster", "https://tm/idmanif/9", "1"});
+    statut(reportee, "rescheduled", LocalDate.now().plusMonths(12).toString());
+    ficheAvecObservations(
+        salle,
+        "izia",
+        "20:30",
+        new String[] {"eventim", "https://www.eventim.fr/event/izia-22000007", "1"});
+    final UUID autreDate =
+        ficheAvecObservations(
+            salle,
+            "izia",
+            "20:45",
+            new String[] {"eventim", "https://www.eventim.fr/event/izia-22000008", "1"});
+    jdbc.update(
+        "UPDATE evenements SET date = date + 7 WHERE id = CAST(:id AS uuid)",
+        Map.of("id", autreDate.toString()));
+
+    assertEquals(0, fusionProduitsEventim.marquerFichesDOrigineDesReports());
+  }
+
+  @Test
+  void marquerFichesDOrigineDesReports_heureEloignee_neMarquePas() {
+    final UUID reportee =
+        ficheAvecObservations(
+            salle, "izia", "20:30", new String[] {"ticketmaster", "https://tm/idmanif/9", "1"});
+    statut(reportee, "rescheduled", LocalDate.now().plusMonths(12).toString());
+    ficheAvecObservations(
+        salle,
+        "izia",
+        "15:00",
+        new String[] {"eventim", "https://www.eventim.fr/event/izia-22000009", "1"});
+
+    assertEquals(0, fusionProduitsEventim.marquerFichesDOrigineDesReports());
+  }
 }

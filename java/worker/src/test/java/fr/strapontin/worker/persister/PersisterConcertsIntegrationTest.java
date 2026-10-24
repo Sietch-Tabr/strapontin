@@ -1671,6 +1671,46 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals("rescheduled", ligne.get("statut"), "le statut à jour doit être conservé");
   }
 
+  // Izia à l'Olympia : la date est reportée d'un an, la correspondance déjà notifiée repart.
+  @Test
+  void persisterConcerts_dateReporteeParTicketmaster_reArmeLaNotificationDeLaCorrespondance() {
+    final String url = "https://www.ticketmaster.fr/fr/manifestation/izia/idmanif/653099";
+    final ConcertBrut.Constructeur base =
+        ConcertBrut.nouveau()
+            .artiste("Izia")
+            .heure("20:00")
+            .salle("Olympia")
+            .ville("Paris")
+            .dept("75")
+            .url(url)
+            .source("ticketmaster")
+            .classification("music");
+    persisterConcerts.persisterConcerts(
+        List.of(base.date("2098-11-18").statut("onsale").construire()));
+    final UUID evenementId = jdbc.queryForObject("SELECT id FROM evenements", Map.of(), UUID.class);
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u8', 'u8', 'u8@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id, notification_envoyee_le)"
+            + " VALUES ('u8', CAST(:id AS uuid), now())",
+        Map.of("id", evenementId.toString()));
+
+    persisterConcerts.persisterConcerts(
+        List.of(base.date("2099-11-18").statut("rescheduled").construire()));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "2099-11-18",
+        jdbc.queryForObject("SELECT date::text FROM evenements", Map.of(), String.class));
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT notification_envoyee_le FROM user_matches",
+            Map.of(),
+            java.sql.Timestamp.class));
+  }
+
   @Test
   void persisterConcerts_memeUrlTicketmasterMatineeEtSoireeUneAnnulee_neModifiePasLAutre() {
     // Certaines productions (théâtre, cirque) partagent un seul idmanif Ticketmaster pour

@@ -672,4 +672,12 @@ class NotificationDigestServiceTest {
     m.setAccessible(true);
     return (String) m.invoke(null, sujet, concerts, baseUrl);
   }
+
+  @Test
+  void etiquetteStatut_statutNotable_retourneLeLibelle() {
+    assertEquals("Prévente", NotificationDigestService.etiquetteStatut("presale"));
+    assertEquals("Date reportée", NotificationDigestService.etiquetteStatut("rescheduled"));
+    assertEquals("", NotificationDigestService.etiquetteStatut("onsale"));
+    assertEquals("", NotificationDigestService.etiquetteStatut(null));
+  }
 }
