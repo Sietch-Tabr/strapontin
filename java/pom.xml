@@ -38,7 +38,7 @@
         <httpclient.version>4.5.14</httpclient.version>
         <jose4j.version>0.9.7</jose4j.version>
         <okapibarcode.version>0.5.7</okapibarcode.version>
-        <resend.version>4.28.0</resend.version>
+        <resend.version>4.29.0</resend.version>
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.0</okhttp-jvm.version>
