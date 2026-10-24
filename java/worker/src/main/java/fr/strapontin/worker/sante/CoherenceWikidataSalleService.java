@@ -51,6 +51,10 @@ public class CoherenceWikidataSalleService {
   // coordonnées Wikidata, déplacement d'un point d'entrée).
   private static final double ECART_REALIGNEMENT_METRES = 100;
 
+  // Au-delà, une position publiée par une source n'est plus qu'approximative :
+  // la salle suit l'élément Wikidata sans attendre le seuil de signalement.
+  private static final double ECART_ALIGNEMENT_AUTO_METRES = 300;
+
   // Au-delà, une position publiée par une source ne désigne plus le même
   // lieu que l'élément Wikidata (centre-ville au lieu de la commune de la salle).
   private static final double ECART_SIGNALEMENT_METRES = 1000;
@@ -194,7 +198,7 @@ public class CoherenceWikidataSalleService {
       if (element != null
           && element.latitude() != null
           && element.longitude() != null
-          && realignerSiEcart(salle, element)) {
+          && realignerSiEcart(salle, element, ECART_REALIGNEMENT_METRES, Double.MAX_VALUE)) {
         realignees++;
       }
     }
@@ -226,6 +230,8 @@ public class CoherenceWikidataSalleService {
       final double ecart =
           DistanceGeo.metres(
               salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
+      // Quelques centaines de mètres : la billetterie approxime, Wikidata fait foi.
+      realignerSiEcart(salle, element, ECART_ALIGNEMENT_AUTO_METRES, ECART_SIGNALEMENT_METRES);
       if (ecart > ECART_SIGNALEMENT_METRES) {
         divergentes++;
         encoreEnAnomalie.add(salle.id());
@@ -303,16 +309,21 @@ public class CoherenceWikidataSalleService {
         (rs, _) -> versSalleAEnrichir(rs));
   }
 
-  private boolean realignerSiEcart(final SalleAEnrichir salle, final EnrichissementSalle element) {
+  // Réaligne seulement un écart situé entre les deux bornes (min exclu, max inclus).
+  private boolean realignerSiEcart(
+      final SalleAEnrichir salle,
+      final EnrichissementSalle element,
+      final double ecartMin,
+      final double ecartMax) {
     final double ecart =
         DistanceGeo.metres(
             salle.latitude(), salle.longitude(), element.latitude(), element.longitude());
-    if (ecart <= ECART_REALIGNEMENT_METRES) {
+    if (ecart <= ecartMin || ecart > ecartMax) {
       return false;
     }
     jdbc.update(
-        "UPDATE salles SET latitude = :latitude, longitude = :longitude"
-            + " WHERE id = CAST(:id AS uuid)",
+        "UPDATE salles SET latitude = :latitude, longitude = :longitude,"
+            + " origine_position = 'wikidata' WHERE id = CAST(:id AS uuid)",
         Map.of(
             "latitude", element.latitude(),
             "longitude", element.longitude(),
