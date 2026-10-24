@@ -223,12 +223,17 @@
                 <version>${bouncycastle.version}</version>
             </dependency>
 
-            <!-- Push VAPID — exclure bcprov-jdk15on tiré par webpush-java -->
+            <!-- Push VAPID — exclure bcprov-jdk15on tiré par webpush-java, et async-http-client
+                 (vulnérable, utilisé par la seule PushAsyncService, jamais appelée) -->
             <dependency>
                 <groupId>nl.martijndwars</groupId>
                 <artifactId>web-push</artifactId>
                 <version>${webpush.version}</version>
                 <exclusions>
+                    <exclusion>
+                        <groupId>org.asynchttpclient</groupId>
+                        <artifactId>async-http-client</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>org.bouncycastle</groupId>
                         <artifactId>bcprov-jdk15on</artifactId>
