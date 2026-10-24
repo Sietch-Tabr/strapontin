@@ -56,6 +56,32 @@ steps:
       - event: push
         branch: main
 
+  # Analyse des vulnérabilités connues (base OSV) des dépendances Maven et npm, bloquante
+  # comme l'analyse statique. Une exception justifiée se déclare dans osv-scanner.toml.
+  # Sérialisée après static-analysis : l'inventaire Maven ne doit pas se superposer aux
+  # autres steps lourds de l'agent (2 Go).
+  - name: inventaire-dependances
+    image: maven:3.10-eclipse-temurin-27
+    depends_on: [static-analysis]
+    environment:
+      MAVEN_OPTS: "-Xmx512m"
+    volumes:
+      - /var/cache/woodpecker/maven:/root/.m2
+    commands:
+      - bash scripts/analyse-dependances.sh sbom
+    when:
+      - event: push
+        branch: main
+
+  - name: analyse-dependances
+    image: ghcr.io/google/osv-scanner:v2.7.0
+    depends_on: [inventaire-dependances]
+    commands:
+      - /osv-scanner scan source -L java/target/bom.json -L front/package-lock.json
+    when:
+      - event: push
+        branch: main
+
   # Sérialisé après build-front (pas en parallèle) : les deux steps exécutent npm ci
   # dans le même workspace partagé de la pipeline (front/node_modules) — en parallèle,
   # deux npm ci concurrents sur le même répertoire produisent un ENOTEMPTY sur rmdir
@@ -89,7 +115,8 @@ steps:
 
   - name: build
     image: maven:3.10-eclipse-temurin-27
-    depends_on: [test, build-front, static-analysis, lint-front]
+    depends_on:
+      [test, build-front, static-analysis, lint-front, analyse-dependances]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
     commands:
