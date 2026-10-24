@@ -7,7 +7,7 @@ when:
 
 steps:
   - name: test
-    image: maven:3.9-eclipse-temurin-26
+    image: maven:3.10-eclipse-temurin-27
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2
       - /var/run/docker.sock:/var/run/docker.sock
@@ -35,11 +35,11 @@ steps:
   # killer (constaté en reproduction, v2.9.1) — un seul step lourd à la fois sur cet
   # agent.
   - name: static-analysis
-    image: maven:3.9-eclipse-temurin-26
+    image: maven:3.10-eclipse-temurin-27
     depends_on: [test, lint-front]
     environment:
       MAVEN_OPTS: "-Xmx768m"
-      # L'image fixe la JDK 26 du projet : le rappel PMD sur la JDK utilisée pour
+      # L'image fixe la JDK 27 du projet : le rappel PMD sur la JDK utilisée pour
       # résoudre les classes standard n'a pas d'objet ici.
       PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS: "true"
     volumes:
@@ -83,7 +83,7 @@ steps:
         branch: main
 
   - name: build
-    image: maven:3.9-eclipse-temurin-26
+    image: maven:3.10-eclipse-temurin-27
     depends_on: [test, build-front, static-analysis, lint-front]
     volumes:
       - /var/cache/woodpecker/maven:/root/.m2

@@ -26,7 +26,7 @@
     <properties>
         <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
         <revision>3.1.0</revision>
-        <java.version>26</java.version>
+        <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
         <flyway.version>13.9.0</flyway.version>
@@ -65,8 +65,10 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
-                        <!-- Mockito 5.x : chargement explicite en agent évite le self-attach JDK 25 -->
-                        <argLine>@{argLine} @{jacocoArgLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                        <!-- Mockito 5.x : chargement explicite en agent évite le self-attach JDK 25 ;
+                             -Xshare:off : Mockito ajoute un jar au classpath du chargeur de démarrage,
+                             ce que le partage de classes (CDS) signale par un avertissement de la JVM. -->
+                        <argLine>@{argLine} @{jacocoArgLine} -Xshare:off -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                     </configuration>
                 </plugin>
                 <plugin>
