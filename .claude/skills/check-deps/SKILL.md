@@ -45,6 +45,8 @@ Informatif uniquement — jamais appliqué automatiquement, un changement d'OS/P
 
 Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template Debian LXC, Temurin/Java) et `.woodpecker/` (image de build, version Node) ; comparer aux dernières versions stables publiées (WebSearch/WebFetch).
 
+**Serveur Woodpecker** (installé à la main par `.deb`, aucune mise à jour automatique) : comparer la version servie par `http://192.168.20.88:8000/version` aux releases GitHub (`woodpecker-ci/woodpecker`) et lire les notes des versions sautées (migrations de base, variables renommées). Contrôler aussi si le script Proxmox communautaire Woodpecker-CI est sorti de DevScripts (ticket `community-scripts/DevScripts#2384`) et ce qu'il décrit pour la mise à jour. Mise à jour seulement après accord : procédure dans la mémoire `reference_woodpecker_mise_a_jour`.
+
 ## 5. Analyser le changelog de chaque dépendance obsolète
 
 Pour chaque ligne remontée aux étapes 2-4 : WebFetch/WebSearch vers le changelog réel (GitHub releases, page Maven Central, changelog npm/GitHub du paquet). Classer :
@@ -58,7 +60,7 @@ Repérer aussi, même sur une mise à jour sûre, les **nouveautés/optimisation
 
 ## 6. Vétusté et CVE (chaque dépendance pinnée, pas seulement celles avec une mise à jour disponible)
 
-Une dépendance déjà à sa dernière version publiée peut quand même être un risque si le projet amont est mort ou vulnérable — l'étape 5 ne le détecte pas (elle ne s'intéresse qu'aux dépendances *en retard*).
+Une dépendance déjà à sa dernière version publiée peut quand même être un risque si le projet amont est mort ou vulnérable — l'étape 5 ne le détecte pas (elle ne s'intéresse qu'aux dépendances _en retard_).
 
 Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dépendance npm épinglée : vérifier la date de dernière publication (`maven-metadata.xml` → `<lastUpdated>`, ou `npm view <paquet> time` / registre npm) et rechercher une CVE connue (WebSearch `"<paquet>" CVE <année>`, ou base OSV/GitHub Advisory).
 
@@ -68,7 +70,7 @@ Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dép
 
 ## 7. Audit périodique des fonctionnalités inexploitées (dépendances déjà à jour)
 
-L'étape 5 n'analyse que le *delta* entre la version épinglée et la dernière disponible — une fonctionnalité déjà présente dans une version qu'on utilise **depuis longtemps**, jamais adoptée dans le code, ne remonte plus jamais dans aucun scan futur (la dépendance n'est plus "en retard" sur elle). Trouvé le 18/09/2026 : le module `Suppressions` de `resend-java`, disponible depuis la v4.18.0 (bien avant tous les bumps tracés dans l'historique du pom), jamais repéré par aucune invocation de ce skill.
+L'étape 5 n'analyse que le _delta_ entre la version épinglée et la dernière disponible — une fonctionnalité déjà présente dans une version qu'on utilise **depuis longtemps**, jamais adoptée dans le code, ne remonte plus jamais dans aucun scan futur (la dépendance n'est plus "en retard" sur elle). Trouvé le 18/09/2026 : le module `Suppressions` de `resend-java`, disponible depuis la v4.18.0 (bien avant tous les bumps tracés dans l'historique du pom), jamais repéré par aucune invocation de ce skill.
 
 - Ne pas auditer ça à chaque invocation (coût disproportionné pour un projet perso, cf. `feedback_proportionnalite_ingenierie`) — seulement à la demande explicite de l'utilisateur sur une dépendance donnée ("on a implémenté les dernières nouveautés de X ?"), ou en mode jalon si le jalon touche déjà une fonctionnalité liée à cette dépendance.
 - Démarche : lister les classes/méthodes du SDK réellement utilisées dans le code (grep) vs. celles exposées par la version actuellement installée (décompilation du jar en cache local `~/.m2`, `javap -classpath <jar> <classe>` — jamais deviner une signature). Comparer au changelog complet du projet amont (pas seulement le delta courant) pour retrouver depuis quelle version chaque capacité inexploitée existe.
