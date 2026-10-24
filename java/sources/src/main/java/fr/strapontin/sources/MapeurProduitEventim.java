@@ -5,6 +5,7 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.core.Hommage;
 import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
@@ -102,11 +103,16 @@ final class MapeurProduitEventim {
    * Spectacle") — normalise les espaces insécables/fines autour du
    * séparateur (détail : CLAUDE.md, Dédoublonnage inter-sources).
    * @param titre titre de l'événement Eventim
-   * @return nom de l'artiste extrait, ou le titre complet si non trouvé
+   * @return nom de l'artiste extrait, ou le titre complet si non trouvé ou si
+   *     le titre annonce un hommage
    */
   /* package-private : appelé par EventimSource (même package). */
   static String extraireNomArtiste(final String titre) {
     Objects.requireNonNull(titre, "titre");
+    if (Hommage.estHommage(titre)) {
+      // « System of a Down - Live Tribute by … » n'est pas System of a Down.
+      return titre;
+    }
     final String titreNormalise = titre.replace('\u00A0', ' ').replace('\u202F', ' ');
     for (final String sep : new String[] {" - ", " : "}) {
       final int idx = titreNormalise.indexOf(sep);

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.Hommage;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.ProduitEventim;
 import java.sql.Types;
@@ -249,6 +250,20 @@ public class PersisteurConcertsDb {
             .addValue("salleNormReference", salleNormReference));
   }
 
+  // Un hommage rattaché à l'artiste imité avant que son titre soit reconnu : le
+  // rattachement et les correspondances de ses abonnés tombent.
+  private void detacherArtisteImite(final UUID evenementId, final ValeurConcert concert) {
+    if (!Hommage.estHommage(concert.artiste())) {
+      return;
+    }
+    final Map<String, Object> id = Map.of("id", evenementId.toString());
+    jdbc.update(
+        "UPDATE evenements SET artiste_id = NULL WHERE id = CAST(:id AS uuid)"
+            + " AND artiste_id IS NOT NULL",
+        id);
+    jdbc.update("DELETE FROM user_matches WHERE concert_id = CAST(:id AS uuid)", id);
+  }
+
   // L'adresse d'un produit suit son titre : l'ancienne, qui ne sera plus revue,
   // ne doit pas rester à côté de la nouvelle.
   private void retirerAnciennesAdressesProduit(
@@ -400,6 +415,7 @@ public class PersisteurConcertsDb {
       } else {
         mettreAJourChampsEvenement(resolution.id(), concert);
         if (resolution.parProduit()) {
+          detacherArtisteImite(resolution.id(), concert);
           retirerAnciennesAdressesProduit(resolution.id(), concert);
           alignerIdentiteSurProduit(resolution.id(), concert);
         }

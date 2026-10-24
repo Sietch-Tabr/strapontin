@@ -604,6 +604,60 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         jdbc.queryForObject("SELECT artiste_norm FROM evenements", Map.of(), String.class));
   }
 
+  // Le Balajo : « System of a Down - Live Tribute by … » rattaché à l'artiste imité avant que
+  // le titre d'hommage soit reconnu.
+  @Test
+  void persisterConcerts_hommageDejaRattacheAUnArtisteSuivi_detacheEtSupprimeLesMatches() {
+    final UUID artisteId =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('System of a Down', 'system of a down')"
+                + " RETURNING id",
+            Map.of(),
+            UUID.class);
+    final UUID evenementId =
+        seedEvenementAvecObservation(
+            "System of a Down",
+            "system of a down",
+            "2098-11-18",
+            "20:00",
+            "Le Balajo",
+            "le balajo",
+            "75",
+            null,
+            artisteId,
+            "eventim",
+            "https://www.eventim.fr/event/system-of-a-down-22026717");
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u9', 'u9', 'u9@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_matches (user_id, concert_id) VALUES ('u9', CAST(:id AS uuid))",
+        Map.of("id", evenementId.toString()));
+
+    final ConcertBrut hommage =
+        ConcertBrut.nouveau()
+            .artiste("System of a Down - Live Tribute by Steeven Corsini")
+            .date("2098-11-18")
+            .heure("20:00")
+            .salle("Le Balajo")
+            .ville("Paris")
+            .dept("75")
+            .url("https://www.eventim.fr/event/system-of-a-down-live-tribute-22026717")
+            .source("eventim")
+            .classification("music")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(hommage));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    final Map<String, Object> fiche =
+        jdbc.queryForMap("SELECT artiste_id, artiste_norm FROM evenements", Map.of());
+    assertNull(fiche.get("artiste_id"));
+    assertEquals("system of a down live tribute by steeven corsini", fiche.get("artiste_norm"));
+    assertEquals(
+        0L, jdbc.queryForObject("SELECT COUNT(*) FROM user_matches", Map.of(), Long.class));
+  }
+
   @Test
   void persisterConcerts_memeProduitEventimAUneAutreDate_creeUneAutreFiche() {
     persisterConcerts.persisterConcerts(
