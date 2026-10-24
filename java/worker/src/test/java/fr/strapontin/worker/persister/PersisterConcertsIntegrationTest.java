@@ -2149,6 +2149,38 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
             UUID.class));
   }
 
+  // La Merise : Eventim ajoute la commune au nom, ce n'est pas une salle interne.
+  @Test
+  void persisterConcerts_nomTermineParLaCommune_rattacheALaSalleSansCreerDeSousSalle() {
+    final UUID merise =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, dept) VALUES ('la merise', 'La Merise',"
+                + " 'la merise', '78') RETURNING id",
+            Map.of(),
+            UUID.class);
+    persisterConcerts.persisterConcerts(
+        List.of(
+            ConcertBrut.nouveau()
+                .artiste("Artiste Merise")
+                .date(DATE_RECENTE)
+                .heure("20:00")
+                .salle("La Merise - Trappes")
+                .ville("Trappes")
+                .dept("78")
+                .url("https://eventim.example/merise")
+                .source("eventim")
+                .salleSourceId("eventim:internal:la merise trappes@78190")
+                .construire()));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM salles", Map.of(), Long.class));
+    assertEquals(
+        merise,
+        jdbc.queryForObject(
+            "SELECT salle_id FROM evenements WHERE artiste_norm = 'artiste merise'",
+            Map.of(),
+            UUID.class));
+  }
+
   // Un complexe multi-salles (La Seine Musicale, #1180) ne doit jamais mélanger deux halls
   // physiquement distincts sous un même salle_id — la seconde sous-salle qualifiée rencontrée
   // devient un enfant du complexe plutôt que d'être fusionnée ou de rester ambiguë.

@@ -149,16 +149,18 @@ class ResolveurSalleParConcert {
 
   // Étapes par nom, de la plus sûre à la plus permissive, sous veto de position.
   private UUID chercherParNom(final ValeurConcert concert) {
-    UUID salleId = retenir(chercherSalleParNomExact(concert.salle(), concert.dept()), concert);
+    // La commune ajoutée au nom n'est pas le qualificatif d'une salle interne.
+    final String nomSansVille = QualificatifSalle.sansVilleFinale(concert.salle(), concert.ville());
+    UUID salleId = retenir(chercherSalleParNomExact(nomSansVille, concert.dept()), concert);
     if (salleId == null) {
       salleId =
           sousSalles.plutotQueLeComplexe(
-              retenir(chercherSalleParTokens(concert.salle(), concert.dept()), concert),
-              concert.salle(),
+              retenir(chercherSalleParTokens(nomSansVille, concert.dept()), concert),
+              nomSansVille,
               concert.dept());
     }
     if (salleId == null) {
-      salleId = retenir(sousSalles.resoudre(concert.salle(), concert.dept()), concert);
+      salleId = retenir(sousSalles.resoudre(nomSansVille, concert.dept()), concert);
     }
     return salleId != null ? salleId : retenir(chercherSalleParCleForte(concert), concert);
   }
