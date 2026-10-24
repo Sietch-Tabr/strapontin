@@ -4,8 +4,6 @@
  */
 package fr.strapontin.sources;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,14 +93,15 @@ public final class ClientNominatim {
   public Optional<Coordonnees> geocoder(final String nom) {
     cadenceur.attendre();
     try {
-      final String url =
-          BASE_URL
-              + "?q="
-              + URLEncoder.encode(nom, StandardCharsets.UTF_8)
-              + "&format=json&limit=1&countrycodes=fr";
+      final String gabarit = BASE_URL + "?q={nom}&format=json&limit=1&countrycodes=fr";
       @SuppressWarnings("unchecked")
       final List<Map<String, Object>> resultats =
-          restClient.get().uri(url).header("User-Agent", USER_AGENT).retrieve().body(List.class);
+          restClient
+              .get()
+              .uri(gabarit, nom)
+              .header("User-Agent", USER_AGENT)
+              .retrieve()
+              .body(List.class);
       return extraireCoordonnees(resultats);
     } catch (Exception e) {
       LOG.warn("Nominatim géocodage échoué nom={} : {}", nom, e.getMessage());
@@ -141,9 +140,7 @@ public final class ClientNominatim {
       final StringBuilder url =
           new StringBuilder(TAILLE_URL_RECHERCHE)
               .append(BASE_URL)
-              .append("?q=")
-              .append(URLEncoder.encode(requete, StandardCharsets.UTF_8))
-              .append("&format=jsonv2&extratags=1&limit=5&countrycodes=fr");
+              .append("?q={requete}&format=jsonv2&extratags=1&limit=5&countrycodes=fr");
       if (centre != null) {
         url.append("&bounded=1&viewbox=")
             .append(
@@ -158,7 +155,7 @@ public final class ClientNominatim {
       final List<Map<String, Object>> resultats =
           restClient
               .get()
-              .uri(url.toString())
+              .uri(url.toString(), requete)
               .header("User-Agent", USER_AGENT)
               .retrieve()
               .body(List.class);

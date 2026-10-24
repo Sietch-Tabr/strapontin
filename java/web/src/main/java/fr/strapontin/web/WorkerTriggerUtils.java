@@ -20,19 +20,23 @@ public final class WorkerTriggerUtils {
   private WorkerTriggerUtils() {}
 
   /**
-   * Déclenche un appel POST vers le worker sur un thread virtuel, sans
-   * attendre ni propager d'exception à l'appelant.
+   * Déclenche un POST vers le worker (thread virtuel), sans propager d'erreur.
    * @param restClient client HTTP partagé
    * @param log logger de l'appelant, pour journaliser un échec
-   * @param url URL complète du endpoint worker à appeler
-   * @param messageEchec message de log en cas d'échec (exception jointe)
+   * @param gabaritUrl URL du endpoint, variables en {@code {nom}}
+   * @param messageEchec message de log en cas d'échec
+   * @param variables valeurs du gabarit, encodées une seule fois
    */
   public static void declencherWorkerAsync(
-      final RestClient restClient, final Logger log, final String url, final String messageEchec) {
+      final RestClient restClient,
+      final Logger log,
+      final String gabaritUrl,
+      final String messageEchec,
+      final Object... variables) {
     Thread.startVirtualThread(
         () -> {
           try {
-            restClient.post().uri(url).retrieve().toBodilessEntity();
+            restClient.post().uri(gabaritUrl, variables).retrieve().toBodilessEntity();
           } catch (Exception e) {
             log.warn("{} : {}", messageEchec, e.getMessage());
           }

@@ -95,4 +95,42 @@ class ClientNominatimTest {
 
     assertTrue(resultat.isEmpty());
   }
+
+  @Test
+  void geocoder_accentEtVirgule_encodeUneSeuleFois() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            MockRestRequestMatchers.requestTo(
+                org.hamcrest.Matchers.containsString(
+                    "q=Th%C3%A9%C3%A2tre%20du%20Gymnase%2C%20Paris&")))
+        .andRespond(MockRestResponseCreators.withSuccess("[]", MediaType.APPLICATION_JSON));
+
+    source(restClient, mock(CadenceurAppels.class)).geocoder("Théâtre du Gymnase, Paris");
+
+    serveur.verify();
+  }
+
+  @Test
+  void rechercherLieux_accentEtVirgule_encodeUneSeuleFois() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(
+            MockRestRequestMatchers.requestTo(
+                org.hamcrest.Matchers.containsString("q=Le%20Kilowatt%2C%20Vitry%20%C3%A9&")))
+        .andRespond(MockRestResponseCreators.withSuccess("[]", MediaType.APPLICATION_JSON));
+
+    final ClientNominatim.ResultatRecherche resultat =
+        source(restClient, mock(CadenceurAppels.class))
+            .rechercherLieux("Le Kilowatt, Vitry é", new ClientNominatim.Coordonnees(48.78, 2.39));
+
+    assertTrue(resultat.succes());
+    serveur.verify();
+  }
 }

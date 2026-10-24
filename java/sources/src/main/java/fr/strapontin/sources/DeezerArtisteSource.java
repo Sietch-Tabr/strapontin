@@ -5,8 +5,6 @@
 package fr.strapontin.sources;
 
 import fr.strapontin.core.Normalisation;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -90,8 +88,12 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   private Optional<EnrichissementArtiste> decouvrirParNom(final ArtisteAEnrichir artiste) {
     compteurBilan.enregistrerAppel();
     try {
-      final String uri = DEEZER_BASE + "/search/artist?q=" + encode(artiste.nom()) + "&limit=25";
-      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final Map<String, Object> data =
+          restClient
+              .get()
+              .uri(DEEZER_BASE + "/search/artist?q={nom}&limit=25", artiste.nom())
+              .retrieve()
+              .body(Map.class);
       if (data == null) {
         return Optional.empty();
       }
@@ -137,10 +139,6 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       }
     }
     return Optional.ofNullable(retenu);
-  }
-
-  private static String encode(final String texte) {
-    return URLEncoder.encode(texte, StandardCharsets.UTF_8);
   }
 
   @SuppressWarnings("unchecked")

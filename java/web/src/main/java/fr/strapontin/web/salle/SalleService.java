@@ -10,8 +10,6 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -372,8 +370,8 @@ public class SalleService {
     WorkerTriggerUtils.declencherWorkerAsync(
         restClient,
         LOG,
-        "http://localhost:8081/trigger/salle?identifiants="
-            + URLEncoder.encode(identifiants, StandardCharsets.UTF_8),
-        "Déclenchement worker salle impossible identifiants=" + identifiants);
+        "http://localhost:8081/trigger/salle?identifiants={identifiants}",
+        "Déclenchement worker salle impossible identifiants=" + identifiants,
+        identifiants);
   }
 }

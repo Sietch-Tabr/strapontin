@@ -13,8 +13,6 @@ import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.admin.LogAdminService;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -305,15 +303,13 @@ public class ArtisteService {
       return List.of();
     }
     try {
-      final String url =
+      final String gabarit =
           WIKIDATA_API_URL
-              + "?action=wbsearchentities&search="
-              + URLEncoder.encode(terme, StandardCharsets.UTF_8)
-              + "&language=fr&format=json&type=item&limit=6";
+              + "?action=wbsearchentities&search={terme}&language=fr&format=json&type=item&limit=6";
       final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
-              .uri(url)
+              .uri(gabarit, terme)
               .header("User-Agent", WIKIDATA_USER_AGENT)
               .exchange(
                   (_, resp) ->
@@ -344,15 +340,12 @@ public class ArtisteService {
   /* package-private : substituable par mock partiel en test (même package). */
   String resoudreDeezerId(final String wikidataId) {
     try {
-      final String url =
-          WIKIDATA_API_URL
-              + "?action=wbgetentities&ids="
-              + URLEncoder.encode(wikidataId, StandardCharsets.UTF_8)
-              + "&props=claims&format=json";
+      final String gabarit =
+          WIKIDATA_API_URL + "?action=wbgetentities&ids={wikidataId}&props=claims&format=json";
       final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
-              .uri(url)
+              .uri(gabarit, wikidataId)
               .header("User-Agent", WIKIDATA_USER_AGENT)
               .exchange(
                   (_, resp) ->
@@ -400,12 +393,11 @@ public class ArtisteService {
       return List.of();
     }
     try {
-      final String url =
-          DEEZER_URL + "?q=" + URLEncoder.encode(terme, StandardCharsets.UTF_8) + "&limit=6";
+      final String gabarit = DEEZER_URL + "?q={terme}&limit=6";
       final WorkerTriggerUtils.ReponseHttp reponse =
           restClient
               .get()
-              .uri(url)
+              .uri(gabarit, terme)
               .exchange(
                   (_, resp) ->
                       new WorkerTriggerUtils.ReponseHttp(

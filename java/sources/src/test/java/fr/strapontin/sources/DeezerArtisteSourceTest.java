@@ -56,6 +56,24 @@ class DeezerArtisteSourceTest {
   }
 
   @Test
+  void enrichirLot_decouverteNomAccentue_encodeLeNomUneSeuleFois() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final ArtisteAEnrichir artiste =
+        new ArtisteAEnrichir(UUID.randomUUID(), "Mylène Farmer", "mylene farmer", null, null);
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("q=Myl%C3%A8ne%20Farmer&")))
+        .andRespond(withSuccess("{\"data\":[]}", MediaType.APPLICATION_JSON));
+
+    new DeezerArtisteSource(restClient).enrichirLot(List.of(artiste));
+
+    serveur.verify();
+  }
+
+  @Test
   void enrichirLot_decouverteHomonymesExacts_retientLePlusSuivi() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
