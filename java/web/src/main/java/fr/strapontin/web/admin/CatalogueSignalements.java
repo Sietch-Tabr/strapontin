@@ -100,6 +100,13 @@ public final class CatalogueSignalements {
             + " calendrier de la salle. Si un seul concert y est annoncé, supprimer la fiche en"
             + " trop depuis les concerts ; sinon marquer comme traité.");
     ajouter(
+        "produit_eventim_double",
+        "Un produit Eventim sur deux fiches",
+        "Le même produit Eventim est porté par deux fiches du même jour dans la même salle, que la"
+            + " fusion automatique n'a pas réunies (heures éloignées, artistes différents, plus de"
+            + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop depuis"
+            + " les concerts, ou marquer comme traité si ce sont deux séances.");
+    ajouter(
         "departement_sans_concert",
         "Département sans concert",
         "Aucun concert à venir dans ce département : aucune de nos billetteries n'y programme ou"

@@ -60,8 +60,7 @@ public class FusionEvenementsArtisteService {
   /**
    * Détecte puis fusionne les paires d'événements partageant salle/date/
    * heure avec un {@code artiste_norm} doublon flou — une paire déjà
-   * disparue (fusionnée plus tôt dans le même cycle) est ignorée
-   * silencieusement (redondante).
+   * disparue (fusionnée plus tôt dans le même cycle) est ignorée.
    * @return nombre de fusions effectuées
    */
   public int fusionner() {
@@ -152,11 +151,10 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Même séance publiée par deux billetteries à des heures proches (ouverture
-   * des portes et début : 20 h 30 chez Ticketmaster, 20 h chez Eventim) : seuls
-   * événements de leur artiste, salle et jour, l'un Ticketmaster seul, l'autre
-   * Eventim seul, à moins d'une heure d'écart, dans une salle non signalée comme
-   * mélangeant plusieurs lieux.
+   * Même séance publiée par deux billetteries à des heures proches (20 h 30 chez
+   * Ticketmaster, 20 h chez Eventim) : seuls événements de leur artiste, salle et
+   * jour, à moins d'une heure d'écart, l'un ne portant qu'une source et les sources
+   * différant, dans une salle non signalée comme mélangeant plusieurs lieux.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeSeanceDeuxSourcesHeuresProches() {
@@ -170,29 +168,39 @@ public class FusionEvenementsArtisteService {
               WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
               GROUP BY e.id),
             groupes AS (
-              SELECT salle_id, date, artiste_norm FROM ev GROUP BY salle_id, date, artiste_norm
-              HAVING count(*) = 2
-                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
-                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1)
-            SELECT t.id AS cible, v.id AS source
+              SELECT salle_id, date, artiste_norm FROM ev WHERE tm OR evt
+              GROUP BY salle_id, date, artiste_norm HAVING count(*) = 2)
+            SELECT a.id AS evt_a, b.id AS evt_b,
+                   (a.tm AND NOT a.evt AND b.evt AND NOT b.tm) AS a_ticketmaster_seul,
+                   (b.tm AND NOT b.evt AND a.evt AND NOT a.tm) AS b_ticketmaster_seul
             FROM groupes g
             JOIN salles s ON s.id = g.salle_id
-            JOIN ev t ON t.salle_id = g.salle_id AND t.date = g.date
-                     AND t.artiste_norm = g.artiste_norm AND t.tm AND NOT t.evt
-            JOIN ev v ON v.salle_id = g.salle_id AND v.date = g.date
-                     AND v.artiste_norm = g.artiste_norm AND v.evt AND NOT v.tm
-            WHERE abs(extract(epoch FROM (t.heure - v.heure))) <= :ecartSecondes
+            JOIN ev a ON a.salle_id = g.salle_id AND a.date = g.date
+                     AND a.artiste_norm = g.artiste_norm AND (a.tm OR a.evt)
+            JOIN ev b ON b.salle_id = g.salle_id AND b.date = g.date
+                     AND b.artiste_norm = g.artiste_norm AND (b.tm OR b.evt) AND a.id < b.id
+            WHERE abs(extract(epoch FROM (a.heure - b.heure))) <= :ecartSecondes
+              AND (a.tm::int + a.evt::int = 1 OR b.tm::int + b.evt::int = 1)
+              AND NOT (a.tm = b.tm AND a.evt = b.evt)
               AND\
             """
                 + SalleFiable.condition("s"),
             Map.of("ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+    int fusions = 0;
     for (final Map<String, Object> paire : paires) {
-      fusionner(
-          (UUID) paire.get("cible"),
-          (UUID) paire.get("source"),
-          "même séance, deux sources, heures proches");
+      final UUID idA = (UUID) paire.get("evt_a");
+      final UUID idB = (UUID) paire.get("evt_b");
+      final String motif = "même séance, deux sources, heures proches";
+      if (Boolean.TRUE.equals(paire.get("a_ticketmaster_seul"))) {
+        fusionner(idA, idB, motif);
+      } else if (Boolean.TRUE.equals(paire.get("b_ticketmaster_seul"))) {
+        fusionner(idB, idA, motif);
+      } else if (fusionnerPaireChoisie(idA, idB, motif) == null) {
+        continue;
+      }
+      fusions++;
     }
-    return paires.size();
+    return fusions;
   }
 
   /**
@@ -386,6 +394,22 @@ public class FusionEvenementsArtisteService {
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
     fusionner(cibleId, sourceId, "artiste_norm convergent");
+  }
+
+  /**
+   * Fusionne deux événements en gardant le mieux établi.
+   * @param idA premier événement
+   * @param idB second événement
+   * @param motif raison journalisée
+   * @return l'événement conservé, ou {@code null} si l'un a disparu
+   */
+  public UUID fusionnerPaireChoisie(final UUID idA, final UUID idB, final String motif) {
+    final UUID[] cibleSource = choisirCibleEtSource(idA, idB);
+    if (cibleSource == null) {
+      return null;
+    }
+    fusionner(cibleSource[0], cibleSource[1], motif);
+    return cibleSource[0];
   }
 
   // Observations et user_matches reportés sur la cible (doublons écartés),

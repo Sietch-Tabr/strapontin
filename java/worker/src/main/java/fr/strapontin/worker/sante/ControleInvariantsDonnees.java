@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.ProduitEventim;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
@@ -53,6 +54,7 @@ final class ControleInvariantsDonnees {
         + publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
+        + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
   }
 
@@ -198,6 +200,42 @@ final class ControleInvariantsDonnees {
                   rs.getString("heure"),
                   "intitules",
                   rs.getString("titre_a") + " / " + rs.getString("titre_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
+  // Un même produit Eventim porté par deux fiches du même jour et de la même salle
+  // après la fusion nocturne : heures éloignées, artistes reconnus différents ou
+  // plus de deux fiches. Détecté seulement, le calendrier de la salle seul tranche.
+  private Map<UUID, Map<String, Object>> produitsEventimDoubles() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    final String produit = ProduitEventim.expressionSql("o");
+    jdbc.query(
+        "WITH p AS (SELECT DISTINCT e.id, e.salle_id, e.date, e.heure, e.first_seen, "
+            + produit
+            + " AS produit FROM observations o JOIN evenements e ON e.id = o.evenement_id"
+            + " WHERE o.source = 'eventim' AND e.date >= CURRENT_DATE"
+            + " AND e.salle_id IS NOT NULL AND "
+            + produit
+            + " IS NOT NULL)"
+            + " SELECT CASE WHEN a.first_seen >= b.first_seen THEN a.id ELSE b.id END AS recent,"
+            + " CASE WHEN a.first_seen >= b.first_seen THEN b.id ELSE a.id END AS jumeau,"
+            + " a.produit AS produit, s.nom AS salle, a.date::text AS date"
+            + " FROM p a JOIN p b ON b.produit = a.produit AND b.date = a.date"
+            + " AND b.salle_id = a.salle_id AND a.id < b.id JOIN salles s ON s.id = a.salle_id",
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  SALLE,
+                  rs.getString(SALLE),
+                  DATE,
+                  rs.getString(DATE),
+                  "produit",
+                  rs.getString("produit"),
                   JUMEAU,
                   rs.getObject(JUMEAU, UUID.class).toString()));
         });

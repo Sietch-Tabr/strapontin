@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.core.ProduitEventim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +43,7 @@ public class PersisteurConcertsDb {
   private final RechercheEvenementExistant rechercheEvenement;
   private final RepublicationFicheDeplacee republicationFiche;
 
-  private record ResolutionEvenement(UUID id, boolean nouveau) {}
+  private record ResolutionEvenement(UUID id, boolean nouveau, boolean parProduit) {}
 
   /**
    * @param jdbc template JDBC injecté par Spring
@@ -151,23 +152,29 @@ public class PersisteurConcertsDb {
 
   /**
    * Résout l'événement canonique d'un concert entrant, ou en crée un
-   * nouveau : correspondance exacte, sinon repli flou même salle et même
-   * date ({@link RechercheEvenementExistant}), sinon création.
+   * nouveau : correspondance exacte, produit Eventim déjà porté, sinon repli
+   * flou même salle et même date ({@link RechercheEvenementExistant}), sinon
+   * création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
     final UUID exactId = rechercheEvenement.exact(concert);
     if (exactId != null) {
-      return new ResolutionEvenement(exactId, false);
+      return new ResolutionEvenement(exactId, false, false);
+    }
+
+    final UUID produitId = rechercheEvenement.parProduit(concert);
+    if (produitId != null) {
+      return new ResolutionEvenement(produitId, false, true);
     }
 
     if (concert.salleId() != null) {
       final UUID candidatId = rechercheEvenement.parSalleEtDate(concert);
       if (candidatId != null) {
-        return new ResolutionEvenement(candidatId, false);
+        return new ResolutionEvenement(candidatId, false, false);
       }
     }
 
-    return new ResolutionEvenement(creerNouvelEvenement(concert), true);
+    return new ResolutionEvenement(creerNouvelEvenement(concert), true, false);
   }
 
   private UUID creerNouvelEvenement(final ValeurConcert concert) {
@@ -240,6 +247,60 @@ public class PersisteurConcertsDb {
         paramsCreation(concert)
             .addValue("id", evenementId.toString())
             .addValue("salleNormReference", salleNormReference));
+  }
+
+  // L'adresse d'un produit suit son titre : l'ancienne, qui ne sera plus revue,
+  // ne doit pas rester à côté de la nouvelle.
+  private void retirerAnciennesAdressesProduit(
+      final UUID evenementId, final ValeurConcert concert) {
+    if (!"eventim".equals(concert.source())) {
+      return;
+    }
+    jdbc.update(
+        "DELETE FROM observations o WHERE o.evenement_id = CAST(:id AS uuid)"
+            + " AND o.source = 'eventim' AND o.url IS DISTINCT FROM :url AND "
+            + ProduitEventim.expressionSql("o")
+            + " = :produit",
+        Map.of(
+            "id",
+            evenementId.toString(),
+            "url",
+            concert.url(),
+            "produit",
+            ProduitEventim.identifiant(concert.url()).orElse("")));
+  }
+
+  // Un événement que la seule source du produit alimente en suit les changements
+  // de titre et d'heure ; une autre source garde l'identité établie.
+  // La clé (artiste, date, heure, salle) ne doit pas déjà exister, sinon l'identité
+  // reste inchangée.
+  private void alignerIdentiteSurProduit(final UUID evenementId, final ValeurConcert concert) {
+    jdbc.update(
+        """
+        UPDATE evenements e SET
+            heure       = COALESCE(CAST(:heure AS time), e.heure),
+            artiste_norm = CASE WHEN e.artiste_id IS NULL OR e.artiste_id = CAST(:artisteId AS uuid)
+                                THEN :artisteNorm ELSE e.artiste_norm END,
+            updated_at  = now()
+        WHERE e.id = CAST(:id AS uuid)
+          AND NOT EXISTS (SELECT 1 FROM observations o
+                          WHERE o.evenement_id = e.id
+                            AND o.source <> CAST(:source AS source_concert))
+          AND NOT EXISTS (
+            SELECT 1 FROM evenements x
+            WHERE x.id <> e.id AND x.date = e.date AND x.salle_id IS NOT DISTINCT FROM e.salle_id
+              AND x.heure IS NOT DISTINCT FROM COALESCE(CAST(:heure AS time), e.heure)
+              AND x.artiste_norm = CASE WHEN e.artiste_id IS NULL
+                                             OR e.artiste_id = CAST(:artisteId AS uuid)
+                                        THEN :artisteNorm ELSE e.artiste_norm END)
+        """,
+        new MapSqlParameterSource()
+            .addValue("id", evenementId.toString())
+            .addValue(CLE_HEURE, concert.heure(), Types.TIME)
+            .addValue("source", concert.source())
+            .addValue("artisteNorm", concert.artisteNorm())
+            .addValue(
+                "artisteId", concert.artisteId() != null ? concert.artisteId().toString() : null));
   }
 
   private void upsertObservation(final UUID evenementId, final ValeurConcert concert) {
@@ -338,6 +399,10 @@ public class PersisteurConcertsDb {
         inserts++;
       } else {
         mettreAJourChampsEvenement(resolution.id(), concert);
+        if (resolution.parProduit()) {
+          retirerAnciennesAdressesProduit(resolution.id(), concert);
+          alignerIdentiteSurProduit(resolution.id(), concert);
+        }
         updates++;
       }
     }

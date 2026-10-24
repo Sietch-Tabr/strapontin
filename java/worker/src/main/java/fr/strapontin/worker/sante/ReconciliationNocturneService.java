@@ -7,6 +7,7 @@ package fr.strapontin.worker.sante;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
 import fr.strapontin.worker.persister.FusionEvenementsArtisteService;
+import fr.strapontin.worker.persister.FusionProduitsEventimService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class ReconciliationNocturneService {
   private final ReconciliateurSalles reconciliateurSalles;
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final FusionEvenementsArtisteService fusionEvenementsArtiste;
+  private final FusionProduitsEventimService fusionProduitsEventim;
   private final CoherenceMultiSalleService coherenceMultiSalle;
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
   private final ControleIntegriteService controleIntegrite;
@@ -45,7 +47,7 @@ public class ReconciliationNocturneService {
   private final CouvertureDepartements couvertureDepartements;
 
   /**
-   * Assemble les 13 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 14 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -55,6 +57,7 @@ public class ReconciliationNocturneService {
       final ReconciliateurSalles reconciliateurSalles,
       final FusionSallesClePorteeService fusionSallesClePortee,
       final FusionEvenementsArtisteService fusionEvenementsArtiste,
+      final FusionProduitsEventimService fusionProduitsEventim,
       final CoherenceMultiSalleService coherenceMultiSalle,
       final SuggestionMotsGenericsService suggestionMotsGenerics,
       final ControleIntegriteService controleIntegrite,
@@ -68,6 +71,7 @@ public class ReconciliationNocturneService {
     this.reconciliateurSalles = reconciliateurSalles;
     this.fusionSallesClePortee = fusionSallesClePortee;
     this.fusionEvenementsArtiste = fusionEvenementsArtiste;
+    this.fusionProduitsEventim = fusionProduitsEventim;
     this.coherenceMultiSalle = coherenceMultiSalle;
     this.suggestionMotsGenerics = suggestionMotsGenerics;
     this.controleIntegrite = controleIntegrite;
@@ -106,7 +110,8 @@ public class ReconciliationNocturneService {
     // Avant la fusion par clé forte : une fiche périmée sur la mauvaise salle
     // fournirait la coïncidence qui fusionne deux salles distinctes.
     final int fichesPerimeesFusionnees =
-        fusionEvenementsArtiste.fusionnerFichesPerimees()
+        fusionProduitsEventim.fusionner()
+            + fusionEvenementsArtiste.fusionnerFichesPerimees()
             + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
             + fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()
             + fusionEvenementsArtiste.fusionnerConcertsDeplaces();

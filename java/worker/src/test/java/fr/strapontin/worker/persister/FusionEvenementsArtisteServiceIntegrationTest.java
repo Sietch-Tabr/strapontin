@@ -36,6 +36,8 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
 
   @Autowired private FusionEvenementsArtisteService fusionEvenementsArtiste;
 
+  @Autowired private FusionProduitsEventimService fusionProduitsEventim;
+
   @Autowired private NamedParameterJdbcTemplate jdbc;
 
   private UUID salle;
@@ -602,5 +604,203 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     evenementSource(salle, "gloria de vivaldi", "eventim");
 
     assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+  }
+
+  // --- fusionnerMemeProduitEventim ---
+
+  // Chaque observation : { source, url, âge en heures de la dernière vue }.
+  private UUID ficheAvecObservations(
+      final UUID salleId,
+      final String artisteNorm,
+      final String heure,
+      final String[]... observations) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id) VALUES"
+                + " (:artiste, CAST(:date AS date), CAST(:heure AS time), 'la seine musicale',"
+                + " CAST(:salleId AS uuid)) RETURNING id",
+            Map.of(
+                "artiste",
+                artisteNorm,
+                "date",
+                DATE_FUTURE,
+                "heure",
+                heure,
+                "salleId",
+                salleId.toString()),
+            UUID.class);
+    for (final String[] o : observations) {
+      jdbc.update(
+          "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut,"
+              + " updated_at) VALUES (CAST(:id AS uuid), CAST(:source AS source_concert), :url,"
+              + " :artiste, 'La Seine Musicale', now() - make_interval(hours => :age))",
+          Map.of(
+              "id",
+              id.toString(),
+              "source",
+              o[0],
+              "url",
+              o[1],
+              "artiste",
+              artisteNorm,
+              "age",
+              Integer.parseInt(o[2])));
+    }
+    return id;
+  }
+
+  private long nombreObservations(final UUID evenementId, final String source) {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM observations WHERE evenement_id = CAST(:id AS uuid)"
+            + " AND source = CAST(:source AS source_concert)",
+        Map.of("id", evenementId.toString(), "source", source),
+        Long.class);
+  }
+
+  // Béjart Ballet Lausanne : le titre Eventim change, l'identifiant du produit reste.
+  @Test
+  void fusionnerProduit_titreModifie_fusionneEtGardeLaFicheLaMieuxPortee() {
+    final UUID ancienne =
+        ficheAvecObservations(
+            salle,
+            "bejart ballet lausanne",
+            "20:30",
+            new String[] {"ticketmaster", "https://tm/idmanif/1", "1"},
+            new String[] {"eventim", "https://www.eventim.fr/event/bejart-ballet-22173044", "250"});
+    final UUID recente =
+        ficheAvecObservations(
+            salle,
+            "bolero",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/bolero-22173044", "1"});
+
+    assertEquals(1, fusionProduitsEventim.fusionner());
+    assertTrue(existe(ancienne));
+    assertFalse(existe(recente));
+    assertEquals(1L, nombreObservations(ancienne, "eventim"));
+    assertEquals(
+        "https://www.eventim.fr/event/bolero-22173044",
+        jdbc.queryForObject(
+            "SELECT url FROM observations WHERE evenement_id = CAST(:id AS uuid)"
+                + " AND source = 'eventim'",
+            Map.of("id", ancienne.toString()),
+            String.class));
+  }
+
+  @Test
+  void fusionnerProduit_heureDifferenteDUneDemiHeure_fusionne() {
+    final UUID a =
+        ficheAvecObservations(
+            salle,
+            "dragonflies",
+            "19:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/dragonflies-22234371", "1"});
+    final UUID b =
+        ficheAvecObservations(
+            salle,
+            "dragonflies",
+            "18:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/dragonflies-22234371", "1"});
+
+    assertEquals(1, fusionProduitsEventim.fusionner());
+    assertEquals(1L, (existe(a) ? 1L : 0L) + (existe(b) ? 1L : 0L));
+  }
+
+  @Test
+  void fusionnerProduit_heuresTropEloignees_neFusionnePas() {
+    final UUID matinee =
+        ficheAvecObservations(
+            salle,
+            "boleros",
+            "15:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/boleros-22000001", "1"});
+    final UUID soiree =
+        ficheAvecObservations(
+            salle,
+            "boleros",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/boleros-22000001", "1"});
+
+    assertEquals(0, fusionProduitsEventim.fusionner());
+    assertTrue(existe(matinee));
+    assertTrue(existe(soiree));
+  }
+
+  @Test
+  void fusionnerProduit_troisFichesPourLeProduit_neFusionnePas() {
+    for (final String heure : List.of("20:00", "20:15", "20:30")) {
+      ficheAvecObservations(
+          salle,
+          "titre " + heure,
+          heure,
+          new String[] {"eventim", "https://www.eventim.fr/event/titre-22000002", "1"});
+    }
+
+    assertEquals(0, fusionProduitsEventim.fusionner());
+    assertEquals(3L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  @Test
+  void fusionnerProduit_deuxArtistesReconnusDifferents_neFusionnePas() {
+    final UUID a =
+        ficheAvecObservations(
+            salle,
+            "premier",
+            "20:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/premier-22000003", "1"});
+    final UUID b =
+        ficheAvecObservations(
+            salle,
+            "second",
+            "20:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/second-22000003", "1"});
+    jdbc.update(
+        "UPDATE evenements SET artiste_id = CAST(:artiste AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("artiste", creerArtiste("Premier").toString(), "id", a.toString()));
+    jdbc.update(
+        "UPDATE evenements SET artiste_id = CAST(:artiste AS uuid) WHERE id = CAST(:id AS uuid)",
+        Map.of("artiste", creerArtiste("Second").toString(), "id", b.toString()));
+
+    assertEquals(0, fusionProduitsEventim.fusionner());
+  }
+
+  // Yael Naim : la fiche de 19 h 30 porte les deux sources, Ticketmaster republie à 20 h 30.
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_ficheDeuxSourcesEtFicheUneSource_fusionne() {
+    final UUID portee =
+        ficheAvecObservations(
+            salle,
+            "yael naim",
+            "19:30",
+            new String[] {"ticketmaster", "https://tm/idmanif/1", "20"},
+            new String[] {"eventim", "https://www.eventim.fr/event/yael-naim-22000004", "1"});
+    final UUID republiee =
+        ficheAvecObservations(
+            salle,
+            "yael naim",
+            "20:30",
+            new String[] {"ticketmaster", "https://tm/idmanif/1/2", "1"});
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+    assertTrue(existe(portee));
+    assertFalse(existe(republiee));
+  }
+
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_deuxFichesDeuxSources_neFusionnePas() {
+    ficheAvecObservations(
+        salle,
+        "deux sources",
+        "19:30",
+        new String[] {"ticketmaster", "https://tm/a", "1"},
+        new String[] {"eventim", "https://www.eventim.fr/event/a-22000005", "1"});
+    ficheAvecObservations(
+        salle,
+        "deux sources",
+        "20:30",
+        new String[] {"ticketmaster", "https://tm/b", "1"},
+        new String[] {"eventim", "https://www.eventim.fr/event/b-22000006", "1"});
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
   }
 }

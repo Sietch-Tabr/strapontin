@@ -512,6 +512,108 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count);
   }
 
+  private static ConcertBrut produitEventim(
+      final String titre, final String heure, final String date, final String slug) {
+    return ConcertBrut.nouveau()
+        .artiste(titre)
+        .date(date)
+        .heure(heure)
+        .salle("Seine Musicale")
+        .ville("Boulogne-Billancourt")
+        .dept("92")
+        .url("https://www.eventim.fr/event/" + slug)
+        .source("eventim")
+        .classification("music")
+        .genre("Danse")
+        .construire();
+  }
+
+  @Test
+  void persisterConcerts_produitEventimTitreEtHeureModifies_garde_uneSeuleFiche() {
+    persisterConcerts.persisterConcerts(
+        List.of(
+            produitEventim("Bejart Ballet Lausanne", "20:30", "2098-03-05", "bejart-22173044")));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:00", "2098-03-05", "bolero-22173044")));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    final Map<String, Object> fiche =
+        jdbc.queryForMap("SELECT artiste_norm, heure::text AS heure FROM evenements", Map.of());
+    assertEquals("bolero", fiche.get("artiste_norm"));
+    assertEquals("20:00:00", fiche.get("heure"));
+    assertEquals(
+        1L, jdbc.queryForObject("SELECT COUNT(*) FROM observations", Map.of(), Long.class));
+  }
+
+  @Test
+  void persisterConcerts_produitEventimSurFicheDeuxSources_neChangeNiHeureNiTitre() {
+    final ConcertBrut ticketmaster =
+        ConcertBrut.nouveau()
+            .artiste("Bejart Ballet Lausanne")
+            .date("2098-03-05")
+            .heure("20:30")
+            .salle("Seine Musicale")
+            .ville("Boulogne-Billancourt")
+            .dept("92")
+            .url("https://www.ticketmaster.fr/idmanif/1")
+            .source("ticketmaster")
+            .classification("music")
+            .genre("Danse")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(ticketmaster));
+    persisterConcerts.persisterConcerts(
+        List.of(
+            produitEventim("Bejart Ballet Lausanne", "20:30", "2098-03-05", "bejart-22173044")));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:00", "2098-03-05", "bolero-22173044")));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    final Map<String, Object> fiche =
+        jdbc.queryForMap("SELECT artiste_norm, heure::text AS heure FROM evenements", Map.of());
+    assertEquals("bejart ballet lausanne", fiche.get("artiste_norm"));
+    assertEquals("20:30:00", fiche.get("heure"));
+    assertEquals(
+        2L, jdbc.queryForObject("SELECT COUNT(*) FROM observations", Map.of(), Long.class));
+  }
+
+  private static ConcertBrut pageSiteSalle(final String titre, final String url) {
+    return ConcertBrut.nouveau()
+        .artiste(titre)
+        .date("2098-11-07")
+        .heure("20:00")
+        .salle("Usine a Chapeaux")
+        .ville("Rennes")
+        .dept("35")
+        .url(url)
+        .source("site_salle")
+        .classification("music")
+        .construire();
+  }
+
+  @Test
+  void persisterConcerts_pageDeSalleAuTitreModifie_garde_uneSeuleFiche() {
+    final String url = "https://usineachapeaux.fr/agenda/concert-1";
+    persisterConcerts.persisterConcerts(
+        List.of(pageSiteSalle("Blue Katrice x Chandail Chandail x Mona Guba", url)));
+    persisterConcerts.persisterConcerts(
+        List.of(pageSiteSalle("Mona Guba x Blue Katrice x Chandail Chandail", url)));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "mona guba x blue katrice x chandail chandail",
+        jdbc.queryForObject("SELECT artiste_norm FROM evenements", Map.of(), String.class));
+  }
+
+  @Test
+  void persisterConcerts_memeProduitEventimAUneAutreDate_creeUneAutreFiche() {
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:30", "2098-03-05", "bolero-22173044")));
+    persisterConcerts.persisterConcerts(
+        List.of(produitEventim("Bolero", "20:30", "2098-03-06", "bolero-22173044")));
+
+    assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+  }
+
   @Test
   void persisterConcerts_statutPreventeApresDeuxCyclesEventimSuccessifs_resteProtege() {
     // Eventim envoie systématiquement un statut null (pas de distinction prévente/vente
