@@ -6,11 +6,15 @@
     <template v-else>
       <form class="form-vertical" @submit.prevent="sauvegarderNotifications">
         <div class="param-bloc">
-          <fieldset class="form-checkboxes">
-            <legend class="form-label">Fréquence</legend>
-            <p class="param-aide">
-              Elle s'applique à l'email comme au push. {{ PLAGE_SILENCIEUSE }}
-            </p>
+          <h3 id="notif-frequence-titre" class="param-libelle">Fréquence</h3>
+          <p class="param-aide">
+            Elle s'applique à l'email comme au push. {{ PLAGE_SILENCIEUSE }}
+          </p>
+          <div
+            class="form-checkboxes"
+            role="radiogroup"
+            aria-labelledby="notif-frequence-titre"
+          >
             <label
               v-for="option in FREQUENCES"
               :key="option.valeur"
@@ -19,7 +23,7 @@
               <input v-model="frequence" type="radio" :value="option.valeur" />
               <span>{{ option.libelle }}</span>
             </label>
-          </fieldset>
+          </div>
         </div>
 
         <div class="param-bloc">
@@ -116,9 +120,18 @@
           </template>
         </div>
 
-        <button type="submit" class="bouton bouton-primaire">
-          Enregistrer
-        </button>
+        <div class="notif-enregistrement">
+          <button type="submit" class="bouton bouton-primaire">
+            Enregistrer
+          </button>
+          <p v-if="modifie" class="alerte alerte-avertissement" role="status">
+            Modifications non enregistrées.
+          </p>
+          <p v-else class="param-aide">
+            Enregistre la fréquence, l'email et le push. Les appareils
+            ci-dessous s'appliquent aussitôt.
+          </p>
+        </div>
       </form>
 
       <div v-if="pushSupporte && vapidDisponible" class="param-bloc">
@@ -165,7 +178,7 @@
             Aucun appareil abonné aux notifications push.
           </li>
         </ul>
-        <div class="param-actions">
+        <div class="param-actions appareils-actions">
           <button
             v-if="
               pushNonEnregistre || (!pushAbonne && pushPermission !== 'denied')
@@ -198,6 +211,7 @@ import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "ParametresNotifications" });
 
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import { useToasts } from "../../composables/useToasts.js";
 import DialogueConfirmation from "../DialogueConfirmation.vue";
 import EtatChargement from "../EtatChargement.vue";
@@ -267,6 +281,13 @@ const testEnCours = ref(false);
 let swRegistration = null;
 let cleVapidPublique = null;
 const controleur = new AbortController();
+
+// Écart entre le formulaire et les dernières préférences enregistrées.
+const modifie = computed(
+  () =>
+    enregistrees !== null &&
+    JSON.stringify(instantane()) !== JSON.stringify(enregistrees),
+);
 
 function formaterDateHeure(iso) {
   return new Date(iso).toLocaleString("fr-FR", {
@@ -359,19 +380,41 @@ async function enregistrer(corps) {
   return rep;
 }
 
+// Vrai si les préférences sont enregistrées.
 async function sauvegarderNotifications() {
   try {
     const rep = await enregistrer(instantane());
     if (rep.ok) {
       afficherToast("Préférences de notification enregistrées.", "succes");
-    } else {
-      const corps = await lireJson(rep);
-      afficherToast(corps.erreur || "Erreur.", "erreur");
+      return true;
     }
+    const corps = await lireJson(rep);
+    afficherToast(corps.erreur || "Erreur.", "erreur");
   } catch (e) {
-    if (e.name === "AbortError") return;
+    if (e.name === "AbortError") return false;
     afficherToast("Erreur réseau lors de l'enregistrement.", "erreur");
   }
+  return false;
+}
+
+// Quitter la page avec des modifications : enregistrer, abandonner ou rester.
+onBeforeRouteLeave(async () => {
+  if (!modifie.value) return true;
+  const choix = await dialogueConfirmation.value?.choisir({
+    titre: "Modifications non enregistrées",
+    message:
+      "Vos préférences de notification ont changé sans être enregistrées.",
+    action: "Enregistrer",
+    secondaire: "Abandonner les modifications",
+    annuler: "Rester sur la page",
+  });
+  if (choix === "action") return await sauvegarderNotifications();
+  return choix === "secondaire";
+});
+
+// Fermeture de l'onglet ou rechargement : le navigateur demande lui-même confirmation.
+function avertirAvantFermeture(evenement) {
+  if (modifie.value) evenement.preventDefault();
 }
 
 function retirerPushDuFormulaire() {
@@ -569,8 +612,14 @@ async function retirerPushSiAucunAppareil() {
   }
 }
 
-onMounted(charger);
-onUnmounted(() => controleur.abort());
+onMounted(() => {
+  window.addEventListener("beforeunload", avertirAvantFermeture);
+  charger();
+});
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", avertirAvantFermeture);
+  controleur.abort();
+});
 </script>
 
 <style scoped>
@@ -605,6 +654,25 @@ onUnmounted(() => controleur.abort());
 
 .notif-contenus {
   margin-top: var(--espace-6);
+  margin-left: var(--espace-12);
+}
+
+.notif-enregistrement {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espace-8);
+  margin-bottom: var(--espace-8);
+}
+
+.notif-enregistrement p {
+  margin: 0;
+}
+
+.appareils-actions {
+  margin-top: var(--espace-8);
+  padding-top: var(--espace-8);
+  border-top: var(--trait-fin) solid var(--border);
 }
 
 .notif-radio {

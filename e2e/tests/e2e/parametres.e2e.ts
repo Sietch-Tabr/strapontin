@@ -1,4 +1,9 @@
-import { test, expect, request as playwrightRequest } from "@playwright/test";
+import {
+  test,
+  expect,
+  request as playwrightRequest,
+  type Page,
+} from "@playwright/test";
 import { FICHIER_AUTH_USER } from "./global-setup.js";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
@@ -30,6 +35,102 @@ test.describe("Scénario: paramètres — sections", () => {
   test("parametres_section_donnees_visible", async ({ page }) => {
     await page.goto("/parametres#donnees");
     await expect(page.locator("section#donnees")).toBeVisible();
+  });
+});
+
+test.describe("Scénario: paramètres — notifications, mise en page et sortie", () => {
+  async function ouvrirNotifications(page: Page) {
+    await page.goto("/parametres#notifications");
+    await expect(page.locator("section#notifications")).toBeVisible();
+    await expect(
+      page.getByRole("radio", { name: "Récapitulatif quotidien (12h)" }),
+    ).toBeVisible();
+  }
+
+  async function modifierLaFrequence(page: Page) {
+    const quotidien = page.getByRole("radio", {
+      name: "Récapitulatif quotidien (12h)",
+    });
+    const hebdomadaire = page.getByRole("radio", {
+      name: "Récapitulatif hebdomadaire (dimanche 12h)",
+    });
+    // Choisir la fréquence qui n'est pas celle enregistrée.
+    const cible = (await quotidien.isChecked()) ? hebdomadaire : quotidien;
+    await cible.check();
+  }
+
+  async function quitterVersLAccueil(page: Page) {
+    await page.locator('a[href="/"]:visible').first().click();
+  }
+
+  test("parametres_notifications_frequence_aLeCadreTitreDesAutresBlocs", async ({
+    page,
+  }) => {
+    await ouvrirNotifications(page);
+    const bloc = page.locator("#notifications .param-bloc", {
+      has: page.getByRole("heading", { name: "Fréquence", level: 3 }),
+    });
+    await expect(bloc.locator("fieldset")).toHaveCount(0);
+    await expect(bloc.getByRole("radiogroup")).toBeVisible();
+  });
+
+  test("parametres_notifications_modification_afficheLEtatNonEnregistre", async ({
+    page,
+  }) => {
+    await ouvrirNotifications(page);
+    await expect(page.getByText("Modifications non enregistrées.")).toHaveCount(
+      0,
+    );
+
+    await modifierLaFrequence(page);
+
+    await expect(
+      page.getByText("Modifications non enregistrées."),
+    ).toBeVisible();
+  });
+
+  test("parametres_notifications_quitterSansModification_nePoseAucuneQuestion", async ({
+    page,
+  }) => {
+    await ouvrirNotifications(page);
+
+    await quitterVersLAccueil(page);
+
+    await expect(page).not.toHaveURL(/\/parametres/);
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+  });
+
+  test("parametres_notifications_quitterAvecModification_proposeEnregistrerAbandonnerOuRester", async ({
+    page,
+  }) => {
+    await ouvrirNotifications(page);
+    await modifierLaFrequence(page);
+
+    await quitterVersLAccueil(page);
+
+    const dialogue = page.getByRole("dialog", {
+      name: "Modifications non enregistrées",
+    });
+    await expect(dialogue).toBeVisible();
+    await expect(
+      dialogue.getByRole("button", { name: "Enregistrer" }),
+    ).toBeVisible();
+    await expect(
+      dialogue.getByRole("button", { name: "Abandonner les modifications" }),
+    ).toBeVisible();
+
+    await dialogue.getByRole("button", { name: "Rester sur la page" }).click();
+    await expect(page).toHaveURL(/\/parametres/);
+    await expect(
+      page.getByText("Modifications non enregistrées."),
+    ).toBeVisible();
+
+    await quitterVersLAccueil(page);
+    await page
+      .getByRole("dialog", { name: "Modifications non enregistrées" })
+      .getByRole("button", { name: "Abandonner les modifications" })
+      .click();
+    await expect(page).not.toHaveURL(/\/parametres/);
   });
 });
 

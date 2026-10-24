@@ -87,6 +87,21 @@ class ClientControllerTest {
     assertEquals(500, ((String) captor.getValue().get("cleArbitraire")).length());
   }
 
+  // La pile d'appel garde plus de place que les autres champs : elle localise l'erreur.
+  @Test
+  @SuppressWarnings("unchecked")
+  void signalerErreur_pileDAppel_estGardeeJusqua2000Caracteres() {
+    final Map<String, Object> corps = new HashMap<>();
+    corps.put("message", "erreur JS");
+    corps.put("pile", "p".repeat(5_000));
+
+    controller.signalerErreur(corps, null, request);
+
+    final ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+    verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), captor.capture());
+    assertEquals(2000, ((String) captor.getValue().get("pile")).length());
+  }
+
   @Test
   void signalerErreur_memeMessageRepete_nEstJournaliseQuUneFois() {
     for (int i = 0; i < 5; i++) {

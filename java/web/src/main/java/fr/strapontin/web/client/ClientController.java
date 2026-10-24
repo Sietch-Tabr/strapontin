@@ -35,6 +35,8 @@ public class ClientController {
 
   private static final int LONGUEUR_MAX_MESSAGE = 1000;
   private static final int LONGUEUR_MAX_URL = 500;
+  // La pile d'appel situe l'origine d'une erreur non rattrapée.
+  private static final int LONGUEUR_MAX_PILE = 2000;
   private static final int MAX_CLES_META = 20;
   private static final Set<String> TYPES_VALIDES = Set.of("js-error", "promise-rejection");
   /* package-private : visibilité élargie pour ClientControllerTest (même package). */
@@ -114,7 +116,11 @@ public class ClientController {
         final Object valeur = entree.getValue();
         meta.put(
             entree.getKey(),
-            valeur != null ? tronquer(String.valueOf(valeur), LONGUEUR_MAX_URL) : "");
+            valeur != null
+                ? tronquer(
+                    String.valueOf(valeur),
+                    "pile".equals(entree.getKey()) ? LONGUEUR_MAX_PILE : LONGUEUR_MAX_URL)
+                : "");
       }
     }
   }
