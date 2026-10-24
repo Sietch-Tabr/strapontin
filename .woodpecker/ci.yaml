@@ -49,7 +49,9 @@ steps:
       # déconnexion de la JVM, pas immédiatement à la fin du process Maven — laisse ce
       # nettoyage se terminer avant de solliciter à nouveau la mémoire de l'agent.
       - sleep 15
-      - mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests
+      - >-
+        mvn -f java/pom.xml -pl core,sources,web,worker -am
+        compile checkstyle:check pmd:check spotless:check -DskipTests
     when:
       - event: push
         branch: main
@@ -76,7 +78,10 @@ steps:
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
-      - rm -rf java/web/src/main/resources/static/assets java/web/src/main/resources/static/index.html java/web/src/main/resources/static/sw.js
+      - >-
+        rm -rf java/web/src/main/resources/static/assets
+        java/web/src/main/resources/static/index.html
+        java/web/src/main/resources/static/sw.js
       - cd front && npm ci && npm run build
     when:
       - event: push
