@@ -40,7 +40,14 @@ test.describe("Scénario: paramètres — sections", () => {
 
 test.describe("Scénario: paramètres — notifications, mise en page et sortie", () => {
   async function ouvrirNotifications(page: Page) {
-    await page.goto("/parametres#notifications");
+    // Sans ancre dans l'URL : WebKit double la navigation d'un goto avec fragment.
+    await page.goto("/parametres");
+    const selecteur = page.locator("select.param-onglets-mobile");
+    if (await selecteur.isVisible()) {
+      await selecteur.selectOption("#notifications");
+    } else {
+      await page.locator('a.param-onglet[href="#notifications"]').click();
+    }
     await expect(page.locator("section#notifications")).toBeVisible();
     await expect(
       page.getByRole("radio", { name: "Récapitulatif quotidien (12h)" }),
