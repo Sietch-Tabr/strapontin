@@ -122,6 +122,66 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     verify(ticketmasterSource, never()).fetchSalle("tm:venue-non-suivie", null);
   }
 
+  private void insererFicheDeSalle(final UUID salleId, final String dept, final int joursSansVue) {
+    final UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id, dept)"
+                + " VALUES (:norm, :date, 'salle test', CAST(:salleId AS uuid), :dept)"
+                + " RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("norm", "fiche " + UUID.randomUUID())
+                .addValue("date", LocalDate.now().plusMonths(1))
+                .addValue("salleId", salleId.toString())
+                .addValue("dept", dept),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, artiste_brut, salle_brut, updated_at)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'a', 's',"
+            + " now() - make_interval(days => :jours))",
+        Map.of("id", evenementId.toString(), "jours", joursSansVue));
+  }
+
+  @Test
+  void executerFetchSallesAll_salleNonSuivieDontUneFicheDeDepartementSuiviEstFigee_estFetchee() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-theatre", "venue-theatre");
+    insererFicheDeSalle(salle, "75", 10);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any()))
+        .thenReturn(List.<ConcertBrut>of());
+
+    fetchService.executerFetchSallesAll();
+
+    verify(ticketmasterSource).fetchSalle("tm:venue-theatre", null);
+  }
+
+  @Test
+  void executerFetchSallesAll_ficheFigeeDansUnDepartementNonSuivi_neFetchePasLaSalle() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-lyon", "venue-lyon");
+    insererFicheDeSalle(salle, "69", 30);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(ticketmasterSource, never()).fetchSalle("tm:venue-lyon", null);
+  }
+
+  @Test
+  void executerFetchSallesAll_ficheRecenteDeDepartementSuivi_neFetchePasLaSalle() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-paris", "venue-paris");
+    insererFicheDeSalle(salle, "75", 2);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(ticketmasterSource, never()).fetchSalle("tm:venue-paris", null);
+  }
+
   private UUID insererArtisteSuivi(final String userId, final String nom) {
     final UUID artisteId =
         jdbc.queryForObject(

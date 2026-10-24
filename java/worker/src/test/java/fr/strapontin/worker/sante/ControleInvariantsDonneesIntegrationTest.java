@@ -232,6 +232,64 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(2L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
   }
 
+  private UUID creerSalleNommee(final String cle) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES (:cle, :cle, :cle) RETURNING id",
+        Map.of("cle", cle),
+        UUID.class);
+  }
+
+  private void ficheObservee(final UUID salle, final String dept, final int joursSansVue) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                + " VALUES (:artiste, CURRENT_DATE + 30, '20:00', 'madeleine',"
+                + " CAST(:salle AS uuid), :dept) RETURNING id",
+            Map.of(
+                "artiste", "fiche " + UUID.randomUUID(), "salle", salle.toString(), "dept", dept),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut,"
+            + " updated_at) VALUES (CAST(:id AS uuid), 'ticketmaster', :url, 'a', 's',"
+            + " now() - make_interval(days => :jours))",
+        Map.of("id", id.toString(), "url", "https://tm/" + id, "jours", joursSansVue));
+  }
+
+  @Test
+  void verifier_ficheDeDepartementSuiviSansObservationRecente_signaleLesFichesFigees() {
+    final UUID salle = creerSalle();
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u3', 'u3', 'u3@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES ('u3', ARRAY['75']::text[])",
+        Map.of());
+    ficheObservee(salle, "75", 20);
+
+    controle.verifier();
+
+    assertEquals(List.of("fiches_figees"), actifs());
+  }
+
+  @Test
+  void verifier_ficheFigeeHorsPerimetreOuRecente_neSignaleRien() {
+    final UUID salle = creerSalle();
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u3', 'u3', 'u3@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES ('u3', ARRAY['75']::text[])",
+        Map.of());
+    ficheObservee(salle, "75", 3);
+    ficheObservee(creerSalleNommee("lyon"), "69", 40);
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   @Test
   void verifier_deuxFichesDeSourcesDifferentesAuMemeCreneau_neSignalePasCeType() {
     final UUID salle = creerSalle();

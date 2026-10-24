@@ -34,6 +34,18 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
+  // Salle d'un département suivi dont une fiche à venir n'a plus été revue depuis
+  // une semaine : le fetch de région ne demande que music, opera et musical, aucun
+  // autre fetch ne la voit (théâtre, humour). Interrogée par lieu, sans filtre.
+  private static final String CONDITION_SALLE_A_RAFRAICHIR =
+      """
+      EXISTS (SELECT 1 FROM evenements e
+              WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE
+                AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))
+                AND NOT EXISTS (SELECT 1 FROM observations o
+                                WHERE o.evenement_id = e.id
+                                  AND o.updated_at > now() - interval '7 days'))""";
+
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
@@ -246,7 +258,10 @@ class FetchSallesExecutor {
             "SELECT ss.salle_id::text AS salle_id, ss.source AS source,"
                 + " ss.identifiant_externe AS identifiant, ss.libelle_source AS libelle"
                 + " FROM salle_sources ss"
-                + " WHERE EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
+                + " WHERE (EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
+                + "   OR (ss.source = 'ticketmaster' AND "
+                + CONDITION_SALLE_A_RAFRAICHIR
+                + "))"
                 + " AND (ss.source <> 'eventim' OR ss.libelle_source IS NOT NULL)"
                 + (filtre ? " AND ss.salle_id::text IN (:ids)" : "")
                 + " ORDER BY ss.salle_id, ss.source",

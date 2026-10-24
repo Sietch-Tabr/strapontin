@@ -107,6 +107,12 @@ public final class CatalogueSignalements {
             + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop depuis"
             + " les concerts, ou marquer comme traité si ce sont deux séances.");
     ajouter(
+        "fiches_figees",
+        "Fiches à venir sans mise à jour",
+        "Des fiches à venir du périmètre des utilisateurs n'ont été revues par aucun fetch depuis"
+            + " deux semaines, sans absence comptée : vérifier que la source les interroge"
+            + " (départements, classements, salles) ; le signalement se referme seul.");
+    ajouter(
         "departement_sans_concert",
         "Département sans concert",
         "Aucun concert à venir dans ce département : aucune de nos billetteries n'y programme ou"

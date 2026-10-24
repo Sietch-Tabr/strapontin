@@ -55,6 +55,7 @@ final class ControleInvariantsDonnees {
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
         + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
+        + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
   }
 
@@ -204,6 +205,36 @@ final class ControleInvariantsDonnees {
                   rs.getObject(JUMEAU, UUID.class).toString()));
         });
     return anomalies;
+  }
+
+  // Fiche à venir du périmètre d'un utilisateur (département, artiste, salle ou
+  // correspondance) dont aucune observation n'a été revue depuis deux semaines et
+  // qu'aucun compteur d'absences n'a encore signalée : aucun fetch ne la voit.
+  private Map<UUID, Map<String, Object>> fichesFigees() {
+    final Map<String, Object> details = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT count(*) AS nb, min(e.date)::text AS premiere,
+               string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts
+        FROM evenements e
+        WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
+          AND EXISTS (SELECT 1 FROM observations o WHERE o.evenement_id = e.id)
+          AND NOT EXISTS (SELECT 1 FROM observations o
+                          WHERE o.evenement_id = e.id AND o.updated_at > now() - interval '14 days')
+          AND (EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))
+               OR EXISTS (SELECT 1 FROM user_artistes ua WHERE ua.artiste_id = e.artiste_id)
+               OR EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = e.salle_id)
+               OR EXISTS (SELECT 1 FROM user_matches um WHERE um.concert_id = e.id))
+        """,
+        Map.of(),
+        rs -> {
+          if (rs.getLong("nb") > 0) {
+            details.put("fiches", rs.getLong("nb"));
+            details.put("premiere", rs.getString("premiere"));
+            details.put("departements", rs.getString("depts"));
+          }
+        });
+    return globale("fiches_figees", details);
   }
 
   // Un même produit Eventim porté par deux fiches du même jour et de la même salle
