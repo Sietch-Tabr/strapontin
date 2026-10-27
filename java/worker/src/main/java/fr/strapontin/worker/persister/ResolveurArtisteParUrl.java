@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.Hommage;
 import java.sql.Date;
 import java.sql.Time;
 import java.time.LocalDate;
@@ -106,6 +107,10 @@ class ResolveurArtisteParUrl {
     final String artisteNormExistant = (String) existant.get("artiste_norm");
     final UUID artisteIdExistant = (UUID) existant.get("artiste_id");
     if (artisteNormExistant == null || artisteNormExistant.equals(concert.artisteNorm())) {
+      return concert;
+    }
+    // Un titre d'hommage reste lui-même : l'adresse existante porte l'artiste imité.
+    if (Hommage.estHommage(concert.artisteNorm()) != Hommage.estHommage(artisteNormExistant)) {
       return concert;
     }
     LOG.debug(

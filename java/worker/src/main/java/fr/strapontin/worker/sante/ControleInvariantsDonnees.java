@@ -51,6 +51,7 @@ final class ControleInvariantsDonnees {
         + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
+        + publier("hommage_rattache_artiste", "evenement", hommagesRattachesAUnArtiste())
         + publier("annulation_une_billetterie", "evenement", annulationsUneBilletterie())
         + publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
         + publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
@@ -456,6 +457,25 @@ final class ControleInvariantsDonnees {
           }
         });
     return globale("comptes_incoherents", comptes);
+  }
+
+  // L'adresse annonce un hommage, la fiche reste rattachée à l'artiste imité.
+  private Map<UUID, Map<String, Object>> hommagesRattachesAUnArtiste() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT e.id, e.artiste_norm, e.date FROM evenements e
+        WHERE e.date >= CURRENT_DATE AND e.artiste_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM observations o
+                      WHERE o.evenement_id = e.id AND o.url ~* '(tribute|hommage)')
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              UUID.fromString(rs.getString("id")),
+              Map.of("artisteNorm", rs.getString("artiste_norm"), "date", rs.getString("date")));
+        });
+    return anomalies;
   }
 
   // Une séance à venir annulée par une source alors qu'une autre la présente encore,

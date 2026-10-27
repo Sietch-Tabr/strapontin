@@ -262,6 +262,21 @@ public class PersisteurConcertsDb {
             + " AND artiste_id IS NOT NULL",
         id);
     jdbc.update("DELETE FROM user_matches WHERE concert_id = CAST(:id AS uuid)", id);
+    // Une fiche portée par deux sources garde son identité au rafraîchissement : sans ce
+    // réalignement, l'artiste imité y serait rattaché de nouveau d'après le nom resté.
+    jdbc.update(
+        """
+        UPDATE evenements e SET artiste_norm = :artisteNorm, updated_at = now()
+        WHERE e.id = CAST(:id AS uuid) AND e.artiste_norm <> :artisteNorm
+          AND NOT EXISTS (
+            SELECT 1 FROM evenements x
+            WHERE x.id <> e.id AND x.artiste_norm = :artisteNorm AND x.date = e.date
+              AND x.heure IS NOT DISTINCT FROM e.heure
+              AND x.salle_id IS NOT DISTINCT FROM e.salle_id)
+        """,
+        new MapSqlParameterSource()
+            .addValue("id", evenementId.toString())
+            .addValue("artisteNorm", concert.artisteNorm()));
   }
 
   // L'adresse d'un produit suit son titre : l'ancienne, qui ne sera plus revue,

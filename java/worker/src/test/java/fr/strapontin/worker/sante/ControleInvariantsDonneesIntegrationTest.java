@@ -96,6 +96,32 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_adresseDHommageSurFicheRattachee_signaleLHommage() {
+    final UUID salle = creerSalle();
+    evenement(salle, "ac dc", "75");
+    final UUID artiste =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('AC/DC', 'ac dc') RETURNING id",
+            Map.of(),
+            UUID.class);
+    jdbc.update(
+        "UPDATE evenements SET artiste_id = CAST(:a AS uuid) WHERE artiste_norm = 'ac dc'",
+        Map.of("a", artiste.toString()));
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " SELECT id, 'eventim', 'https://eventim.fr/ac-dc-live-tribute-1', 'a', 's'"
+            + " FROM evenements",
+        Map.of());
+
+    controle.verifier();
+    assertEquals(List.of("hommage_rattache_artiste"), actifs());
+
+    jdbc.update("UPDATE evenements SET artiste_id = NULL", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
   void verifier_seanceAnnuleeParUneSourceEtVendueParLAutre_signaleLAnnulation() {
     final UUID salle = creerSalle();
     evenement(salle, "drag race", "34");

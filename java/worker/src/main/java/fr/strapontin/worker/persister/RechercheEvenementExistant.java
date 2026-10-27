@@ -64,8 +64,9 @@ final class RechercheEvenementExistant {
   /**
    * Événement qui porte déjà ce produit le même jour dans la même salle, quels
    * que soient le titre et l'heure publiés : produit Eventim (son identifiant
-   * survit au titre, pas l'adresse) ou page d'un site de salle. Plusieurs
-   * candidats : le mieux entretenu, la fusion nocturne rapproche les autres.
+   * survit au titre, pas l'adresse), page d'un site de salle ou adresse
+   * Ticketmaster. Plusieurs candidats : le mieux entretenu, la fusion nocturne
+   * rapproche les autres (pour Ticketmaster, aucun : choix ambigu).
    * @return l'événement, ou {@code null} sans candidat ou si les artistes divergent
    */
   /* package-private : appelé par PersisteurConcertsDb. */
@@ -87,11 +88,17 @@ final class RechercheEvenementExistant {
             new MapSqlParameterSource()
                 .addValue("produit", ProduitEventim.identifiant(concert.url()).orElse(null))
                 .addValue("url", concert.url())
+                .addValue("source", concert.source())
                 .addValue(CLE_DATE, concert.date(), Types.DATE)
                 .addValue(
                     "salleId",
                     concert.salleId() != null ? concert.salleId().toString() : null,
                     Types.VARCHAR));
+    // Une production à séances multiples partage une même adresse Ticketmaster : deux fiches
+    // déjà rattachées à la même adresse le même jour rendent le choix ambigu.
+    if ("ticketmaster".equals(concert.source()) && candidats.size() != 1) {
+      return null;
+    }
     for (final Map<String, Object> c : candidats) {
       final UUID candArtisteId = (UUID) c.get("artiste_id");
       final boolean artistesDivergents =
@@ -113,8 +120,9 @@ final class RechercheEvenementExistant {
         && ProduitEventim.identifiant(concert.url()).isPresent()) {
       return "o.source = 'eventim' AND " + ProduitEventim.expressionSql("o") + " = :produit";
     }
-    if ("site_salle".equals(concert.source()) && concert.url() != null) {
-      return "o.source = 'site_salle' AND o.url = :url";
+    if (("site_salle".equals(concert.source()) || "ticketmaster".equals(concert.source()))
+        && concert.url() != null) {
+      return "o.source = CAST(:source AS source_concert) AND o.url = :url";
     }
     return null;
   }

@@ -147,6 +147,11 @@ public final class CatalogueSignalements {
         "Le secret du second facteur d'un compte est stocké en clair ou illisible : le"
             + " redémarrage du site le chiffre, sinon réenrôler le TOTP du compte.");
     ajouter(
+        "hommage_rattache_artiste",
+        "Hommage rattaché à l'artiste imité",
+        "L'adresse de la séance annonce un hommage (tribute) mais la fiche est rattachée à"
+            + " l'artiste imité : ses abonnés seraient prévenus à tort.");
+    ajouter(
         "annulation_une_billetterie",
         "Annulation vue par une seule billetterie",
         "Une séance à venir est annulée par une billetterie alors qu'une autre la présente encore"
