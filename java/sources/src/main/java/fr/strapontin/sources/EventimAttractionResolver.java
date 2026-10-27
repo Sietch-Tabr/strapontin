@@ -135,6 +135,55 @@ final class EventimAttractionResolver {
     }
   }
 
+  /**
+   * Indique si l'identifiant enregistré pour un artiste désigne, chez Eventim, un autre artiste :
+   * l'attraction figure parmi les résultats de la recherche par nom mais son nom n'est pas celui
+   * de l'artiste (ni un nom connu de lui). Un identifiant absent des résultats reste indéterminé.
+   * @param terme nom de l'artiste suivi
+   * @param attractionId identifiant enregistré
+   * @param autresNomsConnus libellé et alias connus de l'artiste
+   * @return {@code true} si l'identifiant est prouvé être celui d'un autre artiste
+   */
+  @SuppressWarnings("unchecked")
+  /* package-private : appelé par EventimSource (même package). */
+  boolean attractionDUnAutreArtiste(
+      final String terme, final String attractionId, final List<String> autresNomsConnus) {
+    final URI uri = construireUriRechercheAttractions(terme);
+    compteurBilan.enregistrerAppel();
+    try {
+      final Map<String, Object> data = restClient.get().uri(uri).retrieve().body(Map.class);
+      final List<Map<String, Object>> attractions =
+          data == null ? null : (List<Map<String, Object>>) data.get("attractions");
+      if (attractions == null) {
+        return false;
+      }
+      final String termeNorm = Normalisation.normaliserTexte(terme);
+      final Set<String> autresNomsNorm =
+          autresNomsConnus.stream()
+              .filter(Objects::nonNull)
+              .map(Normalisation::normaliserTexte)
+              .filter(n -> !n.isEmpty() && !n.equals(termeNorm))
+              .collect(Collectors.toSet());
+      for (final Map<String, Object> a : attractions) {
+        if (!attractionId.equals(extraireAttractionId(a))) {
+          continue;
+        }
+        final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
+        return !estCorrespondanceExacte(nomNorm, termeNorm)
+            && !autresNomsNorm.contains(nomNorm)
+            && !estContainmentEligible(terme, termeNorm, nomNorm, true, autresNomsNorm);
+      }
+      return false;
+    } catch (ResourceAccessException e) {
+      compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
+      throw e;
+    } catch (Exception e) {
+      compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
+      LOG.warn("Eventim attractions erreur terme={} : {}", terme, e.getMessage());
+      return false;
+    }
+  }
+
   private URI construireUriRechercheAttractions(final String terme) {
     return UriSources.encoder(
         UriComponentsBuilder.fromUriString(baseUrl + "/v1/attractions")

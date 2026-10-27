@@ -45,9 +45,10 @@ public class ReconciliationNocturneService {
   private final HealthCheckSallesTM healthCheckSallesTM;
   private final CompleteurVillesSalles completeurVillesSalles;
   private final CouvertureDepartements couvertureDepartements;
+  private final VerificationIdentifiantsEventim verificationIdentifiantsEventim;
 
   /**
-   * Assemble les 14 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 15 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -64,7 +65,8 @@ public class ReconciliationNocturneService {
       final HealthCheckArtistesTM healthCheckArtistesTM,
       final HealthCheckSallesTM healthCheckSallesTM,
       final CompleteurVillesSalles completeurVillesSalles,
-      final CouvertureDepartements couvertureDepartements) {
+      final CouvertureDepartements couvertureDepartements,
+      final VerificationIdentifiantsEventim verificationIdentifiantsEventim) {
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
@@ -79,6 +81,7 @@ public class ReconciliationNocturneService {
     this.healthCheckSallesTM = healthCheckSallesTM;
     this.completeurVillesSalles = completeurVillesSalles;
     this.couvertureDepartements = couvertureDepartements;
+    this.verificationIdentifiantsEventim = verificationIdentifiantsEventim;
   }
 
   /**
@@ -93,6 +96,7 @@ public class ReconciliationNocturneService {
     healthCheckArtistesTM.verifierVivacite();
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     healthCheckSallesTM.alerterLieuxEventimSuspects();
+    verificationIdentifiantsEventim.verifier();
 
     // Avant l'enrichissement et les rapprochements : ils comparent des villes et
     // des départements.

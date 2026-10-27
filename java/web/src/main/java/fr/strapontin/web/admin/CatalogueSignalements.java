@@ -147,6 +147,11 @@ public final class CatalogueSignalements {
         "Le secret du second facteur d'un compte est stocké en clair ou illisible : le"
             + " redémarrage du site le chiffre, sinon réenrôler le TOTP du compte.");
     ajouter(
+        "identifiant_externe_autre_artiste",
+        "Identifiant externe d'un autre artiste",
+        "L'identifiant enregistré chez une billetterie désigne un autre artiste que celui suivi :"
+            + " le retirer de la fiche de l'artiste.");
+    ajouter(
         "seance_dans_deux_salles",
         "Même séance dans deux salles",
         "Un même artiste est déclaré le même jour, à des heures proches, dans une salle et sa"

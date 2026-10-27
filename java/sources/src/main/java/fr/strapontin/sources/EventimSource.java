@@ -139,6 +139,19 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     return lieux.preleverLieuxObserves();
   }
 
+  /**
+   * Indique si l'identifiant d'attraction enregistré pour un artiste désigne chez Eventim un
+   * autre artiste (voir {@link EventimAttractionResolver#attractionDUnAutreArtiste}).
+   * @param nomArtiste nom de l'artiste suivi
+   * @param attractionId identifiant enregistré
+   * @param autresNomsConnus libellé et alias connus de l'artiste
+   * @return {@code true} si l'identifiant est prouvé être celui d'un autre artiste
+   */
+  public boolean attractionDUnAutreArtiste(
+      final String nomArtiste, final String attractionId, final List<String> autresNomsConnus) {
+    return attractionResolver.attractionDUnAutreArtiste(nomArtiste, attractionId, autresNomsConnus);
+  }
+
   @Override
   public String nom() {
     return "eventim";
