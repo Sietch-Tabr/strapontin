@@ -41,8 +41,8 @@ Cron adaptatif (v2.4.0, #721) : `0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?` — 11 
 | `fetch:artistes:batch`           | `0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?`  | `worker.cron.fetch-artistes`          |                                          |
 | `fetch:salles:all`               | `0 30 1,5,7,9,11,13,15,17,19,21,23 * * ?` | `worker.cron.fetch-salles`            |                                          |
 | `recalculer:matches`             | `0 0 1,5,7,9,11,13,15,17,19,21,23 * * ?`  | `worker.cron.recalculer-matches`      |                                          |
-| `fetch:region`                   | `0 0 2 * * ?`                             | `worker.cron.fetch-region`            |                                          |
-| `reconciliation:nocturne`        | `0 0 3 * * ?`                             | `worker.cron.reconciliation-nocturne` | après fetch:region                       |
+| `fetch:region`                   | `0 0 3 * * ?`                             | `worker.cron.fetch-region`            |                                          |
+| `reconciliation:nocturne`        | `0 15 4 * * ?`                            | `worker.cron.reconciliation-nocturne` | après fetch:region                       |
 | `notifier:digest (différés)`     | `0 0 7 * * ?`                             |                                       | push retenus la nuit                     |
 | `notifier:version`               | `0 0 11 * * ?`                            |                                       |                                          |
 | `notifier:digest (quotidien)`    | `0 0 12 * * ?`                            |                                       |                                          |
