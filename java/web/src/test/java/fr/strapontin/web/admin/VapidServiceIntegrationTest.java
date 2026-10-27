@@ -105,6 +105,28 @@ class VapidServiceIntegrationTest extends AbstractWebIntegrationTest {
   }
 
   @Test
+  void genererVapid_comptesSansAppareilRestant_decocheLeurPush() throws Exception {
+    compteAvecAppareil("v1", true);
+    jdbc.update(
+        "UPDATE user_config SET notif_artistes_push = true, notif_nouvelle_version = true,"
+            + " frequence_notifications = 'quotidien' WHERE user_id = 'v1'",
+        Map.of());
+    when(emailServiceSecurite.envoyerPushReinitialise(any(), any()))
+        .thenReturn(List.of("v1@test.fr"));
+
+    service.genererVapid("Fuite de la clé privée");
+
+    final Map<String, Object> config =
+        jdbc.queryForMap(
+            "SELECT notif_artistes_push, notif_nouvelle_version, frequence_notifications"
+                + " FROM user_config WHERE user_id = 'v1'",
+            Map.of());
+    assertEquals(false, config.get("notif_artistes_push"));
+    assertEquals(false, config.get("notif_nouvelle_version"));
+    assertEquals("quotidien", config.get("frequence_notifications"));
+  }
+
+  @Test
   void genererVapid_causeEnregistree_estcelleDuRenouvellementEtPasUneCauseAnterieure()
       throws Exception {
     compteAvecAppareil("v1", true);

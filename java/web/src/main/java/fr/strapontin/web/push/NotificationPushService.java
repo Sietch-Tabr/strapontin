@@ -106,19 +106,20 @@ public class NotificationPushService {
   }
 
   /**
-   * Un échec isolé peut être transitoire : seule une répétition sur
-   * {@value EchecPush#SEUIL_ECHECS_CONSECUTIFS} envois consécutifs révoque
-   * l'abonnement.
+   * Un échec isolé peut être transitoire : seule une série d'au moins
+   * {@value EchecPush#SEUIL_ECHECS_CONSECUTIFS} envois sur
+   * {@value EchecPush#JOURS_MIN_SERIE_ECHECS} jours révoque l'abonnement, sauf
+   * si tous les envois vers ce service échouent (panne côté application).
    */
   private ResultatEnvoiPush compterEchec(
       final Map<String, Object> ab, final String userId, final Integer status, final String corps) {
     final String raison = EchecPush.raison(status, corps);
-    final Integer echecs =
-        jdbc.queryForObject(
+    final Map<String, Object> serie =
+        jdbc.queryForMap(
             EchecPush.SQL_INCREMENTER_ECHECS,
-            new MapSqlParameterSource().addValue(CLE_ID, ab.get(CLE_ID)).addValue("statut", status),
-            Integer.class);
-    if (EchecPush.seuilAtteint(echecs)) {
+            new MapSqlParameterSource().addValue(CLE_ID, ab.get(CLE_ID)).addValue("statut", status));
+    final int echecs = EchecPush.echecs(serie);
+    if (EchecPush.seuilAtteint(serie) && !panneDuService(ab)) {
       supprimerAbonnement(
           ab,
           userId,
@@ -275,10 +276,17 @@ public class NotificationPushService {
     return false;
   }
 
+  private boolean panneDuService(final Map<String, Object> ab) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            EchecPush.SQL_PANNE_DU_SERVICE, Map.of(CLE_ID, ab.get(CLE_ID)), Boolean.class));
+  }
+
   private void supprimerAbonnement(
       final Map<String, Object> ab, final String userId, final String cause, final String raison) {
     jdbc.update(EchecPush.SQL_SUPPRIMER_ABONNEMENT, Map.of(CLE_ID, ab.get(CLE_ID)));
     jdbc.update(EchecPush.SQL_DATER_RETRAIT, Map.of(CLE_USER_ID, userId, "cause", cause));
+    jdbc.update(EchecPush.SQL_DECOCHER_PUSH_SANS_APPAREIL, Map.of(CLE_USER_ID, userId));
     LOG.info("Abonnement push révoqué ({}) : {}", raison, userId);
     final Map<String, Object> meta = new HashMap<>();
     meta.put(CLE_USER_ID, userId);

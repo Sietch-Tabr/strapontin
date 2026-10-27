@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.ProduitEventim;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -51,6 +52,7 @@ final class ControleInvariantsDonnees {
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
         + publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
+        + publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
@@ -453,6 +455,33 @@ final class ControleInvariantsDonnees {
           }
         });
     return globale("comptes_incoherents", comptes);
+  }
+
+  // Tous les envois vers un même service push échouent depuis des jours pour au moins deux
+  // comptes : la cause est côté application ou service, et aucun appareil n'est retiré.
+  private Map<UUID, Map<String, Object>> envoisPushEnPanne() {
+    final Map<String, Object> services = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        WITH abonnements AS (
+          SELECT substring(endpoint from '^https?://[^/]+') AS service, user_id,
+                 echecs_consecutifs > 0 AS en_echec, premier_echec_le, dernier_envoi_reussi_le
+          FROM push_abonnements)
+        SELECT service, count(DISTINCT user_id) FILTER (WHERE en_echec) AS comptes
+        FROM abonnements
+        GROUP BY service
+        HAVING count(DISTINCT user_id) FILTER (WHERE en_echec) >= 2
+           AND min(premier_echec_le) FILTER (WHERE en_echec)
+               < now() - :jours * interval '1 day'
+           AND (max(dernier_envoi_reussi_le) IS NULL
+                OR max(dernier_envoi_reussi_le)
+                   < min(premier_echec_le) FILTER (WHERE en_echec))
+        """,
+        Map.of("jours", EchecPush.JOURS_MIN_SERIE_ECHECS),
+        rs -> {
+          services.put(rs.getString("service"), rs.getInt("comptes") + " comptes");
+        });
+    return globale("envois_push_en_panne", services);
   }
 
   // Un secret chiffré est un base64 d'au moins 28 octets ; un Base32 brut ou toute autre

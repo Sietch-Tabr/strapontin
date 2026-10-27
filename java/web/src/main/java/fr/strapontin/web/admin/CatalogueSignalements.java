@@ -147,6 +147,12 @@ public final class CatalogueSignalements {
         "Le secret du second facteur d'un compte est stocké en clair ou illisible : le"
             + " redémarrage du site le chiffre, sinon réenrôler le TOTP du compte.");
     ajouter(
+        "envois_push_en_panne",
+        "Envois push en panne",
+        "Tous les envois vers un même service de notification échouent depuis plusieurs jours"
+            + " pour plusieurs comptes : la cause est probablement l'application, aucun appareil"
+            + " n'est retiré tant que la panne dure.");
+    ajouter(
         "orphelins_fk",
         "Références orphelines",
         "Des lignes référencent une salle, un artiste ou un concert supprimé.");

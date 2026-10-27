@@ -96,6 +96,29 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_toutUnServicePushEnEchecDepuisDesJours_signaleLaPanne() {
+    for (final String id : List.of("p1", "p2")) {
+      jdbc.update(
+          "INSERT INTO users (id, username, email, must_change_credentials)"
+              + " VALUES (:id, :id, :id || '@test.fr', true)",
+          Map.of("id", id));
+      jdbc.update(
+          "INSERT INTO push_abonnements (user_id, endpoint, p256dh, auth, echecs_consecutifs,"
+              + " premier_echec_le) VALUES (:id, 'https://fcm.googleapis.com/' || :id, 'k', 'a',"
+              + " 8, now() - interval '6 days')",
+          Map.of("id", id));
+    }
+
+    controle.verifier();
+    assertEquals(List.of("envois_push_en_panne"), actifs());
+
+    jdbc.update("UPDATE push_abonnements SET dernier_envoi_reussi_le = now() WHERE user_id = 'p1'",
+        Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
   void verifier_secretTotpEnClair_signaleLeCompteSeulement() {
     jdbc.update(
         "INSERT INTO users (id, username, email, must_change_credentials, two_factor_secret)"

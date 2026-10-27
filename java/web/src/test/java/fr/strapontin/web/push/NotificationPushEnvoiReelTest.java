@@ -141,9 +141,8 @@ class NotificationPushEnvoiReelTest {
   @Test
   void envoyerNotificationTest_cinquiemeEchecConsecutif_appareilRevoque() throws Exception {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnement()));
-    when(jdbc.queryForObject(
-            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
-        .thenReturn(5);
+    when(jdbc.queryForMap(contains("echecs_consecutifs + 1"), any(SqlParameterSource.class)))
+        .thenReturn(Map.of("echecs_consecutifs", 5, "serie_assez_longue", true));
     statutRenvoye = 403;
 
     assertEquals(ResultatEnvoiPush.APPAREIL_REVOQUE, service().envoyerNotificationTest("u1", null));

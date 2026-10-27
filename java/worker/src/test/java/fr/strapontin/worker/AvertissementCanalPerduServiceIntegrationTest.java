@@ -98,11 +98,21 @@ class AvertissementCanalPerduServiceIntegrationTest extends AbstractWorkerIntegr
   }
 
   @Test
-  void verifier_emailActif_aucunAvertissement() {
+  void verifier_emailActif_avertitQuandMemeLePushEstPerdu() {
     jdbc.update("UPDATE user_config SET notif_artistes = true", Map.of());
 
-    assertEquals(0, service.verifier());
-    verify(emailCompteService, never()).envoyerAvertissementCanalPerdu(anyString(), any());
+    assertEquals(1, service.verifier());
+    verify(emailCompteService).envoyerAvertissementCanalPerdu("u1@test.fr", "cause lisible");
+  }
+
+  @Test
+  void verifier_pushDecocheApresRetrait_avertitEncore() {
+    jdbc.update(
+        "UPDATE user_config SET notif_artistes_push = false, notif_salles_push = false,"
+            + " notif_nouvelle_version = false",
+        Map.of());
+
+    assertEquals(1, service.verifier());
   }
 
   @Test

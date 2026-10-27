@@ -114,9 +114,8 @@ class NotificationPushDigestServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
         .thenReturn(List.of(abonnement(1)));
-    when(jdbc.queryForObject(
-            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
-        .thenReturn(echecs);
+    when(jdbc.queryForMap(contains("echecs_consecutifs + 1"), any(SqlParameterSource.class)))
+        .thenReturn(Map.of("echecs_consecutifs", echecs, "serie_assez_longue", true));
     return jdbc;
   }
 
