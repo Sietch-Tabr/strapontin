@@ -4,6 +4,31 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.1 — 27 octobre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Une date annulée chez Eventim n'est plus affichée comme disponible, et une annulation vue par une seule billetterie est signalée à l'administrateur.",
+          "Un concert qui change d'heure chez Ticketmaster ne revient plus en double le lendemain d'une fusion, et un spectacle annulé n'absorbe plus le spectacle qui le remplace le même soir.",
+          "Les hommages (tribute) restent détachés de l'artiste imité, même quand la billetterie garde la même adresse.",
+          "Une séance publiée dans deux salles (changement de salle, salle et sous-salle) est signalée, et la fiche d'un concert reprend le département de sa salle.",
+          "Les concerts Eventim encore en vente ne sont plus signalés « à confirmer » quand ils sortent des catégories de la recherche par région : ils sont revus par lieu.",
+          "Une salle liée à un lieu détruit sur Wikidata (l'Alhambra) ou à une gare (Le Hasard Ludique) n'en garde plus la position, une salle qui a un élément Wikidata reçoit sa position, et la ville d'une salle suit sa commune réelle (Le Transbordeur : Villeurbanne).",
+        ],
+      },
+      {
+        categorie: "Notifications et compte",
+        items: [
+          "L'appareil est nommé de la même façon partout (« PWA sur iPhone », « Chrome sur Android »...) : email de nouvelle connexion, liste des sessions et appareils de notification.",
+          "Une mise à jour de votre navigateur ou de votre système ne déclenche plus l'email « Nouvelle connexion détectée » ; un nouveau navigateur, un nouveau système ou l'application installée en déclenchent toujours un.",
+          "Quand le dernier appareil de notification push est retiré, vous en êtes prévenu par email quel que soit votre autre réglage, avec la cause et ce qu'il faut refaire ; vos choix push sont alors décochés.",
+          "Un appareil n'est plus retiré pour un échec passager du service de notification : il faut cinq échecs répartis sur cinq jours, et jamais lorsque tout le service échoue.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.0 — 24 octobre 2026",
     categories: [
       {
