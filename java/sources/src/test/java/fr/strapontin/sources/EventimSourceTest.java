@@ -901,6 +901,20 @@ class EventimSourceTest {
     assertNull(concert.statut());
   }
 
+  @Test
+  void mapProduit_statutCancelled_retourneStatutCancelled() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("status", "Cancelled"));
+
+    assertEquals("cancelled", EventimSource.mapProduit(produit, null).statut());
+  }
+
+  @Test
+  void mapProduit_statutAvailable_retourneStatutNull() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("status", "Available"));
+
+    assertNull(EventimSource.mapProduit(produit, null).statut());
+  }
+
   // --- salleSourceId interne ---
 
   @Test

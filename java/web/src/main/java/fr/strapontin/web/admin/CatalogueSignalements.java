@@ -147,6 +147,11 @@ public final class CatalogueSignalements {
         "Le secret du second facteur d'un compte est stocké en clair ou illisible : le"
             + " redémarrage du site le chiffre, sinon réenrôler le TOTP du compte.");
     ajouter(
+        "annulation_une_billetterie",
+        "Annulation vue par une seule billetterie",
+        "Une séance à venir est annulée par une billetterie alors qu'une autre la présente encore"
+            + " : vérifier sur le site de la salle.");
+    ajouter(
         "envois_push_en_panne",
         "Envois push en panne",
         "Tous les envois vers un même service de notification échouent depuis plusieurs jours"

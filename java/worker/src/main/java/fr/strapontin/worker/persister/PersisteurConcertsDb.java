@@ -321,13 +321,15 @@ public class PersisteurConcertsDb {
   private void upsertObservation(final UUID evenementId, final ValeurConcert concert) {
     jdbc.update(
         """
-        INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)
-        VALUES (CAST(:evenementId AS uuid), CAST(:source AS source_concert), :url, :artiste, :salle)
+        INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut, statut)
+        VALUES (CAST(:evenementId AS uuid), CAST(:source AS source_concert), :url, :artiste, :salle,
+                :statut)
         ON CONFLICT ON CONSTRAINT uq_observations DO UPDATE SET
             artiste_brut = CASE WHEN unaccent(EXCLUDED.artiste_brut) != EXCLUDED.artiste_brut
                                 THEN EXCLUDED.artiste_brut ELSE observations.artiste_brut END,
             salle_brut   = CASE WHEN upper(EXCLUDED.salle_brut) != EXCLUDED.salle_brut
                                 THEN EXCLUDED.salle_brut ELSE observations.salle_brut END,
+            statut       = EXCLUDED.statut,
             updated_at   = now()
         """,
         new MapSqlParameterSource()
@@ -335,7 +337,8 @@ public class PersisteurConcertsDb {
             .addValue("source", concert.source())
             .addValue("url", concert.url())
             .addValue("artiste", concert.artiste())
-            .addValue(CLE_SALLE, concert.salle()));
+            .addValue(CLE_SALLE, concert.salle())
+            .addValue("statut", concert.statut()));
   }
 
   /**

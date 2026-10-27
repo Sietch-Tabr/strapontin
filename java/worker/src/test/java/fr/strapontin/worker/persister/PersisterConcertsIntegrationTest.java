@@ -216,6 +216,31 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count);
   }
 
+  @Test
+  void persisterConcerts_produitEventimAnnule_evenementEtObservationAnnules() {
+    final ConcertBrut annule =
+        ConcertBrut.nouveau()
+            .artiste("Drag Race France Live")
+            .date("2098-11-10")
+            .heure("20:00")
+            .salle("Corum")
+            .ville("Montpellier")
+            .dept("34")
+            .url("https://eventim.example/drag-race")
+            .source("eventim")
+            .statut("cancelled")
+            .construire();
+
+    persisterConcerts.persisterConcerts(List.of(annule));
+
+    assertEquals(
+        "cancelled",
+        jdbc.queryForObject("SELECT statut FROM evenements", Map.of(), String.class));
+    assertEquals(
+        "cancelled",
+        jdbc.queryForObject("SELECT statut FROM observations", Map.of(), String.class));
+  }
+
   // Eventim omet parfois la ville d'un lieu connu (Stade de France) : celle de la salle la
   // remplace, jamais une valeur vide.
   @Test

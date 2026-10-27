@@ -96,6 +96,27 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_seanceAnnuleeParUneSourceEtVendueParLAutre_signaleLAnnulation() {
+    final UUID salle = creerSalle();
+    evenement(salle, "drag race", "34");
+    final UUID evenement =
+        jdbc.queryForObject(
+            "SELECT id FROM evenements WHERE artiste_norm = 'drag race'", Map.of(), UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut, statut)"
+            + " VALUES (CAST(:id AS uuid), 'eventim', 'u1', 'a', 's', 'cancelled'),"
+            + " (CAST(:id AS uuid), 'ticketmaster', 'u2', 'a', 's', 'onsale')",
+        Map.of("id", evenement.toString()));
+
+    controle.verifier();
+    assertEquals(List.of("annulation_une_billetterie"), actifs());
+
+    jdbc.update("UPDATE observations SET statut = 'cancelled'", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
   void verifier_toutUnServicePushEnEchecDepuisDesJours_signaleLaPanne() {
     for (final String id : List.of("p1", "p2")) {
       jdbc.update(

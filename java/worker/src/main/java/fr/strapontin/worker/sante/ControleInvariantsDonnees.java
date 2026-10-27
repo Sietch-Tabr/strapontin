@@ -51,6 +51,7 @@ final class ControleInvariantsDonnees {
         + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
+        + publier("annulation_une_billetterie", "evenement", annulationsUneBilletterie())
         + publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
         + publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
@@ -455,6 +456,37 @@ final class ControleInvariantsDonnees {
           }
         });
     return globale("comptes_incoherents", comptes);
+  }
+
+  // Une séance à venir annulée par une source alors qu'une autre la présente encore,
+  // observations de moins de trois jours des deux côtés.
+  private Map<UUID, Map<String, Object>> annulationsUneBilletterie() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT e.id, e.artiste_norm, e.date,
+               (SELECT string_agg(DISTINCT o.source::text, ', ') FROM observations o
+                 WHERE o.evenement_id = e.id AND o.statut = 'cancelled'
+                   AND o.updated_at > now() - interval '3 days') AS annulee_par,
+               (SELECT string_agg(DISTINCT o.source::text, ', ') FROM observations o
+                 WHERE o.evenement_id = e.id AND o.statut IS DISTINCT FROM 'cancelled'
+                   AND o.updated_at > now() - interval '3 days') AS encore_vue_par
+        FROM evenements e
+        WHERE e.date >= CURRENT_DATE
+        """,
+        Map.of(),
+        rs -> {
+          if (rs.getString("annulee_par") != null && rs.getString("encore_vue_par") != null) {
+            anomalies.put(
+                UUID.fromString(rs.getString("id")),
+                Map.of(
+                    "artisteNorm", rs.getString("artiste_norm"),
+                    "date", rs.getString("date"),
+                    "annuleePar", rs.getString("annulee_par"),
+                    "encoreVuePar", rs.getString("encore_vue_par")));
+          }
+        });
+    return anomalies;
   }
 
   // Tous les envois vers un même service push échouent depuis des jours pour au moins deux
