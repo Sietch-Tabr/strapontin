@@ -60,6 +60,7 @@ final class ControleInvariantsDonnees {
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publier("creneau_double_meme_source", "evenement", creneauxDoublesMemeSource())
         + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
+        + publier("seance_dans_deux_salles", "evenement", seancesDansDeuxSalles())
         + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publier("salle_sans_ville", SALLE, sallesSansVille())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
@@ -133,6 +134,52 @@ final class ControleInvariantsDonnees {
 
   // Même concert sur deux salles déclarées distinctes (admin ou répartition) :
   // un lieu resté sur la mauvaise salle l'a recréé. Le plus récent est signalé.
+  // Même artiste, même date, heures à moins de trois heures : dans une salle et sa sous-salle,
+  // dans deux salles d'une même commune (séance déplacée restée publiée sous l'ancienne) ou
+  // dans une même salle sous deux heures (deux billetteries). Les paires déclarées distinctes
+  // relèvent de concert_double_salles_distinctes.
+  private Map<UUID, Map<String, Object>> seancesDansDeuxSalles() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+               e1.artiste_norm, e1.date::text AS date,
+               coalesce(sa.nom, '?') AS salle_a, coalesce(sb.nom, '?') AS salle_b,
+               e1.heure::text AS heure_a, e2.heure::text AS heure_b
+        FROM evenements e1
+        JOIN evenements e2 ON e2.id > e1.id AND e2.date = e1.date
+         AND e2.heure IS NOT NULL AND e1.heure IS NOT NULL
+         AND abs(extract(epoch FROM (e2.heure - e1.heure))) <= 10800
+         AND (e2.artiste_norm = e1.artiste_norm
+              OR (e1.artiste_id IS NOT NULL AND e2.artiste_id = e1.artiste_id))
+        JOIN salles sa ON sa.id = e1.salle_id
+        JOIN salles sb ON sb.id = e2.salle_id
+        WHERE e1.date >= CURRENT_DATE
+          AND (sa.id = sb.id OR sa.salle_parent_id = sb.id OR sb.salle_parent_id = sa.id
+               OR lower(sa.ville) = lower(sb.ville))
+          AND NOT (sa.id = sb.id AND e1.heure = e2.heure)
+          AND NOT EXISTS (
+            SELECT 1 FROM salles_paires_distinctes d
+            WHERE d.salle_a = LEAST(sa.id, sb.id) AND d.salle_b = GREATEST(sa.id, sb.id))
+          AND EXISTS (SELECT 1 FROM observations o
+                      WHERE o.evenement_id IN (e1.id, e2.id)
+                        AND o.updated_at > now() - interval '7 days')
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("recent", UUID.class),
+              Map.of(
+                  "artiste", rs.getString("artiste_norm"),
+                  DATE, rs.getString(DATE),
+                  "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  "heures", rs.getString("heure_a") + " / " + rs.getString("heure_b"),
+                  JUMEAU, rs.getObject(JUMEAU, UUID.class).toString()));
+        });
+    return anomalies;
+  }
+
   private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(

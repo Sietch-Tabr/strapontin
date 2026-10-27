@@ -31,6 +31,7 @@ public class SignalementMatchingService {
       Map.of(
           "creneau_double_meme_source", "jumeau",
           "produit_eventim_double", "jumeau",
+          "seance_dans_deux_salles", "jumeau",
           "wikidata_coordonnees_divergentes", "wikidataId");
 
   private final NamedParameterJdbcTemplate jdbc;

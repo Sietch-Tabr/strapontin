@@ -248,7 +248,9 @@ public class FusionEvenementsArtisteService {
    * « of Mtsensk », « Ballet Preljocaj » / « Le Lac des cygnes ») : seuls
    * événements de leur salle au même créneau, l'un Ticketmaster seul, l'autre
    * Eventim seul, sans artiste reconnu, dans une salle non signalée comme
-   * mélangeant plusieurs lieux. À appeler après les contrôles d'intégrité.
+   * mélangeant plusieurs lieux. Une fiche annulée n'est jamais candidate : le
+   * spectacle de remplacement du même créneau reste une fiche à part. À appeler
+   * après les contrôles d'intégrité.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeCreneauDeuxSources() {
@@ -260,6 +262,7 @@ public class FusionEvenementsArtisteService {
                      bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
               FROM evenements e JOIN observations o ON o.evenement_id = e.id
               WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+                AND e.statut IS DISTINCT FROM 'cancelled'
               GROUP BY e.id),
             creneaux AS (
               SELECT salle_id, date, heure FROM ev GROUP BY salle_id, date, heure

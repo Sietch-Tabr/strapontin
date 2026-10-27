@@ -95,6 +95,61 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(List.of("salle_multi_departements", "salle_suivie_contaminee"), actifs());
   }
 
+  private UUID evenementHeure(final UUID salle, final String artiste, final String heure) {
+    return jdbc.queryForObject(
+        "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+            + " VALUES (:artiste, CURRENT_DATE + 30, CAST(:heure AS time), 'x',"
+            + " CAST(:salle AS uuid), '75') RETURNING id",
+        Map.of("artiste", artiste, "heure", heure, "salle", salle.toString()),
+        UUID.class);
+  }
+
+  private void observer(final UUID evenement, final String source) {
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST(:source AS source_concert), :url, 'a', 's')",
+        Map.of("id", evenement.toString(), "source", source, "url", "u-" + evenement + source));
+  }
+
+  @Test
+  void verifier_memeArtisteMemeSoirDansDeuxSallesDeLaMemeCommune_signaleLaSeance() {
+    final UUID alhambra = creerSalle();
+    final UUID bataclan =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES ('bataclan', 'Bataclan',"
+                + " 'bataclan', 'Paris') RETURNING id",
+            Map.of(),
+            UUID.class);
+    observer(evenementHeure(alhambra, "dead poet society", "20:00"), "ticketmaster");
+    observer(evenementHeure(bataclan, "dead poet society", "20:00"), "ticketmaster");
+
+    controle.verifier();
+
+    assertEquals(List.of("seance_dans_deux_salles"), actifs());
+  }
+
+  @Test
+  void verifier_memeSalleDeuxHeuresProchesDeuxSources_signaleLaSeance() {
+    final UUID salle = creerSalle();
+    observer(evenementHeure(salle, "sting", "18:30"), "ticketmaster");
+    observer(evenementHeure(salle, "sting", "16:00"), "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of("seance_dans_deux_salles"), actifs());
+  }
+
+  @Test
+  void verifier_matineeEtSoireeEloignees_neSignaleRien() {
+    final UUID salle = creerSalle();
+    observer(evenementHeure(salle, "spectacle", "14:00"), "ticketmaster");
+    observer(evenementHeure(salle, "spectacle", "20:30"), "ticketmaster");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   @Test
   void verifier_adresseDHommageSurFicheRattachee_signaleLHommage() {
     final UUID salle = creerSalle();

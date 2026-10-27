@@ -186,7 +186,8 @@ public class PersisteurConcertsDb {
              genre, sous_genre, statut, presale_debut, presale_nom, artiste_id)
         VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm,
                 COALESCE(NULLIF(:ville, ''), (SELECT s.ville FROM salles s
-                                               WHERE s.id = CAST(:salleId AS uuid))), :dept,
+                                               WHERE s.id = CAST(:salleId AS uuid))),
+                COALESCE(:dept, (SELECT s.dept FROM salles s WHERE s.id = CAST(:salleId AS uuid))),
                 :classification, :genre, :sousGenre, :statut, CAST(:presaleDebut AS timestamptz),
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
@@ -231,7 +232,8 @@ public class PersisteurConcertsDb {
             salle_norm     = COALESCE(:salleNormReference, salle_norm),
             ville          = COALESCE(NULLIF(:ville, ''), ville, (SELECT s.ville FROM salles s
                                WHERE s.id = COALESCE(CAST(:salleId AS uuid), salle_id))),
-            dept           = COALESCE(:dept, dept),
+            dept           = COALESCE(:dept, dept, (SELECT s.dept FROM salles s
+                               WHERE s.id = COALESCE(CAST(:salleId AS uuid), salle_id))),
             classification = COALESCE(:classification, classification),
             genre          = COALESCE(:genre, genre),
             sous_genre     = COALESCE(:sousGenre, sous_genre),

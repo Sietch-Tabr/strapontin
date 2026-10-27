@@ -582,6 +582,21 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertFalse(existe(ev));
   }
 
+  // Zénith Paris - La Villette : le spectacle annulé n'absorbe pas son remplaçant du même soir.
+  @Test
+  void fusionnerMemeCreneauDeuxSources_ficheAnnulee_neFusionnePasLeRemplacant() {
+    final UUID zenith = creerSalle("Zenith Paris La Villette");
+    final UUID annule = evenementSource(zenith, "krys", "ticketmaster");
+    final UUID remplacant = evenementSource(zenith, "habib fatako", "eventim");
+    jdbc.update(
+        "UPDATE evenements SET statut = 'cancelled' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", annule.toString()));
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertTrue(existe(annule));
+    assertTrue(existe(remplacant));
+  }
+
   // Théâtre Montparnasse : « Bouvard et Pécuchet » vient du Poche-Montparnasse, mal rattaché.
   @Test
   void fusionnerMemeCreneauDeuxSources_salleSignaleeEnDispersion_neFusionnePas() {
