@@ -92,6 +92,10 @@ L'étape 5 n'analyse que le _delta_ entre la version épinglée et la dernière 
 
 Résumé structuré par dépendance : version actuelle → disponible, résumé du changelog, sûr/à risque, nouveauté notable. Si quelque chose mérite un suivi, proposer un ticket — **constat/analyse uniquement, jamais de piste d'implémentation** (cf. mémoire `feedback_ticket_pas_de_solution`). Aucune modification de fichier sans validation explicite de l'utilisateur.
 
+## 9 bis. Dette déclarée des avertissements front
+
+`front/avertissements-attendus.txt` liste les avertissements `npm ci` et `npm run build` encore émis, chacun avec sa cause amont et la date de sa dernière vérification ; `scripts/avertissements-front.sh` (pipeline) fait échouer un avertissement absent de la liste **et** un avertissement de la liste qui a disparu. À chaque invocation en mode jalon : relire chaque ligne contre l'état amont (paquet, version, demande de fusion citée), mettre à jour la date ou supprimer la ligne si la cause est corrigée. Ne jamais allonger la liste sans cause nommée ; l'objectif est qu'elle soit vide.
+
 ## 10. Pièges connus à revérifier systématiquement
 
 - **`okhttp`** (dépendance transitive Resend) : artefact Maven générique vide depuis okhttp 5.0.0 (module Kotlin Multiplatform). resend-java ≥ 4.28.0 dépend directement de `okhttp-jvm`, version gérée dans le pom parent : à chaque montée de Resend, vérifier par `mvn dependency:tree -pl web,worker` qu'aucun `com.squareup.okhttp3:okhttp` vide n'est tiré (le worker avait été oublié une fois, v2.7.0 lot 4, bug de prod silencieux).
