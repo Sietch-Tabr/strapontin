@@ -140,7 +140,8 @@ public class CoherenceWikidataSalleService {
         || salle.ville() == null
         || salle.dept() == null
         || villesConcertsReelles == null
-        || Normalisation.normaliserTexte(commune).equals(Normalisation.normaliserTexte(salle.ville()))) {
+        || Normalisation.normaliserTexte(commune)
+            .equals(Normalisation.normaliserTexte(salle.ville()))) {
       return;
     }
     final String communeNorm = Normalisation.normaliserTexte(commune);
@@ -257,7 +258,8 @@ public class CoherenceWikidataSalleService {
                     salle.id()));
       }
     }
-    LOG.info("coherence:wikidata:positions-manquantes candidates={} posees={}", salles.size(), posees);
+    LOG.info(
+        "coherence:wikidata:positions-manquantes candidates={} posees={}", salles.size(), posees);
     return posees;
   }
 

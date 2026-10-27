@@ -149,8 +149,7 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
         1L,
         jdbc.queryForObject(
             "SELECT count(*) FROM logs_admin WHERE message LIKE '%salle(s)=Alhambra%'",
-            Map.of(),
-            Long.class));
+            Map.of(), Long.class));
     assertNull(
         jdbc.queryForObject(
             "SELECT wikidata_id FROM salles WHERE id = CAST(:id AS uuid)",

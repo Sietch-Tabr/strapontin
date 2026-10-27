@@ -9,22 +9,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -69,7 +64,7 @@ class NotificationVersionPushServiceTest {
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.empty());
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
-            configService, jdbc, logsAdminWorker, (_, _, _) -> mock(PushService.class));
+            configService, jdbc, logsAdminWorker, (_, _, _) -> mock(ClientWebPush.class));
 
     final int nbEnvoyes = service.notifierVersion("3.0.0");
 
@@ -84,7 +79,7 @@ class NotificationVersionPushServiceTest {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
-            configService, jdbc, logsAdminWorker, (_, _, _) -> mock(PushService.class));
+            configService, jdbc, logsAdminWorker, (_, _, _) -> mock(ClientWebPush.class));
 
     final int nbEnvoyes = service.notifierVersion("3.0.0");
 
@@ -101,13 +96,9 @@ class NotificationVersionPushServiceTest {
         .thenReturn(Optional.of("contact@strapontin.fr"));
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnementTest()));
 
-    final PushService pushServiceMock = mock(PushService.class);
-    final HttpResponse reponseMock = mock(HttpResponse.class);
-    final StatusLine statusLineMock = mock(StatusLine.class);
-    when(statusLineMock.getStatusCode()).thenReturn(201);
-    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
-        .thenReturn(reponseMock);
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(201, ""));
 
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
@@ -130,13 +121,9 @@ class NotificationVersionPushServiceTest {
         .thenReturn(Optional.of("contact@strapontin.fr"));
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnementTest()));
 
-    final PushService pushServiceMock = mock(PushService.class);
-    final HttpResponse reponseMock = mock(HttpResponse.class);
-    final StatusLine statusLineMock = mock(StatusLine.class);
-    when(statusLineMock.getStatusCode()).thenReturn(500);
-    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
-        .thenReturn(reponseMock);
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(500, ""));
 
     final NotificationVersionPushService service =
         new NotificationVersionPushService(
@@ -145,9 +132,7 @@ class NotificationVersionPushServiceTest {
     final int nbEnvoyes = service.notifierVersion("3.0.0");
 
     assertEquals(0, nbEnvoyes);
-    verify(jdbc)
-        .queryForObject(
-            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class));
+    verify(jdbc).queryForMap(contains("echecs_consecutifs + 1"), any(SqlParameterSource.class));
   }
 
   @Test
@@ -159,13 +144,9 @@ class NotificationVersionPushServiceTest {
     when(configService.lireConfig("CONTACT_EMAIL"))
         .thenReturn(Optional.of("contact@strapontin.fr"));
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnementTest()));
-    final PushService pushServiceMock = mock(PushService.class);
-    final HttpResponse reponseMock = mock(HttpResponse.class);
-    final StatusLine statusLineMock = mock(StatusLine.class);
-    when(statusLineMock.getStatusCode()).thenReturn(410);
-    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
-        .thenReturn(reponseMock);
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(410, ""));
 
     new NotificationVersionPushService(
             configService, jdbc, logsAdminWorker, (_, _, _) -> pushServiceMock)

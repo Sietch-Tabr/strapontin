@@ -93,8 +93,7 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
 
     completeur.completer();
 
-    assertEquals(
-        "60", jdbc.queryForObject("SELECT dept FROM evenements", Map.of(), String.class));
+    assertEquals("60", jdbc.queryForObject("SELECT dept FROM evenements", Map.of(), String.class));
   }
 
   @Test
@@ -105,8 +104,7 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
 
     completeur.completer();
 
-    assertEquals(
-        "62", jdbc.queryForObject("SELECT dept FROM evenements", Map.of(), String.class));
+    assertEquals("62", jdbc.queryForObject("SELECT dept FROM evenements", Map.of(), String.class));
   }
 
   @Test

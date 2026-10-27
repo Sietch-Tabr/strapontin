@@ -20,6 +20,12 @@
             <artifactId>bcprov-jdk18on</artifactId>
         </dependency>
 
+        <!-- Envoi Web Push (chiffrement et en-têtes VAPID) -->
+        <dependency>
+            <groupId>com.interaso</groupId>
+            <artifactId>webpush</artifactId>
+        </dependency>
+
         <!-- PessimisticLockingFailureException pour RetrySerialisable — artefact minimal
              (hiérarchie d'exceptions génériques, pas de JDBC/web), déjà tiré transitivement par
              web et worker via spring-boot-starter-jdbc. -->

@@ -54,7 +54,8 @@ class AppareilsServiceTest {
   void enregistrerAppareil_echecJdbc_neLevePasDException() {
     when(jdbc.update(anyString(), anyMap())).thenThrow(new DataIntegrityViolationException("fk"));
 
-    assertDoesNotThrow(() -> service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0", "navigateur"));
+    assertDoesNotThrow(
+        () -> service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0", "navigateur"));
   }
 
   // L'identifiant exposé côté client (appareilId) doit être l'UUID opaque, jamais le session_id

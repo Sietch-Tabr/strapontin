@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
@@ -12,11 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import nl.martijndwars.webpush.Subscription;
-import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +42,7 @@ public class NotificationVersionPushService {
 
   /**
    * Constructeur Spring — {@code FabriquePushService} n'est jamais un bean
-   * géré, la fabrique réelle ({@code PushService::new}) est fournie en dur
+   * géré, la fabrique réelle ({@code ClientWebPush::new}) est fournie en dur
    * ici, même pattern que {@link NotificationDigestService}.
    * @param configService lecture des clés VAPID/PUBLIC_BASE_URL
    * @param jdbc accès JDBC
@@ -57,7 +53,7 @@ public class NotificationVersionPushService {
       final ConfigServiceWorker configService,
       final NamedParameterJdbcTemplate jdbc,
       final LogsAdminWorker logsAdminWorker) {
-    this(configService, jdbc, logsAdminWorker, PushService::new);
+    this(configService, jdbc, logsAdminWorker, ClientWebPush::new);
   }
 
   /**
@@ -102,7 +98,7 @@ public class NotificationVersionPushService {
     }
 
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    final PushService pushService;
+    final ClientWebPush pushService;
     try {
       pushService =
           fabriquePushService.creer(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
@@ -149,7 +145,7 @@ public class NotificationVersionPushService {
   }
 
   private int envoyerAAbonnements(
-      final PushService pushService,
+      final ClientWebPush pushService,
       final List<Map<String, Object>> abonnements,
       final String payload,
       final String version) {
@@ -173,7 +169,7 @@ public class NotificationVersionPushService {
   }
 
   private boolean envoyerAUnAbonnement(
-      final PushService pushService, final Map<String, Object> ab, final String payload) {
+      final ClientWebPush pushService, final Map<String, Object> ab, final String payload) {
     final String userId = (String) ab.get("user_id");
     if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
       suiviEchecs.revoquer(
@@ -184,18 +180,22 @@ public class NotificationVersionPushService {
           SOURCE_LOGS);
       return false;
     }
-    final HttpResponse response;
+    final ClientWebPush.Reponse reponse;
     try {
-      final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
-      final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
-      final Subscription subscription =
-          new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
+      reponse =
+          pushService.envoyer(
+              (String) ab.get(CLE_ENDPOINT),
+              (String) ab.get("p256dh"),
+              (String) ab.get("auth"),
+              payload);
     } catch (Exception e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
       return false;
     }
-    final int status = response.getStatusLine().getStatusCode();
+    final int status = reponse.statut();
     switch (EchecPush.interpreter(status)) {
       case SUCCES -> {
         suiviEchecs.succes(ab);
@@ -208,13 +208,7 @@ public class NotificationVersionPushService {
               EchecPush.causeLisible(status),
               EchecPush.raison(status, null),
               SOURCE_LOGS);
-      case ECHEC ->
-          suiviEchecs.echec(
-              ab,
-              userId,
-              status,
-              EchecPush.lireCorps(() -> response.getEntity().getContent()),
-              SOURCE_LOGS);
+      case ECHEC -> suiviEchecs.echec(ab, userId, status, reponse.corps(), SOURCE_LOGS);
     }
     return false;
   }

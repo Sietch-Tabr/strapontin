@@ -214,7 +214,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     controle.verifier();
     assertEquals(List.of("envois_push_en_panne"), actifs());
 
-    jdbc.update("UPDATE push_abonnements SET dernier_envoi_reussi_le = now() WHERE user_id = 'p1'",
+    jdbc.update(
+        "UPDATE push_abonnements SET dernier_envoi_reussi_le = now() WHERE user_id = 'p1'",
         Map.of());
     controle.verifier();
     assertEquals(List.of(), actifs());
@@ -443,12 +444,13 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
         Map.of());
     ficheObservee(salle, "75", 20);
     jdbc.update("UPDATE evenements SET date = CURRENT_DATE + 400", Map.of());
-    final UUID recente = jdbc.queryForObject(
-        "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
-            + " VALUES ('recente', CURRENT_DATE + 100, '20:00', 'x', CAST(:s AS uuid), '75')"
-            + " RETURNING id",
-        Map.of("s", salle.toString()),
-        UUID.class);
+    final UUID recente =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                + " VALUES ('recente', CURRENT_DATE + 100, '20:00', 'x', CAST(:s AS uuid), '75')"
+                + " RETURNING id",
+            Map.of("s", salle.toString()),
+            UUID.class);
     observer(recente, "eventim");
 
     controle.verifier();

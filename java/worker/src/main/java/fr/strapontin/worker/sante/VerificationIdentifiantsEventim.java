@@ -70,7 +70,8 @@ public class VerificationIdentifiantsEventim {
             eventim.attractionDUnAutreArtiste(
                 (String) ligne.get("nom"), attraction, alias((String) ligne.get("alias")));
       } catch (RuntimeException e) {
-        LOG.warn("Eventim injoignable, vérification des identifiants interrompue : {}", e.getMessage());
+        LOG.warn(
+            "Eventim injoignable, vérification des identifiants interrompue : {}", e.getMessage());
         break;
       }
       jdbc.update(

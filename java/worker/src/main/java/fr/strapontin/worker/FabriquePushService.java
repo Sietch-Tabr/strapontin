@@ -4,8 +4,7 @@
  */
 package fr.strapontin.worker;
 
-import java.security.GeneralSecurityException;
-import nl.martijndwars.webpush.PushService;
+import fr.strapontin.core.ClientWebPush;
 
 /**
  * Fabrique du client push VAPID, même motif que {@link FabriqueResend}.
@@ -21,15 +20,14 @@ interface FabriquePushService {
    * @param clePrivee clé privée VAPID
    * @param sujet identifiant {@code mailto:} ou {@code https:} requis par VAPID
    * @return client push prêt à l'emploi
-   * @throws GeneralSecurityException si les clés sont invalides
+   * @throws IllegalArgumentException si les clés sont invalides
    */
-  PushService creer(String clePublique, String clePrivee, String sujet)
-      throws GeneralSecurityException;
+  ClientWebPush creer(String clePublique, String clePrivee, String sujet);
 
   /**
    * @return la fabrique de production
    */
   static FabriquePushService parDefaut() {
-    return PushService::new;
+    return ClientWebPush::new;
   }
 }

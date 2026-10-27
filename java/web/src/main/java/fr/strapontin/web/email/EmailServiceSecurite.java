@@ -83,8 +83,7 @@ public class EmailServiceSecurite {
     }
 
     final String corps =
-        EmailTemplatesSecurite.alerteNouvelAppareil(
-            nomAppareil, userAgent, ctx.get().baseUrl());
+        EmailTemplatesSecurite.alerteNouvelAppareil(nomAppareil, userAgent, ctx.get().baseUrl());
 
     final String texte =
         """

@@ -234,8 +234,7 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     persisterConcerts.persisterConcerts(List.of(annule));
 
     assertEquals(
-        "cancelled",
-        jdbc.queryForObject("SELECT statut FROM evenements", Map.of(), String.class));
+        "cancelled", jdbc.queryForObject("SELECT statut FROM evenements", Map.of(), String.class));
     assertEquals(
         "cancelled",
         jdbc.queryForObject("SELECT statut FROM observations", Map.of(), String.class));

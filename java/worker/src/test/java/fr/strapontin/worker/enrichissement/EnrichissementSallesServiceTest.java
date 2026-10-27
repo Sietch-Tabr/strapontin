@@ -78,8 +78,7 @@ class EnrichissementSallesServiceTest {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(salle));
     final SourceEnrichissementSalle osm = mock(SourceEnrichissementSalle.class);
     when(osm.enrichirLot(any()))
-        .thenReturn(
-            Map.of(salleId, new EnrichissementSalle("Q16507976", null, null, null, null)));
+        .thenReturn(Map.of(salleId, new EnrichissementSalle("Q16507976", null, null, null, null)));
     final WikidataSalleSource wikidata = mock(WikidataSalleSource.class);
     when(wikidata.enrichirLot(any())).thenReturn(Map.of());
     when(wikidata.typesInvalides(any())).thenReturn(Set.of("Q16507976"));

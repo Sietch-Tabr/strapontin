@@ -8,12 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import fr.strapontin.sources.TicketmasterSource;
 import java.time.Clock;
@@ -23,11 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,7 +48,7 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
   @Autowired private LogsAdminWorker logsAdminWorker;
 
   private ConfigServiceWorker configService;
-  private PushService pushService;
+  private ClientWebPush pushService;
   private NotificationDigestService.ConcertNotif concert;
 
   @BeforeEach
@@ -72,12 +67,9 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.of("priv"));
     when(configService.lireConfig("PUBLIC_BASE_URL")).thenReturn(Optional.of("https://exemple.fr"));
     when(configService.lireConfig("CONTACT_EMAIL")).thenReturn(Optional.of("c@exemple.fr"));
-    pushService = mock(PushService.class);
-    final HttpResponse reponse = mock(HttpResponse.class);
-    final StatusLine statut = mock(StatusLine.class);
-    when(statut.getStatusCode()).thenReturn(201);
-    when(reponse.getStatusLine()).thenReturn(statut);
-    when(pushService.send(any(Notification.class), eq(Encoding.AES128GCM))).thenReturn(reponse);
+    pushService = mock(ClientWebPush.class);
+    when(pushService.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(201, ""));
 
     final UUID id =
         jdbc.queryForObject(
@@ -133,7 +125,7 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
 
     assertTrue(pris);
     assertEquals(1, retenus());
-    verify(pushService, never()).send(any(Notification.class), any(Encoding.class));
+    verify(pushService, never()).envoyer(any(), any(), any(), any());
   }
 
   @Test
@@ -153,7 +145,7 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
 
     assertEquals(1, utilisateurs);
     assertEquals(0, retenus());
-    verify(pushService).send(any(Notification.class), eq(Encoding.AES128GCM));
+    verify(pushService).envoyer(any(), any(), any(), any());
     assertEquals(0, service(SEPT_HEURES).envoyerDifferes());
   }
 
@@ -165,7 +157,7 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(0, service(Instant.parse("2026-10-18T03:00:00Z")).envoyerDifferes());
 
     assertEquals(1, retenus());
-    verify(pushService, never()).send(any(Notification.class), any(Encoding.class));
+    verify(pushService, never()).envoyer(any(), any(), any(), any());
   }
 
   @Test
@@ -177,6 +169,6 @@ class PushDifferesIntegrationTest extends AbstractWorkerIntegrationTest {
 
     assertTrue(pris);
     assertEquals(0, retenus());
-    verify(pushService).send(any(Notification.class), eq(Encoding.AES128GCM));
+    verify(pushService).envoyer(any(), any(), any(), any());
   }
 }

@@ -536,7 +536,8 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     insererUserConfigDept("u1", "75");
     final UUID salle = insererSalleAvecSourceTm("salle-theatre-eventim", "venue-te");
     jdbc.update(
-        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)", Map.of("id", salle.toString()));
+        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salle.toString()));
     insererFicheDeSalle(salle, "75", 1);
     jdbc.update("UPDATE observations SET source = 'eventim'", Map.of());
     when(ticketmasterSource.fetchRegionCouverte(any(), any()))

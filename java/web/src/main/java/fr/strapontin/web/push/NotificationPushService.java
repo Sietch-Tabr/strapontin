@@ -4,21 +4,16 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
-import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import nl.martijndwars.webpush.Subscription;
-import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -72,23 +67,27 @@ public class NotificationPushService {
 
   private ResultatEnvoiPush envoyerAUnAbonnement(
       final Map<String, Object> ab,
-      final PushService pushService,
+      final ClientWebPush pushService,
       final String userId,
       final String payload) {
     if (!estAutoriseSinonSupprime(ab, userId)) {
       return ResultatEnvoiPush.SERVICE_NAVIGATEUR_REFUSE;
     }
-    final HttpResponse response;
+    final ClientWebPush.Reponse reponse;
     try {
-      final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
-      final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
-      final Subscription subscription =
-          new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
+      reponse =
+          pushService.envoyer(
+              (String) ab.get(CLE_ENDPOINT),
+              (String) ab.get("p256dh"),
+              (String) ab.get("auth"),
+              payload);
     } catch (Exception e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       return compterEchec(ab, userId, null, e.getMessage());
     }
-    final int status = response.getStatusLine().getStatusCode();
+    final int status = reponse.statut();
     return switch (EchecPush.interpreter(status)) {
       case SUCCES -> {
         jdbc.update(EchecPush.SQL_REINITIALISER_ECHECS, Map.of(CLE_ID, ab.get(CLE_ID)));
@@ -99,9 +98,7 @@ public class NotificationPushService {
             ab, userId, EchecPush.causeLisible(status), EchecPush.raison(status, null));
         yield ResultatEnvoiPush.APPAREIL_REVOQUE;
       }
-      case ECHEC ->
-          compterEchec(
-              ab, userId, status, EchecPush.lireCorps(() -> response.getEntity().getContent()));
+      case ECHEC -> compterEchec(ab, userId, status, reponse.corps());
     };
   }
 
@@ -117,7 +114,9 @@ public class NotificationPushService {
     final Map<String, Object> serie =
         jdbc.queryForMap(
             EchecPush.SQL_INCREMENTER_ECHECS,
-            new MapSqlParameterSource().addValue(CLE_ID, ab.get(CLE_ID)).addValue("statut", status));
+            new MapSqlParameterSource()
+                .addValue(CLE_ID, ab.get(CLE_ID))
+                .addValue("statut", status));
     final int echecs = EchecPush.echecs(serie);
     if (EchecPush.seuilAtteint(serie) && !panneDuService(ab)) {
       supprimerAbonnement(
@@ -184,7 +183,7 @@ public class NotificationPushService {
         """
             .formatted(baseUrl);
 
-    final PushService pushService;
+    final ClientWebPush pushService;
     try {
       pushService = creerServicePush(clePublique.get(), clePrivee.get(), "mailto:" + contactEmail);
     } catch (Exception e) {
@@ -212,7 +211,7 @@ public class NotificationPushService {
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     final String payload;
-    final PushService pushService;
+    final ClientWebPush pushService;
     try {
       payload =
           JSON.writeValueAsString(
@@ -248,12 +247,12 @@ public class NotificationPushService {
    * @param clePrivee clé VAPID privée
    * @param sujet sujet VAPID ({@code mailto:})
    * @return service d'envoi, redéfini en test pour intercepter le transport
-   * @throws GeneralSecurityException si les clés sont illisibles
+   * @throws IllegalArgumentException si les clés sont illisibles
    */
   /* package-private : redéfini par les tests du même package. */
-  PushService creerServicePush(final String clePublique, final String clePrivee, final String sujet)
-      throws GeneralSecurityException {
-    return new PushService(clePublique, clePrivee, sujet);
+  ClientWebPush creerServicePush(
+      final String clePublique, final String clePrivee, final String sujet) {
+    return new ClientWebPush(clePublique, clePrivee, sujet);
   }
 
   // Sans trace admin, une panne du service ne se voyait que dans le journal.

@@ -171,11 +171,16 @@ final class ControleInvariantsDonnees {
           anomalies.put(
               rs.getObject("recent", UUID.class),
               Map.of(
-                  "artiste", rs.getString("artiste_norm"),
-                  DATE, rs.getString(DATE),
-                  "salles", rs.getString("salle_a") + " / " + rs.getString("salle_b"),
-                  "heures", rs.getString("heure_a") + " / " + rs.getString("heure_b"),
-                  JUMEAU, rs.getObject(JUMEAU, UUID.class).toString()));
+                  "artiste",
+                  rs.getString("artiste_norm"),
+                  DATE,
+                  rs.getString(DATE),
+                  "salles",
+                  rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  "heures",
+                  rs.getString("heure_a") + " / " + rs.getString("heure_b"),
+                  JUMEAU,
+                  rs.getObject(JUMEAU, UUID.class).toString()));
         });
     return anomalies;
   }

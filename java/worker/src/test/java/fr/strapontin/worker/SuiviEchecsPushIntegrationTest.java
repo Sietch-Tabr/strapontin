@@ -181,8 +181,10 @@ class SuiviEchecsPushIntegrationTest extends AbstractWorkerIntegrationTest {
   void echec_toutLeServiceEchoue_neRevoquePasUnAppareil() {
     configurerCompte(true);
     ajouterAbonnementAutreCompte(true, false);
-    jdbc.update("UPDATE push_abonnements SET premier_echec_le = now() - interval '6 days',"
-        + " echecs_consecutifs = 4 WHERE user_id = 'u-push'", Map.of());
+    jdbc.update(
+        "UPDATE push_abonnements SET premier_echec_le = now() - interval '6 days',"
+            + " echecs_consecutifs = 4 WHERE user_id = 'u-push'",
+        Map.of());
 
     suivi.echec(abonnement, "u-push", 403, "refusé", "notification-digest");
 
@@ -193,8 +195,10 @@ class SuiviEchecsPushIntegrationTest extends AbstractWorkerIntegrationTest {
   void echec_unAutreAppareilDuServiceAReussi_revoqueLAppareilEnEchec() {
     configurerCompte(true);
     ajouterAbonnementAutreCompte(false, true);
-    jdbc.update("UPDATE push_abonnements SET premier_echec_le = now() - interval '6 days',"
-        + " echecs_consecutifs = 4 WHERE user_id = 'u-push'", Map.of());
+    jdbc.update(
+        "UPDATE push_abonnements SET premier_echec_le = now() - interval '6 days',"
+            + " echecs_consecutifs = 4 WHERE user_id = 'u-push'",
+        Map.of());
 
     suivi.echec(abonnement, "u-push", 403, "refusé", "notification-digest");
 

@@ -90,8 +90,7 @@ class HorairesJobsTest {
   @Test
   void horaires_recuperationEtReconciliation_gardentUneHeureDEcart() {
     assertTrue(
-        minutesDepuisMinuit("reconciliation:nocturne") - minutesDepuisMinuit("fetch:region")
-            >= 60);
+        minutesDepuisMinuit("reconciliation:nocturne") - minutesDepuisMinuit("fetch:region") >= 60);
   }
 
   @Test

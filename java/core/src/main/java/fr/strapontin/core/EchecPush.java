@@ -53,7 +53,8 @@ public final class EchecPush {
           + " WHERE id = :id RETURNING echecs_consecutifs,"
           + " (now() - premier_echec_le >= interval '"
           + JOURS_MIN_SERIE_ECHECS
-          + " days') AS " + COLONNE_SERIE_ASSEZ_LONGUE;
+          + " days') AS "
+          + COLONNE_SERIE_ASSEZ_LONGUE;
 
   /** Remet à zéro la série d'un abonnement {@code :id} et date l'envoi réussi. */
   public static final String SQL_REINITIALISER_ECHECS =
@@ -68,10 +69,12 @@ public final class EchecPush {
    */
   public static final String SQL_PANNE_DU_SERVICE =
       "SELECT NOT EXISTS (SELECT 1 FROM push_abonnements a1, push_abonnements a2"
-          + " WHERE a1.id = :id AND " + MEME_SERVICE_SQL
+          + " WHERE a1.id = :id AND "
+          + MEME_SERVICE_SQL
           + " AND a2.dernier_envoi_reussi_le >= a1.premier_echec_le)"
           + " AND EXISTS (SELECT 1 FROM push_abonnements a1, push_abonnements a2"
-          + " WHERE a1.id = :id AND a2.user_id <> a1.user_id AND " + MEME_SERVICE_SQL
+          + " WHERE a1.id = :id AND a2.user_id <> a1.user_id AND "
+          + MEME_SERVICE_SQL
           + " AND a2.echecs_consecutifs > 0)";
 
   /** Supprime l'abonnement {@code :id}. */
