@@ -108,6 +108,7 @@ public class ReconciliationNocturneService {
     final int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
     // Avant les contrôles de position : un écart de position n'est pas
     // un mauvais élément.
+    coherenceWikidataSalle.poserPositionsManquantes();
     final int positionsRealignees = coherenceWikidataSalle.realignerPositions();
     coherenceWikidataSalle.signalerPositionsDivergentes();
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
