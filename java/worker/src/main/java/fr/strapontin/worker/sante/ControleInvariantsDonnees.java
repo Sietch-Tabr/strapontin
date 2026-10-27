@@ -290,7 +290,12 @@ final class ControleInvariantsDonnees {
     jdbc.query(
         """
         SELECT count(*) AS nb, min(e.date)::text AS premiere,
-               string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts
+               string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts,
+               count(*) FILTER (WHERE e.date > COALESCE(
+                 (SELECT max(x.date) FROM evenements x
+                  JOIN observations ox ON ox.evenement_id = x.id
+                  WHERE x.salle_id = e.salle_id AND ox.updated_at > now() - interval '3 days'),
+                 CURRENT_DATE)) AS hors_horizon
         FROM evenements e
         WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
           AND e.absences_consecutives = 0
@@ -308,6 +313,9 @@ final class ControleInvariantsDonnees {
             details.put("fiches", rs.getLong("nb"));
             details.put("premiere", rs.getString("premiere"));
             details.put("departements", rs.getString("depts"));
+            // Plus tardives que toute fiche revue de leur salle : au-delà de l'horizon des
+            // récupérations plutôt que retirées de la billetterie.
+            details.put("horsHorizon", rs.getLong("hors_horizon"));
           }
         });
     return globale("fiches_figees", details);

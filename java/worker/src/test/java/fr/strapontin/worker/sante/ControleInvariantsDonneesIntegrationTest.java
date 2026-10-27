@@ -432,6 +432,37 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_ficheFigeeLaPlusTardiveDeSaSalle_estDistingueeCommeHorsHorizon() {
+    final UUID salle = creerSalle();
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u3', 'u3', 'u3@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES ('u3', ARRAY['75']::text[])",
+        Map.of());
+    ficheObservee(salle, "75", 20);
+    jdbc.update("UPDATE evenements SET date = CURRENT_DATE + 400", Map.of());
+    final UUID recente = jdbc.queryForObject(
+        "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+            + " VALUES ('recente', CURRENT_DATE + 100, '20:00', 'x', CAST(:s AS uuid), '75')"
+            + " RETURNING id",
+        Map.of("s", salle.toString()),
+        UUID.class);
+    observer(recente, "eventim");
+
+    controle.verifier();
+
+    assertEquals(
+        "1",
+        jdbc.queryForObject(
+            "SELECT details->>'horsHorizon' FROM signalements_matching"
+                + " WHERE type = 'fiches_figees' AND resolu_le IS NULL",
+            Map.of(),
+            String.class));
+  }
+
+  @Test
   void verifier_ficheFigeeHorsPerimetreOuRecente_neSignaleRien() {
     final UUID salle = creerSalle();
     jdbc.update(

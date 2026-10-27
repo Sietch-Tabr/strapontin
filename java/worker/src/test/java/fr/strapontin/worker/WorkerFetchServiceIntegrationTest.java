@@ -509,6 +509,51 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(48.87, lieu.get("latitude"));
   }
 
+  // Théâtre ou humour Eventim sorti des deux catégories de la recherche par département : la
+  // fiche, non revue depuis une semaine, est reprise par lieu au lieu d'attendre une absence.
+  @Test
+  void executerFetchSallesAll_ficheEventimFigeeDansUnDepartementSuivi_interrogeLeLieu() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("lucernaire", "venue-lucernaire");
+    insererSourceEventim(salle, "internal:lucernaire", "Lucernaire");
+    insererFicheDeSalle(salle, "75", 10);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(ticketmasterSource.fetchSalle(startsWith("tm:"), any())).thenReturn(List.of());
+    when(eventimSource.accepteIdentifiantSalle(startsWith("eventim:"))).thenReturn(true);
+    when(eventimSource.fetchSalle(startsWith("eventim:"), any())).thenReturn(List.of());
+
+    fetchService.executerFetchSallesAll();
+
+    verify(eventimSource).fetchSalle("eventim:internal:lucernaire", "Lucernaire");
+  }
+
+  // La recherche par département n'interroge Eventim que pour deux catégories : un produit qui
+  // en sort n'est plus renvoyé mais reste en vente, il ne gagne aucune absence.
+  @Test
+  void executerFetchRegion_ficheEventimNonRenvoyee_neCompteAucuneAbsence() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-theatre-eventim", "venue-te");
+    jdbc.update(
+        "UPDATE salles SET dept = '75' WHERE id = CAST(:id AS uuid)", Map.of("id", salle.toString()));
+    insererFicheDeSalle(salle, "75", 1);
+    jdbc.update("UPDATE observations SET source = 'eventim'", Map.of());
+    when(ticketmasterSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusMonths(6)));
+    when(eventimSource.fetchRegionCouverte(any(), any()))
+        .thenReturn(new ResultatRegion(List.of(), LocalDate.now().plusMonths(6)));
+
+    fetchService.executerFetchRegion();
+
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "SELECT absences_consecutives FROM evenements WHERE salle_id = CAST(:id AS uuid)",
+            Map.of("id", salle.toString()),
+            Integer.class));
+  }
+
   // Un lieu passé à une autre billetterie garde souvent un concert listé : la chute par rapport
   // au volume précédent doit être signalée, pas seulement une salle devenue vide.
   @Test

@@ -157,7 +157,9 @@ class FetchRegionExecutor {
       try {
         final ResultatRegion resultatSource = source.fetchRegionCouverte(lotDepts, null);
         tous.addAll(resultatSource.concerts());
-        if (resultatSource.horizon() != null) {
+        // Eventim n'est interrogé ici que pour deux catégories : un produit qui en sort n'est
+        // plus renvoyé sans avoir disparu. Ses absences se comptent par lieu (FetchSallesExecutor).
+        if (resultatSource.horizon() != null && !"eventim".equals(source.nom())) {
           horizons.put(source.nom(), resultatSource.horizon());
         }
       } catch (Exception e) {
