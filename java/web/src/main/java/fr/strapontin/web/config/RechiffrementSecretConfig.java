@@ -8,6 +8,7 @@ import fr.strapontin.core.ConfigCipher;
 import fr.strapontin.web.admin.LogAdminService;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Rechiffre au démarrage, avec le secret courant, les valeurs encore
  * chiffrées avec {@code APP_CONFIG_SECRET_PRECEDENT} (app_config, TOTP).
- * Idempotent. Procédure : {@code scripts/rotation-secrets.sh}.
+ * Chiffre aussi, à chaque démarrage, tout secret TOTP resté en clair. Idempotent. Procédure : {@code scripts/rotation-secrets.sh}.
  * @since 3.0.1
  * @author Kwaite
  */
@@ -28,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class RechiffrementSecretConfig implements ApplicationRunner {
 
   private static final Logger LOG = LoggerFactory.getLogger(RechiffrementSecretConfig.class);
+
+  private static final Pattern SECRET_BASE32 = Pattern.compile("[A-Z2-7]{16,}=*");
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
@@ -54,6 +57,7 @@ public class RechiffrementSecretConfig implements ApplicationRunner {
   @Override
   @Transactional
   public void run(final ApplicationArguments args) {
+    chiffrerSecretsTotpEnClair();
     if (secretPrecedent == null || secretPrecedent.isBlank() || secretPrecedent.equals(secret)) {
       return;
     }
@@ -77,6 +81,34 @@ public class RechiffrementSecretConfig implements ApplicationRunner {
         "securite",
         "rotation APP_CONFIG_SECRET : valeurs rechiffrées",
         Map.of("appConfig", nbConfig, "totp", nbTotp));
+  }
+
+  // Un secret TOTP écrit avant le chiffrement est un Base32 brut, jamais un base64 de plus de
+  // 28 octets : le motif le distingue d'une valeur chiffrée sans la déchiffrer.
+  private void chiffrerSecretsTotpEnClair() {
+    final ConfigCipher courant = new ConfigCipher(secret);
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT id, two_factor_secret AS valeur FROM users WHERE two_factor_secret IS NOT NULL",
+            Map.of());
+    int chiffres = 0;
+    for (final Map<String, Object> ligne : lignes) {
+      final String valeur = (String) ligne.get("valeur");
+      if (SECRET_BASE32.matcher(valeur).matches()) {
+        jdbc.update(
+            "UPDATE users SET two_factor_secret = :valeur WHERE id = :id",
+            Map.of("id", ligne.get("id"), "valeur", courant.chiffrer(valeur)));
+        chiffres++;
+      }
+    }
+    if (chiffres > 0) {
+      LOG.warn("secrets TOTP en clair chiffrés au démarrage : {}", chiffres);
+      logAdminService.logAdmin(
+          "warn",
+          "securite",
+          "secrets TOTP stockés en clair chiffrés au démarrage",
+          Map.of("totp", chiffres));
+    }
   }
 
   private int rechiffrer(

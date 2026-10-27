@@ -91,6 +91,32 @@ class RechiffrementSecretConfigIntegrationTest extends AbstractWebIntegrationTes
                 String.class)));
   }
 
+  @Test
+  void run_secretTotpEnClair_leChiffreSansRotation() {
+    jdbc.update(
+        "INSERT INTO users (id, email, role, display_username, two_factor_secret) VALUES"
+            + " ('rotation-clair', 'clair@test.fr', CAST('user' AS role_utilisateur), 'clair',"
+            + " 'JBSWY3DPEHPK3PXP')",
+        Map.of());
+
+    runner(NOUVEAU, "").run(null);
+
+    final String stocke =
+        jdbc.queryForObject(
+            "SELECT two_factor_secret FROM users WHERE id = 'rotation-clair'",
+            Map.of(),
+            String.class);
+    assertEquals("JBSWY3DPEHPK3PXP", new ConfigCipher(NOUVEAU).dechiffrer(stocke));
+    runner(NOUVEAU, "").run(null);
+    assertEquals(
+        stocke,
+        jdbc.queryForObject(
+            "SELECT two_factor_secret FROM users WHERE id = 'rotation-clair'",
+            Map.of(),
+            String.class),
+        "second démarrage : valeur déjà chiffrée laissée intacte");
+  }
+
   // Relancé après une rotation déjà appliquée (APP_CONFIG_SECRET_PRECEDENT encore défini),
   // rien ne doit changer : les valeurs ne se déchiffrent plus avec l'ancien secret.
   @Test

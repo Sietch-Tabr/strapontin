@@ -104,8 +104,8 @@ public final class CatalogueSignalements {
         "Un produit Eventim sur deux fiches",
         "Le même produit Eventim est porté par deux fiches du même jour dans la même salle, que la"
             + " fusion automatique n'a pas réunies (heures éloignées, artistes différents, plus de"
-            + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop depuis"
-            + " les concerts, ou marquer comme traité si ce sont deux séances.");
+            + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop"
+            + " depuis les concerts, ou marquer comme traité si ce sont deux séances.");
     ajouter(
         "salle_sans_ville",
         "Salle sans commune",
@@ -141,6 +141,11 @@ public final class CatalogueSignalements {
         "comptes_incoherents",
         "Comptes incohérents",
         "Un compte activé n'a pas d'identifiant de connexion unique haché en bcrypt.");
+    ajouter(
+        "secret_totp_non_chiffre",
+        "Secret TOTP non chiffré",
+        "Le secret du second facteur d'un compte est stocké en clair ou illisible : le"
+            + " redémarrage du site le chiffre, sinon réenrôler le TOTP du compte.");
     ajouter(
         "orphelins_fk",
         "Références orphelines",

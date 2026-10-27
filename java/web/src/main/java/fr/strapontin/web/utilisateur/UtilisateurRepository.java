@@ -163,8 +163,10 @@ class UtilisateurRepository {
     try {
       return cipher.dechiffrer(brut);
     } catch (RuntimeException e) {
-      LOG.warn("Secret TOTP non chiffré détecté pour l'utilisateur {} (legacy)", userId);
-      return brut;
+      // Refus plutôt que repli sur la valeur brute : un secret en clair est rechiffré au
+      // démarrage (RechiffrementSecretConfig), un secret illisible signale un mauvais secret.
+      LOG.error("Secret TOTP illisible pour l'utilisateur {}", userId);
+      return null;
     }
   }
 

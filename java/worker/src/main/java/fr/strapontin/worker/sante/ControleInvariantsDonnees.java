@@ -50,6 +50,7 @@ final class ControleInvariantsDonnees {
         + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
         + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
+        + publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
         + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
@@ -452,6 +453,24 @@ final class ControleInvariantsDonnees {
           }
         });
     return globale("comptes_incoherents", comptes);
+  }
+
+  // Un secret chiffré est un base64 d'au moins 28 octets ; un Base32 brut ou toute autre
+  // forme est un secret resté en clair (ou corrompu). Le motif évite de déchiffrer.
+  private Map<UUID, Map<String, Object>> secretsTotpNonChiffres() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT id FROM users
+        WHERE two_factor_secret IS NOT NULL
+          AND (two_factor_secret ~ '^[A-Z2-7]+=*$'
+               OR two_factor_secret !~ '^[A-Za-z0-9+/]{40,}={0,2}$')
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(uuidDe(rs.getString("id")), Map.of("utilisateurId", rs.getString("id")));
+        });
+    return anomalies;
   }
 
   // Un identifiant Wikidata ou Deezer désigne une seule salle ou un seul artiste.

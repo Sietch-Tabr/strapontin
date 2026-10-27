@@ -78,11 +78,11 @@ class UtilisateurRepositoryTest {
   }
 
   @Test
-  void lireSecretTotp_valeurLegacyEnClair_retourneValeurBruteSansEchouer() {
+  void lireSecretTotp_valeurEnClair_refuseSansExposerLaValeur() {
     when(jdbc.queryForList(anyString(), anyMap(), eq(String.class)))
         .thenReturn(List.of("JBSWY3DPEHPK3PXP"));
 
-    assertEquals("JBSWY3DPEHPK3PXP", repository.lireSecretTotp("user-1"));
+    assertNull(repository.lireSecretTotp("user-1"));
   }
 
   @Test

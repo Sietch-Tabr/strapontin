@@ -96,6 +96,26 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_secretTotpEnClair_signaleLeCompteSeulement() {
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials, two_factor_secret)"
+            + " VALUES ('t1', 't1', 't1@test.fr', true, 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP'),"
+            + " ('t2', 't2', 't2@test.fr', true, :chiffre)",
+        Map.of("chiffre", "A".repeat(4) + "bcd".repeat(20)));
+
+    controle.verifier();
+
+    assertEquals(List.of("secret_totp_non_chiffre"), actifs());
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching WHERE type = 'secret_totp_non_chiffre'"
+                + " AND resolu_le IS NULL",
+            Map.of(),
+            Integer.class));
+  }
+
+  @Test
   void verifier_compteActiveSansIdentifiantDeConnexion_signaleUneIncoherence() {
     jdbc.update(
         "INSERT INTO users (id, username, email, must_change_credentials)"
