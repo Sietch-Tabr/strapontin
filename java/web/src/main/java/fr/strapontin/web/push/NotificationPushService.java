@@ -82,9 +82,7 @@ public class NotificationPushService {
               (String) ab.get("auth"),
               payload);
     } catch (Exception e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
+      ClientWebPush.restaurerInterruption(e);
       return compterEchec(ab, userId, null, e.getMessage());
     }
     final int status = reponse.statut();

@@ -71,7 +71,7 @@ final class RechercheEvenementExistant {
    */
   /* package-private : appelé par PersisteurConcertsDb. */
   UUID parProduit(final ValeurConcert concert) {
-    final String condition = conditionProduit(concert);
+    final String condition = CritereProduitEvenement.condition(concert);
     if (condition == null) {
       return null;
     }
@@ -94,9 +94,7 @@ final class RechercheEvenementExistant {
                     "salleId",
                     concert.salleId() != null ? concert.salleId().toString() : null,
                     Types.VARCHAR));
-    // Une production à séances multiples partage une même adresse Ticketmaster : deux fiches
-    // déjà rattachées à la même adresse le même jour rendent le choix ambigu.
-    if ("ticketmaster".equals(concert.source()) && candidats.size() != 1) {
+    if (CritereProduitEvenement.choixAmbigu(concert, candidats.size())) {
       return null;
     }
     for (final Map<String, Object> c : candidats) {
@@ -110,19 +108,6 @@ final class RechercheEvenementExistant {
       if (!artistesDivergents && heureProche(heure, concert.heure())) {
         return (UUID) c.get("id");
       }
-    }
-    return null;
-  }
-
-  // Condition SQL des observations du même produit, null sans identifiant.
-  private static String conditionProduit(final ValeurConcert concert) {
-    if ("eventim".equals(concert.source())
-        && ProduitEventim.identifiant(concert.url()).isPresent()) {
-      return "o.source = 'eventim' AND " + ProduitEventim.expressionSql("o") + " = :produit";
-    }
-    if (("site_salle".equals(concert.source()) || "ticketmaster".equals(concert.source()))
-        && concert.url() != null) {
-      return "o.source = CAST(:source AS source_concert) AND o.url = :url";
     }
     return null;
   }

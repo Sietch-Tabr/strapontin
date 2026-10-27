@@ -264,8 +264,8 @@ public class PersisteurConcertsDb {
             + " AND artiste_id IS NOT NULL",
         id);
     jdbc.update("DELETE FROM user_matches WHERE concert_id = CAST(:id AS uuid)", id);
-    // Une fiche portée par deux sources garde son identité au rafraîchissement : sans ce
-    // réalignement, l'artiste imité y serait rattaché de nouveau d'après le nom resté.
+    // Une fiche à deux sources garde son identité au rafraîchissement : sans ce
+    // réalignement, l'artiste imité lui serait rattaché de nouveau par le nom.
     jdbc.update(
         """
         UPDATE evenements e SET artiste_norm = :artisteNorm, updated_at = now()

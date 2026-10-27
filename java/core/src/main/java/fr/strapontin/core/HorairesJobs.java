@@ -24,10 +24,7 @@ public final class HorairesJobs {
   /** Cycle de récupération : onze fois par jour. */
   public static final String FETCH_ARTISTES = "0 0 " + HEURES_CYCLE + " * * ?";
 
-  /**
-   * Récupération par département : un passage nocturne, hors de la plage 02:00 à 02:59 que les
-   * changements d'heure suppriment ou répètent.
-   */
+  /** Récupération par département, hors plage 02:00-02:59 (changement d'heure). */
   public static final String FETCH_REGION = "0 0 3 * * ?";
 
   /** Salles suivies, une demi-heure après chaque cycle d'artistes. */

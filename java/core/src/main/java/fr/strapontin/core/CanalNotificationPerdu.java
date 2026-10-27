@@ -5,11 +5,10 @@
 package fr.strapontin.core;
 
 /**
- * Compte dont le push ne peut plus parvenir : son dernier appareil a été retiré (révocation
- * automatique, retrait manuel suivi d'une rotation des clés) ou son push n'a jamais eu d'appareil
- * alors qu'il était seul coché. Partagé par l'avertissement email et le bandeau web. Le retrait
- * décoche les cases push, donc la condition du retrait ne dépend pas de l'état des cases ni des
- * autres canaux.
+ * Compte dont le push ne peut plus parvenir : dernier appareil retiré, ou
+ * push seul coché sans appareil jamais enregistré. Partagé par l'email
+ * d'avertissement et le bandeau web ; la condition du retrait ne dépend ni
+ * des cases (décochées) ni des autres canaux.
  * @since 3.0.3
  * @author Kwaite
  */

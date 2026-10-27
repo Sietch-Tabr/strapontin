@@ -72,7 +72,7 @@ public class EmailServiceSecurite {
    *
    * @param email l'adresse de l'utilisateur concerné
    * @param userAgent l'en-tête {@code User-Agent} brut du nouvel appareil
-   * @param nomAppareil nom lisible de l'appareil (« PWA sur iPhone », « Chrome sur Android »)
+   * @param nomAppareil nom lisible de l'appareil (« PWA sur iPhone »)
    */
   public void envoyerAlerteNouvelAppareil(
       final String email, final String userAgent, final String nomAppareil) {

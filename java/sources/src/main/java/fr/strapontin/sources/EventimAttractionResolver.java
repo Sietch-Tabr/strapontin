@@ -30,6 +30,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 final class EventimAttractionResolver {
 
+  private static final String CLE_NOM = "name";
   private static final Logger LOG = LoggerFactory.getLogger(EventimAttractionResolver.class);
   private static final String PARAM_WEB_ID = "webId";
   private static final String PARAM_LANGUE = "language";
@@ -136,13 +137,12 @@ final class EventimAttractionResolver {
   }
 
   /**
-   * Indique si l'identifiant enregistré pour un artiste désigne, chez Eventim, un autre artiste :
-   * l'attraction figure parmi les résultats de la recherche par nom mais son nom n'est pas celui
-   * de l'artiste (ni un nom connu de lui). Un identifiant absent des résultats reste indéterminé.
+   * Indique si l'identifiant enregistré désigne chez Eventim un autre artiste
+   * (présent dans les résultats de la recherche par nom, sous un autre nom).
    * @param terme nom de l'artiste suivi
    * @param attractionId identifiant enregistré
    * @param autresNomsConnus libellé et alias connus de l'artiste
-   * @return {@code true} si l'identifiant est prouvé être celui d'un autre artiste
+   * @return {@code true} si l'identifiant est prouvé être celui d'un autre
    */
   @SuppressWarnings("unchecked")
   /* package-private : appelé par EventimSource (même package). */
@@ -164,16 +164,11 @@ final class EventimAttractionResolver {
               .map(Normalisation::normaliserTexte)
               .filter(n -> !n.isEmpty() && !n.equals(termeNorm))
               .collect(Collectors.toSet());
-      for (final Map<String, Object> a : attractions) {
-        if (!attractionId.equals(extraireAttractionId(a))) {
-          continue;
-        }
-        final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
-        return !estCorrespondanceExacte(nomNorm, termeNorm)
-            && !autresNomsNorm.contains(nomNorm)
-            && !estContainmentEligible(terme, termeNorm, nomNorm, true, autresNomsNorm);
-      }
-      return false;
+      return attractions.stream()
+          .filter(a -> attractionId.equals(extraireAttractionId(a)))
+          .findFirst()
+          .map(a -> nomDifferent(a, terme, termeNorm, autresNomsNorm))
+          .orElse(false);
     } catch (ResourceAccessException e) {
       compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
       throw e;
@@ -182,6 +177,21 @@ final class EventimAttractionResolver {
       LOG.warn("Eventim attractions erreur terme={} : {}", terme, e.getMessage());
       return false;
     }
+  }
+
+  private static boolean nomDifferent(
+      final Map<String, Object> attraction,
+      final String terme,
+      final String termeNorm,
+      final Set<String> autresNomsNorm) {
+    final String nomNorm = Normalisation.normaliserTexte(nomAttraction(attraction));
+    return !estCorrespondanceExacte(nomNorm, termeNorm)
+        && !autresNomsNorm.contains(nomNorm)
+        && !estContainmentEligible(terme, termeNorm, nomNorm, true, autresNomsNorm);
+  }
+
+  private static String nomAttraction(final Map<String, Object> attraction) {
+    return (String) attraction.getOrDefault(CLE_NOM, "");
   }
 
   private URI construireUriRechercheAttractions(final String terme) {
@@ -216,7 +226,7 @@ final class EventimAttractionResolver {
             .collect(Collectors.toSet());
     Map<String, Object> parContainment = null;
     for (final Map<String, Object> a : attractions) {
-      final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault("name", ""));
+      final String nomNorm = Normalisation.normaliserTexte((String) a.getOrDefault(CLE_NOM, ""));
       if (estCorrespondanceExacte(nomNorm, termeNorm)) {
         return a;
       }
@@ -264,7 +274,7 @@ final class EventimAttractionResolver {
 
   private void journaliserContainmentAccepte(
       final String terme, final Map<String, Object> attraction) {
-    final String nomRetourne = (String) attraction.getOrDefault("name", "");
+    final String nomRetourne = (String) attraction.getOrDefault(CLE_NOM, "");
     LOG.info(
         "Eventim: correspondance par containment pour terme={} — résultat={} accepté",
         terme,
@@ -279,7 +289,7 @@ final class EventimAttractionResolver {
 
   private void journaliserAucuneCorrespondance(
       final String terme, final List<Map<String, Object>> attractions) {
-    final String nomRetourne = (String) attractions.get(0).getOrDefault("name", "");
+    final String nomRetourne = (String) attractions.get(0).getOrDefault(CLE_NOM, "");
     // Refus protecteur attendu (homonyme, hommage) : information, pas anomalie.
     LOG.info(
         "Eventim: aucune correspondance exacte pour terme={} — premier résultat={} ignoré",

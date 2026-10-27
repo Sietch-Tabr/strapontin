@@ -199,8 +199,8 @@ public class CompleteurVillesSalles {
     return ville.replaceFirst("^(le|la|les|l) ", "");
   }
 
-  // Un produit sans code postal laisse la fiche sans département : elle échappe aux fetchs et
-  // contrôles par département alors que sa salle en a un.
+  // Un produit sans code postal laisse la fiche sans département : elle
+  // échappe aux fetchs et contrôles par département alors que sa salle en a un.
   private int renseignerDepartementDesFiches() {
     return jdbc.update(
         "UPDATE evenements e SET dept = s.dept FROM salles s"

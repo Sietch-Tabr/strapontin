@@ -245,12 +245,9 @@ public class FusionEvenementsArtisteService {
 
   /**
    * Même spectacle publié sous deux intitulés (« Lady Macbeth de Mzensk » /
-   * « of Mtsensk », « Ballet Preljocaj » / « Le Lac des cygnes ») : seuls
-   * événements de leur salle au même créneau, l'un Ticketmaster seul, l'autre
-   * Eventim seul, sans artiste reconnu, dans une salle non signalée comme
-   * mélangeant plusieurs lieux. Une fiche annulée n'est jamais candidate : le
-   * spectacle de remplacement du même créneau reste une fiche à part. À appeler
-   * après les contrôles d'intégrité.
+   * « of Mtsensk ») : seuls événements de leur salle au même créneau, l'un
+   * Ticketmaster seul, l'autre Eventim seul, sans artiste reconnu ni fiche
+   * annulée, salle non signalée. À appeler après les contrôles d'intégrité.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeCreneauDeuxSources() {

@@ -36,13 +36,11 @@ public class AppareilsService {
   }
 
   /**
-   * Détecte un nouvel appareil pour cet utilisateur : un navigateur, un système ou un mode
-   * (application installée ou navigateur) jamais vus pour le compte. Une mise à jour du navigateur
-   * ou du système ne compte pas. À appeler avant {@link #enregistrerAppareil}, sans quoi la ligne
-   * tout juste insérée fausserait le résultat.
+   * Détecte un navigateur, un système ou un mode jamais vus pour le compte,
+   * avant {@link #enregistrerAppareil} (sinon la ligne insérée fausse le test).
    * @param userId identifiant de l'utilisateur
    * @param userAgent en-tête {@code User-Agent}, peut être {@code null}
-   * @param modeAffichage valeur de l'en-tête de mode d'affichage, peut être {@code null}
+   * @param modeAffichage mode annoncé par le client, peut être {@code null}
    * @return {@code true} si un nouvel appareil est détecté
    */
   public boolean estNouvelAppareil(
@@ -74,7 +72,7 @@ public class AppareilsService {
     }
   }
 
-  // Un User-Agent illisible n'a pas d'identité à comparer : seule l'égalité exacte compte.
+  // Un User-Agent illisible n'a pas d'identité : seule l'égalité exacte compte.
   private static boolean correspond(
       final NomAppareil courant, final String uaConnu, final String modeConnu, final String ua) {
     if (courant.illisible()) {
@@ -84,13 +82,12 @@ public class AppareilsService {
   }
 
   /**
-   * Enregistre l'appareil associé à une session déjà persistée
-   * (détail : CLAUDE.md, Authentification) — best-effort, ne
-   * fait jamais échouer la requête appelante.
+   * Enregistre l'appareil d'une session déjà persistée (best-effort, ne fait
+   * jamais échouer la requête appelante).
    * @param sessionId identifiant de session Spring Session
    * @param userId identifiant de l'utilisateur
    * @param userAgent en-tête {@code User-Agent}, peut être {@code null}
-   * @param modeAffichage valeur de l'en-tête de mode d'affichage, peut être {@code null}
+   * @param modeAffichage mode annoncé par le client, peut être {@code null}
    */
   public void enregistrerAppareil(
       final String sessionId,

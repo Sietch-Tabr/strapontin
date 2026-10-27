@@ -69,9 +69,8 @@ final class SuiviEchecsPush {
         meta);
   }
 
-  // Un échec isolé peut être transitoire : seule une série d'au moins
-  // EchecPush.SEUIL_ECHECS_CONSECUTIFS envois sur EchecPush.JOURS_MIN_SERIE_ECHECS jours révoque
-  // l'abonnement, sauf si tous les envois vers ce service échouent (panne côté application).
+  // Un échec isolé peut être transitoire : seule une série assez longue
+  // (EchecPush) révoque l'abonnement, sauf si tout le service échoue.
   /* package-private : appelé par les émetteurs push du même package. */
   void echec(
       final Map<String, Object> abonnement,

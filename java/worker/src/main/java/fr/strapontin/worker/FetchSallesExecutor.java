@@ -34,9 +34,8 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
-  // Salle d'un département suivi dont une fiche à venir n'a plus été revue depuis
-  // une semaine : le fetch de région ne demande que music, opera et musical chez
-  // Ticketmaster et deux catégories chez Eventim, qui bornent aussi la date (6 mois).
+  // Salle d'un département suivi dont une fiche à venir n'a plus été revue
+  // depuis une semaine : le fetch de région borne catégories et date (6 mois).
   // Interrogée par lieu, sans filtre.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
       """

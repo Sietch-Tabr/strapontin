@@ -17,31 +17,13 @@ import java.util.Base64;
 import java.util.Map;
 
 /**
- * Envoi d'une notification Web Push (chiffrement {@code aes128gcm}, authentification VAPID) par le
- * client HTTP du JDK : la bibliothèque ne fournit que l'en-tête et le corps, le statut et la
- * réponse du service push restent à la disposition des règles de {@link EchecPush}.
+ * Envoi d'une notification Web Push ({@code aes128gcm}, VAPID) par le client
+ * HTTP du JDK : la bibliothèque fournit en-têtes et corps, le statut et la
+ * réponse du service push servent aux règles de {@link EchecPush}.
  * @since 3.1.1
  * @author Kwaite
  */
 public final class ClientWebPush {
-
-  /** Réponse du service push : statut HTTP et début du corps (raison d'un refus). */
-  public record Reponse(int statut, String corps) {}
-
-  /** Envoi HTTP d'une requête déjà chiffrée, substituable en test. */
-  @FunctionalInterface
-  public interface Transport {
-    /**
-     * @param endpoint adresse d'abonnement
-     * @param entetes en-têtes à poser (VAPID, chiffrement, durée de vie)
-     * @param corps contenu chiffré
-     * @return réponse du service push
-     * @throws IOException si le service push est injoignable ou ne répond pas à temps
-     * @throws InterruptedException si l'envoi est interrompu
-     */
-    Reponse poster(String endpoint, Map<String, String> entetes, byte[] corps)
-        throws IOException, InterruptedException;
-  }
 
   private static final Duration DELAI_CONNEXION = Duration.ofSeconds(10);
   private static final Duration DELAI_REPONSE = Duration.ofSeconds(20);
@@ -86,8 +68,7 @@ public final class ClientWebPush {
    * @param auth secret d'authentification de l'abonnement (base64 ou base64url)
    * @param charge contenu de la notification
    * @return statut et début du corps de la réponse
-   * @throws IOException si le service push est injoignable ou ne répond pas à temps
-   * @throws InterruptedException si l'envoi est interrompu
+   * @throws IOException si le service push est injoignable ou interrompu
    */
   public Reponse envoyer(
       final String endpoint, final String p256dh, final String auth, final String charge)
@@ -97,6 +78,8 @@ public final class ClientWebPush {
     return transport.poster(endpoint, webPush.getHeaders(endpoint, null, null, null), corps);
   }
 
+  // Un client unique pour toute la vie du processus.
+  @SuppressWarnings("PMD.CloseResource")
   private static Transport transportJdk() {
     final HttpClient http = HttpClient.newBuilder().connectTimeout(DELAI_CONNEXION).build();
     return (endpoint, entetes, corps) -> {
@@ -112,6 +95,35 @@ public final class ClientWebPush {
           reponse.statusCode(),
           new String(brut, 0, Math.min(brut.length, OCTETS_MAX_CORPS), StandardCharsets.UTF_8));
     };
+  }
+
+  /** Envoi HTTP d'une requête déjà chiffrée, substituable en test. */
+  @FunctionalInterface
+  public interface Transport {
+    /**
+     * @param endpoint adresse d'abonnement
+     * @param entetes en-têtes à poser (VAPID, chiffrement, durée de vie)
+     * @param corps contenu chiffré
+     * @return réponse du service push
+     * @throws IOException si le service push est injoignable
+     * @throws InterruptedException si l'envoi est interrompu
+     */
+    Reponse poster(String endpoint, Map<String, String> entetes, byte[] corps)
+        throws IOException, InterruptedException;
+  }
+
+  /** Réponse du service push : statut HTTP et début du corps (raison d'un refus). */
+  public record Reponse(int statut, String corps) {}
+
+  /**
+   * À appeler dans le {@code catch} d'un envoi : restaure l'interruption du
+   * fil.
+   * @param erreur exception interceptée
+   */
+  public static void restaurerInterruption(final Exception erreur) {
+    if (erreur instanceof InterruptedException) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   // Les clés sont stockées en base64 standard ou URL selon le navigateur.

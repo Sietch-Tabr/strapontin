@@ -9,14 +9,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Appareil d'un utilisateur, identifié par son navigateur, son système et son mode d'affichage
- * (application installée ou navigateur). Source unique du nom affiché dans l'email de nouvelle
- * connexion, la liste des sessions et celle des abonnements push, et de la comparaison qui décide
- * d'une alerte de nouvel appareil.
- *
- * <p>Limites connues : un iPad récent se présente comme un Mac, et Windows 10 et 11 partagent la
- * même valeur de {@code User-Agent}. Aucun modèle d'appareil n'est déduit.
- *
+ * Appareil identifié par navigateur, système et mode (PWA ou onglet).
  * @param navigateur navigateur reconnu, null si illisible
  * @param systeme système reconnu, null si illisible
  * @param mode mode d'affichage annoncé par le client
@@ -25,7 +18,11 @@ import java.util.Objects;
  */
 public record NomAppareil(String navigateur, String systeme, Mode mode) {
 
-  /** Mode d'affichage, que seul le client connaît : le {@code User-Agent} est identique. */
+  // Source unique du nom affiché (email, sessions, abonnements push) et de
+  // l'alerte de nouvel appareil. Limites connues : un iPad récent se présente
+  // comme un Mac, Windows 10 et 11 se confondent ; aucun modèle d'appareil.
+
+  /** Mode d'affichage, connu du seul client (même {@code User-Agent}). */
   public enum Mode {
     /** Application installée (PWA). */
     PWA,
@@ -35,7 +32,7 @@ public record NomAppareil(String navigateur, String systeme, Mode mode) {
     INCONNU
   }
 
-  /** En-tête envoyé par le front sur chaque appel : {@code pwa} ou {@code navigateur}. */
+  /** En-tête du front sur chaque appel : {@code pwa} ou {@code navigateur}. */
   public static final String ENTETE_MODE = "X-Mode-Affichage";
 
   private static final String INCONNU = "Appareil inconnu";
@@ -94,25 +91,23 @@ public record NomAppareil(String navigateur, String systeme, Mode mode) {
   }
 
   /**
-   * @return « PWA sur iPhone », « Safari sur iPhone », « Chrome sur Android »... ou « Appareil
-   *     inconnu »
+   * @return « PWA sur iPhone », « Chrome sur Android » ou « Appareil inconnu »
    */
   public String libelle() {
-    if (mode == Mode.PWA) {
-      return systeme == null ? "PWA" : "PWA sur " + systeme;
+    final String sys = systeme();
+    final String sur = sys == null ? "" : " sur " + sys;
+    if (mode() == Mode.PWA) {
+      return "PWA" + sur;
     }
-    if (illisible()) {
-      return INCONNU;
+    if (navigateur() != null) {
+      return navigateur() + sur;
     }
-    if (navigateur == null) {
-      return systeme;
-    }
-    return systeme == null ? navigateur : navigateur + " sur " + systeme;
+    return sys == null ? INCONNU : sys;
   }
 
   /**
-   * Un appareil dont la version du navigateur ou du système a changé reste le même ; un mode
-   * inconnu d'un côté (session antérieure à l'annonce du mode) ne distingue rien.
+   * Une nouvelle version du navigateur ou du système reste le même appareil ;
+   * un mode inconnu d'un côté ne distingue rien.
    *
    * @param autre appareil à comparer
    * @return vrai si même navigateur, même système et mode compatible

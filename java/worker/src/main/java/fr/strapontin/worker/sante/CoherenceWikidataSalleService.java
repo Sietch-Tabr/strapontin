@@ -5,7 +5,6 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.DistanceGeo;
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.WikidataSalleSource;
@@ -65,6 +64,7 @@ public class CoherenceWikidataSalleService {
   private final WikidataSalleSource wikidata;
   private final LogsAdminWorker logsAdminWorker;
   private final SignalementMatchingService signalements;
+  private final CorrectionsSallesWikidata corrections;
 
   /**
    * @param jdbc accès JDBC
@@ -82,6 +82,7 @@ public class CoherenceWikidataSalleService {
     this.wikidata = wikidata;
     this.logsAdminWorker = logsAdminWorker;
     this.signalements = signalements;
+    this.corrections = new CorrectionsSallesWikidata(jdbc, wikidata, logsAdminWorker);
   }
 
   /**
@@ -112,8 +113,7 @@ public class CoherenceWikidataSalleService {
     for (final SalleAEnrichir salle : candidats) {
       final EnrichissementSalle enrichissement = resultats.get(salle.id());
       if (enrichissement != null) {
-        corrigerVilleSurCommuneWikidata(
-            salle, enrichissement, villesConcertsReelles.get(salle.id()));
+        corrections.corrigerVille(salle, enrichissement, villesConcertsReelles.get(salle.id()));
       }
       if (enrichissement != null
           && traiterSalle(
@@ -128,46 +128,8 @@ public class CoherenceWikidataSalleService {
     return incoherences;
   }
 
-  // La ville d'une salle vient de la première billetterie qui l'a créée. Quand Wikidata donne
-  // une autre commune du même département et que les concerts de la salle portent cette commune,
-  // c'est la commune réelle (Le Transbordeur : Villeurbanne, non Lyon).
-  private void corrigerVilleSurCommuneWikidata(
-      final SalleAEnrichir salle,
-      final EnrichissementSalle enrichissement,
-      final List<String> villesConcertsReelles) {
-    final String commune = enrichissement.ville();
-    if (commune == null
-        || salle.ville() == null
-        || salle.dept() == null
-        || villesConcertsReelles == null
-        || Normalisation.normaliserTexte(commune)
-            .equals(Normalisation.normaliserTexte(salle.ville()))) {
-      return;
-    }
-    final String communeNorm = Normalisation.normaliserTexte(commune);
-    final boolean concertsAccordes =
-        villesConcertsReelles.stream()
-            .map(Normalisation::normaliserTexte)
-            .allMatch(communeNorm::equals);
-    if (!concertsAccordes) {
-      return;
-    }
-    jdbc.update(
-        "UPDATE salles SET ville = :ville WHERE id = :id",
-        Map.of("ville", commune, "id", salle.id()));
-    logsAdminWorker.inserer(
-        "info",
-        SOURCE_LOG,
-        "ville de la salle alignée sur la commune Wikidata salle="
-            + salle.nom()
-            + " ancienne="
-            + salle.ville()
-            + " commune="
-            + commune,
-        Map.of("salleId", salle.id().toString(), "ancienneVille", salle.ville(), "ville", commune));
-  }
-
-  // true si la salle est incohérente ; journalisée seulement si la signature change.
+  // true si la salle est incohérente ; journalisée seulement si la signature
+  // change.
   private boolean traiterSalle(
       final SalleAEnrichir salle,
       final EnrichissementSalle enrichissement,
@@ -216,7 +178,7 @@ public class CoherenceWikidataSalleService {
 
     final Set<String> invalides = wikidata.typesInvalides(wikidataIds);
     for (final String qid : invalides) {
-      invaliderWikidataId(qid);
+      corrections.invaliderWikidataId(qid);
     }
     LOG.info(
         "coherence:wikidata:types candidats={} invalides={}", wikidataIds.size(), invalides.size());
@@ -224,53 +186,15 @@ public class CoherenceWikidataSalleService {
   }
 
   /**
-   * Pose la position de l'élément Wikidata (P625) d'une salle qui en porte un sans avoir aucune
-   * position : sans position, elle échappe au rapprochement par position et aux contrôles
-   * d'écart.
-   * @return nombre de salles positionnées
-   */
-  public int poserPositionsManquantes() {
-    final List<SalleAEnrichir> salles =
-        jdbc.query(
-            "SELECT id, nom, nom_norm, ville, dept, wikidata_id, latitude, longitude FROM salles"
-                + " WHERE wikidata_id IS NOT NULL AND latitude IS NULL AND longitude IS NULL",
-            Map.of(),
-            (rs, _) -> versSalleAEnrichir(rs));
-    if (salles.isEmpty()) {
-      return 0;
-    }
-    final Map<UUID, EnrichissementSalle> elements = wikidata.enrichirLot(salles);
-    int posees = 0;
-    for (final SalleAEnrichir salle : salles) {
-      final EnrichissementSalle element = elements.get(salle.id());
-      if (element != null && element.latitude() != null && element.longitude() != null) {
-        posees +=
-            jdbc.update(
-                "UPDATE salles SET latitude = :latitude, longitude = :longitude,"
-                    + " origine_position = 'wikidata'"
-                    + " WHERE id = :id AND latitude IS NULL AND longitude IS NULL",
-                Map.of(
-                    "latitude",
-                    element.latitude(),
-                    "longitude",
-                    element.longitude(),
-                    "id",
-                    salle.id()));
-      }
-    }
-    LOG.info(
-        "coherence:wikidata:positions-manquantes candidates={} posees={}", salles.size(), posees);
-    return posees;
-  }
-
-  /**
    * Réaligne sur son élément actuel la position d'une salle positionnée par
    * Wikidata : une position écrite une fois (élément homonyme corrigé depuis,
    * coordonnées modifiées sur Wikidata) n'était jamais relue, et passait pour
    * un mauvais élément dans les contrôles de position.
+   * Pose d'abord la position des salles qui n'en ont aucune.
    * @return nombre de salles réalignées
    */
   public int realignerPositions() {
+    corrections.poserPositionsManquantes();
     final List<SalleAEnrichir> salles = sallesPositionneesParWikidata();
     if (salles.isEmpty()) {
       return 0;
@@ -431,30 +355,6 @@ public class CoherenceWikidataSalleService {
         "SELECT wikidata_id FROM salles WHERE wikidata_id IS NOT NULL", Map.of(), String.class);
   }
 
-  private void invaliderWikidataId(final String qid) {
-    final List<String> salles =
-        jdbc.queryForList(
-            "SELECT nom FROM salles WHERE wikidata_id = :qid ORDER BY nom",
-            Map.of("qid", qid),
-            String.class);
-    jdbc.update(
-        // Coordonnées issues de la même entité (P625) : fausses aussi, et elles
-        // serviraient sinon à rattacher par proximité GPS des lieux sans rapport.
-        "UPDATE salles SET wikidata_id = NULL, latitude = NULL, longitude = NULL,"
-            + " origine_position = NULL"
-            + " WHERE wikidata_id = :qid",
-        Map.of("qid", qid));
-    logsAdminWorker.inserer(
-        "warn",
-        SOURCE_LOG,
-        "wikidata_id invalidé — type Wikidata exclu ou élément dissous (gare, tram, détruit,"
-            + " administratif, commerce) wikidataId="
-            + qid
-            + " salle(s)="
-            + String.join(", ", salles),
-        Map.of(CLE_WIKIDATA_ID, qid, "salles", salles));
-  }
-
   /**
    * Charge, pour chaque salle candidate, la signature de la dernière
    * incohérence déjà journalisée (commune Wikidata + type de contamination),
@@ -571,7 +471,8 @@ public class CoherenceWikidataSalleService {
         (rs, _) -> versSalleAEnrichir(rs));
   }
 
-  private static SalleAEnrichir versSalleAEnrichir(final ResultSet rs) throws SQLException {
+  /* package-private : réutilisé par CorrectionsSallesWikidata. */
+  static SalleAEnrichir versSalleAEnrichir(final ResultSet rs) throws SQLException {
     return new SalleAEnrichir(
         rs.getObject("id", UUID.class),
         rs.getString("nom"),

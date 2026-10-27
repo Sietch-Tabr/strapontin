@@ -189,9 +189,7 @@ public class NotificationVersionPushService {
               (String) ab.get("auth"),
               payload);
     } catch (Exception e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
+      ClientWebPush.restaurerInterruption(e);
       suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
       return false;
     }

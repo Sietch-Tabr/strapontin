@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Rechiffre au démarrage, avec le secret courant, les valeurs encore
  * chiffrées avec {@code APP_CONFIG_SECRET_PRECEDENT} (app_config, TOTP).
- * Chiffre aussi, à chaque démarrage, tout secret TOTP resté en clair. Idempotent. Procédure : {@code scripts/rotation-secrets.sh}.
+ * Chiffre aussi tout secret TOTP resté en clair. Idempotent. Procédure :
+ * {@code scripts/rotation-secrets.sh}.
  * @since 3.0.1
  * @author Kwaite
  */
@@ -30,6 +31,7 @@ public class RechiffrementSecretConfig implements ApplicationRunner {
 
   private static final Logger LOG = LoggerFactory.getLogger(RechiffrementSecretConfig.class);
 
+  private static final String CLE_VALEUR = "valeur";
   private static final Pattern SECRET_BASE32 = Pattern.compile("[A-Z2-7]{16,}=*");
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -83,8 +85,8 @@ public class RechiffrementSecretConfig implements ApplicationRunner {
         Map.of("appConfig", nbConfig, "totp", nbTotp));
   }
 
-  // Un secret TOTP écrit avant le chiffrement est un Base32 brut, jamais un base64 de plus de
-  // 28 octets : le motif le distingue d'une valeur chiffrée sans la déchiffrer.
+  // Un secret TOTP antérieur au chiffrement est un Base32 brut, jamais un
+  // base64 de 28 octets ou plus : le motif le distingue sans déchiffrer.
   private void chiffrerSecretsTotpEnClair() {
     final ConfigCipher courant = new ConfigCipher(secret);
     final List<Map<String, Object>> lignes =
@@ -93,11 +95,11 @@ public class RechiffrementSecretConfig implements ApplicationRunner {
             Map.of());
     int chiffres = 0;
     for (final Map<String, Object> ligne : lignes) {
-      final String valeur = (String) ligne.get("valeur");
-      if (SECRET_BASE32.matcher(valeur).matches()) {
+      final String brut = (String) ligne.get(CLE_VALEUR);
+      if (SECRET_BASE32.matcher(brut).matches()) {
         jdbc.update(
             "UPDATE users SET two_factor_secret = :valeur WHERE id = :id",
-            Map.of("id", ligne.get("id"), "valeur", courant.chiffrer(valeur)));
+            Map.of("id", ligne.get("id"), CLE_VALEUR, courant.chiffrer(brut)));
         chiffres++;
       }
     }

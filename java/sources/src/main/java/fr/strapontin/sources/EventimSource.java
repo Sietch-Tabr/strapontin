@@ -140,12 +140,12 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Indique si l'identifiant d'attraction enregistré pour un artiste désigne chez Eventim un
-   * autre artiste (voir {@link EventimAttractionResolver#attractionDUnAutreArtiste}).
+   * Indique si l'identifiant d'attraction enregistré désigne chez Eventim
+   * un autre artiste que celui suivi.
    * @param nomArtiste nom de l'artiste suivi
    * @param attractionId identifiant enregistré
    * @param autresNomsConnus libellé et alias connus de l'artiste
-   * @return {@code true} si l'identifiant est prouvé être celui d'un autre artiste
+   * @return {@code true} si l'identifiant est celui d'un autre artiste
    */
   public boolean attractionDUnAutreArtiste(
       final String nomArtiste, final String attractionId, final List<String> autresNomsConnus) {
@@ -289,8 +289,7 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
 
     produits.forEach(lieux::relever);
-    final List<Map<String, Object>> retenus =
-        artisteFallback != null ? ecartes.retenir(produits, artisteFallback) : produits;
+    final List<Map<String, Object>> retenus = ecartes.retenir(produits, artisteFallback);
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : retenus) {
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);

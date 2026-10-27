@@ -43,8 +43,7 @@ public class AlerteActiviteUtilisateurService {
    *
    * @param email l'adresse email de l'utilisateur
    * @param userAgent l'en-tête {@code User-Agent} du nouvel appareil
-   * @param modeAffichage mode d'affichage annoncé par le client (pwa ou navigateur), peut être
-   *     {@code null}
+   * @param modeAffichage mode annoncé par le client, peut être {@code null}
    */
   public void notifierNouvelAppareil(
       final String email, final String userAgent, final String modeAffichage) {

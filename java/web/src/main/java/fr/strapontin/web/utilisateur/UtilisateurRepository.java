@@ -163,8 +163,8 @@ class UtilisateurRepository {
     try {
       return cipher.dechiffrer(brut);
     } catch (RuntimeException e) {
-      // Refus plutôt que repli sur la valeur brute : un secret en clair est rechiffré au
-      // démarrage (RechiffrementSecretConfig), un secret illisible signale un mauvais secret.
+      // Refus, jamais de repli sur la valeur brute : un secret en clair est
+      // chiffré au démarrage, un secret illisible signale un mauvais secret.
       LOG.error("Secret TOTP illisible pour l'utilisateur {}", userId);
       return null;
     }

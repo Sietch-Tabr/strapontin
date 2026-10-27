@@ -86,8 +86,8 @@ public class FusionProduitsEventimService {
     return fusions;
   }
 
-  // Intitulé de la fiche dont la publication Eventim est la plus récente : la fiche gardée
-  // peut porter une première publication fautive.
+  // Intitulé de la fiche à la publication Eventim la plus récente : la fiche
+  // gardée peut porter une première publication fautive.
   private String libelleLePlusRecent(final UUID evtA, final UUID evtB) {
     final List<String> libelles =
         jdbc.queryForList(
@@ -100,8 +100,8 @@ public class FusionProduitsEventimService {
     return libelles.isEmpty() ? null : libelles.get(0);
   }
 
-  // Sans artiste reconnu, l'intitulé fait l'identité de la fiche ; une fiche rattachée à un
-  // artiste garde le sien. Une fiche déjà présente sous ce nom au même créneau l'interdit.
+  // Sans artiste reconnu, l'intitulé fait l'identité de la fiche ; avec un
+  // artiste, elle garde le sien. Un même nom au même créneau l'interdit.
   private void aligner(final UUID conservee, final String libelle) {
     if (libelle == null) {
       return;

@@ -71,7 +71,7 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
   // Ldlc Arena : élément Wikidata avec coordonnées, aucune position en base.
   @Test
-  void poserPositionsManquantes_salleAvecElementSansPosition_recoitCelleDeWikidata() {
+  void realignerPositions_salleAvecElementSansPosition_recoitCelleDeWikidata() {
     final UUID id = UUID.randomUUID();
     jdbc.update(
         "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id) VALUES"
@@ -85,7 +85,7 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
                 new EnrichissementSalle(
                     "Q107719069", "Ldlc Arena", "Décines", null, null, 45.7, 4.98)));
 
-    assertEquals(1, coherence.poserPositionsManquantes());
+    coherence.realignerPositions();
 
     final Map<String, Object> salle =
         jdbc.queryForMap(

@@ -125,7 +125,7 @@ public class PushController {
         pushService.listerAbonnements(((UtilisateurDetails) auth.getPrincipal()).id()));
   }
 
-  // Un appareil illisible n'est pas nommé : la liste affiche alors son libellé par défaut.
+  // Un appareil illisible n'est pas nommé : libellé par défaut à l'affichage.
   private static String nommer(final NomAppareil appareil) {
     return appareil.illisible() && appareil.mode() != NomAppareil.Mode.PWA
         ? null

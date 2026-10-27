@@ -97,23 +97,19 @@ public class ReconciliationNocturneService {
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     healthCheckSallesTM.alerterLieuxEventimSuspects();
     verificationIdentifiantsEventim.verifier();
-
-    // Avant l'enrichissement et les rapprochements : ils comparent des villes et
-    // des départements.
+    // Avant l'enrichissement et les rapprochements : ils comparent villes et
+    // départements.
     completeurVillesSalles.completer();
-
     final int enrichisArtistes = enrichissementArtistes.enrichir();
     final int enrichisSalles = enrichissementSalles.enrichir();
     final int incoherencesWikidata = coherenceWikidataSalle.verifier();
     final int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
-    // Avant les contrôles de position : un écart de position n'est pas
-    // un mauvais élément.
-    coherenceWikidataSalle.poserPositionsManquantes();
+    // Avant les contrôles de position : un écart n'est pas un mauvais élément.
     final int positionsRealignees = coherenceWikidataSalle.realignerPositions();
     coherenceWikidataSalle.signalerPositionsDivergentes();
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
     // Avant la fusion par clé forte : une fiche périmée sur la mauvaise salle
-    // fournirait la coïncidence qui fusionne deux salles distinctes.
+    // la fausserait.
     final int fichesOrigineReportMarquees = fusionProduitsEventim.marquerFichesDOrigineDesReports();
     final int fichesPerimeesFusionnees =
         fusionProduitsEventim.fusionner()
@@ -130,9 +126,8 @@ public class ReconciliationNocturneService {
     couvertureDepartements.verifier();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
     final int integriteSignalements = controleIntegrite.verifier();
-    // Après les contrôles : une salle mélangeant deux lieux y est signalée et exclue.
-    final int memeCreneau = fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources();
-
+    // Après les contrôles : une salle mélangeant deux lieux y est signalée et
+    // exclue.
     return new ResultatReconciliation(
         bilanSalles[0],
         bilanSalles[1],
@@ -144,7 +139,7 @@ public class ReconciliationNocturneService {
         nomsIncoherentsTM,
         sallesOrphelinesResolues,
         sallesFusionnees,
-        evenementsFusionnes + memeCreneau,
+        evenementsFusionnes + fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources(),
         fichesOrigineReportMarquees,
         positionsRealignees,
         contaminationsSignalees,

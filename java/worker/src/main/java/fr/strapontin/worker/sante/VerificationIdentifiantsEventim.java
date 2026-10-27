@@ -14,9 +14,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Vérifie, par lots, que l'identifiant Eventim enregistré pour un artiste désigne bien cet
- * artiste chez Eventim : un identifiant d'un autre artiste (« Love and Furies » pour « Furies »)
- * est signalé, jamais supprimé en silence.
+ * Vérifie, par lots, que l'identifiant Eventim d'un artiste désigne bien cet
+ * artiste : celui d'un autre (« Love and Furies » pour « Furies ») est
+ * signalé, jamais supprimé en silence.
  * @since 3.1.1
  * @author Kwaite
  */

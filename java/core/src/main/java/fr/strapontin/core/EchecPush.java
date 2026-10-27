@@ -13,12 +13,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Issue d'un envoi push et règle de révocation partagées par tous les
- * émetteurs : un abonnement supprimé (404/410, définitif selon la
- * spécification Web Push) est révoqué au premier échec, tout autre échec
- * après {@value #SEUIL_ECHECS_CONSECUTIFS} envois consécutifs en échec répartis
- * sur au moins {@value #JOURS_MIN_SERIE_ECHECS} jours : une panne de week-end ne
- * retire aucun appareil avant que quelqu'un puisse la traiter.
+ * Issue d'un envoi push et règle de révocation des émetteurs : 404/410
+ * aussitôt, tout autre échec après {@value #SEUIL_ECHECS_CONSECUTIFS} envois
+ * sur {@value #JOURS_MIN_SERIE_ECHECS} jours au moins.
  * @since 3.0.4
  * @author Kwaite
  */
@@ -42,9 +39,9 @@ public final class EchecPush {
   public static final int JOURS_MIN_SERIE_ECHECS = 5;
 
   /**
-   * Incrémente le compteur d'un abonnement {@code :id}, date l'échec (et le début de la série)
-   * et en garde le {@code :statut} HTTP (null sans réponse), puis renvoie le compteur et
-   * l'ancienneté de la série (à lire avec {@link #seuilAtteint(Map)}).
+   * Incrémente le compteur de l'abonnement {@code :id}, date l'échec et le
+   * début de la série, garde le {@code :statut} HTTP (null sans réponse) et
+   * renvoie compteur et ancienneté (voir {@link #seuilAtteint(Map)}).
    */
   public static final String SQL_INCREMENTER_ECHECS =
       "UPDATE push_abonnements SET echecs_consecutifs = echecs_consecutifs + 1,"
@@ -63,9 +60,9 @@ public final class EchecPush {
           + " dernier_envoi_reussi_le = now() WHERE id = :id";
 
   /**
-   * Vrai si l'abonnement {@code :id} échoue comme au moins un autre abonnement d'un autre
-   * compte vers le même service push, sans qu'aucun envoi vers ce service n'ait réussi depuis le
-   * début de sa série : la cause est alors côté application ou service, pas côté appareil.
+   * Vrai si {@code :id} échoue comme un autre compte vers le même service
+   * push, sans envoi réussi vers lui depuis le début de sa série : la cause
+   * est côté application ou service, pas côté appareil.
    */
   public static final String SQL_PANNE_DU_SERVICE =
       "SELECT NOT EXISTS (SELECT 1 FROM push_abonnements a1, push_abonnements a2"
@@ -81,31 +78,28 @@ public final class EchecPush {
   public static final String SQL_SUPPRIMER_ABONNEMENT =
       "DELETE FROM push_abonnements WHERE id = :id";
 
-  /**
-   * Date et cause du retrait sur le compte {@code :userId} et arme un nouvel avertissement.
-   */
+  /** Date et cause du retrait du compte {@code :userId}, avertissement armé. */
   public static final String SQL_DATER_RETRAIT =
       "UPDATE user_config SET dernier_appareil_retire_le = now(),"
           + " cause_dernier_retrait_appareil = :cause, avertissement_canal_perdu_le = NULL"
           + " WHERE user_id = :userId";
 
-  /** Efface le retrait du compte {@code :userId} : un appareil est (re)venu ou a été retiré à sa demande. */
+  /** Efface le retrait de {@code :userId} (appareil revenu ou retiré). */
   public static final String SQL_EFFACER_RETRAIT =
       "UPDATE user_config SET dernier_appareil_retire_le = NULL,"
           + " cause_dernier_retrait_appareil = NULL, avertissement_canal_perdu_le = NULL"
           + " WHERE user_id = :userId";
 
   /**
-   * Décoche les contenus push du compte {@code :userId} quand il n'a plus d'appareil : une case
-   * cochée sans appareil est un état que l'enregistrement des préférences refuse. Sans contenu
-   * restant, la fréquence passe à « jamais ».
+   * Décoche les contenus push de {@code :userId} sans appareil (état que
+   * l'enregistrement refuse) ; sans contenu restant : fréquence « jamais ».
    */
   public static final String SQL_DECOCHER_PUSH_SANS_APPAREIL =
       SQL_DECOCHER_PUSH
           + " WHERE user_id = :userId"
           + " AND NOT EXISTS (SELECT 1 FROM push_abonnements WHERE user_id = :userId)";
 
-  /** Comme {@link #SQL_DECOCHER_PUSH_SANS_APPAREIL}, pour tous les comptes sans appareil. */
+  /** Comme {@link #SQL_DECOCHER_PUSH_SANS_APPAREIL}, pour tous les comptes. */
   public static final String SQL_DECOCHER_PUSH_TOUS_SANS_APPAREIL =
       SQL_DECOCHER_PUSH
           + " WHERE NOT EXISTS (SELECT 1 FROM push_abonnements pa"
@@ -155,7 +149,7 @@ public final class EchecPush {
 
   /**
    * @param serie ligne renvoyée par {@link #SQL_INCREMENTER_ECHECS}
-   * @return {@code true} si la série compte assez d'envois et dure assez longtemps pour révoquer
+   * @return {@code true} si la série est assez nombreuse et longue
    */
   public static boolean seuilAtteint(final Map<String, Object> serie) {
     final Object echecs = serie.get(COLONNE_ECHECS);

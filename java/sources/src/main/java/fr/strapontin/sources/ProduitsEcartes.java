@@ -29,12 +29,15 @@ public final class ProduitsEcartes implements SourceAvecProduitsEcartes {
    * Retient les produits qui concernent l'artiste ({@link ProduitsDeLArtiste})
    * et met les autres en file.
    * @param produits produits d'une récupération par artiste
-   * @param artiste nom de l'artiste recherché
+   * @param artiste nom de l'artiste recherché, null pour tout garder
    * @return les produits retenus
    */
   /* package-private : appelé par EventimSource (même package). */
   List<Map<String, Object>> retenir(
       final List<Map<String, Object>> produits, final String artiste) {
+    if (artiste == null) {
+      return produits;
+    }
     return ProduitsDeLArtiste.retenir(produits, artiste, produit -> ajouter(artiste, produit));
   }
 
