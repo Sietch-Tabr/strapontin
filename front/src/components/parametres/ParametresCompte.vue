@@ -165,7 +165,7 @@
             class="ligne-appareil"
           >
             <span class="appareil-info">
-              {{ resumerUserAgent(appareil.userAgent) }}
+              {{ appareil.nom }}
               <span v-if="appareil.sessionCourante" class="badge badge-nouveau"
                 >Session actuelle</span
               >
@@ -229,17 +229,6 @@ function formaterDateHeure(iso) {
     dateStyle: "short",
     timeStyle: "short",
   });
-}
-
-// Résumé lisible du User-Agent brut — un navigateur/OS suffit à distinguer les appareils,
-// inutile d'afficher la chaîne complète (souvent illisible, parfois très longue).
-function resumerUserAgent(userAgent) {
-  if (!userAgent) return "Appareil inconnu";
-  const os =
-    /Windows|Mac OS X|Android|iPhone|iPad|Linux/.exec(userAgent)?.[0] ?? "";
-  const navigateur = /Firefox|Edg|Chrome|Safari/.exec(userAgent)?.[0] ?? "";
-  const resume = [navigateur, os].filter(Boolean).join(" sur ");
-  return resume || "Appareil inconnu";
 }
 
 async function chargerAppareils() {

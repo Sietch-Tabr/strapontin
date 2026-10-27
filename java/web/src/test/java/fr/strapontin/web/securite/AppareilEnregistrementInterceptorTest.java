@@ -5,6 +5,7 @@
 package fr.strapontin.web.securite;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -58,7 +59,8 @@ class AppareilEnregistrementInterceptorTest {
 
     assertTrue(interceptor.preHandle(request, response, new Object()));
 
-    verify(appareilsService, never()).enregistrerAppareil(anyString(), anyString(), anyString());
+    verify(appareilsService, never())
+        .enregistrerAppareil(anyString(), anyString(), anyString(), any());
   }
 
   @Test
@@ -68,7 +70,8 @@ class AppareilEnregistrementInterceptorTest {
 
     assertTrue(interceptor.preHandle(request, response, new Object()));
 
-    verify(appareilsService, never()).enregistrerAppareil(anyString(), anyString(), anyString());
+    verify(appareilsService, never())
+        .enregistrerAppareil(anyString(), anyString(), anyString(), any());
   }
 
   @Test
@@ -78,7 +81,8 @@ class AppareilEnregistrementInterceptorTest {
 
     assertTrue(interceptor.preHandle(request, response, new Object()));
 
-    verify(appareilsService, never()).enregistrerAppareil(anyString(), anyString(), anyString());
+    verify(appareilsService, never())
+        .enregistrerAppareil(anyString(), anyString(), anyString(), any());
   }
 
   @Test
@@ -87,6 +91,7 @@ class AppareilEnregistrementInterceptorTest {
     when(session.getAttribute("appareilEnregistre")).thenReturn(null);
     when(session.getId()).thenReturn("sess-1");
     when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
+    when(request.getHeader(NomAppareil.ENTETE_MODE)).thenReturn("pwa");
 
     final UtilisateurDetails details =
         new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
@@ -96,10 +101,10 @@ class AppareilEnregistrementInterceptorTest {
 
     assertTrue(interceptor.preHandle(request, response, new Object()));
 
-    verify(appareilsService).enregistrerAppareil("sess-1", "u1", "Mozilla/5.0");
+    verify(appareilsService).enregistrerAppareil("sess-1", "u1", "Mozilla/5.0", "pwa");
     verify(session).setAttribute("appareilEnregistre", Boolean.TRUE);
     verify(alerteActiviteUtilisateurService, never())
-        .notifierNouvelAppareil(anyString(), anyString());
+        .notifierNouvelAppareil(anyString(), anyString(), any());
   }
 
   @Test
@@ -108,7 +113,8 @@ class AppareilEnregistrementInterceptorTest {
     when(session.getAttribute("appareilEnregistre")).thenReturn(null);
     when(session.getId()).thenReturn("sess-1");
     when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-    when(appareilsService.estNouvelAppareil("u1", "Mozilla/5.0")).thenReturn(true);
+    when(request.getHeader(NomAppareil.ENTETE_MODE)).thenReturn("pwa");
+    when(appareilsService.estNouvelAppareil("u1", "Mozilla/5.0", "pwa")).thenReturn(true);
 
     final UtilisateurDetails details =
         new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
@@ -118,7 +124,8 @@ class AppareilEnregistrementInterceptorTest {
 
     assertTrue(interceptor.preHandle(request, response, new Object()));
 
-    verify(alerteActiviteUtilisateurService).notifierNouvelAppareil("test@test.fr", "Mozilla/5.0");
+    verify(alerteActiviteUtilisateurService)
+        .notifierNouvelAppareil("test@test.fr", "Mozilla/5.0", "pwa");
   }
 
   // Appels parallèles de la première page : l'attribut n'est pas encore visible des autres
@@ -129,7 +136,8 @@ class AppareilEnregistrementInterceptorTest {
     when(session.getAttribute("appareilEnregistre")).thenReturn(null);
     when(session.getId()).thenReturn("sess-2");
     when(request.getHeader("User-Agent")).thenReturn("Mozilla/5.0");
-    when(appareilsService.estNouvelAppareil("u1", "Mozilla/5.0")).thenReturn(true);
+    when(request.getHeader(NomAppareil.ENTETE_MODE)).thenReturn("pwa");
+    when(appareilsService.estNouvelAppareil("u1", "Mozilla/5.0", "pwa")).thenReturn(true);
     final UtilisateurDetails details =
         new UtilisateurDetails("u1", "login", "test@test.fr", "", "user", false, false, false);
     SecurityContextHolder.getContext()
@@ -139,8 +147,9 @@ class AppareilEnregistrementInterceptorTest {
     interceptor.preHandle(request, response, new Object());
     interceptor.preHandle(request, response, new Object());
 
-    verify(appareilsService).enregistrerAppareil("sess-2", "u1", "Mozilla/5.0");
+    verify(appareilsService).enregistrerAppareil("sess-2", "u1", "Mozilla/5.0", "pwa");
     verify(session).setAttribute("appareilEnregistre", Boolean.TRUE);
-    verify(alerteActiviteUtilisateurService).notifierNouvelAppareil("test@test.fr", "Mozilla/5.0");
+    verify(alerteActiviteUtilisateurService)
+        .notifierNouvelAppareil("test@test.fr", "Mozilla/5.0", "pwa");
   }
 }

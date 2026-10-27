@@ -44,15 +44,16 @@ final class EmailTemplatesSecurite {
    * @return le HTML de l'email d'alerte
    */
   /* package-private : appelé par EmailServiceSecurite (même package). */
-  static String alerteNouvelAppareil(final String userAgent, final String baseUrl) {
-    final String appareil =
-        userAgent == null || userAgent.isBlank() ? "appareil inconnu" : userAgent;
+  static String alerteNouvelAppareil(
+      final String nomAppareil, final String userAgent, final String baseUrl) {
+    final String brut = userAgent == null || userAgent.isBlank() ? "User-Agent absent" : userAgent;
     final String corps =
         """
         <p style="color: %s; margin: 0 0 24px">
           Une connexion depuis un appareil jamais vu a été détectée sur votre compte :
         </p>
-        <p style="color: %s; font-size: 13px; font-family: monospace; margin: 0 0 24px">%s</p>
+        <p style="color: %s; font-size: 16px; font-weight: bold; margin: 0 0 4px">%s</p>
+        <p style="color: %s; font-size: 11px; font-family: monospace; margin: 0 0 24px">%s</p>
         <p style="color: %s; font-size: 13px; margin-top: 24px">
           Si c'est vous, ignorez cet email. Sinon, changez immédiatement votre mot de passe
           depuis vos paramètres.
@@ -61,7 +62,9 @@ final class EmailTemplatesSecurite {
             .formatted(
                 EmailTemplates.C_TEXTE,
                 EmailTemplates.C_TEXTE,
-                EmailTemplates.e(appareil),
+                EmailTemplates.e(nomAppareil),
+                EmailTemplates.C_MUTE,
+                EmailTemplates.e(brut),
                 EmailTemplates.C_MUTE);
     return EmailTemplates.envelopper("Nouvelle connexion détectée", corps, baseUrl);
   }

@@ -42,7 +42,7 @@ class AppareilsServiceTest {
 
   @Test
   void enregistrerAppareil_delegueAuJdbc() {
-    service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0");
+    service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0", "navigateur");
 
     org.mockito.Mockito.verify(jdbc)
         .update(org.mockito.ArgumentMatchers.contains("INSERT INTO session_appareils"), anyMap());
@@ -54,7 +54,7 @@ class AppareilsServiceTest {
   void enregistrerAppareil_echecJdbc_neLevePasDException() {
     when(jdbc.update(anyString(), anyMap())).thenThrow(new DataIntegrityViolationException("fk"));
 
-    assertDoesNotThrow(() -> service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0"));
+    assertDoesNotThrow(() -> service.enregistrerAppareil("sess-1", "u1", "Mozilla/5.0", "navigateur"));
   }
 
   // L'identifiant exposé côté client (appareilId) doit être l'UUID opaque, jamais le session_id
@@ -99,35 +99,67 @@ class AppareilsServiceTest {
     assertTrue(service.revoquerAppareil("u1", UUID.randomUUID().toString()));
   }
 
+  private static final String SAFARI_27_0_1 =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like"
+          + " Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1";
+  private static final String SAFARI_27_0_2 = SAFARI_27_0_1.replace("27.0.1", "27.0.2");
+  private static final String FIREFOX_LINUX =
+      "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0";
+
+  private void appareilsConnus(final String userAgent, final String mode) {
+    final Map<String, Object> ligne = new java.util.HashMap<>();
+    ligne.put("user_agent", userAgent);
+    ligne.put("mode_affichage", mode);
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(ligne));
+  }
+
   @Test
   void estNouvelAppareil_aucunAppareilConnu_retourneFalse() {
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("total", 0L, "meme_appareil", 0L));
+    when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of());
 
-    assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0"));
+    assertFalse(service.estNouvelAppareil("u1", SAFARI_27_0_1, "navigateur"));
   }
 
   @Test
-  void estNouvelAppareil_appareilsConnusMaisUserAgentInedit_retourneTrue() {
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("total", 2L, "meme_appareil", 0L));
+  void estNouvelAppareil_navigateurMisAJour_retourneFalse() {
+    appareilsConnus(SAFARI_27_0_1, "NAVIGATEUR");
 
-    assertTrue(service.estNouvelAppareil("u1", "Mozilla/5.0"));
+    assertFalse(service.estNouvelAppareil("u1", SAFARI_27_0_2, "navigateur"));
   }
 
   @Test
-  void estNouvelAppareil_userAgentDejaConnu_retourneFalse() {
-    when(jdbc.queryForMap(anyString(), anyMap()))
-        .thenReturn(Map.of("total", 2L, "meme_appareil", 1L));
+  void estNouvelAppareil_sessionAnterieureSansMode_neDistingueQueNavigateurEtSysteme() {
+    appareilsConnus(SAFARI_27_0_1, null);
 
-    assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0"));
+    assertFalse(service.estNouvelAppareil("u1", SAFARI_27_0_1, "pwa"));
+  }
+
+  @Test
+  void estNouvelAppareil_autreNavigateurOuSysteme_retourneTrue() {
+    appareilsConnus(SAFARI_27_0_1, "NAVIGATEUR");
+
+    assertTrue(service.estNouvelAppareil("u1", FIREFOX_LINUX, "navigateur"));
+  }
+
+  @Test
+  void estNouvelAppareil_memeAppareilEnModePwaJamaisVu_retourneTrue() {
+    appareilsConnus(SAFARI_27_0_1, "NAVIGATEUR");
+
+    assertTrue(service.estNouvelAppareil("u1", SAFARI_27_0_1, "pwa"));
+  }
+
+  @Test
+  void estNouvelAppareil_userAgentIllisibleInedit_retourneTrue() {
+    appareilsConnus("curl/8.4", "INCONNU");
+
+    assertTrue(service.estNouvelAppareil("u1", "wget/1.21", null));
   }
 
   @Test
   void estNouvelAppareil_echecJdbc_retourneFalseSansException() {
-    when(jdbc.queryForMap(anyString(), anyMap()))
+    when(jdbc.queryForList(anyString(), anyMap()))
         .thenThrow(new DataIntegrityViolationException("x"));
 
-    assertDoesNotThrow(() -> assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0")));
+    assertDoesNotThrow(() -> assertFalse(service.estNouvelAppareil("u1", "Mozilla/5.0", null)));
   }
 }
