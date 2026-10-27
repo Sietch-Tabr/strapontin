@@ -131,7 +131,7 @@ Texte d'origine des paragraphes condensés dans SKILL.md le 22/10/2026, conserv�
 
 ### Section 4 : ancienne liste des jobs
 
-Vérifier sur la fenêtre : `fetch:region` (1×/jour, 02h00 — `Planificateur.java`), `fetch:artistes:batch`/`fetch:salles:all` (H:00-ish), `recalculer:matches`, `revoquer:admins` (horaire), purges quotidiennes (00:00/00:05/00:06/00:15), `reconciliation:nocturne` (3h, chercher `démarré`/`terminé sallesVerifiees=…redecouvertes=…ambigues=…enrichissementsSalle=…enrichissementsArtiste=…`).
+Vérifier sur la fenêtre : `fetch:region` (1×/jour, 03h00 depuis 3.1.1 — `Planificateur.java`), `fetch:artistes:batch`/`fetch:salles:all` (H:00-ish), `recalculer:matches`, `revoquer:admins` (horaire), purges quotidiennes (00:00/00:05/00:06/00:15), `reconciliation:nocturne` (3h, chercher `démarré`/`terminé sallesVerifiees=…redecouvertes=…ambigues=…enrichissementsSalle=…enrichissementsArtiste=…`).
 
 ### Section 5 : requête logs_admin et ancien piège epoch millis
 
