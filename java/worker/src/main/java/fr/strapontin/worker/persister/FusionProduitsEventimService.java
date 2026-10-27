@@ -72,15 +72,51 @@ public class FusionProduitsEventimService {
             Map.of("ecartSecondes", ECART_MAX_HEURE_SECONDES));
     int fusions = 0;
     for (final Map<String, Object> paire : paires) {
+      final UUID evtA = (UUID) paire.get("evt_a");
+      final UUID evtB = (UUID) paire.get("evt_b");
+      final String libelleRecent = libelleLePlusRecent(evtA, evtB);
       final UUID conservee =
-          fusionEvenements.fusionnerPaireChoisie(
-              (UUID) paire.get("evt_a"), (UUID) paire.get("evt_b"), "même produit Eventim");
+          fusionEvenements.fusionnerPaireChoisie(evtA, evtB, "même produit Eventim");
       if (conservee != null) {
         retirerObservationsPerimees(conservee);
+        aligner(conservee, libelleRecent);
         fusions++;
       }
     }
     return fusions;
+  }
+
+  // Intitulé de la fiche dont la publication Eventim est la plus récente : la fiche gardée
+  // peut porter une première publication fautive.
+  private String libelleLePlusRecent(final UUID evtA, final UUID evtB) {
+    final List<String> libelles =
+        jdbc.queryForList(
+            "SELECT e.artiste_norm FROM evenements e WHERE e.id IN (:a, :b)"
+                + " ORDER BY (SELECT max(o.updated_at) FROM observations o"
+                + " WHERE o.evenement_id = e.id AND o.source = 'eventim') DESC NULLS LAST,"
+                + " e.first_seen DESC LIMIT 1",
+            Map.of("a", evtA, "b", evtB),
+            String.class);
+    return libelles.isEmpty() ? null : libelles.get(0);
+  }
+
+  // Sans artiste reconnu, l'intitulé fait l'identité de la fiche ; une fiche rattachée à un
+  // artiste garde le sien. Une fiche déjà présente sous ce nom au même créneau l'interdit.
+  private void aligner(final UUID conservee, final String libelle) {
+    if (libelle == null) {
+      return;
+    }
+    jdbc.update(
+        """
+        UPDATE evenements e SET artiste_norm = :libelle, updated_at = now()
+        WHERE e.id = :id AND e.artiste_id IS NULL AND e.artiste_norm <> :libelle
+          AND NOT EXISTS (
+            SELECT 1 FROM evenements x
+            WHERE x.id <> e.id AND x.artiste_norm = :libelle AND x.date = e.date
+              AND x.heure IS NOT DISTINCT FROM e.heure
+              AND x.salle_id IS NOT DISTINCT FROM e.salle_id)
+        """,
+        Map.of("id", conservee, "libelle", libelle));
   }
 
   // Après un changement de titre, l'ancienne adresse d'un produit reste portée par

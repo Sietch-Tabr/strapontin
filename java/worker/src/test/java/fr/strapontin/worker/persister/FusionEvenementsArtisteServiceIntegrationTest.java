@@ -702,6 +702,26 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
             String.class));
   }
 
+  // Celtic Ovation : la première publication portait une faute de frappe.
+  @Test
+  void fusionnerProduit_premierePublicationFautive_gardeLIntituleLePlusRecent() {
+    ficheAvecObservations(
+        salle,
+        "celtic avation",
+        "20:30",
+        new String[] {"eventim", "https://www.eventim.fr/event/celtic-avation-22300001", "250"});
+    ficheAvecObservations(
+        salle,
+        "celtic ovation",
+        "20:30",
+        new String[] {"eventim", "https://www.eventim.fr/event/celtic-ovation-22300001", "1"});
+
+    assertEquals(1, fusionProduitsEventim.fusionner());
+    assertEquals(
+        List.of("celtic ovation"),
+        jdbc.queryForList("SELECT artiste_norm FROM evenements", Map.of(), String.class));
+  }
+
   @Test
   void fusionnerProduit_heureDifferenteDUneDemiHeure_fusionne() {
     final UUID a =

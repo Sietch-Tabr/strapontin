@@ -23,6 +23,8 @@ public record ResultatReconciliation(
     int sallesOrphelinesResolues,
     int sallesFusionneesParCleForte,
     int evenementsFusionnesArtiste,
+    int fichesOrigineReportMarquees,
+    int positionsRealignees,
     int contaminationsMultiSalleSignalees,
     int doublonsMultiSalleSignales,
     int motsGenericsSuggeres,

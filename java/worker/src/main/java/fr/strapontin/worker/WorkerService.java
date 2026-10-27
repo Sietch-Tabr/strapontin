@@ -83,7 +83,8 @@ public class WorkerService {
               "reconciliation:nocturne terminé sallesVerifiees={} redecouvertes={} ambigues={}"
                   + " enrichissementsSalle={} enrichissementsArtiste={} typesWikidataInvalides={}"
                   + " nomsIncoherentsTM={} sallesFusionneesParCleForte={}"
-                  + " evenementsFusionnesArtiste={} contaminationsMultiSalleSignalees={}"
+                  + " evenementsFusionnesArtiste={} fichesOrigineReportMarquees={}"
+                  + " positionsRealignees={} contaminationsMultiSalleSignalees={}"
                   + " doublonsMultiSalleSignales={} motsGenericsSuggeres={}"
                   + " integriteSignalements={}",
               bilan.sallesVerifiees(),
@@ -95,6 +96,8 @@ public class WorkerService {
               bilan.nomsIncoherentsTM(),
               bilan.sallesFusionneesParCleForte(),
               bilan.evenementsFusionnesArtiste(),
+              bilan.fichesOrigineReportMarquees(),
+              bilan.positionsRealignees(),
               bilan.contaminationsMultiSalleSignalees(),
               bilan.doublonsMultiSalleSignales(),
               bilan.motsGenericsSuggeres(),
