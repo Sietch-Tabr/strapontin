@@ -33,13 +33,11 @@ public class FusionEvenementsArtisteService {
   private static final Logger LOG = LoggerFactory.getLogger(FusionEvenementsArtisteService.class);
   private static final String CLE_CIBLE = "cible";
   private static final String CLE_SOURCE = "source";
+  private static final String CLE_SEUIL = "seuil";
   private static final int NB_EVENEMENTS_PAIRE = 2;
-  // Absences au-delà desquelles une fiche n'est plus vivante (un cycle de
-  // fetch manqué ponctuellement ne suffit pas).
-  /* package-private : visibilité élargie pour les tests (même package). */
+  /* package-private (tests) : absences d'une fiche non vivante. */
   static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
-  // Écart d'heure maximal entre l'ancienne et la nouvelle fiche d'une même
-  // séance : au-delà, ce sont deux séances (matinée et soirée).
+  // Écart d'heure maximal d'une même séance (au-delà : matinée et soirée).
   private static final int ECART_MAX_HEURE_CHANGEE_SECONDES = 3600;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -114,16 +112,13 @@ public class FusionEvenementsArtisteService {
             WHERE p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
             GROUP BY p.evenement_id
             """,
-            Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+            Map.of(CLE_SEUIL, SEUIL_ABSENCES_FICHE_PERIMEE));
     return fusionnerSiVivantUnique(lignes, "fiche source périmée");
   }
 
   /**
-   * Séance dont l'heure a changé : la fiche qui n'est plus publiée (absente
-   * depuis plusieurs cycles) rejoint l'unique fiche vivante du même artiste, de
-   * la même salle et du même jour, à moins d'une heure d'écart — quelle que soit
-   * la source de l'une ou l'autre. Deux séances réelles d'un même jour (matinée,
-   * soirée) sont plus éloignées ; plusieurs vivantes possibles : ignoré.
+   * Séance dont l'heure a changé : la fiche qui n'est plus publiée rejoint
+   * l'unique fiche vivante (même artiste, salle, jour, moins d'une heure).
    * @return nombre de fusions effectuées
    */
   public int fusionnerSeancesHeureChangee() {
@@ -145,16 +140,18 @@ public class FusionEvenementsArtisteService {
             GROUP BY p.id
             """,
             Map.of(
-                "seuil", SEUIL_ABSENCES_FICHE_PERIMEE,
-                "ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+                CLE_SEUIL,
+                SEUIL_ABSENCES_FICHE_PERIMEE,
+                "ecartSecondes",
+                ECART_MAX_HEURE_CHANGEE_SECONDES));
     return fusionnerSiVivantUnique(lignes, "séance dont l'heure a changé");
   }
 
   /**
    * Même séance publiée par deux billetteries à des heures proches (20 h 30 chez
-   * Ticketmaster, 20 h chez Eventim) : seuls événements de leur artiste, salle et
-   * jour, à moins d'une heure d'écart, l'un ne portant qu'une source et les sources
-   * différant, dans une salle non signalée comme mélangeant plusieurs lieux.
+   * Ticketmaster, 20 h chez Eventim) : fiches vivantes d'un artiste, d'une salle
+   * et d'un jour, seules à moins d'une heure l'une de l'autre, l'une à source
+   * unique, salle non signalée comme mélangeant plusieurs lieux.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeSeanceDeuxSourcesHeuresProches() {
@@ -166,26 +163,30 @@ public class FusionEvenementsArtisteService {
                      bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
               FROM evenements e JOIN observations o ON o.evenement_id = e.id
               WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+                AND e.absences_consecutives < :seuil
               GROUP BY e.id),
-            groupes AS (
-              SELECT salle_id, date, artiste_norm FROM ev WHERE tm OR evt
-              GROUP BY salle_id, date, artiste_norm HAVING count(*) = 2)
-            SELECT a.id AS evt_a, b.id AS evt_b,
-                   (a.tm AND NOT a.evt AND b.evt AND NOT b.tm) AS a_ticketmaster_seul,
-                   (b.tm AND NOT b.evt AND a.evt AND NOT a.tm) AS b_ticketmaster_seul
-            FROM groupes g
-            JOIN salles s ON s.id = g.salle_id
-            JOIN ev a ON a.salle_id = g.salle_id AND a.date = g.date
-                     AND a.artiste_norm = g.artiste_norm AND (a.tm OR a.evt)
-            JOIN ev b ON b.salle_id = g.salle_id AND b.date = g.date
-                     AND b.artiste_norm = g.artiste_norm AND (b.tm OR b.evt) AND a.id < b.id
-            WHERE abs(extract(epoch FROM (a.heure - b.heure))) <= :ecartSecondes
-              AND (a.tm::int + a.evt::int = 1 OR b.tm::int + b.evt::int = 1)
-              AND NOT (a.tm = b.tm AND a.evt = b.evt)
+            proches AS (
+              SELECT a.id AS evt_a, b.id AS evt_b, a.salle_id, a.tm AS a_tm, a.evt AS a_evt,
+                     b.tm AS b_tm, b.evt AS b_evt
+              FROM ev a JOIN ev b ON b.salle_id = a.salle_id AND b.date = a.date
+                       AND b.artiste_norm = a.artiste_norm AND a.id < b.id
+              WHERE abs(extract(epoch FROM (a.heure - b.heure))) <= :ecartSecondes)
+            SELECT p.evt_a, p.evt_b,
+                   (p.a_tm AND NOT p.a_evt AND p.b_evt AND NOT p.b_tm) AS a_ticketmaster_seul,
+                   (p.b_tm AND NOT p.b_evt AND p.a_evt AND NOT p.a_tm) AS b_ticketmaster_seul
+            FROM proches p JOIN salles s ON s.id = p.salle_id
+            WHERE (p.a_tm::int + p.a_evt::int = 1 OR p.b_tm::int + p.b_evt::int = 1)
+              AND NOT (p.a_tm = p.b_tm AND p.a_evt = p.b_evt)
+              AND (SELECT count(*) FROM proches q WHERE q.evt_a IN (p.evt_a, p.evt_b)
+                   OR q.evt_b IN (p.evt_a, p.evt_b)) = 1
               AND\
             """
                 + SalleFiable.condition("s"),
-            Map.of("ecartSecondes", ECART_MAX_HEURE_CHANGEE_SECONDES));
+            Map.of(
+                "ecartSecondes",
+                ECART_MAX_HEURE_CHANGEE_SECONDES,
+                CLE_SEUIL,
+                SEUIL_ABSENCES_FICHE_PERIMEE));
     int fusions = 0;
     for (final Map<String, Object> paire : paires) {
       final UUID idA = (UUID) paire.get("evt_a");
@@ -239,15 +240,14 @@ public class FusionEvenementsArtisteService {
                   AND es.salle_id = p.salle_id AND es.absences_consecutives = 0)
             GROUP BY p.id
             """,
-            Map.of("seuil", SEUIL_ABSENCES_FICHE_PERIMEE));
+            Map.of(CLE_SEUIL, SEUIL_ABSENCES_FICHE_PERIMEE));
     return fusionnerSiVivantUnique(lignes, "concert déplacé");
   }
 
   /**
-   * Même spectacle publié sous deux intitulés (« Lady Macbeth de Mzensk » /
-   * « of Mtsensk ») : seuls événements de leur salle au même créneau, l'un
-   * Ticketmaster seul, l'autre Eventim seul, sans artiste reconnu ni fiche
-   * annulée, salle non signalée. À appeler après les contrôles d'intégrité.
+   * Même spectacle sous deux intitulés (« of Mtsensk » / « de Mzensk ») : seuls
+   * événements de leur salle au créneau, Ticketmaster seul et Eventim seul, sans
+   * artiste reconnu ni fiche annulée. À appeler après les contrôles d'intégrité.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeCreneauDeuxSources() {

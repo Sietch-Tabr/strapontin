@@ -47,13 +47,17 @@ public final class ClientWebPush {
    * @param clePrivee clé privée VAPID (scalaire, base64url)
    * @param sujet identifiant {@code mailto:} ou {@code https:} requis par VAPID
    * @param transport envoi HTTP de la requête chiffrée
-   * @throws IllegalArgumentException si les clés sont invalides
+   * @throws IllegalArgumentException si les clés ou le sujet sont invalides
    */
   public ClientWebPush(
       final String clePublique,
       final String clePrivee,
       final String sujet,
       final Transport transport) {
+    // Apple refuse (BadJwtToken) un sujet sans adresse : « mailto: » seul.
+    if (sujet == null || "mailto:".equals(sujet.strip())) {
+      throw new IllegalArgumentException("Sujet VAPID vide : CONTACT_EMAIL absent");
+    }
     try {
       this.webPush = new WebPush(sujet, VapidKeys.fromUncompressedBytes(clePublique, clePrivee));
     } catch (RuntimeException e) {

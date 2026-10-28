@@ -552,6 +552,30 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertFalse(existe(ev));
   }
 
+  // Mark Guiliana au New Morning : une fiche périmée (20 h) et une seconde séance (22 h) ne
+  // bloquent plus le rapprochement de 19 h 30 (Eventim) et 19 h 45 (Ticketmaster).
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_fichePerimeeEtSecondeSeance_fusionneLesDeux() {
+    final UUID newMorning = creerSalle("New Morning");
+    final UUID evenementEventim = seanceSource(newMorning, "mark guiliana", "19:30", "eventim");
+    final UUID tm = seanceSource(newMorning, "mark guiliana", "19:45", "ticketmaster");
+    final UUID perimee = seanceSource(newMorning, "mark guiliana", "20:00", "ticketmaster");
+    final UUID soiree = seanceSource(newMorning, "mark guiliana", "22:00", "ticketmaster");
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 8 WHERE id = CAST(:id AS uuid)",
+        Map.of("id", perimee.toString()));
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+    assertTrue(existe(tm));
+    assertFalse(existe(evenementEventim));
+    assertTrue(existe(soiree));
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerSeancesHeureChangee());
+    assertFalse(existe(perimee));
+    assertTrue(existe(tm));
+    assertTrue(existe(soiree));
+  }
+
   @Test
   void fusionnerMemeSeanceDeuxSourcesHeuresProches_matineeEtSoiree_neFusionnePas() {
     final UUID newMorning = creerSalle("New Morning");

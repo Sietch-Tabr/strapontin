@@ -86,6 +86,18 @@ class ClientWebPushTest {
   }
 
   @Test
+  void construire_sujetSansAdresse_leveIllegalArgumentException() {
+    final VapidKeys vapid = VapidKeys.generate();
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new ClientWebPush(
+                base64Url(vapid.getApplicationServerKey()),
+                scalaire(vapid.getPrivateKey()),
+                "mailto:"));
+  }
+
+  @Test
   void construire_clesInvalides_leveIllegalArgumentException() {
     assertThrows(
         IllegalArgumentException.class,

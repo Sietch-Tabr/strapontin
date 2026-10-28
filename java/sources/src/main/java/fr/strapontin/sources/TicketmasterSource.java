@@ -4,7 +4,6 @@
  */
 package fr.strapontin.sources;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.PositionLieu;
@@ -133,53 +132,8 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
    * jamais appelé hors de cette classe/des tests du même package. */
   TicketmasterSource(
       final String apiKey, final RestClient restClient, final CadenceurAppels cadenceur) {
-    this(
-        apiKey,
-        restClient,
-        TicketmasterAttractionResolver.creerCacheAvertissementsParDefaut(),
-        cadenceur);
-  }
-
-  /**
-   * Crée une instance avec la clé API, le RestClient et le cache de throttle
-   * des avertissements personnalisés (injection de test), cadencée en mémoire.
-   *
-   * @param apiKey clé API Ticketmaster Discovery v2
-   * @param restClient client HTTP Spring à utiliser
-   * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
-   */
-  /* package-private : maillon intermédiaire de la chaîne d'injection de test,
-   * jamais appelé hors de cette classe/des tests du même package. */
-  TicketmasterSource(
-      final String apiKey,
-      final RestClient restClient,
-      final Cache<String, Boolean> avertissementsAttractionIntrouvable) {
-    this(
-        apiKey,
-        restClient,
-        avertissementsAttractionIntrouvable,
-        new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS));
-  }
-
-  /**
-   * Crée une instance en spécifiant individuellement chacune de ses
-   * dépendances (injection de test complète).
-   * @param apiKey clé API Ticketmaster Discovery v2
-   * @param restClient client HTTP Spring à utiliser
-   * @param avertissementsAttractionIntrouvable cache de throttle à utiliser
-   * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
-   */
-  /* package-private : constructeur d'injection de test complète, jamais appelé
-   * hors des tests du même package. */
-  TicketmasterSource(
-      final String apiKey,
-      final RestClient restClient,
-      final Cache<String, Boolean> avertissementsAttractionIntrouvable,
-      final CadenceurAppels cadenceur) {
     this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
     this.restClient = Objects.requireNonNull(restClient, "restClient");
-    Objects.requireNonNull(
-        avertissementsAttractionIntrouvable, "avertissementsAttractionIntrouvable");
     this.cadenceur = Objects.requireNonNull(cadenceur, "cadenceur");
     this.healthCheck =
         new TicketmasterHealthCheck(this.apiKey, this.restClient, this.cadenceur, etatFetch);
@@ -187,12 +141,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
         new TicketmasterPageFetcher(
             this.restClient, this.apiKey, this.cadenceur, etatFetch, TAILLE_PAGE_REGION);
     this.attractionResolver =
-        new TicketmasterAttractionResolver(
-            this.restClient,
-            this.apiKey,
-            BASE_URL,
-            this.cadenceur,
-            avertissementsAttractionIntrouvable);
+        new TicketmasterAttractionResolver(this.restClient, this.apiKey, BASE_URL, this.cadenceur);
   }
 
   /**

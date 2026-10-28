@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
@@ -651,10 +649,9 @@ class TicketmasterSourceTest {
     serveur.verify();
   }
 
-  // un nom sans correspondance ne doit pas re-déclencher indéfiniment le même WARN à chaque
-  // appel : le cache de throttle retient le nom déjà signalé.
+  // Un nom sans correspondance est un refus attendu : aucun identifiant, jamais d'état gardé.
   @Test
-  void rechercherAttractionId_aucuneCorrespondance_memoriseNomDansLeCacheDeThrottle() {
+  void rechercherAttractionId_aucuneCorrespondance_retourneNull() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
     final RestClient restClient = builder.build();
@@ -667,12 +664,10 @@ class TicketmasterSourceTest {
                 """,
                 MediaType.APPLICATION_JSON));
 
-    final Cache<String, Boolean> cache = Caffeine.newBuilder().build();
-    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient, cache);
-    final String id = source.rechercherAttractionId("Furies");
+    final TicketmasterSource source = new TicketmasterSource("fake-key", restClient);
 
-    assertNull(id);
-    assertEquals(Boolean.TRUE, cache.getIfPresent("furies"));
+    assertNull(source.rechercherAttractionId("Furies"));
+    serveur.verify();
   }
 
   @Test
