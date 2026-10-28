@@ -26,7 +26,8 @@ case "${1:-}" in
   local)
     generer_inventaire
     docker run --rm -v "$RACINE":/src --entrypoint /osv-scanner "$IMAGE_SCANNER" \
-      scan source -L /src/java/target/bom.json -L /src/front/package-lock.json
+      scan source --config=/src/osv-scanner.toml \
+      -L /src/java/target/bom.json -L /src/front/package-lock.json
     ;;
   *)
     echo "Usage : $0 sbom|local" >&2

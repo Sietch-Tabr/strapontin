@@ -1,0 +1,13 @@
+# Exceptions à l'analyse des vulnérabilités (scripts/analyse-dependances.sh, étape CI
+# analyse-dependances). Chaque exception porte une échéance courte et sa raison ; elle se réexamine
+# à chaque jalon (check-deps) et se retire dès que la cause disparaît.
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2026-11-27
+reason = """deepmerge 4.3.1 (CVE-2026-93753, pollution de prototype par mergeObject), dernière version publiée \
+(mars 2023), sans correctif : le mainteneur conteste l'avis (TehShrike/deepmerge#273), la PR #274 n'est pas \
+fusionnée. Dépendance de développement transitive (vite-plugin-pwa > workbox-build > \
+@rollup/plugin-node-resolve), employée au seul build du service worker avec la configuration du projet, \
+jamais avec des données externes, et absente du JAR livré. Sortie durable : quitter la chaîne workbox \
+(ticket de suivi)."""

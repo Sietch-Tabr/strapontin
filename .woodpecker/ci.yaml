@@ -77,7 +77,9 @@ steps:
     image: ghcr.io/google/osv-scanner:v2.7.0
     depends_on: [inventaire-dependances]
     commands:
-      - /osv-scanner scan source -L java/target/bom.json -L front/package-lock.json
+      - >-
+        /osv-scanner scan source --config=osv-scanner.toml
+        -L java/target/bom.json -L front/package-lock.json
     when:
       - event: push
         branch: main
