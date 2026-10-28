@@ -93,6 +93,7 @@ steps:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
       - sh scripts/verifier-outillage.sh
+      - sh scripts/tester-avertissements-front.sh
       - cd front && sh ../scripts/avertissements-front.sh npm-ci npm ci && npm run lint && npm run lint:css
     when:
       - event: push

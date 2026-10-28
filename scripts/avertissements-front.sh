@@ -19,7 +19,8 @@ if [ "$statut" -ne 0 ]; then
 fi
 
 # Messages d'avertissement de npm (« npm warn ») et de Vite (« WARN » ou « [warn] »).
-avertissements="$(grep -i -E '^npm warn|^[[:space:]]*WARN[[:space:]]|\[warn\]' "$journal" || true)"
+# Les accents graves autour des noms d'options varient selon la sortie : ils sont retirés.
+avertissements="$({ grep -i -E '^npm warn|^[[:space:]]*WARN[[:space:]]|\[warn\]' "$journal" || true; } | tr -d '`')"
 echec=0
 
 if [ -n "$avertissements" ]; then
