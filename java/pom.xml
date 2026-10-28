@@ -39,7 +39,6 @@
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.1</okhttp-jvm.version>
-        <springdoc.version>3.2.0</springdoc.version>
         <jsoup.version>1.23.2</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
@@ -251,13 +250,6 @@
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp-jvm</artifactId>
                 <version>${okhttp-jvm.version}</version>
-            </dependency>
-
-            <!-- OpenAPI / Swagger UI (série 3.x pour Spring Boot 4.x) -->
-            <dependency>
-                <groupId>org.springdoc</groupId>
-                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-                <version>${springdoc.version}</version>
             </dependency>
 
             <!-- Lecture des pages HTML des sites de salles (analyseur HTML seul : la vulnérabilité
