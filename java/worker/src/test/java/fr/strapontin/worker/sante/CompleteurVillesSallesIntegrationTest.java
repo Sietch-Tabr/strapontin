@@ -87,6 +87,27 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
   }
 
   @Test
+  void completer_ficheSansDepartement_reprendCeluiDeSaSalle() {
+    final UUID salleId = salle("Chateau de Chantilly", "Chantilly", "60");
+    evenement(salleId, "sting", "Chantilly");
+
+    completeur.completer();
+
+    assertEquals("60", jdbc.queryForObject("SELECT dept FROM evenements", Map.of(), String.class));
+  }
+
+  @Test
+  void completer_ficheAvecUnAutreDepartement_neLeChangePas() {
+    final UUID salleId = salle("Salle Mixte", "Lille", "59");
+    evenement(salleId, "a", "Lille");
+    jdbc.update("UPDATE evenements SET dept = '62'", Map.of());
+
+    completeur.completer();
+
+    assertEquals("62", jdbc.queryForObject("SELECT dept FROM evenements", Map.of(), String.class));
+  }
+
+  @Test
   void completer_orthographesDifferentesDUneVille_sontUnifiees() {
     final UUID salleId = salle("Salle B", "Nantes, France", "44");
     evenement(salleId, "a", "Tremblay En France");

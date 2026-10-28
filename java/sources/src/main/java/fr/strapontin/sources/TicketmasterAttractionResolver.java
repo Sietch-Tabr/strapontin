@@ -4,11 +4,8 @@
  */
 package fr.strapontin.sources;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.strapontin.core.Normalisation;
 import java.net.URI;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -32,20 +29,12 @@ final class TicketmasterAttractionResolver {
   private final String apiKey;
   private final String baseUrl;
   private final CadenceurAppels cadenceur;
-  // Une absence de correspondance TM pour un nom donné est un résultat stable
-  // la plupart du temps (rappelé à chaque cycle fetch:artistes:batch, aucun
-  // état négatif persisté pour permettre une redécouverte si TM ajoute
-  // l'attraction plus tard) — sans throttle, le WARN se répète à chaque cycle
-  // pour le même nom déjà classé introuvable.
-  private final Cache<String, Boolean> avertissementsAttractionIntrouvable;
 
   /**
    * @param restClient client HTTP Ticketmaster partagé
    * @param apiKey clé API Ticketmaster Discovery v2
    * @param baseUrl URL de base de l'API Ticketmaster Discovery v2
    * @param cadenceur stratégie d'espacement des appels HTTP à utiliser
-   * @param avertissementsAttractionIntrouvable cache de throttle des
-   *     avertissements
    */
   /* package-private : instancié uniquement par TicketmasterSource (même
    * package). */
@@ -53,24 +42,11 @@ final class TicketmasterAttractionResolver {
       final RestClient restClient,
       final String apiKey,
       final String baseUrl,
-      final CadenceurAppels cadenceur,
-      final Cache<String, Boolean> avertissementsAttractionIntrouvable) {
+      final CadenceurAppels cadenceur) {
     this.restClient = restClient;
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
     this.cadenceur = cadenceur;
-    this.avertissementsAttractionIntrouvable = avertissementsAttractionIntrouvable;
-  }
-
-  /**
-   * Crée le cache de throttle par défaut des avertissements d'attraction
-   * introuvable (expiration 1 jour, taille max 1000).
-   *
-   * @return un nouveau cache de throttle
-   */
-  /* package-private : appelé par TicketmasterSource (même package). */
-  static Cache<String, Boolean> creerCacheAvertissementsParDefaut() {
-    return Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build();
   }
 
   /**
@@ -110,13 +86,8 @@ final class TicketmasterAttractionResolver {
           return (String) attraction.get("id");
         }
       }
-      if (avertissementsAttractionIntrouvable.getIfPresent(nomNorm) == null) {
-        avertissementsAttractionIntrouvable.put(nomNorm, Boolean.TRUE);
-        LOG.warn("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
-      } else {
-        LOG.debug(
-            "rechercherAttractionId TM — pas de correspondance exacte nom={} (déjà signalé)", nom);
-      }
+      // Refus attendu (artiste absent de TM, homonyme) : information, jamais anomalie.
+      LOG.info("rechercherAttractionId TM — pas de correspondance exacte nom={}", nom);
       return null;
     } catch (Exception e) {
       LOG.warn(

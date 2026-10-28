@@ -34,6 +34,12 @@ final class SuiviEchecsPush {
     this.logsAdminWorker = logsAdminWorker;
   }
 
+  private boolean panneDuService(final Map<String, Object> abonnement) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            EchecPush.SQL_PANNE_DU_SERVICE, Map.of(CLE_ID, abonnement.get(CLE_ID)), Boolean.class));
+  }
+
   /* package-private : appelé par les émetteurs push du même package. */
   void succes(final Map<String, Object> abonnement) {
     jdbc.update(EchecPush.SQL_REINITIALISER_ECHECS, Map.of(CLE_ID, abonnement.get(CLE_ID)));
@@ -50,6 +56,7 @@ final class SuiviEchecsPush {
       final String source) {
     jdbc.update(EchecPush.SQL_SUPPRIMER_ABONNEMENT, Map.of(CLE_ID, abonnement.get(CLE_ID)));
     jdbc.update(EchecPush.SQL_DATER_RETRAIT, Map.of("userId", userId, "cause", cause));
+    jdbc.update(EchecPush.SQL_DECOCHER_PUSH_SANS_APPAREIL, Map.of("userId", userId));
     LOG.info("Abonnement push révoqué ({}) : {}", raison, userId);
     final Map<String, Object> meta = new HashMap<>();
     meta.put("userId", userId);
@@ -62,8 +69,8 @@ final class SuiviEchecsPush {
         meta);
   }
 
-  // Un échec isolé peut être transitoire : seule une répétition sur
-  // EchecPush.SEUIL_ECHECS_CONSECUTIFS envois consécutifs révoque l'abonnement.
+  // Un échec isolé peut être transitoire : seule une série assez longue
+  // (EchecPush) révoque l'abonnement, sauf si tout le service échoue.
   /* package-private : appelé par les émetteurs push du même package. */
   void echec(
       final Map<String, Object> abonnement,
@@ -72,14 +79,14 @@ final class SuiviEchecsPush {
       final String corps,
       final String source) {
     final String raison = EchecPush.raison(statut, corps);
-    final Integer echecs =
-        jdbc.queryForObject(
+    final Map<String, Object> serie =
+        jdbc.queryForMap(
             EchecPush.SQL_INCREMENTER_ECHECS,
             new MapSqlParameterSource()
                 .addValue(CLE_ID, abonnement.get(CLE_ID))
-                .addValue("statut", statut),
-            Integer.class);
-    if (EchecPush.seuilAtteint(echecs)) {
+                .addValue("statut", statut));
+    final int echecs = EchecPush.echecs(serie);
+    if (EchecPush.seuilAtteint(serie) && !panneDuService(abonnement)) {
       revoquer(
           abonnement,
           userId,

@@ -5,6 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.EndpointPush;
@@ -18,11 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import nl.martijndwars.webpush.Subscription;
-import org.apache.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -120,7 +116,7 @@ class NotificationPushDigestService {
 
     final String baseUrl = configService.lireConfig("PUBLIC_BASE_URL").orElse("");
     final String contactEmail = configService.lireConfig("CONTACT_EMAIL").orElse("");
-    final PushService pushService =
+    final ClientWebPush pushService =
         creerPushServiceVapid(clePublique.get(), clePrivee.get(), contactEmail);
     if (pushService == null) {
       return false;
@@ -236,7 +232,7 @@ class NotificationPushDigestService {
         Map.of("userId", userId));
   }
 
-  private PushService creerPushServiceVapid(
+  private ClientWebPush creerPushServiceVapid(
       final String clePublique, final String clePrivee, final String contactEmail) {
     try {
       return fabriquePushService.creer(clePublique, clePrivee, "mailto:" + contactEmail);
@@ -247,7 +243,7 @@ class NotificationPushDigestService {
   }
 
   private int envoyerPushAAbonnements(
-      final PushService pushService,
+      final ClientWebPush pushService,
       final List<Map<String, Object>> abonnements,
       final String payload,
       final String userId) {
@@ -271,23 +267,25 @@ class NotificationPushDigestService {
   }
 
   private boolean envoyerAUnAbonnement(
-      final PushService pushService,
+      final ClientWebPush pushService,
       final Map<String, Object> ab,
       final String payload,
       final String userId) {
-    final HttpResponse response;
+    final ClientWebPush.Reponse reponse;
     try {
-      final String p256dh = ((String) ab.get("p256dh")).replace("+", "-").replace("/", "_");
-      final String auth = ((String) ab.get("auth")).replace("+", "-").replace("/", "_");
-      final Subscription subscription =
-          new Subscription((String) ab.get(CLE_ENDPOINT), new Subscription.Keys(p256dh, auth));
-      response = pushService.send(new Notification(subscription, payload), Encoding.AES128GCM);
+      reponse =
+          pushService.envoyer(
+              (String) ab.get(CLE_ENDPOINT),
+              (String) ab.get("p256dh"),
+              (String) ab.get("auth"),
+              payload);
     } catch (Exception e) {
+      ClientWebPush.restaurerInterruption(e);
       compteurPush.enregistrerErreur();
       suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
       return false;
     }
-    final int status = response.getStatusLine().getStatusCode();
+    final int status = reponse.statut();
     switch (EchecPush.interpreter(status)) {
       case SUCCES -> {
         suiviEchecs.succes(ab);
@@ -304,12 +302,7 @@ class NotificationPushDigestService {
               SOURCE_LOGS);
       case ECHEC -> {
         compteurPush.enregistrerErreur();
-        suiviEchecs.echec(
-            ab,
-            userId,
-            status,
-            EchecPush.lireCorps(() -> response.getEntity().getContent()),
-            SOURCE_LOGS);
+        suiviEchecs.echec(ab, userId, status, reponse.corps(), SOURCE_LOGS);
       }
     }
     return false;

@@ -244,8 +244,9 @@ public class WikidataSalleSource
     return """
     SELECT DISTINCT ?item WHERE {
       VALUES ?item { %s }
-      ?item wdt:P31 ?type .
-      VALUES ?type { %s }
+      { ?item wdt:P31 ?type . VALUES ?type { %s } }
+      UNION
+      { ?item wdt:P576 [] }
     }
     """
         .formatted(items, typesExclusSparql);

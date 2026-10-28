@@ -97,7 +97,8 @@ class ReconciliationNocturneServiceTest {
             new HealthCheckArtistesTM(jdbc, tm, logsAdminWorker),
             new HealthCheckSallesTM(jdbc, tm, logsAdminWorker),
             mock(CompleteurVillesSalles.class),
-            mock(CouvertureDepartements.class));
+            mock(CouvertureDepartements.class),
+            mock(VerificationIdentifiantsEventim.class));
   }
 
   private static Map<String, Object> ligneSalleSuspecte(

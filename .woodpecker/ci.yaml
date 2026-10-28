@@ -22,7 +22,7 @@ steps:
     volumes:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
-      - cd front && npm ci && npm run test:unit
+      - cd front && sh ../scripts/avertissements-front.sh npm-ci npm ci && npm run test:unit
     when:
       - event: push
         branch: main
@@ -93,7 +93,7 @@ steps:
       - /var/cache/woodpecker/npm:/root/.npm
     commands:
       - sh scripts/verifier-outillage.sh
-      - cd front && npm ci && npm run lint && npm run lint:css
+      - cd front && sh ../scripts/avertissements-front.sh npm-ci npm ci && npm run lint && npm run lint:css
     when:
       - event: push
         branch: main
@@ -108,7 +108,9 @@ steps:
         rm -rf java/web/src/main/resources/static/assets
         java/web/src/main/resources/static/index.html
         java/web/src/main/resources/static/sw.js
-      - cd front && npm ci && npm run build
+      - >-
+        cd front && sh ../scripts/avertissements-front.sh npm-ci npm ci
+        && sh ../scripts/avertissements-front.sh build npm run build
     when:
       - event: push
         branch: main

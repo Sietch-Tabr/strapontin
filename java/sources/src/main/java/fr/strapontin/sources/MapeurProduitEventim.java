@@ -235,9 +235,10 @@ final class MapeurProduitEventim {
 
     final String url = extraireUrlProduit(produit);
     // inStock=false couvre à la fois les concerts complets et les préventes :
-    // impossible à distinguer via l'API Eventim. On ne stocke pas de statut
-    // pour éviter les faux positifs.
-    final String statut = null;
+    // impossible à distinguer via l'API Eventim. Seul le statut explicite
+    // Cancelled est retenu.
+    final String statut =
+        "Cancelled".equalsIgnoreCase((String) produit.get("status")) ? "cancelled" : null;
     // Eventim n'expose pas de venueId stable : identifiant interne tiré du nom
     // normalisé et du code postal (IdentifiantLieuEventim).
     final String salleNorm = Normalisation.normaliserTexte(salle);

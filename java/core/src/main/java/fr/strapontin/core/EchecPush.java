@@ -9,45 +9,101 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Issue d'un envoi push et règle de révocation partagées par tous les
- * émetteurs : un abonnement supprimé (404/410, définitif selon la
- * spécification Web Push) est révoqué au premier échec, tout autre échec
- * après {@value #SEUIL_ECHECS_CONSECUTIFS} envois consécutifs en échec.
+ * Issue d'un envoi push et règle de révocation des émetteurs : 404/410
+ * aussitôt, tout autre échec après {@value #SEUIL_ECHECS_CONSECUTIFS} envois
+ * sur {@value #JOURS_MIN_SERIE_ECHECS} jours au moins.
  * @since 3.0.4
  * @author Kwaite
  */
 public final class EchecPush {
 
+  private static final String COLONNE_SERIE_ASSEZ_LONGUE = "serie_assez_longue";
+  private static final String MEME_SERVICE_SQL =
+      "substring(a2.endpoint from '^https?://[^/]+') = substring(a1.endpoint from"
+          + " '^https?://[^/]+')";
+  private static final String COLONNE_ECHECS = "echecs_consecutifs";
+  private static final String SQL_DECOCHER_PUSH =
+      "UPDATE user_config SET notif_artistes_push = false, notif_salles_push = false,"
+          + " notif_nouvelle_version = false,"
+          + " frequence_notifications = CASE WHEN notif_artistes OR notif_salles"
+          + " THEN frequence_notifications ELSE 'jamais' END";
+
   /** Envois consécutifs en échec au-delà desquels l'appareil est révoqué. */
   public static final int SEUIL_ECHECS_CONSECUTIFS = 5;
 
+  /** Durée minimale, en jours, de la série d'échecs avant révocation. */
+  public static final int JOURS_MIN_SERIE_ECHECS = 5;
+
   /**
-   * Incrémente le compteur d'un abonnement {@code :id}, date l'échec et
-   * en garde le {@code :statut} HTTP (null sans réponse), puis renvoie
-   * le compteur.
+   * Incrémente le compteur de l'abonnement {@code :id}, date l'échec et le
+   * début de la série, garde le {@code :statut} HTTP (null sans réponse) et
+   * renvoie compteur et ancienneté (voir {@link #seuilAtteint(Map)}).
    */
   public static final String SQL_INCREMENTER_ECHECS =
       "UPDATE push_abonnements SET echecs_consecutifs = echecs_consecutifs + 1,"
-          + " dernier_echec_le = now(), dernier_echec_statut = :statut"
-          + " WHERE id = :id RETURNING echecs_consecutifs";
+          + " dernier_echec_le = now(), dernier_echec_statut = :statut,"
+          + " premier_echec_le = COALESCE(premier_echec_le, now())"
+          + " WHERE id = :id RETURNING echecs_consecutifs,"
+          + " (now() - premier_echec_le >= interval '"
+          + JOURS_MIN_SERIE_ECHECS
+          + " days') AS "
+          + COLONNE_SERIE_ASSEZ_LONGUE;
 
-  /** Remet à zéro le compteur d'un abonnement {@code :id} après un envoi réussi. */
+  /** Remet à zéro la série d'un abonnement {@code :id} et date l'envoi réussi. */
   public static final String SQL_REINITIALISER_ECHECS =
       "UPDATE push_abonnements SET echecs_consecutifs = 0, dernier_echec_le = NULL,"
-          + " dernier_echec_statut = NULL"
-          + " WHERE id = :id AND (echecs_consecutifs <> 0 OR dernier_echec_le IS NOT NULL)";
+          + " dernier_echec_statut = NULL, premier_echec_le = NULL,"
+          + " dernier_envoi_reussi_le = now() WHERE id = :id";
+
+  /**
+   * Vrai si {@code :id} échoue comme un autre compte vers le même service
+   * push, sans envoi réussi vers lui depuis le début de sa série : la cause
+   * est côté application ou service, pas côté appareil.
+   */
+  public static final String SQL_PANNE_DU_SERVICE =
+      "SELECT NOT EXISTS (SELECT 1 FROM push_abonnements a1, push_abonnements a2"
+          + " WHERE a1.id = :id AND "
+          + MEME_SERVICE_SQL
+          + " AND a2.dernier_envoi_reussi_le >= a1.premier_echec_le)"
+          + " AND EXISTS (SELECT 1 FROM push_abonnements a1, push_abonnements a2"
+          + " WHERE a1.id = :id AND a2.user_id <> a1.user_id AND "
+          + MEME_SERVICE_SQL
+          + " AND a2.echecs_consecutifs > 0)";
 
   /** Supprime l'abonnement {@code :id}. */
   public static final String SQL_SUPPRIMER_ABONNEMENT =
       "DELETE FROM push_abonnements WHERE id = :id";
 
-  /** Date et cause du retrait sur le compte {@code :userId}, pour l'avertissement. */
+  /** Date et cause du retrait du compte {@code :userId}, avertissement armé. */
   public static final String SQL_DATER_RETRAIT =
       "UPDATE user_config SET dernier_appareil_retire_le = now(),"
-          + " cause_dernier_retrait_appareil = :cause WHERE user_id = :userId";
+          + " cause_dernier_retrait_appareil = :cause, avertissement_canal_perdu_le = NULL"
+          + " WHERE user_id = :userId";
+
+  /** Efface le retrait de {@code :userId} (appareil revenu ou retiré). */
+  public static final String SQL_EFFACER_RETRAIT =
+      "UPDATE user_config SET dernier_appareil_retire_le = NULL,"
+          + " cause_dernier_retrait_appareil = NULL, avertissement_canal_perdu_le = NULL"
+          + " WHERE user_id = :userId";
+
+  /**
+   * Décoche les contenus push de {@code :userId} sans appareil (état que
+   * l'enregistrement refuse) ; sans contenu restant : fréquence « jamais ».
+   */
+  public static final String SQL_DECOCHER_PUSH_SANS_APPAREIL =
+      SQL_DECOCHER_PUSH
+          + " WHERE user_id = :userId"
+          + " AND NOT EXISTS (SELECT 1 FROM push_abonnements WHERE user_id = :userId)";
+
+  /** Comme {@link #SQL_DECOCHER_PUSH_SANS_APPAREIL}, pour tous les comptes. */
+  public static final String SQL_DECOCHER_PUSH_TOUS_SANS_APPAREIL =
+      SQL_DECOCHER_PUSH
+          + " WHERE NOT EXISTS (SELECT 1 FROM push_abonnements pa"
+          + " WHERE pa.user_id = user_config.user_id)";
 
   /** Cause lisible d'un appareil dont le service push n'est pas pris en charge. */
   public static final String CAUSE_SERVICE_NON_PRIS_EN_CHARGE =
@@ -92,11 +148,22 @@ public final class EchecPush {
   }
 
   /**
-   * @param echecs nombre d'échecs consécutifs après celui-ci
-   * @return {@code true} si l'appareil doit être révoqué
+   * @param serie ligne renvoyée par {@link #SQL_INCREMENTER_ECHECS}
+   * @return {@code true} si la série est assez nombreuse et longue
    */
-  public static boolean seuilAtteint(final Integer echecs) {
-    return echecs != null && echecs >= SEUIL_ECHECS_CONSECUTIFS;
+  public static boolean seuilAtteint(final Map<String, Object> serie) {
+    final Object echecs = serie.get(COLONNE_ECHECS);
+    return echecs instanceof Number nombre
+        && nombre.intValue() >= SEUIL_ECHECS_CONSECUTIFS
+        && Boolean.TRUE.equals(serie.get(COLONNE_SERIE_ASSEZ_LONGUE));
+  }
+
+  /**
+   * @param serie ligne renvoyée par {@link #SQL_INCREMENTER_ECHECS}
+   * @return nombre d'échecs consécutifs de la série
+   */
+  public static int echecs(final Map<String, Object> serie) {
+    return serie.get(COLONNE_ECHECS) instanceof Number nombre ? nombre.intValue() : 0;
   }
 
   /**

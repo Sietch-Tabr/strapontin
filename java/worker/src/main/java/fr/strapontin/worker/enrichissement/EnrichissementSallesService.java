@@ -56,6 +56,7 @@ public class EnrichissementSallesService {
   private final SuiviChroniciteService suiviChronicite;
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final SignalementMatchingService signalementMatchingService;
+  private final FiltreElementsExclus filtre;
 
   /**
    * @param jdbc accès JDBC
@@ -78,6 +79,7 @@ public class EnrichissementSallesService {
     this.suiviChronicite = suiviChronicite;
     this.fusionSallesClePortee = fusionSallesClePortee;
     this.signalementMatchingService = signalementMatchingService;
+    this.filtre = new FiltreElementsExclus(sources, logsAdminWorker);
   }
 
   /**
@@ -177,6 +179,8 @@ public class EnrichissementSallesService {
       }
       courant = appliquerWikidataIdConnu(courant, accumule);
     }
+
+    filtre.ecarter(lot, accumule);
 
     int nbEnrichis = 0;
     for (final SalleAEnrichir salle : lot) {

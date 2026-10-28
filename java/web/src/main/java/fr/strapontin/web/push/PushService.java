@@ -172,6 +172,7 @@ public class PushService {
             .addValue("p256dh", requete.keys().p256dh())
             .addValue("auth", requete.keys().auth())
             .addValue("appareil", appareil));
+    jdbc.update(EchecPush.SQL_EFFACER_RETRAIT, Map.of(CLE_USER_ID, userId));
 
     logAdminService.logAdmin("info", "push", "abonnement push créé", Map.of(CLE_USER_ID, userId));
   }
@@ -186,6 +187,9 @@ public class PushService {
     jdbc.update(
         "DELETE FROM push_abonnements WHERE user_id = :userId AND endpoint = :endpoint",
         Map.of(CLE_USER_ID, userId, "endpoint", endpoint));
+    // Retrait voulu par l'utilisateur : ses choix push tombent sans avertissement.
+    jdbc.update(EchecPush.SQL_DECOCHER_PUSH_SANS_APPAREIL, Map.of(CLE_USER_ID, userId));
+    jdbc.update(EchecPush.SQL_EFFACER_RETRAIT, Map.of(CLE_USER_ID, userId));
     logAdminService.logAdmin(
         "info", "push", "abonnement push révoqué", Map.of(CLE_USER_ID, userId));
   }

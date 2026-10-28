@@ -83,31 +83,10 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
-        <!-- Fournisseur cryptographique BouncyCastle (push VAPID) -->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk18on</artifactId>
-        </dependency>
-
         <!-- Validation des entrées (Bean Validation / Jakarta) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
-        <!-- Notifications push VAPID -->
-        <dependency>
-            <groupId>nl.martijndwars</groupId>
-            <artifactId>web-push</artifactId>
-        </dependency>
-        <!-- HttpClient 4.x + jose4j — requis en compile scope (web-push les tire en runtime) -->
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.bitbucket.b_c</groupId>
-            <artifactId>jose4j</artifactId>
         </dependency>
 
         <!-- QR code SVG — génération côté serveur (enrollment TOTP) -->

@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.EchecPush;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.config.ConfigService;
@@ -74,6 +75,7 @@ public class VapidService {
             + " WHERE user_id IN (SELECT user_id FROM push_abonnements)",
         Map.of("cause", causeRenouvellement(motifPropre)));
     final int nbSupprimes = jdbc.update("DELETE FROM push_abonnements", Map.of());
+    jdbc.update(EchecPush.SQL_DECOCHER_PUSH_TOUS_SANS_APPAREIL, Map.of());
 
     final List<String> prevenus =
         emailServiceSecurite.envoyerPushReinitialise(List.copyOf(comptes.values()), motifPropre);

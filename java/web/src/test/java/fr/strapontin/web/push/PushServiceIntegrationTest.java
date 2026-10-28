@@ -13,6 +13,7 @@ import static org.mockito.Mockito.mock;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import org.flywaydb.core.Flyway;
@@ -106,5 +107,51 @@ class PushServiceIntegrationTest extends AbstractWebIntegrationTest {
         Map.of());
 
     assertTrue(service.listerAbonnements("u-push").get(0).cause().contains("injoignable"));
+  }
+
+  private void configurer(final boolean retire) {
+    jdbc.update(
+        "INSERT INTO user_config (user_id, notif_artistes, notif_salles, notif_artistes_push,"
+            + " notif_nouvelle_version, frequence_notifications, dernier_appareil_retire_le,"
+            + " cause_dernier_retrait_appareil)"
+            + " VALUES ('u-push', false, false, true, true, 'quotidien',"
+            + " CASE WHEN :retire THEN now() END, CASE WHEN :retire THEN 'cause' END)"
+            + " ON CONFLICT (user_id) DO UPDATE SET notif_artistes = false, notif_salles = false,"
+            + " notif_artistes_push = true,"
+            + " notif_nouvelle_version = true, frequence_notifications = 'quotidien',"
+            + " dernier_appareil_retire_le = CASE WHEN :retire THEN now() END,"
+            + " cause_dernier_retrait_appareil = CASE WHEN :retire THEN 'cause' END",
+        Map.of("retire", retire));
+  }
+
+  @Test
+  void abonner_apresUnRetrait_effaceLeRetraitPourQueLAvertissementNeRevienneJamais() {
+    configurer(true);
+
+    service.abonner("u-push", requete("a"), null);
+
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT dernier_appareil_retire_le FROM user_config WHERE user_id = 'u-push'",
+            Map.of(),
+            OffsetDateTime.class));
+  }
+
+  @Test
+  void desabonner_dernierAppareil_decocheLePushSansAvertissement() {
+    service.abonner("u-push", requete("a"), null);
+    configurer(false);
+
+    service.desabonner("u-push", "https://fcm.googleapis.com/fcm/send/a");
+
+    final Map<String, Object> config =
+        jdbc.queryForMap(
+            "SELECT notif_artistes_push, notif_nouvelle_version, frequence_notifications,"
+                + " dernier_appareil_retire_le FROM user_config WHERE user_id = 'u-push'",
+            Map.of());
+    assertEquals(false, config.get("notif_artistes_push"));
+    assertEquals(false, config.get("notif_nouvelle_version"));
+    assertEquals("jamais", config.get("frequence_notifications"));
+    assertNull(config.get("dernier_appareil_retire_le"));
   }
 }

@@ -15,6 +15,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.resend.Resend;
 import com.resend.services.emails.Emails;
 import com.resend.services.emails.model.CreateEmailOptions;
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -22,11 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -436,7 +432,7 @@ class NotificationDigestServiceTest {
         .update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
-  // Resend/PushService n'étaient pas injectables (instanciation en dur dans
+  // Resend/ClientWebPush n'étaient pas injectables (instanciation en dur dans
   // envoyerEmail/envoyerPush), rendant le chemin nominal de succès impossible à exercer.
   @Test
   void executerDigest_emailEnvoyeAvecSucces_marqueLeConcertNotifie() throws Exception {
@@ -464,7 +460,7 @@ class NotificationDigestServiceTest {
             gestionQuotaResendWorker,
             _ -> resendMock,
             (_, _, _) -> {
-              throw new java.security.GeneralSecurityException("VAPID non configuré en test");
+              throw new IllegalArgumentException("VAPID non configuré en test");
             });
 
     serviceAvecFabriques.executerDigest("quotidien");
@@ -498,7 +494,7 @@ class NotificationDigestServiceTest {
             gestionQuotaResendWorker,
             _ -> resendMock,
             (_, _, _) -> {
-              throw new java.security.GeneralSecurityException("VAPID non configuré en test");
+              throw new IllegalArgumentException("VAPID non configuré en test");
             });
     final Logger logger = (Logger) LoggerFactory.getLogger(NotificationEmailDigestService.class);
     final ListAppender<ILoggingEvent> evenements = new ListAppender<>();
@@ -558,13 +554,9 @@ class NotificationDigestServiceTest {
     when(jdbc.update(anyString(), any(SqlParameterSource.class))).thenReturn(1);
     when(jdbc.update(contains("echecs_consecutifs = 0"), anyMap())).thenReturn(1);
 
-    final PushService pushServiceMock = mock(PushService.class);
-    final HttpResponse reponseMock = mock(HttpResponse.class);
-    final StatusLine statusLineMock = mock(StatusLine.class);
-    when(statusLineMock.getStatusCode()).thenReturn(201);
-    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
-        .thenReturn(reponseMock);
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(201, ""));
 
     final NotificationDigestService serviceAvecFabriques =
         new NotificationDigestService(
@@ -582,7 +574,7 @@ class NotificationDigestServiceTest {
 
     serviceAvecFabriques.executerDigest("quotidien");
 
-    verify(pushServiceMock).send(any(Notification.class), eq(Encoding.AES128GCM));
+    verify(pushServiceMock).envoyer(any(), any(), any(), any());
     verify(jdbc).update(contains("notification_envoyee_le"), any(SqlParameterSource.class));
   }
 
@@ -613,7 +605,7 @@ class NotificationDigestServiceTest {
     lenient()
         .when(configService.lireConfig("VAPID_PRIVATE_KEY"))
         .thenReturn(Optional.of("cle-privee"));
-    final PushService pushServiceMock = mock(PushService.class);
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
 
     new NotificationDigestService(
             configService,
@@ -629,7 +621,7 @@ class NotificationDigestServiceTest {
                 HORLOGE_JOURNEE))
         .executerDigest("quotidien");
 
-    verify(pushServiceMock, never()).send(any(Notification.class), any(Encoding.class));
+    verify(pushServiceMock, never()).envoyer(any(), any(), any(), any());
   }
 
   private static Map<String, Object> ligneTest(final String userId) {

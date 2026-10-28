@@ -39,16 +39,18 @@ class AlerteActiviteUtilisateurServiceTest {
 
   @Test
   void notifierNouvelAppareil_emailPresent_envoieLAlerte() {
-    service.notifierNouvelAppareil("alice@test.fr", "Mozilla/5.0");
+    service.notifierNouvelAppareil("alice@test.fr", "Mozilla/5.0", "navigateur");
 
-    verify(emailServiceSecurite).envoyerAlerteNouvelAppareil("alice@test.fr", "Mozilla/5.0");
+    verify(emailServiceSecurite)
+        .envoyerAlerteNouvelAppareil("alice@test.fr", "Mozilla/5.0", "Appareil inconnu");
   }
 
   @Test
   void notifierNouvelAppareil_emailAbsent_neFaitRien() {
-    service.notifierNouvelAppareil(null, "Mozilla/5.0");
+    service.notifierNouvelAppareil(null, "Mozilla/5.0", null);
 
-    verify(emailServiceSecurite, never()).envoyerAlerteNouvelAppareil(anyString(), anyString());
+    verify(emailServiceSecurite, never())
+        .envoyerAlerteNouvelAppareil(anyString(), anyString(), anyString());
   }
 
   @Test

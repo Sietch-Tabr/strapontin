@@ -1348,4 +1348,10 @@ class WikidataSalleSourceTest {
   void typesExclus_arrondissementMunicipal_estExclu() {
     assertTrue(WikidataSalleDecouverte.TYPES_EXCLUS.contains("Q702842"));
   }
+
+  // Alhambra : « ancien théâtre parisien » de type bâtiment détruit, jamais le lieu actuel.
+  @Test
+  void typesExclus_batimentDetruit_estExclu() {
+    assertTrue(WikidataSalleDecouverte.TYPES_EXCLUS.contains("Q19860854"));
+  }
 }

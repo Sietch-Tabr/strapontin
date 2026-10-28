@@ -11,11 +11,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.web.VapidKeyGenerator;
 import fr.strapontin.web.admin.LogAdminService;
 import fr.strapontin.web.config.ConfigService;
@@ -29,13 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.message.BasicHttpResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -43,7 +36,7 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 /**
  * Envoi push réel depuis le module web : vraies clés VAPID, chargement des
- * clés, chiffrement du contenu et signature par le vrai {@link PushService} ;
+ * clés, chiffrement du contenu et signature par le vrai {@link ClientWebPush} ;
  * seul l'appel HTTP au service de push du navigateur est intercepté.
  * @since 3.0.3
  * @author Kwaite
@@ -52,7 +45,7 @@ class NotificationPushEnvoiReelTest {
 
   private ConfigService configService;
   private NamedParameterJdbcTemplate jdbc;
-  private final List<HttpPost> requetesEmises = new ArrayList<>();
+  private final List<Map<String, String>> requetesEmises = new ArrayList<>();
   private int statutRenvoye;
 
   @BeforeEach
@@ -72,22 +65,16 @@ class NotificationPushEnvoiReelTest {
   private NotificationPushService service() {
     return new NotificationPushService(configService, jdbc, mock(LogAdminService.class)) {
       @Override
-      PushService creerServicePush(
-          final String clePublique, final String clePrivee, final String sujet)
-          throws GeneralSecurityException {
-        return new PushService(clePublique, clePrivee, sujet) {
-          @Override
-          public HttpResponse send(final Notification notification, final Encoding encodage) {
-            try {
-              // L'encodage demandé par le service : send(Notification) seul retombe sur l'ancien
-              // « aesgcm », que Firebase refuse (« crypto-key header had invalid format »).
-              requetesEmises.add(preparePost(notification, encodage));
-            } catch (Exception e) {
-              throw new IllegalStateException(e);
-            }
-            return new BasicHttpResponse(HttpVersion.HTTP_1_1, statutRenvoye, "");
-          }
-        };
+      ClientWebPush creerServicePush(
+          final String clePublique, final String clePrivee, final String sujet) {
+        return new ClientWebPush(
+            clePublique,
+            clePrivee,
+            sujet,
+            (endpoint, entetes, corps) -> {
+              requetesEmises.add(entetes);
+              return new ClientWebPush.Reponse(statutRenvoye, "");
+            });
       }
     };
   }
@@ -112,10 +99,10 @@ class NotificationPushEnvoiReelTest {
 
     assertEquals(ResultatEnvoiPush.ENVOYEE, resultat);
     assertEquals(1, requetesEmises.size());
-    final HttpPost requete = requetesEmises.get(0);
-    assertEquals("aes128gcm", requete.getFirstHeader("Content-Encoding").getValue());
-    assertNotNull(requete.getFirstHeader("Authorization"));
-    assertTrue(requete.getFirstHeader("Authorization").getValue().startsWith("vapid t="));
+    final Map<String, String> entetes = requetesEmises.get(0);
+    assertEquals("aes128gcm", entetes.get("Content-Encoding"));
+    assertNotNull(entetes.get("Authorization"));
+    assertTrue(entetes.get("Authorization").startsWith("vapid t="));
   }
 
   @Test
@@ -141,9 +128,8 @@ class NotificationPushEnvoiReelTest {
   @Test
   void envoyerNotificationTest_cinquiemeEchecConsecutif_appareilRevoque() throws Exception {
     when(jdbc.queryForList(anyString(), anyMap())).thenReturn(List.of(abonnement()));
-    when(jdbc.queryForObject(
-            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
-        .thenReturn(5);
+    when(jdbc.queryForMap(contains("echecs_consecutifs + 1"), any(SqlParameterSource.class)))
+        .thenReturn(Map.of("echecs_consecutifs", 5, "serie_assez_longue", true));
     statutRenvoye = 403;
 
     assertEquals(ResultatEnvoiPush.APPAREIL_REVOQUE, service().envoyerNotificationTest("u1", null));

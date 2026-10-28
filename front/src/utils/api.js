@@ -7,6 +7,7 @@ export const ENTETE_APPLICATION = "X-Requested-With";
 export const VALEUR_ENTETE_APPLICATION = "strapontin";
 
 import { creerCacheHorsLigne, estCachable } from "./cacheHorsLigne.js";
+import { ENTETE_MODE_AFFICHAGE, lireModeAffichage } from "./modeAffichage.js";
 
 // Un GET sans copie gardée patiente longtemps (une recherche interroge plusieurs services en
 // parallèle) ; avec une copie, on bascule vite sur elle plutôt que de laisser une page vide.
@@ -110,6 +111,7 @@ export async function appelApi(url, options = {}) {
   const { sansRepli = false, delaiMs, ...init } = options;
   const entetes = new Headers(init.headers);
   entetes.set(ENTETE_APPLICATION, VALEUR_ENTETE_APPLICATION);
+  entetes.set(ENTETE_MODE_AFFICHAGE, lireModeAffichage());
   const methode = (init.method ?? "GET").toUpperCase();
   if (methode !== "GET") return fetch(url, { ...init, headers: entetes });
 

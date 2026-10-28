@@ -1,7 +1,8 @@
 <template>
   <p v-if="canalPerdu" class="alerte alerte-avertissement bandeau-canal-perdu">
-    Vous ne recevez plus les nouveaux concerts : votre dernier appareil
-    n'accepte plus les notifications push et l'email est désactivé.
+    Vos notifications push sont arrêtées : votre dernier appareil a été retiré
+    et vos choix push ont été décochés. Réactivez les notifications sur
+    l'appareil, puis recochez les contenus souhaités.
     <RouterLink to="/parametres#notifications"
       >Réactiver mes notifications</RouterLink
     >

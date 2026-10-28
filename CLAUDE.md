@@ -30,7 +30,7 @@ Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapont
 - **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)
 - **Flyway 13** — migrations DB, un seul jeu (`java/web/src/main/resources/db/migration/`) appliqué aussi par les tests worker. Conventions : [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md).
 - **Resend** — notifications email (tier gratuit 3 000/mois) ; gabarits HTML via `EmailTemplates.java` (text blocks Java). Garde-fous de quota/anti-boucle : [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md).
-- **web-push (VAPID)** — notifications push PWA
+- **Web Push (VAPID)** — notifications push PWA, `com.interaso:webpush` (crypto du JDK, seule dépendance `kotlin-stdlib`) derrière `core.ClientWebPush` ; ni `web-push`, ni `httpclient` 4, ni `jose4j`
 - **Maven** — build (`mvn -f java/pom.xml -pl web,worker -am package`). Version CI-friendly (#764) : `<revision>` dans `java/pom.xml` (parent), `${revision}` dans les 4 pom.xml enfants — un seul bump met à jour tout le monorepo.
 - **Checkstyle/PMD** (Java) + **ESLint/stylelint** (front) — analyse statique bloquante (`failOnViolation=true`, CI et local identiques), sans baseline de dette. SpotBugs non activé (mis de côté au spike Java 25 initial, hors périmètre du mode bloquant).
 

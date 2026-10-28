@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.push;
 
+import fr.strapontin.web.securite.NomAppareil;
 import fr.strapontin.web.securite.UtilisateurDetails;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -58,17 +59,20 @@ public class PushController {
    * @param requete corps JSON avec endpoint et clés
    * @param auth contexte d'authentification
    * @param userAgent navigateur de l'appareil, pour le nommer dans la liste
+   * @param modeAffichage mode d'affichage annoncé par le client (pwa ou navigateur)
    * @return 201 si créé
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> abonner(
       @Valid @RequestBody final RequeteAbonnement requete,
       final Authentication auth,
-      @RequestHeader(value = "User-Agent", required = false) final String userAgent) {
+      @RequestHeader(value = "User-Agent", required = false) final String userAgent,
+      @RequestHeader(value = NomAppareil.ENTETE_MODE, required = false)
+          final String modeAffichage) {
     pushService.abonner(
         ((UtilisateurDetails) auth.getPrincipal()).id(),
         requete,
-        LibelleAppareil.depuisUserAgent(userAgent));
+        nommer(NomAppareil.depuis(userAgent, modeAffichage)));
     return ResponseEntity.status(201).body(Map.of("ok", true));
   }
 
@@ -119,5 +123,12 @@ public class PushController {
       final Authentication auth) {
     return ResponseEntity.ok(
         pushService.listerAbonnements(((UtilisateurDetails) auth.getPrincipal()).id()));
+  }
+
+  // Un appareil illisible n'est pas nommé : libellé par défaut à l'affichage.
+  private static String nommer(final NomAppareil appareil) {
+    return appareil.illisible() && appareil.mode() != NomAppareil.Mode.PWA
+        ? null
+        : appareil.libelle();
   }
 }

@@ -186,7 +186,8 @@ public class PersisteurConcertsDb {
              genre, sous_genre, statut, presale_debut, presale_nom, artiste_id)
         VALUES (:artisteNorm, :date, :heure, CAST(:salleId AS uuid), :salleNorm,
                 COALESCE(NULLIF(:ville, ''), (SELECT s.ville FROM salles s
-                                               WHERE s.id = CAST(:salleId AS uuid))), :dept,
+                                               WHERE s.id = CAST(:salleId AS uuid))),
+                COALESCE(:dept, (SELECT s.dept FROM salles s WHERE s.id = CAST(:salleId AS uuid))),
                 :classification, :genre, :sousGenre, :statut, CAST(:presaleDebut AS timestamptz),
                 :presaleNom, CAST(:artisteId AS uuid))
         RETURNING id
@@ -231,7 +232,8 @@ public class PersisteurConcertsDb {
             salle_norm     = COALESCE(:salleNormReference, salle_norm),
             ville          = COALESCE(NULLIF(:ville, ''), ville, (SELECT s.ville FROM salles s
                                WHERE s.id = COALESCE(CAST(:salleId AS uuid), salle_id))),
-            dept           = COALESCE(:dept, dept),
+            dept           = COALESCE(:dept, dept, (SELECT s.dept FROM salles s
+                               WHERE s.id = COALESCE(CAST(:salleId AS uuid), salle_id))),
             classification = COALESCE(:classification, classification),
             genre          = COALESCE(:genre, genre),
             sous_genre     = COALESCE(:sousGenre, sous_genre),
@@ -262,6 +264,21 @@ public class PersisteurConcertsDb {
             + " AND artiste_id IS NOT NULL",
         id);
     jdbc.update("DELETE FROM user_matches WHERE concert_id = CAST(:id AS uuid)", id);
+    // Une fiche à deux sources garde son identité au rafraîchissement : sans ce
+    // réalignement, l'artiste imité lui serait rattaché de nouveau par le nom.
+    jdbc.update(
+        """
+        UPDATE evenements e SET artiste_norm = :artisteNorm, updated_at = now()
+        WHERE e.id = CAST(:id AS uuid) AND e.artiste_norm <> :artisteNorm
+          AND NOT EXISTS (
+            SELECT 1 FROM evenements x
+            WHERE x.id <> e.id AND x.artiste_norm = :artisteNorm AND x.date = e.date
+              AND x.heure IS NOT DISTINCT FROM e.heure
+              AND x.salle_id IS NOT DISTINCT FROM e.salle_id)
+        """,
+        new MapSqlParameterSource()
+            .addValue("id", evenementId.toString())
+            .addValue("artisteNorm", concert.artisteNorm()));
   }
 
   // L'adresse d'un produit suit son titre : l'ancienne, qui ne sera plus revue,
@@ -321,13 +338,15 @@ public class PersisteurConcertsDb {
   private void upsertObservation(final UUID evenementId, final ValeurConcert concert) {
     jdbc.update(
         """
-        INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)
-        VALUES (CAST(:evenementId AS uuid), CAST(:source AS source_concert), :url, :artiste, :salle)
+        INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut, statut)
+        VALUES (CAST(:evenementId AS uuid), CAST(:source AS source_concert), :url, :artiste, :salle,
+                :statut)
         ON CONFLICT ON CONSTRAINT uq_observations DO UPDATE SET
             artiste_brut = CASE WHEN unaccent(EXCLUDED.artiste_brut) != EXCLUDED.artiste_brut
                                 THEN EXCLUDED.artiste_brut ELSE observations.artiste_brut END,
             salle_brut   = CASE WHEN upper(EXCLUDED.salle_brut) != EXCLUDED.salle_brut
                                 THEN EXCLUDED.salle_brut ELSE observations.salle_brut END,
+            statut       = EXCLUDED.statut,
             updated_at   = now()
         """,
         new MapSqlParameterSource()
@@ -335,7 +354,8 @@ public class PersisteurConcertsDb {
             .addValue("source", concert.source())
             .addValue("url", concert.url())
             .addValue("artiste", concert.artiste())
-            .addValue(CLE_SALLE, concert.salle()));
+            .addValue(CLE_SALLE, concert.salle())
+            .addValue("statut", concert.statut()));
   }
 
   /**

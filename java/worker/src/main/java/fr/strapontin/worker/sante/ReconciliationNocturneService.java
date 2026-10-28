@@ -45,9 +45,10 @@ public class ReconciliationNocturneService {
   private final HealthCheckSallesTM healthCheckSallesTM;
   private final CompleteurVillesSalles completeurVillesSalles;
   private final CouvertureDepartements couvertureDepartements;
+  private final VerificationIdentifiantsEventim verificationIdentifiantsEventim;
 
   /**
-   * Assemble les 14 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 15 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -64,7 +65,8 @@ public class ReconciliationNocturneService {
       final HealthCheckArtistesTM healthCheckArtistesTM,
       final HealthCheckSallesTM healthCheckSallesTM,
       final CompleteurVillesSalles completeurVillesSalles,
-      final CouvertureDepartements couvertureDepartements) {
+      final CouvertureDepartements couvertureDepartements,
+      final VerificationIdentifiantsEventim verificationIdentifiantsEventim) {
     this.enrichissementSalles = enrichissementSalles;
     this.enrichissementArtistes = enrichissementArtistes;
     this.coherenceWikidataSalle = coherenceWikidataSalle;
@@ -79,6 +81,7 @@ public class ReconciliationNocturneService {
     this.healthCheckSallesTM = healthCheckSallesTM;
     this.completeurVillesSalles = completeurVillesSalles;
     this.couvertureDepartements = couvertureDepartements;
+    this.verificationIdentifiantsEventim = verificationIdentifiantsEventim;
   }
 
   /**
@@ -93,25 +96,23 @@ public class ReconciliationNocturneService {
     healthCheckArtistesTM.verifierVivacite();
     final int nomsIncoherentsTM = healthCheckArtistesTM.verifierNoms();
     healthCheckSallesTM.alerterLieuxEventimSuspects();
-
-    // Avant l'enrichissement et les rapprochements : ils comparent des villes et
-    // des départements.
+    verificationIdentifiantsEventim.verifier();
+    // Avant l'enrichissement et les rapprochements : ils comparent villes et
+    // départements.
     completeurVillesSalles.completer();
-
     final int enrichisArtistes = enrichissementArtistes.enrichir();
     final int enrichisSalles = enrichissementSalles.enrichir();
     final int incoherencesWikidata = coherenceWikidataSalle.verifier();
     final int typesWikidataInvalides = coherenceWikidataSalle.revaliderTypes();
-    // Avant les contrôles de position : un écart de position n'est pas
-    // un mauvais élément.
-    coherenceWikidataSalle.realignerPositions();
+    // Avant les contrôles de position : un écart n'est pas un mauvais élément.
+    final int positionsRealignees = coherenceWikidataSalle.realignerPositions();
     coherenceWikidataSalle.signalerPositionsDivergentes();
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
     // Avant la fusion par clé forte : une fiche périmée sur la mauvaise salle
-    // fournirait la coïncidence qui fusionne deux salles distinctes.
+    // la fausserait.
+    final int fichesOrigineReportMarquees = fusionProduitsEventim.marquerFichesDOrigineDesReports();
     final int fichesPerimeesFusionnees =
         fusionProduitsEventim.fusionner()
-            + fusionProduitsEventim.marquerFichesDOrigineDesReports()
             + fusionEvenementsArtiste.fusionnerFichesPerimees()
             + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
             + fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()
@@ -125,9 +126,8 @@ public class ReconciliationNocturneService {
     couvertureDepartements.verifier();
     final int motsGenericsSuggeres = suggestionMotsGenerics.suggerer();
     final int integriteSignalements = controleIntegrite.verifier();
-    // Après les contrôles : une salle mélangeant deux lieux y est signalée et exclue.
-    final int memeCreneau = fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources();
-
+    // Après les contrôles : une salle mélangeant deux lieux y est signalée et
+    // exclue.
     return new ResultatReconciliation(
         bilanSalles[0],
         bilanSalles[1],
@@ -139,7 +139,9 @@ public class ReconciliationNocturneService {
         nomsIncoherentsTM,
         sallesOrphelinesResolues,
         sallesFusionnees,
-        evenementsFusionnes + memeCreneau,
+        evenementsFusionnes + fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources(),
+        fichesOrigineReportMarquees,
+        positionsRealignees,
         contaminationsSignalees,
         doublonsSignales,
         motsGenericsSuggeres,

@@ -72,6 +72,27 @@ class HorairesJobsTest {
         minutesDepuisMinuit("fetch:region") < minutesDepuisMinuit("reconciliation:nocturne"));
   }
 
+  // Le 25 octobre la plage 02:00-02:59 existe deux fois, le 28 mars jamais : un job quotidien
+  // y serait manqué, doublé ou reporté à 03:00 contre un autre.
+  @Test
+  void horaires_aucunJobQuotidienDansLaPlageDuChangementDHeure() {
+    for (final HorairesJobs.Horaire h : HorairesJobs.WORKER) {
+      final String[] champs = h.cron().split(" ");
+      final boolean quotidien = !"*".equals(champs[2]) && !champs[2].contains("/");
+      if (quotidien) {
+        for (final String heure : champs[2].split(",")) {
+          assertTrue(!"2".equals(heure), h.type() + " planifié dans la plage 02:00-02:59");
+        }
+      }
+    }
+  }
+
+  @Test
+  void horaires_recuperationEtReconciliation_gardentUneHeureDEcart() {
+    assertTrue(
+        minutesDepuisMinuit("reconciliation:nocturne") - minutesDepuisMinuit("fetch:region") >= 60);
+  }
+
   @Test
   void horaires_surchargesDistinctes_neSontDeclareesQuUneFois() {
     final Map<String, Long> parPropriete =

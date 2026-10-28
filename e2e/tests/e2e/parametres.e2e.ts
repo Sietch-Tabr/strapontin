@@ -9,6 +9,32 @@ import { FICHIER_AUTH_USER } from "./global-setup.js";
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 const E2E_USER_IDENTIFIANT = "e2euser";
 
+test.describe("Scénario: paramètres — nom des appareils", () => {
+  test("compte_appareilsConnectes_nommeLAppareilEnClair", async ({ page }) => {
+    await page.goto("/parametres#compte");
+    const section = page.locator("section#compte");
+    const liste = section.locator(".appareil-info").first();
+
+    await expect(liste).toBeVisible();
+    // Navigateur et système, jamais le User-Agent brut ni un jeton comme « Mac OS X » ou « Edg ».
+    await expect(liste).toContainText(
+      /(Chrome|Safari|Firefox|Edge) sur (macOS|Windows|Linux|Android|iPhone|iPad)/,
+    );
+    await expect(liste).not.toContainText("Mozilla/5.0");
+    await expect(liste).not.toContainText("Mac OS X");
+  });
+
+  test("api_appelsDuFront_annoncentLeModeDAffichage", async ({ page }) => {
+    const requete = page.waitForRequest(
+      (r) => r.url().includes("/api/") && r.headers()["x-mode-affichage"] !== undefined,
+    );
+    await page.goto("/parametres#compte");
+
+    // Onglet de navigateur dans les tests : le serveur distingue ainsi une application installée.
+    expect((await requete).headers()["x-mode-affichage"]).toBe("navigateur");
+  });
+});
+
 test.describe("Scénario: paramètres — sections", () => {
   test("parametres_h1_visible", async ({ page }) => {
     await page.goto("/parametres");

@@ -64,6 +64,7 @@ public class CoherenceWikidataSalleService {
   private final WikidataSalleSource wikidata;
   private final LogsAdminWorker logsAdminWorker;
   private final SignalementMatchingService signalements;
+  private final CorrectionsSallesWikidata corrections;
 
   /**
    * @param jdbc accès JDBC
@@ -81,6 +82,7 @@ public class CoherenceWikidataSalleService {
     this.wikidata = wikidata;
     this.logsAdminWorker = logsAdminWorker;
     this.signalements = signalements;
+    this.corrections = new CorrectionsSallesWikidata(jdbc, wikidata, logsAdminWorker);
   }
 
   /**
@@ -110,6 +112,9 @@ public class CoherenceWikidataSalleService {
     int incoherences = 0;
     for (final SalleAEnrichir salle : candidats) {
       final EnrichissementSalle enrichissement = resultats.get(salle.id());
+      if (enrichissement != null) {
+        corrections.corrigerVille(salle, enrichissement, villesConcertsReelles.get(salle.id()));
+      }
       if (enrichissement != null
           && traiterSalle(
               salle,
@@ -123,7 +128,8 @@ public class CoherenceWikidataSalleService {
     return incoherences;
   }
 
-  // true si la salle est incohérente ; journalisée seulement si la signature change.
+  // true si la salle est incohérente ; journalisée seulement si la signature
+  // change.
   private boolean traiterSalle(
       final SalleAEnrichir salle,
       final EnrichissementSalle enrichissement,
@@ -172,7 +178,7 @@ public class CoherenceWikidataSalleService {
 
     final Set<String> invalides = wikidata.typesInvalides(wikidataIds);
     for (final String qid : invalides) {
-      invaliderWikidataId(qid);
+      corrections.invaliderWikidataId(qid);
     }
     LOG.info(
         "coherence:wikidata:types candidats={} invalides={}", wikidataIds.size(), invalides.size());
@@ -184,9 +190,11 @@ public class CoherenceWikidataSalleService {
    * Wikidata : une position écrite une fois (élément homonyme corrigé depuis,
    * coordonnées modifiées sur Wikidata) n'était jamais relue, et passait pour
    * un mauvais élément dans les contrôles de position.
+   * Pose d'abord la position des salles qui n'en ont aucune.
    * @return nombre de salles réalignées
    */
   public int realignerPositions() {
+    corrections.poserPositionsManquantes();
     final List<SalleAEnrichir> salles = sallesPositionneesParWikidata();
     if (salles.isEmpty()) {
       return 0;
@@ -347,23 +355,6 @@ public class CoherenceWikidataSalleService {
         "SELECT wikidata_id FROM salles WHERE wikidata_id IS NOT NULL", Map.of(), String.class);
   }
 
-  private void invaliderWikidataId(final String qid) {
-    jdbc.update(
-        // Coordonnées issues de la même entité (P625) : fausses aussi, et elles
-        // serviraient sinon à rattacher par proximité GPS des lieux sans rapport.
-        "UPDATE salles SET wikidata_id = NULL, latitude = NULL, longitude = NULL,"
-            + " origine_position = NULL"
-            + " WHERE wikidata_id = :qid",
-        Map.of("qid", qid));
-    logsAdminWorker.inserer(
-        "warn",
-        SOURCE_LOG,
-        "wikidata_id invalidé — type Wikidata désormais exclu (gare/tram/administratif/commerce)"
-            + " wikidataId="
-            + qid,
-        Map.of(CLE_WIKIDATA_ID, qid));
-  }
-
   /**
    * Charge, pour chaque salle candidate, la signature de la dernière
    * incohérence déjà journalisée (commune Wikidata + type de contamination),
@@ -480,7 +471,8 @@ public class CoherenceWikidataSalleService {
         (rs, _) -> versSalleAEnrichir(rs));
   }
 
-  private static SalleAEnrichir versSalleAEnrichir(final ResultSet rs) throws SQLException {
+  /* package-private : réutilisé par CorrectionsSallesWikidata. */
+  static SalleAEnrichir versSalleAEnrichir(final ResultSet rs) throws SQLException {
     return new SalleAEnrichir(
         rs.getObject("id", UUID.class),
         rs.getString("nom"),

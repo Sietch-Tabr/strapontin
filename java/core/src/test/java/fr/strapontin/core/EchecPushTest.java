@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -36,10 +37,20 @@ class EchecPushTest {
   }
 
   @Test
-  void seuilAtteint_auCinquiemeEchec_retourneVrai() {
-    assertFalse(EchecPush.seuilAtteint(4));
-    assertTrue(EchecPush.seuilAtteint(5));
-    assertFalse(EchecPush.seuilAtteint(null));
+  void seuilAtteint_cinqEchecsSurAssezDeJours_retourneVrai() {
+    assertTrue(EchecPush.seuilAtteint(serie(5, true)));
+    assertTrue(EchecPush.seuilAtteint(serie(12, true)));
+  }
+
+  @Test
+  void seuilAtteint_moinsDeCinqEchecsOuSerieTropCourte_retourneFaux() {
+    assertFalse(EchecPush.seuilAtteint(serie(4, true)));
+    assertFalse(EchecPush.seuilAtteint(serie(40, false)));
+    assertFalse(EchecPush.seuilAtteint(Map.of()));
+  }
+
+  private static Map<String, Object> serie(final int echecs, final boolean assezLongue) {
+    return Map.of("echecs_consecutifs", echecs, "serie_assez_longue", assezLongue);
   }
 
   @Test

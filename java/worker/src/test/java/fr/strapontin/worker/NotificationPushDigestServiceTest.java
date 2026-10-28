@@ -16,20 +16,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
-import org.apache.http.entity.StringEntity;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -77,14 +71,10 @@ class NotificationPushDigestServiceTest {
     return abonnement;
   }
 
-  private static PushService pushServiceRetournant(final int statutHttp) throws Exception {
-    final PushService pushServiceMock = mock(PushService.class);
-    final HttpResponse reponseMock = mock(HttpResponse.class);
-    final StatusLine statusLineMock = mock(StatusLine.class);
-    when(statusLineMock.getStatusCode()).thenReturn(statutHttp);
-    when(reponseMock.getStatusLine()).thenReturn(statusLineMock);
-    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
-        .thenReturn(reponseMock);
+  private static ClientWebPush pushServiceRetournant(final int statutHttp) throws Exception {
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(statutHttp, ""));
     return pushServiceMock;
   }
 
@@ -102,11 +92,11 @@ class NotificationPushDigestServiceTest {
             "onsale"));
   }
 
-  private static PushService pushServiceRetournant(final int statutHttp, final String corps)
+  private static ClientWebPush pushServiceRetournant(final int statutHttp, final String corps)
       throws Exception {
-    final PushService pushServiceMock = pushServiceRetournant(statutHttp);
-    final HttpResponse reponse = pushServiceMock.send(mock(Notification.class), Encoding.AES128GCM);
-    when(reponse.getEntity()).thenReturn(new StringEntity(corps, StandardCharsets.UTF_8));
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(statutHttp, corps));
     return pushServiceMock;
   }
 
@@ -114,9 +104,8 @@ class NotificationPushDigestServiceTest {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForList(contains("push_abonnements"), anyMap()))
         .thenReturn(List.of(abonnement(1)));
-    when(jdbc.queryForObject(
-            contains("echecs_consecutifs + 1"), any(SqlParameterSource.class), eq(Integer.class)))
-        .thenReturn(echecs);
+    when(jdbc.queryForMap(contains("echecs_consecutifs + 1"), any(SqlParameterSource.class)))
+        .thenReturn(Map.of("echecs_consecutifs", echecs, "serie_assez_longue", true));
     return jdbc;
   }
 
@@ -125,7 +114,7 @@ class NotificationPushDigestServiceTest {
   void envoyerPush_403UneFois_neRevoquePasLAbonnement() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(1);
     final LogsAdminWorker logsAdminWorker = mock(LogsAdminWorker.class);
-    final PushService pushServiceMock = pushServiceRetournant(403);
+    final ClientWebPush pushServiceMock = pushServiceRetournant(403);
 
     new NotificationPushDigestService(
             configServiceAvecVapid(),
@@ -143,7 +132,7 @@ class NotificationPushDigestServiceTest {
   void envoyerPush_cinquiemeEchecConsecutifHors403_revoqueAvecLaRaisonDuService() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(EchecPush.SEUIL_ECHECS_CONSECUTIFS);
     final LogsAdminWorker logsAdminWorker = mock(LogsAdminWorker.class);
-    final PushService pushServiceMock =
+    final ClientWebPush pushServiceMock =
         pushServiceRetournant(429, "{\"reason\":\"TooManyProviderTokenUpdates\"}");
 
     new NotificationPushDigestService(
@@ -168,9 +157,8 @@ class NotificationPushDigestServiceTest {
   @Test
   void envoyerPush_exceptionRepetee_revoqueAuSeuil() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(EchecPush.SEUIL_ECHECS_CONSECUTIFS);
-    final PushService pushServiceMock = mock(PushService.class);
-    when(pushServiceMock.send(any(Notification.class), eq(Encoding.AES128GCM)))
-        .thenThrow(new IOException("timeout"));
+    final ClientWebPush pushServiceMock = mock(ClientWebPush.class);
+    when(pushServiceMock.envoyer(any(), any(), any(), any())).thenThrow(new IOException("timeout"));
 
     new NotificationPushDigestService(
             configServiceAvecVapid(),
@@ -186,7 +174,7 @@ class NotificationPushDigestServiceTest {
   @Test
   void envoyerPush_410_revoqueSansCompterLesEchecs() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(0);
-    final PushService pushServiceMock = pushServiceRetournant(410);
+    final ClientWebPush pushServiceMock = pushServiceRetournant(410);
 
     new NotificationPushDigestService(
             configServiceAvecVapid(),
@@ -207,7 +195,7 @@ class NotificationPushDigestServiceTest {
   @Test
   void envoyerPush_succes_reinitialiseLeCompteur() throws Exception {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCompteur(0);
-    final PushService pushServiceMock = pushServiceRetournant(201);
+    final ClientWebPush pushServiceMock = pushServiceRetournant(201);
 
     final boolean envoye =
         new NotificationPushDigestService(

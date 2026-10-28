@@ -527,6 +527,49 @@ class EventimSourceTest {
     assertTrue(source.preleverContainmentsAcceptes().isEmpty());
   }
 
+  private static EventimSource sourceRepondant(final String json) {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+    return new EventimSource(builder.build());
+  }
+
+  // Identifiant enregistré pour Furies et désignant Love & Furies chez Eventim.
+  @Test
+  void attractionDUnAutreArtiste_identifiantDUnAutreNom_retourneVrai() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"810294","name":"Love & Furies"}]}
+            """);
+
+    assertTrue(source.attractionDUnAutreArtiste("Furies", "810294", List.of()));
+  }
+
+  @Test
+  void attractionDUnAutreArtiste_identifiantDuBonArtiste_retourneFaux() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"810294","name":"Furies"}]}
+            """);
+
+    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", List.of()));
+  }
+
+  @Test
+  void attractionDUnAutreArtiste_identifiantAbsentDesResultats_resteIndetermine() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"1","name":"Autre"}]}
+            """);
+
+    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", List.of()));
+  }
+
   // Nom de scène d'une identité confirmée publié sous une forme longue : « -M- » →
   // « -M- Matthieu Chedid », reconnu car le reste du nom est le libellé Wikidata de l'artiste.
   @Test
@@ -899,6 +942,20 @@ class EventimSourceTest {
     final ConcertBrut concert = EventimSource.mapProduit(produit, null);
 
     assertNull(concert.statut());
+  }
+
+  @Test
+  void mapProduit_statutCancelled_retourneStatutCancelled() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("status", "Cancelled"));
+
+    assertEquals("cancelled", EventimSource.mapProduit(produit, null).statut());
+  }
+
+  @Test
+  void mapProduit_statutAvailable_retourneStatutNull() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("status", "Available"));
+
+    assertNull(EventimSource.mapProduit(produit, null).statut());
   }
 
   // --- salleSourceId interne ---

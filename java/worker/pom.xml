@@ -75,26 +75,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Fournisseur cryptographique BouncyCastle (push VAPID) -->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk18on</artifactId>
-        </dependency>
-
-        <!-- Notifications push VAPID + deps compile-scope requises par web-push -->
-        <dependency>
-            <groupId>nl.martijndwars</groupId>
-            <artifactId>web-push</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.bitbucket.b_c</groupId>
-            <artifactId>jose4j</artifactId>
-        </dependency>
-
         <!-- Email transactionnel -->
         <dependency>
             <groupId>com.resend</groupId>

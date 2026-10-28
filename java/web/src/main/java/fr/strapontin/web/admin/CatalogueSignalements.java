@@ -104,8 +104,8 @@ public final class CatalogueSignalements {
         "Un produit Eventim sur deux fiches",
         "Le même produit Eventim est porté par deux fiches du même jour dans la même salle, que la"
             + " fusion automatique n'a pas réunies (heures éloignées, artistes différents, plus de"
-            + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop depuis"
-            + " les concerts, ou marquer comme traité si ce sont deux séances.");
+            + " deux fiches). Vérifier le calendrier de la salle : supprimer la fiche en trop"
+            + " depuis les concerts, ou marquer comme traité si ce sont deux séances.");
     ajouter(
         "salle_sans_ville",
         "Salle sans commune",
@@ -141,6 +141,38 @@ public final class CatalogueSignalements {
         "comptes_incoherents",
         "Comptes incohérents",
         "Un compte activé n'a pas d'identifiant de connexion unique haché en bcrypt.");
+    ajouter(
+        "secret_totp_non_chiffre",
+        "Secret TOTP non chiffré",
+        "Le secret du second facteur d'un compte est stocké en clair ou illisible : le"
+            + " redémarrage du site le chiffre, sinon réenrôler le TOTP du compte.");
+    ajouter(
+        "identifiant_externe_autre_artiste",
+        "Identifiant externe d'un autre artiste",
+        "L'identifiant enregistré chez une billetterie désigne un autre artiste que celui suivi :"
+            + " le retirer de la fiche de l'artiste.");
+    ajouter(
+        "seance_dans_deux_salles",
+        "Même séance dans deux salles",
+        "Un même artiste est déclaré le même jour, à des heures proches, dans une salle et sa"
+            + " sous-salle, dans deux salles d'une même commune ou deux fois dans une même salle :"
+            + " une séance déplacée peut être restée publiée sous l'ancienne salle.");
+    ajouter(
+        "hommage_rattache_artiste",
+        "Hommage rattaché à l'artiste imité",
+        "L'adresse de la séance annonce un hommage (tribute) mais la fiche est rattachée à"
+            + " l'artiste imité : ses abonnés seraient prévenus à tort.");
+    ajouter(
+        "annulation_une_billetterie",
+        "Annulation vue par une seule billetterie",
+        "Une séance à venir est annulée par une billetterie alors qu'une autre la présente encore"
+            + " : vérifier sur le site de la salle.");
+    ajouter(
+        "envois_push_en_panne",
+        "Envois push en panne",
+        "Tous les envois vers un même service de notification échouent depuis plusieurs jours"
+            + " pour plusieurs comptes : la cause est probablement l'application, aucun appareil"
+            + " n'est retiré tant que la panne dure.");
     ajouter(
         "orphelins_fk",
         "Références orphelines",

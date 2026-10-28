@@ -25,7 +25,7 @@
 
     <properties>
         <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.1.0</revision>
+        <revision>3.1.1</revision>
         <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
@@ -33,16 +33,13 @@
         <caffeine.version>3.3.0</caffeine.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.86</bouncycastle.version>
-        <webpush.version>5.1.2</webpush.version>
-        <!-- Dépendances de compilation de web-push, qui ne les tire qu'au runtime -->
-        <httpclient.version>4.5.14</httpclient.version>
-        <jose4j.version>0.9.7</jose4j.version>
+        <webpush.version>1.3.0</webpush.version>
         <okapibarcode.version>0.5.7</okapibarcode.version>
         <resend.version>4.29.0</resend.version>
         <!-- resend-java dépend directement d'okhttp-jvm (variante JVM d'okhttp 5, module Kotlin
              Multiplatform) ; version alignée ici sur la dernière publiée. -->
         <okhttp-jvm.version>5.5.1</okhttp-jvm.version>
-        <springdoc.version>3.1.1</springdoc.version>
+        <springdoc.version>3.2.0</springdoc.version>
         <jsoup.version>1.23.2</jsoup.version>
         <!-- Valeur vide par défaut — JaCoCo ou autre plugin peut la surcharger -->
         <argLine></argLine>
@@ -54,7 +51,7 @@
         <pmd.version>3.28.0</pmd.version>
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
         <pmdCore.version>7.28.0</pmdCore.version>
-        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <spotless.version>3.10.4</spotless.version>
     </properties>
 
@@ -223,22 +220,11 @@
                 <version>${bouncycastle.version}</version>
             </dependency>
 
-            <!-- Push VAPID — exclure bcprov-jdk15on tiré par webpush-java, et async-http-client
-                 (vulnérable, utilisé par la seule PushAsyncService, jamais appelée) -->
+            <!-- Push VAPID : crypto du JDK, seule dépendance kotlin-stdlib -->
             <dependency>
-                <groupId>nl.martijndwars</groupId>
-                <artifactId>web-push</artifactId>
+                <groupId>com.interaso</groupId>
+                <artifactId>webpush</artifactId>
                 <version>${webpush.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.asynchttpclient</groupId>
-                        <artifactId>async-http-client</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.bouncycastle</groupId>
-                        <artifactId>bcprov-jdk15on</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
 
             <!-- jsonassert — exclure android-json (doublon org.json.JSONObject avec org.json:json) -->
@@ -280,17 +266,6 @@
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
                 <version>${jsoup.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpclient</artifactId>
-                <version>${httpclient.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bitbucket.b_c</groupId>
-                <artifactId>jose4j</artifactId>
-                <version>${jose4j.version}</version>
             </dependency>
 
             <!-- QR code SVG de l'enrôlement TOTP -->

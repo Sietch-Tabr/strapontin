@@ -71,9 +71,11 @@ public class EmailServiceSecurite {
    * été détectée sur son compte.
    *
    * @param email l'adresse de l'utilisateur concerné
-   * @param userAgent l'en-tête {@code User-Agent} du nouvel appareil
+   * @param userAgent l'en-tête {@code User-Agent} brut du nouvel appareil
+   * @param nomAppareil nom lisible de l'appareil (« PWA sur iPhone »)
    */
-  public void envoyerAlerteNouvelAppareil(final String email, final String userAgent) {
+  public void envoyerAlerteNouvelAppareil(
+      final String email, final String userAgent, final String nomAppareil) {
     final Optional<EmailSender.ContexteEmail> ctx = emailSender.obtenirContexte();
     if (ctx.isEmpty()) {
       LOG.warn("RESEND_API_KEY absent — alerte nouvel appareil non envoyée");
@@ -81,7 +83,7 @@ public class EmailServiceSecurite {
     }
 
     final String corps =
-        EmailTemplatesSecurite.alerteNouvelAppareil(userAgent, ctx.get().baseUrl());
+        EmailTemplatesSecurite.alerteNouvelAppareil(nomAppareil, userAgent, ctx.get().baseUrl());
 
     final String texte =
         """
@@ -90,8 +92,12 @@ public class EmailServiceSecurite {
         Une connexion depuis un appareil jamais vu a été détectée sur votre compte
         Strapontin (%s). Si c'est vous, ignorez cet email. Sinon, changez immédiatement
         votre mot de passe depuis vos paramètres.
+
+        Détail : %s
         """
-            .formatted(userAgent == null || userAgent.isBlank() ? "appareil inconnu" : userAgent);
+            .formatted(
+                nomAppareil,
+                userAgent == null || userAgent.isBlank() ? "User-Agent absent" : userAgent);
 
     try {
       emailSender.envoyer(

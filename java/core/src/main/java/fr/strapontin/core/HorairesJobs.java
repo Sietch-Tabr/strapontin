@@ -24,8 +24,8 @@ public final class HorairesJobs {
   /** Cycle de récupération : onze fois par jour. */
   public static final String FETCH_ARTISTES = "0 0 " + HEURES_CYCLE + " * * ?";
 
-  /** Récupération par département : un passage nocturne. */
-  public static final String FETCH_REGION = "0 0 2 * * ?";
+  /** Récupération par département, hors plage 02:00-02:59 (changement d'heure). */
+  public static final String FETCH_REGION = "0 0 3 * * ?";
 
   /** Salles suivies, une demi-heure après chaque cycle d'artistes. */
   public static final String FETCH_SALLES = "0 30 " + HEURES_CYCLE + " * * ?";
@@ -37,7 +37,7 @@ public final class HorairesJobs {
   public static final String RECALCULER_MATCHES = "0 0 " + HEURES_CYCLE + " * * ?";
 
   /** Contrôle et enrichissement nocturnes, après la récupération. */
-  public static final String RECONCILIATION_NOCTURNE = "0 0 3 * * ?";
+  public static final String RECONCILIATION_NOCTURNE = "0 15 4 * * ?";
 
   /** Purge des concerts : début de la chaîne nocturne. */
   public static final String PURGER_CONCERTS = "0 0 0 * * ?";

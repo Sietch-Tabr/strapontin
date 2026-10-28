@@ -7,6 +7,8 @@ package fr.strapontin.worker.sante;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -331,7 +333,7 @@ class CoherenceWikidataSalleServiceTest {
   // à l'inverse, si salles.ville diverge textuellement de la commune Wikidata mais que
   // les concerts réels (source indépendante) confirment la même ville, ce n'est pas une vraie
   // incohérence — concerts.ville doit primer sur salles.ville plutôt que de générer un faux
-  // positif.
+  // positif, et la ville de la salle est alignée sur la commune réelle.
   @Test
   void verifier_concertsReelsCoherentsMalgreVilleSalleDivergente_neJournalisePasDIncoherence() {
     final UUID id = UUID.randomUUID();
@@ -346,7 +348,8 @@ class CoherenceWikidataSalleServiceTest {
     final int resultat = service.verifier();
 
     assertEquals(0, resultat);
-    verify(logsAdminWorker, never()).inserer(any(), any(), any(), any());
+    verify(logsAdminWorker, never()).inserer(eq("warn"), any(), any(), any());
+    verify(jdbc).update(contains("UPDATE salles SET ville"), anyMap());
   }
 
   // une salle déjà investiguée et confirmée légitime plusieurs nuits de suite ne doit pas

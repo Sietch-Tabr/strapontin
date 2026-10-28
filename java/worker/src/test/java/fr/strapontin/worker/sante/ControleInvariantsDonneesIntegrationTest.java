@@ -95,6 +95,152 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(List.of("salle_multi_departements", "salle_suivie_contaminee"), actifs());
   }
 
+  private UUID evenementHeure(final UUID salle, final String artiste, final String heure) {
+    return jdbc.queryForObject(
+        "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+            + " VALUES (:artiste, CURRENT_DATE + 30, CAST(:heure AS time), 'x',"
+            + " CAST(:salle AS uuid), '75') RETURNING id",
+        Map.of("artiste", artiste, "heure", heure, "salle", salle.toString()),
+        UUID.class);
+  }
+
+  private void observer(final UUID evenement, final String source) {
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST(:source AS source_concert), :url, 'a', 's')",
+        Map.of("id", evenement.toString(), "source", source, "url", "u-" + evenement + source));
+  }
+
+  @Test
+  void verifier_memeArtisteMemeSoirDansDeuxSallesDeLaMemeCommune_signaleLaSeance() {
+    final UUID alhambra = creerSalle();
+    final UUID bataclan =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, ville) VALUES ('bataclan', 'Bataclan',"
+                + " 'bataclan', 'Paris') RETURNING id",
+            Map.of(),
+            UUID.class);
+    observer(evenementHeure(alhambra, "dead poet society", "20:00"), "ticketmaster");
+    observer(evenementHeure(bataclan, "dead poet society", "20:00"), "ticketmaster");
+
+    controle.verifier();
+
+    assertEquals(List.of("seance_dans_deux_salles"), actifs());
+  }
+
+  @Test
+  void verifier_memeSalleDeuxHeuresProchesDeuxSources_signaleLaSeance() {
+    final UUID salle = creerSalle();
+    observer(evenementHeure(salle, "sting", "18:30"), "ticketmaster");
+    observer(evenementHeure(salle, "sting", "16:00"), "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of("seance_dans_deux_salles"), actifs());
+  }
+
+  @Test
+  void verifier_matineeEtSoireeEloignees_neSignaleRien() {
+    final UUID salle = creerSalle();
+    observer(evenementHeure(salle, "spectacle", "14:00"), "ticketmaster");
+    observer(evenementHeure(salle, "spectacle", "20:30"), "ticketmaster");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_adresseDHommageSurFicheRattachee_signaleLHommage() {
+    final UUID salle = creerSalle();
+    evenement(salle, "ac dc", "75");
+    final UUID artiste =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('AC/DC', 'ac dc') RETURNING id",
+            Map.of(),
+            UUID.class);
+    jdbc.update(
+        "UPDATE evenements SET artiste_id = CAST(:a AS uuid) WHERE artiste_norm = 'ac dc'",
+        Map.of("a", artiste.toString()));
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " SELECT id, 'eventim', 'https://eventim.fr/ac-dc-live-tribute-1', 'a', 's'"
+            + " FROM evenements",
+        Map.of());
+
+    controle.verifier();
+    assertEquals(List.of("hommage_rattache_artiste"), actifs());
+
+    jdbc.update("UPDATE evenements SET artiste_id = NULL", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_seanceAnnuleeParUneSourceEtVendueParLAutre_signaleLAnnulation() {
+    final UUID salle = creerSalle();
+    evenement(salle, "drag race", "34");
+    final UUID evenement =
+        jdbc.queryForObject(
+            "SELECT id FROM evenements WHERE artiste_norm = 'drag race'", Map.of(), UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut, statut)"
+            + " VALUES (CAST(:id AS uuid), 'eventim', 'u1', 'a', 's', 'cancelled'),"
+            + " (CAST(:id AS uuid), 'ticketmaster', 'u2', 'a', 's', 'onsale')",
+        Map.of("id", evenement.toString()));
+
+    controle.verifier();
+    assertEquals(List.of("annulation_une_billetterie"), actifs());
+
+    jdbc.update("UPDATE observations SET statut = 'cancelled'", Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_toutUnServicePushEnEchecDepuisDesJours_signaleLaPanne() {
+    for (final String id : List.of("p1", "p2")) {
+      jdbc.update(
+          "INSERT INTO users (id, username, email, must_change_credentials)"
+              + " VALUES (:id, :id, :id || '@test.fr', true)",
+          Map.of("id", id));
+      jdbc.update(
+          "INSERT INTO push_abonnements (user_id, endpoint, p256dh, auth, echecs_consecutifs,"
+              + " premier_echec_le) VALUES (:id, 'https://fcm.googleapis.com/' || :id, 'k', 'a',"
+              + " 8, now() - interval '6 days')",
+          Map.of("id", id));
+    }
+
+    controle.verifier();
+    assertEquals(List.of("envois_push_en_panne"), actifs());
+
+    jdbc.update(
+        "UPDATE push_abonnements SET dernier_envoi_reussi_le = now() WHERE user_id = 'p1'",
+        Map.of());
+    controle.verifier();
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
+  void verifier_secretTotpEnClair_signaleLeCompteSeulement() {
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials, two_factor_secret)"
+            + " VALUES ('t1', 't1', 't1@test.fr', true, 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP'),"
+            + " ('t2', 't2', 't2@test.fr', true, :chiffre)",
+        Map.of("chiffre", "A".repeat(4) + "bcd".repeat(20)));
+
+    controle.verifier();
+
+    assertEquals(List.of("secret_totp_non_chiffre"), actifs());
+    assertEquals(
+        1,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching WHERE type = 'secret_totp_non_chiffre'"
+                + " AND resolu_le IS NULL",
+            Map.of(),
+            Integer.class));
+  }
+
   @Test
   void verifier_compteActiveSansIdentifiantDeConnexion_signaleUneIncoherence() {
     jdbc.update(
@@ -284,6 +430,38 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     controle.verifier();
 
     assertEquals(List.of("fiches_figees"), actifs());
+  }
+
+  @Test
+  void verifier_ficheFigeeLaPlusTardiveDeSaSalle_estDistingueeCommeHorsHorizon() {
+    final UUID salle = creerSalle();
+    jdbc.update(
+        "INSERT INTO users (id, username, email, must_change_credentials)"
+            + " VALUES ('u3', 'u3', 'u3@test.fr', true)",
+        Map.of());
+    jdbc.update(
+        "INSERT INTO user_config (user_id, departements) VALUES ('u3', ARRAY['75']::text[])",
+        Map.of());
+    ficheObservee(salle, "75", 20);
+    jdbc.update("UPDATE evenements SET date = CURRENT_DATE + 400", Map.of());
+    final UUID recente =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                + " VALUES ('recente', CURRENT_DATE + 100, '20:00', 'x', CAST(:s AS uuid), '75')"
+                + " RETURNING id",
+            Map.of("s", salle.toString()),
+            UUID.class);
+    observer(recente, "eventim");
+
+    controle.verifier();
+
+    assertEquals(
+        "1",
+        jdbc.queryForObject(
+            "SELECT details->>'horsHorizon' FROM signalements_matching"
+                + " WHERE type = 'fiches_figees' AND resolu_le IS NULL",
+            Map.of(),
+            String.class));
   }
 
   @Test

@@ -50,7 +50,7 @@ class AppareilsControllerTest {
     final List<AppareilsService.AppareilDto> attendu =
         List.of(
             new AppareilsService.AppareilDto(
-                "id-1", "Mozilla/5.0", Instant.now(), Instant.now(), true));
+                "id-1", "Mozilla/5.0", "Appareil inconnu", Instant.now(), Instant.now(), true));
     when(appareilsService.listerAppareils("u1", "sess-1")).thenReturn(attendu);
 
     final var resultat = controller.lister(auth, httpRequest);

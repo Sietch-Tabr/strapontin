@@ -74,7 +74,9 @@ final class WikidataSalleDecouverte {
           "Q34442",
           "Q79007",
           "Q54114",
-          "Q83620");
+          "Q83620",
+          // Bâtiment ou structure détruit : l'ancien site, pas le lieu actuel.
+          "Q19860854");
 
   // Rempli par decouvrir() sur divergence GPS, vidé par preleverAmbiguites() —
   // même patron que WikidataArtisteSource.ambiguites.
@@ -388,6 +390,7 @@ final class WikidataSalleDecouverte {
         ?item wdt:P31 ?typeExclu .
         VALUES ?typeExclu { %s }
       }
+      FILTER NOT EXISTS { ?item wdt:P576 [] }
       OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "fr") }
       OPTIONAL { ?item wdt:P625 ?coordValue }
       %s

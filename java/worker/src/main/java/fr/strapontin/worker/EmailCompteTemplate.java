@@ -48,7 +48,7 @@ final class EmailCompteTemplate {
 
   /* package-private : appelé par EmailCompteService (même package). */
   static String avertissementCanalPerdu(final String baseUrl, final String cause) {
-    final String sujet = "Vous ne recevez plus les nouveaux concerts de Strapontin";
+    final String sujet = "Vos notifications push Strapontin sont arrêtées";
     final String raison =
         cause != null && !cause.isBlank()
             ? "Le dernier appareil sur lequel vous receviez les notifications push a été retiré : "
@@ -58,11 +58,11 @@ final class EmailCompteTemplate {
                 + " plus.";
     final String corps =
         raison
-            + " Les notifications par email étant désactivées sur votre compte, les nouveaux"
-            + " concerts de vos artistes et salles ne vous parviennent plus. Pour réactiver le"
-            + " push, ouvrez Strapontin sur votre appareil, autorisez les notifications dans le"
-            + " navigateur puis réactivez-les dans vos paramètres ; vous pouvez aussi activer"
-            + " l'email.";
+            + " Vos choix de notification push (artistes, salles, nouvelle version) ont été"
+            + " décochés, car ils ne peuvent plus servir sans appareil. Vos notifications par"
+            + " email, si vous les avez activées, ne sont pas concernées. Pour retrouver le push,"
+            + " ouvrez Strapontin sur votre appareil, autorisez les notifications dans le"
+            + " navigateur, puis recochez dans vos paramètres les contenus souhaités.";
     return GABARIT.formatted(
         sujet, sujet, corps, baseUrl + "/parametres#notifications", "Mes notifications", baseUrl);
   }

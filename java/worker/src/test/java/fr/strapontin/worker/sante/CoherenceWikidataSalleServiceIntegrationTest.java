@@ -19,6 +19,7 @@ import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,6 +67,94 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
             .addValue("lat", lieuPositionne ? 44.831 : null, Types.DOUBLE)
             .addValue("lon", lieuPositionne ? -0.641 : null, Types.DOUBLE));
     return id;
+  }
+
+  // Ldlc Arena : élément Wikidata avec coordonnées, aucune position en base.
+  @Test
+  void realignerPositions_salleAvecElementSansPosition_recoitCelleDeWikidata() {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id) VALUES"
+            + " (CAST(:id AS uuid), 'ldlc arena', 'Ldlc Arena', 'ldlc arena', 'Décines', '69',"
+            + " 'Q107719069')",
+        Map.of("id", id.toString()));
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q107719069", "Ldlc Arena", "Décines", null, null, 45.7, 4.98)));
+
+    coherence.realignerPositions();
+
+    final Map<String, Object> salle =
+        jdbc.queryForMap(
+            "SELECT latitude, longitude, origine_position FROM salles"
+                + " WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()));
+    assertEquals(45.7, salle.get("latitude"));
+    assertEquals("wikidata", salle.get("origine_position"));
+  }
+
+  // Le Transbordeur : stocké à Lyon, Wikidata et les concerts disent Villeurbanne.
+  @Test
+  void verifier_communeWikidataConfirmeeParLesConcerts_alignelaVilleDeLaSalle() {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id) VALUES"
+            + " (CAST(:id AS uuid), 'le transbordeur', 'Le Transbordeur', 'le transbordeur',"
+            + " 'Lyon', '69', 'Q3227778')",
+        Map.of("id", id.toString()));
+    jdbc.update(
+        "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, ville, dept)"
+            + " VALUES ('a', CURRENT_DATE + 10, '20:00', 'x', CAST(:id AS uuid), 'Villeurbanne',"
+            + " '69')",
+        Map.of("id", id.toString()));
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " SELECT id, 'eventim', 'u', 'a', 's' FROM evenements",
+        Map.of());
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q3227778", "Le Transbordeur", "Villeurbanne", null, null)));
+
+    coherence.verifier();
+
+    assertEquals(
+        "Villeurbanne",
+        jdbc.queryForObject(
+            "SELECT ville FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
+            String.class));
+  }
+
+  // Alhambra : élément détruit retiré, et le journal nomme la salle.
+  @Test
+  void revaliderTypes_elementInvalide_journalNommeLaSalle() {
+    final UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO salles (id, salle_cle, nom, nom_norm, ville, dept, wikidata_id) VALUES"
+            + " (CAST(:id AS uuid), 'alhambra', 'Alhambra', 'alhambra', 'Paris', '75',"
+            + " 'Q4724424')",
+        Map.of("id", id.toString()));
+    jdbc.update("DELETE FROM logs_admin", Map.of());
+    when(wikidataSalleSource.typesInvalides(any())).thenReturn(Set.of("Q4724424"));
+
+    assertEquals(1, coherence.revaliderTypes());
+
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM logs_admin WHERE message LIKE '%salle(s)=Alhambra%'",
+            Map.of(), Long.class));
+    assertNull(
+        jdbc.queryForObject(
+            "SELECT wikidata_id FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
+            String.class));
   }
 
   // Le Pin Galant (Mérignac) : position Wikidata confirmée par son lieu, le contrôle de position

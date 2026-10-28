@@ -48,8 +48,9 @@ public class CompleteurVillesSalles {
   }
 
   /**
-   * Exécute les quatre étapes dans l'ordre : orthographe, ville depuis les
-   * concerts, ville depuis les lieux sources, département depuis le code postal.
+   * Exécute les étapes dans l'ordre : orthographe, ville depuis les concerts,
+   * ville depuis les lieux sources, département depuis le code postal, puis
+   * département des fiches sans département depuis leur salle.
    * @return nombre de valeurs corrigées ou renseignées
    */
   public int completer() {
@@ -58,8 +59,10 @@ public class CompleteurVillesSalles {
     final int depuisLieux = renseignerVilleDepuisLieuxSources();
     final int depuisNoms = renseignerVilleDepuisNomDeLaSalle();
     final int departements = renseignerDepartementDepuisCodePostal();
+    final int departementsFiches = renseignerDepartementDesFiches();
     signalerSallesSansVille();
-    final int total = normalisees + depuisConcerts + depuisLieux + depuisNoms + departements;
+    final int total =
+        normalisees + depuisConcerts + depuisLieux + depuisNoms + departements + departementsFiches;
     if (total > 0) {
       LOG.info(
           "villes des salles : {} orthographes, {} depuis concerts, {} depuis lieux sources,"
@@ -194,6 +197,15 @@ public class CompleteurVillesSalles {
 
   private static String sansArticle(final String ville) {
     return ville.replaceFirst("^(le|la|les|l) ", "");
+  }
+
+  // Un produit sans code postal laisse la fiche sans département : elle
+  // échappe aux fetchs et contrôles par département alors que sa salle en a un.
+  private int renseignerDepartementDesFiches() {
+    return jdbc.update(
+        "UPDATE evenements e SET dept = s.dept FROM salles s"
+            + " WHERE e.salle_id = s.id AND e.dept IS NULL AND s.dept IS NOT NULL",
+        Map.of());
   }
 
   private int renseignerDepartementDepuisCodePostal() {

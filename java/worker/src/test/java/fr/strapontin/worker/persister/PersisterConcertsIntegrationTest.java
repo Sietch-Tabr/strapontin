@@ -216,6 +216,30 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(1L, count);
   }
 
+  @Test
+  void persisterConcerts_produitEventimAnnule_evenementEtObservationAnnules() {
+    final ConcertBrut annule =
+        ConcertBrut.nouveau()
+            .artiste("Drag Race France Live")
+            .date("2098-11-10")
+            .heure("20:00")
+            .salle("Corum")
+            .ville("Montpellier")
+            .dept("34")
+            .url("https://eventim.example/drag-race")
+            .source("eventim")
+            .statut("cancelled")
+            .construire();
+
+    persisterConcerts.persisterConcerts(List.of(annule));
+
+    assertEquals(
+        "cancelled", jdbc.queryForObject("SELECT statut FROM evenements", Map.of(), String.class));
+    assertEquals(
+        "cancelled",
+        jdbc.queryForObject("SELECT statut FROM observations", Map.of(), String.class));
+  }
+
   // Eventim omet parfois la ville d'un lieu connu (Stade de France) : celle de la salle la
   // remplace, jamais une valeur vide.
   @Test
@@ -656,6 +680,93 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals("system of a down live tribute by steeven corsini", fiche.get("artiste_norm"));
     assertEquals(
         0L, jdbc.queryForObject("SELECT COUNT(*) FROM user_matches", Map.of(), Long.class));
+  }
+
+  // Fusion nocturne de deux sources : le produit Ticketmaster déjà rattaché à la fiche est
+  // retrouvé au passage suivant même si l'heure publiée diffère, aucune fiche n'est recréée.
+  @Test
+  void persisterConcerts_produitTicketmasterDejaRattacheHeureDifferente_neCreePasDeFiche() {
+    final String url = "https://www.ticketmaster.fr/fr/manifestation/ultra-vomit/idmanif/1";
+    final ConcertBrut premier =
+        ConcertBrut.nouveau()
+            .artiste("Ultra Vomit")
+            .date("2098-04-24")
+            .heure("20:00")
+            .salle("Théâtre des Cordeliers")
+            .ville("Annonay")
+            .dept("07")
+            .url(url)
+            .source("ticketmaster")
+            .classification("music")
+            .statut("onsale")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(premier));
+
+    final ConcertBrut heureDifferente =
+        ConcertBrut.nouveau()
+            .artiste("Ultra Vomit")
+            .date("2098-04-24")
+            .heure("20:30")
+            .salle("Théâtre des Cordeliers")
+            .ville("Annonay")
+            .dept("07")
+            .url(url)
+            .source("ticketmaster")
+            .classification("music")
+            .statut("onsale")
+            .construire();
+    persisterConcerts.persisterConcerts(List.of(heureDifferente));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  // La fiche porte aussi une observation d'une autre source : le rattachement à l'artiste imité
+  // tombe quand même au rafraîchissement du produit Eventim.
+  @Test
+  void persisterConcerts_hommageSurFicheDeuxSources_detacheEtAligneLArtisteNorm() {
+    final UUID artisteId =
+        jdbc.queryForObject(
+            "INSERT INTO artistes (nom, nom_norm) VALUES ('AC/DC', 'ac dc') RETURNING id",
+            Map.of(),
+            UUID.class);
+    final UUID evenementId =
+        seedEvenementAvecObservation(
+            "AC/DC",
+            "ac dc",
+            "2098-11-04",
+            "20:00",
+            "Le Balajo",
+            "le balajo",
+            "75",
+            null,
+            artisteId,
+            "eventim",
+            "https://www.eventim.fr/event/ac-dc-tribute-22026718");
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), 'ticketmaster', 'https://tm.example/ac-dc', 'AC/DC',"
+            + " 'Le Balajo')",
+        Map.of("id", evenementId.toString()));
+
+    persisterConcerts.persisterConcerts(
+        List.of(
+            ConcertBrut.nouveau()
+                .artiste("AC/DC - Live Tribute - By Smack")
+                .date("2098-11-04")
+                .heure("20:00")
+                .salle("Le Balajo")
+                .ville("Paris")
+                .dept("75")
+                .url("https://www.eventim.fr/event/ac-dc-tribute-22026718")
+                .source("eventim")
+                .classification("music")
+                .construire()));
+
+    assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM evenements", Map.of(), Long.class));
+    assertEquals(
+        "ac dc live tribute by smack",
+        jdbc.queryForObject("SELECT artiste_norm FROM evenements", Map.of(), String.class));
+    assertNull(jdbc.queryForObject("SELECT artiste_id FROM evenements", Map.of(), UUID.class));
   }
 
   @Test

@@ -64,13 +64,14 @@ final class RechercheEvenementExistant {
   /**
    * Événement qui porte déjà ce produit le même jour dans la même salle, quels
    * que soient le titre et l'heure publiés : produit Eventim (son identifiant
-   * survit au titre, pas l'adresse) ou page d'un site de salle. Plusieurs
-   * candidats : le mieux entretenu, la fusion nocturne rapproche les autres.
+   * survit au titre, pas l'adresse), page d'un site de salle ou adresse
+   * Ticketmaster. Plusieurs candidats : le mieux entretenu, la fusion nocturne
+   * rapproche les autres (pour Ticketmaster, aucun : choix ambigu).
    * @return l'événement, ou {@code null} sans candidat ou si les artistes divergent
    */
   /* package-private : appelé par PersisteurConcertsDb. */
   UUID parProduit(final ValeurConcert concert) {
-    final String condition = conditionProduit(concert);
+    final String condition = CritereProduitEvenement.condition(concert);
     if (condition == null) {
       return null;
     }
@@ -87,11 +88,15 @@ final class RechercheEvenementExistant {
             new MapSqlParameterSource()
                 .addValue("produit", ProduitEventim.identifiant(concert.url()).orElse(null))
                 .addValue("url", concert.url())
+                .addValue("source", concert.source())
                 .addValue(CLE_DATE, concert.date(), Types.DATE)
                 .addValue(
                     "salleId",
                     concert.salleId() != null ? concert.salleId().toString() : null,
                     Types.VARCHAR));
+    if (CritereProduitEvenement.choixAmbigu(concert, candidats.size())) {
+      return null;
+    }
     for (final Map<String, Object> c : candidats) {
       final UUID candArtisteId = (UUID) c.get("artiste_id");
       final boolean artistesDivergents =
@@ -103,18 +108,6 @@ final class RechercheEvenementExistant {
       if (!artistesDivergents && heureProche(heure, concert.heure())) {
         return (UUID) c.get("id");
       }
-    }
-    return null;
-  }
-
-  // Condition SQL des observations du même produit, null sans identifiant.
-  private static String conditionProduit(final ValeurConcert concert) {
-    if ("eventim".equals(concert.source())
-        && ProduitEventim.identifiant(concert.url()).isPresent()) {
-      return "o.source = 'eventim' AND " + ProduitEventim.expressionSql("o") + " = :produit";
-    }
-    if ("site_salle".equals(concert.source()) && concert.url() != null) {
-      return "o.source = 'site_salle' AND o.url = :url";
     }
     return null;
   }

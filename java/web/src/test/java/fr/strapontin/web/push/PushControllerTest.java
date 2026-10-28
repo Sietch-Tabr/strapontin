@@ -74,11 +74,27 @@ class PushControllerTest {
         controller.abonner(
             requete,
             auth,
-            "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0");
+            "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0",
+            "navigateur");
 
     assertEquals(HttpStatus.CREATED, rep.getStatusCode());
     assertEquals(true, rep.getBody().get("ok"));
     verify(pushService).abonner("user-1", requete, "Firefox sur Linux");
+  }
+
+  @Test
+  void abonner_applicationInstallee_nommeLaPwa() {
+    stubPrincipal();
+    final RequeteAbonnement requete =
+        new RequeteAbonnement("https://push.exemple/abc", new ClesAbonnement("p256dh", "auth"));
+
+    controller.abonner(
+        requete,
+        auth,
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148",
+        "pwa");
+
+    verify(pushService).abonner("user-1", requete, "PWA sur iPhone");
   }
 
   @Test
@@ -92,7 +108,7 @@ class PushControllerTest {
 
     final ErreurMetier e =
         org.junit.jupiter.api.Assertions.assertThrows(
-            ErreurMetier.class, () -> controller.abonner(requete, auth, null));
+            ErreurMetier.class, () -> controller.abonner(requete, auth, null, null));
     assertEquals(429, e.getStatus());
   }
 

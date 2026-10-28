@@ -43,13 +43,19 @@ public class AlerteActiviteUtilisateurService {
    *
    * @param email l'adresse email de l'utilisateur
    * @param userAgent l'en-tête {@code User-Agent} du nouvel appareil
+   * @param modeAffichage mode annoncé par le client, peut être {@code null}
    */
-  public void notifierNouvelAppareil(final String email, final String userAgent) {
+  public void notifierNouvelAppareil(
+      final String email, final String userAgent, final String modeAffichage) {
     if (email == null || email.isBlank()) {
       return;
     }
-    emailServiceSecurite.envoyerAlerteNouvelAppareil(email, userAgent);
-    LOG.info("Alerte nouvel appareil envoyée : emailHash={}", email.hashCode());
+    final NomAppareil appareil = NomAppareil.depuis(userAgent, modeAffichage);
+    emailServiceSecurite.envoyerAlerteNouvelAppareil(email, userAgent, appareil.libelle());
+    LOG.info(
+        "Alerte nouvel appareil envoyée : emailHash={} appareil={}",
+        email.hashCode(),
+        appareil.libelle());
   }
 
   /**

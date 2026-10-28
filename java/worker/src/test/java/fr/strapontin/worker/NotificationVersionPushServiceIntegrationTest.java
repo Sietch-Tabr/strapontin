@@ -6,21 +6,16 @@ package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.FournisseurBouncyCastle;
 import fr.strapontin.sources.TicketmasterSource;
 import java.util.Map;
 import java.util.Optional;
-import nl.martijndwars.webpush.Encoding;
-import nl.martijndwars.webpush.Notification;
-import nl.martijndwars.webpush.PushService;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +36,7 @@ class NotificationVersionPushServiceIntegrationTest extends AbstractWorkerIntegr
   @Autowired private NamedParameterJdbcTemplate jdbc;
   @Autowired private LogsAdminWorker logsAdminWorker;
 
-  private PushService pushService;
+  private ClientWebPush pushService;
   private NotificationVersionPushService service;
 
   @BeforeEach
@@ -55,12 +50,9 @@ class NotificationVersionPushServiceIntegrationTest extends AbstractWorkerIntegr
     final ConfigServiceWorker configService = mock(ConfigServiceWorker.class);
     when(configService.lireConfig("VAPID_PUBLIC_KEY")).thenReturn(Optional.of("pub"));
     when(configService.lireConfig("VAPID_PRIVATE_KEY")).thenReturn(Optional.of("priv"));
-    pushService = mock(PushService.class);
-    final HttpResponse reponse = mock(HttpResponse.class);
-    final StatusLine statut = mock(StatusLine.class);
-    when(statut.getStatusCode()).thenReturn(201);
-    when(reponse.getStatusLine()).thenReturn(statut);
-    when(pushService.send(any(Notification.class), eq(Encoding.AES128GCM))).thenReturn(reponse);
+    pushService = mock(ClientWebPush.class);
+    when(pushService.envoyer(any(), any(), any(), any()))
+        .thenReturn(new ClientWebPush.Reponse(201, ""));
     service =
         new NotificationVersionPushService(
             configService, jdbc, logsAdminWorker, (_, _, _) -> pushService);
@@ -90,7 +82,7 @@ class NotificationVersionPushServiceIntegrationTest extends AbstractWorkerIntegr
     assertEquals(1, service.notifierVersion("3.0.6"));
     assertEquals(0, service.notifierVersion("3.0.6"));
 
-    verify(pushService, times(1)).send(any(Notification.class), eq(Encoding.AES128GCM));
+    verify(pushService, times(1)).envoyer(any(), any(), any(), any());
   }
 
   @Test

@@ -85,8 +85,8 @@ public class EmailCompteService {
   }
 
   /**
-   * Prévient un utilisateur que plus aucune notification ne peut lui
-   * parvenir : envoyé même si ses notifications email sont désactivées.
+   * Prévient un utilisateur que son push est arrêté faute d'appareil, avec
+   * la cause et ce qu'il doit refaire : envoyé quels que soient ses canaux email.
    *
    * @param email destinataire
    * @param cause cause lisible du retrait du dernier appareil, peut être null
@@ -95,7 +95,7 @@ public class EmailCompteService {
   public boolean envoyerAvertissementCanalPerdu(final String email, final String cause) {
     return envoyer(
         email,
-        "Vous ne recevez plus les nouveaux concerts de Strapontin",
+        "Vos notifications push Strapontin sont arrêtées",
         baseUrl -> EmailCompteTemplate.avertissementCanalPerdu(baseUrl, cause));
   }
 

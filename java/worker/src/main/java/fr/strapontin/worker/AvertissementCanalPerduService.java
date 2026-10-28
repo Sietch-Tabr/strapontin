@@ -13,9 +13,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Prévient par email, une fois par perte, l'utilisateur dont les notifications
- * actives n'ont aucun canal joignable (dernier appareil retiré, ou push jamais
- * abonné). Réarmé dès qu'un canal redevient joignable.
+ * Prévient par email, une fois par perte, l'utilisateur dont le dernier appareil
+ * push a été retiré (quels que soient ses autres canaux) ou dont le push seul
+ * coché n'a jamais eu d'appareil. Réarmé dès qu'un appareil est de nouveau abonné.
  * @since 3.0.3
  * @author Kwaite
  */
@@ -55,9 +55,11 @@ public class AvertissementCanalPerduService {
   public int verifier() {
     jdbc.update(
         "UPDATE user_config uc SET avertissement_canal_perdu_le = NULL"
-            + " WHERE uc.avertissement_canal_perdu_le IS NOT NULL AND NOT ("
-            + CanalNotificationPerdu.CONDITION_SANS_CANAL_SQL
-            + ")",
+            + " WHERE uc.avertissement_canal_perdu_le IS NOT NULL AND NOT (("
+            + CanalNotificationPerdu.CONDITION_SQL
+            + ") OR ("
+            + CanalNotificationPerdu.CONDITION_JAMAIS_ABONNE_SQL
+            + "))",
         Map.of());
     final List<Map<String, Object>> comptes =
         jdbc.queryForList(

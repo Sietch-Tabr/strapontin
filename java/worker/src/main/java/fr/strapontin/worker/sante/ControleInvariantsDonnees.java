@@ -30,12 +30,14 @@ final class ControleInvariantsDonnees {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
+  private final ControleInvariantsComplementaires complementaires;
 
   /* package-private : instancié par ControleIntegriteService. */
   ControleInvariantsDonnees(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
     this.signalements = signalements;
+    this.complementaires = new ControleInvariantsComplementaires(jdbc, signalements);
   }
 
   /**
@@ -57,7 +59,8 @@ final class ControleInvariantsDonnees {
         + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
         + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publier("salle_sans_ville", SALLE, sallesSansVille())
-        + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces());
+        + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
+        + complementaires.verifier();
   }
 
   private int publier(
@@ -126,8 +129,6 @@ final class ControleInvariantsDonnees {
         : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
-  // Même concert sur deux salles déclarées distinctes (admin ou répartition) :
-  // un lieu resté sur la mauvaise salle l'a recréé. Le plus récent est signalé.
   private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -238,7 +239,12 @@ final class ControleInvariantsDonnees {
     jdbc.query(
         """
         SELECT count(*) AS nb, min(e.date)::text AS premiere,
-               string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts
+               string_agg(DISTINCT e.dept, ', ' ORDER BY e.dept) AS depts,
+               count(*) FILTER (WHERE e.date > COALESCE(
+                 (SELECT max(x.date) FROM evenements x
+                  JOIN observations ox ON ox.evenement_id = x.id
+                  WHERE x.salle_id = e.salle_id AND ox.updated_at > now() - interval '3 days'),
+                 CURRENT_DATE)) AS hors_horizon
         FROM evenements e
         WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
           AND e.absences_consecutives = 0
@@ -256,6 +262,9 @@ final class ControleInvariantsDonnees {
             details.put("fiches", rs.getLong("nb"));
             details.put("premiere", rs.getString("premiere"));
             details.put("departements", rs.getString("depts"));
+            // Plus tardives que toute fiche revue de leur salle : au-delà de l'horizon des
+            // récupérations plutôt que retirées de la billetterie.
+            details.put("horsHorizon", rs.getLong("hors_horizon"));
           }
         });
     return globale("fiches_figees", details);
@@ -454,7 +463,8 @@ final class ControleInvariantsDonnees {
     return globale("comptes_incoherents", comptes);
   }
 
-  // Un identifiant Wikidata ou Deezer désigne une seule salle ou un seul artiste.
+  // Un identifiant Wikidata ou Deezer désigne une seule salle ou un seul
+  // artiste.
   private Map<UUID, Map<String, Object>> identifiantsDupliques() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(

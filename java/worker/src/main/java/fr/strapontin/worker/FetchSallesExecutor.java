@@ -34,9 +34,9 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
-  // Salle d'un département suivi dont une fiche à venir n'a plus été revue depuis
-  // une semaine : le fetch de région ne demande que music, opera et musical, aucun
-  // autre fetch ne la voit (théâtre, humour). Interrogée par lieu, sans filtre.
+  // Salle d'un département suivi dont une fiche à venir n'a plus été revue
+  // depuis une semaine : le fetch de région borne catégories et date (6 mois).
+  // Interrogée par lieu, sans filtre.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
       """
       EXISTS (SELECT 1 FROM evenements e
@@ -259,7 +259,7 @@ class FetchSallesExecutor {
                 + " ss.identifiant_externe AS identifiant, ss.libelle_source AS libelle"
                 + " FROM salle_sources ss"
                 + " WHERE (EXISTS (SELECT 1 FROM user_salles us WHERE us.salle_id = ss.salle_id)"
-                + "   OR (ss.source = 'ticketmaster' AND "
+                + "   OR (ss.source IN ('ticketmaster', 'eventim') AND "
                 + CONDITION_SALLE_A_RAFRAICHIR
                 + "))"
                 + " AND (ss.source <> 'eventim' OR ss.libelle_source IS NOT NULL)"

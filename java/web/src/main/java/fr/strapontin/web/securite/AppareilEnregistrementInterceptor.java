@@ -66,10 +66,13 @@ public class AppareilEnregistrementInterceptor implements HandlerInterceptor {
       return true;
     }
     final String userAgent = request.getHeader("User-Agent");
-    final boolean nouvelAppareil = appareilsService.estNouvelAppareil(details.id(), userAgent);
-    appareilsService.enregistrerAppareil(session.getId(), details.id(), userAgent);
+    final String modeAffichage = request.getHeader(NomAppareil.ENTETE_MODE);
+    final boolean nouvelAppareil =
+        appareilsService.estNouvelAppareil(details.id(), userAgent, modeAffichage);
+    appareilsService.enregistrerAppareil(session.getId(), details.id(), userAgent, modeAffichage);
     if (nouvelAppareil) {
-      alerteActiviteUtilisateurService.notifierNouvelAppareil(details.email(), userAgent);
+      alerteActiviteUtilisateurService.notifierNouvelAppareil(
+          details.email(), userAgent, modeAffichage);
     }
     session.setAttribute(ATTRIBUT_DEJA_ENREGISTRE, Boolean.TRUE);
     return true;

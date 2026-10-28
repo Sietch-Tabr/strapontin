@@ -23,6 +23,7 @@ import fr.strapontin.sources.EnrichissementSalle;
 import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceEnrichissementSalle;
+import fr.strapontin.sources.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.SuiviChroniciteService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -64,6 +66,39 @@ class EnrichissementSallesServiceTest {
   // streak persisté ne survit entre deux tests indépendants) — cf. WorkerStatsServiceTest.
   private static SuiviChroniciteService suiviChronicite(final NamedParameterJdbcTemplate jdbc) {
     return new SuiviChroniciteService(jdbc, new ObjectMapper());
+  }
+
+  // Le Hasard Ludique : OpenStreetMap propose l'élément de la gare dont il occupe le bâtiment.
+  @Test
+  void enrichir_elementProposeDeTypeExclu_neLAffectePasEtNommeLaSalle() {
+    final UUID salleId = UUID.randomUUID();
+    final SalleAEnrichir salle =
+        new SalleAEnrichir(
+            salleId, "Le Hasard Ludique", "le hasard ludique", "Paris", "75", null, 48.89, 2.33);
+    final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(salle));
+    final SourceEnrichissementSalle osm = mock(SourceEnrichissementSalle.class);
+    when(osm.enrichirLot(any()))
+        .thenReturn(Map.of(salleId, new EnrichissementSalle("Q16507976", null, null, null, null)));
+    final WikidataSalleSource wikidata = mock(WikidataSalleSource.class);
+    when(wikidata.enrichirLot(any())).thenReturn(Map.of());
+    when(wikidata.typesInvalides(any())).thenReturn(Set.of("Q16507976"));
+    when(wikidata.preleverBilan()).thenReturn(new BilanFetch(0, 0));
+    final LogsAdminWorker logsAdminWorker = logsAdminWorkerMock();
+
+    final int nb =
+        new EnrichissementSallesService(
+                jdbc,
+                List.of(osm, wikidata),
+                logsAdminWorker,
+                suiviChronicite(jdbc),
+                mock(FusionSallesClePorteeService.class),
+                mock(SignalementMatchingService.class))
+            .enrichir();
+
+    assertEquals(0, nb);
+    verify(jdbc, never()).update(contains("wikidata_id = COALESCE"), anyMap());
+    verify(logsAdminWorker)
+        .inserer(eq("warn"), eq("enrichissement"), contains("Le Hasard Ludique"), anyMap());
   }
 
   @Test
