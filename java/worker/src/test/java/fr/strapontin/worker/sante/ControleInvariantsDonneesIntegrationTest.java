@@ -140,6 +140,17 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_memeSalleDeuxSeancesDeLaMemeBilletterie_neSignaleRien() {
+    final UUID salle = creerSalle();
+    observer(evenementHeure(salle, "exposition", "10:00"), "eventim");
+    observer(evenementHeure(salle, "exposition", "11:30"), "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  @Test
   void verifier_matineeEtSoireeEloignees_neSignaleRien() {
     final UUID salle = creerSalle();
     observer(evenementHeure(salle, "spectacle", "14:00"), "ticketmaster");
