@@ -175,7 +175,8 @@ final class ControleInvariantsComplementaires {
   // sa sous-salle,
   // dans deux salles d'une même commune (séance déplacée restée publiée sous
   // l'ancienne) ou
-  // dans une même salle sous deux heures (deux billetteries). Les paires
+  // dans une même salle sous deux heures sans billetterie commune (deux séances
+  // d'une même billetterie sont deux séances réelles). Les paires
   // déclarées distinctes
   // relèvent de concert_double_salles_distinctes.
   private Map<UUID, Map<String, Object>> seancesDansDeuxSalles() {
@@ -199,6 +200,9 @@ final class ControleInvariantsComplementaires {
           AND (sa.id = sb.id OR sa.salle_parent_id = sb.id OR sb.salle_parent_id = sa.id
                OR lower(sa.ville) = lower(sb.ville))
           AND NOT (sa.id = sb.id AND e1.heure = e2.heure)
+          AND (sa.id <> sb.id OR NOT EXISTS (
+            SELECT 1 FROM observations o1 JOIN observations o2 ON o2.source = o1.source
+            WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id))
           AND NOT EXISTS (
             SELECT 1 FROM salles_paires_distinctes d
             WHERE d.salle_a = LEAST(sa.id, sb.id) AND d.salle_b = GREATEST(sa.id, sb.id))
