@@ -23,10 +23,10 @@ Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapont
 ## Stack technique
 
 - **Spring Boot 4.1.2** + **Vue 3 + Vite 8.1** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
-- **Vitest 4** (`front/vitest.config.js`, #781) : tests unitaires des fonctions pures partagées entre composants (`front/src/utils/`), sans montage de composant ni jsdom — complémentaire à Playwright (flux utilisateur, rendu réel), pas redondant. Config dédiée séparée de `vite.config.js` pour ne pas embarquer les plugins Vue/PWA dans l'exécution des tests.
+- **Vitest 4** (`front/vitest.config.js`, #781) : tests unitaires des fonctions pures partagées entre composants (`front/src/utils/`), sans montage de composant ni jsdom.
 - `npm run build`/`npm ci` émettent des warnings connus et non actionnables (vite-plugin-pwa, workbox) : [`front/CLAUDE.md`](front/CLAUDE.md).
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (limitation de débit en fenêtre glissante, `securite.LimiteurDebit`) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
-- **Spring Data JDBC** + PostgreSQL 18 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP). Tuning mémoire laissé par défaut (base ~16 MB, aucun gain mesurable).
+- **Spring Data JDBC** + PostgreSQL 18 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP).
 - **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)
 - **Flyway 13** — migrations DB, un seul jeu (`java/web/src/main/resources/db/migration/`) appliqué aussi par les tests worker. Conventions : [`.claude/rules/sql-migrations.md`](.claude/rules/sql-migrations.md).
 - **Resend** — notifications email (tier gratuit 3 000/mois) ; gabarits HTML via `EmailTemplates.java` (text blocks Java). Garde-fous de quota/anti-boucle : [`web/CLAUDE.md`](java/web/src/main/java/fr/strapontin/web/CLAUDE.md).
