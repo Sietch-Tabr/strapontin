@@ -153,7 +153,7 @@ final class AbsorptionRenommagesSalles {
     return nomActuel != null && sansEspaces(candidat).equals(sansEspaces(nomActuel));
   }
 
-  // « L'Atelier » (apostrophe) et « lAtelier » (collé) ne diffèrent que par les espaces.
+  // « L'Atelier » et « lAtelier » ne diffèrent que par les espaces.
   private static String sansEspaces(final String nom) {
     return Normalisation.normaliserTexte(nom).replace(" ", "");
   }

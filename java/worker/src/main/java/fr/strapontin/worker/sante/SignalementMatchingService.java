@@ -35,8 +35,9 @@ public class SignalementMatchingService {
           "seance_dans_deux_salles", "jumeau",
           "wikidata_coordonnees_divergentes", "wikidataId");
 
-  // Un contrôle qui signale plus de fiches d'un coup qu'un humain n'en traite est en régression.
+  // Au-delà, un contrôle est en régression plutôt qu'à traiter.
   private static final int SEUIL_VOLUME_ANORMAL = 200;
+  private static final String CLE_TYPE = "type";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -82,7 +83,7 @@ public class SignalementMatchingService {
           ON CONFLICT DO NOTHING
           """,
           new MapSqlParameterSource()
-              .addValue("type", type)
+              .addValue(CLE_TYPE, type)
               .addValue("entiteType", entiteType)
               .addValue("entiteId", entiteId.toString())
               .addValue("confiance", confiance)
@@ -110,7 +111,7 @@ public class SignalementMatchingService {
               AND resolu_manuellement AND details ->> :cle = :valeur
             """,
             new MapSqlParameterSource()
-                .addValue("type", type)
+                .addValue(CLE_TYPE, type)
                 .addValue("entiteId", entiteId.toString())
                 .addValue("cle", cle)
                 .addValue("valeur", String.valueOf(details.get(cle))),
@@ -134,7 +135,7 @@ public class SignalementMatchingService {
               + " » : "
               + entitesEncoreEnAnomalie.size()
               + " en un passage",
-          Map.of("type", type, "nombre", entitesEncoreEnAnomalie.size()));
+          Map.of(CLE_TYPE, type, "nombre", entitesEncoreEnAnomalie.size()));
     }
     return jdbc.update(
         """
@@ -143,7 +144,7 @@ public class SignalementMatchingService {
           AND NOT (entite_id = ANY(CAST(:encore AS uuid[])))
         """,
         new MapSqlParameterSource()
-            .addValue("type", type)
+            .addValue(CLE_TYPE, type)
             .addValue(
                 "encore",
                 entitesEncoreEnAnomalie.stream().map(UUID::toString).toArray(String[]::new)));

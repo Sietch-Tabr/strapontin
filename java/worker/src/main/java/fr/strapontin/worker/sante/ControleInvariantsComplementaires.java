@@ -28,6 +28,43 @@ final class ControleInvariantsComplementaires {
   // Deux salles d'une même ville plus éloignées ne jouent pas la même production.
   private static final int DISTANCE_MAX_SALLES_METRES = 2000;
 
+  private static final String SQL_SEANCES_DANS_DEUX_SALLES =
+      """
+        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+               e1.artiste_norm, e1.date::text AS date,
+               coalesce(sa.nom, '?') AS salle_a, coalesce(sb.nom, '?') AS salle_b,
+               e1.heure::text AS heure_a, e2.heure::text AS heure_b
+        FROM evenements e1
+        JOIN evenements e2 ON e2.id > e1.id AND e2.date = e1.date
+         AND e2.heure IS NOT NULL AND e1.heure IS NOT NULL
+         AND abs(extract(epoch FROM (e2.heure - e1.heure))) <= 10800
+         AND (e2.artiste_norm = e1.artiste_norm
+              OR (e1.artiste_id IS NOT NULL AND e2.artiste_id = e1.artiste_id))
+        JOIN salles sa ON sa.id = e1.salle_id
+        JOIN salles sb ON sb.id = e2.salle_id
+        WHERE e1.date >= CURRENT_DATE
+          AND (sa.id = sb.id OR sa.salle_parent_id = sb.id OR sb.salle_parent_id = sa.id
+               OR (lower(sa.ville) = lower(sb.ville)
+                   AND (sa.latitude IS NULL OR sa.longitude IS NULL
+                        OR sb.latitude IS NULL OR sb.longitude IS NULL
+                        OR 2 * 6371000 * asin(sqrt(
+                             power(sin(radians(sb.latitude - sa.latitude) / 2), 2)
+                             + cos(radians(sa.latitude)) * cos(radians(sb.latitude))
+                               * power(sin(radians(sb.longitude - sa.longitude) / 2), 2)))
+                           <= :distanceMax)))
+          AND NOT (sa.id = sb.id AND e1.heure = e2.heure)
+          AND (sa.id <> sb.id OR NOT EXISTS (
+            SELECT 1 FROM observations o1 JOIN observations o2 ON o2.source = o1.source
+            WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id))
+          AND NOT EXISTS (
+            SELECT 1 FROM salles_paires_distinctes d
+            WHERE d.salle_a = LEAST(sa.id, sb.id) AND d.salle_b = GREATEST(sa.id, sb.id))
+          AND EXISTS (SELECT 1 FROM observations o
+                      WHERE o.evenement_id IN (e1.id, e2.id)
+                        AND o.updated_at > now() - interval '7 days')
+        """;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
 
@@ -185,41 +222,7 @@ final class ControleInvariantsComplementaires {
   private Map<UUID, Map<String, Object>> seancesDansDeuxSalles() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
-        """
-        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
-               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
-               e1.artiste_norm, e1.date::text AS date,
-               coalesce(sa.nom, '?') AS salle_a, coalesce(sb.nom, '?') AS salle_b,
-               e1.heure::text AS heure_a, e2.heure::text AS heure_b
-        FROM evenements e1
-        JOIN evenements e2 ON e2.id > e1.id AND e2.date = e1.date
-         AND e2.heure IS NOT NULL AND e1.heure IS NOT NULL
-         AND abs(extract(epoch FROM (e2.heure - e1.heure))) <= 10800
-         AND (e2.artiste_norm = e1.artiste_norm
-              OR (e1.artiste_id IS NOT NULL AND e2.artiste_id = e1.artiste_id))
-        JOIN salles sa ON sa.id = e1.salle_id
-        JOIN salles sb ON sb.id = e2.salle_id
-        WHERE e1.date >= CURRENT_DATE
-          AND (sa.id = sb.id OR sa.salle_parent_id = sb.id OR sb.salle_parent_id = sa.id
-               OR (lower(sa.ville) = lower(sb.ville)
-                   AND (sa.latitude IS NULL OR sa.longitude IS NULL
-                        OR sb.latitude IS NULL OR sb.longitude IS NULL
-                        OR 2 * 6371000 * asin(sqrt(
-                             power(sin(radians(sb.latitude - sa.latitude) / 2), 2)
-                             + cos(radians(sa.latitude)) * cos(radians(sb.latitude))
-                               * power(sin(radians(sb.longitude - sa.longitude) / 2), 2)))
-                           <= :distanceMax)))
-          AND NOT (sa.id = sb.id AND e1.heure = e2.heure)
-          AND (sa.id <> sb.id OR NOT EXISTS (
-            SELECT 1 FROM observations o1 JOIN observations o2 ON o2.source = o1.source
-            WHERE o1.evenement_id = e1.id AND o2.evenement_id = e2.id))
-          AND NOT EXISTS (
-            SELECT 1 FROM salles_paires_distinctes d
-            WHERE d.salle_a = LEAST(sa.id, sb.id) AND d.salle_b = GREATEST(sa.id, sb.id))
-          AND EXISTS (SELECT 1 FROM observations o
-                      WHERE o.evenement_id IN (e1.id, e2.id)
-                        AND o.updated_at > now() - interval '7 days')
-        """,
+        SQL_SEANCES_DANS_DEUX_SALLES,
         Map.of("distanceMax", DISTANCE_MAX_SALLES_METRES),
         rs -> {
           anomalies.put(

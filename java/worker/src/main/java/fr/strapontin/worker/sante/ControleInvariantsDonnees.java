@@ -28,8 +28,7 @@ final class ControleInvariantsDonnees {
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
 
-  // Au-delà, la salle reçoit légitimement plusieurs spectacles à la fois (théâtre à plusieurs
-  // salles).
+  // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
   private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
 
   private final NamedParameterJdbcTemplate jdbc;
