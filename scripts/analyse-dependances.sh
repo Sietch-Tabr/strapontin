@@ -4,7 +4,7 @@ set -euo pipefail
 # Analyse des vulnérabilités connues (base OSV) des dépendances Maven et npm.
 # Usage : analyse-dependances.sh sbom|local
 #   sbom  : génère l'inventaire CycloneDX des modules Java (étape CI, image Maven)
-#   local : sbom puis analyse de l'inventaire et de package-lock.json via Docker
+#   local : sbom puis analyse de l'inventaire et des package-lock.json (front et e2e) via Docker
 # L'analyse en CI est lancée directement par .woodpecker/ci.yaml (l'image osv-scanner n'a pas
 # de bash). Une exception justifiée se déclare dans osv-scanner.toml (IgnoredVulns, ignoreUntil).
 
@@ -27,7 +27,7 @@ case "${1:-}" in
     generer_inventaire
     docker run --rm -v "$RACINE":/src --entrypoint /osv-scanner "$IMAGE_SCANNER" \
       scan source --config=/src/osv-scanner.toml \
-      -L /src/java/target/bom.json -L /src/front/package-lock.json
+      -L /src/java/target/bom.json -L /src/front/package-lock.json -L /src/e2e/package-lock.json
     ;;
   *)
     echo "Usage : $0 sbom|local" >&2
