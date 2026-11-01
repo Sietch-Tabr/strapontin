@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.worker.LogsAdminWorker;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -34,17 +35,25 @@ public class SignalementMatchingService {
           "seance_dans_deux_salles", "jumeau",
           "wikidata_coordonnees_divergentes", "wikidataId");
 
+  // Un contrôle qui signale plus de fiches d'un coup qu'un humain n'en traite est en régression.
+  private static final int SEUIL_VOLUME_ANORMAL = 200;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
+  private final LogsAdminWorker logsAdminWorker;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper sérialisation des détails en JSON
+   * @param logsAdminWorker avertissement quand un type de signalement déborde
    */
   public SignalementMatchingService(
-      final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /**
@@ -116,6 +125,17 @@ public class SignalementMatchingService {
    * @return nombre de signalements clos
    */
   public int clore(final String type, final Collection<UUID> entitesEncoreEnAnomalie) {
+    if (entitesEncoreEnAnomalie.size() > SEUIL_VOLUME_ANORMAL) {
+      logsAdminWorker.inserer(
+          "warn",
+          "signalements",
+          "Volume anormal de signalements « "
+              + type
+              + " » : "
+              + entitesEncoreEnAnomalie.size()
+              + " en un passage",
+          Map.of("type", type, "nombre", entitesEncoreEnAnomalie.size()));
+    }
     return jdbc.update(
         """
         UPDATE signalements_matching SET resolu_le = now()

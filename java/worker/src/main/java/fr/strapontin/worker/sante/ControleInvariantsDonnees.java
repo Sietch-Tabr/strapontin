@@ -28,6 +28,10 @@ final class ControleInvariantsDonnees {
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
 
+  // Au-delà, la salle reçoit légitimement plusieurs spectacles à la fois (théâtre à plusieurs
+  // salles).
+  private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
   private final ControleInvariantsComplementaires complementaires;
@@ -166,7 +170,8 @@ final class ControleInvariantsDonnees {
   // Deux fiches de la même billetterie au même créneau et dans la même salle,
   // sans artiste reconnu : un seul lieu ne reçoit pas deux concerts à la fois,
   // mais la billetterie peut vendre un même concert sous plusieurs programmes.
-  // Détecté seulement, jamais fusionné : le calendrier de la salle seul tranche.
+  // Détecté seulement, jamais fusionné. Une salle qui en cumule plusieurs a
+  // plusieurs salles internes : ses créneaux doubles ne sont pas signalés.
   private Map<UUID, Map<String, Object>> creneauxDoublesMemeSource() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -178,19 +183,23 @@ final class ControleInvariantsDonnees {
           WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
             AND e.artiste_id IS NULL
           GROUP BY e.id)
-        SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
-               CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
-               e1.artiste_norm AS titre_a, e2.artiste_norm AS titre_b, s.nom AS salle,
-               e1.date::text AS date, e1.heure::text AS heure
-        FROM ev e1
-        JOIN ev e2 ON e2.salle_id = e1.salle_id AND e2.date = e1.date AND e2.heure = e1.heure
-                  AND e1.id < e2.id
-        JOIN salles s ON s.id = e1.salle_id
-        WHERE e1.eventim_seul AND e2.eventim_seul
-          AND (SELECT count(*) FROM ev x
-               WHERE x.salle_id = e1.salle_id AND x.date = e1.date AND x.heure = e1.heure) = 2
+        SELECT * FROM (
+          SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+                 CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+                 e1.artiste_norm AS titre_a, e2.artiste_norm AS titre_b, s.nom AS salle,
+                 e1.date::text AS date, e1.heure::text AS heure,
+                 count(*) OVER (PARTITION BY e1.salle_id) AS creneaux_de_la_salle
+          FROM ev e1
+          JOIN ev e2 ON e2.salle_id = e1.salle_id AND e2.date = e1.date AND e2.heure = e1.heure
+                    AND e1.id < e2.id
+          JOIN salles s ON s.id = e1.salle_id
+          WHERE e1.eventim_seul AND e2.eventim_seul
+            AND (SELECT count(*) FROM ev x
+                 WHERE x.salle_id = e1.salle_id AND x.date = e1.date AND x.heure = e1.heure) = 2
+        ) c
+        WHERE c.creneaux_de_la_salle < :seuilSalleMultiple
         """,
-        Map.of(),
+        Map.of("seuilSalleMultiple", SEUIL_CRENEAUX_SALLE_MULTIPLE),
         rs -> {
           anomalies.put(
               rs.getObject("recent", UUID.class),

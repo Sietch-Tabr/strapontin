@@ -25,6 +25,9 @@ final class ControleInvariantsComplementaires {
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
 
+  // Deux salles d'une même ville plus éloignées ne jouent pas la même production.
+  private static final int DISTANCE_MAX_SALLES_METRES = 2000;
+
   private final NamedParameterJdbcTemplate jdbc;
   private final SignalementMatchingService signalements;
 
@@ -198,7 +201,14 @@ final class ControleInvariantsComplementaires {
         JOIN salles sb ON sb.id = e2.salle_id
         WHERE e1.date >= CURRENT_DATE
           AND (sa.id = sb.id OR sa.salle_parent_id = sb.id OR sb.salle_parent_id = sa.id
-               OR lower(sa.ville) = lower(sb.ville))
+               OR (lower(sa.ville) = lower(sb.ville)
+                   AND (sa.latitude IS NULL OR sa.longitude IS NULL
+                        OR sb.latitude IS NULL OR sb.longitude IS NULL
+                        OR 2 * 6371000 * asin(sqrt(
+                             power(sin(radians(sb.latitude - sa.latitude) / 2), 2)
+                             + cos(radians(sa.latitude)) * cos(radians(sb.latitude))
+                               * power(sin(radians(sb.longitude - sa.longitude) / 2), 2)))
+                           <= :distanceMax)))
           AND NOT (sa.id = sb.id AND e1.heure = e2.heure)
           AND (sa.id <> sb.id OR NOT EXISTS (
             SELECT 1 FROM observations o1 JOIN observations o2 ON o2.source = o1.source
@@ -210,7 +220,7 @@ final class ControleInvariantsComplementaires {
                       WHERE o.evenement_id IN (e1.id, e2.id)
                         AND o.updated_at > now() - interval '7 days')
         """,
-        Map.of(),
+        Map.of("distanceMax", DISTANCE_MAX_SALLES_METRES),
         rs -> {
           anomalies.put(
               rs.getObject("recent", UUID.class),
