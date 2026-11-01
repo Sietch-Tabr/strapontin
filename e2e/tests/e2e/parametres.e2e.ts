@@ -95,7 +95,7 @@ test.describe("Scénario: paramètres — notifications, mise en page et sortie"
   }
 
   async function quitterVersLAccueil(page: Page) {
-    await page.locator('a[href="/"]:visible').first().click();
+    await page.locator('a[href="/"]').visible().first().click();
   }
 
   test("parametres_notifications_frequence_aLeCadreTitreDesAutresBlocs", async ({
@@ -736,7 +736,16 @@ test.describe("Scénario: API compte — identifiant", () => {
 });
 
 test.describe("Scénario: API compte — mot de passe", () => {
-  test("api_mdp_mauvais_actuel_retourne_400", async ({ request }) => {
+  test("api_mdp_mauvais_actuel_retourne_400", async ({
+    request,
+    browserName,
+    isMobile,
+  }) => {
+    // Chaque essai erroné compte dans la limite de 5 par 15 min et par compte.
+    test.skip(
+      browserName !== "chromium" || isMobile,
+      "limite d'échecs par compte — chromium desktop uniquement",
+    );
     const rep = await request.post("/api/user/password", {
       data: {
         motDePasseActuel: "mauvais-mot-de-passe-incorrect",

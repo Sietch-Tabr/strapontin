@@ -31,17 +31,26 @@ Le projet épingle la plupart de ses versions via des propriétés dans le pom p
 
 Vérifier aussi séparément si une version plus récente du parent Spring Boot (BOM) est disponible.
 
+Plugins Maven : `mvn -f java/pom.xml -N versions:display-plugin-updates`. Ne lire que sa première ligne (« All plugins with a version specified are using the latest versions ») ; les lignes `->` qui suivent proposent des versions plus anciennes (`maven-pmd-plugin 3.28.0 -> 2.2`), faux signal de rétrogradation à ignorer. Les plugins sans version dans le pom (surefire, compiler, jar…) suivent le parent Spring Boot : leur mise à jour passe par celle du parent.
+
 ## 3. Scanner npm
 
 ```bash
 cd front && npm outdated
+cd ../e2e && npm outdated
 ```
 
-Lister current/wanted/latest par paquet.
+Deux projets npm : `front/` (application) et `e2e/` (Playwright, tests de bout en bout). Les deux se scannent à chaque invocation ; `e2e/` y a échappé jusqu'au jalon 3.1.2 (Playwright resté en 1.63.0 alors que la 1.64.1, avec WebKit 27.2 pour un hôte en macOS 27.2, existait). Lister current/wanted/latest par paquet. Pour Playwright, relever aussi le moteur embarqué : `npx -y playwright@<version> install --dry-run webkit` (affiche « WebKit X.Y »), à comparer à celui de l'hôte (`sw_vers`) ; un moteur de test plus ancien que le système est un écart à signaler.
 
 ## 4. Scanner la stack infra
 
 Informatif uniquement — jamais appliqué automatiquement, un changement d'OS/PostgreSQL/Java majeur dépasse le cadre d'un jalon applicatif.
+
+**Images de la pipeline** : `grep -n 'image:' .woodpecker/ci.yaml` (maven, node, osv-scanner, alpine au 01/11/2026). Comparer chaque tag à la dernière version publiée ; une image sans tag (`alpine` du step de sauvegarde) suit `latest` : le signaler, c'est un constat (non reproductible, jamais relu), pas une modification à faire seul.
+
+**Scanner OSV** : l'image est épinglée à deux endroits, `scripts/analyse-dependances.sh` (`IMAGE_SCANNER`) et `.woodpecker/ci.yaml` ; les deux doivent rester identiques et comparées à la dernière release (`curl -s https://api.github.com/repos/google/osv-scanner/releases/latest`, champ `tag_name`). C'est le contrôle bloquant de la pipeline : un scanner périmé est un angle mort.
+
+**Hors périmètre, géré par l'utilisateur** (ne pas le reproposer) : les mises à jour `apt` des conteneurs LXC, et les outils du poste (brew, tea, woodpecker-cli, Docker) via topgrade.
 
 Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template Debian LXC, Temurin/Java) et `.woodpecker/` (image de build, version Node) ; comparer aux dernières versions stables publiées (WebSearch/WebFetch).
 
@@ -62,7 +71,7 @@ Repérer aussi, même sur une mise à jour sûre, les **nouveautés/optimisation
 
 Une dépendance déjà à sa dernière version publiée peut quand même être un risque si le projet amont est mort ou vulnérable — l'étape 5 ne le détecte pas (elle ne s'intéresse qu'aux dépendances _en retard_).
 
-Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dépendance npm épinglée : vérifier la date de dernière publication (`maven-metadata.xml` → `<lastUpdated>`, ou `npm view <paquet> time` / registre npm) et rechercher une CVE connue (WebSearch `"<paquet>" CVE <année>`, ou base OSV/GitHub Advisory).
+Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dépendance npm épinglée (`front/` et `e2e/`) : vérifier la date de dernière publication (`maven-metadata.xml` → `<lastUpdated>`, ou `npm view <paquet> time` / registre npm) et rechercher une CVE connue (WebSearch `"<paquet>" CVE <année>`, ou base OSV/GitHub Advisory).
 
 - **Silencieux dans le rapport si RAS** : dernière publication < 12 mois et aucune CVE ouverte.
 - **Signalé** (mode jalon : mentionné sans bloquer le jalon ; mode hors-jalon : dans le rapport, avec proposition de ticket constat-only si pertinent) : aucune publication depuis 12+ mois, projet visiblement à l'arrêt, ou CVE trouvée sans version corrigée disponible.
@@ -86,6 +95,7 @@ L'étape 5 n'analyse que le _delta_ entre la version épinglée et la dernière 
   mvn -pl worker test -am
   cd front && npm run test:unit
   ```
+  Une mise à jour de `e2e/` (Playwright) se valide par la suite E2E complète, 5 navigateurs, un run unique à zéro échec et zéro instable.
 - Toute mise à jour "à risque" **ou nouveauté/optimisation repérée jugée pertinente** (étape 5) : poser la question précise **dans le même tour** — implémentation immédiate / ticket dédié / ignoré pour une nouveauté, à appliquer ou non pour une mise à jour à risque — jamais noter "en attente de décision" ou "à mentionner" sans la poser (cf. mémoire `feedback_question_doit_etre_posee`). Seule une réponse explicite ferme le point ; ne bloque pas le reste du jalon si elle n'est pas immédiate — continuer sur les tickets du jalon en parallèle.
 - Le bump de dépendances rejoint le commit/la PR du jalon en cours, jamais une PR séparée.
 

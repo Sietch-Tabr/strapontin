@@ -79,7 +79,7 @@ steps:
     commands:
       - >-
         /osv-scanner scan source --config=osv-scanner.toml
-        -L java/target/bom.json -L front/package-lock.json
+        -L java/target/bom.json -L front/package-lock.json -L e2e/package-lock.json
     when:
       - event: push
         branch: main
