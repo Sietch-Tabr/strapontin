@@ -135,7 +135,8 @@ class ClientNominatimTest {
     serveur.verify();
   }
 
-  // Le K : Nominatim donne le village de Tinqueux, et « municipality » désigne Reims, l'agglomération.
+  // Le K : Nominatim donne le village de Tinqueux, et « municipality » désigne Reims,
+  // l'agglomération.
   @Test
   void communeDe_positionDUnVillage_retourneLaCommuneEtNonLIntercommunalite() {
     final RestClient.Builder builder = RestClient.builder();
@@ -167,8 +168,9 @@ class ClientNominatimTest {
   void communeDe_erreurHttp_neConcluPas() {
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
-    serveur.expect(MockRestRequestMatchers.anything()).andRespond(
-        MockRestResponseCreators.withServerError());
+    serveur
+        .expect(MockRestRequestMatchers.anything())
+        .andRespond(MockRestResponseCreators.withServerError());
 
     final ClientNominatim.ResultatCommune resultat =
         source(builder.build(), mock(CadenceurAppels.class))

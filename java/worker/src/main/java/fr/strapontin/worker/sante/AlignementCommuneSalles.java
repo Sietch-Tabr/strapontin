@@ -18,11 +18,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Aligne la ville d'une salle sans élément Wikidata sur la commune où tombe sa
- * position : les billetteries annoncent la grande ville voisine (« Reims » pour
- * Le K, à Tinqueux). Quelques salles par nuit, la plus anciennement vérifiée
- * d'abord, par un géocodage inverse cadencé ; la ville ne change que si la
- * commune trouvée est du même département.
+ * Aligne la ville d'une salle sans élément Wikidata sur la commune de sa
+ * position (« Reims » pour Le K, à Tinqueux) par un géocodage inverse, quelques
+ * salles par nuit ; même département seulement.
  * @since 3.1.2
  * @author Kwaite
  */
@@ -100,7 +98,7 @@ public class AlignementCommuneSalles {
     final String ville = (String) salle.get("ville");
     final String dept = (String) salle.get("dept");
     final boolean memeDepartement =
-        resultat.codePostal().map(code -> Normalisation.extraireDeptFrancais(code)).stream()
+        resultat.codePostal().map(Normalisation::extraireDeptFrancais).stream()
             .anyMatch(dept::equals);
     if (commune.isEmpty()
         || !memeDepartement

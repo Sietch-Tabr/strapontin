@@ -139,12 +139,10 @@ final class EventimAttractionResolver {
   }
 
   /**
-   * Indique si l'identifiant enregistré désigne chez Eventim un autre artiste
-   * (présent dans les résultats de la recherche par nom, sous un autre nom).
+   * Indique si l'identifiant enregistré désigne un autre artiste chez Eventim.
    * @param terme nom de l'artiste suivi
    * @param attractionId identifiant enregistré
-   * @param identiteConfirmee identité de l'artiste confirmée par Deezer ou
-   *     Wikidata : même règle que la recherche d'attraction du fetch
+   * @param identiteConfirmee identité confirmée, comme pour le fetch
    * @param autresNomsConnus libellé et alias connus de l'artiste
    * @return {@code true} si l'identifiant est prouvé être celui d'un autre
    */

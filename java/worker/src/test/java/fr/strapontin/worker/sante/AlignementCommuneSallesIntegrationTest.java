@@ -98,8 +98,7 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
         1L,
         jdbc.queryForObject(
             "SELECT count(*) FROM logs_admin WHERE message LIKE '%Reims → Tinqueux%'",
-            Map.of(),
-            Long.class));
+            Map.of(), Long.class));
     assertNotNull(
         jdbc.queryForObject(
             "SELECT commune_verifiee_le FROM salles WHERE id = CAST(:id AS uuid)",

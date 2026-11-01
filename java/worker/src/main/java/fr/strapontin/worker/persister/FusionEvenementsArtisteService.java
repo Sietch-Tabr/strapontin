@@ -83,10 +83,8 @@ public class FusionEvenementsArtisteService {
   /**
    * Fusionne chaque événement périmé dans l'unique événement vivant de même
    * fiche et de même date (même url, ou même idmanif TM apparue plus d'une
-   * heure après la dernière vue de la périmée : deux séances vues au même
-   * passage restent distinctes) ; une fiche maintenue par un administrateur ou
-   * une séance d'une autre date de la série n'est jamais fusionnée ; ambigu :
-   * ignoré. Avant la fusion de salles.
+   * heure après la dernière vue de la périmée) ; une fiche maintenue n'est
+   * jamais fusionnée ; ambigu : ignoré. Avant la fusion de salles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimees() {
@@ -247,47 +245,6 @@ public class FusionEvenementsArtisteService {
     return fusionnerSiVivantUnique(lignes, "concert déplacé");
   }
 
-  /**
-   * Même spectacle sous deux intitulés (« of Mtsensk » / « de Mzensk ») : seuls
-   * événements de leur salle au créneau, Ticketmaster seul et Eventim seul, sans
-   * artiste reconnu ni fiche annulée. À appeler après les contrôles d'intégrité.
-   * @return nombre de fusions effectuées
-   */
-  public int fusionnerMemeCreneauDeuxSources() {
-    final List<Map<String, Object>> paires =
-        jdbc.queryForList(
-            """
-            WITH ev AS (
-              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_id,
-                     bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
-              FROM evenements e JOIN observations o ON o.evenement_id = e.id
-              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
-                AND e.statut IS DISTINCT FROM 'cancelled'
-              GROUP BY e.id),
-            creneaux AS (
-              SELECT salle_id, date, heure FROM ev GROUP BY salle_id, date, heure
-              HAVING count(*) = 2
-                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
-                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1
-                 AND count(*) FILTER (WHERE artiste_id IS NOT NULL) = 0)
-            SELECT t.id AS cible, v.id AS source
-            FROM creneaux c
-            JOIN salles s ON s.id = c.salle_id
-            JOIN ev t ON t.salle_id = c.salle_id AND t.date = c.date AND t.heure = c.heure
-                     AND t.tm AND NOT t.evt
-            JOIN ev v ON v.salle_id = c.salle_id AND v.date = c.date AND v.heure = c.heure
-                     AND v.evt AND NOT v.tm
-            WHERE\
-            """
-                + SalleFiable.condition("s"),
-            Map.of());
-    for (final Map<String, Object> paire : paires) {
-      fusionner(
-          (UUID) paire.get("cible"), (UUID) paire.get("source"), "même créneau, deux sources");
-    }
-    return paires.size();
-  }
-
   // Plusieurs vivants (même adresse pour plusieurs séances) : aucun choix sûr.
   private int fusionnerSiVivantUnique(final List<Map<String, Object>> lignes, final String motif) {
     int fusions = 0;
@@ -400,9 +357,7 @@ public class FusionEvenementsArtisteService {
   }
 
   /**
-   * Absorbe une fiche périmée dans la fiche vivante désignée, quelle que soit
-   * la mieux établie des deux : la date et l'heure à garder sont celles de la
-   * fiche vivante.
+   * Absorbe une fiche dans la fiche vivante, dont la date et l'heure sont gardées.
    * @param vivantId événement à conserver
    * @param perimeId événement à absorber puis supprimer
    * @param motif raison journalisée

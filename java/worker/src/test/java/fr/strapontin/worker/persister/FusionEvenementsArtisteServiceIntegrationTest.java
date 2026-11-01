@@ -37,6 +37,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
   @Autowired private FusionEvenementsArtisteService fusionEvenementsArtiste;
 
   @Autowired private FusionProduitsEventimService fusionProduitsEventim;
+  @Autowired private FusionSeancesDeuxSourcesService fusionSeancesDeuxSources;
 
   @Autowired private NamedParameterJdbcTemplate jdbc;
 
@@ -404,6 +405,47 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(vivante));
   }
 
+  private void passerEnEventim(final UUID evenementId) {
+    jdbc.update(
+        "UPDATE observations SET source = CAST('eventim' AS source_concert)"
+            + " WHERE evenement_id = CAST(:id AS uuid)",
+        Map.of("id", evenementId.toString()));
+  }
+
+  // Sting à Aluna : Ticketmaster publie la séance sans heure, Eventim à 16 h.
+  @Test
+  void fusionnerSeancesSansHeure_unePublicationSansHeureEtUneAvecHeure_fusionneDansLHorodatee() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);
+    final UUID horodatee = creerFiche(salle, DATE_FUTURE, "16:00", 0, URL_TM + "/idtier/1");
+    passerEnEventim(horodatee);
+
+    assertEquals(1, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertFalse(existe(sansHeure));
+    assertTrue(existe(horodatee));
+  }
+
+  @Test
+  void fusionnerSeancesSansHeure_memeSourceDesDeuxCotes_neFusionnePas() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);
+    final UUID horodatee = creerFiche(salle, DATE_FUTURE, "16:00", 0, URL_TM + "/idtier/1");
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertTrue(existe(sansHeure));
+    assertTrue(existe(horodatee));
+  }
+
+  @Test
+  void fusionnerSeancesSansHeure_deuxFichesHorodateesPossibles_ignoreLAmbiguite() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);
+    final UUID matinee = creerFiche(salle, DATE_FUTURE, "14:00", 0, URL_TM + "/idtier/1");
+    final UUID soiree = creerFiche(salle, DATE_FUTURE, "20:00", 0, URL_TM + "/idtier/2");
+    passerEnEventim(matinee);
+    passerEnEventim(soiree);
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertTrue(existe(sansHeure));
+  }
+
   // Toutes les séances d'une série partagent la même adresse : une séance absente ne rejoint pas
   // une séance vivante d'un autre jour.
   @Test
@@ -627,7 +669,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     final UUID tm = evenementSource(bastille, "lady macbeth of mtsensk", "ticketmaster");
     final UUID ev = evenementSource(bastille, "lady macbeth de mzensk", "eventim");
 
-    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertEquals(1, fusionSeancesDeuxSources.fusionnerMemeCreneauDeuxSources());
     assertTrue(existe(tm));
     assertFalse(existe(ev));
   }
@@ -642,7 +684,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
         "UPDATE evenements SET statut = 'cancelled' WHERE id = CAST(:id AS uuid)",
         Map.of("id", annule.toString()));
 
-    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerMemeCreneauDeuxSources());
     assertTrue(existe(annule));
     assertTrue(existe(remplacant));
   }
@@ -658,7 +700,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
             + " ('dispersion_sources_salle', 'salle', CAST(:id AS uuid), 'haute')",
         Map.of("id", salle.toString()));
 
-    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerMemeCreneauDeuxSources());
   }
 
   @Test
@@ -668,7 +710,7 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     evenementSource(salle, "bebe concert", "eventim");
     evenementSource(salle, "gloria de vivaldi", "eventim");
 
-    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources());
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerMemeCreneauDeuxSources());
   }
 
   // --- fusionnerMemeProduitEventim ---

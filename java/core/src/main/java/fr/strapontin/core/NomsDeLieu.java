@@ -25,7 +25,7 @@ public final class NomsDeLieu {
   // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
 
-  // Un mot qui perd son article collé garde au moins cinq lettres (« lessaion » → « essaion »).
+  // Un mot qui perd son article collé garde au moins cinq lettres.
   private static final int LONGUEUR_MIN_APRES_ARTICLE = 5;
 
   private static final Pattern ARTICLE_ELIDE = Pattern.compile("\\b([a-z]) (?=[a-z])");
@@ -74,8 +74,8 @@ public final class NomsDeLieu {
         && designentSansDetacherLArticle(detacheA, detacheB, contexteLieu);
   }
 
-  // « lessaion » chez Eventim, « essaion » chez Ticketmaster : l'article élidé collé à un mot
-  // que l'autre nom porte seul se détache. Un reste de moins de cinq lettres reste un mot.
+  // « lessaion » chez Eventim, « essaion » chez Ticketmaster : l'article collé se
+  // détache si l'autre nom porte le mot seul.
   private static String detacherArticleColle(final String nomNorm, final String nomNormAutre) {
     final Set<String> motsAutre = new HashSet<>(Arrays.asList(nomNormAutre.split(" ")));
     final StringBuilder resultat = new StringBuilder();

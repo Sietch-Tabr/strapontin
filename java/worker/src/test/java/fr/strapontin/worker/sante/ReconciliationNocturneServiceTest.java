@@ -21,9 +21,8 @@ import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
-import fr.strapontin.worker.persister.FusionEvenementsArtisteService;
-import fr.strapontin.worker.persister.FusionProduitsEventimService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
+import fr.strapontin.worker.persister.FusionsNocturnes;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
 import java.time.Instant;
 import java.util.HashMap;
@@ -51,7 +50,7 @@ class ReconciliationNocturneServiceTest {
   private CoherenceWikidataSalleService coherenceWikidataSalle;
   private ReconciliateurSalles reconciliateurSalles;
   private FusionSallesClePorteeService fusionSallesClePortee;
-  private FusionEvenementsArtisteService fusionEvenementsArtiste;
+  private FusionsNocturnes fusions;
   private CoherenceMultiSalleService coherenceMultiSalle;
   private SuggestionMotsGenericsService suggestionMotsGenerics;
   private ControleIntegriteService controleIntegrite;
@@ -67,7 +66,7 @@ class ReconciliationNocturneServiceTest {
     coherenceWikidataSalle = mock(CoherenceWikidataSalleService.class);
     reconciliateurSalles = mock(ReconciliateurSalles.class);
     fusionSallesClePortee = mock(FusionSallesClePorteeService.class);
-    fusionEvenementsArtiste = mock(FusionEvenementsArtisteService.class);
+    fusions = mock(FusionsNocturnes.class);
     coherenceMultiSalle = mock(CoherenceMultiSalleService.class);
     suggestionMotsGenerics = mock(SuggestionMotsGenericsService.class);
     controleIntegrite = mock(ControleIntegriteService.class);
@@ -77,7 +76,7 @@ class ReconciliationNocturneServiceTest {
     when(coherenceWikidataSalle.verifier()).thenReturn(0);
     when(reconciliateurSalles.retenterSallesOrphelines()).thenReturn(0);
     when(fusionSallesClePortee.fusionner()).thenReturn(0);
-    when(fusionEvenementsArtiste.fusionner()).thenReturn(0);
+    when(fusions.fusionnerEvenements()).thenReturn(0);
     when(coherenceMultiSalle.detecterContamination()).thenReturn(0);
     when(coherenceMultiSalle.detecterDoublons()).thenReturn(0);
     when(suggestionMotsGenerics.suggerer()).thenReturn(0);
@@ -89,8 +88,7 @@ class ReconciliationNocturneServiceTest {
             coherenceWikidataSalle,
             reconciliateurSalles,
             fusionSallesClePortee,
-            fusionEvenementsArtiste,
-            mock(FusionProduitsEventimService.class),
+            fusions,
             coherenceMultiSalle,
             suggestionMotsGenerics,
             controleIntegrite,

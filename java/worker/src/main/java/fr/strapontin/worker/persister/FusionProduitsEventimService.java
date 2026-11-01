@@ -24,6 +24,7 @@ public class FusionProduitsEventimService {
 
   // Écart d'heure maximal entre deux fiches d'un produit : au-delà, deux séances.
   private static final int ECART_MAX_HEURE_SECONDES = 3600;
+  private static final long VIVANT_UNIQUE = 1;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final FusionEvenementsArtisteService fusionEvenements;
@@ -124,7 +125,7 @@ public class FusionProduitsEventimService {
                 FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE));
     int fusions = 0;
     for (final Map<String, Object> ligne : paires) {
-      if (((Number) ligne.get("nb_vivants")).longValue() != 1) {
+      if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
         continue;
       }
       final UUID vivant = UUID.fromString((String) ligne.get("vivant"));

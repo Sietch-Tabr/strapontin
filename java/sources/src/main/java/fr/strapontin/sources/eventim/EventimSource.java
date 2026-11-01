@@ -147,12 +147,10 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
   }
 
   /**
-   * Indique si l'identifiant d'attraction enregistré désigne chez Eventim
-   * un autre artiste que celui suivi.
+   * Indique si l'identifiant d'attraction désigne un autre artiste.
    * @param nomArtiste nom de l'artiste suivi
    * @param attractionId identifiant enregistré
-   * @param identiteConfirmee identité de l'artiste confirmée par Deezer ou
-   *     Wikidata, comme pour {@code fetchArtiste}
+   * @param identiteConfirmee identité confirmée, comme pour fetchArtiste
    * @param autresNomsConnus libellé et alias connus de l'artiste
    * @return {@code true} si l'identifiant est celui d'un autre artiste
    */

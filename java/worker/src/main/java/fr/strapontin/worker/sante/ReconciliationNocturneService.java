@@ -6,9 +6,8 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;
-import fr.strapontin.worker.persister.FusionEvenementsArtisteService;
-import fr.strapontin.worker.persister.FusionProduitsEventimService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
+import fr.strapontin.worker.persister.FusionsNocturnes;
 import fr.strapontin.worker.persister.ReconciliateurSalles;
 import org.springframework.stereotype.Service;
 
@@ -36,8 +35,7 @@ public class ReconciliationNocturneService {
   private final CoherenceWikidataSalleService coherenceWikidataSalle;
   private final ReconciliateurSalles reconciliateurSalles;
   private final FusionSallesClePorteeService fusionSallesClePortee;
-  private final FusionEvenementsArtisteService fusionEvenementsArtiste;
-  private final FusionProduitsEventimService fusionProduitsEventim;
+  private final FusionsNocturnes fusions;
   private final CoherenceMultiSalleService coherenceMultiSalle;
   private final SuggestionMotsGenericsService suggestionMotsGenerics;
   private final ControleIntegriteService controleIntegrite;
@@ -48,7 +46,7 @@ public class ReconciliationNocturneService {
   private final VerificationIdentifiantsEventim verificationIdentifiantsEventim;
 
   /**
-   * Assemble les 15 collaborateurs autonomes du job nocturne (santé,
+   * Assemble les 14 collaborateurs autonomes du job nocturne (santé,
    * enrichissement, réconciliation, intégrité — voir Javadoc de classe).
    */
   public ReconciliationNocturneService(
@@ -57,8 +55,7 @@ public class ReconciliationNocturneService {
       final CoherenceWikidataSalleService coherenceWikidataSalle,
       final ReconciliateurSalles reconciliateurSalles,
       final FusionSallesClePorteeService fusionSallesClePortee,
-      final FusionEvenementsArtisteService fusionEvenementsArtiste,
-      final FusionProduitsEventimService fusionProduitsEventim,
+      final FusionsNocturnes fusions,
       final CoherenceMultiSalleService coherenceMultiSalle,
       final SuggestionMotsGenericsService suggestionMotsGenerics,
       final ControleIntegriteService controleIntegrite,
@@ -72,8 +69,7 @@ public class ReconciliationNocturneService {
     this.coherenceWikidataSalle = coherenceWikidataSalle;
     this.reconciliateurSalles = reconciliateurSalles;
     this.fusionSallesClePortee = fusionSallesClePortee;
-    this.fusionEvenementsArtiste = fusionEvenementsArtiste;
-    this.fusionProduitsEventim = fusionProduitsEventim;
+    this.fusions = fusions;
     this.coherenceMultiSalle = coherenceMultiSalle;
     this.suggestionMotsGenerics = suggestionMotsGenerics;
     this.controleIntegrite = controleIntegrite;
@@ -110,18 +106,12 @@ public class ReconciliationNocturneService {
     final int sallesOrphelinesResolues = reconciliateurSalles.retenterSallesOrphelines();
     // Avant la fusion par clé forte : une fiche périmée sur la mauvaise salle
     // la fausserait.
-    final int fichesOrigineReportMarquees = fusionProduitsEventim.marquerFichesDOrigineDesReports();
-    final int fichesPerimeesFusionnees =
-        fusionProduitsEventim.fusionner()
-            + fusionProduitsEventim.fusionnerProduitsRepublies()
-            + fusionEvenementsArtiste.fusionnerFichesPerimees()
-            + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
-            + fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()
-            + fusionEvenementsArtiste.fusionnerConcertsDeplaces();
+    final int fichesOrigineReportMarquees = fusions.marquerFichesDOrigineDesReports();
+    final int fichesPerimeesFusionnees = fusions.fusionnerFichesPerimeesEtSeances();
     final int sallesFusionnees =
         fusionSallesClePortee.fusionnerMemesLieux(controleIntegrite.pairesMemeLieuFortes())
             + fusionSallesClePortee.fusionner();
-    final int evenementsFusionnes = fichesPerimeesFusionnees + fusionEvenementsArtiste.fusionner();
+    final int evenementsFusionnes = fichesPerimeesFusionnees + fusions.fusionnerEvenements();
     final int contaminationsSignalees = coherenceMultiSalle.detecterContamination();
     final int doublonsSignales = coherenceMultiSalle.detecterDoublons();
     couvertureDepartements.verifier();
@@ -140,7 +130,7 @@ public class ReconciliationNocturneService {
         nomsIncoherentsTM,
         sallesOrphelinesResolues,
         sallesFusionnees,
-        evenementsFusionnes + fusionEvenementsArtiste.fusionnerMemeCreneauDeuxSources(),
+        evenementsFusionnes + fusions.fusionnerMemeCreneauDeuxSources(),
         fichesOrigineReportMarquees,
         positionsRealignees,
         contaminationsSignalees,

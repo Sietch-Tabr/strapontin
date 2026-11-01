@@ -33,7 +33,7 @@ public final class ClientNominatim {
   private static final String URL_INVERSE =
       "https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}"
           + "&format=jsonv2&zoom=10&addressdetails=1";
-  // Ordre de préférence : « municipality » désigne l'intercommunalité, jamais la commune.
+  // « municipality » désigne l'intercommunalité : jamais la commune.
   private static final List<String> CLES_COMMUNE = List.of("city", "town", "village");
   private static final String USER_AGENT =
       "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";

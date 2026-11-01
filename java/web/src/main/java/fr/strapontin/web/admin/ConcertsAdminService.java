@@ -26,6 +26,34 @@ public class ConcertsAdminService {
 
   private static final int TAILLE_PAGE_DEFAUT = 50;
 
+  // Situation : jumeau (même produit vivant), vu ailleurs depuis 7 jours, ou rien.
+  private static final String SQL_LISTE =
+      """
+      SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
+             c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre,
+             CASE
+               WHEN EXISTS (
+                 SELECT 1 FROM observations o
+                 JOIN observations n ON n.source = 'eventim' AND n.evenement_id <> o.evenement_id
+                   AND %1$s = %2$s
+                 JOIN evenements v ON v.id = n.evenement_id
+                 WHERE o.evenement_id = c.id AND o.source = 'eventim'
+                   AND v.salle_id IS NOT DISTINCT FROM ev.salle_id
+                   AND v.absences_consecutives = 0 AND v.suppression_suggeree_le IS NULL)
+                 THEN 'jumeau'
+               WHEN EXISTS (
+                 SELECT 1 FROM observations o
+                 WHERE o.evenement_id = c.id AND o.source <> 'eventim'
+                   AND o.updated_at > now() - interval '7 days')
+                 THEN 'annoncee_ailleurs'
+               ELSE 'introuvable' END AS situation
+      FROM concerts c JOIN evenements ev ON ev.id = c.id
+      WHERE c.suppression_suggeree_le IS NOT NULL
+      ORDER BY c.suppression_suggeree_le DESC
+      LIMIT :taille OFFSET :offset
+      """
+          .formatted(ProduitEventim.expressionSql("o"), ProduitEventim.expressionSql("n"));
+
   private final NamedParameterJdbcTemplate jdbc;
   private final LogAdminService logAdminService;
 
@@ -53,31 +81,7 @@ public class ConcertsAdminService {
     final long[] total = {0};
     final List<ConcertSuppressionSuggeree> concerts =
         jdbc.query(
-            """
-            SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
-                   c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre,
-                   CASE
-                     WHEN EXISTS (
-                       SELECT 1 FROM observations o
-                       JOIN observations n ON n.source = 'eventim' AND n.evenement_id <> o.evenement_id
-                         AND %1$s = %2$s
-                       JOIN evenements v ON v.id = n.evenement_id
-                       WHERE o.evenement_id = c.id AND o.source = 'eventim'
-                         AND v.salle_id IS NOT DISTINCT FROM ev.salle_id
-                         AND v.absences_consecutives = 0 AND v.suppression_suggeree_le IS NULL)
-                       THEN 'jumeau'
-                     WHEN EXISTS (
-                       SELECT 1 FROM observations o
-                       WHERE o.evenement_id = c.id AND o.source <> 'eventim'
-                         AND o.updated_at > now() - interval '7 days')
-                       THEN 'annoncee_ailleurs'
-                     ELSE 'introuvable' END AS situation
-            FROM concerts c JOIN evenements ev ON ev.id = c.id
-            WHERE c.suppression_suggeree_le IS NOT NULL
-            ORDER BY c.suppression_suggeree_le DESC
-            LIMIT :taille OFFSET :offset
-            """
-                .formatted(ProduitEventim.expressionSql("o"), ProduitEventim.expressionSql("n")),
+            SQL_LISTE,
             paramsPage,
             (rs, _) -> {
               total[0] = rs.getLong("total_filtre");

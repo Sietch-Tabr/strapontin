@@ -11,11 +11,8 @@ import java.util.UUID;
 
 /**
  * Concert flagué par la purge nocturne comme candidat à la suppression
- * définitive, en attente de revue manuelle depuis l'admin Concerts. La
- * situation dit ce que les billetteries en savent : {@code jumeau} (le même
- * produit Eventim est vivant sur une autre fiche de la salle),
- * {@code annoncee_ailleurs} (une autre billetterie l'a vue depuis moins de sept
- * jours) ou {@code introuvable}.
+ * définitive, en attente de revue manuelle. La situation dit ce que les
+ * billetteries en savent : jumeau, annoncee_ailleurs ou introuvable.
  * @since 2.8.3
  * @author Kwaite
  */
