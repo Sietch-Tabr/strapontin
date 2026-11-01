@@ -6,7 +6,9 @@ package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
+import fr.strapontin.sources.enrichissement.ClientNominatim;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import fr.strapontin.worker.LogsAdminWorker;
@@ -41,7 +43,11 @@ class CompleteurVillesSallesIntegrationTest extends AbstractWorkerIntegrationTes
     jdbc.update("DELETE FROM evenements", Map.of());
     jdbc.update("DELETE FROM salles", Map.of());
     jdbc.update("DELETE FROM logs_admin", Map.of());
-    completeur = new CompleteurVillesSalles(jdbc, logsAdminWorker);
+    completeur =
+        new CompleteurVillesSalles(
+            jdbc,
+            logsAdminWorker,
+            new AlignementCommuneSalles(jdbc, mock(ClientNominatim.class), logsAdminWorker));
   }
 
   private UUID salle(final String nom, final String ville, final String dept) {

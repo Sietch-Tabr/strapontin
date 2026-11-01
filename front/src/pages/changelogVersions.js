@@ -13,6 +13,7 @@ export const versionsChangelog = [
           "Un spectacle que la billetterie republie à une autre date ou à une autre heure reste une seule fiche : l'ancienne n'est plus affichée à côté de la nouvelle.",
           "Une fiche absente n'est plus fusionnée dans une autre date de la même série, et une fiche gardée par un administrateur n'est jamais absorbée.",
           "Deux salles voisines dont les noms ne diffèrent que par un article collé (« Essaion » / « Théâtre de l'Essaion ») sont reconnues comme un seul lieu.",
+          "La ville d'une salle suit sa commune réelle quand la billetterie annonce la grande ville voisine (Le K est à Tinqueux, pas à Reims).",
           "Un artiste dont le nom est publié plus long par Eventim (« Drag Race France Live ») n'est plus signalé à tort comme appartenant à un autre artiste.",
           "Dans les concerts à confirmer, l'administrateur voit si le même produit est vivant sur une autre fiche, si une autre billetterie l'annonce encore ou s'il est introuvable.",
         ],

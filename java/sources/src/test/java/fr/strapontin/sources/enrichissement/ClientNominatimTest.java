@@ -134,4 +134,47 @@ class ClientNominatimTest {
     assertTrue(resultat.succes());
     serveur.verify();
   }
+
+  // Le K : Nominatim donne le village de Tinqueux, et « municipality » désigne Reims, l'agglomération.
+  @Test
+  void communeDe_positionDUnVillage_retourneLaCommuneEtNonLIntercommunalite() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final CadenceurAppels cadenceur = mock(CadenceurAppels.class);
+    serveur
+        .expect(
+            MockRestRequestMatchers.requestTo(
+                org.hamcrest.Matchers.containsString("/reverse?lat=49.239700&lon=3.987500")))
+        .andRespond(
+            MockRestResponseCreators.withSuccess(
+                """
+                {"address":{"village":"Tinqueux","municipality":"Reims","postcode":"51430"}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final ClientNominatim.ResultatCommune resultat =
+        source(builder.build(), cadenceur)
+            .communeDe(new ClientNominatim.Coordonnees(49.2397, 3.9875));
+
+    assertTrue(resultat.succes());
+    assertEquals(Optional.of("Tinqueux"), resultat.commune());
+    assertEquals(Optional.of("51430"), resultat.codePostal());
+    verify(cadenceur).attendre();
+    serveur.verify();
+  }
+
+  @Test
+  void communeDe_erreurHttp_neConcluPas() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur.expect(MockRestRequestMatchers.anything()).andRespond(
+        MockRestResponseCreators.withServerError());
+
+    final ClientNominatim.ResultatCommune resultat =
+        source(builder.build(), mock(CadenceurAppels.class))
+            .communeDe(new ClientNominatim.Coordonnees(49.2397, 3.9875));
+
+    assertEquals(false, resultat.succes());
+    assertTrue(resultat.commune().isEmpty());
+  }
 }

@@ -30,6 +30,11 @@ public final class ClientNominatim {
   private static final Logger LOG = LoggerFactory.getLogger(ClientNominatim.class);
 
   private static final String BASE_URL = "https://nominatim.openstreetmap.org/search";
+  private static final String URL_INVERSE =
+      "https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}"
+          + "&format=jsonv2&zoom=10&addressdetails=1";
+  // Ordre de préférence : « municipality » désigne l'intercommunalité, jamais la commune.
+  private static final List<String> CLES_COMMUNE = List.of("city", "town", "village");
   private static final String USER_AGENT =
       "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
 
@@ -180,6 +185,54 @@ public final class ClientNominatim {
     } catch (Exception e) {
       LOG.warn("Nominatim recherche échouée requete={} : {}", requete, e.getMessage());
       return new ResultatRecherche(List.of(), false);
+    }
+  }
+
+  /**
+   * Commune où tombe une position, et son code postal.
+   * @param commune nom de la commune, vide si Nominatim n'en donne pas
+   * @param codePostal code postal de l'adresse, vide s'il est inconnu
+   * @param succes {@code false} si l'appel a échoué (aucune conclusion possible)
+   */
+  public record ResultatCommune(
+      Optional<String> commune, Optional<String> codePostal, boolean succes) {}
+
+  /**
+   * Géocodage inverse : commune d'une position.
+   * @param position coordonnées de la salle
+   * @return commune et code postal trouvés, et succès de l'appel
+   */
+  public ResultatCommune communeDe(final Coordonnees position) {
+    cadenceur.attendre();
+    try {
+      @SuppressWarnings("unchecked")
+      final Map<String, Object> reponse =
+          restClient
+              .get()
+              .uri(
+                  URL_INVERSE,
+                  String.format(Locale.ROOT, "%.6f", position.latitude()),
+                  String.format(Locale.ROOT, "%.6f", position.longitude()))
+              .header("User-Agent", USER_AGENT)
+              .retrieve()
+              .body(Map.class);
+      if (reponse == null || !(reponse.get("address") instanceof Map<?, ?> adresse)) {
+        return new ResultatCommune(Optional.empty(), Optional.empty(), true);
+      }
+      final Optional<String> commune =
+          CLES_COMMUNE.stream()
+              .map(adresse::get)
+              .filter(String.class::isInstance)
+              .map(String.class::cast)
+              .findFirst();
+      final Optional<String> codePostal =
+          Optional.ofNullable(adresse.get("postcode"))
+              .filter(String.class::isInstance)
+              .map(String.class::cast);
+      return new ResultatCommune(commune, codePostal, true);
+    } catch (Exception e) {
+      LOG.warn("Nominatim géocodage inverse échoué : {}", e.getMessage());
+      return new ResultatCommune(Optional.empty(), Optional.empty(), false);
     }
   }
 
