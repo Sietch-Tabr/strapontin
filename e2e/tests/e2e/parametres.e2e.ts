@@ -26,7 +26,9 @@ test.describe("Scénario: paramètres — nom des appareils", () => {
 
   test("api_appelsDuFront_annoncentLeModeDAffichage", async ({ page }) => {
     const requete = page.waitForRequest(
-      (r) => r.url().includes("/api/") && r.headers()["x-mode-affichage"] !== undefined,
+      (r) =>
+        r.url().includes("/api/") &&
+        r.headers()["x-mode-affichage"] !== undefined,
     );
     await page.goto("/parametres#compte");
 
@@ -131,6 +133,29 @@ test.describe("Scénario: paramètres — notifications, mise en page et sortie"
 
     await expect(page).not.toHaveURL(/\/parametres/);
     await expect(page.locator("dialog[open]")).toHaveCount(0);
+  });
+
+  // Un humain met plus de 4 s à répondre : la View Transition de la navigation ne doit alors
+  // lever aucune erreur de page (promesse rejetée non gérée, remontée à la console et au journal).
+  test("parametres_notifications_dialogueOuvertPlusDe4s_neLeveAucuneErreurDePage", async ({
+    page,
+  }) => {
+    const erreurs: string[] = [];
+    page.on("pageerror", (erreur) => erreurs.push(erreur.message));
+    await ouvrirNotifications(page);
+    await modifierLaFrequence(page);
+
+    await quitterVersLAccueil(page);
+    const dialogue = page.getByRole("dialog", {
+      name: "Modifications non enregistrées",
+    });
+    await expect(dialogue).toBeVisible();
+    await page.waitForTimeout(5000);
+
+    await expect(dialogue).toBeVisible();
+    await dialogue.getByRole("button", { name: "Rester sur la page" }).click();
+    await expect(page).toHaveURL(/\/parametres/);
+    expect(erreurs).toEqual([]);
   });
 
   test("parametres_notifications_quitterAvecModification_proposeEnregistrerAbandonnerOuRester", async ({

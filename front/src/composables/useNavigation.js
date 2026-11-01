@@ -1,6 +1,9 @@
 import { nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+// Au-delà de la durée de l'animation, une navigation encore en attente n'est plus animée.
+const DELAI_ABANDON_TRANSITION_MS = 300;
+
 /**
  * Navigue vers `href` via le router, avec transition animée si le navigateur la supporte.
  *
@@ -40,6 +43,18 @@ export function naviguer(router, href, options = {}) {
     await nextTick();
   });
   transition.updateCallbackDone.catch(() => naviguerHorsSpa(href));
+  // ready et finished rejettent aussi quand la transition est abandonnée ou expire : sans
+  // catch, l'erreur remonte à la console et au journal admin.
+  transition.ready?.catch(() => {});
+  transition.finished?.catch(() => {});
+  // Une garde de navigation qui attend l'utilisateur (dialogue de modifications non enregistrées)
+  // garde le callback en attente et le rendu gelé : on abandonne l'animation pour rendre la main.
+  const minuterie = setTimeout(
+    () => transition.skipTransition?.(),
+    DELAI_ABANDON_TRANSITION_MS,
+  );
+  const arreter = () => clearTimeout(minuterie);
+  transition.updateCallbackDone.then(arreter, arreter);
 }
 
 export function useNavigation() {
