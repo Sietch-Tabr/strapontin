@@ -19,6 +19,7 @@
               <th>Ville</th>
               <th>Date</th>
               <th>Absences</th>
+              <th>Situation</th>
               <th>Flagué le</th>
               <th>Actions</th>
             </tr>
@@ -32,6 +33,11 @@
                 {{ formaterAvecHeure(concert.date, concert.heure) }}
               </td>
               <td data-label="Absences">{{ concert.absencesConsecutives }}</td>
+              <td data-label="Situation">
+                <span :class="classeSituation(concert.situation)">{{
+                  libelleSituation(concert.situation)
+                }}</span>
+              </td>
               <td data-label="Flagué le">
                 {{ formaterInstant(concert.suppressionSuggereeLe) }}
               </td>
@@ -127,6 +133,10 @@ import {
   formaterAvecHeure,
   formaterInstant,
 } from "../../composables/useDates.js";
+import {
+  classeSituation,
+  libelleSituation,
+} from "../../utils/situationConcert.js";
 import EtatChargement from "../EtatChargement.vue";
 
 const { afficherToast } = useToasts();

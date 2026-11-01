@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.ProduitEventim;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -54,12 +55,29 @@ public class ConcertsAdminService {
         jdbc.query(
             """
             SELECT c.id, c.artiste, c.salle, c.ville, c.date, c.heure, c.absences_consecutives,
-                   c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre
-            FROM concerts c
+                   c.suppression_suggeree_le, COUNT(*) OVER() AS total_filtre,
+                   CASE
+                     WHEN EXISTS (
+                       SELECT 1 FROM observations o
+                       JOIN observations n ON n.source = 'eventim' AND n.evenement_id <> o.evenement_id
+                         AND %1$s = %2$s
+                       JOIN evenements v ON v.id = n.evenement_id
+                       WHERE o.evenement_id = c.id AND o.source = 'eventim'
+                         AND v.salle_id IS NOT DISTINCT FROM ev.salle_id
+                         AND v.absences_consecutives = 0 AND v.suppression_suggeree_le IS NULL)
+                       THEN 'jumeau'
+                     WHEN EXISTS (
+                       SELECT 1 FROM observations o
+                       WHERE o.evenement_id = c.id AND o.source <> 'eventim'
+                         AND o.updated_at > now() - interval '7 days')
+                       THEN 'annoncee_ailleurs'
+                     ELSE 'introuvable' END AS situation
+            FROM concerts c JOIN evenements ev ON ev.id = c.id
             WHERE c.suppression_suggeree_le IS NOT NULL
             ORDER BY c.suppression_suggeree_le DESC
             LIMIT :taille OFFSET :offset
-            """,
+            """
+                .formatted(ProduitEventim.expressionSql("o"), ProduitEventim.expressionSql("n")),
             paramsPage,
             (rs, _) -> {
               total[0] = rs.getLong("total_filtre");
@@ -71,7 +89,8 @@ public class ConcertsAdminService {
                   rs.getObject("date", LocalDate.class),
                   rs.getObject("heure", LocalTime.class),
                   rs.getInt("absences_consecutives"),
-                  rs.getTimestamp("suppression_suggeree_le").toInstant());
+                  rs.getTimestamp("suppression_suggeree_le").toInstant(),
+                  rs.getString("situation"));
             });
 
     // page vide (offset au-delà du total) : total_filtre n'est renvoyé par
