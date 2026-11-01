@@ -5,7 +5,7 @@
 package fr.strapontin.web.salle;
 
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;

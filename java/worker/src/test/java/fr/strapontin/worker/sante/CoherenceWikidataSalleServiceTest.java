@@ -17,9 +17,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.EnrichissementSalle;
-import fr.strapontin.sources.SalleAEnrichir;
-import fr.strapontin.sources.WikidataSalleSource;
+import fr.strapontin.sources.enrichissement.EnrichissementSalle;
+import fr.strapontin.sources.enrichissement.SalleAEnrichir;
+import fr.strapontin.sources.enrichissement.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.sql.ResultSet;
 import java.util.List;

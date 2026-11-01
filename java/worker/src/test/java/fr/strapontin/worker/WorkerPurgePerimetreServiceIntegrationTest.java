@@ -6,7 +6,7 @@ package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

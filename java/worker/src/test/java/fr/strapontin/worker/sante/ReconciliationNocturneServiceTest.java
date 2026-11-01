@@ -15,9 +15,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
-import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource.CandidatVenueTM;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.enrichissement.EnrichissementArtistesService;
 import fr.strapontin.worker.enrichissement.EnrichissementSallesService;

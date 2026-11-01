@@ -6,8 +6,8 @@ package fr.strapontin.worker;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import fr.strapontin.sources.CadenceurAppels;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

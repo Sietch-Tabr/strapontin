@@ -14,9 +14,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.enrichissement.ResolveurNomCanonique;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

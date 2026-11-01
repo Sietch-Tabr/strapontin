@@ -6,8 +6,8 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.sql.Array;
 import java.util.Arrays;

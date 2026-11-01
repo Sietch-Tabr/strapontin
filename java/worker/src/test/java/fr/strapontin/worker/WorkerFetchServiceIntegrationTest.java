@@ -15,11 +15,11 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.LieuEventim;
 import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.ResultatRegion;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.eventim.LieuEventim;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.time.LocalDate;
 import java.util.List;

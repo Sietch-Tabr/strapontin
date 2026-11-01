@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import fr.strapontin.worker.WorkerPurgeService;
 import java.time.LocalDate;

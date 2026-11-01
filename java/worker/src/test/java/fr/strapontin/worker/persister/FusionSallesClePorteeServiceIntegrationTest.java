@@ -6,7 +6,7 @@ package fr.strapontin.worker.persister;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.util.List;

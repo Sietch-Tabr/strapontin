@@ -15,9 +15,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceConcerts;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.enrichissement.ResolveurNomCanonique;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

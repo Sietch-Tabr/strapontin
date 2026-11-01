@@ -5,9 +5,9 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.PositionLieu;
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.TicketmasterSource.CandidatVenueTM;
-import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource.CandidatVenueTM;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.sql.Types;
 import java.util.List;

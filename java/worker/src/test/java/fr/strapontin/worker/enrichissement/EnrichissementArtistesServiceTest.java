@@ -16,9 +16,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.ArtisteAEnrichir;
-import fr.strapontin.sources.EnrichissementArtiste;
-import fr.strapontin.sources.SourceEnrichissementArtiste;
+import fr.strapontin.sources.enrichissement.ArtisteAEnrichir;
+import fr.strapontin.sources.enrichissement.EnrichissementArtiste;
+import fr.strapontin.sources.enrichissement.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.ArrayList;
@@ -345,9 +345,11 @@ class EnrichissementArtistesServiceTest {
         mock(
             SourceEnrichissementArtiste.class,
             org.mockito.Mockito.withSettings()
-                .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
+                .extraInterfaces(
+                    fr.strapontin.sources.enrichissement.SourceAvecAmbiguitesDecouverte.class));
     when(wikidata.enrichirLot(any())).thenReturn(Map.of());
-    when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
+    when(((fr.strapontin.sources.enrichissement.SourceAvecAmbiguitesDecouverte) wikidata)
+            .preleverAmbiguites())
         .thenReturn(Map.of(artisteId, Map.of()));
     final SignalementMatchingService signalement = mock(SignalementMatchingService.class);
 

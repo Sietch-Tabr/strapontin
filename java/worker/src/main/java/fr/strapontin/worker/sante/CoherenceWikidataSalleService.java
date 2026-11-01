@@ -5,9 +5,9 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.DistanceGeo;
-import fr.strapontin.sources.EnrichissementSalle;
-import fr.strapontin.sources.SalleAEnrichir;
-import fr.strapontin.sources.WikidataSalleSource;
+import fr.strapontin.sources.enrichissement.EnrichissementSalle;
+import fr.strapontin.sources.enrichissement.SalleAEnrichir;
+import fr.strapontin.sources.enrichissement.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.sql.ResultSet;
 import java.sql.SQLException;

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.CadenceurAppels;
+import fr.strapontin.sources.http.CadenceurAppels;
 import fr.strapontin.web.config.ConfigService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;

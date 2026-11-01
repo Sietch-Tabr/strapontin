@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

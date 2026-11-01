@@ -4,7 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.eventim.EventimSource;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

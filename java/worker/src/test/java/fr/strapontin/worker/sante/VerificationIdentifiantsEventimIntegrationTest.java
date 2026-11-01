@@ -10,8 +10,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.OffsetDateTime;
 import java.util.List;

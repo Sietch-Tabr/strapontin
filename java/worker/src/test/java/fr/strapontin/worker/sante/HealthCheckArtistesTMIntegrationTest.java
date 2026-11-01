@@ -11,8 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.TicketmasterSource.StatutIdTM;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.util.Map;
 import java.util.UUID;

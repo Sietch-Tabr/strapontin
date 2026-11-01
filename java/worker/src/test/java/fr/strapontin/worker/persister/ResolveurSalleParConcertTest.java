@@ -13,7 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
