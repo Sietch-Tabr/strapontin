@@ -64,4 +64,69 @@ describe("naviguer", () => {
 
     expect(naviguerHorsSpa).toHaveBeenCalledWith("/salles");
   });
+
+  describe("navigation qui attend l'utilisateur (garde avec dialogue)", () => {
+    function creerTransition(updateCallbackDone) {
+      return {
+        updateCallbackDone,
+        ready: Promise.resolve(),
+        finished: Promise.resolve(),
+        skipTransition: vi.fn(),
+      };
+    }
+
+    it("abandonne l'animation quand la navigation reste en attente", async () => {
+      vi.useFakeTimers();
+      const router = creerFauxRouter({
+        push: vi.fn(() => new Promise(() => {})),
+      });
+      let transition;
+      const demarrerTransition = vi.fn((cb) => {
+        transition = creerTransition(cb());
+        return transition;
+      });
+
+      naviguer(router, "/", { demarrerTransition });
+      await vi.advanceTimersByTimeAsync(299);
+      expect(transition.skipTransition).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2);
+
+      expect(transition.skipTransition).toHaveBeenCalledOnce();
+      vi.useRealTimers();
+    });
+
+    it("garde l'animation quand la navigation aboutit tout de suite", async () => {
+      vi.useFakeTimers();
+      const router = creerFauxRouter();
+      let transition;
+      const demarrerTransition = vi.fn((cb) => {
+        transition = creerTransition(cb());
+        return transition;
+      });
+
+      naviguer(router, "/spectacles", { demarrerTransition });
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(transition.skipTransition).not.toHaveBeenCalled();
+      vi.useRealTimers();
+    });
+
+    it("intercepte le rejet de ready et de finished d'une transition expirée", async () => {
+      const router = creerFauxRouter();
+      const expiree = () =>
+        Promise.reject(new DOMException("expirée", "TimeoutError"));
+      const demarrerTransition = vi.fn((cb) => ({
+        updateCallbackDone: cb(),
+        ready: expiree(),
+        finished: expiree(),
+        skipTransition: vi.fn(),
+      }));
+
+      // Un rejet non intercepté ferait échouer Vitest (« Unhandled Rejection »).
+      naviguer(router, "/artistes", { demarrerTransition });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(router.push).toHaveBeenCalledWith("/artistes");
+    });
+  });
 });
