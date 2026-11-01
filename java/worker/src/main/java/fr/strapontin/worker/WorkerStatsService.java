@@ -6,11 +6,11 @@ package fr.strapontin.worker;
 
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CatalogueJobs;
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.ResolveurNomCanonique;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceConcerts;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.enrichissement.ResolveurNomCanonique;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;

@@ -6,7 +6,7 @@ package fr.strapontin.web.admin;
 
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.eventim.EventimSource;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.salle.SalleService;
 import java.time.Duration;

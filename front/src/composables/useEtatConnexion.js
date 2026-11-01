@@ -7,6 +7,9 @@ export const etatConnexion = reactive({
   lente: false,
   // Date (ms) de la plus ancienne donnée gardée affichée, null tant que tout est à jour.
   donneesEnCacheLe: null,
+  // Une liste de l'utilisateur n'a pu être lue et aucune copie n'existe : l'application n'a rien
+  // à afficher et montre l'écran hors ligne.
+  sansDonnees: false,
 });
 
 let branche = false;
@@ -23,6 +26,9 @@ export function initialiserSuiviConnexion() {
         etatConnexion.donneesEnCacheLe === null
           ? instantMs
           : Math.min(etatConnexion.donneesEnCacheLe, instantMs);
+    },
+    sansDonnees: (valeur) => {
+      etatConnexion.sansDonnees = valeur;
     },
   });
 }

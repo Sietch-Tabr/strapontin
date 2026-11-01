@@ -18,10 +18,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Tient les villes des salles et des événements : une seule orthographe par
- * commune, la ville de chaque salle renseignée depuis ses concerts puis ses
- * lieux sources, un département déduit du code postal. Une salle dont la ville
- * reste inconnue est signalée dans le journal admin.
+ * Tient les villes des salles et des événements : une orthographe par commune,
+ * ville renseignée depuis les concerts puis les lieux sources, département
+ * déduit du code postal, ville alignée sur la commune de la position. Une
+ * ville inconnue est signalée.
  * @since 3.0.6
  * @author Kwaite
  */
@@ -36,15 +36,19 @@ public class CompleteurVillesSalles {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
+  private final AlignementCommuneSalles alignementCommune;
 
   /**
    * @param jdbc accès JDBC
    * @param logsAdminWorker signalement des salles dont la ville reste inconnue
    */
   public CompleteurVillesSalles(
-      final NamedParameterJdbcTemplate jdbc, final LogsAdminWorker logsAdminWorker) {
+      final NamedParameterJdbcTemplate jdbc,
+      final LogsAdminWorker logsAdminWorker,
+      final AlignementCommuneSalles alignementCommune) {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
+    this.alignementCommune = alignementCommune;
   }
 
   /**
@@ -60,9 +64,16 @@ public class CompleteurVillesSalles {
     final int depuisNoms = renseignerVilleDepuisNomDeLaSalle();
     final int departements = renseignerDepartementDepuisCodePostal();
     final int departementsFiches = renseignerDepartementDesFiches();
+    final int communes = alignementCommune.aligner();
     signalerSallesSansVille();
     final int total =
-        normalisees + depuisConcerts + depuisLieux + depuisNoms + departements + departementsFiches;
+        normalisees
+            + depuisConcerts
+            + depuisLieux
+            + depuisNoms
+            + departements
+            + departementsFiches
+            + communes;
     if (total > 0) {
       LOG.info(
           "villes des salles : {} orthographes, {} depuis concerts, {} depuis lieux sources,"

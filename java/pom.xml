@@ -25,12 +25,12 @@
 
     <properties>
         <!-- Version CI-friendly : un seul bump ici met à jour parent + 4 modules enfants -->
-        <revision>3.1.1</revision>
+        <revision>3.1.2</revision>
         <java.version>27</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Versions plus récentes que celles du BOM Spring Boot 4.1.1 (Flyway 12.4.0, Caffeine 3.2.4) -->
         <flyway.version>13.9.0</flyway.version>
-        <caffeine.version>3.3.0</caffeine.version>
+        <caffeine.version>3.3.1</caffeine.version>
         <!-- Versions non gérées par le BOM -->
         <bouncycastle.version>1.86</bouncycastle.version>
         <webpush.version>1.3.0</webpush.version>
@@ -49,7 +49,7 @@
         <checkstyle.version>3.6.0</checkstyle.version>
         <pmd.version>3.28.0</pmd.version>
         <!-- PMD core surchargé — nécessaire pour le support Java 26, cf. commentaire sur le plugin -->
-        <pmdCore.version>7.28.0</pmdCore.version>
+        <pmdCore.version>7.29.0</pmdCore.version>
         <jacoco.version>0.8.16</jacoco.version>
         <spotless.version>3.10.4</spotless.version>
     </properties>

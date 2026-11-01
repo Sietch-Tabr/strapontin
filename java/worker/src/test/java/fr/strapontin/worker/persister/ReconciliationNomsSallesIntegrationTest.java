@@ -6,7 +6,7 @@ package fr.strapontin.worker.persister;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.util.List;
@@ -162,6 +162,22 @@ class ReconciliationNomsSallesIntegrationTest extends AbstractWorkerIntegrationT
     absorber("ticketmaster", "ticketmaster:zenith", "Zénith Toulouse Métropole");
 
     assertEquals("Zénith Toulouse Métropole", nom());
+  }
+
+  // Théâtre de l'Atelier : Ticketmaster écrit « L'Atelier », Eventim « lAtelier » ; la salle
+  // gardait un nom le matin et l'autre dix minutes plus tard.
+  @Test
+  void
+      absorberRenommagesSalles_graphieTicketmasterSeulementDifferenteParLApostrophe_neRenommePas() {
+    mapper("ticketmaster", "ticketmaster:atelier");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Théâtre de lAtelier' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()));
+
+    absorber("ticketmaster", "ticketmaster:atelier", "Theatre de L'Atelier");
+    assertEquals("Théâtre de lAtelier", nom());
+    absorber("ticketmaster", "ticketmaster:atelier", "Theatre de L'Atelier");
+    assertEquals("Théâtre de lAtelier", nom());
   }
 
   @Test

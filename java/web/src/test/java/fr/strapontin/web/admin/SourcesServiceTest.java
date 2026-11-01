@@ -17,7 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.eventim.EventimSource;
 import fr.strapontin.web.salle.SalleService;
 import java.sql.Timestamp;
 import java.util.List;

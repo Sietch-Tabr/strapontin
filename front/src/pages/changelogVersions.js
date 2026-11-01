@@ -4,6 +4,33 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.2 — 1 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Les billets de visite d'un musée, les entrées de parc de loisirs et les produits de parking ne sont plus affichés comme des concerts.",
+          "Un spectacle que la billetterie republie à une autre date ou à une autre heure reste une seule fiche : l'ancienne n'est plus affichée à côté de la nouvelle.",
+          "Une fiche absente n'est plus fusionnée dans une autre date de la même série, et une fiche gardée par un administrateur n'est jamais absorbée.",
+          "Deux salles voisines dont les noms ne diffèrent que par un article collé (« Essaion » / « Théâtre de l'Essaion ») sont reconnues comme un seul lieu.",
+          "La ville d'une salle suit sa commune réelle quand la billetterie annonce la grande ville voisine (Le K est à Tinqueux, pas à Reims).",
+          "Une séance publiée sans heure par une billetterie et avec une heure par l'autre n'apparaît plus en double (festival Aluna).",
+          "Deux productions de même titre dans des salles éloignées d'une même ville, et les spectacles simultanés d'un théâtre à plusieurs salles, ne sont plus signalés comme des doublons.",
+          "Le nom d'une salle ne change plus deux fois par jour quand deux billetteries l'écrivent presque pareil (Théâtre de l'Atelier).",
+          "Plusieurs séances d'une même billetterie dans une même salle (créneaux de visite, sets de jazz) ne sont plus signalées comme une séance publiée dans deux salles.",
+          "Un artiste dont le nom est publié plus long par Eventim (« Drag Race France Live ») n'est plus signalé à tort comme appartenant à un autre artiste.",
+          "Dans les concerts à confirmer, l'administrateur voit si le même produit est vivant sur une autre fiche, si une autre billetterie l'annonce encore ou s'il est introuvable.",
+        ],
+      },
+      {
+        categorie: "Application",
+        items: [
+          "Hors ligne juste après une connexion, sans aucune donnée gardée, l'application affiche tout de suite l'écran « Vous êtes hors ligne » au lieu de messages d'erreur, puis se recharge d'elle-même au retour de la connexion.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.1 — 27 octobre 2026",
     categories: [
       {

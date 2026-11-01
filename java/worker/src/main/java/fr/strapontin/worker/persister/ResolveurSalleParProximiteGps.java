@@ -7,7 +7,7 @@ package fr.strapontin.worker.persister;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;

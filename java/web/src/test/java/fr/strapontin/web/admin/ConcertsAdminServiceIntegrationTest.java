@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
@@ -86,6 +87,92 @@ class ConcertsAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
     assertEquals("Vincent Dedienne", reponse.concerts().get(0).artiste());
     assertNotNull(reponse.concerts().get(0).suppressionSuggereeLe());
     assertEquals(1L, reponse.total());
+  }
+
+  private UUID creerFiche(
+      final String artiste,
+      final int absences,
+      final boolean flague,
+      final String source,
+      final String url,
+      final int joursDObservation) {
+    final UUID salleId = salleDeTest();
+    final UUID evenementId =
+        jdbc.queryForObject(
+            "INSERT INTO evenements (artiste_norm, date, salle_norm, salle_id,"
+                + " absences_consecutives, suppression_suggeree_le)"
+                + " VALUES (:artiste, :date, 'salle test', CAST(:salleId AS uuid), :absences,"
+                + " CASE WHEN :flague THEN now() END) RETURNING id",
+            new MapSqlParameterSource()
+                .addValue("artiste", artiste)
+                .addValue("date", LocalDate.now().plusDays(10 + absences))
+                .addValue("salleId", salleId.toString())
+                .addValue("absences", absences)
+                .addValue("flague", flague),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut,"
+            + " updated_at) VALUES (CAST(:id AS uuid), CAST(:source AS source_concert), :url,"
+            + " :artiste, 'Salle Test', now() - make_interval(days => :jours))",
+        Map.of(
+            "id",
+            evenementId.toString(),
+            "source",
+            source,
+            "url",
+            url,
+            "artiste",
+            artiste,
+            "jours",
+            joursDObservation));
+    return evenementId;
+  }
+
+  private UUID salleDeTest() {
+    final List<UUID> existantes =
+        jdbc.queryForList(
+            "SELECT id FROM salles WHERE salle_cle = 'salle test'", Map.of(), UUID.class);
+    if (!existantes.isEmpty()) {
+      return existantes.get(0);
+    }
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm) VALUES ('salle test', 'Salle Test',"
+            + " 'salle test') RETURNING id",
+        Map.of(),
+        UUID.class);
+  }
+
+  private String situationDe(final String artiste) {
+    return service.lister(0).concerts().stream()
+        .filter(c -> c.artiste().equals(artiste))
+        .findFirst()
+        .orElseThrow()
+        .situation();
+  }
+
+  @Test
+  void lister_memeProduitEventimVivantAilleursDansLaSalle_situationJumeau() {
+    creerFiche(
+        "nieve ella", 50, true, "eventim", "https://www.eventim.fr/event/nieve-ella-1111/", 30);
+    creerFiche(
+        "nieve ella", 0, false, "eventim", "https://www.eventim.fr/event/nieve-ella-1111/", 0);
+
+    assertEquals("jumeau", situationDe("nieve ella"));
+  }
+
+  @Test
+  void lister_autreBilletterieLaVoitEncore_situationAnnonceeAilleurs() {
+    creerFiche("les 1001 nuits du jazz", 50, true, "site_salle", "https://salle/jazz", 1);
+
+    assertEquals("annoncee_ailleurs", situationDe("les 1001 nuits du jazz"));
+  }
+
+  @Test
+  void lister_aucuneSourceNeLaVoit_situationIntrouvable() {
+    creerFiche(
+        "dominique blanc", 50, true, "eventim", "https://www.eventim.fr/event/blanc-2222/", 40);
+
+    assertEquals("introuvable", situationDe("dominique blanc"));
   }
 
   @Test

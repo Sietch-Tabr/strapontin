@@ -6,7 +6,7 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

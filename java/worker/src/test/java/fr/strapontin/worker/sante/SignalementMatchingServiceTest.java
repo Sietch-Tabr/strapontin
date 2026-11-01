@@ -7,8 +7,12 @@ package fr.strapontin.worker.sante;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import fr.strapontin.worker.LogsAdminWorker;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,11 +31,13 @@ class SignalementMatchingServiceTest {
 
   private NamedParameterJdbcTemplate jdbc;
   private SignalementMatchingService service;
+  private LogsAdminWorker logsAdminWorker;
 
   @BeforeEach
   void setUp() {
     jdbc = mock(NamedParameterJdbcTemplate.class);
-    service = new SignalementMatchingService(jdbc, new ObjectMapper());
+    logsAdminWorker = mock(LogsAdminWorker.class);
+    service = new SignalementMatchingService(jdbc, new ObjectMapper(), logsAdminWorker);
   }
 
   @Test
@@ -66,5 +72,33 @@ class SignalementMatchingServiceTest {
         .update(anyString(), any(SqlParameterSource.class));
 
     service.signaler("collision_wikidata_artiste", "artiste", UUID.randomUUID(), "haute", null);
+  }
+
+  private static List<UUID> entites(final int nombre) {
+    final List<UUID> entites = new ArrayList<>();
+    for (int i = 0; i < nombre; i++) {
+      entites.add(UUID.randomUUID());
+    }
+    return entites;
+  }
+
+  // 4 716 signalements en un passage : la régression doit se voir dès le premier.
+  @Test
+  void clore_volumeAnormalDeSignalementsActifs_averti() {
+    service.clore("seance_dans_deux_salles", entites(201));
+
+    verify(logsAdminWorker)
+        .inserer(
+            org.mockito.ArgumentMatchers.eq("warn"),
+            anyString(),
+            org.mockito.ArgumentMatchers.contains("seance_dans_deux_salles"),
+            any());
+  }
+
+  @Test
+  void clore_volumeHabituel_neAvertitPas() {
+    service.clore("seance_dans_deux_salles", entites(200));
+
+    verify(logsAdminWorker, never()).inserer(anyString(), anyString(), anyString(), any());
   }
 }

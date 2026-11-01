@@ -11,10 +11,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.EnrichissementSalle;
-import fr.strapontin.sources.SalleAEnrichir;
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.WikidataSalleSource;
+import fr.strapontin.sources.enrichissement.EnrichissementSalle;
+import fr.strapontin.sources.enrichissement.SalleAEnrichir;
+import fr.strapontin.sources.enrichissement.WikidataSalleSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.sql.Types;
 import java.util.List;

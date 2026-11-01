@@ -11,11 +11,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.ArtisteAEnrichir;
-import fr.strapontin.sources.DeezerArtisteSource;
-import fr.strapontin.sources.EnrichissementArtiste;
-import fr.strapontin.sources.TicketmasterSource;
-import fr.strapontin.sources.WikidataArtisteSource;
+import fr.strapontin.sources.enrichissement.ArtisteAEnrichir;
+import fr.strapontin.sources.enrichissement.DeezerArtisteSource;
+import fr.strapontin.sources.enrichissement.EnrichissementArtiste;
+import fr.strapontin.sources.enrichissement.WikidataArtisteSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.util.List;
 import java.util.Map;

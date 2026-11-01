@@ -5,9 +5,9 @@
 package fr.strapontin.web;
 
 import fr.strapontin.core.JetonInterneWorker;
-import fr.strapontin.sources.CadenceurAppels;
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.web.securite.ActiviteUtilisateurInterceptor;
 import fr.strapontin.web.securite.AppareilEnregistrementInterceptor;
 import java.net.InetAddress;

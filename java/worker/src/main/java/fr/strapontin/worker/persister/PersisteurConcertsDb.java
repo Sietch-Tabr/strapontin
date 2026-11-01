@@ -244,6 +244,9 @@ public class PersisteurConcertsDb {
             presale_nom    = COALESCE(:presaleNom, presale_nom),
             salle_id       = COALESCE(CAST(:salleId AS uuid), salle_id),
             artiste_id     = COALESCE(CAST(:artisteId AS uuid), artiste_id),
+            absences_consecutives = 0,
+            absence_detectee_le   = NULL,
+            suppression_suggeree_le = NULL,
             updated_at     = now()
         WHERE id = CAST(:id AS uuid)
         """,

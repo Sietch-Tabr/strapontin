@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import fr.strapontin.sources.EventimSource;
+import fr.strapontin.sources.eventim.EventimSource;
 import fr.strapontin.web.AbstractWebIntegrationTest;
 import fr.strapontin.web.salle.SalleService;
 import java.util.List;

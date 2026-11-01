@@ -4,17 +4,17 @@
  */
 package fr.strapontin.worker;
 
-import fr.strapontin.sources.CadenceurAppels;
-import fr.strapontin.sources.ClientNominatim;
-import fr.strapontin.sources.ClientSiteSalle;
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.ProduitsEcartes;
-import fr.strapontin.sources.ResolveurNomCanonique;
-import fr.strapontin.sources.SiteAllmol;
-import fr.strapontin.sources.SiteEmbSannois;
-import fr.strapontin.sources.SiteLeTriton;
-import fr.strapontin.sources.SiteUsineAChapeaux;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
+import fr.strapontin.sources.enrichissement.ResolveurNomCanonique;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.eventim.ProduitsEcartes;
+import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.sources.sites.ClientSiteSalle;
+import fr.strapontin.sources.sites.SiteAllmol;
+import fr.strapontin.sources.sites.SiteEmbSannois;
+import fr.strapontin.sources.sites.SiteLeTriton;
+import fr.strapontin.sources.sites.SiteUsineAChapeaux;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.quartz.autoconfigure.SchedulerFactoryBeanCustomizer;

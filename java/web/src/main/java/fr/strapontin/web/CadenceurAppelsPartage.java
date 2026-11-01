@@ -4,7 +4,7 @@
  */
 package fr.strapontin.web;
 
-import fr.strapontin.sources.CadenceurAppels;
+import fr.strapontin.sources.http.CadenceurAppels;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 

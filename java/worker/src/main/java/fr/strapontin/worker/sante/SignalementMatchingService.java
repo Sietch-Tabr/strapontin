@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.sante;
 
+import fr.strapontin.worker.LogsAdminWorker;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -34,17 +35,26 @@ public class SignalementMatchingService {
           "seance_dans_deux_salles", "jumeau",
           "wikidata_coordonnees_divergentes", "wikidataId");
 
+  // Au-delà, un contrôle est en régression plutôt qu'à traiter.
+  private static final int SEUIL_VOLUME_ANORMAL = 200;
+  private static final String CLE_TYPE = "type";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
+  private final LogsAdminWorker logsAdminWorker;
 
   /**
    * @param jdbc accès JDBC
    * @param objectMapper sérialisation des détails en JSON
+   * @param logsAdminWorker avertissement quand un type de signalement déborde
    */
   public SignalementMatchingService(
-      final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
+      final NamedParameterJdbcTemplate jdbc,
+      final ObjectMapper objectMapper,
+      final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
+    this.logsAdminWorker = logsAdminWorker;
   }
 
   /**
@@ -73,7 +83,7 @@ public class SignalementMatchingService {
           ON CONFLICT DO NOTHING
           """,
           new MapSqlParameterSource()
-              .addValue("type", type)
+              .addValue(CLE_TYPE, type)
               .addValue("entiteType", entiteType)
               .addValue("entiteId", entiteId.toString())
               .addValue("confiance", confiance)
@@ -101,7 +111,7 @@ public class SignalementMatchingService {
               AND resolu_manuellement AND details ->> :cle = :valeur
             """,
             new MapSqlParameterSource()
-                .addValue("type", type)
+                .addValue(CLE_TYPE, type)
                 .addValue("entiteId", entiteId.toString())
                 .addValue("cle", cle)
                 .addValue("valeur", String.valueOf(details.get(cle))),
@@ -116,6 +126,17 @@ public class SignalementMatchingService {
    * @return nombre de signalements clos
    */
   public int clore(final String type, final Collection<UUID> entitesEncoreEnAnomalie) {
+    if (entitesEncoreEnAnomalie.size() > SEUIL_VOLUME_ANORMAL) {
+      logsAdminWorker.inserer(
+          "warn",
+          "signalements",
+          "Volume anormal de signalements « "
+              + type
+              + " » : "
+              + entitesEncoreEnAnomalie.size()
+              + " en un passage",
+          Map.of(CLE_TYPE, type, "nombre", entitesEncoreEnAnomalie.size()));
+    }
     return jdbc.update(
         """
         UPDATE signalements_matching SET resolu_le = now()
@@ -123,7 +144,7 @@ public class SignalementMatchingService {
           AND NOT (entite_id = ANY(CAST(:encore AS uuid[])))
         """,
         new MapSqlParameterSource()
-            .addValue("type", type)
+            .addValue(CLE_TYPE, type)
             .addValue(
                 "encore",
                 entitesEncoreEnAnomalie.stream().map(UUID::toString).toArray(String[]::new)));

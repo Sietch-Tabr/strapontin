@@ -29,8 +29,14 @@
 
        LongVariable exclue après mesure : 455 sites, tous des noms français explicites conformes à
        l'exigence de nommage du projet (ex. emailAlerteService, SEUIL_APPELS_MIN_ALERTE_DEFAUT) —
-       le seuil par défaut de 17 caractères est directement contradictoire avec cette exigence. -->
+       le seuil par défaut de 17 caractères est directement contradictoire avec cette exigence.
+
+       LocalVariableDeclarationShouldBeAtStartOfBlock exclue après mesure : 3 577 sites (core 266,
+       sources 617, web 1 391, worker 1 303) — la règle exige des variables locales déclarées en
+       tête de bloc, sans initialisation, ce qui interdit le style du projet (variables final
+       initialisées à leur point d'usage, portée minimale). -->
   <rule ref="category/java/codestyle.xml">
+    <exclude name="LocalVariableDeclarationShouldBeAtStartOfBlock"/>
     <exclude name="UnnecessaryConstructor"/>
     <exclude name="OnlyOneReturn"/>
     <exclude name="LongVariable"/>

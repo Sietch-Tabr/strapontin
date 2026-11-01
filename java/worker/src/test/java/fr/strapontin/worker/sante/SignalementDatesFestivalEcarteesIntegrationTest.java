@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import fr.strapontin.sources.ProduitEcarte;
-import fr.strapontin.sources.SourceAvecProduitsEcartes;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.eventim.ProduitEcarte;
+import fr.strapontin.sources.eventim.SourceAvecProduitsEcartes;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.util.List;
 import java.util.Map;

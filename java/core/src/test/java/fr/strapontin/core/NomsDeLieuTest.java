@@ -32,6 +32,24 @@ class NomsDeLieuTest {
             "theatre montparnasse", "theatre de poche montparnasse paris", "Paris"));
   }
 
+  // Eventim colle l'article élidé au nom (« lessaion »), Ticketmaster ne l'écrit pas.
+  @Test
+  void designentFortementLeMemeLieu_articleElideColleDUnCote_vrai() {
+    assertTrue(
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "essaion de paris", "theatre de lessaion paris 04", "Paris 04"));
+    assertTrue(
+        NomsDeLieu.designentFortementLeMemeLieu(
+            "theatre de lessaion paris 04", "essaion de paris", "Paris 04"));
+  }
+
+  // « lille » n'est pas l'article « l » collé à « ille » : un reste de moins de cinq lettres ne
+  // se détache pas.
+  @Test
+  void designentFortementLeMemeLieu_resteTropCourtApresLArticle_faux() {
+    assertFalse(NomsDeLieu.designentFortementLeMemeLieu("salle lille", "salle ille", "Rennes"));
+  }
+
   @Test
   void designentFortementLeMemeLieu_sigleDesInitiales_vrai() {
     assertTrue(NomsDeLieu.designentFortementLeMemeLieu("ed n", "espace dollfus noack", null));

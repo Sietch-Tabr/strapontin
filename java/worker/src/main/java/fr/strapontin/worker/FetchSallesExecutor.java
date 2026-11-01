@@ -7,7 +7,7 @@ package fr.strapontin.worker;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.SourceConcerts;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;
@@ -36,15 +36,17 @@ class FetchSallesExecutor {
 
   // Salle d'un département suivi dont une fiche à venir n'a plus été revue
   // depuis une semaine : le fetch de région borne catégories et date (6 mois).
-  // Interrogée par lieu, sans filtre.
+  // Interrogée par lieu, sans filtre. Une fiche déjà absente au seuil n'est pas
+  // renvoyée par le lieu : elle ne le fait plus réinterroger.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
-      """
-      EXISTS (SELECT 1 FROM evenements e
-              WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE
-                AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))
-                AND NOT EXISTS (SELECT 1 FROM observations o
-                                WHERE o.evenement_id = e.id
-                                  AND o.updated_at > now() - interval '7 days'))""";
+      "EXISTS (SELECT 1 FROM evenements e"
+          + " WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE"
+          + " AND e.absences_consecutives < "
+          + WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES
+          + " AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))"
+          + " AND NOT EXISTS (SELECT 1 FROM observations o"
+          + " WHERE o.evenement_id = e.id"
+          + " AND o.updated_at > now() - interval '7 days'))";
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;

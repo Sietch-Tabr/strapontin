@@ -82,9 +82,9 @@ public class FusionEvenementsArtisteService {
 
   /**
    * Fusionne chaque événement périmé dans l'unique événement vivant de même
-   * fiche (même url, ou même idmanif TM à la même date, apparue plus d'une
-   * heure après la dernière vue de la périmée : deux séances vues au même
-   * passage restent distinctes) ; ambigu : ignoré. Avant la fusion de salles.
+   * fiche et de même date (même url, ou même idmanif TM apparue plus d'une
+   * heure après la dernière vue de la périmée) ; une fiche maintenue n'est
+   * jamais fusionnée ; ambigu : ignoré. Avant la fusion de salles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimees() {
@@ -93,7 +93,7 @@ public class FusionEvenementsArtisteService {
             """
             WITH obs AS (
               SELECT o.evenement_id, o.source, o.url, e.date, e.absences_consecutives,
-                     o.first_seen, o.updated_at,
+                     e.maintenu_le, o.first_seen, o.updated_at,
                      CASE WHEN o.source = 'ticketmaster'
                           THEN substring(o.url FROM '/idmanif/([0-9]+)') END AS idmanif
               FROM observations o
@@ -106,10 +106,11 @@ public class FusionEvenementsArtisteService {
             JOIN obs v
               ON v.evenement_id <> p.evenement_id
              AND v.source = p.source
+             AND v.date = p.date
              AND (v.url = p.url OR (p.idmanif IS NOT NULL AND v.idmanif = p.idmanif
-                                    AND v.date = p.date
                                     AND p.updated_at < v.first_seen - interval '1 hour'))
             WHERE p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+              AND p.maintenu_le IS NULL
             GROUP BY p.evenement_id
             """,
             Map.of(CLE_SEUIL, SEUIL_ABSENCES_FICHE_PERIMEE));
@@ -244,47 +245,6 @@ public class FusionEvenementsArtisteService {
     return fusionnerSiVivantUnique(lignes, "concert déplacé");
   }
 
-  /**
-   * Même spectacle sous deux intitulés (« of Mtsensk » / « de Mzensk ») : seuls
-   * événements de leur salle au créneau, Ticketmaster seul et Eventim seul, sans
-   * artiste reconnu ni fiche annulée. À appeler après les contrôles d'intégrité.
-   * @return nombre de fusions effectuées
-   */
-  public int fusionnerMemeCreneauDeuxSources() {
-    final List<Map<String, Object>> paires =
-        jdbc.queryForList(
-            """
-            WITH ev AS (
-              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_id,
-                     bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
-              FROM evenements e JOIN observations o ON o.evenement_id = e.id
-              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
-                AND e.statut IS DISTINCT FROM 'cancelled'
-              GROUP BY e.id),
-            creneaux AS (
-              SELECT salle_id, date, heure FROM ev GROUP BY salle_id, date, heure
-              HAVING count(*) = 2
-                 AND count(*) FILTER (WHERE tm AND NOT evt) = 1
-                 AND count(*) FILTER (WHERE evt AND NOT tm) = 1
-                 AND count(*) FILTER (WHERE artiste_id IS NOT NULL) = 0)
-            SELECT t.id AS cible, v.id AS source
-            FROM creneaux c
-            JOIN salles s ON s.id = c.salle_id
-            JOIN ev t ON t.salle_id = c.salle_id AND t.date = c.date AND t.heure = c.heure
-                     AND t.tm AND NOT t.evt
-            JOIN ev v ON v.salle_id = c.salle_id AND v.date = c.date AND v.heure = c.heure
-                     AND v.evt AND NOT v.tm
-            WHERE\
-            """
-                + SalleFiable.condition("s"),
-            Map.of());
-    for (final Map<String, Object> paire : paires) {
-      fusionner(
-          (UUID) paire.get("cible"), (UUID) paire.get("source"), "même créneau, deux sources");
-    }
-    return paires.size();
-  }
-
   // Plusieurs vivants (même adresse pour plusieurs séances) : aucun choix sûr.
   private int fusionnerSiVivantUnique(final List<Map<String, Object>> lignes, final String motif) {
     int fusions = 0;
@@ -394,6 +354,18 @@ public class FusionEvenementsArtisteService {
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
     fusionner(cibleId, sourceId, "artiste_norm convergent");
+  }
+
+  /**
+   * Absorbe une fiche dans la fiche vivante, dont la date et l'heure sont gardées.
+   * @param vivantId événement à conserver
+   * @param perimeId événement à absorber puis supprimer
+   * @param motif raison journalisée
+   */
+  @Transactional
+  public void fusionnerDansFicheVivante(
+      final UUID vivantId, final UUID perimeId, final String motif) {
+    fusionner(vivantId, perimeId, motif);
   }
 
   /**

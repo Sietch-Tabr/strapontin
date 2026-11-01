@@ -15,11 +15,11 @@ import static org.mockito.Mockito.when;
 
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.LieuEventim;
 import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.ResultatRegion;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.eventim.LieuEventim;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.quota.GestionQuotaTM;
 import java.time.LocalDate;
 import java.util.List;
@@ -167,6 +167,22 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     fetchService.executerFetchSallesAll();
 
     verify(ticketmasterSource, never()).fetchSalle("tm:venue-lyon", null);
+  }
+
+  @Test
+  void executerFetchSallesAll_ficheFigeeDejaComptéeAbsenteAuSeuil_neReinterrogePasLaSalle() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-sans-retour", "venue-sans-retour");
+    insererFicheDeSalle(salle, "75", 10);
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = :seuil WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("seuil", WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, "id", salle.toString()));
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(ticketmasterSource, never()).fetchSalle("tm:venue-sans-retour", null);
   }
 
   @Test

@@ -5,7 +5,7 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ConcertBrut;
-import fr.strapontin.sources.SourceSiteSalle;
+import fr.strapontin.sources.sites.SourceSiteSalle;
 import fr.strapontin.worker.persister.PersisterConcerts;
 import fr.strapontin.worker.persister.PersisterConcerts.ResultatPersistance;
 import fr.strapontin.worker.persister.RecalculerMatchesService;

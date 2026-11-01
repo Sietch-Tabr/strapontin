@@ -19,11 +19,11 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import fr.strapontin.core.BilanFetch;
-import fr.strapontin.sources.EnrichissementSalle;
-import fr.strapontin.sources.SalleAEnrichir;
 import fr.strapontin.sources.SourceAvecBilanFetch;
-import fr.strapontin.sources.SourceEnrichissementSalle;
-import fr.strapontin.sources.WikidataSalleSource;
+import fr.strapontin.sources.enrichissement.EnrichissementSalle;
+import fr.strapontin.sources.enrichissement.SalleAEnrichir;
+import fr.strapontin.sources.enrichissement.SourceEnrichissementSalle;
+import fr.strapontin.sources.enrichissement.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.SuiviChroniciteService;
 import fr.strapontin.worker.persister.FusionSallesClePorteeService;
@@ -746,9 +746,11 @@ class EnrichissementSallesServiceTest {
         mock(
             SourceEnrichissementSalle.class,
             org.mockito.Mockito.withSettings()
-                .extraInterfaces(fr.strapontin.sources.SourceAvecAmbiguitesDecouverte.class));
+                .extraInterfaces(
+                    fr.strapontin.sources.enrichissement.SourceAvecAmbiguitesDecouverte.class));
     when(wikidata.enrichirLot(any())).thenReturn(Map.of());
-    when(((fr.strapontin.sources.SourceAvecAmbiguitesDecouverte) wikidata).preleverAmbiguites())
+    when(((fr.strapontin.sources.enrichissement.SourceAvecAmbiguitesDecouverte) wikidata)
+            .preleverAmbiguites())
         .thenReturn(
             java.util.Map.of(
                 salleId, java.util.Map.of("wikidataId", "Q4724424", "ecartMetres", 4200L)));

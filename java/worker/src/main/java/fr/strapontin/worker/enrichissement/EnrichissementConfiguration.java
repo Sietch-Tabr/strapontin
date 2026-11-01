@@ -4,11 +4,11 @@
  */
 package fr.strapontin.worker.enrichissement;
 
-import fr.strapontin.sources.ClientNominatim;
-import fr.strapontin.sources.DeezerArtisteSource;
-import fr.strapontin.sources.NominatimSalleSource;
-import fr.strapontin.sources.WikidataArtisteSource;
-import fr.strapontin.sources.WikidataSalleSource;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
+import fr.strapontin.sources.enrichissement.DeezerArtisteSource;
+import fr.strapontin.sources.enrichissement.NominatimSalleSource;
+import fr.strapontin.sources.enrichissement.WikidataArtisteSource;
+import fr.strapontin.sources.enrichissement.WikidataSalleSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

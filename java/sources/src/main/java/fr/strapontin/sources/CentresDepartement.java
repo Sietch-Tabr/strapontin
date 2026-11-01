@@ -4,17 +4,16 @@
  */
 package fr.strapontin.sources;
 
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import java.util.Map;
 
 /**
  * Correspondance département → centre géographique (Nominatim/OSM, stable),
  * utilisée pour les requêtes par région de {@link TicketmasterSource}.
  */
-final class CentresDepartement {
+public final class CentresDepartement {
 
-  /* package-private : réutilisé par
-   * TicketmasterRegionFetcher (même package). */
-  static final Map<String, CentreDept> PAR_DEPT =
+  public static final Map<String, CentreDept> PAR_DEPT =
       Map.ofEntries(
           Map.entry("01", new CentreDept(46.0654, 5.4489, 76)),
           Map.entry("02", new CentreDept(49.4533, 3.6069, 83)),

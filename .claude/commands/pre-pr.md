@@ -36,11 +36,19 @@ Ne pas mentionner les refactors internes, corrections de sécurité non visibles
 
 Mettre à jour `README.md` si les prérequis, la description ou les instructions de build ont changé.
 
-## 6. Commit documentation
+## 6. Contrôle de cohérence documentation et code
+
+```bash
+scripts/verifier-doc.sh
+```
+
+Compare le wiki, `CLAUDE.md` et le changelog au code : liens du wiki, routes, tables du schéma, versions annoncées, entrée de la Roadmap pour chaque version publiée et pour la version en cours, entrée du changelog utilisateur. Tout `[ERREUR]` est corrigé avant la PR (le wiki est un dépôt séparé : ce contrôle ne peut pas tourner en pipeline, il passe donc ici à chaque jalon).
+
+## 7. Commit documentation
 
 Proposer le message de commit (`docs: ...`), attendre validation, puis committer.
 
-## 7. Créer la PR
+## 8. Créer la PR
 
 ```bash
 tea pr create -r Kwaite/strapontin \
@@ -58,6 +66,6 @@ EOF
 - Base : branche d'intégration courante (ne pas spécifier `--base` pour utiliser la branche par défaut du dépôt).
 - Labels : selon nature (`Bug`, `Feature`, `Task`…).
 
-## 8. Suite
+## 9. Suite
 
 Afficher l'URL de la PR et s'arrêter. Le merge, la vérification de la prod, le tag, la release et la fermeture du jalon relèvent de `/cloture-jalon`, lancé par l'utilisateur.

@@ -7,7 +7,7 @@ package fr.strapontin.worker.persister;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QualificatifSalle;
-import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;

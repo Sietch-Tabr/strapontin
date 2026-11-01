@@ -6,7 +6,7 @@ package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.util.List;
@@ -126,6 +126,62 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     controle.verifier();
 
     assertEquals(List.of("seance_dans_deux_salles"), actifs());
+  }
+
+  private UUID salleAvecPosition(final String cle, final double latitude, final double longitude) {
+    return jdbc.queryForObject(
+        "INSERT INTO salles (salle_cle, nom, nom_norm, ville, latitude, longitude)"
+            + " VALUES (:cle, :cle, :cle, 'Paris', :lat, :lon) RETURNING id",
+        Map.of("cle", cle, "lat", latitude, "lon", longitude),
+        UUID.class);
+  }
+
+  // Deux théâtres de Paris à plus de 5 km : deux productions du même titre.
+  @Test
+  void verifier_memeTitreMemeSoirDansDeuxSallesEloigneesDeLaMemeVille_neSignaleRien() {
+    final UUID abc = salleAvecPosition("abc theatre", 48.8700, 2.3480);
+    final UUID madeleine = salleAvecPosition("theatre de la madeleine", 48.9000, 2.2800);
+    observer(evenementHeure(abc, "cendrillon", "14:30"), "eventim");
+    observer(evenementHeure(madeleine, "cendrillon", "14:30"), "ticketmaster");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
+  // Dead Poet Society : Alhambra et Bataclan, à environ 1 km.
+  @Test
+  void verifier_memeTitreMemeSoirDansDeuxSallesProchesDeLaMemeVille_signaleLaSeance() {
+    final UUID alhambra = salleAvecPosition("alhambra", 48.8650, 2.3680);
+    final UUID bataclan = salleAvecPosition("bataclan", 48.8630, 2.3700);
+    observer(evenementHeure(alhambra, "dead poet society", "20:00"), "ticketmaster");
+    observer(evenementHeure(bataclan, "dead poet society", "20:00"), "eventim");
+
+    controle.verifier();
+
+    assertEquals(List.of("seance_dans_deux_salles"), actifs());
+  }
+
+  // Théâtre de l'Essaïon : deux salles internes, des spectacles différents au même créneau.
+  @Test
+  void verifier_salleAvecPlusieursCreneauxDoubles_neSignaleAucunCreneauDouble() {
+    final UUID essaion = creerSalle();
+    for (int jour = 1; jour <= 4; jour++) {
+      for (final String titre : List.of("spectacle a " + jour, "spectacle b " + jour)) {
+        final UUID id =
+            jdbc.queryForObject(
+                "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, dept)"
+                    + " VALUES (:titre, CURRENT_DATE + :jour, '14:20', 'x',"
+                    + " CAST(:salle AS uuid), '75') RETURNING id",
+                Map.of("titre", titre, "jour", jour, "salle", essaion.toString()),
+                UUID.class);
+        observer(id, "eventim");
+      }
+    }
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
   }
 
   @Test

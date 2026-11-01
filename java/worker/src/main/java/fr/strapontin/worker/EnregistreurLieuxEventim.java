@@ -4,8 +4,8 @@
  */
 package fr.strapontin.worker;
 
-import fr.strapontin.sources.EventimSource;
-import fr.strapontin.sources.LieuEventim;
+import fr.strapontin.sources.eventim.EventimSource;
+import fr.strapontin.sources.eventim.LieuEventim;
 import java.sql.Types;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;

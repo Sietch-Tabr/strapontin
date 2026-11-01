@@ -4,8 +4,8 @@
  */
 package fr.strapontin.web.salle;
 
-import fr.strapontin.sources.CadenceurAppels;
-import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
+import fr.strapontin.sources.http.CadenceurAppels;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.CadenceurAppelsPartage;
 import fr.strapontin.web.WorkerTriggerUtils;

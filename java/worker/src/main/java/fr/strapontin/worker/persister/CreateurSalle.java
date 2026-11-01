@@ -5,7 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.ClientNominatim;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;

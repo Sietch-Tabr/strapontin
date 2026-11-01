@@ -5,11 +5,11 @@
 package fr.strapontin.worker.enrichissement;
 
 import fr.strapontin.core.BilanFetch;
-import fr.strapontin.sources.ArtisteAEnrichir;
-import fr.strapontin.sources.EnrichissementArtiste;
-import fr.strapontin.sources.SourceAvecAmbiguitesDecouverte;
 import fr.strapontin.sources.SourceAvecBilanFetch;
-import fr.strapontin.sources.SourceEnrichissementArtiste;
+import fr.strapontin.sources.enrichissement.ArtisteAEnrichir;
+import fr.strapontin.sources.enrichissement.EnrichissementArtiste;
+import fr.strapontin.sources.enrichissement.SourceAvecAmbiguitesDecouverte;
+import fr.strapontin.sources.enrichissement.SourceEnrichissementArtiste;
 import fr.strapontin.worker.LogsAdminWorker;
 import fr.strapontin.worker.sante.SignalementMatchingService;
 import java.util.HashMap;

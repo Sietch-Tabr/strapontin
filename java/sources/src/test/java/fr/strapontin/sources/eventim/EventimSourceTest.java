@@ -1,0 +1,1222 @@
+/*
+ * Strapontin — concert finder
+ * Copyright (C) 2025-2026 Kwaite
+ */
+package fr.strapontin.sources.eventim;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+
+import fr.strapontin.core.BilanFetch;
+import fr.strapontin.core.ConcertBrut;
+import fr.strapontin.sources.ReponseIncompleteException;
+import fr.strapontin.sources.ResultatRegion;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
+class EventimSourceTest {
+
+  // --- Fixtures ---
+
+  private static Map<String, Object> produitEventimRaw() {
+    return produitEventimRaw(Map.of());
+  }
+
+  private static Map<String, Object> produitEventimRaw(final Map<String, Object> surcharge) {
+    final Map<String, Object> base = new HashMap<>();
+    base.put("name", "Julien Clerc");
+    base.put(
+        "typeAttributes",
+        Map.of(
+            "liveEntertainment",
+            Map.of(
+                "startDate", "2025-09-15T20:30:00",
+                "location",
+                    Map.of(
+                        "name", "Accor Arena",
+                        "city", "Paris",
+                        "postalCode", "75012"),
+                "priceRange", Map.of("min", 39.9, "max", 99.9))));
+    base.put("link", "https://www.eventim.fr/event/julien-clerc-1234");
+    base.putAll(surcharge);
+    return base;
+  }
+
+  // --- corrigerVilleEventim ---
+
+  @Test
+  void corrigerVilleEventim_arrondissementAccole_retourneLaVille() {
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris 07", "75", "Le Bon Marché"));
+    assertEquals("Lyon", EventimSource.corrigerVilleEventim("Lyon 3", "69", "Salle 3000"));
+  }
+
+  @Test
+  void corrigerVilleEventim_deptParis_neCorrigePas() {
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", "75", "Accor Arena"));
+  }
+
+  @Test
+  void corrigerVilleEventim_villeAutreQueParis_neCorrigePas() {
+    assertEquals(
+        "Boulogne-Billancourt",
+        EventimSource.corrigerVilleEventim("Boulogne-Billancourt", "92", "La Seine Musicale"));
+  }
+
+  @Test
+  void corrigerVilleEventim_petiteCouronneAvecCommuneDansNomSalle_extraitCommune() {
+    // ticket — La Seine Musicale - Boulogne Billancourt, dept=92, Eventim renvoie "Paris"
+    assertEquals(
+        "Boulogne Billancourt",
+        EventimSource.corrigerVilleEventim(
+            "Paris", "92", "La Seine Musicale - Boulogne Billancourt"));
+  }
+
+  @Test
+  void corrigerVilleEventim_petiteCouronneSansCommuneDansNomSalle_retourneNullEtJournalise() {
+    // Stade de France, dept=93, aucune commune extractible du nom de salle — une valeur qu'on
+    // vient soi-même de qualifier d'incohérente ne doit jamais écraser une valeur déjà en base.
+    assertNull(EventimSource.corrigerVilleEventim("Paris", "93", "Stade De France"));
+  }
+
+  @Test
+  void corrigerVilleEventim_villeOuDeptAbsent_retourneVilleInchangee() {
+    assertNull(EventimSource.corrigerVilleEventim(null, "92", "La Seine Musicale"));
+    assertEquals("Paris", EventimSource.corrigerVilleEventim("Paris", null, "Accor Arena"));
+  }
+
+  // --- parseDateEventim ---
+
+  @Test
+  void parseDateEventim_dateEtHeureValides_parseDateEtHeure() {
+    final String[] r = EventimSource.parseDateEventim("2025-09-15T20:30:00");
+    assertEquals("2025-09-15", r[0]);
+    assertEquals("20:30", r[1]);
+  }
+
+  @Test
+  void parseDateEventim_heure0000_retourneHeureNull() {
+    final String[] r = EventimSource.parseDateEventim("2025-09-15T00:00:00");
+    assertEquals("2025-09-15", r[0]);
+    assertNull(r[1]);
+  }
+
+  @Test
+  void parseDateEventim_sansSeparateurT_retourneHeureNull() {
+    final String[] r = EventimSource.parseDateEventim("2025-09-15");
+    assertEquals("2025-09-15", r[0]);
+    assertNull(r[1]);
+  }
+
+  @Test
+  void parseDateEventim_extraitHHMMSeulement() {
+    final String[] r = EventimSource.parseDateEventim("2025-09-15T21:45:30");
+    assertEquals("21:45", r[1]);
+  }
+
+  // --- concerneArtiste (têtes d'affiche de festival attachées à tous les produits) ---
+
+  private static final List<Map<String, Object>> ARTISTES_FESTIVAL =
+      List.of(
+          Map.of("name", "Cascadeur"),
+          Map.of("name", "Pi Ja Ma"),
+          Map.of("name", "Les Rendez-Vous Soniques"),
+          Map.of("name", "Suzane"),
+          Map.of("name", "Benjamin Biolay"));
+
+  private static Map<String, Object> produitFestival(final String titre) {
+    return Map.of("name", titre, "attractions", ARTISTES_FESTIVAL);
+  }
+
+  @Test
+  void concerneArtiste_dateDUnAutreArtisteDuFestival_estEcartee() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("Cascadeur + Betty Pop - Les Rendez-Vous Soniques #17"), "Suzane"));
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("PI JA MA & La Chorale du Normandy - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+  }
+
+  @Test
+  void concerneArtiste_hommageALArtisteRecherche_estEcarte() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of("name", "AC/DC Live Tribute by Poun, Black Bomb A, Smack"), "AC/DC"));
+  }
+
+  @Test
+  void concerneArtiste_hommageRechercheParSonPropreNom_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of("name", "AC/DC Tribute - Live au Balajo"), "AC/DC Tribute"));
+  }
+
+  // Titre tronqué par Eventim : la suite reste un préfixe du festival.
+  @Test
+  void concerneArtiste_titreTronque_dateDUnAutreArtisteEcartee() {
+    assertFalse(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("PI JA MA & La Chorale du Normandy + Marianne Perrudin - Les Rendez.."),
+            "Suzane"));
+  }
+
+  // Produits réels relevés le 04/10/2026 : le titre nomme l'événement, que l'artiste joue.
+  @Test
+  void concerneArtiste_titreDeLEvenementLuiMeme_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Les Voix de Carmen",
+                "attractions",
+                List.of(
+                    Map.of("name", "Les Voix de Carmen"),
+                    Map.of("name", "Camelia Jordana"),
+                    Map.of("name", "Estelle Meyer"))),
+            "Camélia Jordana"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Firemaster Convention - Billet 1 Jour",
+                "attractions",
+                List.of(
+                    Map.of("name", "Firemaster Convention"),
+                    Map.of("name", "Ultra Vomit"),
+                    Map.of("name", "Bukowski"))),
+            "Ultra Vomit"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Ensemble !!!",
+                "attractions",
+                List.of(
+                    Map.of("name", "Ensemble !!!"),
+                    Map.of("name", "Sinsemilia"),
+                    Map.of("name", "Tryo"))),
+            "Tryo"));
+  }
+
+  // Cas réel du 06/10/2026 : « Les Rendez-vous Soniques #17 » du 14/11, sans Suzane, à côté
+  // de sa propre date nommée.
+  @Test
+  void retenir_soireeTitreeDuSeulFestivalAvecUneDateNommantLArtiste_estEcartee() {
+    final Map<String, Object> saDate =
+        produitFestival("Suzane + Marguerite + Sam Sauvage - Les Rendez-Vous Soniques #17");
+    final Map<String, Object> autreSoiree = produitFestival("Les Rendez-vous Soniques #17");
+    final List<Map<String, Object>> ecartes = new ArrayList<>();
+
+    final List<Map<String, Object>> retenus =
+        ProduitsDeLArtiste.retenir(List.of(saDate, autreSoiree), "Suzane", ecartes::add);
+
+    assertEquals(List.of(saDate), retenus);
+    assertEquals(List.of(autreSoiree), ecartes);
+  }
+
+  // Une date réelle peut n'être titrée que du festival (Nancy Jazz Pulsations) : sans autre
+  // produit nommant l'artiste, elle est gardée.
+  @Test
+  void retenir_titreDuSeulFestivalSansDateNommantLArtiste_estGarde() {
+    final Map<String, Object> soiree =
+        Map.of(
+            "name",
+            "Nancy Jazz Pulsations",
+            "attractions",
+            List.of(Map.of("name", "Nancy Jazz Pulsations"), Map.of("name", "Ibeyi")));
+
+    assertEquals(List.of(soiree), ProduitsDeLArtiste.retenir(List.of(soiree), "Ibeyi", _ -> {}));
+  }
+
+  @Test
+  void concerneArtiste_dateOuLArtisteJoue_estGardee() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("Suzane + Marguerite + Sam Sauvage - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+  }
+
+  @Test
+  void concerneArtiste_titreSansArtisteReconnu_estGarde() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            produitFestival("Pionnières par DeLaurentis - Les Rendez-Vous Soniques #17"),
+            "Suzane"));
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "Les 30 ans de Rêves de Gosse",
+                "attractions",
+                List.of(Map.of("name", "Shy'm"))),
+            "Shy'm"));
+  }
+
+  @Test
+  void concerneArtiste_nomDeLArtisteContenuDansUneAttraction_nEstPasUnAutreArtiste() {
+    assertTrue(
+        ProduitsDeLArtiste.concerneArtiste(
+            Map.of(
+                "name",
+                "-M- Matthieu Chedid - Tournée",
+                "attractions",
+                List.of(Map.of("name", "-M- Matthieu Chedid"))),
+            "-M-"));
+  }
+
+  // --- extraireNomArtiste ---
+
+  @Test
+  void extraireNomArtiste_avecSeparateurTiret_retournePartieDroite() {
+    assertEquals("Coldplay", EventimSource.extraireNomArtiste("Coldplay - Music Of The Spheres"));
+  }
+
+  @Test
+  void extraireNomArtiste_titreDHommage_gardeLeTitreComplet() {
+    final String titre = "System of a Down - Live Tribute by Steeven Corsini (Smack)";
+
+    assertEquals(titre, EventimSource.extraireNomArtiste(titre));
+  }
+
+  @Test
+  void extraireNomArtiste_avecSeparateurDeuxPoints_retournePartieDroite() {
+    assertEquals("Artiste", EventimSource.extraireNomArtiste("Artiste : Spectacle 2025"));
+  }
+
+  @Test
+  void extraireNomArtiste_sansSeparateur_retourneTitreComblet() {
+    assertEquals("Julien Clerc", EventimSource.extraireNomArtiste("Julien Clerc"));
+  }
+
+  // Séparateur avec espace insécable (U+00A0) au lieu d'une espace normale — le titre entier
+  // était retenu comme nom d'artiste faute de matcher " - ".
+  @Test
+  void extraireNomArtiste_avecEspaceInsecableAvantTiret_retournePartieGauche() {
+    assertEquals("Baby Keem", EventimSource.extraireNomArtiste("Baby Keem - The Ca$ino Tour"));
+  }
+
+  @Test
+  void extraireNomArtiste_avecEspaceFineInsecableAvantTiret_retournePartieGauche() {
+    assertEquals("Artiste", EventimSource.extraireNomArtiste("Artiste - Tournée"));
+  }
+
+  // --- mapProduit ---
+
+  @Test
+  void mapProduit_produitComplet_parseTousLesChamps() {
+    final ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
+    assertNotNull(resultat);
+    assertEquals("Julien Clerc", resultat.artiste());
+    assertEquals("2025-09-15", resultat.date());
+    assertEquals("20:30", resultat.heure());
+    assertEquals("Accor Arena", resultat.salle());
+    assertEquals("Paris", resultat.ville());
+    assertEquals("75", resultat.dept());
+    assertEquals("https://www.eventim.fr/event/julien-clerc-1234", resultat.url());
+    assertEquals("eventim", resultat.source());
+    assertNull(resultat.classification());
+    assertNull(resultat.genre());
+    assertNull(resultat.statut());
+  }
+
+  @Test
+  void mapProduit_dateAbsente_retourneNull() {
+    final Map<String, Object> produit =
+        produitEventimRaw(Map.of("typeAttributes", Map.of("liveEntertainment", Map.of())));
+    assertNull(EventimSource.mapProduit(produit, null));
+  }
+
+  @Test
+  void mapProduit_nomAbsent_retourneNull() {
+    final Map<String, Object> produit = new HashMap<>(produitEventimRaw());
+    produit.remove("name");
+    assertNull(EventimSource.mapProduit(produit, null));
+  }
+
+  @Test
+  void mapProduit_urlDepuisDomainEtPath_reconstruitUrl() {
+    final Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "url",
+                Map.of("domain", "https://www.eventim.fr", "path", "/event/julien-clerc-1234")));
+    final Map<String, Object> base = new HashMap<>(produit);
+    base.remove("link");
+    final ConcertBrut resultat = EventimSource.mapProduit(base, null);
+    assertNotNull(resultat);
+    assertEquals("https://www.eventim.fr/event/julien-clerc-1234", resultat.url());
+  }
+
+  @Test
+  void mapProduit_sansUrlNiLien_retourneUrlNull() {
+    final Map<String, Object> produit = new HashMap<>(produitEventimRaw());
+    produit.remove("link");
+    produit.remove("url");
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    assertNotNull(resultat);
+    assertNull(resultat.url());
+  }
+
+  @Test
+  void mapProduit_salleSeineMusicaleVillePariseIncoherente_corrigeVilleEnBoulogne() {
+    // ticket
+    final Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "typeAttributes",
+                Map.of(
+                    "liveEntertainment",
+                    Map.of(
+                        "startDate",
+                        "2025-09-15T20:30:00",
+                        "location",
+                        Map.of(
+                            "name", "La Seine Musicale - Boulogne Billancourt",
+                            "city", "Paris",
+                            "postalCode", "92100")))));
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    assertNotNull(resultat);
+    assertEquals("Boulogne Billancourt", resultat.ville());
+    assertEquals("92", resultat.dept());
+  }
+
+  @Test
+  void mapProduit_locationAbsente_salleInconnueEtDeptNull() {
+    final Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "typeAttributes",
+                Map.of("liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+    assertNotNull(resultat);
+    assertEquals("Salle inconnue", resultat.salle());
+    assertNull(resultat.dept());
+  }
+
+  // timeout HTTP explicite (connexion 10s/lecture 30s) via ClientHttpFactory
+  @Test
+  void constructeurParDefaut_neLancePasException_etExposeLeNomEventim() {
+    final EventimSource source = new EventimSource();
+
+    assertEquals("eventim", source.nom());
+  }
+
+  // régression : un User-Agent de navigateur (Mozilla/5.0...) déclenche un blocage 403
+  // Akamai depuis le 09/07/2026 ; un Accept-Encoding explicite fait échouer la désérialisation
+  // JSON (SimpleClientHttpRequestFactory ne décompresse pas la réponse gzip lui-même).
+  @Test
+  void builderAvecHeadersParDefaut_headersReels_userAgentHonneteEtAucunAcceptEncoding() {
+    final RestClient.Builder builder = EventimSource.builderAvecHeadersParDefaut();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andExpect(header("User-Agent", EventimSource.USER_AGENT))
+        .andExpect(headerDoesNotExist("Accept-Encoding"))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    new EventimSource(restClient).fetchArtiste("Test");
+
+    serveur.verify();
+    assertFalse(EventimSource.USER_AGENT.startsWith("Mozilla"));
+  }
+
+  // --- Tests HTTP ---
+
+  @Test
+  void fetchArtiste_nomSansCorrespondanceExacte_retourneListeVide() {
+    // ticket — rechercherAttractionId ne doit pas prendre attractions.get(0) si pas d'exact
+    // match normalisé (ex: Shy'm → API retourne "Shy", normalisé différent)
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-808","name":"Shy"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Shy'm");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtiste_termeContenuDansNomPlusVerbeux_retourneResultatsParContainment() {
+    // ticket — "-M-" contenu dans "-M- Matthieu Chedid" → accepté par containment
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("-M-");
+
+    // Liste vide car products vide, mais l'ID a bien été utilisé (verify passe)
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+
+    // le containment accepté doit être exposé pour remontée dans logs_admin
+    final List<String> containments = source.preleverContainmentsAcceptes();
+    assertEquals(1, containments.size());
+    assertTrue(containments.get(0).contains("-M-"));
+    assertTrue(containments.get(0).contains("-M- Matthieu Chedid"));
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  // régression : "Furies" trouvé par containment dans "Love & Furies" (deux
+  // entités distinctes) réapparaissait à chaque cycle de fetch. Dès que l'artiste a déjà un
+  // deezerId ou un wikidataId connu (identité confirmée indépendamment), le repli par
+  // containment doit être désactivé — seule une correspondance exacte est acceptée.
+  @Test
+  void fetchArtiste_identiteConfirmeeParDeezerId_rejetteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Furies", "656219", null);
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  private static EventimSource sourceRepondant(final String json) {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+    return new EventimSource(builder.build());
+  }
+
+  // Identifiant enregistré pour Furies et désignant Love & Furies chez Eventim.
+  @Test
+  void attractionDUnAutreArtiste_identifiantDUnAutreNom_retourneVrai() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"810294","name":"Love & Furies"}]}
+            """);
+
+    assertTrue(source.attractionDUnAutreArtiste("Furies", "810294", true, List.of()));
+  }
+
+  // Drag Race France : l'attraction s'appelle « Drag Race France Live ». Sans identité confirmée,
+  // le fetch accepte ce nom par containment, le contrôle ne le conteste donc pas.
+  @Test
+  void attractionDUnAutreArtiste_nomContenantLeNomSansIdentiteConfirmee_retourneFaux() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"814968","name":"Drag Race France Live"}]}
+            """);
+
+    assertFalse(source.attractionDUnAutreArtiste("Drag Race France", "814968", false, List.of()));
+  }
+
+  @Test
+  void attractionDUnAutreArtiste_nomContenantLeNomAvecIdentiteConfirmee_retourneVrai() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"814968","name":"Drag Race France Live"}]}
+            """);
+
+    assertTrue(source.attractionDUnAutreArtiste("Drag Race France", "814968", true, List.of()));
+  }
+
+  @Test
+  void attractionDUnAutreArtiste_identifiantDuBonArtiste_retourneFaux() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"810294","name":"Furies"}]}
+            """);
+
+    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", true, List.of()));
+  }
+
+  @Test
+  void attractionDUnAutreArtiste_identifiantAbsentDesResultats_resteIndetermine() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"1","name":"Autre"}]}
+            """);
+
+    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", true, List.of()));
+  }
+
+  // Nom de scène d'une identité confirmée publié sous une forme longue : « -M- » →
+  // « -M- Matthieu Chedid », reconnu car le reste du nom est le libellé Wikidata de l'artiste.
+  @Test
+  void fetchArtiste_identiteConfirmeeResteDuNomConnu_accepteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess("{\"products\":[],\"totalResults\":0}", MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("-M-", "867", "Q2365459", List.of("Matthieu Chedid", "M"));
+
+    serveur.verify();
+    assertEquals(1, source.preleverContainmentsAcceptes().size());
+  }
+
+  @Test
+  void fetchArtiste_identiteConfirmeeResteDuNomInconnu_rejetteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats =
+        source.fetchArtiste("Furies", "656219", null, List.of("The Furies"));
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  // Symétrique côté wikidataId : même comportement attendu qu'avec un deezerId connu.
+  @Test
+  void fetchArtiste_identiteConfirmeeParWikidataId_rejetteLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-love-furies","name":"Love & Furies"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Furies", null, "Q3106253");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  // "Youssou N'Dour" ("n dour" normalisé) / "Youssou NDour" ("ndour") : ni égalité stricte ni
+  // containment ne matchaient. L'égalité sans espaces doit accepter ce cas, identité confirmée.
+  @Test
+  void fetchArtiste_apostropheOmiseParSourceIdentiteConfirmee_egaliteSansEspacesAcceptee() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-ndour","name":"Youssou NDour"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-ndour")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Youssou N'Dour", "656219", null);
+
+    // Liste vide car products vide, mais l'attractionId a bien été utilisé (verify passe) —
+    // preuve que la correspondance a été acceptée malgré l'absence d'égalité stricte.
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  // Identité non confirmée (ni deezerId ni wikidataId) : comportement historique inchangé, le
+  // containment reste autorisé — non-régression du cas "-M-" ci-dessus via la nouvelle signature.
+  @Test
+  void fetchArtiste_identiteNonConfirmee_autoriseLeContainment() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-m","name":"-M- Matthieu Chedid"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-m")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("-M-", null, null);
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertEquals(1, source.preleverContainmentsAcceptes().size());
+  }
+
+  @Test
+  void fetchArtiste_termeUnCaractereBrut_pasDeContainment() {
+    // ticket — terme d'un seul caractère brut (ex. "M") ne déclenche pas le containment
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-x","name":"X Factor"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("X");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+    assertTrue(source.preleverContainmentsAcceptes().isEmpty());
+  }
+
+  @Test
+  void fetchArtiste_artisteNonTrouveEventim_retourneListeVide() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Artiste Inconnu");
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void fetchArtiste_correspondanceExactePreferee_utiliseExactId() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[
+                  {"attractionId":"evt-999","name":"Julien Clerc Tribute"},
+                  {"attractionId":"evt-123","name":"Julien Clerc"}
+                ]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("evt-123")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[],"totalResults":0}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    serveur.verify();
+  }
+
+  @Test
+  void constructeurParDefaut_initialise_sansErreur() {
+    assertDoesNotThrow((org.junit.jupiter.api.function.Executable) EventimSource::new);
+  }
+
+  @Test
+  void fetchRegion_listeDeptVide_retourneListeVide() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchRegion(List.of(), List.of("music"));
+
+    assertTrue(resultats.isEmpty());
+    serveur.verify();
+  }
+
+  // attraction_ids exige top (50 au plus), qui fait ignorer page : une réponse pleine
+  // déclenche une nouvelle fenêtre à partir du dernier jour reçu.
+  @Test
+  void fetchArtiste_reponsePleine_repriseAuDernierJourAvecTop() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    final String produit =
+        """
+        {"name":"Julien Clerc","typeAttributes":{"liveEntertainment":{
+          "startDate":"%s","location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"}}},
+          "link":"https://www.eventim.fr/event/julien-clerc-%d"}
+        """;
+    final LocalDate jour = LocalDate.now().plusDays(30);
+    final String pleine =
+        java.util.stream.IntStream.range(0, 50)
+            .mapToObj(n -> produit.formatted(jour + "T20:00:00", n))
+            .collect(java.util.stream.Collectors.joining(","));
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("top=50"),
+                    org.hamcrest.Matchers.containsString("date_from=" + LocalDate.now()))))
+        .andRespond(
+            withSuccess(
+                "{\"products\":[" + pleine + "],\"totalResults\":51}", MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("date_from=" + jour)))
+        .andRespond(
+            withSuccess(
+                "{\"products\":[" + produit.formatted(jour.plusDays(1) + "T20:00:00", 99) + "]}",
+                MediaType.APPLICATION_JSON));
+
+    final List<ConcertBrut> resultats =
+        new EventimSource(builder.build()).fetchArtiste("Julien Clerc");
+
+    serveur.verify();
+    assertEquals(51, resultats.size());
+  }
+
+  @Test
+  void fetchArtiste_reponseValide_retourneConcerts() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(
+            withSuccess(
+                """
+                {"products":[
+                  {"name":"Julien Clerc",
+                   "typeAttributes":{"liveEntertainment":{
+                     "startDate":"2025-09-15T20:30:00",
+                     "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012"},
+                     "priceRange":{"min":39.9,"max":99.9}}},
+                   "link":"https://www.eventim.fr/event/julien-clerc-1234"}
+                ],"totalResults":1}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    final List<ConcertBrut> resultats = source.fetchArtiste("Julien Clerc");
+
+    assertEquals(1, resultats.size());
+    assertEquals("Julien Clerc", resultats.get(0).artiste());
+    serveur.verify();
+  }
+
+  // Contrairement à un artiste réellement absent d'Eventim (liste vide, succès), un échec HTTP
+  // sur les produits lève une réponse incomplète : aucune absence comptée.
+  @Test
+  void fetchArtiste_erreurHttpSurFetchProduits_leveReponseIncomplete() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-123","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(withServerError());
+
+    final EventimSource source = new EventimSource(restClient);
+    final ReponseIncompleteException incomplete =
+        assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
+
+    assertTrue(incomplete.concertsRecus().isEmpty());
+    serveur.verify();
+  }
+
+  @Test
+  void mapProduit_inStockFalse_retourneStatutNull() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("inStock", false));
+
+    final ConcertBrut concert = EventimSource.mapProduit(produit, null);
+
+    assertNull(concert.statut());
+  }
+
+  @Test
+  void mapProduit_inStockTrue_retourneStatutNull() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("inStock", true));
+
+    final ConcertBrut concert = EventimSource.mapProduit(produit, null);
+
+    assertNull(concert.statut());
+  }
+
+  @Test
+  void mapProduit_statutCancelled_retourneStatutCancelled() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("status", "Cancelled"));
+
+    assertEquals("cancelled", EventimSource.mapProduit(produit, null).statut());
+  }
+
+  @Test
+  void mapProduit_statutAvailable_retourneStatutNull() {
+    final Map<String, Object> produit = produitEventimRaw(Map.of("status", "Available"));
+
+    assertNull(EventimSource.mapProduit(produit, null).statut());
+  }
+
+  // --- salleSourceId interne ---
+
+  @Test
+  void mapProduit_salleConnue_salleSourceIdGenere() {
+    final ConcertBrut resultat = EventimSource.mapProduit(produitEventimRaw(), null);
+
+    assertNotNull(resultat.salleSourceId());
+    assertTrue(
+        resultat.salleSourceId().startsWith("eventim:internal:"),
+        "salleSourceId doit commencer par 'eventim:internal:' mais était : "
+            + resultat.salleSourceId());
+    assertEquals("eventim:internal:accor arena@75012", resultat.salleSourceId());
+  }
+
+  @Test
+  void mapProduit_locationAbsente_salleSourceIdNull() {
+    final Map<String, Object> produit =
+        produitEventimRaw(
+            Map.of(
+                "typeAttributes",
+                Map.of("liveEntertainment", Map.of("startDate", "2025-09-15T20:30:00"))));
+
+    final ConcertBrut resultat = EventimSource.mapProduit(produit, null);
+
+    assertNull(
+        resultat.salleSourceId(), "salleSourceId doit être null quand la salle est inconnue");
+  }
+
+  // --- BilanFetch ---
+
+  @Test
+  void preleverBilan_appelReussi_compteUnAppelSansErreur() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Artiste Inconnu");
+
+    final BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(0, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttpSurAttractions_compteUneErreur() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withServerError());
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Julien Clerc");
+
+    final BilanFetch bilan = source.preleverBilan();
+    assertEquals(1, bilan.appels());
+    assertEquals(1, bilan.erreursHttp());
+  }
+
+  @Test
+  void preleverBilan_erreurHttpSurProducts_compteAppelEtErreurSepares() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(
+            withSuccess(
+                """
+                {"attractions":[{"attractionId":"evt-1","name":"Julien Clerc"}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/products")))
+        .andRespond(withServerError());
+
+    final EventimSource source = new EventimSource(restClient);
+    assertThrows(ReponseIncompleteException.class, () -> source.fetchArtiste("Julien Clerc"));
+
+    final BilanFetch bilan = source.preleverBilan();
+    assertEquals(2, bilan.appels(), "un appel /attractions + un appel /products");
+    assertEquals(1, bilan.erreursHttp(), "seul l'appel /products a échoué");
+  }
+
+  @Test
+  void preleverBilan_apresPrelevement_remetLesCompteursAZero() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withServerError());
+
+    final EventimSource source = new EventimSource(restClient);
+    source.fetchArtiste("Julien Clerc");
+    source.preleverBilan();
+
+    final BilanFetch second = source.preleverBilan();
+    assertEquals(0, second.appels());
+    assertEquals(0, second.erreursHttp());
+  }
+
+  @Test
+  void fetchArtiste_panneReseau_propageResourceAccessException() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final RestClient restClient = builder.build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
+        .andRespond(withException(new java.io.IOException("Connection reset")));
+
+    final EventimSource source = new EventimSource(restClient);
+
+    assertThrows(
+        org.springframework.web.client.ResourceAccessException.class,
+        () -> source.fetchArtiste("Test"));
+  }
+
+  private static final String PRODUIT_ACCOR_ARENA =
+      """
+      {"name":"Julien Clerc",
+       "typeAttributes":{"liveEntertainment":{
+         "startDate":"2025-09-15T20:30:00",
+         "location":{"name":"Accor Arena","city":"Paris","postalCode":"75012",
+                     "geoLocation":{"latitude":48.8386,"longitude":2.3786}}}},
+       "link":"https://www.eventim.fr/event/julien-clerc-1234"}
+      """;
+
+  private static final String PRODUIT_SAINT_DENIS =
+      """
+      {"name":"Autre",
+       "typeAttributes":{"liveEntertainment":{
+         "startDate":"2025-09-16T20:30:00",
+         "location":{"name":"Stade de France","city":"Saint Denis","postalCode":"93200"}}},
+       "link":"https://www.eventim.fr/event/autre-5678"}
+      """;
+
+  // L'API ignore query=<dept> : seules les villes (city_names) filtrent réellement, avec les
+  // catégories Eventim quelles que soient les classifications passées, et sans in_stock (un
+  // concert complet disparaîtrait sinon, et compterait des absences).
+  @Test
+  void fetchRegionCouverte_villesConnues_interrogeCityNamesEtCategoriesSansInStock() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(
+            requestTo(
+                org.hamcrest.Matchers.allOf(
+                    org.hamcrest.Matchers.containsString("/products"),
+                    org.hamcrest.Matchers.containsString("city_names=Saint%20Denis"),
+                    org.hamcrest.Matchers.containsString("Concerts%20%26%20Festivals"),
+                    org.hamcrest.Matchers.containsString("Classique%20%26%20Danse"),
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("in_stock")),
+                    org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("query=")))))
+        .andRespond(
+            withSuccess(
+                "{\"products\":["
+                    + PRODUIT_ACCOR_ARENA
+                    + ","
+                    + PRODUIT_SAINT_DENIS
+                    + "],\"totalResults\":2}",
+                MediaType.APPLICATION_JSON));
+    final EventimSource source = new EventimSource(builder.build());
+    source.definirFournisseurVilles(depts -> List.of("Saint Denis"));
+
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("93"), List.of("music"));
+
+    serveur.verify();
+    assertEquals(1, resultat.concerts().size());
+    assertEquals("93", resultat.concerts().get(0).dept());
+    assertEquals(LocalDate.now().plusMonths(6).minusDays(1), resultat.horizon());
+  }
+
+  @Test
+  void fetchRegionCouverte_aucuneVilleConnue_aucuneRequeteNiHorizon() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final EventimSource source = new EventimSource(builder.build());
+
+    final ResultatRegion resultat = source.fetchRegionCouverte(List.of("69"), null);
+
+    serveur.verify();
+    assertTrue(resultat.concerts().isEmpty());
+    assertNull(resultat.horizon());
+  }
+
+  @Test
+  void fetchSalle_libelleConnu_interrogeVenueNamesEtReleveLeLieu() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("venue_names=Accor%20Arena")))
+        .andRespond(
+            withSuccess(
+                "{\"products\":[" + PRODUIT_ACCOR_ARENA + "],\"totalResults\":1}",
+                MediaType.APPLICATION_JSON));
+    final EventimSource source = new EventimSource(builder.build());
+
+    final List<ConcertBrut> concerts =
+        source.fetchSalle("eventim:internal:accor arena", "Accor Arena");
+
+    serveur.verify();
+    assertEquals(1, concerts.size());
+    final List<LieuEventim> lieux = source.preleverLieuxObserves();
+    assertEquals(1, lieux.size());
+    assertEquals("internal:accor arena@75012", lieux.get(0).identifiant());
+    assertEquals("Accor Arena", lieux.get(0).libelle());
+    assertEquals("Paris", lieux.get(0).ville());
+    assertEquals(48.8386, lieux.get(0).latitude());
+    assertTrue(source.preleverLieuxObserves().isEmpty());
+  }
+
+  @Test
+  void fetchSalle_libelleInconnu_aucuneRequete() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final EventimSource source = new EventimSource(builder.build());
+
+    assertTrue(source.fetchSalle("eventim:internal:accor arena", null).isEmpty());
+    serveur.verify();
+  }
+}

@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import fr.strapontin.core.PositionLieu;
-import fr.strapontin.sources.ClientNominatim;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.util.Map;
 import java.util.UUID;

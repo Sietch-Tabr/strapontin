@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { etatConnexion } from "./useEtatConnexion.js";
 
 const toasts = ref([]);
 let compteur = 0;
@@ -9,7 +10,15 @@ function delaiParType(type) {
   return 5000;
 }
 
-export function afficherToast(message, type = "info") {
+// Sans données lisibles, l'écran hors ligne dit déjà l'essentiel : aucune erreur de chargement ne
+// s'y ajoute. `toujours` garde un message qui n'est pas une erreur de chargement (la perte de
+// connexion elle-même).
+export function afficherToast(
+  message,
+  type = "info",
+  { toujours = false } = {},
+) {
+  if (type === "erreur" && etatConnexion.sansDonnees && !toujours) return null;
   const id = ++compteur;
   const indice = toasts.value.length;
   toasts.value.push({ id, message, type, indice });

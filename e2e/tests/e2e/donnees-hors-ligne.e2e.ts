@@ -87,7 +87,7 @@ test.describe("Scénario: données gardées — connexion absente", () => {
     await expect(page.getByText(/\d+ concerts? à venir/)).toBeVisible();
   });
 
-  test("horsLigne_sansAucuneCopie_gardeLeComportementHabituel", async ({
+  test("horsLigne_sansAucuneCopie_afficheTouteDeSuiteLEcranHorsLigne", async ({
     page,
     context,
   }) => {
@@ -101,14 +101,37 @@ test.describe("Scénario: données gardées — connexion absente", () => {
     await context.setOffline(true);
     await page.getByRole("link", { name: LIEN_SPECTACLES }).first().click();
 
-    // Aucune copie : pas de bandeau trompeur, l'erreur habituelle s'affiche.
-    await expect(page.getByText("Impossible de", { exact: false }).first()).toBeVisible({
-      timeout: 10000,
-    });
+    // Aucune copie : l'écran hors ligne remplace la page, sans toast d'erreur de chargement ni
+    // bandeau annonçant des données gardées qui n'existent pas.
+    await expect(
+      page.getByRole("heading", { name: "Vous êtes hors ligne" }),
+    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Impossible de")).toHaveCount(0);
     await expect(
       page.getByText("Connexion absente ou trop lente", { exact: false }),
     ).toHaveCount(0);
     await context.setOffline(false);
+  });
+
+  test("horsLigne_sansAucuneCopie_retourDeLaConnexion_rechargeSansAction", async ({
+    page,
+    context,
+  }) => {
+    await preparerDeuxPagesGardees(page);
+    await page.evaluate((prefixe) => {
+      for (const c of Object.keys(localStorage)) {
+        if (c.startsWith(prefixe)) localStorage.removeItem(c);
+      }
+    }, PREFIXE_CACHE);
+    await context.setOffline(true);
+    await page.getByRole("link", { name: LIEN_SPECTACLES }).first().click();
+    const ecran = page.getByRole("heading", { name: "Vous êtes hors ligne" });
+    await expect(ecran).toBeVisible({ timeout: 5000 });
+
+    await context.setOffline(false);
+
+    await expect(ecran).toHaveCount(0, { timeout: 30000 });
+    await expect(page.locator("main")).toBeVisible();
   });
 });
 

@@ -11,8 +11,8 @@ import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
-import fr.strapontin.sources.ClientNominatim;
-import fr.strapontin.sources.TicketmasterSource;
+import fr.strapontin.sources.enrichissement.ClientNominatim;
+import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -238,6 +238,35 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
     assertEquals(
         "cancelled",
         jdbc.queryForObject("SELECT statut FROM observations", Map.of(), String.class));
+  }
+
+  // Une fiche revue par n'importe quel fetch, y compris dans une salle que le comptage par lieu
+  // ne couvre pas, n'est plus marquée absente ni à confirmer.
+  @Test
+  void persisterConcerts_ficheMarqueeAbsenteEtRevue_leveLeMarquage() {
+    final ConcertBrut vu =
+        concertAvecUrl(
+            "Vincent Dedienne",
+            "2098-05-04",
+            "Théâtre Quintaou",
+            "eventim",
+            "https://www.eventim.fr/event/dedienne-21898719/");
+    persisterConcerts.persisterConcerts(List.of(vu));
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 18, absence_detectee_le = now(),"
+            + " suppression_suggeree_le = now()",
+        Map.of());
+
+    persisterConcerts.persisterConcerts(List.of(vu));
+
+    final Map<String, Object> fiche =
+        jdbc.queryForMap(
+            "SELECT absences_consecutives, absence_detectee_le, suppression_suggeree_le"
+                + " FROM evenements",
+            Map.of());
+    assertEquals(0, fiche.get("absences_consecutives"));
+    assertNull(fiche.get("absence_detectee_le"));
+    assertNull(fiche.get("suppression_suggeree_le"));
   }
 
   // Eventim omet parfois la ville d'un lieu connu (Stade de France) : celle de la salle la

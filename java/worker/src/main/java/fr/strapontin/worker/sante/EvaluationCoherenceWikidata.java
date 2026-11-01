@@ -6,8 +6,8 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.EnrichissementSalle;
-import fr.strapontin.sources.SalleAEnrichir;
+import fr.strapontin.sources.enrichissement.EnrichissementSalle;
+import fr.strapontin.sources.enrichissement.SalleAEnrichir;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,10 +34,9 @@ final class EvaluationCoherenceWikidata {
   // informels sans commune propre, ex. Bercy, La Défense) ou sur une commune
   // fusionnée/intercommunalité (Wikidata garde parfois l'ancien nom d'une des
   // communes d'origine, ou référence l'intercommunalité). Cette normalisation
-  // est volontairement locale à ce contrôle *a posteriori* : {@link
-  // fr.strapontin.sources.WikidataSalleSource} reste inchangé, il bloque le
-  // matching *au moment de l'enrichissement* où une comparaison plus permissive
-  // réduirait la couverture.
+  // est volontairement locale à ce contrôle *a posteriori* : {@code
+  // WikidataSalleSource} reste inchangé, il bloque le matching *au moment de
+  // l'enrichissement* où une comparaison plus permissive réduirait la couverture.
   private static final Pattern ARRONDISSEMENT =
       Pattern.compile("^(\\d{1,2})(?:e|er|eme|ieme)? +arrondissement de (paris|lyon|marseille)$");
 

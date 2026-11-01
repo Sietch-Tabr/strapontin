@@ -4,10 +4,10 @@
  */
 package fr.strapontin.worker.enrichissement;
 
-import fr.strapontin.sources.EnrichissementSalle;
-import fr.strapontin.sources.SalleAEnrichir;
-import fr.strapontin.sources.SourceEnrichissementSalle;
-import fr.strapontin.sources.WikidataSalleSource;
+import fr.strapontin.sources.enrichissement.EnrichissementSalle;
+import fr.strapontin.sources.enrichissement.SalleAEnrichir;
+import fr.strapontin.sources.enrichissement.SourceEnrichissementSalle;
+import fr.strapontin.sources.enrichissement.WikidataSalleSource;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.List;
 import java.util.Map;

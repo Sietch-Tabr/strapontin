@@ -11,7 +11,8 @@ import java.util.UUID;
 
 /**
  * Concert flagué par la purge nocturne comme candidat à la suppression
- * définitive, en attente de revue manuelle depuis l'admin Concerts.
+ * définitive, en attente de revue manuelle. La situation dit ce que les
+ * billetteries en savent : jumeau, annoncee_ailleurs ou introuvable.
  * @since 2.8.3
  * @author Kwaite
  */
@@ -23,4 +24,5 @@ public record ConcertSuppressionSuggeree(
     LocalDate date,
     LocalTime heure,
     int absencesConsecutives,
-    Instant suppressionSuggereeLe) {}
+    Instant suppressionSuggereeLe,
+    String situation) {}
