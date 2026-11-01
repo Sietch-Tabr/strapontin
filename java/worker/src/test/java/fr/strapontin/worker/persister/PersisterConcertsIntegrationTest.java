@@ -240,6 +240,35 @@ class PersisterConcertsIntegrationTest extends AbstractWorkerIntegrationTest {
         jdbc.queryForObject("SELECT statut FROM observations", Map.of(), String.class));
   }
 
+  // Une fiche revue par n'importe quel fetch, y compris dans une salle que le comptage par lieu
+  // ne couvre pas, n'est plus marquée absente ni à confirmer.
+  @Test
+  void persisterConcerts_ficheMarqueeAbsenteEtRevue_leveLeMarquage() {
+    final ConcertBrut vu =
+        concertAvecUrl(
+            "Vincent Dedienne",
+            "2098-05-04",
+            "Théâtre Quintaou",
+            "eventim",
+            "https://www.eventim.fr/event/dedienne-21898719/");
+    persisterConcerts.persisterConcerts(List.of(vu));
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = 18, absence_detectee_le = now(),"
+            + " suppression_suggeree_le = now()",
+        Map.of());
+
+    persisterConcerts.persisterConcerts(List.of(vu));
+
+    final Map<String, Object> fiche =
+        jdbc.queryForMap(
+            "SELECT absences_consecutives, absence_detectee_le, suppression_suggeree_le"
+                + " FROM evenements",
+            Map.of());
+    assertEquals(0, fiche.get("absences_consecutives"));
+    assertNull(fiche.get("absence_detectee_le"));
+    assertNull(fiche.get("suppression_suggeree_le"));
+  }
+
   // Eventim omet parfois la ville d'un lieu connu (Stade de France) : celle de la salle la
   // remplace, jamais une valeur vide.
   @Test
