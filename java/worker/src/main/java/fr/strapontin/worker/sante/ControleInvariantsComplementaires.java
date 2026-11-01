@@ -7,8 +7,10 @@ package fr.strapontin.worker.sante;
 import fr.strapontin.core.EchecPush;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
@@ -24,6 +26,9 @@ final class ControleInvariantsComplementaires {
   private static final String EVENEMENT = "evenement";
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
+  private static final String SALLE = "salle";
+  // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
+  private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
 
   // Deux salles d'une même ville plus éloignées ne jouent pas la même production.
   private static final int DISTANCE_MAX_SALLES_METRES = 2000;
@@ -84,7 +89,8 @@ final class ControleInvariantsComplementaires {
         + publier("annulation_une_billetterie", EVENEMENT, annulationsUneBilletterie())
         + publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
         + publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
-        + publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles());
+        + publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles())
+        + publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource());
   }
 
   private int publier(
@@ -239,6 +245,62 @@ final class ControleInvariantsComplementaires {
                   JUMEAU,
                   rs.getObject(JUMEAU, UUID.class).toString()));
         });
+    return anomalies;
+  }
+
+  // Deux fiches de la même billetterie au même créneau et dans la même salle,
+  // sans artiste reconnu : un seul lieu ne reçoit pas deux concerts à la fois,
+  // mais la billetterie peut vendre un même concert sous plusieurs programmes.
+  // Détecté seulement, jamais fusionné. Une salle qui en cumule plusieurs a
+  // plusieurs salles internes : ses créneaux doubles ne sont pas signalés.
+  private Map<UUID, Map<String, Object>> creneauxDoublesMemeSource() {
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            """
+            WITH ev AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm, e.first_seen,
+                     bool_and(o.source = 'eventim') AS eventim_seul
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+                AND e.artiste_id IS NULL
+              GROUP BY e.id)
+            SELECT CASE WHEN e1.first_seen >= e2.first_seen THEN e1.id ELSE e2.id END AS recent,
+                   CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
+                   e1.salle_id AS salle_id, e1.artiste_norm AS titre_a,
+                   e2.artiste_norm AS titre_b, s.nom AS salle,
+                   e1.date::text AS date, e1.heure::text AS heure
+            FROM ev e1
+            JOIN ev e2 ON e2.salle_id = e1.salle_id AND e2.date = e1.date AND e2.heure = e1.heure
+                      AND e1.id < e2.id
+            JOIN salles s ON s.id = e1.salle_id
+            WHERE e1.eventim_seul AND e2.eventim_seul
+              AND (SELECT count(*) FROM ev x
+                   WHERE x.salle_id = e1.salle_id AND x.date = e1.date AND x.heure = e1.heure) = 2
+            """,
+            Map.of());
+    // Un comptage en SQL (fonction de fenêtre) multipliait la durée par plus de 70.
+    final Map<Object, Long> parSalle =
+        paires.stream()
+            .collect(Collectors.groupingBy(paire -> paire.get("salle_id"), Collectors.counting()));
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    for (final Map<String, Object> paire : paires) {
+      if (parSalle.get(paire.get("salle_id")) >= SEUIL_CRENEAUX_SALLE_MULTIPLE) {
+        continue;
+      }
+      anomalies.put(
+          (UUID) paire.get("recent"),
+          Map.of(
+              SALLE,
+              paire.get(SALLE),
+              DATE,
+              paire.get(DATE),
+              "heure",
+              paire.get("heure"),
+              "intitules",
+              paire.get("titre_a") + " / " + paire.get("titre_b"),
+              JUMEAU,
+              paire.get(JUMEAU).toString()));
+    }
     return anomalies;
   }
 }
