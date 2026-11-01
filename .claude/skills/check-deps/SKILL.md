@@ -67,6 +67,7 @@ Pour chaque propriété de version du pom parent (`java/pom.xml`) et chaque dép
 - **Silencieux dans le rapport si RAS** : dernière publication < 12 mois et aucune CVE ouverte.
 - **Signalé** (mode jalon : mentionné sans bloquer le jalon ; mode hors-jalon : dans le rapport, avec proposition de ticket constat-only si pertinent) : aucune publication depuis 12+ mois, projet visiblement à l'arrêt, ou CVE trouvée sans version corrigée disponible.
 - Ne jamais rétrograder ou remplacer une dépendance vétuste par une alternative de son propre chef — même règle que l'étape 11 : constat, jamais de piste d'implémentation imposée.
+- **Étape obligatoire, jamais sautée** : lancer `bash scripts/analyse-dependances.sh local` (Docker requis ; même analyse OSV que l'étape bloquante `analyse-dependances` de la pipeline de `main`, exceptions de `osv-scanner.toml` comprises). Un avis sans correctif installable se signale à l'utilisateur **avant la PR** pour décider d'une exception datée, jamais après le merge : la pipeline de `main` s'arrête sinon avant `build`, `backup` et `deploy` (jalon 3.1.1 avec deepmerge, jalon 3.1.2 avec glob et minimatch). Le compte rendu de l'invocation écrit « étape 6 : faite » avec le résultat du scan.
 
 ## 7. Audit périodique des fonctionnalités inexploitées (dépendances déjà à jour)
 

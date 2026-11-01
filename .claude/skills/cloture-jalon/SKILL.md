@@ -67,7 +67,13 @@ Seulement après les étapes 3 et 4 confirmées.
 ```bash
 git tag -a v<version> -m "v<version>" && git push origin v<version>
 git rev-parse v<version>^{commit}   # doit égaler origin/main
+# Codeberg crée lui-même une fiche de release au push d'un tag, de façon asynchrone :
+# attendre qu'elle existe avant `tea releases create`.
+until curl -sf --max-time 20 -o /dev/null \
+  "https://codeberg.org/api/v1/repos/Kwaite/strapontin/releases/tags/v<version>"; do sleep 3; done
 ```
+
+Un `Error:` de `tea` n'est jamais une conclusion : relire l'état par l'API (une seule release, corps non vide) après une pause, avant de relancer.
 
 Les notes s'adressent aux utilisateurs et aux admins : reprendre l'entrée de la version dans `front/src/pages/changelogVersions.js` (changements visibles, regroupés par thème, formulés pour eux), sans numéros de ticket ou de PR ni jargon interne. Un lien vers la PR ou la roadmap ne remplace pas ce contenu.
 
