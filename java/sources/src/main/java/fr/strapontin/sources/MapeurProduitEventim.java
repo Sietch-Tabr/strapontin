@@ -9,6 +9,7 @@ import fr.strapontin.core.Hommage;
 import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -36,7 +37,45 @@ final class MapeurProduitEventim {
   // Signalée une fois par démarrage, sinon répétée à chaque produit du lieu.
   private static final Set<String> SALLES_VILLE_NON_CORRIGEE = ConcurrentHashMap.newKeySet();
 
+  // Catégories racines d'un spectacle : les visites, parcs de loisirs et matchs n'en sont pas, et
+  // une requête par lieu les renvoie avec les concerts du même établissement.
+  private static final Set<String> CATEGORIES_SPECTACLE =
+      Set.of("Concerts & Festivals", "Classique & Danse", "Théâtre", "Humour", "Spectacles");
+  private static final String PREFIXE_LIEU_PARKING = "PARKING";
+
   private MapeurProduitEventim() {}
+
+  /**
+   * Indique si un produit est une séance de spectacle : ni un produit de
+   * parking (lieu « PARKING - … »), ni une visite, un parc ou un match
+   * (catégorie racine hors spectacle). Un produit sans catégorie connue est
+   * gardé.
+   * @param produit produit Eventim sous forme de Map imbriquée
+   * @return {@code true} si le produit peut devenir une fiche de concert
+   */
+  /* package-private : appelé par EventimSource (même package). */
+  static boolean estProduitDeSpectacle(final Map<String, Object> produit) {
+    if (extraireLiveEntertainment(produit).get("location") instanceof Map<?, ?> lieu
+        && lieu.get(CLE_NOM) instanceof String nomLieu
+        && nomLieu.strip().toUpperCase(Locale.ROOT).startsWith(PREFIXE_LIEU_PARKING)) {
+      return false;
+    }
+    if (!(produit.get("categories") instanceof Iterable<?> categories)) {
+      return true;
+    }
+    boolean racineConnue = false;
+    for (final Object categorie : categories) {
+      if (categorie instanceof Map<?, ?> fiche
+          && !fiche.containsKey("parentCategory")
+          && fiche.get(CLE_NOM) instanceof String nom) {
+        racineConnue = true;
+        if (CATEGORIES_SPECTACLE.contains(nom)) {
+          return true;
+        }
+      }
+    }
+    return !racineConnue;
+  }
 
   /**
    * Corrige « Paris 07 » en « Paris », et une salle taguée Paris hors 75

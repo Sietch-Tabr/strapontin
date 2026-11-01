@@ -289,7 +289,9 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
     }
 
     produits.forEach(lieux::relever);
-    final List<Map<String, Object>> retenus = ecartes.retenir(produits, artisteFallback);
+    final List<Map<String, Object>> spectacles =
+        produits.stream().filter(MapeurProduitEventim::estProduitDeSpectacle).toList();
+    final List<Map<String, Object>> retenus = ecartes.retenir(spectacles, artisteFallback);
     final List<ConcertBrut> concerts = new ArrayList<>();
     for (final Map<String, Object> p : retenus) {
       final ConcertBrut concert = mapProduit(p, artisteFallback, artisteSourceId);

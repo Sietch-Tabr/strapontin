@@ -170,6 +170,22 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
   }
 
   @Test
+  void executerFetchSallesAll_ficheFigeeDejaComptéeAbsenteAuSeuil_neReinterrogePasLaSalle() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("salle-sans-retour", "venue-sans-retour");
+    insererFicheDeSalle(salle, "75", 10);
+    jdbc.update(
+        "UPDATE evenements SET absences_consecutives = :seuil WHERE salle_id = CAST(:id AS uuid)",
+        Map.of("seuil", WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES, "id", salle.toString()));
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(ticketmasterSource, never()).fetchSalle("tm:venue-sans-retour", null);
+  }
+
+  @Test
   void executerFetchSallesAll_ficheRecenteDeDepartementSuivi_neFetchePasLaSalle() {
     insererUser("u1");
     insererUserConfigDept("u1", "75");

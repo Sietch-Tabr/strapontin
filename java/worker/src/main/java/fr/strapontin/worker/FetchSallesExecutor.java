@@ -36,15 +36,17 @@ class FetchSallesExecutor {
 
   // Salle d'un département suivi dont une fiche à venir n'a plus été revue
   // depuis une semaine : le fetch de région borne catégories et date (6 mois).
-  // Interrogée par lieu, sans filtre.
+  // Interrogée par lieu, sans filtre de classement. Une fiche déjà comptée absente au seuil par
+  // ces interrogations n'est pas renvoyée par le lieu : elle ne le fait plus réinterroger.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
-      """
-      EXISTS (SELECT 1 FROM evenements e
-              WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE
-                AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))
-                AND NOT EXISTS (SELECT 1 FROM observations o
-                                WHERE o.evenement_id = e.id
-                                  AND o.updated_at > now() - interval '7 days'))""";
+      "EXISTS (SELECT 1 FROM evenements e"
+          + " WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE"
+          + " AND e.absences_consecutives < "
+          + WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES
+          + " AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))"
+          + " AND NOT EXISTS (SELECT 1 FROM observations o"
+          + " WHERE o.evenement_id = e.id"
+          + " AND o.updated_at > now() - interval '7 days'))";
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
@@ -230,13 +232,12 @@ class FetchSallesExecutor {
     }
     final String prefixe = TicketmasterSource.PREFIXE_IDENTIFIANT + ":";
     return salles.stream()
-        .map(
-            salle ->
-                new SalleAFetcher(
-                    salle.salleId(),
-                    salle.identifiants().stream()
-                        .filter(id -> !id.identifiant().startsWith(prefixe))
-                        .toList()))
+        .map(salle ->
+            new SalleAFetcher(
+                salle.salleId(),
+                salle.identifiants().stream()
+                    .filter(id -> !id.identifiant().startsWith(prefixe))
+                    .toList()))
         .filter(salle -> !salle.identifiants().isEmpty())
         .toList();
   }
@@ -266,24 +267,23 @@ class FetchSallesExecutor {
                 + (filtre ? " AND ss.salle_id::text IN (:ids)" : "")
                 + " ORDER BY ss.salle_id, ss.source",
             filtre ? Map.of("ids", salleIdsCibles) : Map.of())
-        .forEach(
-            ligne -> {
-              final String source = (String) ligne.get("source");
-              final String prefixe =
-                  "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
-              final String libelle = (String) ligne.get("libelle");
-              final List<IdentifiantSalle> identifiants =
-                  parSalle.computeIfAbsent((String) ligne.get("salle_id"), _ -> new ArrayList<>());
-              // Un lieu Eventim peut porter un identifiant historique et un identifiant qualifié
-              // par code postal : Eventim n'est interrogé que par libellé, une fois.
-              final boolean dejaInterroge =
-                  "eventim".equals(source)
-                      && identifiants.stream().anyMatch(i -> libelle.equals(i.libelle()));
-              if (!dejaInterroge) {
-                identifiants.add(
-                    new IdentifiantSalle(prefixe + ":" + ligne.get("identifiant"), libelle));
-              }
-            });
+        .forEach(ligne -> {
+          final String source = (String) ligne.get("source");
+          final String prefixe =
+              "ticketmaster".equals(source) ? TicketmasterSource.PREFIXE_IDENTIFIANT : source;
+          final String libelle = (String) ligne.get("libelle");
+          final List<IdentifiantSalle> identifiants =
+              parSalle.computeIfAbsent((String) ligne.get("salle_id"), _ -> new ArrayList<>());
+          // Un lieu Eventim peut porter un identifiant historique et un identifiant qualifié
+          // par code postal : Eventim n'est interrogé que par libellé, une fois.
+          final boolean dejaInterroge =
+              "eventim".equals(source)
+                  && identifiants.stream().anyMatch(i -> libelle.equals(i.libelle()));
+          if (!dejaInterroge) {
+            identifiants.add(
+                new IdentifiantSalle(prefixe + ":" + ligne.get("identifiant"), libelle));
+          }
+        });
     return parSalle.entrySet().stream()
         .map(entree -> new SalleAFetcher(entree.getKey(), entree.getValue()))
         .toList();
@@ -358,9 +358,8 @@ class FetchSallesExecutor {
     final ResultatPersistance resultat = persisterConcerts.persisterConcerts(dedoublonnes);
     rapportage.enregistreurLieuxEventim().enregistrer();
     // Une requête par salle : les sources interrogées (donc les horizons) varient.
-    horizonsParSalle.forEach(
-        (salleId, horizons) ->
-            commun.mettreAJourAbsencesSalles(List.of(salleId), debutLot, horizons));
+    horizonsParSalle.forEach((salleId, horizons) ->
+        commun.mettreAJourAbsencesSalles(List.of(salleId), debutLot, horizons));
     return new ResultatLotSalles(resultat, sallesInjoignables);
   }
 }
