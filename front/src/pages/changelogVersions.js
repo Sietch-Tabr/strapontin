@@ -16,6 +16,7 @@ export const versionsChangelog = [
           "La ville d'une salle suit sa commune réelle quand la billetterie annonce la grande ville voisine (Le K est à Tinqueux, pas à Reims).",
           "Une séance publiée sans heure par une billetterie et avec une heure par l'autre n'apparaît plus en double (festival Aluna).",
           "Deux productions de même titre dans des salles éloignées d'une même ville, et les spectacles simultanés d'un théâtre à plusieurs salles, ne sont plus signalés comme des doublons.",
+          "Le nom d'une salle ne change plus deux fois par jour quand deux billetteries l'écrivent presque pareil (Théâtre de l'Atelier).",
           "Un artiste dont le nom est publié plus long par Eventim (« Drag Race France Live ») n'est plus signalé à tort comme appartenant à un autre artiste.",
           "Dans les concerts à confirmer, l'administrateur voit si le même produit est vivant sur une autre fiche, si une autre billetterie l'annonce encore ou s'il est introuvable.",
         ],

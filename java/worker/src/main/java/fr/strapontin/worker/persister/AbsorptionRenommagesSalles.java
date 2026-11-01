@@ -150,8 +150,12 @@ final class AbsorptionRenommagesSalles {
   // requête : seule une graphie strictement meilleure remplace l'actuelle, sinon
   // la salle alterne à chaque lot.
   private static boolean estVarianteDeNom(final String candidat, final String nomActuel) {
-    return nomActuel != null
-        && Normalisation.normaliserTexte(candidat).equals(Normalisation.normaliserTexte(nomActuel));
+    return nomActuel != null && sansEspaces(candidat).equals(sansEspaces(nomActuel));
+  }
+
+  // « L'Atelier » (apostrophe) et « lAtelier » (collé) ne diffèrent que par les espaces.
+  private static String sansEspaces(final String nom) {
+    return Normalisation.normaliserTexte(nom).replace(" ", "");
   }
 
   private void renommer(final UUID salleId, final String nouveauNom) {

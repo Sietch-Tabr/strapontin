@@ -164,6 +164,22 @@ class ReconciliationNomsSallesIntegrationTest extends AbstractWorkerIntegrationT
     assertEquals("Zénith Toulouse Métropole", nom());
   }
 
+  // Théâtre de l'Atelier : Ticketmaster écrit « L'Atelier », Eventim « lAtelier » ; la salle
+  // gardait un nom le matin et l'autre dix minutes plus tard.
+  @Test
+  void
+      absorberRenommagesSalles_graphieTicketmasterSeulementDifferenteParLApostrophe_neRenommePas() {
+    mapper("ticketmaster", "ticketmaster:atelier");
+    jdbc.update(
+        "UPDATE salles SET nom = 'Théâtre de lAtelier' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", salleId.toString()));
+
+    absorber("ticketmaster", "ticketmaster:atelier", "Theatre de L'Atelier");
+    assertEquals("Théâtre de lAtelier", nom());
+    absorber("ticketmaster", "ticketmaster:atelier", "Theatre de L'Atelier");
+    assertEquals("Théâtre de lAtelier", nom());
+  }
+
   @Test
   void absorberRenommagesSalles_nomEventimDUneSalleAvecMappingTicketmaster_neRenommePas() {
     mapper("ticketmaster", "ticketmaster:olympia");
