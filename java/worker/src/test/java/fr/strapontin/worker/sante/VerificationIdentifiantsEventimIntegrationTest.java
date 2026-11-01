@@ -7,7 +7,9 @@ package fr.strapontin.worker.sante;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import fr.strapontin.sources.eventim.EventimSource;
@@ -53,7 +55,7 @@ class VerificationIdentifiantsEventimIntegrationTest extends AbstractWorkerInteg
 
   @Test
   void verifier_identifiantDUnAutreArtiste_signaleEtDateLaVerification() {
-    when(eventimSource.attractionDUnAutreArtiste(eq("Furies"), eq("810294"), any()))
+    when(eventimSource.attractionDUnAutreArtiste(eq("Furies"), eq("810294"), anyBoolean(), any()))
         .thenReturn(true);
 
     assertEquals(1, verification.verifier());
@@ -71,9 +73,27 @@ class VerificationIdentifiantsEventimIntegrationTest extends AbstractWorkerInteg
             OffsetDateTime.class));
   }
 
+  // La règle d'identité est celle du fetch : confirmée par Deezer ou Wikidata, ou non.
+  @Test
+  void verifier_artisteAvecIdentifiantDeezer_transmetUneIdentiteConfirmee() {
+    jdbc.update("UPDATE artistes SET deezer_id = '12345' WHERE nom_norm = 'furies'", Map.of());
+    when(eventimSource.attractionDUnAutreArtiste(any(), any(), eq(true), any())).thenReturn(true);
+
+    assertEquals(1, verification.verifier());
+  }
+
+  @Test
+  void verifier_artisteSansIdentifiantExterne_transmetUneIdentiteNonConfirmee() {
+    when(eventimSource.attractionDUnAutreArtiste(any(), any(), eq(false), any())).thenReturn(false);
+
+    assertEquals(0, verification.verifier());
+    verify(eventimSource).attractionDUnAutreArtiste(eq("Furies"), eq("810294"), eq(false), any());
+  }
+
   @Test
   void verifier_identifiantConforme_neSignaleRien() {
-    when(eventimSource.attractionDUnAutreArtiste(any(), any(), any())).thenReturn(false);
+    when(eventimSource.attractionDUnAutreArtiste(any(), any(), anyBoolean(), any()))
+        .thenReturn(false);
 
     assertEquals(0, verification.verifier());
   }

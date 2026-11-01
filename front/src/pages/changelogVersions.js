@@ -12,6 +12,7 @@ export const versionsChangelog = [
           "Les billets de visite d'un musée, les entrées de parc de loisirs et les produits de parking ne sont plus affichés comme des concerts.",
           "Un spectacle que la billetterie republie à une autre date ou à une autre heure reste une seule fiche : l'ancienne n'est plus affichée à côté de la nouvelle.",
           "Une fiche absente n'est plus fusionnée dans une autre date de la même série, et une fiche gardée par un administrateur n'est jamais absorbée.",
+          "Un artiste dont le nom est publié plus long par Eventim (« Drag Race France Live ») n'est plus signalé à tort comme appartenant à un autre artiste.",
           "Dans les concerts à confirmer, l'administrateur voit si le même produit est vivant sur une autre fiche, si une autre billetterie l'annonce encore ou s'il est introuvable.",
         ],
       },

@@ -151,12 +151,18 @@ public class EventimSource implements SourceConcerts, SourceAvecBilanFetch {
    * un autre artiste que celui suivi.
    * @param nomArtiste nom de l'artiste suivi
    * @param attractionId identifiant enregistré
+   * @param identiteConfirmee identité de l'artiste confirmée par Deezer ou
+   *     Wikidata, comme pour {@code fetchArtiste}
    * @param autresNomsConnus libellé et alias connus de l'artiste
    * @return {@code true} si l'identifiant est celui d'un autre artiste
    */
   public boolean attractionDUnAutreArtiste(
-      final String nomArtiste, final String attractionId, final List<String> autresNomsConnus) {
-    return attractionResolver.attractionDUnAutreArtiste(nomArtiste, attractionId, autresNomsConnus);
+      final String nomArtiste,
+      final String attractionId,
+      final boolean identiteConfirmee,
+      final List<String> autresNomsConnus) {
+    return attractionResolver.attractionDUnAutreArtiste(
+        nomArtiste, attractionId, identiteConfirmee, autresNomsConnus);
   }
 
   @Override

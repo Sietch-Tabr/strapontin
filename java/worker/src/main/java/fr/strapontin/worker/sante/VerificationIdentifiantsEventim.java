@@ -54,7 +54,8 @@ public class VerificationIdentifiantsEventim {
     final List<Map<String, Object>> lot =
         jdbc.queryForList(
             "SELECT s.artiste_id, s.identifiant_externe, a.nom,"
-                + " a.nom_affiche AS alias"
+                + " a.nom_affiche AS alias,"
+                + " (a.deezer_id IS NOT NULL OR a.wikidata_id IS NOT NULL) AS identite_confirmee"
                 + " FROM artiste_sources s JOIN artistes a ON a.id = s.artiste_id"
                 + " WHERE s.source = 'eventim' ORDER BY s.verifie_le NULLS FIRST LIMIT :taille",
             Map.of("taille", TAILLE_LOT));
@@ -68,7 +69,10 @@ public class VerificationIdentifiantsEventim {
       try {
         autreArtiste =
             eventim.attractionDUnAutreArtiste(
-                (String) ligne.get("nom"), attraction, alias((String) ligne.get("alias")));
+                (String) ligne.get("nom"),
+                attraction,
+                Boolean.TRUE.equals(ligne.get("identite_confirmee")),
+                alias((String) ligne.get("alias")));
       } catch (RuntimeException e) {
         LOG.warn(
             "Eventim injoignable, vérification des identifiants interrompue : {}", e.getMessage());

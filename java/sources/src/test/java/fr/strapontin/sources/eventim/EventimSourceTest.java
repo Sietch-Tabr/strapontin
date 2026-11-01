@@ -547,7 +547,31 @@ class EventimSourceTest {
             {"attractions":[{"attractionId":"810294","name":"Love & Furies"}]}
             """);
 
-    assertTrue(source.attractionDUnAutreArtiste("Furies", "810294", List.of()));
+    assertTrue(source.attractionDUnAutreArtiste("Furies", "810294", true, List.of()));
+  }
+
+  // Drag Race France : l'attraction s'appelle « Drag Race France Live ». Sans identité confirmée,
+  // le fetch accepte ce nom par containment, le contrôle ne le conteste donc pas.
+  @Test
+  void attractionDUnAutreArtiste_nomContenantLeNomSansIdentiteConfirmee_retourneFaux() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"814968","name":"Drag Race France Live"}]}
+            """);
+
+    assertFalse(source.attractionDUnAutreArtiste("Drag Race France", "814968", false, List.of()));
+  }
+
+  @Test
+  void attractionDUnAutreArtiste_nomContenantLeNomAvecIdentiteConfirmee_retourneVrai() {
+    final EventimSource source =
+        sourceRepondant(
+            """
+            {"attractions":[{"attractionId":"814968","name":"Drag Race France Live"}]}
+            """);
+
+    assertTrue(source.attractionDUnAutreArtiste("Drag Race France", "814968", true, List.of()));
   }
 
   @Test
@@ -558,7 +582,7 @@ class EventimSourceTest {
             {"attractions":[{"attractionId":"810294","name":"Furies"}]}
             """);
 
-    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", List.of()));
+    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", true, List.of()));
   }
 
   @Test
@@ -569,7 +593,7 @@ class EventimSourceTest {
             {"attractions":[{"attractionId":"1","name":"Autre"}]}
             """);
 
-    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", List.of()));
+    assertFalse(source.attractionDUnAutreArtiste("Furies", "810294", true, List.of()));
   }
 
   // Nom de scène d'une identité confirmée publié sous une forme longue : « -M- » →

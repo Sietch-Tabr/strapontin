@@ -143,13 +143,18 @@ final class EventimAttractionResolver {
    * (présent dans les résultats de la recherche par nom, sous un autre nom).
    * @param terme nom de l'artiste suivi
    * @param attractionId identifiant enregistré
+   * @param identiteConfirmee identité de l'artiste confirmée par Deezer ou
+   *     Wikidata : même règle que la recherche d'attraction du fetch
    * @param autresNomsConnus libellé et alias connus de l'artiste
    * @return {@code true} si l'identifiant est prouvé être celui d'un autre
    */
   @SuppressWarnings("unchecked")
   /* package-private : appelé par EventimSource (même package). */
   boolean attractionDUnAutreArtiste(
-      final String terme, final String attractionId, final List<String> autresNomsConnus) {
+      final String terme,
+      final String attractionId,
+      final boolean identiteConfirmee,
+      final List<String> autresNomsConnus) {
     final URI uri = construireUriRechercheAttractions(terme);
     compteurBilan.enregistrerAppel();
     try {
@@ -169,7 +174,7 @@ final class EventimAttractionResolver {
       return attractions.stream()
           .filter(a -> attractionId.equals(extraireAttractionId(a)))
           .findFirst()
-          .map(a -> nomDifferent(a, terme, termeNorm, autresNomsNorm))
+          .map(a -> nomDifferent(a, terme, termeNorm, identiteConfirmee, autresNomsNorm))
           .orElse(false);
     } catch (ResourceAccessException e) {
       compteurBilan.enregistrerErreur(CauseEchecHttp.depuis(e));
@@ -185,11 +190,12 @@ final class EventimAttractionResolver {
       final Map<String, Object> attraction,
       final String terme,
       final String termeNorm,
+      final boolean identiteConfirmee,
       final Set<String> autresNomsNorm) {
     final String nomNorm = Normalisation.normaliserTexte(nomAttraction(attraction));
     return !estCorrespondanceExacte(nomNorm, termeNorm)
         && !autresNomsNorm.contains(nomNorm)
-        && !estContainmentEligible(terme, termeNorm, nomNorm, true, autresNomsNorm);
+        && !estContainmentEligible(terme, termeNorm, nomNorm, identiteConfirmee, autresNomsNorm);
   }
 
   private static String nomAttraction(final Map<String, Object> attraction) {
