@@ -3,6 +3,7 @@ import {
   appelApi,
   brancherSuiviConnexion,
   ENTETE_DONNEES_EN_CACHE,
+  reinitialiserEtatSansDonnees,
   remplacerCacheHorsLigne,
   serveurJoignable,
 } from "./api.js";
@@ -49,8 +50,9 @@ describe("appelApi : données gardées pour le hors ligne", () => {
     vi.setSystemTime(T0);
     cache = creerCacheHorsLigne({ stockage: stockageMemoire() });
     remplacerCacheHorsLigne(cache);
-    suivi = { lenteur: vi.fn(), donneesEnCache: vi.fn() };
+    suivi = { lenteur: vi.fn(), donneesEnCache: vi.fn(), sansDonnees: vi.fn() };
     brancherSuiviConnexion(suivi);
+    reinitialiserEtatSansDonnees();
   });
 
   afterEach(() => {
@@ -227,6 +229,101 @@ describe("appelApi : données gardées pour le hors ligne", () => {
     await vi.advanceTimersByTimeAsync(10_000);
 
     expect(suivi.lenteur).not.toHaveBeenCalled();
+  });
+});
+
+describe("appelApi : aucune donnée gardée", () => {
+  let suivi;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(T0);
+    remplacerCacheHorsLigne(
+      creerCacheHorsLigne({ stockage: stockageMemoire() }),
+    );
+    suivi = { lenteur: vi.fn(), donneesEnCache: vi.fn(), sansDonnees: vi.fn() };
+    brancherSuiviConnexion(suivi);
+    reinitialiserEtatSansDonnees();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  test("appelApi_reseauCoupeSansCopie_signaleQueRienNePeutEtreAffiche", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+
+    await expect(appelApi("/api/spectacles")).rejects.toBeInstanceOf(TypeError);
+
+    expect(suivi.sansDonnees).toHaveBeenCalledWith(true);
+    expect(suivi.donneesEnCache).not.toHaveBeenCalled();
+  });
+
+  test("appelApi_navigateurHorsLigneSansCopie_echoueAussitotSansAttendreLeServeur", async () => {
+    const fetchEspion = vi.fn();
+    vi.stubGlobal("fetch", fetchEspion);
+    vi.stubGlobal("navigator", { onLine: false });
+
+    await expect(appelApi("/api/accueil")).rejects.toBeInstanceOf(TypeError);
+
+    expect(fetchEspion).not.toHaveBeenCalled();
+    expect(suivi.sansDonnees).toHaveBeenCalledWith(true);
+  });
+
+  test("appelApi_aprèsUnEchecSansCopie_lesListesSuivantesNAttendentPasLeDelai", async () => {
+    const fetchEspion = vi.fn(() =>
+      Promise.reject(new TypeError("Failed to fetch")),
+    );
+    vi.stubGlobal("fetch", fetchEspion);
+    await expect(appelApi("/api/spectacles")).rejects.toBeInstanceOf(TypeError);
+
+    await expect(appelApi("/api/artistes")).rejects.toBeInstanceOf(TypeError);
+
+    expect(fetchEspion).toHaveBeenCalledTimes(1);
+  });
+
+  test("appelApi_serveurIndisponibleSansCopie_signaleQueRienNePeutEtreAffiche", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("", { status: 503 }))),
+    );
+
+    const reponse = await appelApi("/api/salles");
+
+    expect(reponse.status).toBe(503);
+    expect(suivi.sansDonnees).toHaveBeenCalledWith(true);
+  });
+
+  test("appelApi_appelNonCachable_neSignaleJamaisAbsenceDeDonnees", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+
+    await expect(appelApi("/api/artistes?q=abba")).rejects.toBeInstanceOf(
+      TypeError,
+    );
+
+    expect(suivi.sansDonnees).not.toHaveBeenCalled();
+  });
+
+  test("appelApi_copieDisponibleEtReseauCoupe_rendLaCopieSansEcranHorsLigne", async () => {
+    const cache = creerCacheHorsLigne({ stockage: stockageMemoire() });
+    cache.ecrire("/api/accueil", '{"n":1}');
+    remplacerCacheHorsLigne(cache);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
+    );
+
+    const reponse = await appelApi("/api/accueil");
+
+    expect(await reponse.json()).toEqual({ n: 1 });
+    expect(suivi.sansDonnees).not.toHaveBeenCalled();
   });
 });
 

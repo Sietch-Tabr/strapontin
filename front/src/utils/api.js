@@ -30,13 +30,31 @@ function stockageNavigateur() {
 }
 
 let cache = creerCacheHorsLigne({ stockage: stockageNavigateur() });
-let suivi = { lenteur() {}, donneesEnCache() {} };
+let suivi = { lenteur() {}, donneesEnCache() {}, sansDonnees() {} };
 let appelsLents = 0;
+// Vrai dès qu'une liste de l'utilisateur n'a pu être lue et qu'aucune copie n'existe : plus aucun
+// appel de liste n'attend alors le serveur, jusqu'au rechargement de la page.
+let sansDonnees = false;
+
+function marquerSansDonnees() {
+  if (sansDonnees) return;
+  sansDonnees = true;
+  suivi.sansDonnees(true);
+}
+
+function horsLigne() {
+  return globalThis.navigator?.onLine === false;
+}
 
 /// Branche l'interface sur l'état de la connexion.
 /// @param nouveau `{lenteur(bool), donneesEnCache(instantMs)}`
 export function brancherSuiviConnexion(nouveau) {
   suivi = { ...suivi, ...nouveau };
+}
+
+/// Remet à zéro l'état « sans données » (tests).
+export function reinitialiserEtatSansDonnees() {
+  sansDonnees = false;
 }
 
 /// Remplace le cache (tests).
@@ -124,6 +142,10 @@ export async function appelApi(url, options = {}) {
       : copie
         ? DELAI_GET_AVEC_COPIE_MS
         : DELAI_GET_SANS_COPIE_MS);
+  if (cachable && !copie && (sansDonnees || horsLigne())) {
+    marquerSansDonnees();
+    throw new TypeError("Hors ligne");
+  }
   const finirSuivi = suivreLenteur();
   try {
     const reponse = await fetchAvecDelai(
@@ -140,14 +162,17 @@ export async function appelApi(url, options = {}) {
           .text()
           .then((corps) => cache.ecrire(url, corps))
           .catch(() => {});
-      } else if (copie && STATUTS_INDISPONIBLE.has(reponse.status)) {
-        return reponseDepuisCache(copie);
+      } else if (STATUTS_INDISPONIBLE.has(reponse.status)) {
+        if (copie) return reponseDepuisCache(copie);
+        marquerSansDonnees();
       }
     }
     return reponse;
   } catch (erreur) {
-    if (copie && erreur?.name !== "AbortError")
-      return reponseDepuisCache(copie);
+    if (erreur?.name !== "AbortError") {
+      if (copie) return reponseDepuisCache(copie);
+      if (cachable) marquerSansDonnees();
+    }
     throw erreur;
   } finally {
     finirSuivi();

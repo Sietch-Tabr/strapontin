@@ -12,11 +12,14 @@
         :est-admin="estAdmin"
       />
       <main id="contenu-principal" class="contenu-principal">
-        <BanniereIncident />
-        <BanniereSysteme />
-        <BandeauCanalPerdu />
-        <BandeauHorsLigne />
-        <RouterView />
+        <EcranHorsLigne v-if="etatConnexion.sansDonnees" />
+        <template v-else>
+          <BanniereIncident />
+          <BanniereSysteme />
+          <BandeauCanalPerdu />
+          <BandeauHorsLigne />
+          <RouterView />
+        </template>
       </main>
     </div>
 
@@ -79,6 +82,7 @@ import BanniereSysteme from "./components/layout/BanniereSysteme.vue";
 import BanniereIncident from "./components/layout/BanniereIncident.vue";
 import BandeauCanalPerdu from "./components/layout/BandeauCanalPerdu.vue";
 import BandeauHorsLigne from "./components/layout/BandeauHorsLigne.vue";
+import EcranHorsLigne from "./components/layout/EcranHorsLigne.vue";
 import ToastContainer from "./components/layout/ToastContainer.vue";
 import OnboardingModal from "./components/layout/OnboardingModal.vue";
 import InstallPwaBanner from "./components/layout/InstallPwaBanner.vue";
@@ -124,18 +128,19 @@ const surveillanceReconnexion = creerSurveillanceReconnexion({
   joignable: serveurJoignable,
   recharger: () => window.location.reload(),
 });
+const connexionAGuetter = computed(
+  () => etatConnexion.donneesEnCacheLe !== null || etatConnexion.sansDonnees,
+);
 watch(
-  () => etatConnexion.donneesEnCacheLe,
-  (instant) => {
-    if (instant === null) surveillanceReconnexion.arreter();
-    else surveillanceReconnexion.demarrer();
+  connexionAGuetter,
+  (aGuetter) => {
+    if (aGuetter) surveillanceReconnexion.demarrer();
+    else surveillanceReconnexion.arreter();
   },
   { immediate: true },
 );
 function sonderSiDonneesGardees() {
-  if (etatConnexion.donneesEnCacheLe !== null) {
-    surveillanceReconnexion.sonderMaintenant();
-  }
+  if (connexionAGuetter.value) surveillanceReconnexion.sonderMaintenant();
 }
 
 const navPrincipal = [

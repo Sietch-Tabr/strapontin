@@ -20,6 +20,12 @@ export const versionsChangelog = [
           "Dans les concerts à confirmer, l'administrateur voit si le même produit est vivant sur une autre fiche, si une autre billetterie l'annonce encore ou s'il est introuvable.",
         ],
       },
+      {
+        categorie: "Application",
+        items: [
+          "Hors ligne juste après une connexion, sans aucune donnée gardée, l'application affiche tout de suite l'écran « Vous êtes hors ligne » au lieu de messages d'erreur, puis se recharge d'elle-même au retour de la connexion.",
+        ],
+      },
     ],
   },
   {

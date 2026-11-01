@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { etatConnexion } from "./useEtatConnexion.js";
 
 const toasts = ref([]);
 let compteur = 0;
@@ -9,7 +10,10 @@ function delaiParType(type) {
   return 5000;
 }
 
+// Sans données lisibles, l'écran hors ligne dit déjà l'essentiel : aucune erreur de chargement ne
+// s'y ajoute.
 export function afficherToast(message, type = "info") {
+  if (type === "erreur" && etatConnexion.sansDonnees) return null;
   const id = ++compteur;
   const indice = toasts.value.length;
   toasts.value.push({ id, message, type, indice });
