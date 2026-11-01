@@ -27,7 +27,11 @@ export default defineConfig({
     // En-tête posé par le front (front/src/utils/api.js), exigé par la protection CSRF du
     // serveur sur toute requête modifiante : les appels API directs des tests le portent aussi.
     extraHTTPHeaders: { "X-Requested-With": "strapontin" },
-    trace: "on-first-retry",
+    // Arbre d'accessibilité et capture à chaque action : lecture des échecs WebKit.
+    trace: {
+      mode: "retain-on-failure",
+      snapshots: { dom: true, aria: true, screen: true },
+    },
   },
 
   projects: [
