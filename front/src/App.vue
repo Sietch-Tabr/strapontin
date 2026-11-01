@@ -235,10 +235,14 @@ onMounted(async () => {
   // les listeners de transition ci-dessous ne couvrent que les changements d'état, pas l'état
   // initial. Vérifier navigator.onLine au montage pour afficher le toast immédiatement.
   if (!navigator.onLine) {
-    idToastHorsLigne = afficherToast("Vous êtes hors ligne.", "erreur");
+    idToastHorsLigne = afficherToast("Vous êtes hors ligne.", "erreur", {
+      toujours: true,
+    });
   }
   window.addEventListener("offline", () => {
-    idToastHorsLigne = afficherToast("Vous êtes hors ligne.", "erreur");
+    idToastHorsLigne = afficherToast("Vous êtes hors ligne.", "erreur", {
+      toujours: true,
+    });
   });
   window.addEventListener("online", () => {
     if (idToastHorsLigne !== null) {

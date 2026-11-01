@@ -11,9 +11,14 @@ function delaiParType(type) {
 }
 
 // Sans données lisibles, l'écran hors ligne dit déjà l'essentiel : aucune erreur de chargement ne
-// s'y ajoute.
-export function afficherToast(message, type = "info") {
-  if (type === "erreur" && etatConnexion.sansDonnees) return null;
+// s'y ajoute. `toujours` garde un message qui n'est pas une erreur de chargement (la perte de
+// connexion elle-même).
+export function afficherToast(
+  message,
+  type = "info",
+  { toujours = false } = {},
+) {
+  if (type === "erreur" && etatConnexion.sansDonnees && !toujours) return null;
   const id = ++compteur;
   const indice = toasts.value.length;
   toasts.value.push({ id, message, type, indice });
