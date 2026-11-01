@@ -4,6 +4,19 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.2 — 1 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "Les billets de visite d'un musée, les entrées de parc de loisirs et les produits de parking ne sont plus affichés comme des concerts.",
+          "Un spectacle que la billetterie republie à une autre date ou à une autre heure reste une seule fiche : l'ancienne n'est plus affichée à côté de la nouvelle.",
+          "Une fiche absente n'est plus fusionnée dans une autre date de la même série, et une fiche gardée par un administrateur n'est jamais absorbée.",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.1 — 27 octobre 2026",
     categories: [
       {

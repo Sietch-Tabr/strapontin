@@ -19,3 +19,5 @@
 **3.1.1** : un produit Eventim `status: Cancelled` donne le statut `cancelled`. `EventimSource.attractionDUnAutreArtiste` indique qu'un identifiant d'attraction enregistré désigne un autre artiste (résultats de la recherche par nom).
 
 `TicketmasterAttractionResolver` journalise toujours en INFO l'absence de correspondance exacte (plus de WARN une fois par jour puis DEBUG : le cache de throttle est retiré).
+
+**3.1.2** : `eventim.ProduitSpectacle` écarte, avant tout mappage, un produit au lieu « PARKING - … » ou dont aucune catégorie racine n'est un spectacle (Concerts & Festivals, Classique & Danse, Théâtre, Humour, Spectacles) : une requête par lieu renvoie aussi les visites de musée, parcs de loisirs et matchs de l'établissement. Un produit sans catégorie est gardé.
