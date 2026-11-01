@@ -31,6 +31,8 @@ Le projet épingle la plupart de ses versions via des propriétés dans le pom p
 
 Vérifier aussi séparément si une version plus récente du parent Spring Boot (BOM) est disponible.
 
+Plugins Maven : `mvn -f java/pom.xml -N versions:display-plugin-updates`. Ne lire que sa première ligne (« All plugins with a version specified are using the latest versions ») ; les lignes `->` qui suivent proposent des versions plus anciennes (`maven-pmd-plugin 3.28.0 -> 2.2`), faux signal de rétrogradation à ignorer. Les plugins sans version dans le pom (surefire, compiler, jar…) suivent le parent Spring Boot : leur mise à jour passe par celle du parent.
+
 ## 3. Scanner npm
 
 ```bash
@@ -43,6 +45,12 @@ Deux projets npm : `front/` (application) et `e2e/` (Playwright, tests de bout e
 ## 4. Scanner la stack infra
 
 Informatif uniquement — jamais appliqué automatiquement, un changement d'OS/PostgreSQL/Java majeur dépasse le cadre d'un jalon applicatif.
+
+**Images de la pipeline** : `grep -n 'image:' .woodpecker/ci.yaml` (maven, node, osv-scanner, alpine au 01/11/2026). Comparer chaque tag à la dernière version publiée ; une image sans tag (`alpine` du step de sauvegarde) suit `latest` : le signaler, c'est un constat (non reproductible, jamais relu), pas une modification à faire seul.
+
+**Scanner OSV** : l'image est épinglée à deux endroits, `scripts/analyse-dependances.sh` (`IMAGE_SCANNER`) et `.woodpecker/ci.yaml` ; les deux doivent rester identiques et comparées à la dernière release (`curl -s https://api.github.com/repos/google/osv-scanner/releases/latest`, champ `tag_name`). C'est le contrôle bloquant de la pipeline : un scanner périmé est un angle mort.
+
+**Hors périmètre, géré par l'utilisateur** (ne pas le reproposer) : les mises à jour `apt` des conteneurs LXC, et les outils du poste (brew, tea, woodpecker-cli, Docker) via topgrade.
 
 Grep des versions épinglées dans `scripts/provision.sh` (PostgreSQL, template Debian LXC, Temurin/Java) et `.woodpecker/` (image de build, version Node) ; comparer aux dernières versions stables publiées (WebSearch/WebFetch).
 
