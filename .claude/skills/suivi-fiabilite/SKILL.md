@@ -255,7 +255,6 @@ Passage indépendant (modèle du 26/08/2026). Avant de créer un ticket ou d'éc
 - **Chargement** : un subagent défini ou modifié dans `.claude/agents/` n'est chargé qu'au démarrage de Claude Code ; s'il manque ou si sa définition a changé, le signaler et proposer un redémarrage plutôt que de sauter l'étape.
 - **Limites connues** (à garder en tête en réconciliant) : même modèle que moi, donc angles morts communs ; il croit parfois des agendas tiers périmés (Diderot, Cortot) : tout verdict « existe » sans site officiel ou organisateur est à refaire par moi ; il n'a pas le delta des snapshots (`run_check.py` écrit un snapshot, il ne le lance pas) ; il ne voit ni le parcours utilisateur ni l'interface ; il ne peut pas contredire ce qu'il ne voit pas (mes constats et réparations).
 
-
 ## 12. Revue de l'algorithme
 
 Ajoutée le 06/10/2026 sur demande de l'utilisateur : le check ne se contente pas de constater, il cherche ce que l'algorithme aurait dû éviter ou corriger seul, et ce que nous avons manqué. Pour chaque anomalie confirmée, réparée ou signalée de ce check :
@@ -319,6 +318,8 @@ Jamais un résumé condensé type « Check terminé, RAS, mémoire à jour ». C
 - **15.** Mémoire : mise à jour effectuée.
 
 Chaque ligne dit ce qui a été fait et le résultat — si un item n'a pas été fait, l'écrire explicitement plutôt que l'omettre.
+
+**Étape bloquante avant le rapport** (règle du 31/10/2026) : lister chaque action possible que je m'apprête à écarter ou que je n'ai pas faite dans le tour (commentaire sur un ticket ouvert, ticket mineur, réparation, vérification) et la poser en AskUserQuestion. Jamais « non demandé, donc non fait » : l'absence de demande vient de l'absence de question.
 
 **Décisions à prendre** (règle du 17/10/2026) : ne jamais les noyer dans les conclusions. Les poser dans le tour (AskUserQuestion) et, si elles restent ouvertes, les rappeler en toute dernière section du rapport, sous un titre « Décisions en attente », une ligne par décision.
 
