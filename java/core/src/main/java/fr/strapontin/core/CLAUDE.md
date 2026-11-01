@@ -15,3 +15,5 @@
 **3.1.1** : `ClientWebPush` (envoi Web Push, `Transport` substituable en test) ; `EchecPush` porte les règles de révocation (5 envois sur 5 jours, panne de service) et les requêtes de retrait ; `CanalNotificationPerdu` ne dépend plus des cases cochées.
 
 `ClientWebPush` refuse un sujet VAPID sans adresse (`mailto:` seul, `CONTACT_EMAIL` absent) : Apple répond `BadJwtToken`, FCM et Mozilla l'acceptent. Essai réel du 28/10 (dev par tunnel SSH, abonnement Mozilla autopush par WebSocket, message reçu et déchiffré) ; FCM (410 sur jeton inconnu) et Apple (400 `BadWebPushToken` une fois le sujet valide) acceptent la requête, la remise à un vrai navigateur reste à constater.
+
+**3.1.2** : `NomsDeLieu.designentFortementLeMemeLieu` détache l'article élidé collé (« lessaion » chez Eventim, « essaion » chez Ticketmaster) quand l'autre nom porte le mot seul et qu'il reste au moins cinq lettres, puis rejoue les critères : « essaion de paris » et « theatre de lessaion paris 04 » désignent le même lieu (fusion à 50 m ou signalement `meme_lieu_salles`).

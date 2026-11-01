@@ -4,6 +4,7 @@
  */
 package fr.strapontin.core;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -23,6 +24,9 @@ public final class NomsDeLieu {
   // Longueur minimale pour éviter un containment trivial sur un nom déjà très
   // court.
   private static final int LONGUEUR_MIN_CONTAINMENT_DOUBLON = 4;
+
+  // Un mot qui perd son article collé garde au moins cinq lettres (« lessaion » → « essaion »).
+  private static final int LONGUEUR_MIN_APRES_ARTICLE = 5;
 
   private static final Pattern ARTICLE_ELIDE = Pattern.compile("\\b([a-z]) (?=[a-z])");
 
@@ -60,6 +64,36 @@ public final class NomsDeLieu {
    * @return {@code true} si les mots désignent sans ambiguïté le même lieu
    */
   public static boolean designentFortementLeMemeLieu(
+      final String nomNormA, final String nomNormB, final String contexteLieu) {
+    if (designentSansDetacherLArticle(nomNormA, nomNormB, contexteLieu)) {
+      return true;
+    }
+    final String detacheA = detacherArticleColle(nomNormA, nomNormB);
+    final String detacheB = detacherArticleColle(nomNormB, nomNormA);
+    return (!detacheA.equals(nomNormA) || !detacheB.equals(nomNormB))
+        && designentSansDetacherLArticle(detacheA, detacheB, contexteLieu);
+  }
+
+  // « lessaion » chez Eventim, « essaion » chez Ticketmaster : l'article élidé collé à un mot
+  // que l'autre nom porte seul se détache. Un reste de moins de cinq lettres reste un mot.
+  private static String detacherArticleColle(final String nomNorm, final String nomNormAutre) {
+    final Set<String> motsAutre = new HashSet<>(Arrays.asList(nomNormAutre.split(" ")));
+    final StringBuilder resultat = new StringBuilder();
+    for (final String mot : nomNorm.split(" ")) {
+      final boolean articleColle =
+          mot.length() > LONGUEUR_MIN_APRES_ARTICLE
+              && (mot.charAt(0) == 'l' || mot.charAt(0) == 'd')
+              && !motsAutre.contains(mot)
+              && motsAutre.contains(mot.substring(1));
+      if (resultat.length() > 0) {
+        resultat.append(' ');
+      }
+      resultat.append(articleColle ? mot.substring(1) : mot);
+    }
+    return resultat.toString();
+  }
+
+  private static boolean designentSansDetacherLArticle(
       final String nomNormA, final String nomNormB, final String contexteLieu) {
     return CorrespondanceSalle.estDoublonSalleParMots(nomNormA, nomNormB)
         || memeCoeurDeNom(nomNormA, nomNormB, contexteLieu)
