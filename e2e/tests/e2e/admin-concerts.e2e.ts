@@ -66,6 +66,11 @@ test.describe("Scénario: admin — API concerts à confirmer", () => {
     expect(rep.status()).toBe(200);
     const corps = await rep.json();
     expect(Array.isArray(corps.concerts)).toBe(true);
+    for (const concert of corps.concerts) {
+      expect(["jumeau", "annoncee_ailleurs", "introuvable"]).toContain(
+        concert.situation,
+      );
+    }
   });
 
   test("api_admin_concertsAConfirmer_confirmer_uuidInvalide_retourne400", async ({
