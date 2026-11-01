@@ -113,6 +113,7 @@ public class ReconciliationNocturneService {
     final int fichesOrigineReportMarquees = fusionProduitsEventim.marquerFichesDOrigineDesReports();
     final int fichesPerimeesFusionnees =
         fusionProduitsEventim.fusionner()
+            + fusionProduitsEventim.fusionnerProduitsRepublies()
             + fusionEvenementsArtiste.fusionnerFichesPerimees()
             + fusionEvenementsArtiste.fusionnerSeancesHeureChangee()
             + fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()

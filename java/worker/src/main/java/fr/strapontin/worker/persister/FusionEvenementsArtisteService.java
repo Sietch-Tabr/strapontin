@@ -82,9 +82,11 @@ public class FusionEvenementsArtisteService {
 
   /**
    * Fusionne chaque événement périmé dans l'unique événement vivant de même
-   * fiche (même url, ou même idmanif TM à la même date, apparue plus d'une
+   * fiche et de même date (même url, ou même idmanif TM apparue plus d'une
    * heure après la dernière vue de la périmée : deux séances vues au même
-   * passage restent distinctes) ; ambigu : ignoré. Avant la fusion de salles.
+   * passage restent distinctes) ; une fiche maintenue par un administrateur ou
+   * une séance d'une autre date de la série n'est jamais fusionnée ; ambigu :
+   * ignoré. Avant la fusion de salles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimees() {
@@ -93,7 +95,7 @@ public class FusionEvenementsArtisteService {
             """
             WITH obs AS (
               SELECT o.evenement_id, o.source, o.url, e.date, e.absences_consecutives,
-                     o.first_seen, o.updated_at,
+                     e.maintenu_le, o.first_seen, o.updated_at,
                      CASE WHEN o.source = 'ticketmaster'
                           THEN substring(o.url FROM '/idmanif/([0-9]+)') END AS idmanif
               FROM observations o
@@ -106,10 +108,11 @@ public class FusionEvenementsArtisteService {
             JOIN obs v
               ON v.evenement_id <> p.evenement_id
              AND v.source = p.source
+             AND v.date = p.date
              AND (v.url = p.url OR (p.idmanif IS NOT NULL AND v.idmanif = p.idmanif
-                                    AND v.date = p.date
                                     AND p.updated_at < v.first_seen - interval '1 hour'))
             WHERE p.absences_consecutives >= :seuil AND v.absences_consecutives = 0
+              AND p.maintenu_le IS NULL
             GROUP BY p.evenement_id
             """,
             Map.of(CLE_SEUIL, SEUIL_ABSENCES_FICHE_PERIMEE));
@@ -394,6 +397,20 @@ public class FusionEvenementsArtisteService {
   @Transactional
   public void fusionnerUnePaire(final UUID cibleId, final UUID sourceId) {
     fusionner(cibleId, sourceId, "artiste_norm convergent");
+  }
+
+  /**
+   * Absorbe une fiche périmée dans la fiche vivante désignée, quelle que soit
+   * la mieux établie des deux : la date et l'heure à garder sont celles de la
+   * fiche vivante.
+   * @param vivantId événement à conserver
+   * @param perimeId événement à absorber puis supprimer
+   * @param motif raison journalisée
+   */
+  @Transactional
+  public void fusionnerDansFicheVivante(
+      final UUID vivantId, final UUID perimeId, final String motif) {
+    fusionner(vivantId, perimeId, motif);
   }
 
   /**

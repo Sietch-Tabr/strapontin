@@ -404,6 +404,32 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(vivante));
   }
 
+  // Toutes les séances d'une série partagent la même adresse : une séance absente ne rejoint pas
+  // une séance vivante d'un autre jour.
+  @Test
+  void fusionnerFichesPerimees_memeUrlAutreDate_neFusionnePas() {
+    final String lendemain = LocalDate.parse(DATE_FUTURE).plusDays(1).toString();
+    final UUID perimee = creerFiche(salle, DATE_FUTURE, "16:30", 64, URL_TM);
+    final UUID vivante = creerFiche(salle, lendemain, "20:30", 0, URL_TM);
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(perimee));
+    assertTrue(existe(vivante));
+  }
+
+  @Test
+  void fusionnerFichesPerimees_ficheMaintenueParUnAdministrateur_neFusionnePas() {
+    final UUID maintenue = creerFiche(salle, DATE_FUTURE, "20:00", 64, URL_TM);
+    jdbc.update(
+        "UPDATE evenements SET maintenu_le = now() WHERE id = CAST(:id AS uuid)",
+        Map.of("id", maintenue.toString()));
+    final UUID vivante = creerFiche(salle, DATE_FUTURE, "22:30", 0, URL_TM);
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerFichesPerimees());
+    assertTrue(existe(maintenue));
+    assertTrue(existe(vivante));
+  }
+
   // Nubiyan Twist : l'ancienne fiche (20 h 30, d'une autre source) reste affichée à côté de la
   // nouvelle (19 h 30) tant qu'elle n'a pas atteint 50 absences.
   @Test
@@ -744,6 +770,94 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertEquals(
         List.of("celtic ovation"),
         jdbc.queryForList("SELECT artiste_norm FROM evenements", Map.of(), String.class));
+  }
+
+  private void deplacerEtCompterAbsences(
+      final UUID id, final int joursDecalage, final int absences) {
+    jdbc.update(
+        "UPDATE evenements SET date = date + :jours, absences_consecutives = :absences"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", id.toString(), "jours", joursDecalage, "absences", absences));
+  }
+
+  // Bachar Mar-Khalifé : le produit passe du 05/11 au 08/11, l'ancienne fiche reste à l'affiche.
+  @Test
+  void fusionnerProduitsRepublies_produitRepublieAUneAutreDate_ancienneFicheRejointLaNouvelle() {
+    final String url = "https://www.eventim.fr/event/christophe-21737681";
+    final UUID ancienne =
+        ficheAvecObservations(salle, "bachar", "20:30", new String[] {"eventim", url, "100"});
+    final UUID nouvelle =
+        ficheAvecObservations(salle, "bachar", "16:30", new String[] {"eventim", url, "1"});
+    deplacerEtCompterAbsences(ancienne, -3, 3);
+
+    assertEquals(1, fusionProduitsEventim.fusionnerProduitsRepublies());
+    assertFalse(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  // Vincent Dedienne : même jour, l'heure passe de 19 h à 21 h.
+  @Test
+  void fusionnerProduitsRepublies_memeJourHeureTropEloignee_ancienneFicheRejointLaNouvelle() {
+    final String url = "https://www.eventim.fr/event/dedienne-21898719";
+    final UUID ancienne =
+        ficheAvecObservations(salle, "dedienne", "19:00", new String[] {"eventim", url, "100"});
+    final UUID nouvelle =
+        ficheAvecObservations(salle, "dedienne", "21:00", new String[] {"eventim", url, "1"});
+    deplacerEtCompterAbsences(ancienne, 0, 5);
+
+    assertEquals(1, fusionProduitsEventim.fusionnerProduitsRepublies());
+    assertFalse(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepublies_deuxFichesVivantes_neFusionnePas() {
+    final String url = "https://www.eventim.fr/event/serie-21000001";
+    final UUID a =
+        ficheAvecObservations(salle, "serie", "20:00", new String[] {"eventim", url, "1"});
+    final UUID b =
+        ficheAvecObservations(salle, "serie", "20:30", new String[] {"eventim", url, "1"});
+    deplacerEtCompterAbsences(b, 7, 0);
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepublies());
+    assertTrue(existe(a));
+    assertTrue(existe(b));
+  }
+
+  @Test
+  void fusionnerProduitsRepublies_ancienneFicheEntretenueParTicketmaster_neFusionnePas() {
+    final String url = "https://www.eventim.fr/event/tm-21000002";
+    final UUID ancienne =
+        ficheAvecObservations(
+            salle,
+            "tm",
+            "20:00",
+            new String[] {"eventim", url, "100"},
+            new String[] {"ticketmaster", "https://tm/idmanif/9", "1"});
+    final UUID nouvelle =
+        ficheAvecObservations(salle, "tm", "21:30", new String[] {"eventim", url, "1"});
+    deplacerEtCompterAbsences(ancienne, -2, 5);
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepublies());
+    assertTrue(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepublies_ancienneFicheMaintenue_neFusionnePas() {
+    final String url = "https://www.eventim.fr/event/maintenue-21000003";
+    final UUID ancienne =
+        ficheAvecObservations(salle, "maintenue", "20:00", new String[] {"eventim", url, "100"});
+    final UUID nouvelle =
+        ficheAvecObservations(salle, "maintenue", "21:30", new String[] {"eventim", url, "1"});
+    deplacerEtCompterAbsences(ancienne, -2, 5);
+    jdbc.update(
+        "UPDATE evenements SET maintenu_le = now() WHERE id = CAST(:id AS uuid)",
+        Map.of("id", ancienne.toString()));
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepublies());
+    assertTrue(existe(ancienne));
+    assertTrue(existe(nouvelle));
   }
 
   @Test

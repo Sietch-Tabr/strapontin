@@ -86,6 +86,56 @@ public class FusionProduitsEventimService {
     return fusions;
   }
 
+  /**
+   * Fiche d'un produit Eventim republié à une autre date ou à une autre heure :
+   * l'ancienne fiche, absente de sa propre séance et sans autre billetterie qui
+   * l'entretienne, rejoint l'unique fiche vivante du même produit dans la même
+   * salle. Une fiche maintenue par un administrateur reste.
+   * @return nombre de fiches rattachées
+   */
+  public int fusionnerProduitsRepublies() {
+    final String produit = ProduitEventim.expressionSql("o");
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            "WITH p AS (SELECT DISTINCT e.id, e.salle_id, e.date, e.heure, e.artiste_id,"
+                + " e.absences_consecutives, e.maintenu_le, "
+                + produit
+                + " AS produit FROM observations o JOIN evenements e ON e.id = o.evenement_id"
+                + " WHERE o.source = 'eventim' AND e.date >= CURRENT_DATE"
+                + " AND e.salle_id IS NOT NULL AND "
+                + produit
+                + " IS NOT NULL)"
+                + " SELECT a.id AS perime, min(b.id::text) AS vivant,"
+                + " count(DISTINCT b.id) AS nb_vivants FROM p a JOIN p b"
+                + " ON b.produit = a.produit AND b.salle_id = a.salle_id AND b.id <> a.id"
+                + " AND (b.date <> a.date OR abs(extract(epoch FROM (a.heure - b.heure)))"
+                + " > :ecartSecondes)"
+                + " WHERE a.absences_consecutives >= :seuil AND b.absences_consecutives = 0"
+                + " AND a.maintenu_le IS NULL"
+                + " AND (a.artiste_id IS NULL OR b.artiste_id IS NULL"
+                + " OR a.artiste_id = b.artiste_id)"
+                + " AND NOT EXISTS (SELECT 1 FROM observations t"
+                + " WHERE t.evenement_id = a.id AND t.source <> 'eventim')"
+                + " GROUP BY a.id",
+            Map.of(
+                "ecartSecondes",
+                ECART_MAX_HEURE_SECONDES,
+                "seuil",
+                FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE));
+    int fusions = 0;
+    for (final Map<String, Object> ligne : paires) {
+      if (((Number) ligne.get("nb_vivants")).longValue() != 1) {
+        continue;
+      }
+      final UUID vivant = UUID.fromString((String) ligne.get("vivant"));
+      fusionEvenements.fusionnerDansFicheVivante(
+          vivant, (UUID) ligne.get("perime"), "produit Eventim republié");
+      retirerObservationsPerimees(vivant);
+      fusions++;
+    }
+    return fusions;
+  }
+
   // Intitulé de la fiche à la publication Eventim la plus récente : la fiche
   // gardée peut porter une première publication fautive.
   private String libelleLePlusRecent(final UUID evtA, final UUID evtB) {
