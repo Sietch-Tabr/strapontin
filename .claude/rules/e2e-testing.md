@@ -27,3 +27,10 @@ Un test "flaky" (échec puis succès au retry) n'est pas un run propre — lire 
 - **`playwright-mcp` externe** qui relance en boucle un navigateur (facteur ~4x) — vérifier les process `ps aux` avant un run.
 
 Toujours écarter ces causes connues avec des preuves avant de conclure à un bug de code — mais ne jamais les invoquer pour excuser un échec qui n'y correspond pas exactement.
+
+## Outils scriptés
+
+- `bash e2e/lancer-e2e.sh [journal]` : le run complet dans les mêmes conditions à chaque fois (arrête les `playwright-mcp` du poste, vérifie que le dev répond, `caffeinate`) et une ligne de bilan « N réussis, N échecs, N instables, N ignorés ». Code de sortie nul seulement sans échec ni instable.
+- `node e2e/outils/releve-console.mjs [pages…]` : console (error, warning), erreurs de page et HTTP ≥ 400 en session utilisateur puis admin, chromium, firefox et webkit. Le seul relevé connu, compté à part : WebKit signale une violation `style-src-attr` par `<select>` sous la politique `style-src 'self'` (une page vide avec un `<select>` la produit aussi, Chromium jamais) ; l'assouplir affaiblirait la politique, rien n'est donc changé.
+- `node e2e/outils/verifier-service-worker.mjs [dossier] [port]` : enregistrement, précache et rechargement hors ligne du `sw.js` construit, sur `localhost` (le dev en HTTP sur IP privée ne l'expose pas, voir `pwa.e2e.ts`).
+
