@@ -4,5 +4,3 @@
 # Cette liste est une dette déclarée, pas une tolérance : chaque ligne se revérifie à chaque jalon
 # (check-deps) et se supprime dès que l'avertissement disparaît, sinon la pipeline échoue
 # (scripts/avertissements-front.sh). Un avertissement absent de la liste fait aussi échouer.
-npm-ci|deprecated glob@11.1.0|workbox-build 7.4.1 (dernière version) exige glob ^11, déprécié ; migration vers tinyglobby ouverte chez GoogleChrome/workbox #3506, remplacement de Workbox annoncé par vite-plugin-pwa #933|2026-11-02
-build|inlineDynamicImports option is deprecated|appel interne de vite-plugin-pwa 2.0.0 à l'outil de build ; correctif ouvert chez vite-pwa/vite-plugin-pwa #939|2026-11-02
