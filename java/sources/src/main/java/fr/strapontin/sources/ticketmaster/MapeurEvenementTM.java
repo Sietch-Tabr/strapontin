@@ -4,6 +4,7 @@
  */
 package fr.strapontin.sources.ticketmaster;
 
+import fr.strapontin.core.AccesSansSpectacle;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.PlateauSoiree;
@@ -192,6 +193,10 @@ final class MapeurEvenementTM {
         dates != null ? (Map<String, Object>) dates.get("start") : null;
     final String dateStr = start != null ? (String) start.get("localDate") : null;
     if (dateStr == null) {
+      return null;
+    }
+
+    if (AccesSansSpectacle.estAccesSansSpectacle((String) evt.get(CLE_NAME))) {
       return null;
     }
 

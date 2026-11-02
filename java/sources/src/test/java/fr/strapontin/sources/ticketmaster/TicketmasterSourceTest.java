@@ -97,6 +97,21 @@ class TicketmasterSourceTest {
 
   // Recherche de Bertrand Belin : cité en second, il reste l'artiste du concert, avec son propre
   // identifiant, et les deux autres forment le plateau.
+  // Plenitude Arena : un accès prioritaire vendu avec le nom de la salle n'est pas un concert.
+  @Test
+  void mapper_accesPrioritaireSansSpectacle_retourneNull() {
+    assertNull(
+        MapeurEvenementTM.mapper(
+            evenementTMRaw(Map.of("name", "M E N Arena Priority Pass")), null));
+  }
+
+  @Test
+  void mapper_billetCombineAvecPriorityPass_resteUnConcert() {
+    assertNotNull(
+        MapeurEvenementTM.mapper(
+            evenementTMRaw(Map.of("name", "Julien Clerc + Priority Pass")), null));
+  }
+
   @Test
   void mapper_artisteRechercheCiteEnSecond_retenuAvecLePlateau() {
     final ConcertBrut concert = MapeurEvenementTM.mapper(coPlateauTM(), "Bertrand Belin");
