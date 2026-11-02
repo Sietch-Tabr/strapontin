@@ -424,6 +424,29 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(horodatee));
   }
 
+  // Sting à Aluna : Ticketmaster a cessé de renvoyer la fiche sans heure (43 absences).
+  @Test
+  void fusionnerSeancesSansHeure_ficheSansHeureDejaAbsente_fusionneDansLHorodatee() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 43, URL_TM);
+    final UUID horodatee = creerFiche(salle, DATE_FUTURE, "16:00", 0, URL_TM + "/idtier/1");
+    passerEnEventim(horodatee);
+
+    assertEquals(1, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertFalse(existe(sansHeure));
+    assertTrue(existe(horodatee));
+  }
+
+  @Test
+  void fusionnerSeancesSansHeure_ficheHorodateeAbsente_neFusionnePas() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);
+    final UUID horodatee = creerFiche(salle, DATE_FUTURE, "16:00", 43, URL_TM + "/idtier/1");
+    passerEnEventim(horodatee);
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertTrue(existe(sansHeure));
+    assertTrue(existe(horodatee));
+  }
+
   @Test
   void fusionnerSeancesSansHeure_memeSourceDesDeuxCotes_neFusionnePas() {
     final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);

@@ -36,9 +36,10 @@ public class FusionSeancesDeuxSourcesService {
   /**
    * Même séance publiée sans heure par une billetterie et à une heure par
    * l'autre : la fiche sans heure rejoint la fiche horodatée quand elles sont
-   * les seules, du même artiste, de la même salle et du même jour, vivantes, de
-   * sources différentes, dans une salle non signalée comme mélangeant plusieurs
-   * lieux.
+   * les seules, du même artiste, de la même salle et du même jour, de sources
+   * différentes, dans une salle non signalée comme mélangeant plusieurs lieux.
+   * La fiche horodatée est vivante ; la fiche sans heure peut déjà être absente
+   * (la billetterie ne la renvoie plus depuis la publication de l'horaire).
    * @return nombre de fusions effectuées
    */
   public int fusionnerSeancesSansHeure() {
@@ -50,7 +51,7 @@ public class FusionSeancesDeuxSourcesService {
                      bool_or(o.source = 'ticketmaster') AS tm, bool_or(o.source = 'eventim') AS evt
               FROM evenements e JOIN observations o ON o.evenement_id = e.id
               WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL
-                AND e.absences_consecutives < :seuil
+                AND (e.absences_consecutives < :seuil OR e.heure IS NULL)
               GROUP BY e.id),
             paires AS (
               SELECT s.id AS sans_heure, h.id AS avec_heure, s.salle_id
