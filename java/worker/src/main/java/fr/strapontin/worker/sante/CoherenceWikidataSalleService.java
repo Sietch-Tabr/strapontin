@@ -99,15 +99,26 @@ public class CoherenceWikidataSalleService {
             + POSITION_COMPARABLE,
         Map.of());
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
-    if (candidats.isEmpty()) {
+    final List<SalleAEnrichir> sallesPositionComparable = selectionnerSallesPositionComparable();
+    if (candidats.isEmpty() && sallesPositionComparable.isEmpty()) {
       LOG.info("coherence:wikidata — aucun candidat");
       return 0;
     }
 
-    final Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(candidats);
-    final List<UUID> salleIds = candidats.stream().map(SalleAEnrichir::id).toList();
+    final List<SalleAEnrichir> aLire = new ArrayList<>(candidats);
+    aLire.addAll(sallesPositionComparable);
+    final Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(aLire);
+    final List<UUID> salleIds = aLire.stream().map(SalleAEnrichir::id).toList();
     final Map<UUID, List<String>> villesConcertsReelles = chargerVillesConcertsReelles(salleIds);
     final Map<UUID, String> signaturesDejaSignalees = chargerSignaturesDejaSignalees(salleIds);
+
+    // La position tranche le contrôle de cohérence, pas l'alignement de la ville.
+    for (final SalleAEnrichir salle : sallesPositionComparable) {
+      final EnrichissementSalle enrichissement = resultats.get(salle.id());
+      if (enrichissement != null) {
+        corrections.corrigerVille(salle, enrichissement, villesConcertsReelles.get(salle.id()));
+      }
+    }
 
     int incoherences = 0;
     for (final SalleAEnrichir salle : candidats) {
@@ -466,6 +477,19 @@ public class CoherenceWikidataSalleService {
             + " FROM salles s"
             + " WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''"
             + " AND NOT "
+            + POSITION_COMPARABLE,
+        Map.of(),
+        (rs, _) -> versSalleAEnrichir(rs));
+  }
+
+  // Salles écartées du contrôle de cohérence : leur ville reste à aligner.
+  private List<SalleAEnrichir> selectionnerSallesPositionComparable() {
+    return jdbc.query(
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id,"
+            + " NULL::double precision AS latitude, NULL::double precision AS longitude"
+            + " FROM salles s"
+            + " WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''"
+            + " AND "
             + POSITION_COMPARABLE,
         Map.of(),
         (rs, _) -> versSalleAEnrichir(rs));
