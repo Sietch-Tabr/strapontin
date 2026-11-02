@@ -22,8 +22,10 @@ purger:artistes purger:logs-admin revoquer:admins recalculer:matches notifier:di
 reconciliation:nocturne suivi:cycles-jobs"
 JOBS="${*:-$JOBS_PAR_DEFAUT}"
 
-# Le corps est exécuté sur le LXC ; les variables passent en arguments, jamais par le shell local.
-ssh "$HOTE" bash -s -- "$ATTENTE_MAX" "$JOBS" <<'DISTANT'
+# Le corps est exécuté sur le LXC. ssh recompose la ligne de commande distante : la liste des jobs
+# est protégée par printf %q, sinon seul le premier type arriverait au script.
+jobs_protege=$(printf '%q' "$JOBS")
+ssh "$HOTE" "bash -s -- $ATTENTE_MAX $jobs_protege" <<'DISTANT'
 set -u
 attente_max="$1"
 jobs="$2"
@@ -49,19 +51,19 @@ for job in $jobs; do
   statut="terminé"
   case "$reponse" in *déclenché*) ;; *) statut="REFUS : $reponse" ;; esac
 
-  # Fin du job : journal du worker sans nouvelle ligne pendant 25 s, après au moins une ligne.
-  dernier=-1
-  calme=0
+  # Fin du job : sa ligne « <job> terminé » dans le journal du worker. Le silence du journal ne
+  # prouve rien (un job de réconciliation peut se taire plus d'une minute) : deux jobs se
+  # chevaucheraient.
+  fin="$job terminé"
+  [ "$job" = "purger:concerts" ] && fin="purger:concerts-hors-perimetre terminé"
   ecoule=0
-  while [ "$statut" = "terminé" ] && [ "$ecoule" -lt "$attente_max" ]; do
-    sleep 5
-    ecoule=$((ecoule + 5))
-    n=$(journalctl -u strapontin-worker --since "$debut_local" --no-pager 2>/dev/null | wc -l)
-    if [ "$n" -eq "$dernier" ]; then calme=$((calme + 1)); else calme=0; fi
-    dernier=$n
-    if [ "$calme" -ge 5 ] && [ "$n" -gt 0 ]; then break; fi
-  done
-  [ "$statut" = "terminé" ] && [ "$ecoule" -ge "$attente_max" ] && statut="DÉLAI DÉPASSÉ (${attente_max}s)"
+  if [ "$statut" = "terminé" ]; then
+    until journalctl -u strapontin-worker --since "$debut_local" --no-pager | grep -qF "$fin"; do
+      if [ "$ecoule" -ge "$attente_max" ]; then statut="DÉLAI DÉPASSÉ (${attente_max}s)"; break; fi
+      sleep 3
+      ecoule=$((ecoule + 3))
+    done
+  fi
 
   echo "-- journal worker : WARN, ERROR, exceptions"
   journalctl -u strapontin-worker --since "$debut_local" --no-pager \
