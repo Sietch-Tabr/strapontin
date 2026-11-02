@@ -4,6 +4,22 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.3 — 2 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "La ville d'une salle suit la commune réelle même quand sa position vient déjà de Wikidata (Le Transbordeur est à Villeurbanne, pas à Lyon).",
+          "Une séance publiée à l'ouverture des portes par une billetterie et au début du spectacle par l'autre reste une seule fiche (Zimmer90 à l'Élysée Montmartre).",
+          "Une séance que la billetterie ne renvoie plus sans heure est rapprochée de la séance horodatée de l'autre billetterie (Sting au festival Aluna).",
+          "Un concert qu'Eventim republie dans une autre salle ne laisse plus l'ancienne fiche affichée à côté de la nouvelle (Brooke Combe).",
+          "Un accès prioritaire ou une visite vendus seuls ne sont plus affichés comme des concerts ; un billet combiné avec un spectacle reste affiché, son titre annonce la visite (Grand Rex, Priority Pass).",
+          "Un artiste affiche la même classification sur toutes ses fiches, la plus fréquente (Sellig, Vincent Dedienne).",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.2 — 1 novembre 2026",
     categories: [
       {
