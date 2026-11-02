@@ -63,6 +63,9 @@ class CoherenceWikidataSalleServiceTest {
   private void simulerCandidats(final List<SalleAEnrichir> candidats) {
     when(jdbc.query(org.mockito.ArgumentMatchers.anyString(), any(Map.class), any(RowMapper.class)))
         .thenReturn(candidats);
+    // Salles sans ville à compléter par Wikidata : aucune ici.
+    when(jdbc.query(contains("ville IS NULL"), any(Map.class), any(RowMapper.class)))
+        .thenReturn(List.of());
     // Salles écartées du contrôle (position Wikidata confirmée) : aucune ici.
     when(jdbc.query(contains("NULL::double precision"), any(Map.class), any(RowMapper.class)))
         .thenReturn(List.of());
