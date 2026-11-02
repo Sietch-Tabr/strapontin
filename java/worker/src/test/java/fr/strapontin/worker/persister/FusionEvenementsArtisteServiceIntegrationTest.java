@@ -644,6 +644,28 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(soiree));
   }
 
+  // Zimmer90 à l'Élysée Montmartre : 18 h 30 (ouverture des portes) chez Eventim, 20 h chez
+  // Ticketmaster.
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_ouvertureDesPortesEtSpectacle_fusionne() {
+    final UUID elysee = creerSalle("Élysée Montmartre");
+    final UUID tm = seanceSource(elysee, "zimmer90", "20:00", "ticketmaster");
+    final UUID ev = seanceSource(elysee, "zimmer90", "18:30", "eventim");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+    assertTrue(existe(tm));
+    assertFalse(existe(ev));
+  }
+
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_ecartDeDeuxHeuresEtDemie_neFusionnePas() {
+    final UUID newMorning = creerSalle("New Morning");
+    seanceSource(newMorning, "nubiyan twist", "17:30", "eventim");
+    seanceSource(newMorning, "nubiyan twist", "20:00", "ticketmaster");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+  }
+
   @Test
   void fusionnerMemeSeanceDeuxSourcesHeuresProches_matineeEtSoiree_neFusionnePas() {
     final UUID newMorning = creerSalle("New Morning");

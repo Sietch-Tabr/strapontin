@@ -196,6 +196,23 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
   }
 
   @Test
+  void verifier_memeSalleDeuxFiches_nommeUneSeuleSalleDansLeSignalement() {
+    final UUID salle = creerSalle();
+    observer(evenementHeure(salle, "sting", "18:30"), "ticketmaster");
+    observer(evenementHeure(salle, "sting", "16:00"), "eventim");
+
+    controle.verifier();
+
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching WHERE type = 'seance_dans_deux_salles'"
+                + " AND jsonb_exists(details, 'salle') AND NOT jsonb_exists(details, 'salles')",
+            Map.of(),
+            Long.class));
+  }
+
+  @Test
   void verifier_memeSalleDeuxSeancesDeLaMemeBilletterie_neSignaleRien() {
     final UUID salle = creerSalle();
     observer(evenementHeure(salle, "exposition", "10:00"), "eventim");
