@@ -897,6 +897,95 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(nouvelle));
   }
 
+  // Brooke Combe : le produit de Supersonic Records disparaît, un autre paraît à La Bellevilloise.
+  @Test
+  void
+      fusionnerProduitsRepubliesAilleurs_produitRepublieDansUneAutreSalle_ancienneFicheRejointLaNouvelle() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "100"});
+    final UUID nouvelle =
+        ficheAvecObservations(
+            salle,
+            "brooke combe",
+            "20:00",
+            new String[] {"ticketmaster", "https://tm/idmanif/5", "1"},
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+
+    assertEquals(1, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertFalse(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepubliesAilleurs_ancienneFicheEncoreVue_neFusionnePas() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "2"});
+    final UUID nouvelle =
+        ficheAvecObservations(
+            salle,
+            "brooke combe",
+            "20:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertTrue(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepubliesAilleurs_ancienneFicheEntretenueParTicketmaster_neFusionnePas() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "100"},
+            new String[] {"ticketmaster", "https://tm/idmanif/9", "1"});
+    final UUID nouvelle =
+        ficheAvecObservations(
+            salle,
+            "brooke combe",
+            "20:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertTrue(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepubliesAilleurs_ancienneFicheMaintenue_neFusionnePas() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "100"});
+    ficheAvecObservations(
+        salle,
+        "brooke combe",
+        "20:00",
+        new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+    jdbc.update(
+        "UPDATE evenements SET maintenu_le = now() WHERE id = CAST(:id AS uuid)",
+        Map.of("id", ancienne.toString()));
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertTrue(existe(ancienne));
+  }
+
   @Test
   void fusionnerProduitsRepublies_deuxFichesVivantes_neFusionnePas() {
     final String url = "https://www.eventim.fr/event/serie-21000001";

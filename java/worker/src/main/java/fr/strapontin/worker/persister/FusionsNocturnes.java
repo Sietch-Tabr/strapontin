@@ -48,6 +48,7 @@ public class FusionsNocturnes {
   public int fusionnerFichesPerimeesEtSeances() {
     return parProduit.fusionner()
         + parProduit.fusionnerProduitsRepublies()
+        + parProduit.fusionnerProduitsRepubliesAilleurs()
         + parArtiste.fusionnerFichesPerimees()
         + parArtiste.fusionnerSeancesHeureChangee()
         + parArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches()
