@@ -39,8 +39,7 @@ public class FusionEvenementsArtisteService {
   static final int SEUIL_ABSENCES_FICHE_PERIMEE = 3;
   // Écart d'heure maximal d'une même séance (au-delà : matinée et soirée).
   private static final int ECART_MAX_HEURE_CHANGEE_SECONDES = 3600;
-  // Une billetterie publie l'ouverture des portes, l'autre le début du spectacle :
-  // les deux fiches, seules de leur artiste dans la salle, restent à moins de deux heures.
+  // Portes chez l'une, début du spectacle chez l'autre (deux fiches voisines).
   private static final int ECART_MAX_DEUX_SOURCES_SECONDES = 7200;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -155,7 +154,8 @@ public class FusionEvenementsArtisteService {
    * Même séance publiée par deux billetteries à des heures proches (20 h 30 chez
    * Ticketmaster, 20 h chez Eventim) : fiches vivantes d'un artiste, d'une salle
    * et d'un jour, seules à moins de deux heures l'une de l'autre (ouverture des
-   * portes et début du spectacle compris), l'une à source unique, salle non signalée comme mélangeant plusieurs lieux.
+   * portes et début du spectacle compris), l'une à source unique, salle non signalée
+   * comme mélangeant plusieurs lieux.
    * @return nombre de fusions effectuées
    */
   public int fusionnerMemeSeanceDeuxSourcesHeuresProches() {

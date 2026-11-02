@@ -38,8 +38,7 @@ public class FusionSeancesDeuxSourcesService {
    * l'autre : la fiche sans heure rejoint la fiche horodatée quand elles sont
    * les seules, du même artiste, de la même salle et du même jour, de sources
    * différentes, dans une salle non signalée comme mélangeant plusieurs lieux.
-   * La fiche horodatée est vivante ; la fiche sans heure peut déjà être absente
-   * (la billetterie ne la renvoie plus depuis la publication de l'horaire).
+   * La fiche sans heure peut déjà être absente, la fiche horodatée est vivante.
    * @return nombre de fusions effectuées
    */
   public int fusionnerSeancesSansHeure() {

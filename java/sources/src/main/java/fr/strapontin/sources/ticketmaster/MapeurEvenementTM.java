@@ -77,6 +77,9 @@ final class MapeurEvenementTM {
    */
   /* package-private : appelé par TicketmasterSource (même package). */
   static ConcertBrut mapper(final Map<String, Object> evt, final String artisteFallback) {
+    if (AccesSansSpectacle.estAccesSansSpectacle((String) evt.get(CLE_NAME))) {
+      return null;
+    }
     try {
       return parseEvenementTM(evt, artisteFallback);
     } catch (Exception e) {
@@ -193,10 +196,6 @@ final class MapeurEvenementTM {
         dates != null ? (Map<String, Object>) dates.get("start") : null;
     final String dateStr = start != null ? (String) start.get("localDate") : null;
     if (dateStr == null) {
-      return null;
-    }
-
-    if (AccesSansSpectacle.estAccesSansSpectacle((String) evt.get(CLE_NAME))) {
       return null;
     }
 

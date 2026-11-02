@@ -127,6 +127,33 @@ final class CorrectionsSallesWikidata {
         Map.of("salleId", salle.id().toString(), "ancienneVille", salle.ville(), "ville", commune));
   }
 
+  // Salles écartées du contrôle de cohérence : leur ville reste à aligner.
+  /* package-private : appelé par CoherenceWikidataSalleService. */
+  void corrigerVilles(
+      final List<SalleAEnrichir> salles,
+      final Map<UUID, EnrichissementSalle> elements,
+      final Map<UUID, List<String>> villesConcertsReelles) {
+    for (final SalleAEnrichir salle : salles) {
+      final EnrichissementSalle element = elements.get(salle.id());
+      if (element != null) {
+        corrigerVille(salle, element, villesConcertsReelles.get(salle.id()));
+      }
+    }
+  }
+
+  /* package-private : appelé par CoherenceWikidataSalleService. */
+  List<SalleAEnrichir> sallesPositionComparable() {
+    return jdbc.query(
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id,"
+            + " NULL::double precision AS latitude, NULL::double precision AS longitude"
+            + " FROM salles s"
+            + " WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''"
+            + " AND "
+            + CoherenceWikidataSalleService.POSITION_COMPARABLE,
+        Map.of(),
+        (rs, _) -> CoherenceWikidataSalleService.versSalleAEnrichir(rs));
+  }
+
   /* package-private : appelé par CoherenceWikidataSalleService. */
   void invaliderWikidataId(final String qid) {
     final List<String> salles =

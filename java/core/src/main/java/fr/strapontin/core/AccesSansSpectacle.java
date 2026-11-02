@@ -33,7 +33,8 @@ public final class AccesSansSpectacle {
     }
     final String sansAccents =
         Normalizer.normalize(titre, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-    return ACCES.matcher(sansAccents.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+", " "))
+    return ACCES
+        .matcher(sansAccents.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+", " "))
         .find();
   }
 }
