@@ -37,7 +37,7 @@ public final class ClientNominatim {
           + "&format=jsonv2&zoom=10&addressdetails=1";
   // « municipality » désigne l'intercommunalité : jamais la commune.
   private static final List<String> CLES_COMMUNE = List.of("city", "town", "village");
-  // « FR-51 », « FR-75C » (Paris), « FR-69M » (Métropole de Lyon), « FR-2A », « FR-971 ».
+  // Département : « FR-51 », « FR-75C » (Paris), « FR-2A », « FR-971 ».
   private static final Pattern DEPARTEMENT_ISO = Pattern.compile("^FR-(2[AB]|\\d{2,3})[A-Z]?$");
   private static final String USER_AGENT =
       "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
@@ -193,12 +193,10 @@ public final class ClientNominatim {
   }
 
   /**
-   * Commune où tombe une position, son code postal et son département.
-   * @param commune nom de la commune, vide si Nominatim n'en donne pas
-   * @param codePostal code postal de l'adresse, vide s'il est inconnu (Paris n'en a pas à
-   *     ce niveau)
-   * @param departement numéro de département lu dans {@code ISO3166-2-lvl6} (« FR-75C » donne
-   *     « 75 »), vide s'il est inconnu
+   * Commune où tombe une position.
+   * @param commune nom de la commune, vide si inconnu
+   * @param codePostal code postal, vide s'il est inconnu (jamais pour Paris)
+   * @param departement numéro lu dans {@code ISO3166-2-lvl6}, vide s'il est inconnu
    * @param succes {@code false} si l'appel a échoué (aucune conclusion possible)
    */
   public record ResultatCommune(
