@@ -34,8 +34,7 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
-  // Jours sans observation avant de réinterroger un lieu : plus court pour Eventim, dont la
-  // disparition d'un produit se voit sinon tard ; Ticketmaster garde sept jours (quota).
+  // Délais avant de réinterroger un lieu (justification : worker/CLAUDE.md).
   private static final int JOURS_AVANT_RAFRAICHISSEMENT_TICKETMASTER = 7;
   private static final int JOURS_AVANT_RAFRAICHISSEMENT_EVENTIM = 3;
 
