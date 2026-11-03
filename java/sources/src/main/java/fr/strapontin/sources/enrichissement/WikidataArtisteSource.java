@@ -145,7 +145,12 @@ public class WikidataArtisteSource
       if (artisteId == null) {
         continue;
       }
-      final EnrichissementArtiste enrichissement = construireEnrichissement(qid, binding);
+      final EnrichissementArtiste enrichissement =
+          construireEnrichissement(
+              qid,
+              binding,
+              identifiantUnique(ClientSparqlWikidata.valeurBinding(binding, "deezerId")),
+              identifiantUnique(ClientSparqlWikidata.valeurBinding(binding, "tmId")));
       cache.put(qid, enrichissement);
       resultats.put(artisteId, enrichissement);
     }
@@ -163,7 +168,8 @@ public class WikidataArtisteSource
     // renvoyait des alias vides, et aucun alias n'était jamais enregistré.
     return """
     SELECT ?item (SAMPLE(COALESCE(?libelleFr, ?libelleEn)) AS ?itemLabel)
-           (SAMPLE(?deezer) AS ?deezerId) (SAMPLE(?tm) AS ?tmId)
+           (GROUP_CONCAT(DISTINCT ?deezer; separator="|") AS ?deezerId)
+           (GROUP_CONCAT(DISTINCT ?tm; separator="|") AS ?tmId)
            (GROUP_CONCAT(DISTINCT ?altLabel; separator="|") AS ?aliases) WHERE {
       VALUES ?item { %s }
       OPTIONAL { ?item rdfs:label ?libelleFr . FILTER(LANG(?libelleFr) = "fr") }
@@ -216,7 +222,12 @@ public class WikidataArtisteSource
     if (qid == null) {
       return Optional.empty();
     }
-    final EnrichissementArtiste enrichissement = construireEnrichissement(qid, bindings.get(0));
+    final EnrichissementArtiste enrichissement =
+        construireEnrichissement(
+            qid,
+            bindings.get(0),
+            identifiantUnique(valeursDistinctes(bindings, qid, "deezerId")),
+            identifiantUnique(valeursDistinctes(bindings, qid, "tmId")));
     cache.put(qid, enrichissement);
     return Optional.of(enrichissement);
   }
@@ -265,13 +276,36 @@ public class WikidataArtisteSource
   }
 
   private static EnrichissementArtiste construireEnrichissement(
-      final String qid, final Map<String, Object> binding) {
+      final String qid,
+      final Map<String, Object> binding,
+      final String deezerId,
+      final String tmId) {
     return new EnrichissementArtiste(
         qid,
         ClientSparqlWikidata.valeurBinding(binding, "itemLabel"),
-        ClientSparqlWikidata.valeurBinding(binding, "deezerId"),
-        ClientSparqlWikidata.valeurBinding(binding, "tmId"),
+        deezerId,
+        tmId,
         extraireAlias(binding));
+  }
+
+  // Un élément qui porte plusieurs identifiants (Genesis : « Genesis Band » et « Genesis » chez
+  // Deezer) n'en fixe aucun au hasard : la résolution par nom prend le relais.
+  private static String identifiantUnique(final String valeurs) {
+    if (valeurs == null || valeurs.isBlank() || valeurs.contains("|")) {
+      return null;
+    }
+    return valeurs;
+  }
+
+  // Toutes les valeurs d'une colonne pour un élément, séparées par « | » (une ligne par valeur).
+  private static String valeursDistinctes(
+      final List<Map<String, Object>> bindings, final String qid, final String cle) {
+    return bindings.stream()
+        .filter(b -> qid.equals(extraireQid(b)))
+        .map(b -> ClientSparqlWikidata.valeurBinding(b, cle))
+        .filter(v -> v != null && !v.isBlank())
+        .distinct()
+        .collect(Collectors.joining("|"));
   }
 
   // GROUP_CONCAT (séparateur "|") produit une chaîne vide, jamais absente,
