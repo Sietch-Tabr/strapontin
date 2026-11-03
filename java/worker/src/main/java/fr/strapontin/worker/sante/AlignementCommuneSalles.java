@@ -20,9 +20,8 @@ import org.springframework.stereotype.Service;
 /**
  * Aligne la ville d'une salle sans élément Wikidata sur la commune de sa
  * position (« Reims » pour Le K, à Tinqueux) par un géocodage inverse, quelques
- * salles par nuit ; même département seulement. Une salle sans aucune ville,
- * avec ou sans élément Wikidata (celui de l'Opéra-Comique n'a aucune
- * localisation), reçoit de la même façon la commune de sa position.
+ * salles par nuit ; même département seulement. Une salle sans ville, avec ou
+ * sans élément Wikidata, reçoit de même la commune de sa position.
  * @since 3.1.2
  * @author Kwaite
  */
@@ -31,6 +30,7 @@ public class AlignementCommuneSalles {
 
   private static final Logger LOG = LoggerFactory.getLogger(AlignementCommuneSalles.class);
   private static final int SALLES_PAR_NUIT = 20;
+  private static final String CLE_VILLE = "ville";
   private static final int JOURS_ENTRE_VERIFICATIONS = 90;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -86,7 +86,7 @@ public class AlignementCommuneSalles {
       if (commune.isPresent() && memeDepartement(resultat, (String) salle.get("dept"))) {
         jdbc.update(
             "UPDATE salles SET ville = :ville WHERE id = :id AND ville IS NULL",
-            Map.of("ville", commune.get(), "id", salle.get("id")));
+            Map.of(CLE_VILLE, commune.get(), "id", salle.get("id")));
         logsAdminWorker.inserer(
             "info",
             "reconciliation-nocturne",
@@ -94,7 +94,7 @@ public class AlignementCommuneSalles {
                 + salle.get("nom")
                 + " » renseignée d'après sa position : "
                 + commune.get(),
-            Map.of("salleId", ((UUID) salle.get("id")).toString(), "ville", commune.get()));
+            Map.of("salleId", ((UUID) salle.get("id")).toString(), CLE_VILLE, commune.get()));
         renseignees++;
       }
       jdbc.update(
@@ -154,7 +154,7 @@ public class AlignementCommuneSalles {
   private boolean corrigerSiBesoin(
       final Map<String, Object> salle, final ClientNominatim.ResultatCommune resultat) {
     final Optional<String> commune = resultat.commune().map(NomVille::nettoyer);
-    final String ville = (String) salle.get("ville");
+    final String ville = (String) salle.get(CLE_VILLE);
     final String dept = (String) salle.get("dept");
     if (commune.isEmpty()
         || !memeDepartement(resultat, dept)
@@ -164,7 +164,7 @@ public class AlignementCommuneSalles {
     }
     jdbc.update(
         "UPDATE salles SET ville = :ville WHERE id = :id",
-        Map.of("ville", commune.get(), "id", salle.get("id")));
+        Map.of(CLE_VILLE, commune.get(), "id", salle.get("id")));
     logsAdminWorker.inserer(
         "info",
         "reconciliation-nocturne",

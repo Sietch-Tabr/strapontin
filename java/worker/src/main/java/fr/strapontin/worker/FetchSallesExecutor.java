@@ -34,8 +34,7 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
-  // Jours sans observation avant de réinterroger un lieu : la disparition d'un produit se
-  // voit d'autant plus tard que ce délai est long.
+  // Jours sans observation avant de réinterroger un lieu.
   private static final int JOURS_AVANT_RAFRAICHISSEMENT_LIEU = 3;
 
   // Salle d'un département suivi dont une fiche à venir n'a plus été revue

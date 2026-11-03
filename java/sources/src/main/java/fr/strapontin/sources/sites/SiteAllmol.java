@@ -48,8 +48,7 @@ public class SiteAllmol extends SourceSiteSalle {
   private static final Pattern VILLE_ENTRE_PARENTHESES =
       Pattern.compile("^(.*?)\\s*\\(([^)]+)\\)$");
   private static final Pattern DEPT_OUTRE_MER = Pattern.compile("97\\d");
-  // Lieux que le site publie sans commune : le Vélodrome Amédée Détraux (ex-Gourde-Liane) est à
-  // Baie-Mahault.
+  // Lieux publiés sans commune : le Vélodrome Amédée Détraux est à Baie-Mahault.
   private static final Map<String, String> COMMUNES_DES_LIEUX =
       Map.of("velodrome amedee detraux", "Baie-Mahault");
   private static final Map<String, ZoneId> FUSEAUX =
