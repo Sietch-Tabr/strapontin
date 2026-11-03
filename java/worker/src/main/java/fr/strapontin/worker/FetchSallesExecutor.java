@@ -34,8 +34,12 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
+  // Jours sans observation avant de réinterroger un lieu : la disparition d'un produit se
+  // voit d'autant plus tard que ce délai est long.
+  private static final int JOURS_AVANT_RAFRAICHISSEMENT_LIEU = 3;
+
   // Salle d'un département suivi dont une fiche à venir n'a plus été revue
-  // depuis une semaine : le fetch de région borne catégories et date (6 mois).
+  // depuis quelques jours : le fetch de région borne catégories et date (6 mois).
   // Interrogée par lieu, sans filtre. Une fiche déjà absente au seuil n'est pas
   // renvoyée par le lieu : elle ne le fait plus réinterroger.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
@@ -46,7 +50,9 @@ class FetchSallesExecutor {
           + " AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))"
           + " AND NOT EXISTS (SELECT 1 FROM observations o"
           + " WHERE o.evenement_id = e.id"
-          + " AND o.updated_at > now() - interval '7 days'))";
+          + " AND o.updated_at > now() - interval '"
+          + JOURS_AVANT_RAFRAICHISSEMENT_LIEU
+          + " days'))";
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
