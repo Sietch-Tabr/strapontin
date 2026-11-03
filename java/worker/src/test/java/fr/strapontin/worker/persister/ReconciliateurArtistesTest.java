@@ -226,4 +226,59 @@ class ReconciliateurArtistesTest {
             org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
                 params -> "damien gillard rude".equals(params.getValue("nouvelArtisteNorm"))));
   }
+
+  private static ValeurConcert concertDeLaSalle(
+      final String artiste, final String salleNorm, final String classification) {
+    return FabriqueValeurConcert.nouveau()
+        .artiste(artiste)
+        .artisteNorm(artiste.toLowerCase())
+        .date(LocalDate.of(2026, 11, 4))
+        .salle("Accor Arena")
+        .salleNorm(salleNorm)
+        .url("https://www.eventim.fr/event/sidiki-22000001")
+        .source("eventim")
+        .classification(classification)
+        .construire();
+  }
+
+  private static Map<String, Object> existantAccorArena(final String artisteNorm) {
+    final Map<String, Object> ligne = existant(artisteNorm);
+    ligne.put("date", "2026-11-04");
+    ligne.put("salle_norm", "accor arena");
+    return ligne;
+  }
+
+  // Sidiki Diabaté : le titre Eventim « … a l accor arena » ne remplace pas le nom en base.
+  @Test
+  void reconcilierArtistes_titreNomPlusSalleIneligibleDeezer_garderLeNomCourt() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(existantAccorArena("sidiki diabate")));
+
+    final List<ValeurConcert> resultat =
+        reconciliateur.reconcilierArtistes(
+            List.of(concertDeLaSalle("sidiki diabate a l accor arena", "accor arena", null)));
+
+    assertEquals("sidiki diabate", resultat.get(0).artisteNorm());
+    verify(jdbc, never()).update(anyString(), any(SqlParameterSource.class));
+  }
+
+  // Le nom déjà dégradé en base (« … a l accor arena ») est ramené au nom court qui arrive.
+  @Test
+  void reconcilierArtistes_nomExistantNomPlusSalle_estRamenePourLeNomCourt() {
+    final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+    final ReconciliateurArtistes reconciliateur = new ReconciliateurArtistes(jdbc);
+    when(jdbc.queryForList(anyString(), anyMap()))
+        .thenReturn(List.of(existantAccorArena("sidiki diabate a l accor arena")));
+
+    reconciliateur.reconcilierArtistes(
+        List.of(concertDeLaSalle("sidiki diabate", "accor arena", "music")));
+
+    verify(jdbc)
+        .update(
+            org.mockito.ArgumentMatchers.contains("UPDATE evenements"),
+            org.mockito.ArgumentMatchers.<SqlParameterSource>argThat(
+                params -> "sidiki diabate".equals(params.getValue("nouvelArtisteNorm"))));
+  }
 }

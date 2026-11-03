@@ -4,7 +4,9 @@
  */
 package fr.strapontin.core;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -47,6 +49,11 @@ public final class CorrespondanceArtiste {
           "avec",
           "x",
           "presents");
+  // Liaisons entre un nom d'artiste et celui de la salle dans un titre (« … à l'Accor Arena »).
+  private static final Set<String> MOTS_LIAISON_SALLE =
+      Set.of(
+          "a", "au", "aux", "l", "la", "le", "les", "chez", "de", "du", "des", "d", "en", "at",
+          "live", "concert");
   private static final Pattern ANNEE = Pattern.compile("(19|20)\\d{2}");
   private static final int LONGUEUR_MIN_MOT_AFFICHE = 3;
 
@@ -123,5 +130,28 @@ public final class CorrespondanceArtiste {
     final String court = nomA.length() <= nomB.length() ? nomA : nomB;
     final String plusLong = nomA.length() <= nomB.length() ? nomB : nomA;
     return court.contains(" ") && plusLong.startsWith(court + " ");
+  }
+
+  /**
+   * Un titre qui reprend le nom de l'artiste suivi de la salle
+   * (« sidiki diabate a l accor arena » pour « sidiki diabate ») n'est pas un
+   * autre nom d'artiste : les mots ajoutés, hors liaisons, sont tous des mots
+   * du nom de la salle.
+   * @param titre titre complet normalisé
+   * @param nom nom d'artiste normalisé que le titre commencerait
+   * @param salleNorm nom de la salle normalisé, peut être {@code null}
+   * @return {@code true} si le titre est le nom suivi de la salle
+   */
+  public static boolean estNomSuiviDeLaSalle(
+      final String titre, final String nom, final String salleNorm) {
+    if (titre == null || nom == null || salleNorm == null || !titre.startsWith(nom + " ")) {
+      return false;
+    }
+    final Set<String> motsSalle = Set.of(salleNorm.split("\\s+"));
+    final List<String> motsAjoutes =
+        Arrays.stream(titre.substring(nom.length() + 1).split("\\s+"))
+            .filter(mot -> !mot.isEmpty() && !MOTS_LIAISON_SALLE.contains(mot))
+            .toList();
+    return !motsAjoutes.isEmpty() && motsSalle.containsAll(motsAjoutes);
   }
 }
