@@ -5,6 +5,7 @@
 package fr.strapontin.worker.enrichissement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -80,6 +81,46 @@ class EnrichissementSallesServiceIntegrationTest extends AbstractWorkerIntegrati
     final List<UUID> idsTraites = captor.getValue().stream().map(SalleAEnrichir::id).toList();
     assertTrue(idsTraites.contains(salleAujourdhui));
     assertEquals(1, idsTraites.size());
+  }
+
+  private UUID insererSalleAvecSignalementCoordonnees(final String nom, final String wikidataId) {
+    final UUID id =
+        jdbc.queryForObject(
+            "INSERT INTO salles (salle_cle, nom, nom_norm, wikidata_id)"
+                + " VALUES (:cle, :nom, :cle, :wikidata) RETURNING id",
+            new org.springframework.jdbc.core.namedparam.MapSqlParameterSource()
+                .addValue("cle", nom.toLowerCase())
+                .addValue("nom", nom)
+                .addValue("wikidata", wikidataId),
+            UUID.class);
+    jdbc.update(
+        "INSERT INTO signalements_matching (type, entite_type, entite_id, confiance)"
+            + " VALUES ('wikidata_coordonnees_divergentes', 'salle', CAST(:id AS uuid), 'basse')",
+        Map.of("id", id.toString()));
+    return id;
+  }
+
+  private boolean signalementActif(final UUID salleId) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM signalements_matching WHERE entite_id ="
+                + " CAST(:id AS uuid) AND type = 'wikidata_coordonnees_divergentes'"
+                + " AND resolu_le IS NULL)",
+            Map.of("id", salleId.toString()),
+            Boolean.class));
+  }
+
+  // Axone : l'écart de coordonnées a disparu, la salle porte maintenant son élément Wikidata ;
+  // Chantilly : sans élément, son écart peut persister et son signalement reste actif.
+  @Test
+  void enrichir_signalementCoordonneesDeSalleDevenueAvecWikidata_estClos() {
+    final UUID avecElement = insererSalleAvecSignalementCoordonnees("Axone", "Q4829512");
+    final UUID sansElement = insererSalleAvecSignalementCoordonnees("Chantilly", null);
+
+    service.enrichir();
+
+    assertFalse(signalementActif(avecElement));
+    assertTrue(signalementActif(sansElement));
   }
 
   @Test
