@@ -4,7 +4,6 @@
  */
 package fr.strapontin.worker.sante;
 
-import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.enrichissement.EnrichissementSalle;
 import fr.strapontin.sources.enrichissement.SalleAEnrichir;
@@ -29,8 +28,6 @@ final class CorrectionsSallesWikidata {
   private static final String SOURCE_LOG = "coherence-wikidata";
   private static final String CLE_WIKIDATA_ID = "wikidataId";
   private static final String CLE_VILLE = "ville";
-  // Au-delà, l'élément ne désigne pas le lieu de la salle : sa commune est ignorée.
-  private static final double DISTANCE_MAX_COMMUNE_METRES = 20_000;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
@@ -157,65 +154,6 @@ final class CorrectionsSallesWikidata {
             + CoherenceWikidataSalleService.POSITION_COMPARABLE,
         Map.of(),
         (rs, _) -> CoherenceWikidataSalleService.versSalleAEnrichir(rs));
-  }
-
-  /**
-   * Donne la commune de son élément Wikidata à une salle sans ville (ni par ses
-   * concerts ni par ses lieux). Une position connue des deux côtés doit être à
-   * moins de 20 km.
-   * @return nombre de salles dont la ville a été renseignée
-   */
-  /* package-private : appelé par CoherenceWikidataSalleService. */
-  int completerVillesManquantes() {
-    final List<SalleAEnrichir> salles =
-        jdbc.query(
-            "SELECT id, nom, nom_norm, ville, dept, wikidata_id, latitude, longitude FROM salles"
-                + " WHERE wikidata_id IS NOT NULL AND (ville IS NULL OR ville = '')",
-            Map.of(),
-            (rs, _) -> CoherenceWikidataSalleService.versSalleAEnrichir(rs));
-    if (salles.isEmpty()) {
-      return 0;
-    }
-    final Map<UUID, EnrichissementSalle> elements = wikidata.enrichirLot(salles);
-    int completees = 0;
-    for (final SalleAEnrichir salle : salles) {
-      final EnrichissementSalle element = elements.get(salle.id());
-      if (element != null && communeUtilisable(salle, element)) {
-        completees +=
-            jdbc.update(
-                "UPDATE salles SET ville = :ville WHERE id = :id AND (ville IS NULL OR ville = '')",
-                Map.of(CLE_VILLE, element.ville(), "id", salle.id()));
-        logsAdminWorker.inserer(
-            "info",
-            SOURCE_LOG,
-            "ville de la salle reprise de la commune Wikidata salle="
-                + salle.nom()
-                + " commune="
-                + element.ville(),
-            Map.of("salleId", salle.id().toString(), CLE_VILLE, element.ville()));
-      }
-    }
-    LOG.info(
-        "coherence:wikidata:villes-manquantes candidates={} completees={}",
-        salles.size(),
-        completees);
-    return completees;
-  }
-
-  private static boolean communeUtilisable(
-      final SalleAEnrichir salle, final EnrichissementSalle element) {
-    if (element.ville() == null || element.ville().isBlank()) {
-      return false;
-    }
-    final boolean positionsConnues =
-        salle.latitude() != null
-            && salle.longitude() != null
-            && element.latitude() != null
-            && element.longitude() != null;
-    return !positionsConnues
-        || DistanceGeo.metres(
-                salle.latitude(), salle.longitude(), element.latitude(), element.longitude())
-            <= DISTANCE_MAX_COMMUNE_METRES;
   }
 
   /* package-private : appelé par CoherenceWikidataSalleService. */

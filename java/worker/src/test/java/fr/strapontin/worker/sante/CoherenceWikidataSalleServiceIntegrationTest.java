@@ -167,57 +167,6 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
             String.class));
   }
 
-  private UUID salleSansVille(final Double latitude, final Double longitude) {
-    final UUID id = UUID.randomUUID();
-    jdbc.update(
-        "INSERT INTO salles (id, salle_cle, nom, nom_norm, dept, wikidata_id, latitude, longitude)"
-            + " VALUES (CAST(:id AS uuid), 'opera-comique', 'Opéra-Comique', 'opera comique', '75',"
-            + " 'Q872222', :lat, :lon)",
-        new MapSqlParameterSource()
-            .addValue("id", id.toString())
-            .addValue("lat", latitude, Types.DOUBLE)
-            .addValue("lon", longitude, Types.DOUBLE));
-    return id;
-  }
-
-  private String villeDe(final UUID id) {
-    return jdbc.queryForObject(
-        "SELECT ville FROM salles WHERE id = CAST(:id AS uuid)",
-        Map.of("id", id.toString()),
-        String.class);
-  }
-
-  // Opéra-Comique : un élément Wikidata, aucune ville, aucun concert.
-  @Test
-  void verifier_salleSansVilleAvecElementWikidata_reprendLaCommuneDeLElement() {
-    final UUID id = salleSansVille(48.8707, 2.3376);
-    when(wikidataSalleSource.enrichirLot(any()))
-        .thenReturn(
-            Map.of(
-                id,
-                new EnrichissementSalle(
-                    "Q872222", "Opéra-Comique", "Paris", null, null, 48.8708, 2.3377)));
-
-    coherence.verifier();
-
-    assertEquals("Paris", villeDe(id));
-  }
-
-  @Test
-  void verifier_salleSansVilleEtElementTropEloigne_resteSansVille() {
-    final UUID id = salleSansVille(48.8707, 2.3376);
-    when(wikidataSalleSource.enrichirLot(any()))
-        .thenReturn(
-            Map.of(
-                id,
-                new EnrichissementSalle(
-                    "Q872222", "Opéra-Comique", "Lyon", null, null, 45.76, 4.83)));
-
-    coherence.verifier();
-
-    assertNull(villeDe(id));
-  }
-
   // Alhambra : élément détruit retiré, et le journal nomme la salle.
   @Test
   void revaliderTypes_elementInvalide_journalNommeLaSalle() {

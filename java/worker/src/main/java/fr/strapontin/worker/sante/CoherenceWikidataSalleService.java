@@ -99,7 +99,6 @@ public class CoherenceWikidataSalleService {
             + " WHERE coherence_wikidata_signalee IS NOT NULL AND "
             + POSITION_COMPARABLE,
         Map.of());
-    corrections.completerVillesManquantes();
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
     final List<SalleAEnrichir> sallesPositionComparable = corrections.sallesPositionComparable();
     final List<SalleAEnrichir> aLire = new ArrayList<>(candidats);

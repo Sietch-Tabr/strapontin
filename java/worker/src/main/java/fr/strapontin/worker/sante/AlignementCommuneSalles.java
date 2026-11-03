@@ -20,7 +20,9 @@ import org.springframework.stereotype.Service;
 /**
  * Aligne la ville d'une salle sans élément Wikidata sur la commune de sa
  * position (« Reims » pour Le K, à Tinqueux) par un géocodage inverse, quelques
- * salles par nuit ; même département seulement.
+ * salles par nuit ; même département seulement. Une salle sans aucune ville,
+ * avec ou sans élément Wikidata (celui de l'Opéra-Comique n'a aucune
+ * localisation), reçoit de la même façon la commune de sa position.
  * @since 3.1.2
  * @author Kwaite
  */
@@ -50,11 +52,72 @@ public class AlignementCommuneSalles {
   }
 
   /**
-   * Vérifie un lot de salles et corrige la ville de celles dont la position
-   * tombe dans une autre commune du même département.
-   * @return nombre de villes corrigées
+   * Renseigne la ville des salles qui n'en ont pas, puis vérifie un lot de
+   * salles et corrige la ville de celles dont la position tombe dans une autre
+   * commune du même département.
+   * @return nombre de villes renseignées ou corrigées
    */
   public int aligner() {
+    return completerVillesManquantes() + corrigerVillesDivergentes();
+  }
+
+  private int completerVillesManquantes() {
+    final List<Map<String, Object>> salles =
+        jdbc.queryForList(
+            """
+            SELECT s.id, s.nom, s.dept, s.latitude, s.longitude
+            FROM salles s
+            WHERE s.ville IS NULL AND s.dept IS NOT NULL
+              AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+              AND (s.commune_verifiee_le IS NULL
+                   OR s.commune_verifiee_le < now() - make_interval(days => :jours))
+            ORDER BY s.commune_verifiee_le NULLS FIRST
+            LIMIT :nombre
+            """,
+            Map.of("jours", JOURS_ENTRE_VERIFICATIONS, "nombre", SALLES_PAR_NUIT));
+    int renseignees = 0;
+    for (final Map<String, Object> salle : salles) {
+      final ClientNominatim.ResultatCommune resultat = interroger(salle);
+      if (!resultat.succes()) {
+        LOG.warn("Nominatim injoignable, villes manquantes interrompues");
+        break;
+      }
+      final Optional<String> commune = resultat.commune().map(NomVille::nettoyer);
+      if (commune.isPresent() && memeDepartement(resultat, (String) salle.get("dept"))) {
+        jdbc.update(
+            "UPDATE salles SET ville = :ville WHERE id = :id AND ville IS NULL",
+            Map.of("ville", commune.get(), "id", salle.get("id")));
+        logsAdminWorker.inserer(
+            "info",
+            "reconciliation-nocturne",
+            "Ville de la salle « "
+                + salle.get("nom")
+                + " » renseignée d'après sa position : "
+                + commune.get(),
+            Map.of("salleId", ((UUID) salle.get("id")).toString(), "ville", commune.get()));
+        renseignees++;
+      }
+      jdbc.update(
+          "UPDATE salles SET commune_verifiee_le = now() WHERE id = :id",
+          Map.of("id", salle.get("id")));
+    }
+    return renseignees;
+  }
+
+  private ClientNominatim.ResultatCommune interroger(final Map<String, Object> salle) {
+    return nominatim.communeDe(
+        new ClientNominatim.Coordonnees(
+            ((Number) salle.get("latitude")).doubleValue(),
+            ((Number) salle.get("longitude")).doubleValue()));
+  }
+
+  private static boolean memeDepartement(
+      final ClientNominatim.ResultatCommune resultat, final String dept) {
+    return resultat.codePostal().map(Normalisation::extraireDeptFrancais).stream()
+        .anyMatch(dept::equals);
+  }
+
+  private int corrigerVillesDivergentes() {
     final List<Map<String, Object>> salles =
         jdbc.queryForList(
             """
@@ -73,11 +136,7 @@ public class AlignementCommuneSalles {
             Map.of("jours", JOURS_ENTRE_VERIFICATIONS, "nombre", SALLES_PAR_NUIT));
     int corrigees = 0;
     for (final Map<String, Object> salle : salles) {
-      final ClientNominatim.ResultatCommune resultat =
-          nominatim.communeDe(
-              new ClientNominatim.Coordonnees(
-                  ((Number) salle.get("latitude")).doubleValue(),
-                  ((Number) salle.get("longitude")).doubleValue()));
+      final ClientNominatim.ResultatCommune resultat = interroger(salle);
       if (!resultat.succes()) {
         LOG.warn("Nominatim injoignable, alignement des communes interrompu");
         break;
@@ -97,11 +156,8 @@ public class AlignementCommuneSalles {
     final Optional<String> commune = resultat.commune().map(NomVille::nettoyer);
     final String ville = (String) salle.get("ville");
     final String dept = (String) salle.get("dept");
-    final boolean memeDepartement =
-        resultat.codePostal().map(Normalisation::extraireDeptFrancais).stream()
-            .anyMatch(dept::equals);
     if (commune.isEmpty()
-        || !memeDepartement
+        || !memeDepartement(resultat, dept)
         || Normalisation.normaliserTexte(commune.get())
             .equals(Normalisation.normaliserTexte(ville))) {
       return false;
