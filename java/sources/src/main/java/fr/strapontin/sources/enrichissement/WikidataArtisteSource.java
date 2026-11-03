@@ -288,8 +288,8 @@ public class WikidataArtisteSource
         extraireAlias(binding));
   }
 
-  // Un élément qui porte plusieurs identifiants (Genesis : « Genesis Band » et « Genesis » chez
-  // Deezer) n'en fixe aucun au hasard : la résolution par nom prend le relais.
+  // Plusieurs identifiants pour un élément (Genesis chez Deezer) : aucun n'est
+  // choisi au hasard, la résolution par nom prend le relais.
   private static String identifiantUnique(final String valeurs) {
     if (valeurs == null || valeurs.isBlank() || valeurs.contains("|")) {
       return null;
@@ -297,7 +297,7 @@ public class WikidataArtisteSource
     return valeurs;
   }
 
-  // Toutes les valeurs d'une colonne pour un élément, séparées par « | » (une ligne par valeur).
+  // Valeurs d'une colonne pour un élément, séparées par « | ».
   private static String valeursDistinctes(
       final List<Map<String, Object>> bindings, final String qid, final String cle) {
     return bindings.stream()

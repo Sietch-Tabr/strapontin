@@ -270,18 +270,17 @@ public class ReconciliateurArtistes {
     return null;
   }
 
-  // Un titre « nom + salle » (« sidiki diabate a l accor arena ») ne remplace jamais le nom court ;
-  // à l'inverse un nom déjà dégradé ainsi est ramené au nom court, quelle que soit l'éligibilité.
+  // Un titre « nom + salle » ne remplace jamais le nom court ; un nom déjà dégradé
+  // ainsi est ramené au nom court, éligible à Deezer ou non.
   private static boolean correctionRetroactiveJustifiee(
       final ValeurConcert concert, final ArtisteExistant existant) {
     final String entrant = concert.artisteNorm();
     final String ancien = existant.artisteNorm();
-    if (CorrespondanceArtiste.estNomSuiviDeLaSalle(ancien, entrant, concert.salleNorm())) {
-      return true;
-    }
-    return !EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())
-        && !ancien.startsWith(entrant + " ")
-        && !CorrespondanceArtiste.estNomSuiviDeLaSalle(entrant, ancien, concert.salleNorm());
+    final String salle = concert.salleNorm();
+    return CorrespondanceArtiste.estNomSuiviDeLaSalle(ancien, entrant, salle)
+        || (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())
+            && !ancien.startsWith(entrant + " ")
+            && !CorrespondanceArtiste.estNomSuiviDeLaSalle(entrant, ancien, salle));
   }
 
   /**

@@ -38,7 +38,6 @@ import org.springframework.stereotype.Service;
 public class EnrichissementSallesService {
 
   private static final Logger LOG = LoggerFactory.getLogger(EnrichissementSallesService.class);
-  private static final String SIGNALEMENT_COORDONNEES = "wikidata_coordonnees_divergentes";
 
   private static final int TAILLE_LOT_PERSISTANCE = 25;
   // Délai entre deux lots de persistance, en plus du délai intra-source
@@ -58,6 +57,7 @@ public class EnrichissementSallesService {
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final SignalementMatchingService signalementMatchingService;
   private final FiltreElementsExclus filtre;
+  private final ClotureSignalementsCoordonnees cloture;
 
   /**
    * @param jdbc accès JDBC
@@ -81,37 +81,19 @@ public class EnrichissementSallesService {
     this.fusionSallesClePortee = fusionSallesClePortee;
     this.signalementMatchingService = signalementMatchingService;
     this.filtre = new FiltreElementsExclus(sources, logsAdminWorker);
+    this.cloture = new ClotureSignalementsCoordonnees(jdbc, signalementMatchingService);
   }
 
   /**
    * Enrichit les salles sans {@code wikidata_id} du {@code jour_batch}
    * courant (rotation hebdomadaire), priorisées par nombre de concerts
    * liés — n'écrase jamais un {@code nom_affiche} déjà présent.
-   * Referme ensuite les signalements d'écart de coordonnées des salles qui
+   * Referme d'abord les signalements d'écart de coordonnées des salles qui
    * portent désormais un élément Wikidata ou n'existent plus.
    * @return nombre de salles effectivement mises à jour
    */
   public int enrichir() {
-    final int nbEnrichis = enrichirLesCandidats();
-    cloreSignalementsCoordonneesResolus();
-    return nbEnrichis;
-  }
-
-  // Une salle sans élément Wikidata reste concernée : son écart peut persister.
-  private void cloreSignalementsCoordonneesResolus() {
-    final List<UUID> encoreConcernees =
-        jdbc.queryForList(
-            """
-            SELECT sm.entite_id FROM signalements_matching sm
-            JOIN salles s ON s.id = sm.entite_id
-            WHERE sm.type = :type AND sm.resolu_le IS NULL AND s.wikidata_id IS NULL
-            """,
-            Map.of("type", SIGNALEMENT_COORDONNEES),
-            UUID.class);
-    signalementMatchingService.clore(SIGNALEMENT_COORDONNEES, encoreConcernees);
-  }
-
-  private int enrichirLesCandidats() {
+    cloture.clore();
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
       LOG.info("enrichissement:salles — aucun candidat");
@@ -184,7 +166,7 @@ public class EnrichissementSallesService {
           .forEach(
               (salleId, details) ->
                   signalementMatchingService.signaler(
-                      SIGNALEMENT_COORDONNEES,
+                      ClotureSignalementsCoordonnees.TYPE,
                       "salle",
                       salleId,
                       "basse",

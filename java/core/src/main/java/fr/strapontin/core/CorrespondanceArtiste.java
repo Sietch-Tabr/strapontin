@@ -49,7 +49,7 @@ public final class CorrespondanceArtiste {
           "avec",
           "x",
           "presents");
-  // Liaisons entre un nom d'artiste et celui de la salle dans un titre (« … à l'Accor Arena »).
+  // Liaisons entre le nom d'un artiste et celui de la salle dans un titre.
   private static final Set<String> MOTS_LIAISON_SALLE =
       Set.of(
           "a", "au", "aux", "l", "la", "le", "les", "chez", "de", "du", "des", "d", "en", "at",
@@ -133,10 +133,8 @@ public final class CorrespondanceArtiste {
   }
 
   /**
-   * Un titre qui reprend le nom de l'artiste suivi de la salle
-   * (« sidiki diabate a l accor arena » pour « sidiki diabate ») n'est pas un
-   * autre nom d'artiste : les mots ajoutés, hors liaisons, sont tous des mots
-   * du nom de la salle.
+   * Un titre « nom + salle » n'est pas un autre artiste : les mots ajoutés, hors
+   * liaisons, sont tous des mots du nom de la salle.
    * @param titre titre complet normalisé
    * @param nom nom d'artiste normalisé que le titre commencerait
    * @param salleNorm nom de la salle normalisé, peut être {@code null}
