@@ -24,6 +24,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -107,10 +108,11 @@ public class GlobalExceptionHandler {
    * Client déconnecté pendant l'envoi de la réponse : rien à répondre ni à
    * signaler (la réponse, parfois une image, ne peut plus recevoir de JSON).
    *
-   * @param ex l'exception de connexion interrompue
+   * @param ex l'exception de connexion interrompue (Tomcat, ou celle de Spring
+   *     qui l'enveloppe pour une réponse asynchrone)
    */
-  @ExceptionHandler(ClientAbortException.class)
-  public void gererClientDeconnecte(final ClientAbortException ex) {
+  @ExceptionHandler({ClientAbortException.class, AsyncRequestNotUsableException.class})
+  public void gererClientDeconnecte(final Exception ex) {
     LOG.debug("Connexion interrompue par le client : {}", ex.getMessage());
   }
 
