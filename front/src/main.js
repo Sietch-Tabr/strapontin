@@ -10,6 +10,7 @@ import { afficherToast } from "./composables/useToasts.js";
 import {
   construireCorpsErreurJs,
   construireCorpsErreurPromise,
+  lireContexteClient,
 } from "./utils/erreursClient.js";
 
 createApp(App).use(router).mount("#app");
@@ -30,13 +31,24 @@ function signalerErreurClient(corps) {
 
 window.addEventListener("error", (e) => {
   signalerErreurClient(
-    construireCorpsErreurJs(e.message, e.filename, e.lineno, e.colno, e.error),
+    construireCorpsErreurJs(
+      e.message,
+      e.filename,
+      e.lineno,
+      e.colno,
+      e.error,
+      lireContexteClient(),
+    ),
   );
 });
 
 window.addEventListener("unhandledrejection", (e) => {
   signalerErreurClient(
-    construireCorpsErreurPromise(e.reason, window.location.href),
+    construireCorpsErreurPromise(
+      e.reason,
+      window.location.href,
+      lireContexteClient(),
+    ),
   );
 });
 

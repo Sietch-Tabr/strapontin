@@ -95,7 +95,10 @@ public class ClientController {
     meta.put("userAgent", userAgent != null ? userAgent : "");
     ajouterMetaSupplementaire(meta, corps);
 
-    logAdminService.logAdmin("error", "client-js", "[" + type + "] " + message, meta);
+    // Une erreur masquée par le navigateur (script d'une autre origine, extension) n'est pas
+    // localisable et ne vient pas de l'application : consignée, mais sans alerte d'administration.
+    final String niveau = Boolean.TRUE.equals(corps.get("masquee")) ? "warn" : "error";
+    logAdminService.logAdmin(niveau, "client-js", "[" + type + "] " + message, meta);
 
     return ResponseEntity.status(201).body(Map.of("succes", true));
   }

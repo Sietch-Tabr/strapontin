@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -53,6 +54,29 @@ class ClientControllerTest {
 
     assertEquals(201, reponse.getStatusCode().value());
     verify(logAdminService).logAdmin(anyString(), anyString(), anyString(), anyMap());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void signalerErreur_erreurMasqueeParLeNavigateur_estJournaliseeEnWarnSansAlerte() {
+    final Map<String, Object> corps = new HashMap<>();
+    corps.put("message", "Script error.");
+    corps.put("type", "js-error");
+    corps.put("masquee", true);
+    corps.put("page", "/decouverte");
+
+    controller.signalerErreur(corps, null, request);
+
+    final ArgumentCaptor<Map<String, Object>> meta = ArgumentCaptor.forClass(Map.class);
+    verify(logAdminService).logAdmin(eq("warn"), eq("client-js"), anyString(), meta.capture());
+    assertEquals("/decouverte", meta.getValue().get("page"));
+  }
+
+  @Test
+  void signalerErreur_erreurLocalisable_resteEnErreur() {
+    controller.signalerErreur(Map.of("message", "Boom", "type", "js-error"), null, request);
+
+    verify(logAdminService).logAdmin(eq("error"), eq("client-js"), anyString(), anyMap());
   }
 
   @Test
