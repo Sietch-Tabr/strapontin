@@ -141,6 +141,19 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
             Map.of(), Long.class));
   }
 
+  // Paris : Nominatim ne donne aucun code postal, le département vient de ISO3166-2-lvl6.
+  @Test
+  void aligner_salleSansVilleEtCommuneSansCodePostal_utiliseLeDepartementIso() {
+    final UUID salle = salle("Opéra-Comique", null, "Q872222");
+    when(nominatim.communeDe(any()))
+        .thenReturn(
+            new ClientNominatim.ResultatCommune(
+                Optional.of("Reims"), Optional.empty(), Optional.of("51"), true));
+
+    assertEquals(1, alignement.aligner());
+    assertEquals("Reims", ville(salle));
+  }
+
   @Test
   void aligner_salleSansVilleEtCommuneDUnAutreDepartement_resteSansVille() {
     final UUID salle = salle("Salle W", null, null);

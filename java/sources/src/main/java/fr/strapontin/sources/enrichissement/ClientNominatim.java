@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
@@ -35,6 +37,8 @@ public final class ClientNominatim {
           + "&format=jsonv2&zoom=10&addressdetails=1";
   // « municipality » désigne l'intercommunalité : jamais la commune.
   private static final List<String> CLES_COMMUNE = List.of("city", "town", "village");
+  // « FR-51 », « FR-75C » (Paris), « FR-69M » (Métropole de Lyon), « FR-2A », « FR-971 ».
+  private static final Pattern DEPARTEMENT_ISO = Pattern.compile("^FR-(2[AB]|\\d{2,3})[A-Z]?$");
   private static final String USER_AGENT =
       "Strapontin/2.9.0 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";
 
@@ -189,13 +193,31 @@ public final class ClientNominatim {
   }
 
   /**
-   * Commune où tombe une position, et son code postal.
+   * Commune où tombe une position, son code postal et son département.
    * @param commune nom de la commune, vide si Nominatim n'en donne pas
-   * @param codePostal code postal de l'adresse, vide s'il est inconnu
+   * @param codePostal code postal de l'adresse, vide s'il est inconnu (Paris n'en a pas à
+   *     ce niveau)
+   * @param departement numéro de département lu dans {@code ISO3166-2-lvl6} (« FR-75C » donne
+   *     « 75 »), vide s'il est inconnu
    * @param succes {@code false} si l'appel a échoué (aucune conclusion possible)
    */
   public record ResultatCommune(
-      Optional<String> commune, Optional<String> codePostal, boolean succes) {}
+      Optional<String> commune,
+      Optional<String> codePostal,
+      Optional<String> departement,
+      boolean succes) {
+
+    /**
+     * Résultat sans département connu.
+     * @param commune nom de la commune
+     * @param codePostal code postal
+     * @param succes succès de l'appel
+     */
+    public ResultatCommune(
+        final Optional<String> commune, final Optional<String> codePostal, final boolean succes) {
+      this(commune, codePostal, Optional.empty(), succes);
+    }
+  }
 
   /**
    * Géocodage inverse : commune d'une position.
@@ -229,7 +251,14 @@ public final class ClientNominatim {
           Optional.ofNullable(adresse.get("postcode"))
               .filter(String.class::isInstance)
               .map(String.class::cast);
-      return new ResultatCommune(commune, codePostal, true);
+      final Optional<String> departement =
+          Optional.ofNullable(adresse.get("ISO3166-2-lvl6"))
+              .filter(String.class::isInstance)
+              .map(String.class::cast)
+              .map(DEPARTEMENT_ISO::matcher)
+              .filter(Matcher::matches)
+              .map(m -> m.group(1));
+      return new ResultatCommune(commune, codePostal, departement, true);
     } catch (Exception e) {
       LOG.warn("Nominatim géocodage inverse échoué : {}", e.getMessage());
       return new ResultatCommune(Optional.empty(), Optional.empty(), false);

@@ -113,7 +113,11 @@ public class AlignementCommuneSalles {
 
   private static boolean memeDepartement(
       final ClientNominatim.ResultatCommune resultat, final String dept) {
-    return resultat.codePostal().map(Normalisation::extraireDeptFrancais).stream()
+    return resultat
+        .codePostal()
+        .map(Normalisation::extraireDeptFrancais)
+        .or(resultat::departement)
+        .stream()
         .anyMatch(dept::equals);
   }
 
