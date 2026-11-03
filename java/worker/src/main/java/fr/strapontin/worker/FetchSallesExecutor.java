@@ -34,30 +34,40 @@ class FetchSallesExecutor {
   private static final Logger LOG = LoggerFactory.getLogger(FetchSallesExecutor.class);
   private static final int TAILLE_LOT_SALLES = 20;
 
-  // Jours sans observation avant de réinterroger un lieu.
-  private static final int JOURS_AVANT_RAFRAICHISSEMENT_LIEU = 3;
+  // Jours sans observation avant de réinterroger un lieu : plus court pour Eventim, dont la
+  // disparition d'un produit se voit sinon tard ; Ticketmaster garde sept jours (quota).
+  private static final int JOURS_AVANT_RAFRAICHISSEMENT_TICKETMASTER = 7;
+  private static final int JOURS_AVANT_RAFRAICHISSEMENT_EVENTIM = 3;
 
   // Salle d'un département suivi dont une fiche à venir n'a plus été revue
-  // depuis quelques jours : le fetch de région borne catégories et date (6 mois).
+  // depuis plusieurs jours : le fetch de région borne catégories et date (6 mois).
   // Interrogée par lieu, sans filtre. Une fiche déjà absente au seuil n'est pas
   // renvoyée par le lieu : elle ne le fait plus réinterroger.
   private static final String CONDITION_SALLE_A_RAFRAICHIR =
-      "EXISTS (SELECT 1 FROM evenements e"
-          + " WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE"
-          + " AND e.absences_consecutives < "
-          + WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES
-          + " AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))"
-          + " AND NOT EXISTS (SELECT 1 FROM observations o"
-          + " WHERE o.evenement_id = e.id"
-          + " AND o.updated_at > now() - interval '"
-          + JOURS_AVANT_RAFRAICHISSEMENT_LIEU
-          + " days'))";
+      "((ss.source = 'ticketmaster' AND "
+          + fichePasRevueDepuis(JOURS_AVANT_RAFRAICHISSEMENT_TICKETMASTER)
+          + ") OR (ss.source = 'eventim' AND "
+          + fichePasRevueDepuis(JOURS_AVANT_RAFRAICHISSEMENT_EVENTIM)
+          + "))";
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
   private final RecalculerMatchesService recalculerMatchesService;
   private final FetchRapportage rapportage;
   private final WorkerFetchCommun commun;
+
+  private static String fichePasRevueDepuis(final int jours) {
+    return "EXISTS (SELECT 1 FROM evenements e"
+        + " WHERE e.salle_id = ss.salle_id AND e.date >= CURRENT_DATE"
+        + " AND e.absences_consecutives < "
+        + WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES
+        + " AND EXISTS (SELECT 1 FROM user_config uc WHERE e.dept = ANY(uc.departements))"
+        + " AND NOT EXISTS (SELECT 1 FROM observations o"
+        + " WHERE o.evenement_id = e.id"
+        + " AND o.updated_at > now() - interval '"
+        + jours
+        + " days'))";
+  }
 
   /* package-private : instancié uniquement par Spring (même package). */
   FetchSallesExecutor(

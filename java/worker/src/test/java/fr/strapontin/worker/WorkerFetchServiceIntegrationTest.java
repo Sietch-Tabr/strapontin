@@ -544,6 +544,39 @@ class WorkerFetchServiceIntegrationTest extends AbstractWorkerIntegrationTest {
     verify(eventimSource).fetchSalle("eventim:internal:lucernaire", "Lucernaire");
   }
 
+  // Eventim est réinterrogé après trois jours sans observation, Ticketmaster seulement après sept :
+  // la disparition d'un produit Eventim se voit plus tôt sans alourdir le quota Ticketmaster.
+  @Test
+  void executerFetchSallesAll_ficheNonRevueDepuisQuatreJours_interrogeEventimPasTicketmaster() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("supersonic", "venue-supersonic");
+    insererSourceEventim(salle, "internal:supersonic", "Supersonic Records");
+    insererFicheDeSalle(salle, "75", 4);
+    when(ticketmasterSource.accepteIdentifiantSalle(startsWith("tm:"))).thenReturn(true);
+    when(eventimSource.accepteIdentifiantSalle(startsWith("eventim:"))).thenReturn(true);
+    when(eventimSource.fetchSalle(startsWith("eventim:"), any())).thenReturn(List.of());
+
+    fetchService.executerFetchSallesAll();
+
+    verify(eventimSource).fetchSalle("eventim:internal:supersonic", "Supersonic Records");
+    verify(ticketmasterSource, never()).fetchSalle("tm:venue-supersonic", null);
+  }
+
+  @Test
+  void executerFetchSallesAll_ficheEventimNonRevueDepuisDeuxJours_neReinterrogePasLeLieu() {
+    insererUser("u1");
+    insererUserConfigDept("u1", "75");
+    final UUID salle = insererSalleAvecSourceTm("recente", "venue-recente");
+    insererSourceEventim(salle, "internal:recente", "Salle récente");
+    insererFicheDeSalle(salle, "75", 2);
+    when(eventimSource.accepteIdentifiantSalle(startsWith("eventim:"))).thenReturn(true);
+
+    fetchService.executerFetchSallesAll();
+
+    verify(eventimSource, never()).fetchSalle(startsWith("eventim:"), any());
+  }
+
   // La recherche par département n'interroge Eventim que pour deux catégories : un produit qui
   // en sort n'est plus renvoyé mais reste en vente, il ne gagne aucune absence.
   @Test
