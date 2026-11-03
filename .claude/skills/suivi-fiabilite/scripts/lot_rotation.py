@@ -8,8 +8,10 @@ dans snapshots/ :
   curseur (contre-vérification du subagent, voir SKILL.md section 11).
 """
 
+import os
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -50,7 +52,7 @@ def lot_snapshot(entite: str) -> list[list[str]]:
 def executer_sql(requete: str) -> str:
     """Exécute une requête en lecture seule sur la prod via acces.local.sh."""
     with tempfile.TemporaryDirectory() as dossier:
-        fichier = Path(dossier) / "requete.sql"
+        fichier = Path(dossier) / f"requete_{os.getpid()}_{time.time_ns()}.sql"
         fichier.write_text(requete)
         resultat = subprocess.run(
             [str(ACCES), "prod", "psql", str(fichier)],
