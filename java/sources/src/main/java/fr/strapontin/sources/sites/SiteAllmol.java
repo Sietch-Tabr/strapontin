@@ -48,6 +48,10 @@ public class SiteAllmol extends SourceSiteSalle {
   private static final Pattern VILLE_ENTRE_PARENTHESES =
       Pattern.compile("^(.*?)\\s*\\(([^)]+)\\)$");
   private static final Pattern DEPT_OUTRE_MER = Pattern.compile("97\\d");
+  // Lieux que le site publie sans commune : le Vélodrome Amédée Détraux (ex-Gourde-Liane) est à
+  // Baie-Mahault.
+  private static final Map<String, String> COMMUNES_DES_LIEUX =
+      Map.of("velodrome amedee detraux", "Baie-Mahault");
   private static final Map<String, ZoneId> FUSEAUX =
       Map.of(
           "971", ZoneId.of("America/Guadeloupe"),
@@ -184,7 +188,8 @@ public class SiteAllmol extends SourceSiteSalle {
       return new LieuSite(
           parentheses.group(1).strip(), parentheses.group(2).strip(), departement(dept), null);
     }
-    return new LieuSite(lieu, null, departement(dept), null);
+    return new LieuSite(
+        lieu, COMMUNES_DES_LIEUX.get(Normalisation.normaliserTexte(lieu)), departement(dept), null);
   }
 
   private static String departement(final String dept) {
