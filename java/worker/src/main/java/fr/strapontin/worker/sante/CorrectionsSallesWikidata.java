@@ -28,7 +28,8 @@ final class CorrectionsSallesWikidata {
   private static final Logger LOG = LoggerFactory.getLogger(CorrectionsSallesWikidata.class);
   private static final String SOURCE_LOG = "coherence-wikidata";
   private static final String CLE_WIKIDATA_ID = "wikidataId";
-  // Au-delà, l'élément Wikidata ne désigne pas le lieu de la salle : sa commune n'est pas reprise.
+  private static final String CLE_VILLE = "ville";
+  // Au-delà, l'élément ne désigne pas le lieu de la salle : sa commune est ignorée.
   private static final double DISTANCE_MAX_COMMUNE_METRES = 20_000;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -117,7 +118,7 @@ final class CorrectionsSallesWikidata {
     }
     jdbc.update(
         "UPDATE salles SET ville = :ville WHERE id = :id",
-        Map.of("ville", commune, "id", salle.id()));
+        Map.of(CLE_VILLE, commune, "id", salle.id()));
     logsAdminWorker.inserer(
         "info",
         SOURCE_LOG,
@@ -127,7 +128,8 @@ final class CorrectionsSallesWikidata {
             + salle.ville()
             + " commune="
             + commune,
-        Map.of("salleId", salle.id().toString(), "ancienneVille", salle.ville(), "ville", commune));
+        Map.of(
+            "salleId", salle.id().toString(), "ancienneVille", salle.ville(), CLE_VILLE, commune));
   }
 
   // Salles écartées du contrôle de cohérence : leur ville reste à aligner.
@@ -158,9 +160,9 @@ final class CorrectionsSallesWikidata {
   }
 
   /**
-   * Donne la commune de son élément Wikidata à une salle qui n'a aucune ville, ni par ses
-   * concerts ni par ses lieux : sans cela elle restait sans ville, et signalée chaque nuit.
-   * Une position connue des deux côtés doit être à moins de 20 km.
+   * Donne la commune de son élément Wikidata à une salle sans ville (ni par ses
+   * concerts ni par ses lieux). Une position connue des deux côtés doit être à
+   * moins de 20 km.
    * @return nombre de salles dont la ville a été renseignée
    */
   /* package-private : appelé par CoherenceWikidataSalleService. */
@@ -182,7 +184,7 @@ final class CorrectionsSallesWikidata {
         completees +=
             jdbc.update(
                 "UPDATE salles SET ville = :ville WHERE id = :id AND (ville IS NULL OR ville = '')",
-                Map.of("ville", element.ville(), "id", salle.id()));
+                Map.of(CLE_VILLE, element.ville(), "id", salle.id()));
         logsAdminWorker.inserer(
             "info",
             SOURCE_LOG,
@@ -190,7 +192,7 @@ final class CorrectionsSallesWikidata {
                 + salle.nom()
                 + " commune="
                 + element.ville(),
-            Map.of("salleId", salle.id().toString(), "ville", element.ville()));
+            Map.of("salleId", salle.id().toString(), CLE_VILLE, element.ville()));
       }
     }
     LOG.info(
