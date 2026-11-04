@@ -39,13 +39,11 @@ final class ResolveurSalleParProximiteGps {
   }
 
   /**
-   * Dernier recours : salle proche des coordonnées, si les noms n'ont
-   * aucun token commun (un chevauchement même faible = ambiguïté).
+   * Dernier recours : salle proche, sans token commun, non nommée par la source.
    * @param coords coordonnées géocodées du nom entrant
    * @param nom nom brut, pour le garde-fou de nom
    * @param dept département connu (filtre, désactivé si absent)
-   * @param source billetterie du concert : une salle qu'elle nomme déjà autrement n'est
-   *     pas candidate
+   * @param source billetterie du concert
    * @return UUID de la salle la plus proche dans le rayon autorisé, ou null
    */
   /* package-private : appelé aussi par les tests du même package. */
