@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { VitePWA } from "vite-plugin-pwa";
+import { VitePWA } from "@unplugin-pwa/vite";
 import { rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
@@ -20,23 +20,18 @@ function nettoyerAssets() {
   };
 }
 
-// `inlineDynamicImports option is deprecated` : émis par workbox-build lors du bundling interne
-// du service worker (appel Rollup/Rolldown direct, hors pipeline Vite) — aucune option exposée
-// par vite-plugin-pwa ne permet de le corriger, non actionnable à ce jour.
-// `npm warn deprecated glob`/`source-map` : dépendances transitives de workbox-build, 0
-// vulnérabilité (`npm audit`).
 export default defineConfig({
   plugins: [
     vue({ template: { transformAssetUrls: { use: [] } } }),
     nettoyerAssets(),
     VitePWA({
-      strategies: "injectManifest",
-      srcDir: "src",
+      strategies: "buildSW",
       filename: "sw.js",
       manifest: false,
       // Registration gérée manuellement dans main.js — ne pas générer registerSW.js.
       injectRegister: false,
-      injectManifest: {
+      buildSW: {
+        swSrc: "src/sw.js",
         globPatterns: [
           "index.html",
           "offline-fallback.js",

@@ -111,7 +111,7 @@ Résumé structuré par dépendance : version actuelle → disponible, résumé 
 
 - **`okhttp`** (dépendance transitive Resend) : artefact Maven générique vide depuis okhttp 5.0.0 (module Kotlin Multiplatform). resend-java ≥ 4.28.0 dépend directement de `okhttp-jvm`, version gérée dans le pom parent : à chaque montée de Resend, vérifier par `mvn dependency:tree -pl web,worker` qu'aucun `com.squareup.okhttp3:okhttp` vide n'est tiré (le worker avait été oublié une fois, v2.7.0 lot 4, bug de prod silencieux).
 - Le plugin Maven `versions` peut suggérer une **rétrogradation fausse** (`resend-java` → 4.13.0 déjà rencontré) — toujours vérifier `maven-metadata.xml` sur Maven Central directement avant de conclure qu'une version plus récente n'existe pas.
-- `npm audit` sur la chaîne `vite-plugin-pwa`→`workbox-build`→... peut être non actionable sans `--force` (qui rétrograderait `vite-plugin-pwa`) — documenter plutôt que forcer, sauf si `npm audit fix` (sans `--force`) résout proprement (déjà arrivé, v2.7.9).
+- `npm audit` peut proposer un correctif non actionnable sans `--force` (qui rétrograderait un paquet) — documenter plutôt que forcer, sauf si `npm audit fix` (sans `--force`) résout proprement (déjà arrivé, v2.7.9). La chaîne `vite-plugin-pwa`/`workbox-build` n'existe plus (`@unplugin-pwa/vite`, 0.x : relire son changelog à chaque montée).
 - Montée majeure de Spring Boot : vérifier les packages déplacés (ex. `Health`/`HealthIndicator` → `org.springframework.boot.health.contributor` depuis Spring Boot 4).
 - Montée majeure de `flyway` : toujours vérifier le changelog de la version majeure pour les breaking changes avant d'appliquer (déjà fait pour 12→13, aucun breaking change identifié).
 

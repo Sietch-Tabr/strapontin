@@ -153,7 +153,7 @@ public final class CatalogueSignalements {
             + " le retirer de la fiche de l'artiste.");
     ajouter(
         "seance_dans_deux_salles",
-        "Même séance dans deux salles",
+        "Même séance publiée deux fois",
         "Un même artiste est déclaré le même jour, à des heures proches, dans une salle et sa"
             + " sous-salle, dans deux salles d'une même commune ou deux fois dans une même salle :"
             + " une séance déplacée peut être restée publiée sous l'ancienne salle.");

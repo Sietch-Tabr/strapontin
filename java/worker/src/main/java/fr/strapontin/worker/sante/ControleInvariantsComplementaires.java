@@ -39,7 +39,7 @@ final class ControleInvariantsComplementaires {
                CASE WHEN e1.first_seen >= e2.first_seen THEN e2.id ELSE e1.id END AS jumeau,
                e1.artiste_norm, e1.date::text AS date,
                coalesce(sa.nom, '?') AS salle_a, coalesce(sb.nom, '?') AS salle_b,
-               e1.heure::text AS heure_a, e2.heure::text AS heure_b
+               e1.heure::text AS heure_a, e2.heure::text AS heure_b, (sa.id = sb.id) AS meme_salle
         FROM evenements e1
         JOIN evenements e2 ON e2.id > e1.id AND e2.date = e1.date
          AND e2.heure IS NOT NULL AND e1.heure IS NOT NULL
@@ -231,6 +231,7 @@ final class ControleInvariantsComplementaires {
         SQL_SEANCES_DANS_DEUX_SALLES,
         Map.of("distanceMax", DISTANCE_MAX_SALLES_METRES),
         rs -> {
+          final boolean memeSalle = rs.getBoolean("meme_salle");
           anomalies.put(
               rs.getObject("recent", UUID.class),
               Map.of(
@@ -238,8 +239,10 @@ final class ControleInvariantsComplementaires {
                   rs.getString("artiste_norm"),
                   DATE,
                   rs.getString(DATE),
-                  "salles",
-                  rs.getString("salle_a") + " / " + rs.getString("salle_b"),
+                  memeSalle ? "salle" : "salles",
+                  memeSalle
+                      ? rs.getString("salle_a")
+                      : rs.getString("salle_a") + " / " + rs.getString("salle_b"),
                   "heures",
                   rs.getString("heure_a") + " / " + rs.getString("heure_b"),
                   JUMEAU,

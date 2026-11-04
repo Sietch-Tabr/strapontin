@@ -61,7 +61,10 @@ final class CreationSalleDernierRecours {
                         concert.dept(), position.latitude(), position.longitude()));
     final UUID proche =
         coordonnees
-            .map(position -> resolveurGps.chercher(position, concert.salle(), concert.dept()))
+            .map(
+                position ->
+                    resolveurGps.chercher(
+                        position, concert.salle(), concert.dept(), concert.source()))
             .orElse(null);
     return proche != null ? proche : createur.creer(concert, coordonnees);
   }

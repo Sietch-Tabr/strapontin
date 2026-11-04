@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   construireCorpsErreurJs,
   construireCorpsErreurPromise,
+  lireContexteClient,
 } from "./erreursClient.js";
 
 describe("construireCorpsErreurJs", () => {
@@ -19,6 +20,71 @@ describe("construireCorpsErreurJs", () => {
 
   test("construireCorpsErreurJs_messageAbsent_retourneChaineVide", () => {
     expect(construireCorpsErreurJs(undefined, "", 0, 0).message).toBe("");
+  });
+});
+
+describe("erreur masquée par le navigateur", () => {
+  test("construireCorpsErreurJs_scriptErrorSansOrigine_estMarqueeMasquee", () => {
+    expect(
+      construireCorpsErreurJs("Script error.", "", 0, 0, null).masquee,
+    ).toBe(true);
+  });
+
+  test("construireCorpsErreurJs_scriptErrorAvecAdresse_neEstPasMasquee", () => {
+    expect(
+      construireCorpsErreurJs("Script error.", "/assets/a.js", 3, 4, null)
+        .masquee,
+    ).toBeUndefined();
+  });
+
+  test("construireCorpsErreurJs_erreurAvecObjetError_neEstPasMasquee", () => {
+    expect(
+      construireCorpsErreurJs("Script error.", "", 0, 0, new Error("x"))
+        .masquee,
+    ).toBeUndefined();
+  });
+});
+
+describe("lireContexteClient", () => {
+  const env = {
+    location: { pathname: "/decouverte", search: "?q=jazz", hash: "#haut" },
+    navigator: { onLine: false, standalone: true },
+    document: { visibilityState: "hidden" },
+  };
+
+  test("lireContexteClient_fenetreComplete_decritLaPageEtLesConditions", () => {
+    expect(lireContexteClient(env)).toEqual({
+      page: "/decouverte?q=jazz#haut",
+      modeAffichage: "pwa",
+      enLigne: false,
+      visibilite: "hidden",
+    });
+  });
+
+  test("construireCorpsErreurJs_contexteFourni_estJointAuCorps", () => {
+    const corps = construireCorpsErreurJs(
+      "Erreur X",
+      "/a.js",
+      1,
+      2,
+      undefined,
+      lireContexteClient(env),
+    );
+
+    expect(corps).toMatchObject({
+      page: "/decouverte?q=jazz#haut",
+      enLigne: false,
+    });
+  });
+
+  test("construireCorpsErreurPromise_contexteFourni_estJointAuCorps", () => {
+    const corps = construireCorpsErreurPromise(
+      "échec",
+      "/aide",
+      lireContexteClient(env),
+    );
+
+    expect(corps.modeAffichage).toBe("pwa");
   });
 });
 

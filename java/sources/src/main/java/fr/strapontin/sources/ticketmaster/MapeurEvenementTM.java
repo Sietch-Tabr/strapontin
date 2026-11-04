@@ -4,6 +4,7 @@
  */
 package fr.strapontin.sources.ticketmaster;
 
+import fr.strapontin.core.AccesSansSpectacle;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.PlateauSoiree;
@@ -76,6 +77,9 @@ final class MapeurEvenementTM {
    */
   /* package-private : appelé par TicketmasterSource (même package). */
   static ConcertBrut mapper(final Map<String, Object> evt, final String artisteFallback) {
+    if (AccesSansSpectacle.estAccesSansSpectacle((String) evt.get(CLE_NAME))) {
+      return null;
+    }
     try {
       return parseEvenementTM(evt, artisteFallback);
     } catch (Exception e) {

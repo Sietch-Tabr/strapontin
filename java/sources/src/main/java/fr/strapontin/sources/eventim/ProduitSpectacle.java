@@ -4,6 +4,7 @@
  */
 package fr.strapontin.sources.eventim;
 
+import fr.strapontin.core.AccesSansSpectacle;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -27,12 +28,15 @@ final class ProduitSpectacle {
   /**
    * @param produit produit Eventim sous forme de Map imbriquée
    * @return {@code true} si le produit peut devenir une fiche de concert : ni
-   *     un lieu de parking, ni une catégorie racine hors spectacle (un produit
-   *     sans catégorie connue est gardé)
+   *     un lieu de parking, ni une visite ou un accès prioritaire seul, ni une
+   *     catégorie racine hors spectacle (un produit sans catégorie connue est
+   *     gardé ; un billet combiné avec un spectacle reste un spectacle)
    */
   /* package-private : appelé par EventimSource (même package). */
   static boolean estSpectacle(final Map<String, Object> produit) {
-    return !estLieuDeParking(produit) && aCategorieSpectacleOuInconnue(produit);
+    return !estLieuDeParking(produit)
+        && !AccesSansSpectacle.estAccesSansSpectacle((String) produit.get(CLE_NOM))
+        && aCategorieSpectacleOuInconnue(produit);
   }
 
   private static boolean estLieuDeParking(final Map<String, Object> produit) {

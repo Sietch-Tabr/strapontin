@@ -17,15 +17,14 @@ Lance toute la suite de tests du projet et résume les résultats. Un run n'est 
 3. **Analyse statique** (bloquante en CI) :
 
    ```
-   PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f java/pom.xml -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests
-   cd front && npm run lint && npm run lint:css
+   bash scripts/analyse-statique.sh
    ```
 
 4. **Tests E2E Playwright** (contre le LXC dev) :
-   - Prérequis : le dev répond (`curl -s --max-time 5 http://192.168.20.78:9090/actuator/health`, actuator web sur 9090, pas 8080). Sinon le signaler et proposer `/deploy-dev`.
-   - Toujours les 5 navigateurs, jamais `--project` :
+   - Prérequis : le dev répond (`bash scripts/dev.sh etat`). Sinon le signaler et proposer `bash scripts/dev.sh demarrer` puis `/deploy-dev`.
+   - Toujours les 5 navigateurs, jamais `--project` ; le script arrête les `playwright-mcp` et rapporte les chiffres exacts :
      ```
-     cd e2e && npx playwright test 2>&1 | tail -30
+     bash e2e/lancer-e2e.sh
      ```
 
 5. **Résumé final**, chiffres exacts par suite :

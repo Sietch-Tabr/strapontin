@@ -255,8 +255,7 @@ public class ReconciliateurArtistes {
       // laisser écraser une valeur déjà correcte en base.
       // L'intitulé complet (« damien gillard rude ») n'est pas ramené à son
       // début : le lot retient déjà le plus long, sinon le nom oscillerait.
-      if (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())
-          && !existant.artisteNorm().startsWith(concert.artisteNorm() + " ")) {
+      if (correctionRetroactiveJustifiee(concert, existant)) {
         corrigerArtisteExistantEnBase(existant, concert);
         return concert.avecArtisteId(artisteIdPropague);
       }
@@ -269,6 +268,19 @@ public class ReconciliateurArtistes {
       return concert.avecArtisteNormEtId(existant.artisteNorm(), artisteIdPropague);
     }
     return null;
+  }
+
+  // Un titre « nom + salle » ne remplace jamais le nom court ; un nom déjà dégradé
+  // ainsi est ramené au nom court, éligible à Deezer ou non.
+  private static boolean correctionRetroactiveJustifiee(
+      final ValeurConcert concert, final ArtisteExistant existant) {
+    final String entrant = concert.artisteNorm();
+    final String ancien = existant.artisteNorm();
+    final String salle = concert.salleNorm();
+    return CorrespondanceArtiste.estNomSuiviDeLaSalle(ancien, entrant, salle)
+        || (!EligibiliteResolutionDeezer.estEligible(concert.classification(), concert.source())
+            && !ancien.startsWith(entrant + " ")
+            && !CorrespondanceArtiste.estNomSuiviDeLaSalle(entrant, ancien, salle));
   }
 
   /**

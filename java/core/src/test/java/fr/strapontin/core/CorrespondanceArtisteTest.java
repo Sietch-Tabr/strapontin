@@ -158,4 +158,32 @@ class CorrespondanceArtisteTest {
     assertFalse(CorrespondanceArtiste.estMemeAffiche("d", "d and m"));
     assertFalse(CorrespondanceArtiste.estMemeAffiche("1ere partie", "dosseh 1ere partie"));
   }
+
+  // Sidiki Diabaté : le titre Eventim ajoute « à l'Accor Arena » au nom de l'artiste.
+  @Test
+  void estNomSuiviDeLaSalle_nomPuisLiaisonEtSalle_retourneVrai() {
+    assertTrue(
+        CorrespondanceArtiste.estNomSuiviDeLaSalle(
+            "sidiki diabate a l accor arena", "sidiki diabate", "accor arena paris bercy"));
+  }
+
+  @Test
+  void estNomSuiviDeLaSalle_motsAjoutesQuiNeSontPasLaSalle_retourneFaux() {
+    assertFalse(
+        CorrespondanceArtiste.estNomSuiviDeLaSalle(
+            "damien gillard rude", "damien gillard", "accor arena"));
+  }
+
+  @Test
+  void estNomSuiviDeLaSalle_titreSansLeNom_retourneFaux() {
+    assertFalse(
+        CorrespondanceArtiste.estNomSuiviDeLaSalle(
+            "autre artiste a l accor arena", "sidiki diabate", "accor arena"));
+  }
+
+  @Test
+  void estNomSuiviDeLaSalle_parametresAbsents_retourneFaux() {
+    assertFalse(CorrespondanceArtiste.estNomSuiviDeLaSalle("a b", "a", null));
+    assertFalse(CorrespondanceArtiste.estNomSuiviDeLaSalle(null, "a", "b"));
+  }
 }

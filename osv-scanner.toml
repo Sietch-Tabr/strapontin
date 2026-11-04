@@ -3,29 +3,9 @@
 # à chaque jalon (check-deps) et se retire dès que la cause disparaît.
 
 [[IgnoredVulns]]
-id = "GHSA-gcqx-w48m-w2h4"
-ignoreUntil = 2026-11-27
-reason = """deepmerge 4.3.1 (CVE-2026-93753, pollution de prototype par mergeObject), dernière version publiée \
-(mars 2023), sans correctif : le mainteneur conteste l'avis (TehShrike/deepmerge#273), la PR #274 n'est pas \
-fusionnée. Dépendance de développement transitive (vite-plugin-pwa > workbox-build > \
-@rollup/plugin-node-resolve), employée au seul build du service worker avec la configuration du projet, \
-jamais avec des données externes, et absente du JAR livré. Sortie durable : quitter la chaîne workbox \
-(ticket de suivi)."""
-
-[[IgnoredVulns]]
-id = "GHSA-3g3m-2fjr-6pw4"
-ignoreUntil = 2026-11-27
-reason = """glob 11.1.0 (annulation par AbortSignal contournée, parcours du système de fichiers après délai), \
-avis publié le 30/10/2026, corrigé en 14.0.2 seulement. Dépendance de développement transitive \
-(vite-plugin-pwa > workbox-build, qui exige glob ^11), employée au seul build du service worker, jamais \
-avec un signal d'annulation ni des données externes, et absente du JAR livré. Sortie durable : quitter la \
-chaîne workbox (même ticket de suivi que deepmerge)."""
-
-[[IgnoredVulns]]
 id = "GHSA-g3hv-75wg-m249"
 ignoreUntil = 2026-11-27
-reason = """minimatch 10.2.6 (sous eslint et glob) et 5.1.9 (sous workbox-build > ejs > jake), déni de service par \
-amplification de globparts, avis publié le 30/10/2026, corrigé en 11.0.1 seulement. Dépendances de \
-développement transitives (lint et build du service worker), motifs de glob fixés par le projet, jamais \
-fournis par un utilisateur, absentes du JAR livré. Un correctif suppose une version majeure d'eslint et de \
-workbox-build : à reprendre quand l'amont publie."""
+reason = """minimatch 10.2.6 (sous eslint 10.14.0), déni de service par amplification de globparts, avis \
+publié le 30/10/2026, corrigé en 11.0.1 seulement. Dépendance de développement du lint, motifs de glob \
+fixés par le projet, jamais fournis par un utilisateur, absente du JAR livré. Un correctif suppose une \
+version d'eslint qui adopte minimatch 11 : à reprendre quand l'amont publie."""

@@ -27,6 +27,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -66,6 +67,16 @@ class GlobalExceptionHandlerTest {
   @Test
   void gererClientDeconnecte_connexionInterrompue_neJournalisePasEnErreur() {
     handler.gererClientDeconnecte(new ClientAbortException("Relais brisé (pipe)"));
+
+    verifyNoInteractions(logAdminService);
+  }
+
+  // Client parti pendant la réponse d'une requête asynchrone : l'exception de Spring qui enveloppe
+  // l'erreur d'entrée-sortie n'est pas une erreur du serveur.
+  @Test
+  void gererClientDeconnecte_reponseAsynchroneInutilisable_neJournalisePasEnErreur() {
+    handler.gererClientDeconnecte(
+        new AsyncRequestNotUsableException("ServletResponse failed to flushBuffer: Relais brisé"));
 
     verifyNoInteractions(logAdminService);
   }

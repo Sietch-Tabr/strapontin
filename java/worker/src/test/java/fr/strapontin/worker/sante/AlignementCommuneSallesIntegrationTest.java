@@ -124,6 +124,45 @@ class AlignementCommuneSallesIntegrationTest extends AbstractWorkerIntegrationTe
     assertEquals("Reims", ville(salle));
   }
 
+  // Opéra-Comique : un élément Wikidata sans localisation, aucune ville, aucun concert.
+  @Test
+  void aligner_salleSansVilleNiConcert_recoitLaCommuneDeSaPosition() {
+    final UUID salle = salle("Opéra-Comique", null, "Q872222");
+    jdbc.update("DELETE FROM evenements", Map.of());
+    when(nominatim.communeDe(any())).thenReturn(commune("Reims", "51100"));
+
+    assertEquals(1, alignement.aligner());
+
+    assertEquals("Reims", ville(salle));
+    assertEquals(
+        1L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM logs_admin WHERE message LIKE '%renseignée d''après sa position%'",
+            Map.of(), Long.class));
+  }
+
+  // Paris : Nominatim ne donne aucun code postal, le département vient de ISO3166-2-lvl6.
+  @Test
+  void aligner_salleSansVilleEtCommuneSansCodePostal_utiliseLeDepartementIso() {
+    final UUID salle = salle("Opéra-Comique", null, "Q872222");
+    when(nominatim.communeDe(any()))
+        .thenReturn(
+            new ClientNominatim.ResultatCommune(
+                Optional.of("Reims"), Optional.empty(), Optional.of("51"), true));
+
+    assertEquals(1, alignement.aligner());
+    assertEquals("Reims", ville(salle));
+  }
+
+  @Test
+  void aligner_salleSansVilleEtCommuneDUnAutreDepartement_resteSansVille() {
+    final UUID salle = salle("Salle W", null, null);
+    when(nominatim.communeDe(any())).thenReturn(commune("Charleville", "08000"));
+
+    assertEquals(0, alignement.aligner());
+    assertNull(ville(salle));
+  }
+
   @Test
   void aligner_salleAvecElementWikidata_neSeraPasInterrogee() {
     salle("Salle Z", "Reims", "Q123");

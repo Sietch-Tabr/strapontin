@@ -424,6 +424,29 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(horodatee));
   }
 
+  // Sting à Aluna : Ticketmaster a cessé de renvoyer la fiche sans heure (43 absences).
+  @Test
+  void fusionnerSeancesSansHeure_ficheSansHeureDejaAbsente_fusionneDansLHorodatee() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 43, URL_TM);
+    final UUID horodatee = creerFiche(salle, DATE_FUTURE, "16:00", 0, URL_TM + "/idtier/1");
+    passerEnEventim(horodatee);
+
+    assertEquals(1, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertFalse(existe(sansHeure));
+    assertTrue(existe(horodatee));
+  }
+
+  @Test
+  void fusionnerSeancesSansHeure_ficheHorodateeAbsente_neFusionnePas() {
+    final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);
+    final UUID horodatee = creerFiche(salle, DATE_FUTURE, "16:00", 43, URL_TM + "/idtier/1");
+    passerEnEventim(horodatee);
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerSeancesSansHeure());
+    assertTrue(existe(sansHeure));
+    assertTrue(existe(horodatee));
+  }
+
   @Test
   void fusionnerSeancesSansHeure_memeSourceDesDeuxCotes_neFusionnePas() {
     final UUID sansHeure = creerFiche(salle, DATE_FUTURE, null, 0, URL_TM);
@@ -644,6 +667,28 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertTrue(existe(soiree));
   }
 
+  // Zimmer90 à l'Élysée Montmartre : 18 h 30 (ouverture des portes) chez Eventim, 20 h chez
+  // Ticketmaster.
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_ouvertureDesPortesEtSpectacle_fusionne() {
+    final UUID elysee = creerSalle("Élysée Montmartre");
+    final UUID tm = seanceSource(elysee, "zimmer90", "20:00", "ticketmaster");
+    final UUID ev = seanceSource(elysee, "zimmer90", "18:30", "eventim");
+
+    assertEquals(1, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+    assertTrue(existe(tm));
+    assertFalse(existe(ev));
+  }
+
+  @Test
+  void fusionnerMemeSeanceDeuxSourcesHeuresProches_ecartDeDeuxHeuresEtDemie_neFusionnePas() {
+    final UUID newMorning = creerSalle("New Morning");
+    seanceSource(newMorning, "nubiyan twist", "17:30", "eventim");
+    seanceSource(newMorning, "nubiyan twist", "20:00", "ticketmaster");
+
+    assertEquals(0, fusionEvenementsArtiste.fusionnerMemeSeanceDeuxSourcesHeuresProches());
+  }
+
   @Test
   void fusionnerMemeSeanceDeuxSourcesHeuresProches_matineeEtSoiree_neFusionnePas() {
     final UUID newMorning = creerSalle("New Morning");
@@ -850,6 +895,95 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertEquals(1, fusionProduitsEventim.fusionnerProduitsRepublies());
     assertFalse(existe(ancienne));
     assertTrue(existe(nouvelle));
+  }
+
+  // Brooke Combe : le produit de Supersonic Records disparaît, un autre paraît à La Bellevilloise.
+  @Test
+  void
+      fusionnerProduitsRepubliesAilleurs_produitRepublieDansUneAutreSalle_ancienneFicheRejointLaNouvelle() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "100"});
+    final UUID nouvelle =
+        ficheAvecObservations(
+            salle,
+            "brooke combe",
+            "20:00",
+            new String[] {"ticketmaster", "https://tm/idmanif/5", "1"},
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+
+    assertEquals(1, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertFalse(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepubliesAilleurs_ancienneFicheEncoreVue_neFusionnePas() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "2"});
+    final UUID nouvelle =
+        ficheAvecObservations(
+            salle,
+            "brooke combe",
+            "20:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertTrue(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepubliesAilleurs_ancienneFicheEntretenueParTicketmaster_neFusionnePas() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "100"},
+            new String[] {"ticketmaster", "https://tm/idmanif/9", "1"});
+    final UUID nouvelle =
+        ficheAvecObservations(
+            salle,
+            "brooke combe",
+            "20:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertTrue(existe(ancienne));
+    assertTrue(existe(nouvelle));
+  }
+
+  @Test
+  void fusionnerProduitsRepubliesAilleurs_ancienneFicheMaintenue_neFusionnePas() {
+    final UUID supersonic = creerSalle("Supersonic Records");
+    final UUID ancienne =
+        ficheAvecObservations(
+            supersonic,
+            "brooke combe",
+            "20:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/brooke-22287729", "100"});
+    ficheAvecObservations(
+        salle,
+        "brooke combe",
+        "20:00",
+        new String[] {"eventim", "https://www.eventim.fr/event/brooke-22350946", "1"});
+    jdbc.update(
+        "UPDATE evenements SET maintenu_le = now() WHERE id = CAST(:id AS uuid)",
+        Map.of("id", ancienne.toString()));
+
+    assertEquals(0, fusionProduitsEventim.fusionnerProduitsRepubliesAilleurs());
+    assertTrue(existe(ancienne));
   }
 
   @Test

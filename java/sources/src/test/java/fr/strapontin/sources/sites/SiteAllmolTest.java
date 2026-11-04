@@ -78,6 +78,19 @@ class SiteAllmolTest {
         concert.url());
   }
 
+  // Le site publie « Vélodrome Amédée Detraux » sans commune : le lieu est à Baie-Mahault.
+  @Test
+  void extraire_lieuSansCommuneConnuDuSite_recoitSaCommune() {
+    final ConcertBrut concert =
+        concerts.stream()
+            .filter(c -> c.artiste().startsWith("Leïla CHICOT"))
+            .findFirst()
+            .orElseThrow();
+
+    assertEquals("Vélodrome Amédée Detraux", concert.salle());
+    assertEquals("Baie-Mahault", concert.ville());
+  }
+
   // La commune porte elle-même un trait d'union (« Baie-Mahault »).
   @Test
   void extraire_communeAvecTraitDUnionApresUnTiret_estGardee() {

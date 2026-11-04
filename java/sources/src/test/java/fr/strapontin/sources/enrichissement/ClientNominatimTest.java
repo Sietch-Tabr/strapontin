@@ -164,6 +164,51 @@ class ClientNominatimTest {
     serveur.verify();
   }
 
+  // Opéra-Comique : à ce niveau Nominatim ne donne aucun code postal pour Paris, mais le
+  // département dans ISO3166-2-lvl6 (« FR-75C »).
+  @Test
+  void communeDe_parisSansCodePostal_litLeDepartementDansLIso() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    serveur
+        .expect(MockRestRequestMatchers.anything())
+        .andRespond(
+            MockRestResponseCreators.withSuccess(
+                """
+                {"address":{"suburb":"Paris","city":"Paris","ISO3166-2-lvl6":"FR-75C"}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final ClientNominatim.ResultatCommune resultat =
+        source(builder.build(), mock(CadenceurAppels.class))
+            .communeDe(new ClientNominatim.Coordonnees(48.8707, 2.3377));
+
+    assertEquals(Optional.of("Paris"), resultat.commune());
+    assertTrue(resultat.codePostal().isEmpty());
+    assertEquals(Optional.of("75"), resultat.departement());
+  }
+
+  @Test
+  void communeDe_departementsParticuliers_sontLusSansLeSuffixe() {
+    for (final String[] cas :
+        new String[][] {{"FR-69M", "69"}, {"FR-2A", "2A"}, {"FR-971", "971"}, {"FR-51", "51"}}) {
+      final RestClient.Builder builder = RestClient.builder();
+      final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+      serveur
+          .expect(MockRestRequestMatchers.anything())
+          .andRespond(
+              MockRestResponseCreators.withSuccess(
+                  "{\"address\":{\"city\":\"X\",\"ISO3166-2-lvl6\":\"" + cas[0] + "\"}}",
+                  MediaType.APPLICATION_JSON));
+
+      assertEquals(
+          Optional.of(cas[1]),
+          source(builder.build(), mock(CadenceurAppels.class))
+              .communeDe(new ClientNominatim.Coordonnees(1.0, 1.0))
+              .departement());
+    }
+  }
+
   @Test
   void communeDe_erreurHttp_neConcluPas() {
     final RestClient.Builder builder = RestClient.builder();

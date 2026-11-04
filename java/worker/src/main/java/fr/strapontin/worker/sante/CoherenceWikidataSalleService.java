@@ -43,7 +43,8 @@ public class CoherenceWikidataSalleService {
   // Position Wikidata comparable aux lieux publiés : le contrôle de position
   // (20 km) tranche ; les noms de communes signalaient à tort une agglomération
   // (Le Pin Galant à Mérignac pour des concerts annoncés à Bordeaux).
-  private static final String POSITION_COMPARABLE =
+  /* package-private : réutilisé par CorrectionsSallesWikidata. */
+  static final String POSITION_COMPARABLE =
       "(s.origine_position = 'wikidata' AND EXISTS (SELECT 1 FROM salle_sources ss"
           + " WHERE ss.salle_id = s.id AND ss.latitude IS NOT NULL))";
 
@@ -99,15 +100,21 @@ public class CoherenceWikidataSalleService {
             + POSITION_COMPARABLE,
         Map.of());
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
-    if (candidats.isEmpty()) {
+    final List<SalleAEnrichir> sallesPositionComparable = corrections.sallesPositionComparable();
+    final List<SalleAEnrichir> aLire = new ArrayList<>(candidats);
+    aLire.addAll(sallesPositionComparable);
+    if (aLire.isEmpty()) {
       LOG.info("coherence:wikidata — aucun candidat");
       return 0;
     }
 
-    final Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(candidats);
-    final List<UUID> salleIds = candidats.stream().map(SalleAEnrichir::id).toList();
+    final Map<UUID, EnrichissementSalle> resultats = wikidata.enrichirLot(aLire);
+    final List<UUID> salleIds = aLire.stream().map(SalleAEnrichir::id).toList();
     final Map<UUID, List<String>> villesConcertsReelles = chargerVillesConcertsReelles(salleIds);
     final Map<UUID, String> signaturesDejaSignalees = chargerSignaturesDejaSignalees(salleIds);
+
+    // La position tranche le contrôle de cohérence, pas l'alignement de la ville.
+    corrections.corrigerVilles(sallesPositionComparable, resultats, villesConcertsReelles);
 
     int incoherences = 0;
     for (final SalleAEnrichir salle : candidats) {

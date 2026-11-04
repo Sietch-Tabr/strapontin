@@ -48,7 +48,10 @@ class ResolveurSalleParProximiteGpsTest {
 
     final UUID resultat =
         resolveur.chercher(
-            new ClientNominatim.Coordonnees(48.8385, 2.3238), "Theatre Rive Gauche Paris 14", "75");
+            new ClientNominatim.Coordonnees(48.8385, 2.3238),
+            "Theatre Rive Gauche Paris 14",
+            "75",
+            "eventim");
 
     assertNull(resultat);
   }
@@ -71,7 +74,8 @@ class ResolveurSalleParProximiteGpsTest {
         .thenReturn(List.of(candidatProche));
 
     final UUID resultat =
-        resolveur.chercher(new ClientNominatim.Coordonnees(48.5734, 7.7521), "Ed&n", "67");
+        resolveur.chercher(
+            new ClientNominatim.Coordonnees(48.5734, 7.7521), "Ed&n", "67", "eventim");
 
     assertEquals(salleProche, resultat);
   }
@@ -99,7 +103,7 @@ class ResolveurSalleParProximiteGpsTest {
 
     final UUID resultat =
         resolveur.chercher(
-            new ClientNominatim.Coordonnees(48.8566, 2.3522), "Zenith Inconnu", "75");
+            new ClientNominatim.Coordonnees(48.8566, 2.3522), "Zenith Inconnu", "75", "eventim");
 
     assertEquals(proche, resultat);
   }

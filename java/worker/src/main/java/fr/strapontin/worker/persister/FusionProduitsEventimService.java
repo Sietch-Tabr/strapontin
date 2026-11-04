@@ -25,6 +25,7 @@ public class FusionProduitsEventimService {
   // Écart d'heure maximal entre deux fiches d'un produit : au-delà, deux séances.
   private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final long VIVANT_UNIQUE = 1;
+  private static final String CLE_ECART_SECONDES = "ecartSecondes";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final FusionEvenementsArtisteService fusionEvenements;
@@ -70,7 +71,7 @@ public class FusionProduitsEventimService {
                 + " OR a.artiste_id = b.artiste_id)"
                 + " AND (SELECT count(*) FROM p x WHERE x.produit = a.produit"
                 + " AND x.date = a.date AND x.salle_id = a.salle_id) = 2",
-            Map.of("ecartSecondes", ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
     int fusions = 0;
     for (final Map<String, Object> paire : paires) {
       final UUID evtA = (UUID) paire.get("evt_a");
@@ -119,7 +120,7 @@ public class FusionProduitsEventimService {
                 + " WHERE t.evenement_id = a.id AND t.source <> 'eventim')"
                 + " GROUP BY a.id",
             Map.of(
-                "ecartSecondes",
+                CLE_ECART_SECONDES,
                 ECART_MAX_HEURE_SECONDES,
                 "seuil",
                 FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE));
@@ -132,6 +133,56 @@ public class FusionProduitsEventimService {
       fusionEvenements.fusionnerDansFicheVivante(
           vivant, (UUID) ligne.get("perime"), "produit Eventim republié");
       retirerObservationsPerimees(vivant);
+      fusions++;
+    }
+    return fusions;
+  }
+
+  /**
+   * Concert qu'Eventim republie dans une autre salle sous un autre produit :
+   * l'ancienne fiche, que seul Eventim entretenait et qu'il n'a plus renvoyée
+   * depuis l'arrivée de la nouvelle, rejoint l'unique fiche vivante du même
+   * artiste, du même jour et du même département, à une heure voisine. Une
+   * fiche maintenue par un administrateur reste.
+   * @return nombre de fiches rattachées
+   */
+  public int fusionnerProduitsRepubliesAilleurs() {
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            """
+            WITH p AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm, e.artiste_id,
+                     e.maintenu_le, e.absences_consecutives,
+                     bool_and(o.source = 'eventim') AS eventim_seul,
+                     max(o.updated_at) AS derniere_vue,
+                     max(o.first_seen) FILTER (WHERE o.source = 'eventim') AS derniere_arrivee
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL
+              GROUP BY e.id)
+            SELECT a.id AS perime, min(b.id::text) AS vivant, count(DISTINCT b.id) AS nb_vivants
+            FROM p a
+            JOIN salles sa ON sa.id = a.salle_id
+            JOIN p b ON b.id <> a.id AND b.date = a.date AND b.salle_id <> a.salle_id
+             AND (b.artiste_norm = a.artiste_norm
+                  OR (a.artiste_id IS NOT NULL AND b.artiste_id = a.artiste_id))
+             AND (a.heure IS NULL OR b.heure IS NULL
+                  OR abs(extract(epoch FROM (a.heure - b.heure))) <= :ecartSecondes)
+            JOIN salles sb ON sb.id = b.salle_id AND sb.dept = sa.dept
+            WHERE a.eventim_seul AND a.maintenu_le IS NULL
+              AND a.derniere_vue < now() - interval '1 day'
+              AND b.absences_consecutives = 0 AND b.derniere_arrivee > a.derniere_vue
+            GROUP BY a.id
+            """,
+            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+    int fusions = 0;
+    for (final Map<String, Object> ligne : lignes) {
+      if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
+        continue;
+      }
+      fusionEvenements.fusionnerDansFicheVivante(
+          UUID.fromString((String) ligne.get("vivant")),
+          (UUID) ligne.get("perime"),
+          "produit Eventim republié dans une autre salle");
       fusions++;
     }
     return fusions;
@@ -226,7 +277,7 @@ public class FusionProduitsEventimService {
               WHERE (SELECT count(*) FROM paires q WHERE q.origine = p.origine) = 1
                 AND (SELECT count(*) FROM paires q WHERE q.reporte = p.reporte) = 1)
             """,
-            Map.of("ecartSecondes", ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
     if (marquees > 0) {
       logsAdminWorker.inserer(
           "info",

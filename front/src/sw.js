@@ -1,9 +1,9 @@
-import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { precacheAndRoute, cleanupOutdatedCaches } from "@vite-pwa/workbox-swkit/precaching";
 
 // Nettoie les entrées de précache de l'ancienne version à l'activation.
 cleanupOutdatedCaches();
 
-// Précache tous les assets listés dans le manifeste injecté par vite-plugin-pwa :
+// Précache tous les assets listés dans le manifeste injecté par @unplugin-pwa/vite :
 // bundles JS/CSS Vite (fingerprinted), images, icônes.
 // eslint-disable-next-line no-undef
 precacheAndRoute(self.__WB_MANIFEST);

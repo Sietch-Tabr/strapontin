@@ -24,7 +24,7 @@ Historique jalon par jalon : [wiki Roadmap](https://codeberg.org/Kwaite/strapont
 
 - **Spring Boot 4.1.2** + **Vue 3 + Vite 8** (`front/` → `static/`) — port 8080. Thymeleaf et HTMX supprimés.
 - **Vitest 5** (`front/vitest.config.js`, #781) : tests unitaires des fonctions pures partagées entre composants (`front/src/utils/`), sans montage de composant ni jsdom.
-- `npm run build`/`npm ci` émettent des warnings connus et non actionnables (vite-plugin-pwa, workbox) : [`front/CLAUDE.md`](front/CLAUDE.md).
+- `npm run build`/`npm ci` n'émettent aucun avertissement (dette déclarée vide) : [`front/CLAUDE.md`](front/CLAUDE.md).
 - **Spring Security 7** — auth session, TOTP 2FA optionnel (limitation de débit en fenêtre glissante, `securite.LimiteurDebit`) ; `anyRequest().authenticated()` — non-API sans session → redirect `/login`, API → 401 JSON
 - **Spring Data JDBC** + PostgreSQL 18 — données persistantes. `statement_timeout=30s` / `idle_in_transaction_session_timeout=30s` (une transaction bloquante épuiserait sinon le pool HikariCP).
 - **Quartz** — jobs background (fetch concerts) ; `threadPool.threadCount=10` (virtual threads)

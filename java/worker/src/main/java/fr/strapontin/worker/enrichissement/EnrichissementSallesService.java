@@ -57,6 +57,7 @@ public class EnrichissementSallesService {
   private final FusionSallesClePorteeService fusionSallesClePortee;
   private final SignalementMatchingService signalementMatchingService;
   private final FiltreElementsExclus filtre;
+  private final ClotureSignalementsCoordonnees cloture;
 
   /**
    * @param jdbc accès JDBC
@@ -80,15 +81,19 @@ public class EnrichissementSallesService {
     this.fusionSallesClePortee = fusionSallesClePortee;
     this.signalementMatchingService = signalementMatchingService;
     this.filtre = new FiltreElementsExclus(sources, logsAdminWorker);
+    this.cloture = new ClotureSignalementsCoordonnees(jdbc, signalementMatchingService);
   }
 
   /**
    * Enrichit les salles sans {@code wikidata_id} du {@code jour_batch}
    * courant (rotation hebdomadaire), priorisées par nombre de concerts
    * liés — n'écrase jamais un {@code nom_affiche} déjà présent.
+   * Referme d'abord les signalements d'écart de coordonnées des salles qui
+   * portent désormais un élément Wikidata ou n'existent plus.
    * @return nombre de salles effectivement mises à jour
    */
   public int enrichir() {
+    cloture.clore();
     final List<SalleAEnrichir> candidats = selectionnerCandidats();
     if (candidats.isEmpty()) {
       LOG.info("enrichissement:salles — aucun candidat");
@@ -161,7 +166,7 @@ public class EnrichissementSallesService {
           .forEach(
               (salleId, details) ->
                   signalementMatchingService.signaler(
-                      "wikidata_coordonnees_divergentes",
+                      ClotureSignalementsCoordonnees.TYPE,
                       "salle",
                       salleId,
                       "basse",

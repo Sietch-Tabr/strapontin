@@ -27,6 +27,7 @@ final class CorrectionsSallesWikidata {
   private static final Logger LOG = LoggerFactory.getLogger(CorrectionsSallesWikidata.class);
   private static final String SOURCE_LOG = "coherence-wikidata";
   private static final String CLE_WIKIDATA_ID = "wikidataId";
+  private static final String CLE_VILLE = "ville";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WikidataSalleSource wikidata;
@@ -114,7 +115,7 @@ final class CorrectionsSallesWikidata {
     }
     jdbc.update(
         "UPDATE salles SET ville = :ville WHERE id = :id",
-        Map.of("ville", commune, "id", salle.id()));
+        Map.of(CLE_VILLE, commune, "id", salle.id()));
     logsAdminWorker.inserer(
         "info",
         SOURCE_LOG,
@@ -124,7 +125,35 @@ final class CorrectionsSallesWikidata {
             + salle.ville()
             + " commune="
             + commune,
-        Map.of("salleId", salle.id().toString(), "ancienneVille", salle.ville(), "ville", commune));
+        Map.of(
+            "salleId", salle.id().toString(), "ancienneVille", salle.ville(), CLE_VILLE, commune));
+  }
+
+  // Salles écartées du contrôle de cohérence : leur ville reste à aligner.
+  /* package-private : appelé par CoherenceWikidataSalleService. */
+  void corrigerVilles(
+      final List<SalleAEnrichir> salles,
+      final Map<UUID, EnrichissementSalle> elements,
+      final Map<UUID, List<String>> villesConcertsReelles) {
+    for (final SalleAEnrichir salle : salles) {
+      final EnrichissementSalle element = elements.get(salle.id());
+      if (element != null) {
+        corrigerVille(salle, element, villesConcertsReelles.get(salle.id()));
+      }
+    }
+  }
+
+  /* package-private : appelé par CoherenceWikidataSalleService. */
+  List<SalleAEnrichir> sallesPositionComparable() {
+    return jdbc.query(
+        "SELECT id, nom, nom_norm, ville, dept, wikidata_id,"
+            + " NULL::double precision AS latitude, NULL::double precision AS longitude"
+            + " FROM salles s"
+            + " WHERE wikidata_id IS NOT NULL AND ville IS NOT NULL AND ville != ''"
+            + " AND "
+            + CoherenceWikidataSalleService.POSITION_COMPARABLE,
+        Map.of(),
+        (rs, _) -> CoherenceWikidataSalleService.versSalleAEnrichir(rs));
   }
 
   /* package-private : appelé par CoherenceWikidataSalleService. */

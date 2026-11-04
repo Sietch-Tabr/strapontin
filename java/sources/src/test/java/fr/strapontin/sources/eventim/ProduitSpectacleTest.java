@@ -71,4 +71,24 @@ class ProduitSpectacleTest {
         ProduitSpectacle.estSpectacle(
             produit("Salle", List.of("Expositions & Musées", "Spectacles"))));
   }
+
+  private static Map<String, Object> produitNomme(final String nom) {
+    final Map<String, Object> produit = produit("Le Grand Rex", List.of("Spectacles"));
+    produit.put("name", nom);
+    return produit;
+  }
+
+  @Test
+  void estSpectacle_visiteSeuleEnCategorieSpectacle_retourneFaux() {
+    assertFalse(ProduitSpectacle.estSpectacle(produitNomme("Visite des Rex Studios")));
+  }
+
+  // Grand Rex : le billet combiné reste affiché, son titre annonce la visite.
+  @Test
+  void estSpectacle_billetCombineSpectacleEtVisite_retourneVrai() {
+    assertTrue(
+        ProduitSpectacle.estSpectacle(
+            produitNomme(
+                "La Féerie des Eaux + Billie, à la croisée des mondes + Visite des Rex Studios")));
+  }
 }

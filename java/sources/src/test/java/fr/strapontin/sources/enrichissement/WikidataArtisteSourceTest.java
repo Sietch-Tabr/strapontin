@@ -159,6 +159,103 @@ class WikidataArtisteSourceTest {
     serveur.verify();
   }
 
+  // Genesis (Q151012) porte deux P2722 de rang normal, « Genesis Band » (82809422) et « Genesis »
+  // (3037) : la découverte renvoie une ligne par valeur, aucune ne doit être choisie au hasard.
+  @Test
+  void enrichirLot_decouverteElementAvecDeuxIdentifiantsDeezer_n_enFixeAucun() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final UUID id = UUID.randomUUID();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q151012"},
+                   "itemLabel":{"type":"literal","value":"Genesis"},
+                   "deezerId":{"type":"literal","value":"82809422"},
+                   "typeMatch":{"type":"literal","value":"groupe"}},
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q151012"},
+                   "itemLabel":{"type":"literal","value":"Genesis"},
+                   "deezerId":{"type":"literal","value":"3037"},
+                   "typeMatch":{"type":"literal","value":"groupe"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final Map<UUID, EnrichissementArtiste> resultat =
+        source(builder.build())
+            .enrichirLot(List.of(new ArtisteAEnrichir(id, "Genesis", "genesis", null, null)));
+
+    assertEquals("Q151012", resultat.get(id).wikidataId());
+    assertNull(resultat.get(id).deezerId());
+  }
+
+  @Test
+  void enrichirLot_decouverteElementAvecUnSeulIdentifiantRepete_leConserve() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final UUID id = UUID.randomUUID();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q243550"},
+                   "deezerId":{"type":"literal","value":"705"},
+                   "tmId":{"type":"literal","value":"K8vZ"},
+                   "typeMatch":{"type":"literal","value":"humain"}},
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q243550"},
+                   "deezerId":{"type":"literal","value":"705"},
+                   "tmId":{"type":"literal","value":"K8vZ"},
+                   "typeMatch":{"type":"literal","value":"humain"}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EnrichissementArtiste resultat =
+        source(builder.build())
+            .enrichirLot(List.of(new ArtisteAEnrichir(id, "Angele", "angele", null, null)))
+            .get(id);
+
+    assertEquals("705", resultat.deezerId());
+    assertEquals("K8vZ", resultat.ticketmasterIdLegacy());
+  }
+
+  // Mode lot : GROUP_CONCAT renvoie « 82809422|3037 » quand l'élément porte deux identifiants.
+  @Test
+  void enrichirLot_wikidataIdConnuAvecDeuxIdentifiantsDeezer_n_enFixeAucun() {
+    final RestClient.Builder builder = RestClient.builder();
+    final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();
+    final UUID id = UUID.randomUUID();
+
+    serveur
+        .expect(requestTo(org.hamcrest.Matchers.containsString("query.wikidata.org")))
+        .andRespond(
+            withSuccess(
+                """
+                {"results":{"bindings":[
+                  {"item":{"type":"uri","value":"http://www.wikidata.org/entity/Q151012"},
+                   "itemLabel":{"type":"literal","value":"Genesis"},
+                   "deezerId":{"type":"literal","value":"82809422|3037"},
+                   "tmId":{"type":"literal","value":""},
+                   "aliases":{"type":"literal","value":""}}
+                ]}}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    final EnrichissementArtiste resultat =
+        source(builder.build())
+            .enrichirLot(List.of(new ArtisteAEnrichir(id, "Genesis", "genesis", "Q151012", null)))
+            .get(id);
+
+    assertNull(resultat.deezerId());
+  }
+
   // Régression : Muse (P31="groupe de rock", Q5741069) est une sous-classe de "groupe musical"
   // (Q215380), pas une instance directe — un filtre de type strict (?item wdt:P31 wd:Q215380)
   // élimine silencieusement la quasi-totalité des groupes réels. Constaté en production (dev,

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -131,6 +132,41 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
             String.class));
   }
 
+  // Position issue de Wikidata et lieux de billetterie positionnés : la salle est écartée du
+  // contrôle de cohérence, mais sa ville suit quand même la commune confirmée par les concerts.
+  @Test
+  void verifier_positionWikidataEtLieuxPositionnes_alignelaVilleSansSignaler() {
+    final UUID id = salleWikidata("le transbordeur", true);
+    jdbc.update(
+        "UPDATE salles SET ville = 'Lyon', dept = '69', coherence_wikidata_signalee = NULL"
+            + " WHERE id = CAST(:id AS uuid)",
+        Map.of("id", id.toString()));
+    jdbc.update(
+        "INSERT INTO evenements (artiste_norm, date, heure, salle_norm, salle_id, ville, dept)"
+            + " VALUES ('a', CURRENT_DATE + 10, '20:00', 'x', CAST(:id AS uuid), 'Villeurbanne',"
+            + " '69')",
+        Map.of("id", id.toString()));
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " SELECT id, 'eventim', 'u', 'a', 's' FROM evenements",
+        Map.of());
+    when(wikidataSalleSource.enrichirLot(any()))
+        .thenReturn(
+            Map.of(
+                id,
+                new EnrichissementSalle(
+                    "Q3227778", "Le Transbordeur", "Villeurbanne", null, null)));
+
+    assertEquals(0, coherence.verifier());
+
+    assertEquals(
+        "Villeurbanne",
+        jdbc.queryForObject(
+            "SELECT ville FROM salles WHERE id = CAST(:id AS uuid)",
+            Map.of("id", id.toString()),
+            String.class));
+  }
+
   // Alhambra : élément détruit retiré, et le journal nomme la salle.
   @Test
   void revaliderTypes_elementInvalide_journalNommeLaSalle() {
@@ -170,7 +206,9 @@ class CoherenceWikidataSalleServiceIntegrationTest extends AbstractWorkerIntegra
 
     final ArgumentCaptor<List<SalleAEnrichir>> captor = ArgumentCaptor.forClass(List.class);
     verify(wikidataSalleSource).enrichirLot(captor.capture());
-    assertEquals(List.of(sansLieu), captor.getValue().stream().map(SalleAEnrichir::id).toList());
+    assertEquals(
+        Set.of(sansLieu, pinGalant),
+        captor.getValue().stream().map(SalleAEnrichir::id).collect(Collectors.toSet()));
     assertEquals(
         null,
         jdbc.queryForObject(
