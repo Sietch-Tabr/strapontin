@@ -1,13 +1,14 @@
 #!/bin/sh
 # Exécute une commande du front et compare ses avertissements à front/avertissements-attendus.txt.
 # Usage : sh scripts/avertissements-front.sh <npm-ci|build> <commande...>
+# La liste peut être remplacée par LISTE_AVERTISSEMENTS (essais de tester-avertissements-front.sh).
 # Échoue si la commande échoue, si un avertissement n'est pas déclaré, ou si un avertissement
 # déclaré a disparu (la ligne est alors à supprimer : plus de dette à tolérer).
 set -u
 
 portee="$1"
 shift
-liste="$(dirname "$0")/../front/avertissements-attendus.txt"
+liste="${LISTE_AVERTISSEMENTS:-$(dirname "$0")/../front/avertissements-attendus.txt}"
 journal="$(mktemp)"
 trap 'rm -f "$journal"' EXIT
 
