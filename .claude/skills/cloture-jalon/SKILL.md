@@ -105,8 +105,10 @@ git branch -d <branche> && git push origin --delete <branche>
 
 ## 8. Wiki et mémoire
 
-- Wiki, page Roadmap : marquer le jalon livré et dire ce qu'il apporte, en langage clair pour un utilisateur ou un admin. Pas de numéros de PR, de pipeline ni de détail d'incident. Commit et push dans le dépôt du wiki, puis contrôle : `git ls-remote origin main` doit donner le même hash que `git rev-parse HEAD`. Sinon, le signaler à l'utilisateur sans conclure la clôture : `origin/main` local ne prouve pas que le serveur a reçu les commits.
-- Mémoire : merge, numéro et statut de la pipeline, incidents éventuels et suite donnée. Un incident de déploiement donne lieu à un ticket (`/ticket`).
+- Wiki, page Roadmap : marquer le jalon livré et dire ce qu'il apporte, en langage clair pour un utilisateur ou un admin. Pas de numéros de PR, de pipeline ni de détail d'incident.
+- Wiki, toutes les autres pages : relire chaque page listée à l'étape 2 de `/pre-pr` contre le code réel (en-têtes de sécurité, tableau des étapes de pipeline, journal et alertes de l'administration, limites, ADR pour un choix d'outil ou d'architecture) et corriger ce que le jalon a rendu faux ou incomplet. Chaque fait ajouté est relu dans le code avant d'être écrit, puis `scripts/verifier-doc.sh` doit passer sans `[ERREUR]`. Ne pas attendre un rappel : la Roadmap seule ne vaut pas mise à jour du wiki.
+- Commit et push dans le dépôt du wiki, puis contrôle : `git ls-remote origin main` doit donner le même hash que `git rev-parse HEAD`. Sinon, le signaler à l'utilisateur sans conclure la clôture : `origin/main` local ne prouve pas que le serveur a reçu les commits.
+- Mémoire, dans le même geste que le wiki : merge, numéro et statut de la pipeline, incidents éventuels et suite donnée, retours de l'utilisateur de la session en feedback. Un incident de déploiement donne lieu à un ticket (`/ticket`).
 
 ## 9. Fin
 
