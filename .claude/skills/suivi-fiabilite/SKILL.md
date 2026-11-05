@@ -283,6 +283,17 @@ Les anomalies de données confirmées se réparent, elles ne restent pas en atte
 
 **Jamais de ticket sans confirmation explicite de bug ET accord de l'utilisateur.** Présenter le constat, la preuve, la cause racine si identifiée, l'impact concret vérifié — proposer, attendre la réponse. Si un correctif est déjà en cours ailleurs, ne pas dupliquer : noter le statut, vérifier au prochain check.
 
+**Étape bloquante avant tout brouillon : intérêt et durabilité** (règle du 05/11/2026, après l'audit des 235 tickets de ce suivi : 11 repris explicitement par un ticket ultérieur, jusqu'à 76 cités avec un motif de persistance, et 33 tickets « fusion/rapprochement de salles » corrigés cas par cas). Cette étape prime sur la règle « un constat mineur se ticket quand même » du skill `/ticket` : pour ce suivi, un constat sans intérêt ou sans correctif durable ne devient pas un ticket.
+
+1. **Tout vérifier moi-même d'abord** : site officiel du lieu, OSM, API de la billetterie, position, base. Ne lister en « non vérifié » que ce qui exige une autorisation explicite (déchiffrement de clé) ; jamais demander la permission de vérifier.
+2. **Impact chiffré** : nombre de salles, fiches, comptes, notifications touchés (requête, pas impression), et conséquence visible pour l'utilisateur. Un impact nul ou cosmétique : recommander « pas de ticket ».
+3. **Durabilité du correctif** :
+   - La cause racine est-elle établie, ou seul un cas est traité ? Chercher la famille (`tea issues -k` sur le mécanisme) : si 3 tickets ou plus corrigent la même classe de défaut cas par cas, le ticket demande la cause de la classe, pas un cas de plus.
+   - La donnée corrigée sera-t-elle réécrite par une source ou un job (nom suivi de la billetterie, alignement, purge) ? Si oui, le dire et ne proposer un ticket que pour le mécanisme.
+   - Le mécanisme touche-t-il d'autres lignes encore non traitées ? Mesurer le taux d'erreur sur les lignes déjà traitées et le projeter sur celles à venir.
+4. **Présenter** : impact chiffré, durabilité, et une recommandation explicite « ticket » ou « pas de ticket » avec la raison. Un brouillon n'est rédigé que si la recommandation est « ticket ».
+5. **Après création** : au check suivant, revérifier en données réelles que le correctif tient (donnée non réécrite, signalement non recréé), et le consigner dans la mémoire.
+
 **Avant de conclure le résumé du check, relire la liste complète des constats confirmés de ce tour et vérifier explicitement que chacun a (a) une réparation proposée (section 13), (b) un ticket proposé ou créé, (c) les deux, ou (d) une raison explicite de n'avoir ni l'un ni l'autre.** Un constat simplement narré dans le résumé sans proposition de ticket est le même défaut qu'un constat marqué "en attente de décision" sans jamais poser la question — cf. HISTORIQUE.md, récidive du 13/08 (#1057 fermé mais confirmé non résolu sur le fond, narré dans le résumé mais jamais proposé comme ticket dans le même tour que les 3 autres constats du check).
 
 **Structure du ticket : Constat / Analyse / Attendu — jamais de section "piste de correction"/implémentation proposée.** Un ticket écrit au moment de la découverte n'a pas la vue d'ensemble du jalon qui le traitera plus tard (autres tickets, refactors en cours) — imposer une implémentation biaiserait à tort la session qui l'implémentera. Exception : un ticket qui documente une correction directe de données déjà exécutée en BDD prod peut décrire l'opération SQL faite (compte-rendu d'action, pas une piste de code).
