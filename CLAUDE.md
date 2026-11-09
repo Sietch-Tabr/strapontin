@@ -132,7 +132,7 @@ Seul l'outillage partagé de `.claude/` est versionné (liste blanche dans `.git
 - `/pre-pr` : Wiki + CLAUDE.md + changelog + README + commit docs + `tea pr create`
 - `/suivi-fiabilite` : Check delta 360° du suivi de fiabilité prod — santé/jobs/données/tickets, état dans la mémoire personnelle (prérequis locaux listés dans le skill)
 - `check-deps` : Mises à jour Maven/npm/stack infra + changelogs — auto en début de jalon (`"Tickets du jalon X.Y.Z à implémenter :"`, mises à jour sûres appliquées au jalon) ; résumé + proposition de ticket en invocation ad-hoc
-- `/check-pipeline` : Statut et journaux de la dernière pipeline Woodpecker sur `main`
+- `/check-pipeline` : Statut et journaux de la dernière pipeline Woodpecker sur `main`, via `woodpecker-cli` en local (contexte enregistré par `woodpecker-cli setup`, aucun token à passer, aucun accès au LXC de CI)
 - `/ticket` : Création de ticket : doublon recherché, constat/analyse/attendu sans solution, étiquette et jalon vérifiés côté serveur
 - `/cloture-jalon` : Lancé par l'utilisateur uniquement : merge de la PR, pipeline, vérification prod, tag et release lisible, fermeture du jalon, nettoyage, wiki et mémoire
 - `/restauration-dev` : Base du dev remplacée par une copie de la prod, configuration du dev conservée (jamais `restore.sh`)
