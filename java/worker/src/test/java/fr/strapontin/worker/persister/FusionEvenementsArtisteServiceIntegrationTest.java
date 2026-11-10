@@ -801,6 +801,42 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     return id;
   }
 
+  // Salle Gaveau : le produit de 10h est resté sur la fiche de 11h30, qui porte son propre produit.
+  @Test
+  void retirerObservationsDeProduitReattribue_produitRepublieSurUneAutreFiche_leRetire() {
+    final UUID salle = creerSalle("Salle Gaveau");
+    final UUID matin =
+        ficheAvecObservations(
+            salle,
+            "le petit prince",
+            "10:00",
+            new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738765", "1"});
+    final UUID midi =
+        ficheAvecObservations(
+            salle,
+            "le petit prince",
+            "11:30",
+            new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738765", "100"},
+            new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738766", "1"});
+
+    assertEquals(1, fusionProduitsEventim.retirerObservationsDeProduitReattribue());
+
+    assertEquals(1L, nombreObservations(matin, "eventim"));
+    assertEquals(1L, nombreObservations(midi, "eventim"));
+  }
+
+  @Test
+  void retirerObservationsDeProduitReattribue_ficheSeuleSurSonProduit_neRetireRien() {
+    final UUID salle = creerSalle("Salle Gaveau");
+    ficheAvecObservations(
+        salle,
+        "le petit prince",
+        "10:00",
+        new String[] {"eventim", "https://www.eventim.fr/event/petit-prince-21738765", "100"});
+
+    assertEquals(0, fusionProduitsEventim.retirerObservationsDeProduitReattribue());
+  }
+
   private long nombreObservations(final UUID evenementId, final String source) {
     return jdbc.queryForObject(
         "SELECT count(*) FROM observations WHERE evenement_id = CAST(:id AS uuid)"

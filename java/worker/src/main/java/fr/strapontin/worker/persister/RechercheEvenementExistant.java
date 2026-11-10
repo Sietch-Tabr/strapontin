@@ -6,12 +6,14 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.ProduitEventim;
+import java.sql.Date;
 import java.sql.Time;
 import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -30,6 +32,8 @@ final class RechercheEvenementExistant {
   private static final int TOLERANCE_HEURE_MINUTES = 3;
   // Écart d'heure toléré pour un même produit Eventim : au-delà, deux séances.
   private static final int ECART_MAX_PRODUIT_MINUTES = 60;
+  // Un produit revu depuis moins de ce délai est encore publié à sa date : pas un produit déplacé.
+  private static final int MINUTES_SANS_REVUE_PRODUIT_DEPLACE = 90;
   private static final String CLE_DATE = "date";
   private static final String CLE_HEURE = "heure";
 
@@ -70,7 +74,15 @@ final class RechercheEvenementExistant {
    * @return l'événement, ou {@code null} sans candidat ou si les artistes divergent
    */
   /* package-private : appelé par PersisteurConcertsDb. */
-  UUID parProduit(final ValeurConcert concert) {
+  UUID parProduit(final ValeurConcert concert, final boolean produitUniqueDuLot) {
+    final UUID memeJour = parProduitMemeJour(concert);
+    if (memeJour != null || !produitUniqueDuLot) {
+      return memeJour;
+    }
+    return parProduitDeplace(concert);
+  }
+
+  private UUID parProduitMemeJour(final ValeurConcert concert) {
     final String condition = CritereProduitEvenement.condition(concert);
     if (condition == null) {
       return null;
@@ -110,6 +122,60 @@ final class RechercheEvenementExistant {
       }
     }
     return null;
+  }
+
+  // Le produit Eventim est l'identité de la fiche : un produit dont la date ou l'heure change
+  // reste sur sa fiche. Seul un produit unique du lot (jamais une série de séances), porté par une
+  // seule fiche de la salle et qu'aucun cycle récent n'a revue (l'ancienne date n'est plus
+  // publiée), est déplacé.
+  private UUID parProduitDeplace(final ValeurConcert concert) {
+    final Optional<String> produit =
+        "eventim".equals(concert.source())
+            ? ProduitEventim.identifiant(concert.url())
+            : Optional.empty();
+    if (produit.isEmpty()) {
+      return null;
+    }
+    final String expression = ProduitEventim.expressionSql("o");
+    final List<Map<String, Object>> candidats =
+        jdbc.queryForList(
+            "SELECT e.id AS id, e.artiste_id AS artiste_id, e.date AS date,"
+                + " o.updated_at < now() - interval '"
+                + MINUTES_SANS_REVUE_PRODUIT_DEPLACE
+                + " minutes' AS ancienne,"
+                + " NOT EXISTS (SELECT 1 FROM observations x WHERE x.evenement_id = e.id"
+                + "   AND (x.source <> 'eventim' OR "
+                + ProduitEventim.expressionSql("x")
+                + " IS DISTINCT FROM :produit)) AS seul_produit"
+                + " FROM observations o JOIN evenements e ON e.id = o.evenement_id"
+                + " WHERE o.source = 'eventim' AND "
+                + expression
+                + " = :produit AND e.date >= CURRENT_DATE"
+                + " AND (e.salle_id IS NULL OR CAST(:salleId AS uuid) IS NULL"
+                + "      OR e.salle_id = CAST(:salleId AS uuid))",
+            new MapSqlParameterSource()
+                .addValue("produit", produit.get())
+                .addValue(
+                    "salleId",
+                    concert.salleId() != null ? concert.salleId().toString() : null,
+                    Types.VARCHAR));
+    if (candidats.size() != 1) {
+      return null;
+    }
+    final Map<String, Object> c = candidats.get(0);
+    final UUID candArtisteId = (UUID) c.get("artiste_id");
+    final boolean artistesDivergents =
+        concert.artisteId() != null
+            && candArtisteId != null
+            && !concert.artisteId().equals(candArtisteId);
+    // Même jour : la fiche garde l'identité que lui donne l'autre billetterie ; autre jour : seul
+    // ce produit l'alimente, sa date peut le suivre.
+    final boolean memeJour = concert.date().equals(((Date) c.get("date")).toLocalDate());
+    return !artistesDivergents
+            && Boolean.TRUE.equals(c.get("ancienne"))
+            && (memeJour || Boolean.TRUE.equals(c.get("seul_produit")))
+        ? (UUID) c.get("id")
+        : null;
   }
 
   private static boolean heureProche(final LocalTime existante, final LocalTime entrante) {

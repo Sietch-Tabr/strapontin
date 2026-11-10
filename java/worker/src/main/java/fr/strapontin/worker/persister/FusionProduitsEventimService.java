@@ -287,4 +287,43 @@ public class FusionProduitsEventimService {
     }
     return marquees;
   }
+
+  /**
+   * Retire l'observation d'un produit Eventim restée sur une fiche qui en porte
+   * un autre, revu depuis, alors qu'une autre fiche de la salle publie ce
+   * produit à son tour : l'ancien rattachement par l'heure, que les deux
+   * fiches ne se sont pas partagé, n'a plus de raison d'être.
+   * @return nombre d'observations retirées
+   */
+  public int retirerObservationsDeProduitReattribue() {
+    final int retirees =
+        jdbc.update(
+            """
+            DELETE FROM observations o USING evenements e
+            WHERE e.id = o.evenement_id AND o.source = 'eventim'
+              AND o.updated_at < now() - interval '2 days'
+              AND e.date >= CURRENT_DATE
+              AND EXISTS (SELECT 1 FROM observations r
+                          WHERE r.evenement_id = e.id AND r.source = 'eventim'
+                            AND r.updated_at > now() - interval '1 day'
+                            AND %1$s IS DISTINCT FROM %2$s)
+              AND EXISTS (SELECT 1 FROM observations v JOIN evenements ev ON ev.id = v.evenement_id
+                          WHERE v.source = 'eventim' AND v.updated_at > now() - interval '1 day'
+                            AND %3$s = %2$s AND ev.id <> e.id
+                            AND ev.salle_id IS NOT DISTINCT FROM e.salle_id AND ev.date = e.date)
+            """
+                .formatted(
+                    ProduitEventim.expressionSql("r"),
+                    ProduitEventim.expressionSql("o"),
+                    ProduitEventim.expressionSql("v")),
+            Map.of());
+    if (retirees > 0) {
+      logsAdminWorker.inserer(
+          "info",
+          "reconciliation-nocturne",
+          retirees + " observation(s) de produit Eventim retirée(s) d'une fiche qui en porte un autre",
+          Map.of("observations", retirees));
+    }
+    return retirees;
+  }
 }

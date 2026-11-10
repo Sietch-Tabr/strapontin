@@ -464,6 +464,38 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
     assertEquals(3L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
   }
 
+  // Zimmer90 : la même fiche reçoit un doublon, recréé par le cycle, cinq nuits de suite.
+  @Test
+  void verifier_ficheQuiRecoitUnDoublonTroisNuits_estSignalee() {
+    final UUID salle = creerSalle();
+    final UUID cible = evenementHeure(salle, "zimmer90", "20:00");
+    for (int jour = 1; jour <= 3; jour++) {
+      jdbc.update(
+          "INSERT INTO logs_admin (ts, niveau, source, message, meta) VALUES"
+              + " (now() - make_interval(days => :jour), 'info', 'reconciliation-nocturne', 'm',"
+              + " CAST(:meta AS jsonb))",
+          Map.of("jour", jour, "meta", "{\"evenementCible\": \"" + cible + "\"}"));
+    }
+
+    controle.verifier();
+
+    assertTrue(actifs().contains("fusion_nocturne_repetee"));
+  }
+
+  @Test
+  void verifier_ficheQuiRecoitUnDoublonUneSeuleNuit_neSignaleRien() {
+    final UUID salle = creerSalle();
+    final UUID cible = evenementHeure(salle, "zimmer90", "20:00");
+    jdbc.update(
+        "INSERT INTO logs_admin (ts, niveau, source, message, meta) VALUES"
+            + " (now(), 'info', 'reconciliation-nocturne', 'm', CAST(:meta AS jsonb))",
+        Map.of("meta", "{\"evenementCible\": \"" + cible + "\"}"));
+
+    controle.verifier();
+
+    assertTrue(!actifs().contains("fusion_nocturne_repetee"));
+  }
+
   @Test
   void verifier_ficheAvecProduitDePrestation_estSignalee() {
     final UUID salle = creerSalle();

@@ -84,6 +84,13 @@ public final class CatalogueSignalements {
             + " devrait l'écarter : en chercher la raison (nouveau libellé) ; le signalement se"
             + " referme seul.");
     ajouter(
+        "fusion_nocturne_repetee",
+        "Fiche recréée puis refusionnée chaque nuit",
+        "La fusion nocturne reçoit des doublons de cette fiche trois nuits sur sept : une"
+            + " billetterie la republie sous une autre date, heure ou salle et la résolution à"
+            + " l'écriture ne la rattache pas. Comparer les fiches fusionnées dans les journaux ;"
+            + " le signalement se referme seul quand les fusions cessent.");
+    ajouter(
         "ville_salle_divergente",
         "Ville de la salle contredite par sa position",
         "La position de cette salle, publiée par une billetterie, tombe dans une autre commune que"

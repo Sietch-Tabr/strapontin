@@ -10,8 +10,10 @@ import fr.strapontin.core.ProduitEventim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,13 +159,15 @@ public class PersisteurConcertsDb {
    * flou même salle et même date ({@link RechercheEvenementExistant}), sinon
    * création.
    */
-  private ResolutionEvenement resoudreOuCreerEvenement(final ValeurConcert concert) {
+  private ResolutionEvenement resoudreOuCreerEvenement(
+      final ValeurConcert concert, final Set<String> produitsMultiplesDuLot) {
     final UUID exactId = rechercheEvenement.exact(concert);
     if (exactId != null) {
       return new ResolutionEvenement(exactId, false, false);
     }
 
-    final UUID produitId = rechercheEvenement.parProduit(concert);
+    final UUID produitId =
+        rechercheEvenement.parProduit(concert, !produitsMultiplesDuLot.contains(cleProduit(concert)));
     if (produitId != null) {
       return new ResolutionEvenement(produitId, false, true);
     }
@@ -313,6 +317,7 @@ public class PersisteurConcertsDb {
     jdbc.update(
         """
         UPDATE evenements e SET
+            date        = CAST(:date AS date),
             heure       = COALESCE(CAST(:heure AS time), e.heure),
             artiste_norm = CASE WHEN e.artiste_id IS NULL OR e.artiste_id = CAST(:artisteId AS uuid)
                                 THEN :artisteNorm ELSE e.artiste_norm END,
@@ -323,7 +328,8 @@ public class PersisteurConcertsDb {
                             AND o.source <> CAST(:source AS source_concert))
           AND NOT EXISTS (
             SELECT 1 FROM evenements x
-            WHERE x.id <> e.id AND x.date = e.date AND x.salle_id IS NOT DISTINCT FROM e.salle_id
+            WHERE x.id <> e.id AND x.date = CAST(:date AS date)
+              AND x.salle_id IS NOT DISTINCT FROM e.salle_id
               AND x.heure IS NOT DISTINCT FROM COALESCE(CAST(:heure AS time), e.heure)
               AND x.artiste_norm = CASE WHEN e.artiste_id IS NULL
                                              OR e.artiste_id = CAST(:artisteId AS uuid)
@@ -331,6 +337,7 @@ public class PersisteurConcertsDb {
         """,
         new MapSqlParameterSource()
             .addValue("id", evenementId.toString())
+            .addValue(CLE_DATE, concert.date(), Types.DATE)
             .addValue(CLE_HEURE, concert.heure(), Types.TIME)
             .addValue("source", concert.source())
             .addValue("artisteNorm", concert.artisteNorm())
@@ -425,12 +432,13 @@ public class PersisteurConcertsDb {
     int inserts = 0;
     int updates = 0;
     int republications = 0;
+    final Set<String> produitsMultiples = produitsMultiplesDuLot(valeurs);
     for (final ValeurConcert concert : valeurs) {
       if (republicationFiche.estRepublication(concert)) {
         republications++;
         continue;
       }
-      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert);
+      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert, produitsMultiples);
       upsertObservation(resolution.id(), concert);
       enregistrerPlateau(resolution.id(), concert);
       if (resolution.nouveau()) {
@@ -449,5 +457,25 @@ public class PersisteurConcertsDb {
       LOG.info("{} fiche(s) d'une ancienne salle republiée(s) ignorée(s)", republications);
     }
     return new PersisterConcerts.ResultatPersistance(inserts, updates);
+  }
+
+  private static String cleProduit(final ValeurConcert concert) {
+    return "eventim".equals(concert.source())
+        ? ProduitEventim.identifiant(concert.url()).orElse("")
+        : "";
+  }
+
+  // Produits Eventim publiés plusieurs fois dans le lot : des séances d'une série, jamais un
+  // produit dont la date ou l'heure a changé.
+  private static Set<String> produitsMultiplesDuLot(final List<ValeurConcert> valeurs) {
+    final Set<String> vus = new HashSet<>();
+    final Set<String> multiples = new HashSet<>();
+    for (final ValeurConcert concert : valeurs) {
+      final String cle = cleProduit(concert);
+      if (!cle.isEmpty() && !vus.add(cle)) {
+        multiples.add(cle);
+      }
+    }
+    return multiples;
   }
 }

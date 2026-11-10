@@ -57,6 +57,7 @@ final class ControleInvariantsDonnees {
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
         + publier("produit_prestation_visible", "evenement", produitsPrestationVisibles())
+        + publier("fusion_nocturne_repetee", "evenement", fusionsNocturnesRepetees())
         + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publier("salle_sans_ville", SALLE, sallesSansVille())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
@@ -244,6 +245,29 @@ final class ControleInvariantsDonnees {
           anomalies.put(
               rs.getObject("id", UUID.class),
               Map.of("source", rs.getString("source"), "url", rs.getString("url")));
+        });
+    return anomalies;
+  }
+
+  // Une fiche que la fusion nocturne reçoit trois nuits sur sept est recréée chaque jour : la
+  // résolution à l'écriture ne la rattache pas, la fusion ne fait que corriger après coup.
+  private Map<UUID, Map<String, Object>> fusionsNocturnesRepetees() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT c.cible, c.nuits FROM (
+          SELECT CAST(meta ->> 'evenementCible' AS uuid) AS cible,
+                 count(DISTINCT ts::date) AS nuits
+          FROM logs_admin
+          WHERE source = 'reconciliation-nocturne' AND meta ->> 'evenementCible' IS NOT NULL
+            AND ts > now() - interval '7 days'
+          GROUP BY 1 HAVING count(DISTINCT ts::date) >= 3) c
+        JOIN evenements e ON e.id = c.cible AND e.date >= CURRENT_DATE
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("cible", UUID.class), Map.of("nuits", rs.getLong("nuits")));
         });
     return anomalies;
   }

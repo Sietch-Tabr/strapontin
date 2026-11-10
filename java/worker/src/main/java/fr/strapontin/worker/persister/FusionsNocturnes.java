@@ -46,7 +46,8 @@ public class FusionsNocturnes {
    * @return nombre de fusions effectuées
    */
   public int fusionnerFichesPerimeesEtSeances() {
-    return parProduit.fusionner()
+    return parProduit.retirerObservationsDeProduitReattribue()
+        + parProduit.fusionner()
         + parProduit.fusionnerProduitsRepublies()
         + parProduit.fusionnerProduitsRepubliesAilleurs()
         + parArtiste.fusionnerFichesPerimees()

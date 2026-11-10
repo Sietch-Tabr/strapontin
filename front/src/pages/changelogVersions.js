@@ -14,6 +14,7 @@ export const versionsChangelog = [
           "Une prestation d'hospitalité, un accès prioritaire ou un produit de prestation Ticketmaster n'est plus affiché comme un concert (Céline Dion, Rush, Priority Pass) ; ceux déjà enregistrés sont retirés.",
           "Les spectacles de théâtre et d'humour d'une salle Ticketmaster (Marigny, Gaîté-Montparnasse) restent rafraîchis même quand leurs absences avaient atteint le seuil avant le premier passage du lieu : ils ne glissent plus vers la suppression suggérée alors qu'ils sont à l'affiche.",
           "Les spectacles sportifs et les combats de grandes salles (Horse GP, T-Show, MMA) sont de nouveau rafraîchis comme les autres séances ; les matchs d'équipe restent écartés.",
+          "Un produit Eventim dont la date ou l'heure change reste sur sa fiche au lieu d'en créer une seconde chaque nuit (Zimmer90 à l'Élysée Montmartre, Keren Ann, Erella), et un produit rattaché par erreur à la fiche d'un autre n'y reste plus (Le Petit Prince, salle Gaveau).",
         ],
       },
       {
