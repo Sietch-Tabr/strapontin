@@ -47,6 +47,20 @@ final class EmailCompteTemplate {
   private EmailCompteTemplate() {}
 
   /* package-private : appelé par EmailCompteService (même package). */
+  static String nouvelleVersion(final String version, final String baseUrl) {
+    final String sujet = "Strapontin a une nouvelle version";
+    final String corps =
+        "La version "
+            + UtilitairesChaine.echapperHtml(version)
+            + " de Strapontin est disponible. Découvrez ce qui a changé. Vous recevez ce message"
+            + " parce que vous avez demandé à être prévenu des nouvelles versions, et qu'aucun"
+            + " appareil n'est abonné aux notifications push : vous ne le recevrez qu'une fois"
+            + " pour cette version, et pouvez changer ce choix dans vos paramètres.";
+    return GABARIT.formatted(
+        sujet, sujet, corps, baseUrl + "/changelog", "Voir les nouveautés", baseUrl);
+  }
+
+  /* package-private : appelé par EmailCompteService (même package). */
   static String avertissementCanalPerdu(final String baseUrl, final String cause) {
     final String sujet = "Vos notifications push Strapontin sont arrêtées";
     final String raison =
@@ -58,7 +72,7 @@ final class EmailCompteTemplate {
                 + " plus.";
     final String corps =
         raison
-            + " Vos choix de notification push (artistes, salles, nouvelle version) ont été"
+            + " Vos choix de notification push (artistes, salles) ont été"
             + " décochés, car ils ne peuvent plus servir sans appareil. Vos notifications par"
             + " email, si vous les avez activées, ne sont pas concernées. Pour retrouver le push,"
             + " ouvrez Strapontin sur votre appareil, autorisez les notifications dans le"

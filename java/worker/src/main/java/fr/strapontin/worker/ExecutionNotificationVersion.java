@@ -23,19 +23,23 @@ public class ExecutionNotificationVersion {
   private static final Logger LOG = LoggerFactory.getLogger(ExecutionNotificationVersion.class);
 
   private final NotificationVersionPushService notificationVersionPushService;
+  private final NotificationVersionEmailService notificationVersionEmailService;
   private final WorkerStatsService workerStatsService;
   private final BuildProperties buildProperties;
 
   /**
    * @param notificationVersionPushService envoi de l'annonce aux abonnés
+   * @param notificationVersionEmailService annonce par email, pour qui n'a aucun appareil push
    * @param workerStatsService enregistrement de l'exécution
    * @param buildProperties version courante de l'application
    */
   public ExecutionNotificationVersion(
       final NotificationVersionPushService notificationVersionPushService,
+      final NotificationVersionEmailService notificationVersionEmailService,
       final WorkerStatsService workerStatsService,
       final BuildProperties buildProperties) {
     this.notificationVersionPushService = notificationVersionPushService;
+    this.notificationVersionEmailService = notificationVersionEmailService;
     this.workerStatsService = workerStatsService;
     this.buildProperties = buildProperties;
   }
@@ -52,7 +56,11 @@ public class ExecutionNotificationVersion {
     workerStatsService.executerAvecStats(
         LOG,
         "notifier:version",
-        () -> new ResultatPersistance(notificationVersionPushService.notifierVersion(version), 0));
+        () ->
+            new ResultatPersistance(
+                notificationVersionPushService.notifierVersion(version)
+                    + notificationVersionEmailService.notifierVersion(version),
+                0));
     LOG.info("notifier:version terminé version={}", version);
   }
 }

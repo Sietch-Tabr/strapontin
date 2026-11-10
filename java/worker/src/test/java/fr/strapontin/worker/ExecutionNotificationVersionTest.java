@@ -20,11 +20,13 @@ import org.springframework.boot.info.BuildProperties;
 class ExecutionNotificationVersionTest {
 
   private NotificationVersionPushService service;
+  private NotificationVersionEmailService email;
   private ExecutionNotificationVersion execution;
 
   @BeforeEach
   void setUp() {
     service = mock(NotificationVersionPushService.class);
+    email = mock(NotificationVersionEmailService.class);
     final WorkerStatsService stats = mock(WorkerStatsService.class);
     // Le suivi des statistiques exécute le travail transmis, comme en production.
     doAnswer(
@@ -37,7 +39,8 @@ class ExecutionNotificationVersionTest {
         .executerAvecStats(any(), eq("notifier:version"), any());
     final Properties proprietes = new Properties();
     proprietes.setProperty("version", "9.9.9");
-    execution = new ExecutionNotificationVersion(service, stats, new BuildProperties(proprietes));
+    execution = new ExecutionNotificationVersion(
+            service, email, stats, new BuildProperties(proprietes));
   }
 
   @Test
@@ -45,6 +48,7 @@ class ExecutionNotificationVersionTest {
     execution.executer("3.0.0");
 
     verify(service).notifierVersion("3.0.0");
+    verify(email).notifierVersion("3.0.0");
   }
 
   @Test

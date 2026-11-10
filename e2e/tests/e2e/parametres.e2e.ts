@@ -50,6 +50,21 @@ test.describe("Scénario: paramètres — sections", () => {
     await expect(page.locator("section#preferences")).toBeVisible();
   });
 
+  test("parametres_notifications_nouvelleVersion_estProposeeSansAppareilPush", async ({
+    page,
+  }) => {
+    await page.goto("/parametres#notifications");
+    const bloc = page.locator("section#notifications .param-bloc", {
+      hasText: "Nouvelle version",
+    });
+
+    await expect(bloc).toBeVisible();
+    await expect(bloc).toContainText("sans appareil push, par email");
+    await expect(
+      bloc.getByLabel("Être prévenu d'une nouvelle version de l'application"),
+    ).toBeVisible();
+  });
+
   test("parametres_section_notifications_visible", async ({ page }) => {
     await page.goto("/parametres#notifications");
     await expect(page.locator("section#notifications")).toBeVisible();

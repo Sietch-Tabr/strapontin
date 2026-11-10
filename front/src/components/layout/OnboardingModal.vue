@@ -50,7 +50,7 @@ const ETAPES = [
     icone: "icon-bell",
     titre: "Notifications email et push",
     texte:
-      "Choisissez comment être prévenu des nouveaux concerts de vos artistes. Vous pourrez changer d'avis à tout moment dans Paramètres.",
+      "Choisissez comment être prévenu des nouveaux concerts de vos artistes. Vous pourrez changer d'avis à tout moment dans Paramètres, où vous pouvez aussi être prévenu des nouvelles versions de l'application (par push, ou par email sans appareil abonné).",
   },
   {
     icone: "icon-smartphone",

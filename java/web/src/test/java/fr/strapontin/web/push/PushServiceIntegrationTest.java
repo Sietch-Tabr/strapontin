@@ -150,7 +150,7 @@ class PushServiceIntegrationTest extends AbstractWebIntegrationTest {
                 + " dernier_appareil_retire_le FROM user_config WHERE user_id = 'u-push'",
             Map.of());
     assertEquals(false, config.get("notif_artistes_push"));
-    assertEquals(false, config.get("notif_nouvelle_version"));
+    assertEquals(true, config.get("notif_nouvelle_version"));
     assertEquals("jamais", config.get("frequence_notifications"));
     assertNull(config.get("dernier_appareil_retire_le"));
   }

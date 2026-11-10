@@ -19,6 +19,13 @@ export const versionsChangelog = [
         ],
       },
       {
+        categorie: "Notifications",
+        items: [
+          "L'annonce d'une nouvelle version de l'application peut maintenant arriver par email : l'option « Être prévenu d'une nouvelle version » ne demande plus d'appareil push, elle est portée par le push si un appareil est abonné, par email sinon, une seule fois par version.",
+          "Perdre son dernier appareil push ne décoche plus cette option.",
+        ],
+      },
+      {
         categorie: "Invitations",
         items: [
           "Vous pouvez inviter une personne par son adresse email depuis Paramètres, onglet Inviter : l'email part aussitôt et aucun compte n'existe tant que le lien n'est pas activé.",

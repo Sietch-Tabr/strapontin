@@ -112,6 +112,19 @@ public class EmailCompteService {
         EmailCompteTemplate::avertissementPushJamaisActive);
   }
 
+  /**
+   * Annonce une nouvelle version à un utilisateur sans appareil push abonné.
+   * @param email destinataire
+   * @param version version annoncée
+   * @return {@code true} si l'email est parti
+   */
+  public boolean envoyerNouvelleVersion(final String email, final String version) {
+    return envoyer(
+        email,
+        "Strapontin a une nouvelle version",
+        baseUrl -> EmailCompteTemplate.nouvelleVersion(version, baseUrl));
+  }
+
   private boolean envoyer(
       final String email,
       final String sujet,

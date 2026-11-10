@@ -46,7 +46,9 @@ final class VerificationNotifications {
       final boolean contenuPush) {
     final boolean nouvelleVersion = requete.notifNouvelleVersion();
     verifierFrequenceEtContenu(jamais, contenuEmail || contenuPush, nouvelleVersion);
-    verifierCanauxDisponibles(userId, contenuEmail, contenuPush || nouvelleVersion);
+    // La nouvelle version suit un contenu coché : par push si un appareil est abonné, sinon par
+    // email, canaux que ce contrôle vérifie déjà.
+    verifierCanauxDisponibles(userId, contenuEmail, contenuPush);
   }
 
   private static void verifierFrequenceEtContenu(

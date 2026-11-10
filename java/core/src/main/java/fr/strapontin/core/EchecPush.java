@@ -28,7 +28,6 @@ public final class EchecPush {
   private static final String COLONNE_ECHECS = "echecs_consecutifs";
   private static final String SQL_DECOCHER_PUSH =
       "UPDATE user_config SET notif_artistes_push = false, notif_salles_push = false,"
-          + " notif_nouvelle_version = false,"
           + " frequence_notifications = CASE WHEN notif_artistes OR notif_salles"
           + " THEN frequence_notifications ELSE 'jamais' END";
 
