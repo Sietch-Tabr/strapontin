@@ -237,7 +237,7 @@ test.describe("Scénario: admin — onglet Référentiel (salles et artistes)", 
       await boutonFusion.click();
 
       const dialog = page.locator(
-        "dialog[aria-labelledby='titre-fusion-salle']",
+        "dialog[aria-labelledby='titre-fusion-referentiel']",
       );
       await expect(dialog).toBeVisible({ timeout: 3000 });
       await dialog.getByRole("radio", { name: new RegExp(nomA) }).check();

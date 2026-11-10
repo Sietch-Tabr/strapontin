@@ -182,126 +182,38 @@
           </div>
         </div>
 
-        <div v-if="totalPages > 1" class="pagination">
-          <button
-            type="button"
-            class="bouton bouton-secondaire bouton-petit"
-            :disabled="page === 0"
-            @click="allerPage(page - 1)"
-          >
-            ← Précédent
-          </button>
-          <span
-            >Page {{ page + 1 }} / {{ totalPages }} ({{ total }} artistes)</span
-          >
-          <button
-            type="button"
-            class="bouton bouton-secondaire bouton-petit"
-            :disabled="page >= totalPages - 1"
-            @click="allerPage(page + 1)"
-          >
-            Suivant →
-          </button>
-        </div>
+        <PaginationListe
+          admin
+          :page="page"
+          :total-pages="totalPages"
+          :total="total"
+          libelle-total="artistes"
+          @changer="allerPage"
+        />
       </template>
     </div>
   </section>
 
-  <dialog
+  <DialogueEditionReferentiel
     ref="dialogEditionRef"
-    aria-labelledby="titre-edition-artiste"
-    aria-modal="true"
-  >
-    <div class="dialog-entete">
-      <h2 id="titre-edition-artiste" class="dialog-titre">
-        Modifier le nom affiché
-      </h2>
-    </div>
-    <form @submit.prevent="sauvegarderEdition">
-      <div class="champ">
-        <label for="edit-nom-affiche-artiste" class="champ-label"
-          >Nom affiché</label
-        >
-        <input
-          id="edit-nom-affiche-artiste"
-          v-model="edition.nomAffiche"
-          type="text"
-          maxlength="200"
-          autocomplete="off"
-          :placeholder="edition.nomOriginal"
-        />
-        <p class="param-aide">
-          Laisser vide pour revenir à l'enrichissement automatique.
-        </p>
-      </div>
-      <div class="dialog-pied">
-        <button
-          type="submit"
-          class="bouton bouton-primaire"
-          :disabled="enCoursEdition"
-        >
-          Enregistrer
-        </button>
-        <button
-          type="button"
-          class="bouton bouton-texte"
-          @click="fermerEdition"
-        >
-          Annuler
-        </button>
-      </div>
-    </form>
-  </dialog>
+    v-model:nom-affiche="edition.nomAffiche"
+    id-champ="edit-nom-affiche-artiste"
+    :nom-original="edition.nomOriginal"
+    :en-cours="enCoursEdition"
+    @sauvegarder="sauvegarderEdition"
+    @fermer="fermerEdition"
+  />
 
-  <dialog
+  <DialogueFusionReferentiel
     ref="dialogFusionRef"
-    aria-labelledby="titre-fusion-artiste"
-    aria-modal="true"
-  >
-    <div class="dialog-entete">
-      <h2 id="titre-fusion-artiste" class="dialog-titre">
-        Fusionner deux artistes
-      </h2>
-    </div>
-    <p v-if="itemA && itemB">
-      Choisissez l'artiste à conserver — l'autre sera absorbé (concerts,
-      abonnements et sources externes réassignés) puis supprimé. Action
-      irréversible.
-    </p>
-    <div v-if="itemA && itemB" class="champ">
-      <label class="champ-label">
-        <input
-          v-model="cibleChoisie"
-          type="radio"
-          name="cible"
-          :value="itemA.id"
-        />
-        Conserver « {{ itemA.nomAffiche || itemA.nom }} »
-      </label>
-      <label class="champ-label">
-        <input
-          v-model="cibleChoisie"
-          type="radio"
-          name="cible"
-          :value="itemB.id"
-        />
-        Conserver « {{ itemB.nomAffiche || itemB.nom }} »
-      </label>
-    </div>
-    <div class="dialog-pied">
-      <button
-        type="button"
-        class="bouton bouton-danger"
-        :disabled="enCoursFusion || !cibleChoisie"
-        @click="confirmerFusion"
-      >
-        Fusionner
-      </button>
-      <button type="button" class="bouton bouton-texte" @click="fermerFusion">
-        Annuler
-      </button>
-    </div>
-  </dialog>
+    v-model="cibleChoisie"
+    entite="artiste"
+    :item-a="itemA"
+    :item-b="itemB"
+    :en-cours="enCoursFusion"
+    @confirmer="confirmerFusion"
+    @fermer="fermerFusion"
+  />
 
   <dialog
     ref="dialogIdentifiantTmRef"
@@ -352,6 +264,9 @@
 </template>
 
 <script setup>
+import DialogueEditionReferentiel from "./DialogueEditionReferentiel.vue";
+import DialogueFusionReferentiel from "./DialogueFusionReferentiel.vue";
+import PaginationListe from "../PaginationListe.vue";
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminArtistes" });
 

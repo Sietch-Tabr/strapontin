@@ -151,27 +151,14 @@
         </li>
       </ul>
 
-      <div v-if="totalPages > 1" class="pagination">
-        <button
-          type="button"
-          class="bouton bouton-secondaire bouton-petit"
-          :disabled="page === 0"
-          @click="allerPage(page - 1)"
-        >
-          ← Précédent
-        </button>
-        <span
-          >Page {{ page + 1 }} / {{ totalPages }} ({{ total }} anomalies)</span
-        >
-        <button
-          type="button"
-          class="bouton bouton-secondaire bouton-petit"
-          :disabled="page >= totalPages - 1"
-          @click="allerPage(page + 1)"
-        >
-          Suivant →
-        </button>
-      </div>
+      <PaginationListe
+        admin
+        :page="page"
+        :total-pages="totalPages"
+        :total="total"
+        libelle-total="anomalies"
+        @changer="allerPage"
+      />
     </div>
 
     <DialogueRepartitionSalle ref="repartition" @reparti="charger" />
@@ -180,6 +167,7 @@
 </template>
 
 <script setup>
+import PaginationListe from "../PaginationListe.vue";
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminSignalements" });
 

@@ -287,53 +287,52 @@
       </div>
     </div>
 
-    <div v-if="donnees && donnees.totalPages > 1" class="pagination">
-      <button
-        v-if="donnees.page > 0"
-        type="button"
-        class="bouton bouton-secondaire"
-        @click="changerPage(donnees.page - 1)"
-      >
-        Précédent
-      </button>
-      <span>Page {{ donnees.page + 1 }} / {{ donnees.totalPages }}</span>
-      <button
-        v-if="donnees.page + 1 < donnees.totalPages"
-        type="button"
-        class="bouton bouton-secondaire"
-        @click="changerPage(donnees.page + 1)"
-      >
-        Suivant
-      </button>
-    </div>
+    <PaginationListe
+      v-if="donnees"
+      :page="donnees.page"
+      :total-pages="donnees.totalPages"
+      @changer="changerPage"
+    />
   </div>
 </template>
 
 <script setup>
-import { appelApi, lireJson } from "../utils/api.js";
+import PaginationListe from "../components/PaginationListe.vue";
+import { appelApi } from "../utils/api.js";
 import { useDepartementsSansConcert } from "../composables/useDepartementsSansConcert.js";
 defineOptions({ name: "DecouvertePage" });
 
-import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { formaterAvecHeure, formaterInstant } from "../composables/useDates.js";
 import { useToasts } from "../composables/useToasts.js";
 import { sessionRef } from "../composables/useSession.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import { useListeConcertsFiltree } from "../composables/useListeConcertsFiltree.js";
 
 const route = useRoute();
 const router = useRouter();
 const { afficherToast } = useToasts();
 
-const chargement = ref(false);
-const donnees = shallowRef(null);
-const filtresVisibles = ref(false);
-
-const qLocal = ref("");
-const moisLocal = ref("");
-const genreLocal = ref("");
-const classificationLocal = ref("");
-const triLocal = ref("date");
+const {
+  chargement,
+  donnees,
+  filtresVisibles,
+  qLocal,
+  moisLocal,
+  genreLocal,
+  classificationLocal,
+  triLocal,
+  nbFiltresActifs,
+  appliquerFiltres,
+  changerPage,
+} = useListeConcertsFiltree({
+  url: "/api/decouverte",
+  messageErreur: "Impossible de charger les concerts.",
+  ajouterParametres(params) {
+    deptsActifs.value.forEach((d) => params.append("dept", d));
+  },
+});
 
 import { messagesCouverture } from "../utils/couverture.js";
 const { departementsSansConcert, chargerDepartementsSansConcert } =
@@ -355,76 +354,9 @@ const syncDepts = computed(() => {
   );
 });
 
-const nbFiltresActifs = computed(() => {
-  let n = 0;
-  if (route.query.q) n++;
-  if (route.query.mois) n++;
-  if (route.query.genre) n++;
-  if (route.query.classification) n++;
-  return n;
-});
-
-function syncFiltresLocaux() {
-  qLocal.value = route.query.q ?? "";
-  moisLocal.value = route.query.mois ?? "";
-  genreLocal.value = route.query.genre ?? "";
-  classificationLocal.value = route.query.classification ?? "";
-  triLocal.value = route.query.tri ?? "date";
-}
-
 // Contrôleur dédié au cycle de vie du composant (démontage) — distinct de controleurActuel
 // ci-dessous, propre au fetch de la liste de concerts et à sa logique d'annulation du précédent.
 const controleurComposant = new AbortController();
-
-// Un nouvel appel (changement de filtre pendant qu'un chargement précédent est en cours)
-// annule le précédent plutôt que de laisser deux requêtes concurrentes risquer d'appliquer
-// leurs résultats dans le désordre.
-let controleurActuel = null;
-
-async function charger() {
-  controleurActuel?.abort();
-  const controleur = new AbortController();
-  controleurActuel = controleur;
-  chargement.value = true;
-  try {
-    const params = new URLSearchParams();
-    deptsActifs.value.forEach((d) => params.append("dept", d));
-    if (route.query.q) params.set("q", route.query.q);
-    if (route.query.mois) params.set("mois", route.query.mois);
-    if (route.query.genre) params.set("genre", route.query.genre);
-    if (route.query.classification)
-      params.set("classification", route.query.classification);
-    if (triLocal.value && triLocal.value !== "date")
-      params.set("tri", triLocal.value);
-    if (route.query.page) params.set("page", route.query.page);
-    const rep = await appelApi("/api/decouverte?" + params, {
-      signal: controleur.signal,
-    });
-    if (!rep.ok) throw new Error();
-    donnees.value = await lireJson(rep);
-  } catch (e) {
-    if (e.name === "AbortError") return;
-    afficherToast("Impossible de charger les concerts.", "erreur");
-  } finally {
-    if (controleurActuel === controleur) chargement.value = false;
-  }
-}
-
-function appliquerFiltres() {
-  const q = { ...route.query };
-  delete q.page;
-  if (qLocal.value) q.q = qLocal.value;
-  else delete q.q;
-  if (moisLocal.value) q.mois = moisLocal.value;
-  else delete q.mois;
-  if (genreLocal.value) q.genre = genreLocal.value;
-  else delete q.genre;
-  if (classificationLocal.value) q.classification = classificationLocal.value;
-  else delete q.classification;
-  if (triLocal.value && triLocal.value !== "date") q.tri = triLocal.value;
-  else delete q.tri;
-  router.push({ query: q });
-}
 
 function toggleDept(dept) {
   const q = { ...route.query };
@@ -439,10 +371,6 @@ function toggleDept(dept) {
     delete q.dept;
   }
   router.push({ query: q });
-}
-
-function changerPage(page) {
-  router.push({ query: { ...route.query, page: String(page) } });
 }
 
 // La récupération d'un département coûte du quota Ticketmaster : réservée aux admins.
@@ -465,24 +393,7 @@ async function actualiser() {
   }
 }
 
-watch(
-  () => route.query,
-  () => {
-    syncFiltresLocaux();
-    charger();
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  syncFiltresLocaux();
-  charger();
-});
-
-onUnmounted(() => {
-  controleurComposant.abort();
-  controleurActuel?.abort();
-});
+onUnmounted(() => controleurComposant.abort());
 </script>
 
 <style scoped>
