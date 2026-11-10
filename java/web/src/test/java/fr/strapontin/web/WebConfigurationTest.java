@@ -10,8 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
-import org.springframework.context.annotation.Bean;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Bean;
 
 /**
  * Tests unitaires de {@link WebConfiguration} : le jeton de l'API interne du worker n'est joint

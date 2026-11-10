@@ -90,9 +90,6 @@
                         <!-- Bloquant depuis v2.9.1 (existant nettoyé à 0 violation, confirmé par
                              un run réel sur les 4 modules avant bascule). -->
                         <failOnViolation>true</failOnViolation>
-                        <!-- Duplication (CPD) : aucun bloc de 90 jetons ou plus répété dans un module,
-                             à 0 violation depuis 3.1.4 ; le seuil ne se relève pas. -->
-                        <minimumTokens>90</minimumTokens>
                         <violationSeverity>warning</violationSeverity>
                     </configuration>
                     <executions>
@@ -136,6 +133,9 @@
                         <!-- Aucun rapport HTML JXR généré : sans ce réglage, chaque module
                              avertit qu'aucune source XRef n'est disponible. -->
                         <linkXRef>false</linkXRef>
+                        <!-- Duplication (CPD) : aucun bloc de 90 jetons ou plus répété dans un module,
+                             à 0 violation depuis 3.1.4 ; le seuil ne se relève pas. -->
+                        <minimumTokens>90</minimumTokens>
                     </configuration>
                     <executions>
                         <execution>
