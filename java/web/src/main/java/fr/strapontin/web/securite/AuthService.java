@@ -98,9 +98,9 @@ public class AuthService {
   public boolean estTokenInvite(final String token) {
     return invitations.estLienInvitation(token)
         || verificationRepository
-        .lireIdentifiantParTokenHash(GenerateurSecrets.sha256Hex(token))
-        .map(s -> s.startsWith("invite:"))
-        .orElse(false);
+            .lireIdentifiantParTokenHash(GenerateurSecrets.sha256Hex(token))
+            .map(s -> s.startsWith("invite:"))
+            .orElse(false);
   }
 
   /**

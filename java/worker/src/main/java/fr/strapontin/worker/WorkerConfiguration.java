@@ -4,12 +4,12 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.CadenceurAppelsPartage;
 import fr.strapontin.sources.enrichissement.ClientNominatim;
 import fr.strapontin.sources.enrichissement.ResolveurNomCanonique;
 import fr.strapontin.sources.eventim.EventimSource;
 import fr.strapontin.sources.eventim.ProduitsEcartes;
-import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.sources.sites.ClientSiteSalle;
 import fr.strapontin.sources.sites.SiteAllmol;
 import fr.strapontin.sources.sites.SiteEmbSannois;

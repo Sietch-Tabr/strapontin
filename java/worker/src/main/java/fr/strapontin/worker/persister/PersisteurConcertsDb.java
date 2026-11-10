@@ -167,7 +167,8 @@ public class PersisteurConcertsDb {
     }
 
     final UUID produitId =
-        rechercheEvenement.parProduit(concert, !produitsMultiplesDuLot.contains(cleProduit(concert)));
+        rechercheEvenement.parProduit(
+            concert, !produitsMultiplesDuLot.contains(cleProduit(concert)));
     if (produitId != null) {
       return new ResolutionEvenement(produitId, false, true);
     }

@@ -385,7 +385,8 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
             artiste));
   }
 
-  private void plusieursCreneauxDoubles(final UUID salle, final String titreA, final String titreB) {
+  private void plusieursCreneauxDoubles(
+      final UUID salle, final String titreA, final String titreB) {
     for (final String heure : List.of("18:00", "19:00", "20:00", "21:00")) {
       evenementAvecSource(salle, titreA, heure, "eventim");
       evenementAvecSource(salle, titreB, heure, "eventim");

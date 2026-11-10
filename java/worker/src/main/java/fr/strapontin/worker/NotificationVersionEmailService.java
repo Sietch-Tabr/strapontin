@@ -71,7 +71,8 @@ public class NotificationVersionEmailService {
       }
     }
     if (!destinataires.isEmpty()) {
-      LOG.info("annonce de la version {} par email : {}/{}", version, prevenus, destinataires.size());
+      LOG.info(
+          "annonce de la version {} par email : {}/{}", version, prevenus, destinataires.size());
       logsAdminWorker.inserer(
           "info",
           "notification-version",

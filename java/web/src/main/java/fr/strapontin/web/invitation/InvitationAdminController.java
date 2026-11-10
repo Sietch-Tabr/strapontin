@@ -73,7 +73,8 @@ public class InvitationAdminController {
   @PutMapping("/invitations/plafond-defaut")
   public ResponseEntity<Map<String, Object>> definirPlafondDefaut(
       @Valid @RequestBody final RequetePlafondDefaut requete, final Authentication auth) {
-    service.definirPlafondDefaut(requete.plafond(), ((UtilisateurDetails) auth.getPrincipal()).id());
+    service.definirPlafondDefaut(
+        requete.plafond(), ((UtilisateurDetails) auth.getPrincipal()).id());
     return ResponseEntity.ok(Map.of("succes", true));
   }
 

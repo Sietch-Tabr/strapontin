@@ -88,8 +88,7 @@ class InvitationAdminServiceIntegrationTest extends AbstractWebIntegrationTest {
     assertThrows(
         ErreurMetier.class,
         () ->
-            service.definirPlafondUtilisateur(
-                "u1", ReglagesInvitations.PLAFOND_MAX + 1, "admin1"));
+            service.definirPlafondUtilisateur("u1", ReglagesInvitations.PLAFOND_MAX + 1, "admin1"));
   }
 
   @Test

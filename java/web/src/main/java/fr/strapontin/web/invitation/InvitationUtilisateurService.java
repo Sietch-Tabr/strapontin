@@ -199,8 +199,7 @@ public class InvitationUtilisateurService {
       throw new ErreurMetier(MESSAGE_LIEN_INVALIDE);
     }
     final boolean identifiantPris =
-        !jdbc
-            .queryForList(
+        !jdbc.queryForList(
                 "SELECT 1 FROM users WHERE lower(username) = :identifiant",
                 Map.of("identifiant", identifiant),
                 Integer.class)

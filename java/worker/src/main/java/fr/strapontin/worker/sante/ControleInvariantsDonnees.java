@@ -5,7 +5,6 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.ProduitEventim;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,20 +45,24 @@ final class ControleInvariantsDonnees {
   int verifier() {
     return publication.publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
         + publication.publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
-        + publication.publier("notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
+        + publication.publier(
+            "notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
         + publication.publier("salle_multi_departements", SALLE, sallesMultiDepartements())
         + publication.publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
         + publication.publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
         + publication.publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
-        + publication.publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
+        + publication.publier(
+            "identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publication.publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publication.publier("produit_eventim_double", "evenement", produitsEventimDoubles())
-        + publication.publier("produit_prestation_visible", "evenement", produitsPrestationVisibles())
+        + publication.publier(
+            "produit_prestation_visible", "evenement", produitsPrestationVisibles())
         + publication.publier("fusion_nocturne_repetee", "evenement", fusionsNocturnesRepetees())
         + publication.publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publication.publier("salle_sans_ville", SALLE, sallesSansVille())
-        + publication.publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
+        + publication.publier(
+            "artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
         + complementaires.verifier();
   }
 
@@ -108,7 +111,8 @@ final class ControleInvariantsDonnees {
             String.class);
     return comptes.isEmpty()
         ? Map.of()
-        : PublicationAnomalies.globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
+        : PublicationAnomalies.globale(
+            "sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
   private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
@@ -247,8 +251,7 @@ final class ControleInvariantsDonnees {
         """,
         Map.of(),
         rs -> {
-          anomalies.put(
-              rs.getObject("cible", UUID.class), Map.of("nuits", rs.getLong("nuits")));
+          anomalies.put(rs.getObject("cible", UUID.class), Map.of("nuits", rs.getLong("nuits")));
         });
     return anomalies;
   }
@@ -358,7 +361,8 @@ final class ControleInvariantsDonnees {
           details.put("concerts", rs.getLong("nb"));
           details.put("plusAncien", rs.getObject("plus_ancien", LocalDate.class).toString());
           details.put("userId", rs.getString("user_id"));
-          anomalies.put(PublicationAnomalies.uuidDe("utilisateur:" + rs.getString("user_id")), details);
+          anomalies.put(
+              PublicationAnomalies.uuidDe("utilisateur:" + rs.getString("user_id")), details);
         });
     return anomalies;
   }
@@ -415,7 +419,8 @@ final class ControleInvariantsDonnees {
             String.class);
     return versions.isEmpty()
         ? Map.of()
-        : PublicationAnomalies.globale("migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
+        : PublicationAnomalies.globale(
+            "migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
   }
 
   // Compte activé : un seul identifiant de connexion, mot de passe bcrypt.

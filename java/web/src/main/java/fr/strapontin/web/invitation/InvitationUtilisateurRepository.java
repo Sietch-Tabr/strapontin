@@ -40,7 +40,12 @@ class InvitationUtilisateurRepository {
 
   /** Invitation telle que l'affiche la page Paramètres. */
   record Ligne(
-      UUID id, String email, Instant creeLe, Instant expireLe, Instant activeLe, Instant annuleeLe) {
+      UUID id,
+      String email,
+      Instant creeLe,
+      Instant expireLe,
+      Instant activeLe,
+      Instant annuleeLe) {
 
     /**
      * @param maintenant instant de référence
@@ -63,9 +68,10 @@ class InvitationUtilisateurRepository {
    * @return {@code true} si le parrain existe
    */
   boolean verrouillerParrain(final String parrainId) {
-    return !jdbc
-        .queryForList(
-            "SELECT 1 FROM users WHERE id = :id FOR UPDATE", Map.of(CLE_ID, parrainId), Integer.class)
+    return !jdbc.queryForList(
+            "SELECT 1 FROM users WHERE id = :id FOR UPDATE",
+            Map.of(CLE_ID, parrainId),
+            Integer.class)
         .isEmpty();
   }
 
@@ -108,11 +114,13 @@ class InvitationUtilisateurRepository {
     jdbc.update(
         "INSERT INTO envois_invitations (parrain_id) VALUES (:parrain)",
         Map.of(CLE_PARRAIN, parrainId));
-    jdbc.update("DELETE FROM envois_invitations WHERE envoye_le < now() - interval '7 days'", Map.of());
+    jdbc.update(
+        "DELETE FROM envois_invitations WHERE envoye_le < now() - interval '7 days'", Map.of());
   }
 
   boolean compteExiste(final String email) {
-    return nombre("SELECT count(*) FROM users WHERE lower(email) = :email", Map.of(CLE_EMAIL, email))
+    return nombre(
+            "SELECT count(*) FROM users WHERE lower(email) = :email", Map.of(CLE_EMAIL, email))
         > 0;
   }
 

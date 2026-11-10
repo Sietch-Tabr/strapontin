@@ -98,8 +98,7 @@ class NotificationVersionEmailServiceIntegrationTest extends AbstractWorkerInteg
   void notifierVersion_dejaPreveuParPushPourCetteVersion_neRecoitPasDEmail() {
     compte("vem-1", "quotidien", true);
     jdbc.update(
-        "INSERT INTO notifications_version (user_id, version) VALUES ('vem-1', '3.1.4')",
-        Map.of());
+        "INSERT INTO notifications_version (user_id, version) VALUES ('vem-1', '3.1.4')", Map.of());
 
     assertEquals(0, service.notifierVersion("3.1.4"));
   }

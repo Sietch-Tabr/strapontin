@@ -726,7 +726,8 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     final UUID a =
         evenementSource(
             madeleine, "les 4 saisons de vivaldi ave maria et celebres adagios", "eventim");
-    final UUID b = evenementSource(madeleine, "extraits ave maria les 4 saisons de vivaldi", "eventim");
+    final UUID b =
+        evenementSource(madeleine, "extraits ave maria les 4 saisons de vivaldi", "eventim");
 
     assertEquals(1, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
     assertTrue(existe(a) != existe(b));

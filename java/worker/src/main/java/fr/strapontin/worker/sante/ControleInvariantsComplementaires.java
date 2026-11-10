@@ -6,7 +6,6 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.TitresDeSpectacle;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -192,7 +191,9 @@ final class ControleInvariantsComplementaires {
         """,
         Map.of(),
         rs -> {
-          anomalies.put(PublicationAnomalies.uuidDe(rs.getString("id")), Map.of("utilisateurId", rs.getString("id")));
+          anomalies.put(
+              PublicationAnomalies.uuidDe(rs.getString("id")),
+              Map.of("utilisateurId", rs.getString("id")));
         });
     return anomalies;
   }

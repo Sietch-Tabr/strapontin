@@ -5,8 +5,6 @@
 package fr.strapontin.worker;
 
 import fr.strapontin.core.ClientWebPush;
-import fr.strapontin.core.EchecPush;
-import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,7 +28,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class NotificationVersionPushService {
 
-  private static final String CLE_ENDPOINT = "endpoint";
   private static final String SOURCE_LOGS = "push";
   private static final Logger LOG = LoggerFactory.getLogger(NotificationVersionPushService.class);
 
@@ -38,7 +35,7 @@ public class NotificationVersionPushService {
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
   private final FabriquePushService fabriquePushService;
-  private final SuiviEchecsPush suiviEchecs;
+  private final EnvoiPushAbonnement envoi;
 
   /**
    * Constructeur Spring — {@code FabriquePushService} n'est jamais un bean
@@ -74,7 +71,9 @@ public class NotificationVersionPushService {
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
     this.fabriquePushService = fabriquePushService;
-    this.suiviEchecs = new SuiviEchecsPush(jdbc, logsAdminWorker);
+    this.envoi =
+        new EnvoiPushAbonnement(
+            new SuiviEchecsPush(jdbc, logsAdminWorker), SOURCE_LOGS, () -> {}, () -> {});
   }
 
   /**
@@ -152,7 +151,7 @@ public class NotificationVersionPushService {
     int nbEnvoyes = 0;
     final Set<String> notifies = new LinkedHashSet<>();
     for (final Map<String, Object> ab : abonnements) {
-      if (envoyerAUnAbonnement(pushService, ab, payload)) {
+      if (envoi.envoyer(pushService, ab, (String) ab.get("user_id"), payload)) {
         nbEnvoyes++;
         notifies.add((String) ab.get("user_id"));
       }
@@ -166,48 +165,5 @@ public class NotificationVersionPushService {
           Map.of("userId", userId, "version", version));
     }
     return nbEnvoyes;
-  }
-
-  private boolean envoyerAUnAbonnement(
-      final ClientWebPush pushService, final Map<String, Object> ab, final String payload) {
-    final String userId = (String) ab.get("user_id");
-    if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
-      suiviEchecs.revoquer(
-          ab,
-          userId,
-          EchecPush.CAUSE_SERVICE_NON_PRIS_EN_CHARGE,
-          "endpoint non autorisé",
-          SOURCE_LOGS);
-      return false;
-    }
-    final ClientWebPush.Reponse reponse;
-    try {
-      reponse =
-          pushService.envoyer(
-              (String) ab.get(CLE_ENDPOINT),
-              (String) ab.get("p256dh"),
-              (String) ab.get("auth"),
-              payload);
-    } catch (Exception e) {
-      ClientWebPush.restaurerInterruption(e);
-      suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
-      return false;
-    }
-    final int status = reponse.statut();
-    switch (EchecPush.interpreter(status)) {
-      case SUCCES -> {
-        suiviEchecs.succes(ab);
-        return true;
-      }
-      case ABONNEMENT_SUPPRIME ->
-          suiviEchecs.revoquer(
-              ab,
-              userId,
-              EchecPush.causeLisible(status),
-              EchecPush.raison(status, null),
-              SOURCE_LOGS);
-      case ECHEC -> suiviEchecs.echec(ab, userId, status, reponse.corps(), SOURCE_LOGS);
-    }
-    return false;
   }
 }

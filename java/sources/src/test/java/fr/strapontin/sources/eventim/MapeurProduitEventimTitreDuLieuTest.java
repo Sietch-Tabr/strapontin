@@ -52,9 +52,7 @@ class MapeurProduitEventimTitreDuLieuTest {
     final ConcertBrut concert =
         MapeurProduitEventim.mapper(
             produit(
-                "Eglise St Germain des Prés",
-                "EGLISE SAINT GERMAIN DES PRES PARIS 06",
-                List.of()),
+                "Eglise St Germain des Prés", "EGLISE SAINT GERMAIN DES PRES PARIS 06", List.of()),
             null,
             null);
 

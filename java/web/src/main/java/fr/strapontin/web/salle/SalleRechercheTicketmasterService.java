@@ -4,8 +4,8 @@
  */
 package fr.strapontin.web.salle;
 
-import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.CadenceurAppels;
+import fr.strapontin.core.Normalisation;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;

@@ -39,8 +39,8 @@ class ExecutionNotificationVersionTest {
         .executerAvecStats(any(), eq("notifier:version"), any());
     final Properties proprietes = new Properties();
     proprietes.setProperty("version", "9.9.9");
-    execution = new ExecutionNotificationVersion(
-            service, email, stats, new BuildProperties(proprietes));
+    execution =
+        new ExecutionNotificationVersion(service, email, stats, new BuildProperties(proprietes));
   }
 
   @Test

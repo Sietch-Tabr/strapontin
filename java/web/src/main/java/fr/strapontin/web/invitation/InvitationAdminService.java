@@ -92,9 +92,7 @@ public class InvitationAdminService {
     final int modifies =
         jdbc.update(
             "UPDATE users SET plafond_invitations = :plafond WHERE id = :id",
-            new MapSqlParameterSource()
-                .addValue("plafond", plafond)
-                .addValue("id", userId));
+            new MapSqlParameterSource().addValue("plafond", plafond).addValue("id", userId));
     if (modifies == 0) {
       throw new ErreurMetier("Utilisateur introuvable.", 404);
     }

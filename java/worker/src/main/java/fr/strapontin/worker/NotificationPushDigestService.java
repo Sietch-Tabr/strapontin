@@ -7,8 +7,6 @@ package fr.strapontin.worker;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ClientWebPush;
 import fr.strapontin.core.CompteurBilanFetch;
-import fr.strapontin.core.EchecPush;
-import fr.strapontin.core.EndpointPush;
 import fr.strapontin.core.UtilitairesChaine;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -34,7 +32,6 @@ class NotificationPushDigestService {
 
   private static final String SEP = " · ";
   private static final Logger LOG = LoggerFactory.getLogger(NotificationPushDigestService.class);
-  private static final String CLE_ENDPOINT = "endpoint";
   private static final int NB_CONCERTS_SINGULIER = 1;
   private static final String SOURCE_SALLE = "SALLE";
   private static final String SOURCE_LOGS = "notifier-digest";
@@ -42,7 +39,7 @@ class NotificationPushDigestService {
   private final ConfigServiceWorker configService;
   private final NamedParameterJdbcTemplate jdbc;
   private final LogsAdminWorker logsAdminWorker;
-  private final SuiviEchecsPush suiviEchecs;
+  private final EnvoiPushAbonnement envoi;
   private final FabriquePushService fabriquePushService;
   private final Clock horloge;
   // Bilan de panne push agrégé sur le cycle de digest courant, remonté dans
@@ -70,7 +67,12 @@ class NotificationPushDigestService {
     this.configService = configService;
     this.jdbc = jdbc;
     this.logsAdminWorker = logsAdminWorker;
-    this.suiviEchecs = new SuiviEchecsPush(jdbc, logsAdminWorker);
+    this.envoi =
+        new EnvoiPushAbonnement(
+            new SuiviEchecsPush(jdbc, logsAdminWorker),
+            SOURCE_LOGS,
+            compteurPush::enregistrerAppel,
+            compteurPush::enregistrerErreur);
     this.fabriquePushService = fabriquePushService;
   }
 
@@ -249,63 +251,11 @@ class NotificationPushDigestService {
       final String userId) {
     int nbEnvoyes = 0;
     for (final Map<String, Object> ab : abonnements) {
-      if (!EndpointPush.estAutorise((String) ab.get(CLE_ENDPOINT))) {
-        suiviEchecs.revoquer(
-            ab,
-            userId,
-            EchecPush.CAUSE_SERVICE_NON_PRIS_EN_CHARGE,
-            "endpoint non autorisé",
-            SOURCE_LOGS);
-        continue;
-      }
-      compteurPush.enregistrerAppel();
-      if (envoyerAUnAbonnement(pushService, ab, payload, userId)) {
+      if (envoi.envoyer(pushService, ab, userId, payload)) {
         nbEnvoyes++;
       }
     }
     return nbEnvoyes;
-  }
-
-  private boolean envoyerAUnAbonnement(
-      final ClientWebPush pushService,
-      final Map<String, Object> ab,
-      final String payload,
-      final String userId) {
-    final ClientWebPush.Reponse reponse;
-    try {
-      reponse =
-          pushService.envoyer(
-              (String) ab.get(CLE_ENDPOINT),
-              (String) ab.get("p256dh"),
-              (String) ab.get("auth"),
-              payload);
-    } catch (Exception e) {
-      ClientWebPush.restaurerInterruption(e);
-      compteurPush.enregistrerErreur();
-      suiviEchecs.echec(ab, userId, null, e.getMessage(), SOURCE_LOGS);
-      return false;
-    }
-    final int status = reponse.statut();
-    switch (EchecPush.interpreter(status)) {
-      case SUCCES -> {
-        suiviEchecs.succes(ab);
-        return true;
-      }
-      // Abonnement supprimé côté navigateur : nettoyage attendu, pas une panne
-      // du canal push, il n'entre pas dans le bilan de panne.
-      case ABONNEMENT_SUPPRIME ->
-          suiviEchecs.revoquer(
-              ab,
-              userId,
-              EchecPush.causeLisible(status),
-              EchecPush.raison(status, null),
-              SOURCE_LOGS);
-      case ECHEC -> {
-        compteurPush.enregistrerErreur();
-        suiviEchecs.echec(ab, userId, status, reponse.corps(), SOURCE_LOGS);
-      }
-    }
-    return false;
   }
 
   // url en chemin relatif (pas préfixé par baseUrl) — les listeners du service

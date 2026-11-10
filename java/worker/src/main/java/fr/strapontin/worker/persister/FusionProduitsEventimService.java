@@ -321,7 +321,8 @@ public class FusionProduitsEventimService {
       logsAdminWorker.inserer(
           "info",
           "reconciliation-nocturne",
-          retirees + " observation(s) de produit Eventim retirée(s) d'une fiche qui en porte un autre",
+          retirees
+              + " observation(s) de produit Eventim retirée(s) d'une fiche qui en porte un autre",
           Map.of("observations", retirees));
     }
     return retirees;

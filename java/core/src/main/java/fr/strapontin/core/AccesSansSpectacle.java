@@ -21,7 +21,8 @@ public final class AccesSansSpectacle {
       Pattern.compile("^visites?\\b|\\bpriority (pass|access)\\b|\\bfast (pass|track)\\b");
 
   // Adresse d'un produit de prestation, d'hospitalité ou d'accès prioritaire : Ticketmaster le
-  // dit dans l'adresse (« prestation-hospitalite-celine-dion-billet ») plus sûrement que dans le titre.
+  // dit dans l'adresse (« prestation-hospitalite-celine-dion-billet ») plus sûrement que dans le
+  // titre.
   private static final Pattern ADRESSE_PRESTATION =
       Pattern.compile("prestation|hospitalit|priority-(pass|access)");
 
@@ -35,8 +36,7 @@ public final class AccesSansSpectacle {
    */
   public static boolean estAccesSansSpectacle(final String titre, final String adresse) {
     return estAccesSansSpectacle(titre)
-        || adresse != null
-            && ADRESSE_PRESTATION.matcher(adresse.toLowerCase(Locale.ROOT)).find();
+        || adresse != null && ADRESSE_PRESTATION.matcher(adresse.toLowerCase(Locale.ROOT)).find();
   }
 
   /**
