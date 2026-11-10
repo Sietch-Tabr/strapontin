@@ -5,10 +5,9 @@
 package fr.strapontin.worker.quota;
 
 import fr.strapontin.core.CompteurEnvoisResend;
+import fr.strapontin.core.RegleQuotaResend;
 import fr.strapontin.core.RetrySerialisable;
 import fr.strapontin.worker.LogsAdminWorker;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -35,10 +34,7 @@ public class GestionQuotaResendWorker {
 
   private static final Logger LOG = LoggerFactory.getLogger(GestionQuotaResendWorker.class);
 
-  private static final int LIMITE_JOUR = 100;
-  private static final int LIMITE_MOIS = 3000;
   private static final int MAX_TENTATIVES = 3;
-  private static final String CLE_QUOTA = "RESEND_QUOTA_JSON";
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
@@ -77,7 +73,7 @@ public class GestionQuotaResendWorker {
       final String json =
           jdbc.queryForObject(
               "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-              Map.of("cle", CLE_QUOTA),
+              Map.of("cle", RegleQuotaResend.CLE_QUOTA),
               String.class);
       if (json == null) {
         return Optional.empty();
@@ -97,42 +93,14 @@ public class GestionQuotaResendWorker {
       jdbc.update(
           "INSERT INTO app_config (cle, valeur_chiffree) VALUES (:cle, :json)"
               + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()",
-          Map.of("cle", CLE_QUOTA, "json", json));
+          Map.of("cle", RegleQuotaResend.CLE_QUOTA, "json", json));
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le compteur Resend", e);
     }
   }
 
-  private static String jourCourant() {
-    return LocalDate.now(ZoneOffset.UTC).toString();
-  }
-
-  private static String moisCourant(final String jour) {
-    return jour.substring(0, 7);
-  }
-
-  private static CompteurEnvoisResend appliquerRollover(
-      final CompteurEnvoisResend compteur, final String jour, final String mois) {
-    final boolean jourChange = !jour.equals(compteur.jour());
-    final boolean moisChange = !mois.equals(compteur.mois());
-    if (!jourChange && !moisChange) {
-      return compteur;
-    }
-    return new CompteurEnvoisResend(
-        jour,
-        jourChange ? 0 : compteur.envoyesJour(),
-        mois,
-        moisChange ? 0 : compteur.envoyesMois(),
-        !jourChange && compteur.alerteJourEnvoyee(),
-        !moisChange && compteur.alerteMoisEnvoyee());
-  }
-
   private CompteurEnvoisResend lireCompteurCourant() {
-    final String jour = jourCourant();
-    final String mois = moisCourant(jour);
-    return lireCompteurBrut()
-        .map(c -> appliquerRollover(c, jour, mois))
-        .orElse(new CompteurEnvoisResend(jour, 0, mois, 0, false, false));
+    return RegleQuotaResend.courant(lireCompteurBrut());
   }
 
   /**
@@ -156,14 +124,14 @@ public class GestionQuotaResendWorker {
    * (@Transactional/SERIALIZABLE). */
   boolean reserverEnvoiTransactionnel() {
     final CompteurEnvoisResend actuel = lireCompteurCourant();
-    if (actuel.envoyesJour() >= LIMITE_JOUR || actuel.envoyesMois() >= LIMITE_MOIS) {
+    if (RegleQuotaResend.estAtteint(actuel)) {
       ecrireCompteur(actuel);
       LOG.error(
           "quota Resend atteint — envoi digest bloqué jour={}/{} mois={}/{}",
           actuel.envoyesJour(),
-          LIMITE_JOUR,
+          RegleQuotaResend.LIMITE_JOUR,
           actuel.envoyesMois(),
-          LIMITE_MOIS);
+          RegleQuotaResend.LIMITE_MOIS);
       logsAdminWorker.inserer(
           "error",
           "worker",
@@ -172,21 +140,14 @@ public class GestionQuotaResendWorker {
               "envoyesJour",
               actuel.envoyesJour(),
               "limiteJour",
-              LIMITE_JOUR,
+              RegleQuotaResend.LIMITE_JOUR,
               "envoyesMois",
               actuel.envoyesMois(),
               "limiteMois",
-              LIMITE_MOIS));
+              RegleQuotaResend.LIMITE_MOIS));
       return false;
     }
-    ecrireCompteur(
-        new CompteurEnvoisResend(
-            actuel.jour(),
-            actuel.envoyesJour() + 1,
-            actuel.mois(),
-            actuel.envoyesMois() + 1,
-            actuel.alerteJourEnvoyee(),
-            actuel.alerteMoisEnvoyee()));
+    ecrireCompteur(RegleQuotaResend.apresEnvoi(actuel));
     return true;
   }
 }
