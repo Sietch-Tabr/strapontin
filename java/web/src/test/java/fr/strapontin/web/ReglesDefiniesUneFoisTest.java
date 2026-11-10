@@ -42,7 +42,9 @@ class ReglesDefiniesUneFoisTest {
           "LONGUEUR_MIN_MOT_DE_PASSE = ", "ReglesCommunes.java",
           "TOLERANCE_HEURE_MINUTES = ", "ReglesCommunes.java",
           "ECART_MAX_HEURE_SECONDES = ", "ReglesCommunes.java",
-          "RAYON_MEME_LIEU_METRES = ", "ReglesCommunes.java");
+          "RAYON_MEME_LIEU_METRES = ", "ReglesCommunes.java",
+          "e1.salle_id = CAST(:source AS uuid) AND e2.salle_id", "FusionEvenementsSql.java",
+          "e1.artiste_id = CAST(:source AS uuid) AND e2.artiste_id", "FusionEvenementsSql.java");
 
   @Test
   void valeursPartagees_sontDeclareesUneSeuleFois() throws IOException {
