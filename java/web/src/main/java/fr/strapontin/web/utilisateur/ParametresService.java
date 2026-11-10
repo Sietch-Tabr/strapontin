@@ -71,19 +71,9 @@ public class ParametresService {
    * @return map avec les clés {@code nbArtistes} et {@code nbSalles}
    */
   public Map<String, Object> stats(final String userId) {
-    final Integer nbArtistes =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
-    final Integer nbSalles =
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_salles WHERE user_id = :userId",
-            Map.of("userId", userId),
-            Integer.class);
     return Map.of(
-        "nbArtistes", nbArtistes != null ? nbArtistes : 0,
-        "nbSalles", nbSalles != null ? nbSalles : 0);
+        "nbArtistes", SuivisUtilisateur.nombreArtistes(jdbc, userId),
+        "nbSalles", SuivisUtilisateur.nombreSalles(jdbc, userId));
   }
 
   /**

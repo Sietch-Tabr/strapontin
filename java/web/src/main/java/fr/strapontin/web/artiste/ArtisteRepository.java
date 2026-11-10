@@ -4,11 +4,11 @@
  */
 package fr.strapontin.web.artiste;
 
+import fr.strapontin.web.utilisateur.SuivisUtilisateur;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -110,12 +110,7 @@ class ArtisteRepository {
   /* package-private : accès SQL réservé à ArtisteService (même package),
    * pattern service/repository. */
   int compterPourUtilisateur(final String userId) {
-    return Objects.requireNonNullElse(
-        jdbc.queryForObject(
-            "SELECT COUNT(*) FROM user_artistes WHERE user_id = :userId",
-            Map.of(CLE_USER_ID, userId),
-            Integer.class),
-        0);
+    return SuivisUtilisateur.nombreArtistes(jdbc, userId);
   }
 
   /**
