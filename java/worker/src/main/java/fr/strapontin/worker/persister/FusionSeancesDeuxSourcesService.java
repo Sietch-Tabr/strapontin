@@ -118,11 +118,10 @@ public class FusionSeancesDeuxSourcesService {
   }
 
   /**
-   * Un même programme publié par Eventim sous deux variantes d'intitulé au même créneau d'un
-   * lieu (« Les 4 Saisons de Vivaldi, Ave Maria » / « Extraits, Ave Maria », Madeleine) : seuls
-   * événements de leur salle au créneau, Eventim seul, sans artiste reconnu ni fiche annulée,
-   * intitulés partageant l'essentiel de leurs mots (une église ne reçoit pas deux concerts au
-   * même instant). À appeler après les contrôles d'intégrité.
+   * Un même programme publié par Eventim sous deux variantes d'intitulé au même
+   * créneau d'un lieu (Madeleine) : seuls événements de leur salle au créneau,
+   * Eventim seul, sans artiste reconnu ni fiche annulée, intitulés
+   * partageant l'essentiel de leurs mots. À appeler après les contrôles.
    * @return nombre de fusions effectuées
    */
   public int fusionnerVariantesDeTitreEventim() {

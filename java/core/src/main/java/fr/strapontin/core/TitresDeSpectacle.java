@@ -8,8 +8,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Reconnaît deux intitulés d'un même programme, qu'une billetterie décline en variantes
- * (« Les 4 Saisons de Vivaldi, Ave Maria et Célèbres Adagios » / « Extraits, Ave Maria »).
+ * Reconnaît deux intitulés d'un même programme, qu'une billetterie décline en
+ * variantes (« Les 4 Saisons de Vivaldi, Ave Maria et Célèbres Adagios » / «
+ * Extraits, Ave Maria »).
  * @since 3.1.4
  * @author Kwaite
  */
@@ -26,8 +27,8 @@ public final class TitresDeSpectacle {
   /**
    * @param titreA premier intitulé
    * @param titreB second intitulé
-   * @return {@code true} si les deux intitulés partagent au moins deux mots significatifs, qui
-   *     couvrent la moitié des mots du plus court
+   * @return {@code true} si les deux intitulés partagent au moins deux mots
+   *     significatifs, qui     couvrent la moitié des mots du plus court
    */
   public static boolean sontVariantes(final String titreA, final String titreB) {
     final Set<String> motsA = mots(titreA);

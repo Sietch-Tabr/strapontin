@@ -10,8 +10,8 @@ import java.util.UUID;
 
 /**
  * Manière unique dont un contrôle d'invariants publie ses anomalies dans {@code
- * signalements_matching} : chaque anomalie est signalée, puis les signalements du type dont
- * l'entité n'est plus en anomalie sont clos.
+ * signalements_matching} : chaque anomalie est signalée, puis les signalements
+ * du type dont l'entité n'est plus en anomalie sont clos.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -44,7 +44,8 @@ final class PublicationAnomalies {
 
   /**
    * @param valeur texte dont l'identifiant est tiré
-   * @return identifiant déterministe, pour une anomalie qui n'a pas d'entité propre
+   * @return identifiant déterministe, pour une anomalie qui n'a pas d'entité
+   *     propre
    */
   /* package-private : appelé par les contrôles d'invariants (même package). */
   static UUID uuidDe(final String valeur) {

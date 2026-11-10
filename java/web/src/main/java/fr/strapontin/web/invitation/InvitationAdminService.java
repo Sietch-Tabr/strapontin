@@ -14,9 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Réglages d'administration des invitations : plafond par défaut, plafond propre à un
- * utilisateur (de 0, invitation coupée, à {@link ReglagesInvitations#PLAFOND_MAX}). Chaque
- * modification est consignée dans {@code logs_admin}.
+ * Réglages d'administration des invitations : plafond par défaut, plafond
+ * propre à un utilisateur (de 0, invitation coupée, à {@link
+ * ReglagesInvitations#PLAFOND_MAX}). Chaque modification est consignée dans
+ * {@code logs_admin}.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -28,7 +29,7 @@ public class InvitationAdminService {
   private static final String CLE_USER_ID = "userId";
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final ReglagesInvitations reglages;
+  private final ReglagesInvitations reglagesInvitations;
   private final LogAdminService logAdminService;
 
   /**
@@ -41,7 +42,7 @@ public class InvitationAdminService {
       final ReglagesInvitations reglages,
       final LogAdminService logAdminService) {
     this.jdbc = jdbc;
-    this.reglages = reglages;
+    this.reglagesInvitations = reglages;
     this.logAdminService = logAdminService;
   }
 
@@ -58,7 +59,9 @@ public class InvitationAdminService {
    */
   public Reglages reglages() {
     return new Reglages(
-        reglages.plafondDefaut(), reglages.envoisParHeure(), reglages.envoisParJour());
+        reglagesInvitations.plafondDefaut(),
+        reglagesInvitations.envoisParHeure(),
+        reglagesInvitations.envoisParJour());
   }
 
   /**
@@ -68,8 +71,8 @@ public class InvitationAdminService {
    */
   public void definirPlafondDefaut(final int valeur, final String adminId) {
     verifierBornes(valeur);
-    final int ancien = reglages.plafondDefaut();
-    reglages.definirPlafondDefaut(valeur);
+    final int ancien = reglagesInvitations.plafondDefaut();
+    reglagesInvitations.definirPlafondDefaut(valeur);
     logAdminService.logAdmin(
         "info",
         SOURCE_ADMIN,
@@ -79,7 +82,8 @@ public class InvitationAdminService {
 
   /**
    * @param userId utilisateur concerné
-   * @param plafond plafond propre, {@code null} pour revenir au plafond par défaut
+   * @param plafond plafond propre, {@code null} pour revenir au plafond par
+   *     défaut
    * @param adminId administrateur qui le modifie
    * @throws ErreurMetier valeur hors bornes ou utilisateur introuvable (404)
    */

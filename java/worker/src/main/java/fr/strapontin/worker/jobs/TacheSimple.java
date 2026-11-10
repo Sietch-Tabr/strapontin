@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 /**
- * Job Quartz générique : exécute la tâche du registre {@link TachesPlanifiees} dont le nom est
- * l'identité du {@code JobDetail}.
+ * Job Quartz générique : exécute la tâche du registre {@link TachesPlanifiees}
+ * dont le nom est l'identité du {@code JobDetail}.
  * @since 3.1.4
  * @author Kwaite
  */

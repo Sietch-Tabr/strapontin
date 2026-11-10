@@ -244,8 +244,9 @@ public class ControleIntegriteService {
     return signalees;
   }
 
-  // Signalements posés au fil d'un événement (enrichissement, fetch) plutôt qu'énumérés à chaque
-  // passage : refermés ici dès que leur condition a disparu.
+  // Signalements posés au fil d'un événement (enrichissement, fetch) plutôt
+  // qu'énumérés à chaque passage : refermés ici dès que leur condition a
+  // disparu.
   private void fermerSignalementsEvenementiels() {
     jdbc.update(
         """

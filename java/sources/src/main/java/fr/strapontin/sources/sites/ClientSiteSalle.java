@@ -28,7 +28,9 @@ public class ClientSiteSalle {
 
   private static final Logger LOG = LoggerFactory.getLogger(ClientSiteSalle.class);
 
-  /** {@code User-Agent} déclaré à chaque site, avec une adresse où nous joindre. */
+  /**
+   * {@code User-Agent} déclaré à chaque site, avec une adresse où nous joindre.
+   */
   /* package-private : vérifié par les tests du même package. */
 
   private static final String AGENT_ROBOTS = "strapontinbot";

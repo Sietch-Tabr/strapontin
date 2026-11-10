@@ -10,9 +10,9 @@ import fr.strapontin.core.EndpointPush;
 import java.util.Map;
 
 /**
- * Envoi d'un message push à un abonnement, partagé par le digest et l'annonce de version :
- * contrôle de l'endpoint, envoi, puis suite donnée à la réponse (succès, abonnement supprimé,
- * échec) selon {@link EchecPush}.
+ * Envoi d'un message push à un abonnement, partagé par le digest et l'annonce
+ * de version : contrôle de l'endpoint, envoi, puis suite donnée à la réponse
+ * (succès, abonnement supprimé, échec) selon {@link EchecPush}.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -28,8 +28,10 @@ final class EnvoiPushAbonnement {
   /**
    * @param suiviEchecs suivi des échecs et révocations d'appareils
    * @param sourceLogs source des entrées de {@code logs_admin}
-   * @param surAppel appelé avant chaque envoi réel (compteurs), sans effet si rien à compter
-   * @param surErreur appelé pour un échec du canal (exception ou échec de la réponse)
+   * @param surAppel appelé avant chaque envoi réel (compteurs), sans effet si
+   *     rien à compter
+   * @param surErreur appelé pour un échec du canal (exception ou échec de la
+   *     réponse)
    */
   /* package-private : instancié par les services d'envoi push du worker. */
   EnvoiPushAbonnement(
@@ -86,7 +88,8 @@ final class EnvoiPushAbonnement {
         suiviEchecs.succes(abonnement);
         return true;
       }
-      // Abonnement supprimé côté navigateur : nettoyage attendu, pas une panne du canal.
+      // Abonnement supprimé côté navigateur : nettoyage attendu, pas une panne
+      // du canal.
       case ABONNEMENT_SUPPRIME ->
           suiviEchecs.revoquer(
               abonnement,

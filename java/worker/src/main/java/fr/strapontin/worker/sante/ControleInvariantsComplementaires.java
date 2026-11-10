@@ -270,27 +270,29 @@ final class ControleInvariantsComplementaires {
             .collect(Collectors.groupingBy(paire -> paire.get("salle_id"), Collectors.counting()));
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     for (final Map<String, Object> paire : paires) {
-      // Un théâtre à plusieurs salles joue des spectacles différents au même créneau ; deux
-      // variantes d'un même programme dans une église, non.
+      // Un théâtre à plusieurs salles joue des spectacles différents au même
+      // créneau ; deux variantes d'un même programme dans une église, non.
       if (parSalle.get(paire.get("salle_id")) >= SEUIL_CRENEAUX_SALLE_MULTIPLE
           && !TitresDeSpectacle.sontVariantes(
               (String) paire.get("titre_a"), (String) paire.get("titre_b"))) {
         continue;
       }
-      anomalies.put(
-          (UUID) paire.get("recent"),
-          Map.of(
-              SALLE,
-              paire.get(SALLE),
-              DATE,
-              paire.get(DATE),
-              "heure",
-              paire.get("heure"),
-              "intitules",
-              paire.get("titre_a") + " / " + paire.get("titre_b"),
-              JUMEAU,
-              paire.get(JUMEAU).toString()));
+      anomalies.put((UUID) paire.get("recent"), detailsCreneauDouble(paire));
     }
     return anomalies;
+  }
+
+  private static Map<String, Object> detailsCreneauDouble(final Map<String, Object> paire) {
+    return Map.of(
+        SALLE,
+        paire.get(SALLE),
+        DATE,
+        paire.get(DATE),
+        "heure",
+        paire.get("heure"),
+        "intitules",
+        paire.get("titre_a") + " / " + paire.get("titre_b"),
+        JUMEAU,
+        paire.get(JUMEAU).toString());
   }
 }

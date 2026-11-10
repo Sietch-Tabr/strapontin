@@ -23,7 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Invitations d'un utilisateur connecté : liste et état, envoi, renvoi, annulation.
+ * Invitations d'un utilisateur connecté : liste et état, envoi, renvoi,
+ * annulation.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -57,11 +58,12 @@ public class InvitationUtilisateurController {
   }
 
   /**
-   * Invite une personne : la réponse est la même pour une adresse déjà inscrite.
+   * Invite une personne : la réponse est la même pour une adresse déjà
+   * inscrite.
    * @param requete adresse de la personne invitée
    * @param auth utilisateur connecté
-   * @return 200 {@code {succes: true}}, 409 plafond atteint, 429 cadence dépassée, 503 sans URL
-   *     publique
+   * @return 200 {@code {succes: true}}, 409 plafond atteint, 429 cadence
+   *     dépassée, 503 sans URL     publique
    */
   @PostMapping
   public ResponseEntity<Map<String, Object>> inviter(

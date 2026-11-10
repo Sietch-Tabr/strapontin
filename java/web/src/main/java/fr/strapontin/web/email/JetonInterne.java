@@ -10,9 +10,10 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Contrôle du jeton {@code Authorization: Bearer <secret>} des endpoints internes, appelés par les
- * scripts du serveur sans session : un secret absent refuse tout, la comparaison est à temps
- * constant. Une seule définition pour tous les endpoints internes.
+ * Contrôle du jeton {@code Authorization: Bearer <secret>} des endpoints
+ * internes, appelés par les scripts du serveur sans session : un secret absent
+ * refuse tout, la comparaison est à temps constant. Une seule définition pour
+ * tous les endpoints internes.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -23,8 +24,10 @@ final class JetonInterne {
   /**
    * @param secret secret attendu, vide si non configuré
    * @param authorization en-tête {@code Authorization} reçu
-   * @return {@code true} si le secret est configuré et que l'en-tête le porte exactement
+   * @return {@code true} si le secret est configuré et que l'en-tête le porte
+   *     exactement
    */
+  /* package-private : appelé par les contrôleurs internes (même package). */
   static boolean estValide(final String secret, final String authorization) {
     return !secret.isBlank()
         && MessageDigest.isEqual(
@@ -35,6 +38,7 @@ final class JetonInterne {
   /**
    * @return la réponse 403 des endpoints internes
    */
+  /* package-private : appelé par les contrôleurs internes (même package). */
   static ResponseEntity<Map<String, Object>> refus() {
     return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
   }

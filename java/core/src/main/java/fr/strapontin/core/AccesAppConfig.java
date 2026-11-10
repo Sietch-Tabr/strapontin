@@ -12,11 +12,10 @@ import java.util.Set;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Seul chemin de lecture et d'écriture de la table {@code app_config} : lecture, écriture par
- * {@code INSERT … ON CONFLICT}, suppression. La valeur est lue et écrite telle qu'elle est
- * stockée : chiffrée pour les clés de configuration ({@code ConfigCipher}, appliqué par les
- * services de configuration), en JSON clair pour les compteurs et curseurs applicatifs. Un
- * changement de format de la table, ou du traitement des valeurs, ne se fait qu'ici.
+ * Seul chemin de lecture et d'écriture de {@code app_config}. La valeur est
+ * lue et écrite telle que stockée : chiffrée pour les clés de configuration
+ * (par les services de configuration), en JSON clair pour les compteurs. Un
+ * changement de format de la table ne se fait qu'ici.
  * @since 3.1.4
  * @author Kwaite
  */

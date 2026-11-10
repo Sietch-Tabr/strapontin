@@ -141,9 +141,10 @@ final class ResolveurSallePosition {
                 (String) lignes.get(0).get("contexte"));
   }
 
-  // Deux codes postaux connus et différents désignent deux lieux : un nom contenu dans un
-  // autre (« dome » dans « vendome ») ne suffit pas. Un nom identique est gardé, les billetteries
-  // divergeant parfois sur le code postal d'un même lieu.
+  // Deux codes postaux connus et différents désignent deux lieux : un nom
+  // contenu dans un autre (« dome » dans « vendome ») ne suffit pas. Un nom
+  // identique est gardé, les billetteries divergeant parfois sur le code postal
+  // d'un même lieu.
   private boolean codePostalDifferent(
       final UUID salleId, final String nom, final PositionLieu position) {
     if (position.codePostal() == null) {

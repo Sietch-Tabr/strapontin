@@ -22,9 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Invitations envoyées par un utilisateur : aucun compte n'existe avant l'activation du lien, le
- * nombre d'invitations en attente est plafonné, la cadence d'envoi aussi (envois comptés en base,
- * l'annulation d'une invitation ne les efface pas).
+ * Invitations envoyées par un utilisateur : aucun compte n'existe avant
+ * l'activation du lien, le nombre d'invitations en attente est plafonné, la
+ * cadence d'envoi aussi (envois comptés en base, l'annulation d'une invitation
+ * ne les efface pas).
  * @since 3.1.4
  * @author Kwaite
  */
@@ -82,7 +83,7 @@ public class InvitationUtilisateurService {
    * Une invitation telle que la page Paramètres l'affiche.
    * @param id identifiant
    * @param email adresse invitée
-   * @param statut {@code en_attente}, {@code activee}, {@code expiree} ou {@code annulee}
+   * @param statut en_attente, activee, expiree ou annulee
    * @param creeLe date d'envoi
    * @param expireLe date d'expiration du lien
    */
@@ -91,7 +92,8 @@ public class InvitationUtilisateurService {
 
   /**
    * @param parrainId utilisateur connecté
-   * @return son plafond, ses invitations restantes et la liste de ses invitations
+   * @return son plafond, ses invitations restantes et la liste de ses
+   *     invitations
    */
   @Transactional(readOnly = true)
   public Etat etat(final String parrainId) {
@@ -109,8 +111,8 @@ public class InvitationUtilisateurService {
   }
 
   /**
-   * Invite une personne par son adresse. Une adresse déjà inscrite ou déjà invitée reçoit la même
-   * réponse qu'un envoi réussi, sans rien envoyer.
+   * Invite une personne par son adresse. Une adresse déjà inscrite ou déjà
+   * invitée reçoit la même réponse qu'un envoi réussi, sans rien envoyer.
    * @param parrainId utilisateur connecté
    * @param emailBrut adresse saisie
    * @param baseUrl URL publique de l'application
@@ -136,11 +138,11 @@ public class InvitationUtilisateurService {
   }
 
   /**
-   * Renvoie le lien d'une invitation en attente (nouveau lien, nouveau délai de sept jours).
+   * Renvoie le lien d'une invitation en attente (nouveau lien, sept jours).
    * @param parrainId utilisateur connecté
    * @param id invitation à renvoyer
    * @param baseUrl URL publique de l'application
-   * @throws ErreurMetier invitation introuvable ou plus en attente (404), cadence dépassée (429)
+   * @throws ErreurMetier introuvable (404) ou cadence dépassée (429)
    */
   @Transactional(noRollbackFor = ErreurMetier.class)
   public void renvoyer(final String parrainId, final UUID id, final String baseUrl) {
@@ -156,7 +158,8 @@ public class InvitationUtilisateurService {
   }
 
   /**
-   * Annule une invitation en attente ; ses envois restent comptés dans la cadence.
+   * Annule une invitation en attente ; ses envois restent comptés dans la
+   * cadence.
    * @param parrainId utilisateur connecté
    * @param id invitation à annuler
    * @throws ErreurMetier invitation introuvable ou plus en attente (404)
@@ -179,18 +182,18 @@ public class InvitationUtilisateurService {
   }
 
   /**
-   * Crée le compte invité à l'activation du lien : rôle utilisateur, parrain enregistré.
+   * Crée le compte invité à l'activation du lien (rôle utilisateur, parrain).
    * @param token lien brut
    * @param identifiant identifiant choisi, déjà validé
    * @param motDePasse mot de passe choisi
-   * @return l'identifiant du nouveau compte, ou vide si le lien n'est pas celui d'une invitation
-   *     d'utilisateur
-   * @throws ErreurMetier identifiant pris, ou adresse devenue celle d'un compte
+   * @return l'identifiant créé, vide si ce n'est pas un lien d'utilisateur
+   * @throws ErreurMetier identifiant pris ou adresse devenue un compte
    */
   @Transactional
   public Optional<String> activer(
       final String token, final String identifiant, final String motDePasse) {
-    final var invitation = depot.trouverEnAttenteParToken(GenerateurSecrets.sha256Hex(token));
+    final Optional<InvitationUtilisateurRepository.Active> invitation =
+        depot.trouverEnAttenteParToken(GenerateurSecrets.sha256Hex(token));
     if (invitation.isEmpty()) {
       return Optional.empty();
     }
@@ -207,6 +210,16 @@ public class InvitationUtilisateurService {
     if (identifiantPris) {
       throw new ErreurMetier("Cet identifiant est déjà utilisé.");
     }
+    creerCompte(email, invitation.get().parrainId(), identifiant, motDePasse);
+    depot.marquerActivee(invitation.get().id());
+    return Optional.of(identifiant);
+  }
+
+  private void creerCompte(
+      final String email,
+      final String parrainId,
+      final String identifiant,
+      final String motDePasse) {
     final String userId = UUID.randomUUID().toString();
     jdbc.update(
         """
@@ -215,15 +228,7 @@ public class InvitationUtilisateurService {
         VALUES (:id, :email, true, 'user', :identifiant, :identifiant, false, :parrain,
                 now(), now())
         """,
-        Map.of(
-            CLE_ID,
-            userId,
-            CLE_EMAIL,
-            email,
-            "identifiant",
-            identifiant,
-            "parrain",
-            invitation.get().parrainId()));
+        Map.of(CLE_ID, userId, CLE_EMAIL, email, "identifiant", identifiant, "parrain", parrainId));
     jdbc.update(
         "INSERT INTO user_config (user_id) VALUES (:id) ON CONFLICT DO NOTHING",
         Map.of(CLE_ID, userId));
@@ -241,8 +246,6 @@ public class InvitationUtilisateurService {
             userId,
             "motDePasse",
             encodeur.encode(motDePasse)));
-    depot.marquerActivee(invitation.get().id());
-    return Optional.of(identifiant);
   }
 
   private void verrouillerEtVerifier(final String parrainId) {
@@ -264,7 +267,8 @@ public class InvitationUtilisateurService {
     }
   }
 
-  // Aucune adresse ni nom dans la trace : l'identifiant du parrain suffit à un administrateur.
+  // Aucune adresse ni nom dans la trace : l'identifiant du parrain suffit à un
+  // administrateur.
   private void signalerDepassement(final String parrainId, final String motif) {
     logAdminService.logAdmin(
         "warn",

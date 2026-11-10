@@ -9,8 +9,9 @@ import java.util.Objects;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Définition unique du décompte des artistes et des salles qu'un utilisateur suit : si la notion
- * de « suivi » change (statut, filtre), elle ne change qu'ici.
+ * Définition unique du décompte des artistes et des salles qu'un utilisateur
+ * suit : si la notion de « suivi » change (statut, filtre), elle ne change
+ * qu'ici.
  * @since 3.1.4
  * @author Kwaite
  */

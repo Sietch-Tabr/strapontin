@@ -5,7 +5,6 @@
 package fr.strapontin.sources.eventim;
 
 import fr.strapontin.core.ConcertBrut;
-import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.Hommage;
 import fr.strapontin.core.IdentifiantLieuEventim;
 import fr.strapontin.core.Normalisation;
@@ -155,35 +154,13 @@ final class MapeurProduitEventim {
       final String artiste =
           artisteFallback != null
               ? artisteFallback
-              : artisteHorsNomDuLieu(extraireNomArtiste(titre), location, produit);
+              : TitreDuLieu.artisteHorsNomDuLieu(extraireNomArtiste(titre), location, produit);
       return construireConcertEventim(
           produit, location, artiste, datHeure[0], datHeure[1], artisteSourceId);
     } catch (Exception e) {
       LOG.warn("erreur parsing produit Eventim", e);
       return null;
     }
-  }
-
-  // Un titre qui n'est que le nom du lieu (« Eglise St Germain des Prés ») n'est pas un artiste :
-  // la première attraction du produit (l'ensemble qui joue) le remplace quand elle existe.
-  private static String artisteHorsNomDuLieu(
-      final String titre, final Map<String, Object> location, final Map<String, Object> produit) {
-    if (location == null
-        || !(location.get(CLE_NOM) instanceof String lieu)
-        || !CorrespondanceSalle.estDoublonSalle(
-            Normalisation.normaliserTexte(titre), Normalisation.normaliserTexte(lieu))) {
-      return titre;
-    }
-    if (produit.get("attractions") instanceof Iterable<?> attractions) {
-      for (final Object attraction : attractions) {
-        if (attraction instanceof Map<?, ?> fiche
-            && fiche.get(CLE_NOM) instanceof String nom
-            && !nom.isBlank()) {
-          return nom.strip();
-        }
-      }
-    }
-    return titre;
   }
 
   @SuppressWarnings("unchecked")

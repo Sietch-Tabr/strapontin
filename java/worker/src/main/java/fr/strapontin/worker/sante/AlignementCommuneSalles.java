@@ -187,8 +187,9 @@ public class AlignementCommuneSalles {
       signalements.cloreEntite(TYPE_SIGNALEMENT, id);
       return false;
     }
-    // Une position de billetterie est imprécise près d'une limite communale : si les concerts
-    // de la salle nomment sa ville actuelle et jamais la commune calculée, la ville est gardée.
+    // Une position de billetterie est imprécise près d'une limite communale :
+    // si les concerts de la salle nomment sa ville actuelle et jamais la
+    // commune calculée, la ville est gardée.
     final Set<String> villesDesConcerts = villesDesConcerts(id);
     if (villesDesConcerts.contains(Normalisation.normaliserTexte(ville))
         && !villesDesConcerts.contains(communeNormalisee)) {

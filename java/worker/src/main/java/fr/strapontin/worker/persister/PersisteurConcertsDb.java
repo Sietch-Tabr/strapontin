@@ -6,14 +6,11 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.Hommage;
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.core.ProduitEventim;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,15 +157,13 @@ public class PersisteurConcertsDb {
    * création.
    */
   private ResolutionEvenement resoudreOuCreerEvenement(
-      final ValeurConcert concert, final Set<String> produitsMultiplesDuLot) {
+      final ValeurConcert concert, final List<ValeurConcert> lot) {
     final UUID exactId = rechercheEvenement.exact(concert);
     if (exactId != null) {
       return new ResolutionEvenement(exactId, false, false);
     }
 
-    final UUID produitId =
-        rechercheEvenement.parProduit(
-            concert, !produitsMultiplesDuLot.contains(cleProduit(concert)));
+    final UUID produitId = rechercheEvenement.parProduit(concert, lot);
     if (produitId != null) {
       return new ResolutionEvenement(produitId, false, true);
     }
@@ -291,25 +286,6 @@ public class PersisteurConcertsDb {
 
   // L'adresse d'un produit suit son titre : l'ancienne, qui ne sera plus revue,
   // ne doit pas rester à côté de la nouvelle.
-  private void retirerAnciennesAdressesProduit(
-      final UUID evenementId, final ValeurConcert concert) {
-    if (!"eventim".equals(concert.source())) {
-      return;
-    }
-    jdbc.update(
-        "DELETE FROM observations o WHERE o.evenement_id = CAST(:id AS uuid)"
-            + " AND o.source = 'eventim' AND o.url IS DISTINCT FROM :url AND "
-            + ProduitEventim.expressionSql("o")
-            + " = :produit",
-        Map.of(
-            "id",
-            evenementId.toString(),
-            "url",
-            concert.url(),
-            "produit",
-            ProduitEventim.identifiant(concert.url()).orElse("")));
-  }
-
   // Un événement que la seule source du produit alimente en suit les changements
   // de titre et d'heure ; une autre source garde l'identité établie.
   // La clé (artiste, date, heure, salle) ne doit pas déjà exister, sinon l'identité
@@ -433,13 +409,12 @@ public class PersisteurConcertsDb {
     int inserts = 0;
     int updates = 0;
     int republications = 0;
-    final Set<String> produitsMultiples = produitsMultiplesDuLot(valeurs);
     for (final ValeurConcert concert : valeurs) {
       if (republicationFiche.estRepublication(concert)) {
         republications++;
         continue;
       }
-      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert, produitsMultiples);
+      final ResolutionEvenement resolution = resoudreOuCreerEvenement(concert, valeurs);
       upsertObservation(resolution.id(), concert);
       enregistrerPlateau(resolution.id(), concert);
       if (resolution.nouveau()) {
@@ -448,7 +423,7 @@ public class PersisteurConcertsDb {
         mettreAJourChampsEvenement(resolution.id(), concert);
         if (resolution.parProduit()) {
           detacherArtisteImite(resolution.id(), concert);
-          retirerAnciennesAdressesProduit(resolution.id(), concert);
+          rechercheEvenement.retirerAnciennesAdressesProduit(resolution.id(), concert);
           alignerIdentiteSurProduit(resolution.id(), concert);
         }
         updates++;
@@ -458,25 +433,5 @@ public class PersisteurConcertsDb {
       LOG.info("{} fiche(s) d'une ancienne salle republiée(s) ignorée(s)", republications);
     }
     return new PersisterConcerts.ResultatPersistance(inserts, updates);
-  }
-
-  private static String cleProduit(final ValeurConcert concert) {
-    return "eventim".equals(concert.source())
-        ? ProduitEventim.identifiant(concert.url()).orElse("")
-        : "";
-  }
-
-  // Produits Eventim publiés plusieurs fois dans le lot : des séances d'une série, jamais un
-  // produit dont la date ou l'heure a changé.
-  private static Set<String> produitsMultiplesDuLot(final List<ValeurConcert> valeurs) {
-    final Set<String> vus = new HashSet<>();
-    final Set<String> multiples = new HashSet<>();
-    for (final ValeurConcert concert : valeurs) {
-      final String cle = cleProduit(concert);
-      if (!cle.isEmpty() && !vus.add(cle)) {
-        multiples.add(cle);
-      }
-    }
-    return multiples;
   }
 }

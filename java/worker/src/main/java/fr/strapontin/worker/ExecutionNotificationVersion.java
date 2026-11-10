@@ -29,7 +29,8 @@ public class ExecutionNotificationVersion {
 
   /**
    * @param notificationVersionPushService envoi de l'annonce aux abonnés
-   * @param notificationVersionEmailService annonce par email, pour qui n'a aucun appareil push
+   * @param notificationVersionEmailService annonce par email, pour qui n'a
+   *     aucun appareil push
    * @param workerStatsService enregistrement de l'exécution
    * @param buildProperties version courante de l'application
    */

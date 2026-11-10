@@ -7,9 +7,9 @@ package fr.strapontin.web.admin;
 import java.time.Instant;
 
 /**
- * Représentation admin d'un utilisateur (réponse GET /api/admin/utilisateurs) ; {@code parrain}
- * est l'identifiant de l'utilisateur qui l'a invité, {@code plafondInvitations} son plafond propre
- * (nul : plafond par défaut).
+ * Représentation admin d'un utilisateur (réponse GET /api/admin/utilisateurs) ;
+ * {@code parrain} est l'identifiant de l'utilisateur qui l'a invité, {@code
+ * plafondInvitations} son plafond propre (nul : plafond par défaut).
  *
  * @since 2.1.0
  * @author Kwaite

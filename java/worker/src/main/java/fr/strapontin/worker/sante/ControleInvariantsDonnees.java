@@ -23,6 +23,7 @@ final class ControleInvariantsDonnees {
 
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
   private static final String SALLE = "salle";
+  private static final String EVENEMENT = "evenement";
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
 
@@ -54,11 +55,10 @@ final class ControleInvariantsDonnees {
         + publication.publier(
             "identifiant_externe_duplique", "identifiant", identifiantsDupliques())
         + publication.publier(
-            "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
-        + publication.publier("produit_eventim_double", "evenement", produitsEventimDoubles())
-        + publication.publier(
-            "produit_prestation_visible", "evenement", produitsPrestationVisibles())
-        + publication.publier("fusion_nocturne_repetee", "evenement", fusionsNocturnesRepetees())
+            "concert_double_salles_distinctes", EVENEMENT, concertsDoublesSallesDistinctes())
+        + publication.publier("produit_eventim_double", EVENEMENT, produitsEventimDoubles())
+        + publication.publier("produit_prestation_visible", EVENEMENT, produitsPrestationVisibles())
+        + publication.publier("fusion_nocturne_repetee", EVENEMENT, fusionsNocturnesRepetees())
         + publication.publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publication.publier("salle_sans_ville", SALLE, sallesSansVille())
         + publication.publier(
@@ -210,12 +210,12 @@ final class ControleInvariantsDonnees {
     return PublicationAnomalies.globale("fiches_figees", details);
   }
 
-  // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures voisines
-  // après la fusion : artistes différents ou plus de deux fiches. Deux séances
-  // d'un produit (matinée, soirée) ne comptent pas.
-  // Promesse du changelog : un produit de prestation, d'hospitalité ou d'accès prioritaire n'est
-  // jamais pris pour un séance. Toute fiche à venir qui en porte encore un est signalée, quelle que
-  // soit la billetterie.
+  // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures
+  // voisines après la fusion : artistes différents ou plus de deux fiches. Deux
+  // séances d'un produit (matinée, soirée) ne comptent pas. Promesse du
+  // changelog : un produit de prestation, d'hospitalité ou d'accès prioritaire
+  // n'est jamais pris pour un séance. Toute fiche à venir qui en porte encore
+  // un est signalée, quelle que soit la billetterie.
   private Map<UUID, Map<String, Object>> produitsPrestationVisibles() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(
@@ -234,8 +234,9 @@ final class ControleInvariantsDonnees {
     return anomalies;
   }
 
-  // Une fiche que la fusion nocturne reçoit trois nuits sur sept est recréée chaque jour : la
-  // résolution à l'écriture ne la rattache pas, la fusion ne fait que corriger après coup.
+  // Une fiche que la fusion nocturne reçoit trois nuits sur sept est recréée
+  // chaque jour : la résolution à l'écriture ne la rattache pas, la fusion ne
+  // fait que corriger après coup.
   private Map<UUID, Map<String, Object>> fusionsNocturnesRepetees() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     jdbc.query(

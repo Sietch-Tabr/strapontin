@@ -5,15 +5,20 @@
 package fr.strapontin.sources.http;
 
 /**
- * Valeurs partagées par les clients de sources : identité du robot, adresses de base des services
- * appelés par plusieurs classes, codes HTTP qui signifient un refus ou une limitation. Chacune est
- * définie ici une seule fois.
+ * Valeurs partagées par les clients de sources : identité du robot, adresses de
+ * base des services appelés par plusieurs classes, codes HTTP qui signifient un
+ * refus ou une limitation. Chacune est définie ici une seule fois.
  * @since 3.1.4
  * @author Kwaite
  */
+// Classe de constantes : aucune méthode, par construction.
+@SuppressWarnings("PMD.DataClass")
 public final class ConstantesSources {
 
-  /** Identité honnête du robot, déclarée à chaque site et billetterie interrogés. */
+  /**
+   * Identité honnête du robot, déclarée à chaque site et billetterie
+   * interrogés.
+   */
   public static final String USER_AGENT_ROBOT = "StrapontinBot/1.0 (+https://strapontin.kwaite.fr)";
 
   /** Adresse de base de l'API Discovery de Ticketmaster. */

@@ -44,9 +44,8 @@ public class AuthService {
    * @param verificationRepository accès aux tokens de vérification
    * @param emailService service d'envoi d'emails
    * @param passwordEncoder encodeur bcrypt
-   * @param sessionRepository dépôt de sessions JDBC (révocation après reset de
-   *     mdp)
-   * @param invitations invitations envoyées par les utilisateurs (compte créé à l'activation)
+   * @param sessionRepository dépôt de sessions JDBC (révocation après reset)
+   * @param invitations invitations d'utilisateurs (compte créé à l'activation)
    */
   public AuthService(
       final VerificationRepository verificationRepository,

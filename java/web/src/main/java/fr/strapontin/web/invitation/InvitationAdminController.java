@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Réglages d'administration des invitations (réservé aux administrateurs par la configuration de
- * sécurité de {@code /api/admin}).
+ * Réglages d'administration des invitations (réservé aux administrateurs par la
+ * configuration de sécurité de {@code /api/admin}).
  * @since 3.1.4
  * @author Kwaite
  */

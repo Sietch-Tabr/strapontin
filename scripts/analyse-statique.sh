@@ -11,7 +11,7 @@ racine="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "== Java : Checkstyle, PMD, Spotless"
 PMD_JAVA_DISABLE_AUX_CLASSPATH_WARNINGS=true mvn -f "$racine/java/pom.xml" \
-  -pl core,sources,web,worker -am compile checkstyle:check pmd:check spotless:check -DskipTests
+  -pl core,sources,web,worker -am compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
 
 echo "== Front : ESLint et stylelint"
 (cd "$racine/front" && npm run lint && npm run lint:css)

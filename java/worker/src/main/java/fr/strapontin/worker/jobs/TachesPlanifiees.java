@@ -12,25 +12,41 @@ import fr.strapontin.worker.WorkerService;
 import fr.strapontin.worker.WorkerSuiviCyclesService;
 import java.util.Map;
 import java.util.Set;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
 import org.springframework.stereotype.Component;
 
 /**
- * Registre des tâches planifiées qui se réduisent à l'appel d'une méthode de service : définir une
- * tâche de plus, c'est une entrée ici et un {@code JobDetail} (nom, exclusion de concurrence) dans
- * {@code Planificateur}, plus une classe par job. Les jobs qui lisent des données de déclenchement
- * (retries ciblés, identifiant d'artiste ou de salle, fréquence du digest, version) gardent leur
- * classe.
+ * Registre des tâches planifiées qui se réduisent à l'appel d'une méthode de
+ * service : une tâche de plus, c'est une entrée ici et un appel de {@link
+ * #jobDetail} dans {@code Planificateur}. Les jobs qui lisent des données de
+ * déclenchement (retries, identifiants, fréquence, version) gardent leur classe.
  * @since 3.1.4
  * @author Kwaite
  */
 @Component
 public class TachesPlanifiees {
 
-  /** Tâches qu'un seul exemplaire peut exécuter à la fois ({@code @DisallowConcurrentExecution}). */
+  /**
+   * Tâches qu'un seul exemplaire peut exécuter à la fois ({@code
+   * @DisallowConcurrentExecution}).
+   */
   public static final Set<String> EXCLUSIVES =
       Set.of("fetchSitesSalles", "recalculerMatches", "reconciliationNocturne");
 
   private final Map<String, Runnable> taches;
+
+  /**
+   * @param nom nom de la tâche, identité du {@code JobDetail}
+   * @return le {@code JobDetail}, exclusif si le nom figure dans {@link
+   *     #EXCLUSIVES}
+   */
+  public static JobDetail jobDetail(final String nom) {
+    return JobBuilder.newJob(EXCLUSIVES.contains(nom) ? TacheExclusive.class : TacheSimple.class)
+        .withIdentity(nom)
+        .storeDurably()
+        .build();
+  }
 
   /**
    * @param fetch fetch des sites de salles

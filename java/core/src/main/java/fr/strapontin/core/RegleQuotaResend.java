@@ -9,10 +9,9 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 /**
- * Règle du quota d'envois Resend, partagée par le web et le worker qui écrivent le même compteur
- * ({@code app_config}, clé {@value #CLE_QUOTA}) : limites, bascule de jour et de mois, réservation
- * d'un envoi. Les écarts voulus entre web et worker (accès aux données, isolation, journalisation)
- * restent dans leurs classes.
+ * Règle du quota d'envois Resend, partagée par le web et le worker qui écrivent
+ * le même compteur ({@code app_config}, clé {@value #CLE_QUOTA}) : limites,
+ * bascule jour/mois, réservation d'un envoi.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -45,8 +44,9 @@ public final class RegleQuotaResend {
   }
 
   /**
-   * Compteur courant : celui lu en base, remis à zéro pour la période écoulée (l'alerte envoyée se
-   * réarme avec elle), ou un compteur vide s'il n'existe pas.
+   * Compteur courant : celui lu en base, remis à zéro pour la période écoulée
+   * (l'alerte envoyée se réarme avec elle), ou un compteur vide s'il n'existe
+   * pas.
    * @param brut compteur lu, vide si absent ou illisible
    * @return le compteur à jour
    */

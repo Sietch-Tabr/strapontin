@@ -51,7 +51,7 @@ steps:
       - sleep 15
       - >-
         mvn -f java/pom.xml -pl core,sources,web,worker -am
-        compile checkstyle:check pmd:check spotless:check -DskipTests
+        compile checkstyle:check pmd:check pmd:cpd-check spotless:check -DskipTests
     when:
       - event: push
         branch: main

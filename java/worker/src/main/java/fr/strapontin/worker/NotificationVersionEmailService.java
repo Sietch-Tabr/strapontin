@@ -12,9 +12,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Annonce d'une nouvelle version par email aux utilisateurs qui l'ont demandée et qu'aucun
- * appareil push ne peut atteindre : une seule annonce par version et par utilisateur, quel que
- * soit le canal ({@code notifications_version}), fréquence « jamais » exclue.
+ * Annonce d'une nouvelle version par email aux utilisateurs qui l'ont demandée
+ * et qu'aucun appareil push ne peut atteindre : une seule annonce par version
+ * et par utilisateur, quel que soit le canal ({@code notifications_version}),
+ * fréquence « jamais » exclue.
  * @since 3.1.4
  * @author Kwaite
  */
@@ -42,7 +43,8 @@ public class NotificationVersionEmailService {
   }
 
   /**
-   * À appeler après l'envoi push : un utilisateur déjà prévenu de cette version en est écarté.
+   * À appeler après l'envoi push : un utilisateur déjà prévenu de cette version
+   * en est écarté.
    * @param version version applicative à annoncer
    * @return nombre d'utilisateurs prévenus par email
    */

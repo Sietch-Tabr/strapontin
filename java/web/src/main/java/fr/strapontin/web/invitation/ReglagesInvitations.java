@@ -8,21 +8,28 @@ import fr.strapontin.web.config.ConfigService;
 import org.springframework.stereotype.Component;
 
 /**
- * Valeurs réglables, sans redéploiement, des invitations envoyées par les utilisateurs : une
- * seule définition pour le service, l'administration et les tests.
+ * Valeurs réglables, sans redéploiement, des invitations envoyées par les
+ * utilisateurs : une seule définition pour le service, l'administration et les
+ * tests.
  * @since 3.1.4
  * @author Kwaite
  */
 @Component
 public class ReglagesInvitations {
 
-  /** Clé {@code app_config} du plafond d'invitations en attente d'un utilisateur. */
+  /**
+   * Clé {@code app_config} du plafond d'invitations en attente d'un
+   * utilisateur.
+   */
   public static final String CLE_PLAFOND_DEFAUT = "INVITATIONS_PLAFOND_DEFAUT";
 
   /** Clé {@code app_config} du nombre d'envois par heure et par utilisateur. */
   public static final String CLE_ENVOIS_PAR_HEURE = "INVITATIONS_ENVOIS_PAR_HEURE";
 
-  /** Clé {@code app_config} du nombre d'envois par jour, tous utilisateurs confondus. */
+  /**
+   * Clé {@code app_config} du nombre d'envois par jour, tous utilisateurs
+   * confondus.
+   */
   public static final String CLE_ENVOIS_PAR_JOUR = "INVITATIONS_ENVOIS_PAR_JOUR";
 
   /** Plafond d'invitations en attente d'un utilisateur sans réglage propre. */
@@ -32,7 +39,8 @@ public class ReglagesInvitations {
   public static final int PLAFOND_MAX = 50;
 
   private static final int ENVOIS_PAR_HEURE_DEFAUT = 5;
-  // Une invitation est un email de 3 000 par mois : 30 par jour laisse l'essentiel au digest.
+  // Une invitation est un email de 3 000 par mois : 30 par jour laisse
+  // l'essentiel au digest.
   private static final int ENVOIS_PAR_JOUR_DEFAUT = 30;
 
   private final ConfigService configService;
@@ -45,7 +53,8 @@ public class ReglagesInvitations {
   }
 
   /**
-   * @return plafond d'invitations en attente d'un utilisateur sans réglage propre
+   * @return plafond d'invitations en attente d'un utilisateur sans réglage
+   *     propre
    */
   public int plafondDefaut() {
     return lire(CLE_PLAFOND_DEFAUT, PLAFOND_DEFAUT, 0);
@@ -59,7 +68,8 @@ public class ReglagesInvitations {
   }
 
   /**
-   * @return nombre d'envois d'invitation autorisés par jour, tous utilisateurs confondus
+   * @return nombre d'envois d'invitation autorisés par jour, tous utilisateurs
+   *     confondus
    */
   public int envoisParJour() {
     return lire(CLE_ENVOIS_PAR_JOUR, ENVOIS_PAR_JOUR_DEFAUT, 1);

@@ -63,8 +63,8 @@ public class SignalementDatesFestivalEcartees {
     return signales;
   }
 
-  // Le concert n'existe plus, est passé, ou a gagné une autre billetterie : la date n'est plus
-  // attribuée à tort par ce seul produit.
+  // Le concert n'existe plus, est passé, ou a gagné une autre billetterie : la
+  // date n'est plus attribuée à tort par ce seul produit.
   private void fermerObsoletes() {
     jdbc.update(
         """
