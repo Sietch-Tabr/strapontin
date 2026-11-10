@@ -1,6 +1,9 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { FICHIER_AUTH_USER } from "./global-setup.js";
-import { creerContexteAdmin } from "./helpers/admin.js";
+import {
+  creerContexteAdmin,
+  naviguerVersUtilisateurs,
+} from "./helpers/admin.js";
 
 // Adresse de test de Resend : la livraison réussit sans rebond ni boîte réelle.
 const EMAIL_INVITE = "delivered@resend.dev";
@@ -101,21 +104,36 @@ test.describe("Scénario: invitations par un utilisateur", () => {
       await page.goto("/parametres#inviter");
       const section = page.locator("section#inviter");
 
-      await section.getByLabel("Adresse email").fill("pas-une-adresse");
+      const requetes: string[] = [];
+      page.on("request", (requete) => {
+        if (
+          requete.method() === "POST" &&
+          requete.url().includes("/api/invitations")
+        )
+          requetes.push(requete.url());
+      });
+
+      const champ = section.getByLabel("Adresse email");
+      await champ.fill("pas-une-adresse");
       await section
         .getByRole("button", { name: "Envoyer l'invitation" })
         .click();
 
-      // Validation native du navigateur : aucune invitation n'est créée.
-      await expect(section).toContainText("Aucune invitation envoyée");
+      // Validation native du navigateur : le formulaire n'est pas soumis, aucune invitation créée.
+      expect(
+        await champ.evaluate((e) => (e as HTMLInputElement).validity.valid),
+      ).toBe(false);
+      expect(requetes).toEqual([]);
     });
   });
 
   test.describe("session administrateur", () => {
     test("admin_plafondParDefaut_estAffichePuisEnregistrable", async ({
       page,
+      isMobile,
     }) => {
       await page.goto("/admin");
+      await naviguerVersUtilisateurs(page, isMobile);
       const section = page.locator("section#utilisateurs");
       const champ = section.getByLabel("Plafond par défaut");
 
@@ -123,8 +141,7 @@ test.describe("Scénario: invitations par un utilisateur", () => {
       const valeur = await champ.inputValue();
       await champ.fill(valeur);
       await section
-        .getByRole("button", { name: "Enregistrer" })
-        .first()
+        .getByRole("button", { name: "Enregistrer", exact: true })
         .click();
 
       await expect(page.locator(".alerte-succes").first()).toContainText(

@@ -104,9 +104,9 @@
                 />
                 <button
                   type="submit"
-                  class="bouton bouton-petit bouton-primaire"
+                  class="bouton bouton-petit bouton-secondaire"
                 >
-                  Enregistrer
+                  Enregistrer le plafond
                 </button>
                 <button
                   v-if="u.plafondInvitations !== null"
