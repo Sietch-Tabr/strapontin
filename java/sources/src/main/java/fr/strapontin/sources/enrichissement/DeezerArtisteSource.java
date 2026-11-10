@@ -7,6 +7,7 @@ package fr.strapontin.sources.enrichissement;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.ConstantesSources;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -29,7 +30,6 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
   private static final Logger LOG = LoggerFactory.getLogger(DeezerArtisteSource.class);
 
   private static final String CHAMP_NOM = "name";
-  private static final String DEEZER_BASE = "https://api.deezer.com";
 
   private final RestClient restClient;
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
@@ -98,7 +98,9 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       final Map<String, Object> data =
           restClient
               .get()
-              .uri(DEEZER_BASE + "/search/artist?q={nom}&limit=25", artiste.nom())
+              .uri(
+                  ConstantesSources.DEEZER_BASE_URL + "/search/artist?q={nom}&limit=25",
+                  artiste.nom())
               .retrieve()
               .body(Map.class);
       if (data == null) {
@@ -155,7 +157,7 @@ public class DeezerArtisteSource implements SourceEnrichissementArtiste, SourceA
       final Map<String, Object> data =
           restClient
               .get()
-              .uri(DEEZER_BASE + "/artist/" + artiste.deezerId())
+              .uri(ConstantesSources.DEEZER_BASE_URL + "/artist/" + artiste.deezerId())
               .retrieve()
               .body(Map.class);
       if (data == null || data.get(CHAMP_NOM) == null || data.containsKey("error")) {

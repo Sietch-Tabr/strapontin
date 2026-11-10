@@ -7,6 +7,7 @@ package fr.strapontin.sources.ticketmaster;
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.sources.http.ConstantesSources;
 import fr.strapontin.sources.http.UriSources;
 import java.net.URI;
 import java.time.Duration;
@@ -37,7 +38,6 @@ final class TicketmasterPageFetcher {
   // TM refuse offset > 1000 : avec size=200, page 6 → offset 1000 (ok), page 7
   // → 1200 (HTTP 400)
   private static final int NB_PAGES_MAX = 6;
-  private static final int HTTP_TROP_DE_REQUETES = 429;
 
   private final RestClient restClient;
   private final String apiKey;
@@ -111,7 +111,7 @@ final class TicketmasterPageFetcher {
         LOG.warn("Ticketmaster : quota du jour épuisé url={}", uriMasquee(uri));
         etatFetch.signalerQuotaEpuise();
         return new ResultatPage(List.of(), 0, NB_PAGES_MAX, null, false);
-      } else if (httpEx.getStatusCode().value() == HTTP_TROP_DE_REQUETES) {
+      } else if (httpEx.getStatusCode().value() == ConstantesSources.STATUT_LIMITATION) {
         LOG.warn(
             "Ticketmaster 429 (Spike Arrest) url={} dureeAppelHttpMs={}",
             uriMasquee(uri),

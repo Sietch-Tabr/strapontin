@@ -5,6 +5,7 @@
 package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.ProduitEventim;
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Service;
 public class FusionProduitsEventimService {
 
   // Écart d'heure maximal entre deux fiches d'un produit : au-delà, deux séances.
-  private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final long VIVANT_UNIQUE = 1;
   private static final String CLE_ECART_SECONDES = "ecartSecondes";
 
@@ -71,7 +71,7 @@ public class FusionProduitsEventimService {
                 + " OR a.artiste_id = b.artiste_id)"
                 + " AND (SELECT count(*) FROM p x WHERE x.produit = a.produit"
                 + " AND x.date = a.date AND x.salle_id = a.salle_id) = 2",
-            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     int fusions = 0;
     for (final Map<String, Object> paire : paires) {
       final UUID evtA = (UUID) paire.get("evt_a");
@@ -121,7 +121,7 @@ public class FusionProduitsEventimService {
                 + " GROUP BY a.id",
             Map.of(
                 CLE_ECART_SECONDES,
-                ECART_MAX_HEURE_SECONDES,
+                ReglesCommunes.ECART_MAX_HEURE_SECONDES,
                 "seuil",
                 FusionEvenementsArtisteService.SEUIL_ABSENCES_FICHE_PERIMEE));
     int fusions = 0;
@@ -173,7 +173,7 @@ public class FusionProduitsEventimService {
               AND b.absences_consecutives = 0 AND b.derniere_arrivee > a.derniere_vue
             GROUP BY a.id
             """,
-            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     int fusions = 0;
     for (final Map<String, Object> ligne : lignes) {
       if (((Number) ligne.get("nb_vivants")).longValue() != VIVANT_UNIQUE) {
@@ -277,7 +277,7 @@ public class FusionProduitsEventimService {
               WHERE (SELECT count(*) FROM paires q WHERE q.origine = p.origine) = 1
                 AND (SELECT count(*) FROM paires q WHERE q.reporte = p.reporte) = 1)
             """,
-            Map.of(CLE_ECART_SECONDES, ECART_MAX_HEURE_SECONDES));
+            Map.of(CLE_ECART_SECONDES, ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     if (marquees > 0) {
       logsAdminWorker.inserer(
           "info",

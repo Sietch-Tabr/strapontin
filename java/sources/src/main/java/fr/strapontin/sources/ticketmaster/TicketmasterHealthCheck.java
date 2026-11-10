@@ -6,6 +6,7 @@ package fr.strapontin.sources.ticketmaster;
 
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.PositionLieu;
+import fr.strapontin.sources.http.ConstantesSources;
 import fr.strapontin.sources.http.UriSources;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;
@@ -27,7 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 final class TicketmasterHealthCheck {
 
   private static final Logger LOG = LoggerFactory.getLogger(TicketmasterHealthCheck.class);
-  private static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
+  private static final String BASE_URL = ConstantesSources.TICKETMASTER_BASE_URL;
   private static final String CLE_EMBEDDED = "_embedded";
   private static final String PARAM_APIKEY = "apikey";
   private static final String SUFFIXE_JSON = ".json";

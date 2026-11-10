@@ -29,7 +29,6 @@ public final class Dedoublonner {
   // Tolérance sous laquelle deux heures distinctes restent compatibles pour la
   // fusion, très en dessous de tout écart matinée/soirée réel (toujours de
   // l'ordre de l'heure).
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
   // Taille d'un groupe ne contenant aucun doublon potentiel (rien à
   // rapprocher).
   private static final int TAILLE_GROUPE_SANS_DOUBLON = 1;
@@ -168,7 +167,7 @@ public final class Dedoublonner {
     if (minutesA == null || minutesB == null) {
       return false;
     }
-    return Math.abs(minutesA - minutesB) <= TOLERANCE_HEURE_MINUTES;
+    return Math.abs(minutesA - minutesB) <= ReglesCommunes.TOLERANCE_HEURE_MINUTES;
   }
 
   private static Integer minutesDepuisMinuit(final String heure) {

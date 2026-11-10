@@ -11,6 +11,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import fr.strapontin.sources.http.ConstantesSources;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -31,7 +32,7 @@ class ClientSiteSalleTest {
 
   private ClientSiteSalle client() {
     final RestClient.Builder builder =
-        RestClient.builder().defaultHeader("User-Agent", ClientSiteSalle.USER_AGENT);
+        RestClient.builder().defaultHeader("User-Agent", ConstantesSources.USER_AGENT_ROBOT);
     serveur = MockRestServiceServer.bindTo(builder).build();
     return new ClientSiteSalle(builder.build(), Duration.ZERO);
   }
@@ -41,11 +42,11 @@ class ClientSiteSalleTest {
     final ClientSiteSalle client = client();
     serveur
         .expect(requestTo("https://exemple.fr/robots.txt"))
-        .andExpect(header("User-Agent", ClientSiteSalle.USER_AGENT))
+        .andExpect(header("User-Agent", ConstantesSources.USER_AGENT_ROBOT))
         .andRespond(withSuccess("User-agent: *\nDisallow: /admin\n", MediaType.TEXT_PLAIN));
     serveur
         .expect(requestTo("https://exemple.fr/agenda"))
-        .andExpect(header("User-Agent", ClientSiteSalle.USER_AGENT))
+        .andExpect(header("User-Agent", ConstantesSources.USER_AGENT_ROBOT))
         .andRespond(withSuccess("<html>agenda</html>", MediaType.TEXT_HTML));
 
     assertEquals("<html>agenda</html>", client.lire("https://exemple.fr/agenda"));

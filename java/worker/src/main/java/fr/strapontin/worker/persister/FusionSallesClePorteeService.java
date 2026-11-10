@@ -8,6 +8,7 @@ import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.DistanceGeo;
 import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.QualificatifSalle;
+import fr.strapontin.core.ReglesCommunes;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,7 +48,6 @@ public class FusionSallesClePorteeService {
   private static final int NB_CONCERTS_PARTAGES_DISTANCE_ELARGIE = 2;
   // Deux billetteries publient la même séance à 30 ou 60 minutes d'écart
   // (ouverture des portes et début) ; au-delà, ce sont deux séances.
-  private static final int ECART_MAX_HEURE_SECONDES = 3600;
   private static final String CLE_CIBLE = "cible";
   private static final int NB_SALLES_PAIRE = 2;
   private static final String CLE_SOURCE = "source";
@@ -140,7 +140,7 @@ public class FusionSallesClePorteeService {
             GROUP BY c1.salle_id, c2.salle_id, sa.nom_norm, sb.nom_norm, sa.nom, sb.nom,
                      sa.ville, sb.ville, sa.latitude, sa.longitude, sb.latitude, sb.longitude
             """,
-            Map.of("ecartHeure", ECART_MAX_HEURE_SECONDES));
+            Map.of("ecartHeure", ReglesCommunes.ECART_MAX_HEURE_SECONDES));
     final List<PaireSalles> paires = new ArrayList<>();
     for (final Map<String, Object> ligne : lignes) {
       if (memeLieu(ligne)) {

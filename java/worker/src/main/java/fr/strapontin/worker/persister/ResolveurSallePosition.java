@@ -10,6 +10,7 @@ import fr.strapontin.core.NomsDeLieu;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.PositionLieu;
 import fr.strapontin.core.QualificatifSalle;
+import fr.strapontin.core.ReglesCommunes;
 import java.sql.Types;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +27,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 final class ResolveurSallePosition {
 
-  /* package-private : élargi pour les tests et la simulation. */
-  static final double RAYON_MEME_LIEU_METRES = 300;
   /* package-private : positions publiées décalées jusqu'à 7 km (centre-ville
    * pour une salle de périphérie) : seul un autre lieu urbain est exclu. */
   static final double DISTANCE_INCOMPATIBLE_METRES = 20_000;
@@ -82,7 +81,7 @@ final class ResolveurSallePosition {
               position.longitude(),
               (Double) c.get("latitude"),
               (Double) c.get("longitude"));
-      if (distance > RAYON_MEME_LIEU_METRES
+      if (distance > ReglesCommunes.RAYON_MEME_LIEU_METRES
           || !CorrespondanceSalle.estDoublonSalle(nomNorm, (String) c.get("nom_norm"))
           || QualificatifSalle.qualificatifsDivergents(nom, (String) c.get("nom"))) {
         continue;
@@ -134,7 +133,7 @@ final class ResolveurSallePosition {
             (Double) lignes.get(0).get("latitude"),
             (Double) lignes.get(0).get("longitude"));
     return distance > DISTANCE_INCOMPATIBLE_METRES
-        || distance > RAYON_MEME_LIEU_METRES
+        || distance > ReglesCommunes.RAYON_MEME_LIEU_METRES
             && distance <= DISTANCE_LIEUX_VOISINS_MAX_METRES
             && !NomsDeLieu.designentFortementLeMemeLieu(
                 Normalisation.normaliserTexte(nom),

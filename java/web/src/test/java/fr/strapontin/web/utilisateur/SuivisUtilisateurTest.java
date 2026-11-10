@@ -27,8 +27,7 @@ class SuivisUtilisateurTest {
   @Test
   void nombreTotal_additionneArtistesEtSalles() {
     final NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class)))
-        .thenReturn(3);
+    when(jdbc.queryForObject(contains("user_artistes"), anyMap(), eq(Integer.class))).thenReturn(3);
     when(jdbc.queryForObject(contains("user_salles"), anyMap(), eq(Integer.class))).thenReturn(4);
 
     assertEquals(7, SuivisUtilisateur.nombreTotal(jdbc, "u1"));

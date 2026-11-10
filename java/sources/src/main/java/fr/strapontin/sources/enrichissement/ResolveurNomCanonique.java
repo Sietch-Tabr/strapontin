@@ -12,6 +12,7 @@ import fr.strapontin.core.DistanceTexte;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.ConstantesSources;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,6 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   private static final Logger LOG = LoggerFactory.getLogger(ResolveurNomCanonique.class);
 
-  private static final String DEEZER_BASE = "https://api.deezer.com";
   // Un seuil trop permissif expose au cas où le vrai artiste n'apparaît pas du
   // tout dans le pool de candidats Deezer : seul un homonyme sans rapport mais
   // mieux référencé franchit alors le seuil et est retenu par défaut. Constaté
@@ -104,7 +104,10 @@ public class ResolveurNomCanonique implements SourceAvecBilanFetch {
 
   @SuppressWarnings("unchecked")
   private String rechercherDeezerArtiste(final String nom) {
-    final String gabarit = DEEZER_BASE + "/search/artist?q={nom}&limit=" + LIMITE_CANDIDATS_DEEZER;
+    final String gabarit =
+        ConstantesSources.DEEZER_BASE_URL
+            + "/search/artist?q={nom}&limit="
+            + LIMITE_CANDIDATS_DEEZER;
     compteurBilan.enregistrerAppel();
     try {
       final Map<String, Object> data =

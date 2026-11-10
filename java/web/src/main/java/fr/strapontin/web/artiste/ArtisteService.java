@@ -8,6 +8,7 @@ import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.CorrespondanceSalle;
 import fr.strapontin.core.FiltreArtiste;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.sources.http.ConstantesSources;
 import fr.strapontin.web.BudgetRecherchesExternes;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.RessourceDejaExistante;
@@ -43,7 +44,7 @@ import tools.jackson.databind.ObjectMapper;
 public class ArtisteService {
 
   private static final Logger LOG = LoggerFactory.getLogger(ArtisteService.class);
-  private static final String DEEZER_URL = "https://api.deezer.com/search/artist";
+  private static final String DEEZER_URL = ConstantesSources.DEEZER_BASE_URL + "/search/artist";
   private static final String WIKIDATA_API_URL = "https://www.wikidata.org/w/api.php";
   private static final String WIKIDATA_USER_AGENT =
       "Strapontin/2.6.3 (https://codeberg.org/Kwaite/strapontin; kwaite@hotmail.fr)";

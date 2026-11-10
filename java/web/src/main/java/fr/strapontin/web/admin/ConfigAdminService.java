@@ -5,6 +5,7 @@
 package fr.strapontin.web.admin;
 
 import fr.strapontin.core.CadenceurAppels;
+import fr.strapontin.sources.http.ConstantesSources;
 import fr.strapontin.web.ErreurMetier;
 import fr.strapontin.web.config.ConfigService;
 import java.net.URI;
@@ -82,8 +83,8 @@ public class ConfigAdminService {
                       + " (43 caractères)."));
 
   private static final String TM_URL_TEST =
-      "https://app.ticketmaster.com/discovery/v2/events.json"
-          + "?apikey={cle}&size=1&countryCode=FR&classificationName=music";
+      ConstantesSources.TICKETMASTER_BASE_URL
+          + "/events.json?apikey={cle}&size=1&countryCode=FR&classificationName=music";
 
   private final ConfigService configService;
   private final LogAdminService logAdminService;

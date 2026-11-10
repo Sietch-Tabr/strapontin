@@ -12,6 +12,7 @@ import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.ConcertBrut;
 import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.ResultatRegion;
+import fr.strapontin.sources.http.ConstantesSources;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -421,7 +422,7 @@ class EventimSourceTest {
 
     serveur
         .expect(requestTo(org.hamcrest.Matchers.containsString("/attractions")))
-        .andExpect(header("User-Agent", EventimSource.USER_AGENT))
+        .andExpect(header("User-Agent", ConstantesSources.USER_AGENT_ROBOT))
         .andExpect(headerDoesNotExist("Accept-Encoding"))
         .andRespond(
             withSuccess(
@@ -433,7 +434,7 @@ class EventimSourceTest {
     new EventimSource(restClient).fetchArtiste("Test");
 
     serveur.verify();
-    assertFalse(EventimSource.USER_AGENT.startsWith("Mozilla"));
+    assertFalse(ConstantesSources.USER_AGENT_ROBOT.startsWith("Mozilla"));
   }
 
   // --- Tests HTTP ---

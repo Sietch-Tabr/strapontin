@@ -6,6 +6,7 @@ package fr.strapontin.web.salle;
 
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.Normalisation;
+import fr.strapontin.sources.http.ConstantesSources;
 import fr.strapontin.web.WorkerTriggerUtils;
 import fr.strapontin.web.config.ConfigService;
 import java.util.List;
@@ -32,7 +33,7 @@ class SalleRechercheTicketmasterService {
   private static final Logger LOG =
       LoggerFactory.getLogger(SalleRechercheTicketmasterService.class);
   private static final String TM_VENUES_URL =
-      "https://app.ticketmaster.com/discovery/v2/venues.json";
+      ConstantesSources.TICKETMASTER_BASE_URL + "/venues.json";
 
   private final ConfigService configService;
   private final RestClient restClient;

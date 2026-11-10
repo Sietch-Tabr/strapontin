@@ -15,6 +15,7 @@ import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceAvecFetchLot;
 import fr.strapontin.sources.http.CadenceurAppelsMemoire;
 import fr.strapontin.sources.http.ClientHttpFactory;
+import fr.strapontin.sources.http.ConstantesSources;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +38,7 @@ public class TicketmasterSource implements SourceAvecFetchLot, SourceAvecBilanFe
 
   // Package-private (pas private) : réutilisé par TicketmasterRegionFetcher.
   /* package-private : partagée par TicketmasterRegionFetcher (même package). */
-  static final String BASE_URL = "https://app.ticketmaster.com/discovery/v2";
+  static final String BASE_URL = ConstantesSources.TICKETMASTER_BASE_URL;
 
   /**
    * Classifications Ticketmaster filtrées lors des fetchs (musique, opéra,

@@ -21,3 +21,5 @@
 **3.1.3** : `AccesSansSpectacle.estAccesSansSpectacle(titre)` reconnaît d'après son titre un produit de billetterie qui vend une visite ou un accès prioritaire sans spectacle (jamais un billet combiné, titre contenant « + ») ; partagé par `sources` pour Eventim et Ticketmaster.
 
 `CorrespondanceArtiste.estNomSuiviDeLaSalle(titre, nom, salleNorm)` : vrai quand le titre est le nom suivi de liaisons (« à l'», « au », « chez »…) et de mots de la salle seulement ; sert à ne pas prendre « Sidiki Diabaté à l'Accor Arena » pour un autre nom d'artiste.
+
+**Règles définies une seule fois (3.1.4)** : `core.ReglesCommunes` porte les règles de sécurité et de rapprochement partagées (longueur minimale du mot de passe, tolérance horaire de 3 minutes entre fiches Ticketmaster, écart de 3600 s d'une même séance publiée deux fois, rayon « même lieu » de 300 m) et `sources.http.ConstantesSources` l'identité du robot (`StrapontinBot/1.0`), les adresses de base Ticketmaster et Deezer et les codes 403/429. `ReglesDefiniesUneFoisTest` (module web, qui voit les quatre modules) échoue si une de ces valeurs est redéclarée ailleurs.

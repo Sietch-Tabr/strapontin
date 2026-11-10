@@ -24,8 +24,6 @@ public final class CauseEchecHttp {
   /** Cause par défaut d'une erreur non reconnue. */
   public static final String AUTRE = "autre erreur";
 
-  private static final int STATUT_LIMITATION = 429;
-  private static final int STATUT_ACCES_REFUSE = 403;
   private static final int STATUT_ERREUR_SERVICE = 500;
 
   private CauseEchecHttp() {}
@@ -66,10 +64,10 @@ public final class CauseEchecHttp {
   }
 
   private static String causeStatut(final int statut) {
-    if (statut == STATUT_LIMITATION) {
+    if (statut == ConstantesSources.STATUT_LIMITATION) {
       return "HTTP 429 (limitation de débit)";
     }
-    if (statut == STATUT_ACCES_REFUSE) {
+    if (statut == ConstantesSources.STATUT_ACCES_REFUSE) {
       return "HTTP 403 (accès refusé)";
     }
     return statut >= STATUT_ERREUR_SERVICE

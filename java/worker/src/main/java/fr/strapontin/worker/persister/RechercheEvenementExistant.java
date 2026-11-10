@@ -6,6 +6,7 @@ package fr.strapontin.worker.persister;
 
 import fr.strapontin.core.CorrespondanceArtiste;
 import fr.strapontin.core.ProduitEventim;
+import fr.strapontin.core.ReglesCommunes;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Types;
@@ -29,7 +30,6 @@ final class RechercheEvenementExistant {
 
   // Écart d'heure toléré entre deux fiches TM d'un même événement, très en
   // dessous de tout écart matinée/soirée réel.
-  private static final int TOLERANCE_HEURE_MINUTES = 3;
   // Écart d'heure toléré pour un même produit Eventim : au-delà, deux séances.
   private static final int ECART_MAX_PRODUIT_MINUTES = 60;
   // Un produit revu depuis moins de ce délai est encore publié à sa date : pas un produit déplacé.
@@ -240,7 +240,8 @@ final class RechercheEvenementExistant {
   private static boolean memeHeure(final LocalTime existante, final LocalTime entrante) {
     return existante != null
         && entrante != null
-        && Math.abs(Duration.between(existante, entrante).toMinutes()) <= TOLERANCE_HEURE_MINUTES;
+        && Math.abs(Duration.between(existante, entrante).toMinutes())
+            <= ReglesCommunes.TOLERANCE_HEURE_MINUTES;
   }
 
   /**
@@ -264,6 +265,6 @@ final class RechercheEvenementExistant {
       return true;
     }
     final long diffMinutes = Math.abs(Duration.between(existante, entrante).toMinutes());
-    return diffMinutes <= TOLERANCE_HEURE_MINUTES;
+    return diffMinutes <= ReglesCommunes.TOLERANCE_HEURE_MINUTES;
   }
 }

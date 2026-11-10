@@ -7,6 +7,7 @@ package fr.strapontin.sources.ticketmaster;
 import fr.strapontin.core.BilanFetch;
 import fr.strapontin.core.CompteurBilanFetch;
 import fr.strapontin.core.QuotaTM;
+import fr.strapontin.sources.http.ConstantesSources;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,7 +23,6 @@ import org.springframework.web.client.HttpClientErrorException;
  */
 final class EtatFetchTM {
 
-  private static final int HTTP_TROP_DE_REQUETES = 429;
   private static final long DELAI_NOUVEL_ESSAI_MS = 3_600_000;
 
   private final AtomicReference<QuotaTM> dernierQuota = new AtomicReference<>();
@@ -70,7 +70,7 @@ final class EtatFetchTM {
   /* package-private : appelé par TicketmasterPageFetcher/TicketmasterHealthCheck. */
   static boolean estQuotaEpuise(final Exception erreur) {
     return erreur instanceof HttpClientErrorException http
-        && http.getStatusCode().value() == HTTP_TROP_DE_REQUETES
+        && http.getStatusCode().value() == ConstantesSources.STATUT_LIMITATION
         && http.getResponseBodyAsString().contains("QuotaViolation");
   }
 
