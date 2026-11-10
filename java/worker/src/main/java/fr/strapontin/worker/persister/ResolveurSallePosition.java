@@ -99,10 +99,14 @@ final class ResolveurSallePosition {
    * @param nom nom brut du lieu publié
    * @param position position publiée du lieu
    * @return true si salle et lieu, géolocalisés, sont trop éloignés pour
-   *     être le même lieu (voir la classe)
+   *     être le même lieu (voir la classe), ou si leurs codes postaux connus
+   *     diffèrent sans que les noms soient identiques
    */
   /* package-private : appelé par ResolveurSalleParConcert et la simulation. */
   boolean incompatible(final UUID salleId, final String nom, final PositionLieu position) {
+    if (salleId != null && codePostalDifferent(salleId, nom, position)) {
+      return true;
+    }
     if (salleId == null || !position.estGeolocalisee()) {
       return false;
     }
@@ -136,5 +140,23 @@ final class ResolveurSallePosition {
                 Normalisation.normaliserTexte(nom),
                 (String) lignes.get(0).get("nom_norm"),
                 (String) lignes.get(0).get("contexte"));
+  }
+
+  // Deux codes postaux connus et différents désignent deux lieux : un nom contenu dans un
+  // autre (« dome » dans « vendome ») ne suffit pas. Un nom identique est gardé, les billetteries
+  // divergeant parfois sur le code postal d'un même lieu.
+  private boolean codePostalDifferent(
+      final UUID salleId, final String nom, final PositionLieu position) {
+    if (position.codePostal() == null) {
+      return false;
+    }
+    final List<Map<String, Object>> lignes =
+        jdbc.queryForList(
+            "SELECT code_postal, nom_norm FROM salles WHERE id = CAST(:id AS uuid)"
+                + " AND code_postal IS NOT NULL",
+            Map.of("id", salleId.toString()));
+    return !lignes.isEmpty()
+        && !position.codePostal().equals(lignes.get(0).get("code_postal"))
+        && !Normalisation.normaliserTexte(nom).equals(lignes.get(0).get("nom_norm"));
   }
 }

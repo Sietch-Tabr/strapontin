@@ -114,6 +114,37 @@ class ResolutionSallesParPositionIntegrationTest extends AbstractWorkerIntegrati
     assertFalse(parPosition.incompatible(vittel, "Palais des Congrès", PositionLieu.INCONNUE));
   }
 
+  @Test
+  void incompatible_codePostalDifferentEtNomsDifferents_vrai() {
+    final UUID dome = creerSalle("Dome de Paris", "75", MONTPARNASSE);
+    jdbc.update(
+        "UPDATE salles SET code_postal = '75015' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", dome.toString()));
+    final PositionLieu vendomeClub = new PositionLieu(null, null, "75002");
+
+    assertTrue(parPosition.incompatible(dome, "Vendôme Club Paris", vendomeClub));
+  }
+
+  @Test
+  void incompatible_codePostalDifferentMaisNomIdentique_neVetoPas() {
+    final UUID dome = creerSalle("dome de paris", "75", MONTPARNASSE);
+    jdbc.update(
+        "UPDATE salles SET code_postal = '75015' WHERE id = CAST(:id AS uuid)",
+        Map.of("id", dome.toString()));
+
+    assertFalse(
+        parPosition.incompatible(dome, "Dome de Paris", new PositionLieu(null, null, "75002")));
+  }
+
+  @Test
+  void incompatible_codePostalInconnuDUnCote_neVetoPas() {
+    final UUID dome = creerSalle("Dome de Paris", "75", MONTPARNASSE);
+
+    assertFalse(
+        parPosition.incompatible(
+            dome, "Vendôme Club Paris", new PositionLieu(null, null, "75002")));
+  }
+
   // Le Minotaure (Vendôme) portait la position Wikidata d'un homonyme normand, sans aucun lieu
   // publié pour la confirmer : le veto créait une seconde salle « Le Minotaure Vendome ».
   @Test
