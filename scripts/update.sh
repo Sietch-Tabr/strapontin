@@ -7,7 +7,24 @@ trap 'echo "ERREUR à la ligne $LINENO : $BASH_COMMAND" >&2' ERR
 # Usage : /opt/strapontin/scripts/update.sh
 # Appelé par Woodpecker (prod) ou manuellement (dev) après scp des JARs vers *.jar.new.
 
-APP_DIR="/opt/strapontin"
+APP_DIR="${APP_DIR:-/opt/strapontin}"
+AIDE_CONF="${AIDE_CONF:-/etc/aide/aide.conf}"
+AIDE_BASE="${AIDE_BASE:-/var/lib/aide}"
+AIDE_ACTIF=false
+CHANGEMENTS_EXTERNES=""
+
+# Sans cette régénération, tout changement légitime (JARs, scripts, retrait des .prev par un
+# rollback) déclencherait une fausse alerte d'intégrité au prochain contrôle quotidien.
+regenerer_baseline() {
+    echo "[update] Régénération de la baseline AIDE..."
+    aide --config="$AIDE_CONF" --init >/dev/null 2>&1 || true
+    if [ -f "$AIDE_BASE/aide.db.new" ]; then
+        mv "$AIDE_BASE/aide.db.new" "$AIDE_BASE/aide.db"
+        echo "[update] Baseline AIDE régénérée"
+    else
+        echo "[update] AVERTISSEMENT : régénération de la baseline AIDE échouée" >&2
+    fi
+}
 
 rollback() {
     echo "[update] Rollback en cours..." >&2
@@ -15,6 +32,13 @@ rollback() {
     [ -f "$APP_DIR/web.jar.prev" ] && mv "$APP_DIR/web.jar.prev" "$APP_DIR/web.jar"
     [ -f "$APP_DIR/worker.jar.prev" ] && mv "$APP_DIR/worker.jar.prev" "$APP_DIR/worker.jar"
     systemctl restart strapontin-web strapontin-worker
+    # Le rollback retire les .prev que la baseline attend : sans la régénérer, le contrôle
+    # suivant alerte à tort. Un changement externe déjà détecté garde la baseline en l'état.
+    if [ "$AIDE_ACTIF" = true ] && [ -z "$CHANGEMENTS_EXTERNES" ]; then
+        regenerer_baseline
+    elif [ "$AIDE_ACTIF" = true ]; then
+        echo "[update] Baseline AIDE NON régénérée : changement externe à authentifier" >&2
+    fi
     echo "[update] Rollback terminé" >&2
     set -e
 }
@@ -56,17 +80,15 @@ chemins_modifies() {
     ' | sort -u
 }
 
-AIDE_ACTIF=false
-command -v aide >/dev/null 2>&1 && [ -f /etc/aide/aide.conf ] && AIDE_ACTIF=true
+command -v aide >/dev/null 2>&1 && [ -f "$AIDE_CONF" ] && AIDE_ACTIF=true
 
 # Pré-contrôle AIDE avant tout remplacement : un changement hors déploiement (unit systemd,
 # .env, autre script) ne doit jamais être absorbé silencieusement par la régénération de la
 # baseline en fin de déploiement.
-CHANGEMENTS_EXTERNES=""
 if [ "$AIDE_ACTIF" = true ]; then
     echo "[update] Pré-contrôle d'intégrité AIDE..."
     CODE_AIDE=0
-    SORTIE_AIDE=$(aide --config=/etc/aide/aide.conf --check 2>&1) || CODE_AIDE=$?
+    SORTIE_AIDE=$(aide --config="$AIDE_CONF" --check 2>&1) || CODE_AIDE=$?
     if [ "$CODE_AIDE" -ne 0 ]; then
         while read -r chemin; do
             [ -z "$chemin" ] && continue
@@ -139,16 +161,7 @@ if [ "$AIDE_ACTIF" = true ] && [ -n "$CHANGEMENTS_EXTERNES" ]; then
         "http://localhost:8080/api/interne/integrite-statut" \
         >/dev/null 2>&1 || echo "[update] AVERTISSEMENT : notification d'intégrité non envoyée" >&2
 elif [ "$AIDE_ACTIF" = true ]; then
-    echo "[update] Régénération de la baseline AIDE..."
-    # Sans cette régénération, chaque déploiement légitime (web.jar/worker.jar modifiés)
-    # déclencherait une fausse alerte d'intégrité au prochain contrôle quotidien.
-    aide --config=/etc/aide/aide.conf --init >/dev/null 2>&1 || true
-    if [ -f /var/lib/aide/aide.db.new ]; then
-        mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
-        echo "[update] Baseline AIDE régénérée"
-    else
-        echo "[update] AVERTISSEMENT : régénération de la baseline AIDE échouée" >&2
-    fi
+    regenerer_baseline
 else
     echo "[update] AIDE non installé — étape ignorée"
 fi
