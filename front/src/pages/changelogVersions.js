@@ -19,6 +19,12 @@ export const versionsChangelog = [
         ],
       },
       {
+        categorie: "Licence",
+        items: [
+          "Strapontin passe de la licence MIT à la licence GNU Affero General Public License v3.0 (AGPL-3.0) : une version modifiée proposée en ligne doit mettre son code source à disposition de ses utilisateurs. Le code déjà publié sous MIT le reste pour ceux qui l'ont récupéré.",
+        ],
+      },
+      {
         categorie: "Notifications",
         items: [
           "L'annonce d'une nouvelle version de l'application peut maintenant arriver par email : l'option « Être prévenu d'une nouvelle version » ne demande plus d'appareil push, elle est portée par le push si un appareil est abonné, par email sinon, une seule fois par version.",

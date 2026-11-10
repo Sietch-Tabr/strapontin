@@ -55,4 +55,4 @@ Voir le [wiki Déploiement](https://codeberg.org/Kwaite/strapontin/wiki/Déploie
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE) ou la page `/aide` de l'application.
+GNU Affero General Public License v3.0 (AGPL-3.0) — voir [LICENSE](LICENSE) ou la page `/aide` de l'application. Une version modifiée proposée en ligne doit mettre son code source à disposition de ses utilisateurs.

@@ -189,9 +189,11 @@
               Licence
             </h2>
             <p>
-              Strapontin est distribué sous licence <strong>MIT</strong> —
-              logiciel libre, utilisation, modification et redistribution
-              autorisées sous réserve de conserver la mention de copyright.
+              Strapontin est distribué sous licence
+              <strong>GNU Affero General Public License v3.0</strong> (AGPL-3.0)
+              — logiciel libre : utilisation, modification et redistribution
+              autorisées, à condition que toute version modifiée proposée en
+              ligne mette son code source à disposition de ses utilisateurs.
             </p>
           </div>
 

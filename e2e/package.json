@@ -1,5 +1,6 @@
 {
   "name": "strapontin-e2e",
+  "license": "AGPL-3.0-only",
   "private": true,
   "scripts": {
     "test": "playwright test",
