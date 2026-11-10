@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import fr.strapontin.sources.ticketmaster.TicketmasterSource;
 import fr.strapontin.worker.AbstractWorkerIntegrationTest;
@@ -461,6 +462,22 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
 
     assertEquals(java.util.Set.of("produit_eventim_double"), java.util.Set.copyOf(actifs()));
     assertEquals(3L, jdbc.queryForObject("SELECT count(*) FROM evenements", Map.of(), Long.class));
+  }
+
+  @Test
+  void verifier_ficheAvecProduitDePrestation_estSignalee() {
+    final UUID salle = creerSalle();
+    final UUID celine = evenementHeure(salle, "celine dion", "20:00");
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut) VALUES"
+            + " (CAST(:id AS uuid), 'ticketmaster',"
+            + " 'https://www.ticketmaster.fr/fr/manifestation/prestation-hospitalite-celine-dion-billet/idmanif/1',"
+            + " 'Celine Dion', 'Arena')",
+        Map.of("id", celine.toString()));
+
+    controle.verifier();
+
+    assertTrue(actifs().contains("produit_prestation_visible"));
   }
 
   // Flashdance à Pleyel : deux séances du même jour sous une seule adresse de produit.

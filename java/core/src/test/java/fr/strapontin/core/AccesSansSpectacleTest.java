@@ -38,4 +38,24 @@ class AccesSansSpectacleTest {
     assertFalse(AccesSansSpectacle.estAccesSansSpectacle("Sting"));
     assertFalse(AccesSansSpectacle.estAccesSansSpectacle(null));
   }
+
+  @Test
+  void estAccesSansSpectacle_adresseDePrestation_retourneVrai() {
+    assertTrue(
+        AccesSansSpectacle.estAccesSansSpectacle(
+            "Celine Dion", "https://x.fr/prestation-hospitalite-celine-dion-billet/idmanif/1"));
+    assertTrue(
+        AccesSansSpectacle.estAccesSansSpectacle("Rush", "https://x.fr/prestation-rush-billet/1"));
+    assertTrue(
+        AccesSansSpectacle.estAccesSansSpectacle(
+            "XTB", "https://x.fr/xtb-priority-access-2027-billet/1"));
+  }
+
+  @Test
+  void estAccesSansSpectacle_adresseOrdinaire_retourneFaux() {
+    assertFalse(
+        AccesSansSpectacle.estAccesSansSpectacle(
+            "Celine Dion", "https://x.fr/celine-dion-billet/idmanif/1"));
+    assertFalse(AccesSansSpectacle.estAccesSansSpectacle("Celine Dion", null));
+  }
 }

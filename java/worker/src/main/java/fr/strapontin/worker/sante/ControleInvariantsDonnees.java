@@ -56,6 +56,7 @@ final class ControleInvariantsDonnees {
         + publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
         + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
+        + publier("produit_prestation_visible", "evenement", produitsPrestationVisibles())
         + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publier("salle_sans_ville", SALLE, sallesSansVille())
         + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
@@ -226,6 +227,27 @@ final class ControleInvariantsDonnees {
   // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures voisines
   // après la fusion : artistes différents ou plus de deux fiches. Deux séances
   // d'un produit (matinée, soirée) ne comptent pas.
+  // Promesse du changelog : un produit de prestation, d'hospitalité ou d'accès prioritaire n'est
+  // jamais pris pour un séance. Toute fiche à venir qui en porte encore un est signalée, quelle que
+  // soit la billetterie.
+  private Map<UUID, Map<String, Object>> produitsPrestationVisibles() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT DISTINCT e.id, o.source::text AS source, o.url
+        FROM observations o JOIN evenements e ON e.id = o.evenement_id
+        WHERE e.date >= CURRENT_DATE
+          AND lower(o.url) ~ 'prestation|hospitalit|priority-(pass|access)'
+        """,
+        Map.of(),
+        rs -> {
+          anomalies.put(
+              rs.getObject("id", UUID.class),
+              Map.of("source", rs.getString("source"), "url", rs.getString("url")));
+        });
+    return anomalies;
+  }
+
   private Map<UUID, Map<String, Object>> produitsEventimDoubles() {
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     final String produit = ProduitEventim.expressionSql("o");

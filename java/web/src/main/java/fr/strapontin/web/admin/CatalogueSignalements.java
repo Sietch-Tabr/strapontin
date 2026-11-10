@@ -77,6 +77,13 @@ public final class CatalogueSignalements {
             + " son enrichissement depuis le référentiel. La position d'un lieu source est"
             + " réécrite par la billetterie à chaque cycle : elle ne se corrige pas à la main.");
     ajouter(
+        "produit_prestation_visible",
+        "Prestation prise pour un concert",
+        "Une fiche à venir porte l'adresse d'un produit de prestation, d'hospitalité ou d'accès"
+            + " prioritaire : ce n'est pas une billetterie de spectacle. Le filtre des sources"
+            + " devrait l'écarter : en chercher la raison (nouveau libellé) ; le signalement se"
+            + " referme seul.");
+    ajouter(
         "ville_salle_divergente",
         "Ville de la salle contredite par sa position",
         "La position de cette salle, publiée par une billetterie, tombe dans une autre commune que"
