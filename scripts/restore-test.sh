@@ -59,7 +59,7 @@ echo "[restore-test] Attente du démarrage des services (${WAIT_DEMARRAGE}s)..."
 sleep "${WAIT_DEMARRAGE}"
 
 echo "[restore-test] Recherche du dernier backup local..."
-ARCHIVE=$(pct exec "${LXC_TEMP_ID}" -- bash -c 'ls -t /opt/strapontin/backup/strapontin_*.tar.gz 2>/dev/null | head -1' || true)
+ARCHIVE=$(pct exec "${LXC_TEMP_ID}" -- bash -c 'ls -t /opt/strapontin/backup/strapontin_*.sql.gz /opt/strapontin/backup/strapontin_*.tar.gz 2>/dev/null | head -1' || true)
 if [ -z "$ARCHIVE" ]; then
     echo "[restore-test] ERREUR : aucun backup trouvé dans le LXC ${LXC_TEMP_ID}" >&2
     exit 1

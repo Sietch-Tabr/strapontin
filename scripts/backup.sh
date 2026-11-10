@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# backup.sh — dump PostgreSQL + .env + logs dans une archive tar.gz vers le NAS
+# backup.sh — dump PostgreSQL compressé à la volée vers le NAS, et copie du .env à côté
 # Usage : bash /opt/strapontin/scripts/backup.sh
 # À exécuter en tant que root depuis le LXC.
+#
+# Une sauvegarde = deux fichiers de même préfixe : strapontin_<horodatage>.sql.gz (le dump, écrit
+# une seule fois, sans fichier intermédiaire) et strapontin_<horodatage>.env (secrets de
+# l'application, nécessaires à une restauration complète). Les journaux ne sont pas archivés :
+# journald et les journaux d'accès les conservent, aucune restauration n'en a besoin.
 
-BACKUP_DIR="/mnt/backup"
-APP_DIR="/opt/strapontin"
+# Surchargeables par l'environnement pour le test (tester-sauvegardes.sh).
+BACKUP_DIR="${BACKUP_DIR:-/mnt/backup}"
+APP_DIR="${APP_DIR:-/opt/strapontin}"
 
 if ! mountpoint -q "$BACKUP_DIR"; then
     echo "ERREUR : $BACKUP_DIR n'est pas monté" >&2
@@ -14,30 +20,24 @@ if ! mountpoint -q "$BACKUP_DIR"; then
 fi
 
 HORODATAGE=$(date +%Y%m%d_%H%M%S)
-ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.tar.gz"
+ARCHIVE="$BACKUP_DIR/strapontin_${HORODATAGE}.sql.gz"
+ENV_SAUVEGARDE="$BACKUP_DIR/strapontin_${HORODATAGE}.env"
+PARTIEL="${ARCHIVE}.partiel"
+
+# Un dump interrompu ne laisse jamais un fichier qui ressemble à une sauvegarde complète.
+trap 'rm -f "$PARTIEL"' EXIT
 
 echo "Sauvegarde en cours — $HORODATAGE"
 
-# Dump PostgreSQL dans un fichier temporaire
-su - postgres -c "pg_dump strapontin" > /tmp/dump.sql
-echo "  dump DB : OK"
-
-# Archive tar.gz : dump.sql + .env + logs
-TAR_ARGS=(-czf "$ARCHIVE" -C /tmp dump.sql)
+su - postgres -c "pg_dump strapontin" | gzip -c > "$PARTIEL"
+gzip -t "$PARTIEL"
+mv "$PARTIEL" "$ARCHIVE"
+echo "  dump DB : OK ($ARCHIVE)"
 
 if [ -f "$APP_DIR/.env" ]; then
-    TAR_ARGS+=(-C "$APP_DIR" .env)
-    echo "  .env    : OK"
+    install -m 600 "$APP_DIR/.env" "$ENV_SAUVEGARDE"
+    echo "  .env    : OK ($ENV_SAUVEGARDE)"
 fi
-
-if [ -d "$APP_DIR/logs" ]; then
-    TAR_ARGS+=(-C "$APP_DIR" logs)
-    echo "  logs    : OK"
-fi
-
-tar "${TAR_ARGS[@]}"
-rm /tmp/dump.sql
-echo "  archive : $ARCHIVE"
 
 # Purge des sauvegardes > 30 jours — tout fichier strapontin_*, pas seulement
 # le format .tar.gz actuel (couvre les formats d'archive passés/futurs).
