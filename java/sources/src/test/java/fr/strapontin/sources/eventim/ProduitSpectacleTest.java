@@ -91,4 +91,27 @@ class ProduitSpectacleTest {
             produitNomme(
                 "La Féerie des Eaux + Billie, à la croisée des mondes + Visite des Rex Studios")));
   }
+
+  private static Map<String, Object> produitSport(final String sousCategorie) {
+    final Map<String, Object> produit = produit("Accor Arena", null);
+    produit.put(
+        "categories",
+        List.of(
+            Map.of("name", "Sports"),
+            Map.of("name", sousCategorie, "parentCategory", Map.of("name", "Sports"))));
+    return produit;
+  }
+
+  // Horse GP, T-Show, MMA : des spectacles sportifs vendus et annulés comme des séances.
+  @Test
+  void estSpectacle_spectacleSportifOuCombat_retourneVrai() {
+    assertTrue(ProduitSpectacle.estSpectacle(produitSport("Autres sports")));
+    assertTrue(ProduitSpectacle.estSpectacle(produitSport("Sports de combat")));
+  }
+
+  @Test
+  void estSpectacle_matchDEquipe_retourneFaux() {
+    assertFalse(ProduitSpectacle.estSpectacle(produitSport("Basketball")));
+    assertFalse(ProduitSpectacle.estSpectacle(produitSport("Hockey sur glace")));
+  }
 }
