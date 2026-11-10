@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { FICHIER_AUTH_USER } from "./global-setup.js";
+import { FICHIER_AUTH_ADMIN, FICHIER_AUTH_USER } from "./global-setup.js";
 import {
   creerContexteAdmin,
   naviguerVersUtilisateurs,
@@ -128,6 +128,8 @@ test.describe("Scénario: invitations par un utilisateur", () => {
   });
 
   test.describe("session administrateur", () => {
+    test.use({ storageState: FICHIER_AUTH_ADMIN });
+
     test("admin_plafondParDefaut_estAffichePuisEnregistrable", async ({
       page,
       isMobile,
