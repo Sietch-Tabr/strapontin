@@ -5,7 +5,7 @@
 package fr.strapontin.sources.ticketmaster;
 
 import fr.strapontin.core.PositionLieu;
-import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.sources.http.UriSources;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource.CandidatVenueTM;
 import fr.strapontin.sources.ticketmaster.TicketmasterSource.StatutIdTM;

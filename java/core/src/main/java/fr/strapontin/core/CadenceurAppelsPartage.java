@@ -2,16 +2,16 @@
  * Strapontin — concert finder
  * Copyright (C) 2025-2026 Kwaite
  */
-package fr.strapontin.worker;
+package fr.strapontin.core;
 
-import fr.strapontin.sources.http.CadenceurAppels;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * Implémentation de {@link CadenceurAppels} adossée à Postgres —
- * coordonne les appels entre plusieurs processus indépendants (détail :
- * CLAUDE.md, Jobs background).
+ * Implémentation de {@link CadenceurAppels} adossée à Postgres — coordonne
+ * les appels entre web+worker (verrou mémoire insuffisant, deux processus).
+ * Réservation atomique par {@code UPDATE ... RETURNING} (verrou de ligne
+ * Postgres, sans transaction {@code SERIALIZABLE}).
  * @since 2.8.1
  * @author Kwaite
  */

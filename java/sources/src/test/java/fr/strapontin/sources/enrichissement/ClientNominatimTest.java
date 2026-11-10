@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.core.CadenceurAppels;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;

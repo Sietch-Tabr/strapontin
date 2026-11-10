@@ -2,7 +2,7 @@
  * Strapontin — concert finder
  * Copyright (C) 2025-2026 Kwaite
  */
-package fr.strapontin.sources.http;
+package fr.strapontin.core;
 
 /**
  * Garantit un écart minimal entre deux appels HTTP vers un même service

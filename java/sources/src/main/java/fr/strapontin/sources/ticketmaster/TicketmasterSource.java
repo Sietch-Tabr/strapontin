@@ -12,7 +12,7 @@ import fr.strapontin.sources.ReponseIncompleteException;
 import fr.strapontin.sources.ResultatRegion;
 import fr.strapontin.sources.SourceAvecBilanFetch;
 import fr.strapontin.sources.SourceAvecFetchLot;
-import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.sources.http.CadenceurAppelsMemoire;
 import fr.strapontin.sources.http.ClientHttpFactory;
 import java.time.Duration;

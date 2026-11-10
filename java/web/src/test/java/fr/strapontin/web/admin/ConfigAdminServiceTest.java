@@ -44,7 +44,7 @@ class ConfigAdminServiceTest {
             configService,
             logAdminService,
             mock(RestClient.class),
-            mock(fr.strapontin.sources.http.CadenceurAppels.class));
+            mock(fr.strapontin.core.CadenceurAppels.class));
   }
 
   @Test
@@ -113,8 +113,8 @@ class ConfigAdminServiceTest {
   @Test
   void testerApiTm_cleConfiguree_attendLeCadenceurAvantLAppelHttp() {
     when(configService.lireConfig("TICKETMASTER_API_KEY")).thenReturn(Optional.of("fake-key"));
-    final fr.strapontin.sources.http.CadenceurAppels cadenceur =
-        mock(fr.strapontin.sources.http.CadenceurAppels.class);
+    final fr.strapontin.core.CadenceurAppels cadenceur =
+        mock(fr.strapontin.core.CadenceurAppels.class);
 
     final RestClient.Builder builder = RestClient.builder();
     final MockRestServiceServer serveur = MockRestServiceServer.bindTo(builder).build();

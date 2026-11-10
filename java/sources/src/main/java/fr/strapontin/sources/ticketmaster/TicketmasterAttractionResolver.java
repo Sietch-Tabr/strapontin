@@ -5,7 +5,7 @@
 package fr.strapontin.sources.ticketmaster;
 
 import fr.strapontin.core.Normalisation;
-import fr.strapontin.sources.http.CadenceurAppels;
+import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.sources.http.UriSources;
 import java.net.URI;
 import java.util.List;
