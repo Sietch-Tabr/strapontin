@@ -23,20 +23,19 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 final class ControleInvariantsDonnees {
 
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
-  private static final String CONFIANCE_HAUTE = "haute";
   private static final String SALLE = "salle";
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
 
   private final NamedParameterJdbcTemplate jdbc;
-  private final SignalementMatchingService signalements;
+  private final PublicationAnomalies publication;
   private final ControleInvariantsComplementaires complementaires;
 
   /* package-private : instancié par ControleIntegriteService. */
   ControleInvariantsDonnees(
       final NamedParameterJdbcTemplate jdbc, final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
-    this.signalements = signalements;
+    this.publication = new PublicationAnomalies(signalements);
     this.complementaires = new ControleInvariantsComplementaires(jdbc, signalements);
   }
 
@@ -45,41 +44,23 @@ final class ControleInvariantsDonnees {
    */
   /* package-private : appelé par ControleIntegriteService. */
   int verifier() {
-    return publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
-        + publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
-        + publier("notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
-        + publier("salle_multi_departements", SALLE, sallesMultiDepartements())
-        + publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
-        + publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
-        + publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
-        + publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
-        + publier(
+    return publication.publier("orphelins_fk", TYPE_ENTITE_GLOBAL, orphelinsFk())
+        + publication.publier("sessions_sans_appareil", TYPE_ENTITE_GLOBAL, sessionsSansAppareil())
+        + publication.publier("notifications_non_envoyees", "utilisateur", notificationsNonEnvoyees())
+        + publication.publier("salle_multi_departements", SALLE, sallesMultiDepartements())
+        + publication.publier("salle_suivie_contaminee", SALLE, sallesSuiviesContaminees())
+        + publication.publier("migration_flyway_echec", TYPE_ENTITE_GLOBAL, migrationsEnEchec())
+        + publication.publier("comptes_incoherents", TYPE_ENTITE_GLOBAL, comptesIncoherents())
+        + publication.publier("identifiant_externe_duplique", "identifiant", identifiantsDupliques())
+        + publication.publier(
             "concert_double_salles_distinctes", "evenement", concertsDoublesSallesDistinctes())
-        + publier("produit_eventim_double", "evenement", produitsEventimDoubles())
-        + publier("produit_prestation_visible", "evenement", produitsPrestationVisibles())
-        + publier("fusion_nocturne_repetee", "evenement", fusionsNocturnesRepetees())
-        + publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
-        + publier("salle_sans_ville", SALLE, sallesSansVille())
-        + publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
+        + publication.publier("produit_eventim_double", "evenement", produitsEventimDoubles())
+        + publication.publier("produit_prestation_visible", "evenement", produitsPrestationVisibles())
+        + publication.publier("fusion_nocturne_repetee", "evenement", fusionsNocturnesRepetees())
+        + publication.publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
+        + publication.publier("salle_sans_ville", SALLE, sallesSansVille())
+        + publication.publier("artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
         + complementaires.verifier();
-  }
-
-  private int publier(
-      final String type, final String entiteType, final Map<UUID, Map<String, Object>> anomalies) {
-    anomalies.forEach(
-        (entite, details) ->
-            signalements.signaler(type, entiteType, entite, CONFIANCE_HAUTE, details));
-    signalements.clore(type, anomalies.keySet());
-    return anomalies.size();
-  }
-
-  private static UUID uuidDe(final String valeur) {
-    return UUID.nameUUIDFromBytes(valeur.getBytes(StandardCharsets.UTF_8));
-  }
-
-  private static Map<UUID, Map<String, Object>> globale(
-      final String type, final Map<String, Object> details) {
-    return details.isEmpty() ? Map.of() : Map.of(uuidDe("invariant:" + type), details);
   }
 
   private Map<UUID, Map<String, Object>> orphelinsFk() {
@@ -108,7 +89,7 @@ final class ControleInvariantsDonnees {
             comptes.put(rs.getString("cle"), rs.getLong("nb"));
           }
         });
-    return globale("orphelins_fk", comptes);
+    return PublicationAnomalies.globale("orphelins_fk", comptes);
   }
 
   // L'appareil n'est enregistré qu'au premier appel API après connexion,
@@ -127,7 +108,7 @@ final class ControleInvariantsDonnees {
             String.class);
     return comptes.isEmpty()
         ? Map.of()
-        : globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
+        : PublicationAnomalies.globale("sessions_sans_appareil", Map.of("comptes", String.join(", ", comptes)));
   }
 
   private Map<UUID, Map<String, Object>> concertsDoublesSallesDistinctes() {
@@ -222,7 +203,7 @@ final class ControleInvariantsDonnees {
             details.put("horsHorizon", rs.getLong("hors_horizon"));
           }
         });
-    return globale("fiches_figees", details);
+    return PublicationAnomalies.globale("fiches_figees", details);
   }
 
   // Produit Eventim sur plusieurs fiches du même jour, salle et d'heures voisines
@@ -377,7 +358,7 @@ final class ControleInvariantsDonnees {
           details.put("concerts", rs.getLong("nb"));
           details.put("plusAncien", rs.getObject("plus_ancien", LocalDate.class).toString());
           details.put("userId", rs.getString("user_id"));
-          anomalies.put(uuidDe("utilisateur:" + rs.getString("user_id")), details);
+          anomalies.put(PublicationAnomalies.uuidDe("utilisateur:" + rs.getString("user_id")), details);
         });
     return anomalies;
   }
@@ -434,7 +415,7 @@ final class ControleInvariantsDonnees {
             String.class);
     return versions.isEmpty()
         ? Map.of()
-        : globale("migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
+        : PublicationAnomalies.globale("migration_flyway_echec", Map.of("migrations", String.join(", ", versions)));
   }
 
   // Compte activé : un seul identifiant de connexion, mot de passe bcrypt.
@@ -459,7 +440,7 @@ final class ControleInvariantsDonnees {
             comptes.put(rs.getString("cle"), rs.getLong("nb"));
           }
         });
-    return globale("comptes_incoherents", comptes);
+    return PublicationAnomalies.globale("comptes_incoherents", comptes);
   }
 
   // Un identifiant Wikidata ou Deezer désigne une seule salle ou un seul
@@ -482,7 +463,7 @@ final class ControleInvariantsDonnees {
           final String nature = rs.getString("nature");
           final String valeur = rs.getString("valeur");
           anomalies.put(
-              uuidDe(nature + ":" + valeur),
+              PublicationAnomalies.uuidDe(nature + ":" + valeur),
               Map.of("nature", nature, "valeur", valeur, "nb", rs.getLong("nb")));
         });
     return anomalies;
