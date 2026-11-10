@@ -120,6 +120,24 @@ public class SignalementMatchingService {
   }
 
   /**
+   * Clôt le signalement actif d'une seule entité, quand un contrôle qui ne
+   * balaie qu'un lot par nuit constate que l'anomalie a disparu.
+   * @param type type de signalement
+   * @param entiteId entité qui n'est plus en anomalie
+   * @return nombre de signalements clos
+   */
+  public int cloreEntite(final String type, final UUID entiteId) {
+    return jdbc.update(
+        """
+        UPDATE signalements_matching SET resolu_le = now()
+        WHERE type = :type AND resolu_le IS NULL AND entite_id = CAST(:entiteId AS uuid)
+        """,
+        new MapSqlParameterSource()
+            .addValue(CLE_TYPE, type)
+            .addValue("entiteId", entiteId.toString()));
+  }
+
+  /**
    * Clôt les signalements actifs d'un type dont l'entité n'est plus en
    * anomalie : un contrôle périodique se referme de lui-même.
    * @param entitesEncoreEnAnomalie entités toujours concernées

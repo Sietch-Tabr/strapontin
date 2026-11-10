@@ -11,7 +11,9 @@ import fr.strapontin.worker.LogsAdminWorker;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -31,24 +33,29 @@ public class AlignementCommuneSalles {
   private static final Logger LOG = LoggerFactory.getLogger(AlignementCommuneSalles.class);
   private static final int SALLES_PAR_NUIT = 20;
   private static final String CLE_VILLE = "ville";
+  private static final String TYPE_SIGNALEMENT = "ville_salle_divergente";
   private static final int JOURS_ENTRE_VERIFICATIONS = 90;
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ClientNominatim nominatim;
   private final LogsAdminWorker logsAdminWorker;
+  private final SignalementMatchingService signalements;
 
   /**
    * @param jdbc accès JDBC
    * @param nominatim géocodage inverse
    * @param logsAdminWorker trace de chaque ville corrigée
+   * @param signalements signalement d'une ville que les concerts contredisent
    */
   public AlignementCommuneSalles(
       final NamedParameterJdbcTemplate jdbc,
       final ClientNominatim nominatim,
-      final LogsAdminWorker logsAdminWorker) {
+      final LogsAdminWorker logsAdminWorker,
+      final SignalementMatchingService signalements) {
     this.jdbc = jdbc;
     this.nominatim = nominatim;
     this.logsAdminWorker = logsAdminWorker;
+    this.signalements = signalements;
   }
 
   /**
@@ -155,17 +162,45 @@ public class AlignementCommuneSalles {
     return corrigees;
   }
 
+  private Set<String> villesDesConcerts(final UUID salleId) {
+    return jdbc
+        .queryForList(
+            "SELECT DISTINCT ville FROM evenements WHERE salle_id = :id AND ville IS NOT NULL",
+            Map.of("id", salleId),
+            String.class)
+        .stream()
+        .map(Normalisation::normaliserTexte)
+        .collect(Collectors.toSet());
+  }
+
   private boolean corrigerSiBesoin(
       final Map<String, Object> salle, final ClientNominatim.ResultatCommune resultat) {
     final Optional<String> commune = resultat.commune().map(NomVille::nettoyer);
     final String ville = (String) salle.get(CLE_VILLE);
     final String dept = (String) salle.get("dept");
-    if (commune.isEmpty()
-        || !memeDepartement(resultat, dept)
-        || Normalisation.normaliserTexte(commune.get())
-            .equals(Normalisation.normaliserTexte(ville))) {
+    final UUID id = (UUID) salle.get("id");
+    if (commune.isEmpty() || !memeDepartement(resultat, dept)) {
       return false;
     }
+    final String communeNormalisee = Normalisation.normaliserTexte(commune.get());
+    if (communeNormalisee.equals(Normalisation.normaliserTexte(ville))) {
+      signalements.cloreEntite(TYPE_SIGNALEMENT, id);
+      return false;
+    }
+    // Une position de billetterie est imprécise près d'une limite communale : si les concerts
+    // de la salle nomment sa ville actuelle et jamais la commune calculée, la ville est gardée.
+    final Set<String> villesDesConcerts = villesDesConcerts(id);
+    if (villesDesConcerts.contains(Normalisation.normaliserTexte(ville))
+        && !villesDesConcerts.contains(communeNormalisee)) {
+      signalements.signaler(
+          TYPE_SIGNALEMENT,
+          "salle",
+          id,
+          "basse",
+          Map.of(CLE_VILLE, ville, "communeCalculee", commune.get()));
+      return false;
+    }
+    signalements.cloreEntite(TYPE_SIGNALEMENT, id);
     jdbc.update(
         "UPDATE salles SET ville = :ville WHERE id = :id",
         Map.of(CLE_VILLE, commune.get(), "id", salle.get("id")));

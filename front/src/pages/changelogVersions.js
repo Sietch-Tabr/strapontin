@@ -4,6 +4,17 @@
 // tableau : aucune conversion manuelle n'est nécessaire.
 export const versionsChangelog = [
   {
+    entete: "v 3.1.4 — 10 novembre 2026",
+    categories: [
+      {
+        categorie: "Concerts et salles",
+        items: [
+          "La ville d'une salle ne devient plus la commune voisine quand la position de la billetterie est proche d'une limite communale : si les concerts de la salle nomment sa ville, elle est gardée (Espace André Malraux à Châteaudun, Scène de Bayssan à Béziers).",
+        ],
+      },
+    ],
+  },
+  {
     entete: "v 3.1.3 — 2 novembre 2026",
     categories: [
       {
