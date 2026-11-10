@@ -19,6 +19,15 @@ export const versionsChangelog = [
         ],
       },
       {
+        categorie: "Invitations",
+        items: [
+          "Vous pouvez inviter une personne par son adresse email depuis Paramètres, onglet Inviter : l'email part aussitôt et aucun compte n'existe tant que le lien n'est pas activé.",
+          "Deux invitations en attente au plus à la fois ; une invitation activée, expirée ou annulée libère sa place. Vous suivez l'état de chacune, la renvoyez ou l'annulez, et le nombre restant est lisible avant la saisie.",
+          "Les envois sont limités (5 par heure) pour protéger les adresses invitées ; annuler une invitation ne remet pas cette limite à zéro.",
+          "Dans l'administration, la liste des utilisateurs indique qui a invité chaque compte, et un administrateur règle le nombre d'invitations de chaque compte, ou la valeur par défaut.",
+        ],
+      },
+      {
         categorie: "Administration",
         items: [
           "Un signalement dont la condition a disparu se ferme seul à la vérification suivante, quel que soit le contrôle qui l'a posé (identifiant Eventim d'un autre artiste, date de festival écartée, cycle de salles, collision Wikidata, chute de résultats…), et un test échoue si un contrôle signale sans prévoir sa fermeture.",

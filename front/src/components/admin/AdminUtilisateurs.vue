@@ -18,6 +18,28 @@
       </form>
     </div>
 
+    <div class="param-bloc">
+      <h3 class="param-libelle">Invitations par les utilisateurs</h3>
+      <p class="param-aide">
+        Nombre d'invitations en attente qu'un utilisateur peut avoir en même
+        temps, sauf réglage propre à son compte (0 coupe l'invitation).
+      </p>
+      <form class="form-inline" @submit.prevent="enregistrerPlafondDefaut">
+        <label for="plafond-defaut">Plafond par défaut</label>
+        <input
+          id="plafond-defaut"
+          v-model.number="plafondDefautSaisi"
+          type="number"
+          min="0"
+          :max="PLAFOND_INVITATIONS_MAX"
+          required
+        />
+        <button type="submit" class="bouton bouton-primaire">
+          Enregistrer
+        </button>
+      </form>
+    </div>
+
     <EtatChargement v-if="chargement" />
     <div v-else-if="utilisateurs.length" class="param-bloc">
       <h3 class="param-libelle">Utilisateurs ({{ total }})</h3>
@@ -62,6 +84,39 @@
                 {{ u.nbArtistes }} artiste{{ u.nbArtistes !== 1 ? "s" : "" }},
                 {{ u.nbSalles }} salle{{ u.nbSalles !== 1 ? "s" : "" }}
               </p>
+              <p v-if="u.parrain" class="user-carte-suivi">
+                Invité par @{{ u.parrain }}
+              </p>
+              <form
+                class="form-inline"
+                @submit.prevent="enregistrerPlafondUtilisateur(u)"
+              >
+                <label :for="'plafond-' + u.id" class="texte-note"
+                  >Invitations en attente (défaut : {{ plafondDefaut }})</label
+                >
+                <input
+                  :id="'plafond-' + u.id"
+                  v-model.number="plafonds[u.id]"
+                  type="number"
+                  min="0"
+                  :max="PLAFOND_INVITATIONS_MAX"
+                  :placeholder="String(plafondDefaut)"
+                />
+                <button
+                  type="submit"
+                  class="bouton bouton-petit bouton-primaire"
+                >
+                  Enregistrer
+                </button>
+                <button
+                  v-if="u.plafondInvitations !== null"
+                  type="button"
+                  class="bouton bouton-petit bouton-secondaire"
+                  @click="reinitialiserPlafondUtilisateur(u)"
+                >
+                  Revenir au défaut
+                </button>
+              </form>
             </div>
             <div
               v-if="u.id !== utilisateurCourantId"
@@ -517,6 +572,70 @@ const userAVerrouiller = ref(null);
 const inviteEmail = ref("");
 const lienInvitation = ref("");
 const modifEnAttenteRole = ref(null);
+const PLAFOND_INVITATIONS_MAX = 50;
+const plafondDefaut = ref(2);
+const plafondDefautSaisi = ref(2);
+const plafonds = reactive({});
+
+async function chargerReglagesInvitations() {
+  try {
+    const rep = await appelApi("/api/admin/invitations/reglages");
+    if (rep.ok) {
+      const reglages = await lireJson(rep);
+      plafondDefaut.value = reglages.plafondDefaut;
+      plafondDefautSaisi.value = reglages.plafondDefaut;
+    }
+  } catch (_) {
+    afficherToast(
+      "Erreur lors du chargement des réglages d'invitation.",
+      "erreur",
+    );
+  }
+}
+
+async function enregistrerPlafondDefaut() {
+  const rep = await appelApi("/api/admin/invitations/plafond-defaut", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ plafond: plafondDefautSaisi.value }),
+  });
+  if (rep.ok) {
+    plafondDefaut.value = plafondDefautSaisi.value;
+    afficherToast("Plafond par défaut enregistré.", "succes");
+  } else {
+    afficherToast((await lireJson(rep)).erreur || "Plafond refusé.", "erreur");
+  }
+}
+
+async function envoyerPlafondUtilisateur(u, plafond) {
+  const rep = await appelApi(
+    `/api/admin/utilisateurs/${u.id}/plafond-invitations`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plafond }),
+    },
+  );
+  if (rep.ok) {
+    afficherToast("Plafond d'invitations enregistré.", "succes");
+    await charger();
+  } else {
+    afficherToast((await lireJson(rep)).erreur || "Plafond refusé.", "erreur");
+  }
+}
+
+function enregistrerPlafondUtilisateur(u) {
+  const valeur = plafonds[u.id];
+  return envoyerPlafondUtilisateur(
+    u,
+    valeur === "" || valeur === undefined ? null : valeur,
+  );
+}
+
+function reinitialiserPlafondUtilisateur(u) {
+  plafonds[u.id] = undefined;
+  return envoyerPlafondUtilisateur(u, null);
+}
 
 const texteConfirmationRole = computed(() => {
   if (!modifEnAttenteRole.value) return "";
@@ -566,6 +685,7 @@ function allerPage(n) {
 
 function initialiserModifData() {
   for (const u of utilisateurs.value) {
+    plafonds[u.id] = u.plafondInvitations ?? undefined;
     if (!modifData[u.id]) {
       modifData[u.id] = {
         nom: u.displayUsername ?? "",
@@ -942,7 +1062,10 @@ async function confirmerSuppression() {
   }
 }
 
-onMounted(charger);
+onMounted(() => {
+  charger();
+  chargerReglagesInvitations();
+});
 </script>
 
 <style scoped>
