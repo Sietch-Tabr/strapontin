@@ -5,8 +5,6 @@
 package fr.strapontin.web.email;
 
 import fr.strapontin.web.admin.LogAdminService;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -59,12 +57,8 @@ public class IntegriteAlerteController {
       @RequestParam(defaultValue = "") final String statut,
       @RequestParam(defaultValue = "") final String detail,
       @RequestHeader(value = "Authorization", defaultValue = "") final String authorization) {
-    final String attendu = "Bearer " + integriteSecret;
-    if (integriteSecret.isBlank()
-        || !MessageDigest.isEqual(
-            attendu.getBytes(StandardCharsets.UTF_8),
-            authorization.getBytes(StandardCharsets.UTF_8))) {
-      return ResponseEntity.status(403).body(Map.of("erreur", "Accès refusé."));
+    if (!JetonInterne.estValide(integriteSecret, authorization)) {
+      return JetonInterne.refus();
     }
     if (STATUT_MODIFIE.equals(statut)) {
       logAdminService.logAdmin(
