@@ -12,6 +12,7 @@ export const versionsChangelog = [
           "La ville d'une salle ne devient plus la commune voisine quand la position de la billetterie est proche d'une limite communale : si les concerts de la salle nomment sa ville, elle est gardée (Espace André Malraux à Châteaudun, Scène de Bayssan à Béziers).",
           "Un lieu de billetterie n'est plus rattaché à une salle dont le code postal diffère du sien sous prétexte que son nom contient celui de la salle (Vendôme Club Paris n'est pas le Dôme de Paris, Le Passage vers les Étoiles n'est pas Les Étoiles).",
           "Une prestation d'hospitalité, un accès prioritaire ou un produit de prestation Ticketmaster n'est plus affiché comme un concert (Céline Dion, Rush, Priority Pass) ; ceux déjà enregistrés sont retirés.",
+          "Les spectacles de théâtre et d'humour d'une salle Ticketmaster (Marigny, Gaîté-Montparnasse) restent rafraîchis même quand leurs absences avaient atteint le seuil avant le premier passage du lieu : ils ne glissent plus vers la suppression suggérée alors qu'ils sont à l'affiche.",
         ],
       },
       {

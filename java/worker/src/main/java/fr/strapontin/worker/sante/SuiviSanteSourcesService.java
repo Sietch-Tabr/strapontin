@@ -96,7 +96,7 @@ public class SuiviSanteSourcesService {
       final List<Map<String, Object>> lignes =
           jdbc.queryForList(
               """
-              UPDATE salle_sources ss SET dernier_nb_resultats = :nb
+              UPDATE salle_sources ss SET dernier_nb_resultats = :nb, dernier_fetch_le = now()
               FROM salle_sources avant
               WHERE ss.source = :source
                 AND ss.identifiant_externe = :identifiant
