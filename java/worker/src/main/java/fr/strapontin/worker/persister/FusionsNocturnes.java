@@ -68,6 +68,7 @@ public class FusionsNocturnes {
    * @return nombre de spectacles publiés sous deux intitulés fusionnés
    */
   public int fusionnerMemeCreneauDeuxSources() {
-    return parSeance.fusionnerMemeCreneauDeuxSources();
+    return parSeance.fusionnerMemeCreneauDeuxSources()
+        + parSeance.fusionnerVariantesDeTitreEventim();
   }
 }

@@ -719,6 +719,28 @@ class FusionEvenementsArtisteServiceIntegrationTest extends AbstractWorkerIntegr
     assertFalse(existe(ev));
   }
 
+  // Église de la Madeleine : le même programme sous deux intitulés Eventim au même instant.
+  @Test
+  void fusionnerVariantesDeTitreEventim_deuxIntitulesDuMemeProgramme_fusionne() {
+    final UUID madeleine = creerSalle("Eglise de la Madeleine");
+    final UUID a =
+        evenementSource(
+            madeleine, "les 4 saisons de vivaldi ave maria et celebres adagios", "eventim");
+    final UUID b = evenementSource(madeleine, "extraits ave maria les 4 saisons de vivaldi", "eventim");
+
+    assertEquals(1, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
+    assertTrue(existe(a) != existe(b));
+  }
+
+  @Test
+  void fusionnerVariantesDeTitreEventim_deuxProgrammesDifferents_neFusionnePas() {
+    final UUID madeleine = creerSalle("Eglise de la Madeleine");
+    evenementSource(madeleine, "requiem de mozart", "eventim");
+    evenementSource(madeleine, "gospel et negro spirituals", "eventim");
+
+    assertEquals(0, fusionSeancesDeuxSources.fusionnerVariantesDeTitreEventim());
+  }
+
   // Zénith Paris - La Villette : le spectacle annulé n'absorbe pas son remplaçant du même soir.
   @Test
   void fusionnerMemeCreneauDeuxSources_ficheAnnulee_neFusionnePasLeRemplacant() {

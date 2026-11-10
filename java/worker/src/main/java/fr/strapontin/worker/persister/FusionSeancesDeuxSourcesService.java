@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.persister;
 
+import fr.strapontin.core.TitresDeSpectacle;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -114,5 +115,49 @@ public class FusionSeancesDeuxSourcesService {
           (UUID) paire.get("cible"), (UUID) paire.get("source"), "même créneau, deux sources");
     }
     return paires.size();
+  }
+
+  /**
+   * Un même programme publié par Eventim sous deux variantes d'intitulé au même créneau d'un
+   * lieu (« Les 4 Saisons de Vivaldi, Ave Maria » / « Extraits, Ave Maria », Madeleine) : seuls
+   * événements de leur salle au créneau, Eventim seul, sans artiste reconnu ni fiche annulée,
+   * intitulés partageant l'essentiel de leurs mots (une église ne reçoit pas deux concerts au
+   * même instant). À appeler après les contrôles d'intégrité.
+   * @return nombre de fusions effectuées
+   */
+  public int fusionnerVariantesDeTitreEventim() {
+    final List<Map<String, Object>> paires =
+        jdbc.queryForList(
+            """
+            WITH ev AS (
+              SELECT e.id, e.salle_id, e.date, e.heure, e.artiste_norm
+              FROM evenements e JOIN observations o ON o.evenement_id = e.id
+              WHERE e.date >= CURRENT_DATE AND e.salle_id IS NOT NULL AND e.heure IS NOT NULL
+                AND e.artiste_id IS NULL AND e.statut IS DISTINCT FROM 'cancelled'
+              GROUP BY e.id
+              HAVING bool_and(o.source = 'eventim'))
+            SELECT a.id AS a, b.id AS b, a.artiste_norm AS titre_a, b.artiste_norm AS titre_b
+            FROM ev a
+            JOIN ev b ON b.salle_id = a.salle_id AND b.date = a.date AND b.heure = a.heure
+                     AND a.id < b.id
+            JOIN salles s ON s.id = a.salle_id
+            WHERE (SELECT count(*) FROM ev x
+                   WHERE x.salle_id = a.salle_id AND x.date = a.date AND x.heure = a.heure) = 2
+              AND\
+            """
+                + SalleFiable.condition("s"),
+            Map.of());
+    int fusions = 0;
+    for (final Map<String, Object> paire : paires) {
+      if (TitresDeSpectacle.sontVariantes(
+          (String) paire.get("titre_a"), (String) paire.get("titre_b"))) {
+        fusionEvenements.fusionnerPaireChoisie(
+            (UUID) paire.get("a"),
+            (UUID) paire.get("b"),
+            "même programme sous deux intitulés Eventim");
+        fusions++;
+      }
+    }
+    return fusions;
   }
 }

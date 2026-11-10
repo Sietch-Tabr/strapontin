@@ -385,6 +385,37 @@ class ControleInvariantsDonneesIntegrationTest extends AbstractWorkerIntegration
             artiste));
   }
 
+  private void plusieursCreneauxDoubles(final UUID salle, final String titreA, final String titreB) {
+    for (final String heure : List.of("18:00", "19:00", "20:00", "21:00")) {
+      evenementAvecSource(salle, titreA, heure, "eventim");
+      evenementAvecSource(salle, titreB, heure, "eventim");
+    }
+  }
+
+  // Madeleine : onze créneaux doubles, mais deux variantes du même programme à chacun.
+  @Test
+  void verifier_salleAGrosVolumeAvecVariantesDuMemeProgramme_signale() {
+    plusieursCreneauxDoubles(
+        creerSalle(),
+        "les 4 saisons de vivaldi ave maria celebres adagios",
+        "extraits ave maria les 4 saisons de vivaldi");
+
+    controle.verifier();
+
+    assertEquals(4, actifs().size(), "un signalement par créneau");
+    assertTrue(actifs().stream().allMatch("creneau_double_meme_source"::equals));
+  }
+
+  // Théâtre à plusieurs salles : des spectacles différents au même instant, légitimes.
+  @Test
+  void verifier_salleAGrosVolumeAvecSpectaclesDifferents_neSignaleRien() {
+    plusieursCreneauxDoubles(creerSalle(), "le bourgeois gentilhomme", "cyrano de bergerac");
+
+    controle.verifier();
+
+    assertEquals(List.of(), actifs());
+  }
+
   // L'église de la Madeleine : deux programmes Eventim pour un seul concert du soir.
   @Test
   void verifier_deuxFichesEventimAuMemeCreneau_signaleSansFusionner() {

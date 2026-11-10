@@ -5,6 +5,7 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.EchecPush;
+import fr.strapontin.core.TitresDeSpectacle;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -287,7 +288,11 @@ final class ControleInvariantsComplementaires {
             .collect(Collectors.groupingBy(paire -> paire.get("salle_id"), Collectors.counting()));
     final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
     for (final Map<String, Object> paire : paires) {
-      if (parSalle.get(paire.get("salle_id")) >= SEUIL_CRENEAUX_SALLE_MULTIPLE) {
+      // Un théâtre à plusieurs salles joue des spectacles différents au même créneau ; deux
+      // variantes d'un même programme dans une église, non.
+      if (parSalle.get(paire.get("salle_id")) >= SEUIL_CRENEAUX_SALLE_MULTIPLE
+          && !TitresDeSpectacle.sontVariantes(
+              (String) paire.get("titre_a"), (String) paire.get("titre_b"))) {
         continue;
       }
       anomalies.put(
