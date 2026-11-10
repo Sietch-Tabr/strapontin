@@ -13,6 +13,12 @@ export const versionsChangelog = [
           "Un lieu de billetterie n'est plus rattaché à une salle dont le code postal diffère du sien sous prétexte que son nom contient celui de la salle (Vendôme Club Paris n'est pas le Dôme de Paris, Le Passage vers les Étoiles n'est pas Les Étoiles).",
         ],
       },
+      {
+        categorie: "Administration",
+        items: [
+          "Un signalement dont la condition a disparu se ferme seul à la vérification suivante, quel que soit le contrôle qui l'a posé (identifiant Eventim d'un autre artiste, date de festival écartée, cycle de salles, collision Wikidata, chute de résultats…), et un test échoue si un contrôle signale sans prévoir sa fermeture.",
+        ],
+      },
     ],
   },
   {

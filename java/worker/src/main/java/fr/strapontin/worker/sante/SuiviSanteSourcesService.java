@@ -128,6 +128,9 @@ public class SuiviSanteSourcesService {
                 precedent.intValue(),
                 "actuel",
                 nbResultats));
+      } else {
+        signalementMatchingService.cloreEntite(
+            "chute_resultats_salle", (UUID) lignes.get(0).get("salle_id"));
       }
     } catch (Exception e) {
       LOG.warn("Suivi du volume impossible source={} identifiant={}", source, identifiant, e);

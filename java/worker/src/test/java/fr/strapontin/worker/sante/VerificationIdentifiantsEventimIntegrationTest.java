@@ -91,6 +91,22 @@ class VerificationIdentifiantsEventimIntegrationTest extends AbstractWorkerInteg
   }
 
   @Test
+  void verifier_signalementOuvertPuisIdentifiantConforme_leFerme() {
+    when(eventimSource.attractionDUnAutreArtiste(any(), any(), anyBoolean(), any()))
+        .thenReturn(true, false);
+    verification.verifier();
+
+    assertEquals(0, verification.verifier());
+
+    assertEquals(
+        0L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching WHERE resolu_le IS NULL",
+            Map.of(),
+            Long.class));
+  }
+
+  @Test
   void verifier_identifiantConforme_neSignaleRien() {
     when(eventimSource.attractionDUnAutreArtiste(any(), any(), anyBoolean(), any()))
         .thenReturn(false);

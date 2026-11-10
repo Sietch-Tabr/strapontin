@@ -75,6 +75,27 @@ class SignalementDatesFestivalEcarteesIntegrationTest extends AbstractWorkerInte
         "le produit écarté n'est plus observé : une absence par cycle");
   }
 
+  @Test
+  void signaler_concertQuiGagneUneAutreBillettrie_fermeLeSignalement() {
+    final UUID concert = evenement("https://www.eventim.fr/soniques-15-11", "2098-11-15");
+    assertEquals(1, signalerProduitEcartePourSuzane("https://www.eventim.fr/soniques-15-11"));
+    jdbc.update(
+        "INSERT INTO observations (evenement_id, source, url, artiste_brut, salle_brut)"
+            + " VALUES (CAST(:id AS uuid), CAST('ticketmaster' AS source_concert),"
+            + " 'https://www.ticketmaster.fr/suzane', 'Suzane', 'Parc des Expositions')",
+        Map.of("id", concert.toString()));
+
+    new SignalementDatesFestivalEcartees(List.of(), jdbc, signalements).signaler();
+
+    assertEquals(
+        0L,
+        jdbc.queryForObject(
+            "SELECT count(*) FROM signalements_matching WHERE type = 'date_festival_ecartee'"
+                + " AND resolu_le IS NULL",
+            Map.of(),
+            Long.class));
+  }
+
   private int signalerProduitEcartePourSuzane(final String url) {
     final SourceAvecProduitsEcartes eventim = mock(SourceAvecProduitsEcartes.class);
     when(eventim.preleverProduitsEcartes())

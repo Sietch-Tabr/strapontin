@@ -90,6 +90,8 @@ public class VerificationIdentifiantsEventim {
             "haute",
             Map.of("source", "eventim", "identifiant", identifiant, "artiste", ligne.get("nom")));
         signales++;
+      } else {
+        signalements.cloreEntite(TYPE_SIGNALEMENT, artisteId);
       }
     }
     return signales;
