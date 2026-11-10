@@ -7,7 +7,10 @@ package fr.strapontin.web;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URI;
+import org.springframework.context.annotation.Bean;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -35,5 +38,18 @@ class WebConfigurationTest {
     assertFalse(WebConfiguration.estApiInterneWorker(URI.create("http://localhost:9091/actuator")));
     assertFalse(
         WebConfiguration.estApiInterneWorker(URI.create("http://localhost.attaquant.fr:8081/x")));
+  }
+
+  // Une méthode @Bean d'instance force la création de la configuration, qui reçoit les
+  // intercepteurs : tout service qu'ils utilisent et qu'elle définit forme alors un cycle.
+  @Test
+  void methodesBean_toutesStatiques_evitentLeCycleAvecLesIntercepteurs() {
+    for (final Method methode : WebConfiguration.class.getDeclaredMethods()) {
+      if (methode.isAnnotationPresent(Bean.class)) {
+        assertTrue(
+            Modifier.isStatic(methode.getModifiers()),
+            "Méthode @Bean non statique : " + methode.getName());
+      }
+    }
   }
 }

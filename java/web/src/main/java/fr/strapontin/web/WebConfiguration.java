@@ -67,7 +67,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  Clock horloge() {
+  static Clock horloge() {
     return Clock.systemDefaultZone();
   }
 
@@ -83,7 +83,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  RestClient restClient(@Value("${app.config.secret}") final String secret) {
+  static RestClient restClient(@Value("${app.config.secret}") final String secret) {
     final HttpClient httpClient =
         HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     final JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
@@ -115,7 +115,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  EventimSource eventimSource() {
+  static EventimSource eventimSource() {
     return new EventimSource();
   }
 
@@ -130,7 +130,7 @@ public class WebConfiguration implements WebMvcConfigurer {
   /* package-private : Bean Spring, jamais appelé directement hors du
    * conteneur. */
   @Bean
-  CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
+  static CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
   }
@@ -140,7 +140,7 @@ public class WebConfiguration implements WebMvcConfigurer {
    * @return l'accès unique à la table {@code app_config}
    */
   @Bean
-  public AccesAppConfig accesAppConfig(final NamedParameterJdbcTemplate jdbc) {
+  public static AccesAppConfig accesAppConfig(final NamedParameterJdbcTemplate jdbc) {
     return new AccesAppConfig(jdbc);
   }
 }
