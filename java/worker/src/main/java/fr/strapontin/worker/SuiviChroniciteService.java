@@ -4,11 +4,12 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.AccesAppConfig;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
@@ -38,6 +39,7 @@ public class SuiviChroniciteService {
   public static final int SEUIL_CYCLES_CHRONIQUE = 3;
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final ObjectMapper objectMapper;
 
   /**
@@ -47,6 +49,7 @@ public class SuiviChroniciteService {
   public SuiviChroniciteService(
       final NamedParameterJdbcTemplate jdbc, final ObjectMapper objectMapper) {
     this.jdbc = jdbc;
+    this.acces = new AccesAppConfig(jdbc);
     this.objectMapper = objectMapper;
   }
 
@@ -87,17 +90,11 @@ public class SuiviChroniciteService {
 
   private Map<String, Integer> lireStreaks() {
     try {
-      final String json =
-          jdbc.queryForObject(
-              "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-              Map.of("cle", CLE_CONFIG),
-              String.class);
-      if (json == null) {
+      final Optional<String> json = acces.lire(CLE_CONFIG);
+      if (json.isEmpty()) {
         return new HashMap<>();
       }
-      return objectMapper.readValue(json, new TypeReference<>() {});
-    } catch (EmptyResultDataAccessException e) {
-      return new HashMap<>();
+      return objectMapper.readValue(json.get(), new TypeReference<>() {});
     } catch (JacksonException e) {
       LOG.warn("streaks de chronicité malformés en base — réinitialisés : {}", e.getMessage());
       return new HashMap<>();
@@ -107,13 +104,7 @@ public class SuiviChroniciteService {
   private void ecrireStreaks(final Map<String, Integer> streaks) {
     try {
       final String json = objectMapper.writeValueAsString(streaks);
-      jdbc.update(
-          """
-          INSERT INTO app_config (cle, valeur_chiffree)
-          VALUES (:cle, :json)
-          ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
-          """,
-          Map.of("cle", CLE_CONFIG, "json", json));
+      acces.ecrire(CLE_CONFIG, json);
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser les streaks de chronicité", e);
     }

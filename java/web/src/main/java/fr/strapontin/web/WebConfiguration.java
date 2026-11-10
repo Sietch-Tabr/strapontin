@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CadenceurAppels;
 import fr.strapontin.core.CadenceurAppelsPartage;
 import fr.strapontin.core.JetonInterneWorker;
@@ -132,5 +133,14 @@ public class WebConfiguration implements WebMvcConfigurer {
   CadenceurAppels cadenceurTicketmaster(final NamedParameterJdbcTemplate jdbc) {
     return new CadenceurAppelsPartage(
         jdbc, "ticketmaster", TicketmasterSource.DELAI_MIN_ENTRE_APPELS_MS);
+  }
+
+  /**
+   * @param jdbc accès JDBC
+   * @return l'accès unique à la table {@code app_config}
+   */
+  @Bean
+  public AccesAppConfig accesAppConfig(final NamedParameterJdbcTemplate jdbc) {
+    return new AccesAppConfig(jdbc);
   }
 }

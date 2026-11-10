@@ -4,13 +4,12 @@
  */
 package fr.strapontin.web.email;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.core.RegleQuotaResend;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -35,26 +34,20 @@ class GestionQuotaResend {
   private static final double SEUIL_ALERTE = 0.8;
   private static final String CLE_QUOTA = RegleQuotaResend.CLE_QUOTA;
 
-  private final JdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final ObjectMapper objectMapper;
 
   /* package-private : instancié uniquement par EmailSender (même package). */
-  GestionQuotaResend(final JdbcTemplate jdbc, final ObjectMapper objectMapper) {
-    this.jdbc = jdbc;
+  GestionQuotaResend(final AccesAppConfig acces, final ObjectMapper objectMapper) {
+    this.acces = acces;
     this.objectMapper = objectMapper;
   }
 
   private Optional<CompteurEnvoisResend> lireCompteurBrut() {
     try {
-      final String json =
-          jdbc.queryForObject(
-              "SELECT valeur_chiffree FROM app_config WHERE cle = ?", String.class, CLE_QUOTA);
-      if (json == null) {
-        return Optional.empty();
-      }
-      return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
-    } catch (EmptyResultDataAccessException e) {
-      return Optional.empty();
+      return acces
+          .lire(CLE_QUOTA)
+          .map(json -> objectMapper.readValue(json, CompteurEnvoisResend.class));
     } catch (JacksonException e) {
       LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
@@ -64,12 +57,7 @@ class GestionQuotaResend {
   private void ecrireCompteur(final CompteurEnvoisResend compteur) {
     try {
       final String json = objectMapper.writeValueAsString(compteur);
-      jdbc.update(
-          "INSERT INTO app_config (cle, valeur_chiffree) VALUES (?, ?)"
-              + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = ?, mis_a_jour_le = now()",
-          CLE_QUOTA,
-          json,
-          json);
+      acces.ecrire(CLE_QUOTA, json);
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le compteur Resend", e);
     }

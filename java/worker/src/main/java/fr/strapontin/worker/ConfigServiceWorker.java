@@ -4,9 +4,8 @@
  */
 package fr.strapontin.worker;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.ConfigCipher;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -28,7 +27,7 @@ public class ConfigServiceWorker {
   private static final Logger LOG = LoggerFactory.getLogger(ConfigServiceWorker.class);
 
   private final ConfigCipher cipher;
-  private final NamedParameterJdbcTemplate jdbc;
+  private final AccesAppConfig acces;
 
   /**
    * Crée le service et dérive la clé AES-256 depuis le secret applicatif.
@@ -42,7 +41,7 @@ public class ConfigServiceWorker {
       @Value("${app.config.secret-precedent:}") final String secretPrecedent,
       final NamedParameterJdbcTemplate jdbc) {
     this.cipher = new ConfigCipher(secret, secretPrecedent);
-    this.jdbc = jdbc;
+    this.acces = new AccesAppConfig(jdbc);
   }
 
   /**
@@ -53,16 +52,12 @@ public class ConfigServiceWorker {
    */
   public Optional<String> lireConfig(final String cle) {
     Objects.requireNonNull(cle, "La clé de configuration est requise");
-    final List<String> lignes =
-        jdbc.query(
-            "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-            Map.of("cle", cle),
-            (rs, _) -> rs.getString("valeur_chiffree"));
-    if (lignes.isEmpty()) {
+    final Optional<String> chiffree = acces.lire(cle);
+    if (chiffree.isEmpty()) {
       return Optional.empty();
     }
     try {
-      return Optional.of(cipher.dechiffrer(lignes.get(0)));
+      return Optional.of(cipher.dechiffrer(chiffree.get()));
     } catch (Exception e) {
       LOG.error("Échec déchiffrement config '{}' — APP_CONFIG_SECRET modifié ?", cle, e);
       return Optional.empty();

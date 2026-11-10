@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.quota;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.CompteurEnvoisResend;
 import fr.strapontin.core.RegleQuotaResend;
 import fr.strapontin.core.RetrySerialisable;
@@ -14,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -37,6 +37,7 @@ public class GestionQuotaResendWorker {
   private static final int MAX_TENTATIVES = 3;
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final ObjectMapper objectMapper;
   private final LogsAdminWorker logsAdminWorker;
   private GestionQuotaResendWorker self;
@@ -51,6 +52,7 @@ public class GestionQuotaResendWorker {
       final ObjectMapper objectMapper,
       final LogsAdminWorker logsAdminWorker) {
     this.jdbc = jdbc;
+    this.acces = new AccesAppConfig(jdbc);
     this.objectMapper = objectMapper;
     this.logsAdminWorker = logsAdminWorker;
   }
@@ -70,17 +72,9 @@ public class GestionQuotaResendWorker {
 
   private Optional<CompteurEnvoisResend> lireCompteurBrut() {
     try {
-      final String json =
-          jdbc.queryForObject(
-              "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-              Map.of("cle", RegleQuotaResend.CLE_QUOTA),
-              String.class);
-      if (json == null) {
-        return Optional.empty();
-      }
-      return Optional.of(objectMapper.readValue(json, CompteurEnvoisResend.class));
-    } catch (EmptyResultDataAccessException e) {
-      return Optional.empty();
+      return acces
+          .lire(RegleQuotaResend.CLE_QUOTA)
+          .map(json -> objectMapper.readValue(json, CompteurEnvoisResend.class));
     } catch (JacksonException e) {
       LOG.warn("compteur Resend malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
@@ -90,10 +84,7 @@ public class GestionQuotaResendWorker {
   private void ecrireCompteur(final CompteurEnvoisResend compteur) {
     try {
       final String json = objectMapper.writeValueAsString(compteur);
-      jdbc.update(
-          "INSERT INTO app_config (cle, valeur_chiffree) VALUES (:cle, :json)"
-              + " ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()",
-          Map.of("cle", RegleQuotaResend.CLE_QUOTA, "json", json));
+      acces.ecrire(RegleQuotaResend.CLE_QUOTA, json);
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le compteur Resend", e);
     }

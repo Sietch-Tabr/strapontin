@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -60,5 +61,26 @@ class ReglesDefiniesUneFoisTest {
       }
     }
     assertTrue(copies.isEmpty(), "Valeurs redéclarées hors de leur définition : " + copies);
+  }
+
+  // Seul chemin de lecture et d'écriture de app_config : la rotation du secret, qui réécrit toute
+  // la table, est la seule autre classe à l'interroger.
+  @Test
+  void tableAppConfig_estAccedeeParAccesAppConfigSeulement() throws IOException {
+    final Pattern acces = Pattern.compile("(FROM|INTO|UPDATE)\\s+app_config");
+    final List<String> copies = new ArrayList<>();
+    for (final Path racine : RACINES) {
+      try (Stream<Path> fichiers = Files.walk(racine)) {
+        for (final Path fichier : fichiers.filter(f -> f.toString().endsWith(".java")).toList()) {
+          final String nom = fichier.getFileName().toString();
+          if (!nom.equals("AccesAppConfig.java")
+              && !nom.equals("RechiffrementSecretConfig.java")
+              && acces.matcher(Files.readString(fichier)).find()) {
+            copies.add(nom);
+          }
+        }
+      }
+    }
+    assertTrue(copies.isEmpty(), "Accès SQL à app_config hors AccesAppConfig : " + copies);
   }
 }

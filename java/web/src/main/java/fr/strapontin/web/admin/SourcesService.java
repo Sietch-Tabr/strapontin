@@ -4,6 +4,7 @@
  */
 package fr.strapontin.web.admin;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.Normalisation;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.sources.eventim.EventimSource;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,16 +198,12 @@ public class SourcesService {
   }
 
   private QuotaTM lireQuotaTMDepuisBase() {
-    final List<String> quotaJson =
-        jdbc.queryForList(
-            "SELECT valeur_chiffree FROM app_config WHERE cle = 'TM_QUOTA_JSON'",
-            Map.of(),
-            String.class);
+    final Optional<String> quotaJson = new AccesAppConfig(jdbc).lire("TM_QUOTA_JSON");
     if (quotaJson.isEmpty()) {
       return null;
     }
     try {
-      return objectMapper.readValue(quotaJson.get(0), QuotaTM.class).enVigueur(Instant.now());
+      return objectMapper.readValue(quotaJson.get(), QuotaTM.class).enVigueur(Instant.now());
     } catch (Exception e) {
       LOG.warn("Quota TM malformé — ignoré");
       return null;

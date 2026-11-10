@@ -786,16 +786,20 @@ class EnrichissementSallesServiceTest {
     final NamedParameterJdbcTemplate jdbc = jdbcAvecCandidats(List.of(candidat));
 
     final AtomicReference<String> valeurAppConfig = new AtomicReference<>();
-    when(jdbc.queryForObject(
-            anyString(), org.mockito.ArgumentMatchers.<Map<String, ?>>any(), eq(String.class)))
-        .thenAnswer(_ -> valeurAppConfig.get());
+    when(jdbc.queryForList(
+            anyString(),
+            org.mockito.ArgumentMatchers.<Map<String, ?>>any(),
+            org.mockito.ArgumentMatchers.eq(String.class)))
+        .thenAnswer(
+            _ ->
+                valeurAppConfig.get() == null ? List.<String>of() : List.of(valeurAppConfig.get()));
     when(jdbc.update(
             org.mockito.ArgumentMatchers.contains("INSERT INTO app_config"),
             org.mockito.ArgumentMatchers.<Map<String, ?>>any()))
         .thenAnswer(
             invocation -> {
               final Map<String, ?> params = invocation.getArgument(1);
-              valeurAppConfig.set((String) params.get("json"));
+              valeurAppConfig.set((String) params.get("valeur"));
               return 1;
             });
 

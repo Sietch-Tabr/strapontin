@@ -4,6 +4,7 @@
  */
 package fr.strapontin.worker.quota;
 
+import fr.strapontin.core.AccesAppConfig;
 import fr.strapontin.core.QuotaTM;
 import fr.strapontin.worker.LogsAdminWorker;
 import java.time.Instant;
@@ -11,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
@@ -37,6 +37,7 @@ public class GestionQuotaTM {
   private static final String CLE_TOTAL = "total";
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final AccesAppConfig acces;
   private final ObjectMapper objectMapper;
   private final LogsAdminWorker logsAdmin;
 
@@ -50,6 +51,7 @@ public class GestionQuotaTM {
       final ObjectMapper objectMapper,
       final LogsAdminWorker logsAdmin) {
     this.jdbc = jdbc;
+    this.acces = new AccesAppConfig(jdbc);
     this.objectMapper = objectMapper;
     this.logsAdmin = logsAdmin;
   }
@@ -62,19 +64,15 @@ public class GestionQuotaTM {
    */
   public Optional<QuotaTM> lireQuota() {
     try {
-      final String json =
-          jdbc.queryForObject(
-              "SELECT valeur_chiffree FROM app_config WHERE cle = :cle",
-              Map.of("cle", CLE_QUOTA),
-              String.class);
-      if (json == null) {
+      final Optional<String> json = acces.lire(CLE_QUOTA);
+      if (json.isEmpty()) {
         return Optional.empty();
       }
-      final QuotaTM quota = objectMapper.readValue(json, QuotaTM.class);
+      final QuotaTM quota = objectMapper.readValue(json.get(), QuotaTM.class);
       final QuotaTM enVigueur = quota.enVigueur(Instant.now());
       if (enVigueur == null) {
         // Total inconnu : le prochain appel Ticketmaster réécrira le vrai quota.
-        jdbc.update("DELETE FROM app_config WHERE cle = :cle", Map.of("cle", CLE_QUOTA));
+        acces.supprimer(CLE_QUOTA);
         LOG.info("quota TM inconnu après reset — repris au prochain appel Ticketmaster");
         return Optional.empty();
       }
@@ -83,8 +81,6 @@ public class GestionQuotaTM {
         LOG.info("quota TM renouvelé automatiquement après reset — dispo={}", enVigueur.dispo());
       }
       return Optional.of(enVigueur);
-    } catch (EmptyResultDataAccessException e) {
-      return Optional.empty();
     } catch (JacksonException e) {
       LOG.warn("quota TM malformé en base — ignoré : {}", e.getMessage());
       return Optional.empty();
@@ -99,13 +95,7 @@ public class GestionQuotaTM {
   public void ecrireQuota(final QuotaTM quota) {
     try {
       final String json = objectMapper.writeValueAsString(quota);
-      jdbc.update(
-          """
-          INSERT INTO app_config (cle, valeur_chiffree)
-          VALUES (:cle, :json)
-          ON CONFLICT (cle) DO UPDATE SET valeur_chiffree = :json, mis_a_jour_le = now()
-          """,
-          Map.of("cle", CLE_QUOTA, "json", json));
+      acces.ecrire(CLE_QUOTA, json);
     } catch (JacksonException e) {
       LOG.error("impossible de sérialiser le quota TM", e);
     }
