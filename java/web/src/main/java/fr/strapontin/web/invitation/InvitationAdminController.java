@@ -97,8 +97,9 @@ public class InvitationAdminController {
   }
 
   /**
-   * Réinitialise la cadence d'envoi des invitations (profil {@code dev} uniquement) : appelé par
-   * le global-setup E2E, comme le quota de signalement, pour repartir d'une cadence vide.
+   * Réinitialise la cadence d'envoi des invitations (profil {@code dev}
+   * uniquement), appelé par le global-setup E2E pour repartir d'une cadence
+   * vide.
    *
    * @return 204
    */

@@ -108,8 +108,8 @@ public class InvitationAdminService {
   }
 
   /**
-   * Efface le journal des envois d'invitations pour repartir d'une cadence vide (profil {@code
-   * dev} uniquement, appelé par le global-setup des tests E2E).
+   * Efface le journal des envois d'invitations pour repartir d'une cadence
+   * vide (profil {@code dev}, appelé par le global-setup des tests E2E).
    */
   public void reinitialiserEnvois() {
     jdbc.update("DELETE FROM envois_invitations", Map.of());

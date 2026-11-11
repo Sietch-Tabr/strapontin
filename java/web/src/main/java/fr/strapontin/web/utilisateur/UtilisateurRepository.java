@@ -58,9 +58,9 @@ class UtilisateurRepository {
   }
 
   /**
-   * Indique si la double authentification est active d'après la base : le principal de la
-   * session garde la valeur du moment de la connexion, périmée après une activation ou une
-   * désactivation.
+   * Indique si la double authentification est active d'après la base : le
+   * principal de la session garde la valeur de la connexion, périmée après
+   * une activation ou une désactivation.
    *
    * @param userId identifiant de l'utilisateur
    * @return {@code true} si le TOTP est actif
