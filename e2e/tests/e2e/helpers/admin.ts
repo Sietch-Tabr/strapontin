@@ -115,6 +115,11 @@ export async function creerCompteJetableEtSeConnecter(
   await page.fill('input[name="motDePasse"]', "TestE2E!2026jetable");
   await page.click('button[type="submit"]');
   await page.waitForURL((url) => !url.pathname.startsWith("/reset"));
+  // Un compte neuf ouvre la modale d'onboarding, qui rend la page inerte : on la ferme.
+  const onboarding = page.locator("dialog#dialog-onboarding");
+  await expect(onboarding).toBeVisible();
+  await onboarding.locator(".bouton-icone").click();
+  await expect(onboarding).not.toBeVisible();
   return { page, ctx, email };
 }
 
