@@ -15,6 +15,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -93,7 +94,8 @@ final class ClientSparqlWikidata {
   private final fr.strapontin.core.CompteurBilanFetch compteurBilan =
       new fr.strapontin.core.CompteurBilanFetch();
   private final CadenceurAppels cadenceur = new CadenceurAppelsMemoire(DELAI_MIN_ENTRE_APPELS_MS);
-  // Fin et durée des requêtes de la dernière minute, pour situer un 429 dans le budget de calcul.
+  // Fin et durée des requêtes de la dernière minute (situe un 429 dans le budget).
+  private final ReentrantLock verrouRequetes = new ReentrantLock();
   private final Deque<long[]> requetesRecentes = new ArrayDeque<>();
 
   /**
@@ -240,9 +242,12 @@ final class ClientSparqlWikidata {
       return effectuerRequete(sparql);
     } finally {
       final long fin = System.currentTimeMillis();
-      synchronized (requetesRecentes) {
+      verrouRequetes.lock();
+      try {
         requetesRecentes.addLast(new long[] {fin, fin - debut});
         purgerAnciennes(fin);
+      } finally {
+        verrouRequetes.unlock();
       }
     }
   }
@@ -254,19 +259,21 @@ final class ClientSparqlWikidata {
   }
 
   /**
-   * Requêtes envoyées et durée cumulée de traitement sur la dernière minute : le service accorde
-   * 60 s de calcul par minute à chaque client, un cumul proche de 60 s désigne notre propre
-   * consommation, un cumul faible un budget partagé avec un autre client.
+   * Requêtes et durée cumulée sur la dernière minute (budget de 60 s par
+   * minute et par client).
    */
-  /* package-private : testé directement (même package). */
+  /* package-private */
   String consommationRecente() {
-    synchronized (requetesRecentes) {
+    verrouRequetes.lock();
+    try {
       purgerAnciennes(System.currentTimeMillis());
       long cumul = 0;
       for (final long[] requete : requetesRecentes) {
         cumul += requete[1];
       }
       return requetesRecentes.size() + " requête(s), " + cumul + " ms de traitement";
+    } finally {
+      verrouRequetes.unlock();
     }
   }
 

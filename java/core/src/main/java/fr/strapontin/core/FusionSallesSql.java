@@ -4,6 +4,7 @@
  */
 package fr.strapontin.core;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,10 +25,8 @@ public final class FusionSallesSql {
   private FusionSallesSql() {}
 
   /**
-   * Les abonnements en double de la salle absorbée sont supprimés, le reste
-   * réassigné ; tous ses lieux sont gardés : une salle a souvent plusieurs
-   * lieux d'une même source pour un même bâtiment, et la clé (source,
-   * identifiant) ne dépend pas de la salle.
+   * Supprime les abonnements en double de la salle absorbée, réassigne le
+   * reste et garde tous ses lieux (la clé source/identifiant est indépendante).
    * @param jdbc accès JDBC (dans la transaction de la fusion)
    * @param ids paramètres {@code source} et {@code cible} (identifiants texte)
    * @return les lieux reportés sur la salle conservée, {@code source:identifiant}
@@ -87,11 +86,8 @@ public final class FusionSallesSql {
   }
 
   /**
-   * Réassigne à la cible chaque sous-salle de la source (hors cible
-   * elle-même), sauf celle dont la cible est déjà un descendant : la
-   * réassigner créerait un cycle enfant, cible, ..., enfant. Une telle
-   * sous-salle est détachée (parent à {@code NULL}) plutôt que laissée
-   * pointer vers la source sur le point d'être supprimée.
+   * Réassigne à la cible les sous-salles de la source, sauf celles dont la
+   * cible est un descendant (cycle) : elles sont détachées (parent NULL).
    * @param jdbc accès JDBC (dans la transaction de la fusion)
    * @param cibleId salle conservée
    * @param sourceId salle absorbée
@@ -105,7 +101,7 @@ public final class FusionSallesSql {
                 + " CAST(:cible AS uuid)",
             Map.of(CLE_SOURCE, sourceId.toString(), CLE_CIBLE, cibleId.toString()),
             (rs, _) -> rs.getObject("id", UUID.class));
-    final java.util.ArrayList<UUID> detaches = new java.util.ArrayList<>();
+    final List<UUID> detaches = new ArrayList<>();
     for (final UUID enfant : enfants) {
       if (SalleHierarchie.creeraitCycle(cibleId, enfant, id -> lireSalleParentId(jdbc, id))) {
         jdbc.update(
@@ -122,8 +118,8 @@ public final class FusionSallesSql {
     return detaches;
   }
 
-  // Un accès direct à la liste : findFirst() lève une NullPointerException sur un flux dont
-  // l'unique élément est null, cas d'une salle racine sans parent.
+  // Accès direct à la liste : findFirst() lève une NullPointerException
+  // si l'unique élément est null (salle racine sans parent).
   private static UUID lireSalleParentId(final NamedParameterJdbcTemplate jdbc, final UUID salleId) {
     final List<UUID> resultat =
         jdbc.query(

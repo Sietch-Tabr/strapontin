@@ -5,7 +5,6 @@
 package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.ProduitEventim;
-import fr.strapontin.worker.WorkerFetchCommun;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +21,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
  */
 final class ControleInvariantsDonnees {
 
-  private static final int MIN_FICHES_EN_ABSENCE = 3;
   private static final String TYPE_ENTITE_GLOBAL = "invariant";
   private static final String SALLE = "salle";
   private static final String EVENEMENT = "evenement";
@@ -63,7 +61,6 @@ final class ControleInvariantsDonnees {
         + publication.publier("fusion_nocturne_repetee", EVENEMENT, fusionsNocturnesRepetees())
         + publication.publier("fiches_figees", TYPE_ENTITE_GLOBAL, fichesFigees())
         + publication.publier("salle_sans_ville", SALLE, sallesSansVille())
-        + publication.publier("salle_fiches_en_absence", SALLE, sallesAvecFichesEnAbsence())
         + publication.publier(
             "artistes_meme_nom_sans_espaces", "artiste", artistesMemeNomSansEspaces())
         + complementaires.verifier();
@@ -169,37 +166,6 @@ final class ControleInvariantsDonnees {
           details.put(SALLE, rs.getString("nom"));
           details.put("departement", rs.getString("dept"));
           details.put("concerts", rs.getLong("nb"));
-          anomalies.put(rs.getObject("id", UUID.class), details);
-        });
-    return anomalies;
-  }
-
-  // Salle dont plusieurs fiches à venir passent le seuil « à vérifier » : un lieu interrogé qui
-  // ne renvoie plus un groupe de fiches (catégorie écartée, produit retiré) est signalé avant
-  // les 50 absences qui les proposeraient à la suppression, sans fiche maintenue à la main.
-  private Map<UUID, Map<String, Object>> sallesAvecFichesEnAbsence() {
-    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
-    jdbc.query(
-        """
-        SELECT s.id, s.nom, count(*) AS nb, max(e.absences_consecutives) AS absences_max,
-               min(e.date)::text AS premiere
-        FROM evenements e JOIN salles s ON s.id = e.salle_id
-        WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
-          AND e.maintenu_le IS NULL AND e.absences_consecutives >= :seuil
-        GROUP BY s.id, s.nom
-        HAVING count(*) >= :minimum
-        """,
-        Map.of(
-            "seuil",
-            WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES,
-            "minimum",
-            MIN_FICHES_EN_ABSENCE),
-        rs -> {
-          final Map<String, Object> details = new LinkedHashMap<>();
-          details.put(SALLE, rs.getString("nom"));
-          details.put("fiches", rs.getLong("nb"));
-          details.put("absencesMax", rs.getInt("absences_max"));
-          details.put("premiere", rs.getString("premiere"));
           anomalies.put(rs.getObject("id", UUID.class), details);
         });
     return anomalies;

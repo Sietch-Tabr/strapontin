@@ -6,6 +6,7 @@ package fr.strapontin.worker.sante;
 
 import fr.strapontin.core.EchecPush;
 import fr.strapontin.core.TitresDeSpectacle;
+import fr.strapontin.worker.WorkerFetchCommun;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +16,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
  * Invariants de données complémentaires : secrets TOTP, envois push,
- * annulations, hommages et séances déclarées dans deux salles.
+ * annulations, hommages, séances déclarées dans deux salles et salles aux
+ * fiches en absence.
  * @since 3.1.1
  * @author Kwaite
  */
@@ -26,6 +28,7 @@ final class ControleInvariantsComplementaires {
   private static final String DATE = "date";
   private static final String JUMEAU = "jumeau";
   private static final String SALLE = "salle";
+  private static final int MIN_FICHES_EN_ABSENCE = 3;
   // Au-delà : théâtre à plusieurs salles internes, créneaux doubles légitimes.
   private static final int SEUIL_CRENEAUX_SALLE_MULTIPLE = 4;
 
@@ -89,7 +92,38 @@ final class ControleInvariantsComplementaires {
         + publication.publier("secret_totp_non_chiffre", "utilisateur", secretsTotpNonChiffres())
         + publication.publier("envois_push_en_panne", TYPE_ENTITE_GLOBAL, envoisPushEnPanne())
         + publication.publier("seance_dans_deux_salles", EVENEMENT, seancesDansDeuxSalles())
-        + publication.publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource());
+        + publication.publier("creneau_double_meme_source", EVENEMENT, creneauxDoublesMemeSource())
+        + publication.publier("salle_fiches_en_absence", SALLE, sallesAvecFichesEnAbsence());
+  }
+
+  // Plusieurs fiches d'une salle au seuil « à vérifier » : signalées avant les
+  // 50 absences qui les proposeraient à la suppression.
+  private Map<UUID, Map<String, Object>> sallesAvecFichesEnAbsence() {
+    final Map<UUID, Map<String, Object>> anomalies = new LinkedHashMap<>();
+    jdbc.query(
+        """
+        SELECT s.id, s.nom, count(*) AS nb, max(e.absences_consecutives) AS absences_max,
+               min(e.date)::text AS premiere
+        FROM evenements e JOIN salles s ON s.id = e.salle_id
+        WHERE e.date >= CURRENT_DATE AND e.suppression_suggeree_le IS NULL
+          AND e.maintenu_le IS NULL AND e.absences_consecutives >= :seuil
+        GROUP BY s.id, s.nom
+        HAVING count(*) >= :minimum
+        """,
+        Map.of(
+            "seuil",
+            WorkerFetchCommun.SEUIL_ABSENCES_CONSECUTIVES,
+            "minimum",
+            MIN_FICHES_EN_ABSENCE),
+        rs -> {
+          final Map<String, Object> details = new LinkedHashMap<>();
+          details.put(SALLE, rs.getString("nom"));
+          details.put("fiches", rs.getLong("nb"));
+          details.put("absencesMax", rs.getInt("absences_max"));
+          details.put("premiere", rs.getString("premiere"));
+          anomalies.put(rs.getObject("id", UUID.class), details);
+        });
+    return anomalies;
   }
 
   // L'adresse annonce un hommage, la fiche reste rattachée à l'artiste imité.

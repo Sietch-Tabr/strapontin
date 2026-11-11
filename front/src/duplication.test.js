@@ -12,10 +12,7 @@ const PLAFOND_PAIRE = 8;
 
 // Paires connues et leur plafond (mesuré à la création du contrôle, 3.1.4).
 const PLAFONDS_CONNUS = {
-  "components/admin/AdminArtistes.vue|components/admin/AdminSalles.vue": 28,
   "pages/DecouvertePage.vue|pages/SpectaclesPage.vue": 17,
-  "components/admin/AdminArtistes.vue|composables/useReferentielAdmin.js": 20,
-  "components/admin/AdminSalles.vue|composables/useReferentielAdmin.js": 20,
   "pages/ArtistesPage.vue|pages/SallesPage.vue": 11,
 };
 
