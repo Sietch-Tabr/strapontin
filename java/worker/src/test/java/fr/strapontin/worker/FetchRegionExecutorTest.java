@@ -73,4 +73,13 @@ class FetchRegionExecutorTest {
 
     assertEquals(Set.of(), cles);
   }
+
+  @Test
+  void classementsDemandesEtRenvoyes_classementInconnu_estDansLePerimetreDeLaRecherche() {
+    final Set<String> cles =
+        FetchRegionExecutor.classementsDemandesEtRenvoyes(
+            List.of(concert("ticketmaster", null, null, null)), "ticketmaster");
+
+    assertEquals(Set.of("||"), cles);
+  }
 }

@@ -39,6 +39,11 @@ class FetchRegionExecutor {
 
   private static final Logger LOG = LoggerFactory.getLogger(FetchRegionExecutor.class);
   private static final int TAILLE_LOT_DEPTS = 5;
+  // Niveaux de classement demandés à Ticketmaster (classificationName).
+  private static final Set<String> CLASSIFICATIONS_DEMANDEES =
+      TicketmasterSource.CLASSIFICATIONS.stream()
+          .map(Normalisation::normaliserTexte)
+          .collect(Collectors.toUnmodifiableSet());
 
   private final List<SourceConcerts> sources;
   private final PersisterConcerts persisterConcerts;
@@ -194,14 +199,8 @@ class FetchRegionExecutor {
     return new ResultatLotDepartements(resultat, sourceInjoignable);
   }
 
-  // Niveaux de classement que la recherche demande à Ticketmaster (classificationName).
-  private static final Set<String> CLASSIFICATIONS_DEMANDEES =
-      TicketmasterSource.CLASSIFICATIONS.stream()
-          .map(Normalisation::normaliserTexte)
-          .collect(Collectors.toUnmodifiableSet());
-
-  // Un spectacle d'humour renvoyé pour une classification secondaire n'est pas
-  // demandé : ses fiches ne doivent pas gagner d'absence à chaque passage.
+  // Un spectacle renvoyé pour une classification secondaire n'est pas demandé :
+  // ses fiches ne gagnent pas d'absence.
   /* package-private : testé directement (même package). */
   static Set<String> classementsDemandesEtRenvoyes(
       final List<ConcertBrut> concerts, final String source) {
@@ -213,11 +212,14 @@ class FetchRegionExecutor {
         .collect(Collectors.toSet());
   }
 
+  // Classement inconnu : dans le périmètre de la recherche qui l'a renvoyé.
   private static boolean estDemande(final Classement classement) {
-    return Stream.of(classement.classification(), classement.genre(), classement.sousGenre())
-        .filter(Objects::nonNull)
-        .map(Normalisation::normaliserTexte)
-        .anyMatch(CLASSIFICATIONS_DEMANDEES::contains);
+    final List<String> niveaux =
+        Stream.of(classement.classification(), classement.genre(), classement.sousGenre())
+            .filter(Objects::nonNull)
+            .map(Normalisation::normaliserTexte)
+            .toList();
+    return niveaux.isEmpty() || niveaux.stream().anyMatch(CLASSIFICATIONS_DEMANDEES::contains);
   }
 
   /**
