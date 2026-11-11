@@ -95,7 +95,7 @@ L'étape 5 n'analyse que le _delta_ entre la version épinglée et la dernière 
   mvn -pl worker test -am
   cd front && npm run test:unit
   ```
-  Une mise à jour de `e2e/` (Playwright) se valide par la suite E2E complète, 5 navigateurs, un run unique à zéro échec et zéro instable.
+  Une mise à jour de `e2e/` (Playwright) commence par `cd e2e && npx playwright install chromium firefox webkit` : chaque version embarque ses propres navigateurs, et leur absence se présente comme un run entier en échec (`browserType.launch: Executable doesn't exist`, 1 281 échecs constatés pour la 1.65.0). Elle se valide ensuite par la suite E2E complète, 5 navigateurs, un run unique à zéro échec et zéro instable.
 - Toute mise à jour "à risque" **ou nouveauté/optimisation repérée jugée pertinente** (étape 5) : poser la question précise **dans le même tour** — implémentation immédiate / ticket dédié / ignoré pour une nouveauté, à appliquer ou non pour une mise à jour à risque — jamais noter "en attente de décision" ou "à mentionner" sans la poser (cf. mémoire `feedback_question_doit_etre_posee`). Seule une réponse explicite ferme le point ; ne bloque pas le reste du jalon si elle n'est pas immédiate — continuer sur les tickets du jalon en parallèle.
 - Le bump de dépendances rejoint le commit/la PR du jalon en cours, jamais une PR séparée.
 

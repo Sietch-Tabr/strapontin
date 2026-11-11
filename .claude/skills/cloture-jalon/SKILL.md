@@ -67,11 +67,16 @@ Seulement après les étapes 3 et 4 confirmées.
 ```bash
 git tag -a v<version> -m "v<version>" && git push origin v<version>
 git rev-parse v<version>^{commit}   # doit égaler origin/main
-# Codeberg crée lui-même une fiche de release au push d'un tag, de façon asynchrone :
-# attendre qu'elle existe avant `tea releases create`.
-until curl -sf --max-time 20 -o /dev/null \
-  "https://codeberg.org/api/v1/repos/Kwaite/strapontin/releases/tags/v<version>"; do sleep 3; done
+# Codeberg crée parfois lui-même une fiche de release au push d'un tag, de façon asynchrone :
+# l'attendre au plus 2 minutes (40 essais), jamais sans limite.
+for essai in $(seq 40); do
+  curl -sf --max-time 20 -o /dev/null \
+    "https://codeberg.org/api/v1/repos/Kwaite/strapontin/releases/tags/v<version>" && break
+  sleep 3
+done
 ```
+
+Sans fiche au bout de 2 minutes (constaté pour la 3.1.4 : le tag existait côté serveur, aucune release), aucune fiche n'est à attendre : `tea releases create` la crée directement. Vérifier ensuite par l'API qu'il n'existe qu'une release pour le tag.
 
 Un `Error:` de `tea` n'est jamais une conclusion : relire l'état par l'API (une seule release, corps non vide) après une pause, avant de relancer.
 
@@ -98,10 +103,12 @@ curl -s --max-time 20 "https://codeberg.org/api/v1/repos/Kwaite/strapontin/issue
 Une fois les étapes précédentes confirmées :
 
 ```bash
-git checkout main && git pull
+git checkout main && git pull && git fetch --prune origin
 git branch --show-current          # doit afficher main
 git branch -d <branche> && git push origin --delete <branche>
 ```
+
+Puis toutes les autres branches déjà mergées, même créées par une autre session : `git branch -r --merged origin/main` liste les candidates ; chacune se confirme par sa PR (`https://codeberg.org/api/v1/repos/Kwaite/strapontin/pulls?state=all&limit=50`, `merged: true` pour `head.ref`) avant `git branch -d <branche> && git push origin --delete <branche>`. Une branche non mergée ne se supprime jamais sans demande. À la fin, `git branch -a` ne doit plus montrer que `main`.
 
 ## 8. Wiki et mémoire
 
