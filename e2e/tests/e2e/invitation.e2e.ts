@@ -124,13 +124,10 @@ test.describe("Scénario: invitation — flux activation", () => {
         data: { email: emailTest },
       });
       const corps = await rep.json();
-      if (!corps.lienReset) {
-        test.skip(
-          true,
-          "Service email configuré : lien non retourné par l'API",
-        );
-        return;
-      }
+      expect(
+        corps.lienReset,
+        "Le lien d'invitation n'est rendu que sans envoi d'email : le dev ne doit pas avoir de clé Resend",
+      ).toBeTruthy();
       lienInvitation = corps.lienReset as string;
     } finally {
       await apiCtx.dispose();
@@ -190,13 +187,10 @@ test.describe("Scénario: invitation — flux activation", () => {
         data: { email: emailTest },
       });
       const corps = await rep.json();
-      if (!corps.lienReset) {
-        test.skip(
-          true,
-          "Service email configuré : lien non retourné par l'API",
-        );
-        return;
-      }
+      expect(
+        corps.lienReset,
+        "Le lien d'invitation n'est rendu que sans envoi d'email : le dev ne doit pas avoir de clé Resend",
+      ).toBeTruthy();
       lienInvitation = corps.lienReset as string;
     } finally {
       await apiCtx.dispose();
