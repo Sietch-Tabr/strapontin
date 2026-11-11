@@ -1,4 +1,9 @@
-import { test, expect, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
 import { creerContexteAdmin, creerSalleReferentiel } from "./helpers/admin.js";
 
@@ -25,6 +30,47 @@ async function ouvrirReferentiel(
   await expect(
     page.locator(`section#${section} table tbody tr`).first(),
   ).toBeVisible({ timeout: 15000 });
+}
+
+// Un artiste du référentiel naît d'un suivi, aussitôt retiré ; purger:artistes le supprime ensuite.
+// Des noms sans racine commune sont requis : le suivi dédoublonne par similarité de nom.
+async function creerArtisteReferentiel(
+  ctx: APIRequestContext,
+  nom: string,
+): Promise<string> {
+  const repSuivi = await ctx.post("/api/artistes", { data: { nom } });
+  expect(repSuivi.status()).toBe(201);
+  const repListe = await ctx.get(
+    `/api/admin/artistes?nom=${encodeURIComponent(nom)}`,
+  );
+  expect(repListe.ok()).toBe(true);
+  const artiste = (
+    (await repListe.json()).artistes as { id: string; nom: string }[]
+  ).find((a) => a.nom === nom);
+  expect(artiste).toBeTruthy();
+  await ctx.delete(`/api/artistes/${artiste!.id}`);
+  return artiste!.id;
+}
+
+// Recherche par le suffixe partagé et attente de la réponse filtrée : la saisie déclenche un
+// rechargement asynchrone de la page 0.
+async function rechercherDansLeReferentiel(
+  page: Page,
+  entite: "salles" | "artistes",
+  libelle: string,
+  texte: string,
+) {
+  const [reponse] = await Promise.all([
+    page.waitForResponse(
+      (resp) =>
+        resp.url().includes(`/api/admin/${entite}`) &&
+        resp.url().includes(texte),
+    ),
+    page
+      .locator(`section#${entite} input[aria-label="${libelle}"]`)
+      .fill(texte),
+  ]);
+  expect(reponse.ok()).toBe(true);
 }
 
 test.describe("Scénario: admin — onglet Référentiel (salles et artistes)", () => {
@@ -245,6 +291,189 @@ test.describe("Scénario: admin — onglet Référentiel (salles et artistes)", 
 
       await expect(
         page.locator(".alerte-succes").filter({ hasText: "Salles fusionnées" }),
+      ).toBeVisible({ timeout: 5000 });
+      await expect(ligneB).not.toBeVisible({ timeout: 5000 });
+      await expect(ligneA).toBeVisible();
+    } finally {
+      await ctx.dispose();
+    }
+  });
+});
+
+test.describe("Scénario: admin — dialogues du référentiel par l'interface", () => {
+  for (const entite of ["salles", "artistes"] as const) {
+    const singulier = entite === "salles" ? "salle" : "artiste";
+    const libelle =
+      entite === "salles" ? "Rechercher une salle" : "Rechercher un artiste";
+
+    test(`admin_${entite}_editionNomAffiche_parLeDialogue_metAJourLaLigne`, async ({
+      page,
+      isMobile,
+    }) => {
+      if (isMobile) test.skip();
+
+      const suffixe = Date.now();
+      const nom =
+        entite === "salles"
+          ? `Ornithorynque${suffixe}`
+          : `Zzargonautedition${suffixe}`;
+      const nomAffiche = `Nom affiché ${suffixe}`;
+      const ctx = await creerContexteAdmin();
+      try {
+        if (entite === "salles") await creerSalleReferentiel(ctx, nom);
+        else await creerArtisteReferentiel(ctx, nom);
+
+        await page.goto("/admin");
+        await ouvrirReferentiel(
+          page,
+          entite === "salles" ? "Salles" : "Artistes",
+        );
+        await rechercherDansLeReferentiel(
+          page,
+          entite,
+          libelle,
+          String(suffixe),
+        );
+
+        const ligne = page.locator(`section#${entite} table tbody tr`, {
+          hasText: nom,
+        });
+        await expect(ligne).toBeVisible({ timeout: 5000 });
+        await ligne.getByRole("button", { name: "Éditer" }).click();
+
+        const dialog = page.locator(
+          "dialog[aria-labelledby='titre-edition-referentiel']",
+        );
+        await expect(dialog).toBeVisible({ timeout: 3000 });
+        await expect(
+          dialog.getByRole("heading", { name: "Modifier le nom affiché" }),
+        ).toBeVisible();
+        await dialog.getByLabel("Nom affiché").fill(nomAffiche);
+        await dialog.getByRole("button", { name: "Enregistrer" }).click();
+
+        await expect(
+          page
+            .locator(".alerte-succes")
+            .filter({ hasText: "Nom affiché mis à jour" }),
+        ).toBeVisible({ timeout: 5000 });
+        await expect(dialog).not.toBeVisible();
+        await expect(
+          page.locator(`section#${entite} table tbody tr`, {
+            hasText: nomAffiche,
+          }),
+        ).toBeVisible({ timeout: 5000 });
+      } finally {
+        await ctx.dispose();
+      }
+    });
+
+    test(`admin_${entite}_editionNomAffiche_annuler_neChangeRien`, async ({
+      page,
+      isMobile,
+    }) => {
+      if (isMobile) test.skip();
+
+      const suffixe = Date.now();
+      const nom =
+        entite === "salles"
+          ? `Narval${suffixe}`
+          : `Zzbaobabannulation${suffixe}`;
+      const ctx = await creerContexteAdmin();
+      try {
+        if (entite === "salles") await creerSalleReferentiel(ctx, nom);
+        else await creerArtisteReferentiel(ctx, nom);
+
+        await page.goto("/admin");
+        await ouvrirReferentiel(
+          page,
+          entite === "salles" ? "Salles" : "Artistes",
+        );
+        await rechercherDansLeReferentiel(
+          page,
+          entite,
+          libelle,
+          String(suffixe),
+        );
+
+        const ligne = page.locator(`section#${entite} table tbody tr`, {
+          hasText: nom,
+        });
+        await ligne.getByRole("button", { name: "Éditer" }).click();
+        const dialog = page.locator(
+          "dialog[aria-labelledby='titre-edition-referentiel']",
+        );
+        await expect(dialog).toBeVisible({ timeout: 3000 });
+        await dialog
+          .getByLabel("Nom affiché")
+          .fill("Ne doit pas être enregistré");
+        await dialog.getByRole("button", { name: "Annuler" }).click();
+
+        await expect(dialog).not.toBeVisible();
+        await expect(ligne).toBeVisible();
+        await expect(
+          page.locator(`section#${entite} table tbody tr`, {
+            hasText: "Ne doit pas être enregistré",
+          }),
+        ).toHaveCount(0);
+      } finally {
+        await ctx.dispose();
+      }
+    });
+  }
+
+  // Pendant artiste de la fusion de salles par l'interface : cases à cocher, bouton à compteur,
+  // dialogue de confirmation, disparition de la source absorbée.
+  test("admin_artistes_fusionPiloteeParIhm_checkboxesEtDialogReels", async ({
+    page,
+    isMobile,
+  }) => {
+    if (isMobile) test.skip();
+
+    const suffixe = Date.now();
+    const nomA = `Zzargonautfusionui${suffixe}`;
+    const nomB = `Zzbaobabchinookui${suffixe}`;
+    const ctx = await creerContexteAdmin();
+    try {
+      await creerArtisteReferentiel(ctx, nomA);
+      await creerArtisteReferentiel(ctx, nomB);
+
+      await page.goto("/admin");
+      await ouvrirReferentiel(page, "Artistes");
+      await rechercherDansLeReferentiel(
+        page,
+        "artistes",
+        "Rechercher un artiste",
+        String(suffixe),
+      );
+
+      const ligneA = page.locator("section#artistes table tbody tr", {
+        hasText: nomA,
+      });
+      const ligneB = page.locator("section#artistes table tbody tr", {
+        hasText: nomB,
+      });
+      await expect(ligneA).toBeVisible({ timeout: 5000 });
+      await expect(ligneB).toBeVisible({ timeout: 5000 });
+      await ligneA.locator('input[type="checkbox"]').check();
+      await ligneB.locator('input[type="checkbox"]').check();
+
+      const boutonFusion = page.getByRole("button", {
+        name: /Fusionner \(2\/2\)/,
+      });
+      await expect(boutonFusion).toBeEnabled();
+      await boutonFusion.click();
+
+      const dialog = page.locator(
+        "dialog[aria-labelledby='titre-fusion-referentiel']",
+      );
+      await expect(dialog).toBeVisible({ timeout: 3000 });
+      await dialog.getByRole("radio", { name: new RegExp(nomA) }).check();
+      await dialog.getByRole("button", { name: "Fusionner" }).click();
+
+      await expect(
+        page
+          .locator(".alerte-succes")
+          .filter({ hasText: "Artistes fusionnés" }),
       ).toBeVisible({ timeout: 5000 });
       await expect(ligneB).not.toBeVisible({ timeout: 5000 });
       await expect(ligneA).toBeVisible();
