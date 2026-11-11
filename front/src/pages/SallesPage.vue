@@ -149,37 +149,12 @@
       </section>
     </template>
 
-    <dialog
-      id="dialog-confirmer-suppr-salle"
-      ref="dialogRef"
-      aria-labelledby="titre-confirmer-suppr-salle"
-      aria-modal="true"
-    >
-      <div class="dialog-entete">
-        <h2 id="titre-confirmer-suppr-salle" class="dialog-titre">
-          Supprimer la salle
-        </h2>
-      </div>
-      <p>
-        Arrêter de suivre « <strong>{{ salleASupprimer?.nom }}</strong> » ?
-      </p>
-      <div class="dialog-pied">
-        <button
-          type="button"
-          class="bouton bouton-danger"
-          @click="confirmerSuppression"
-        >
-          Supprimer
-        </button>
-        <button
-          type="button"
-          class="bouton bouton-texte"
-          @click="dialogRef.close()"
-        >
-          Annuler
-        </button>
-      </div>
-    </dialog>
+    <DialogueSuppressionSuivi
+      ref="dialogueSuppression"
+      titre="Supprimer la salle"
+      :nom="salleASupprimer?.nom"
+      @confirmer="confirmerSuppression"
+    />
 
     <dialog
       id="dialog-signaler-salle"
@@ -269,6 +244,7 @@ import {
 import { useDialog } from "../composables/useDialog.js";
 import { useToasts } from "../composables/useToasts.js";
 import EtatChargement from "../components/EtatChargement.vue";
+import DialogueSuppressionSuivi from "../components/DialogueSuppressionSuivi.vue";
 import { MESSAGE_SALLE_NON_COUVERTE } from "../utils/couverture.js";
 
 const { afficherToast } = useToasts();
@@ -281,7 +257,7 @@ const erreur = ref("");
 const salleASupprimer = ref(null);
 const signalement = ref({ nom: "", ville: "", urlSite: "", commentaire: "" });
 const signalementEnCours = ref(false);
-const { dialogRef, ouvrir: ouvrirDialog, fermer: fermerDialog } = useDialog();
+const dialogueSuppression = ref(null);
 const { dialogRef: dialogSignalementRef, ouvrir: ouvrirDialogSignalement } =
   useDialog();
 const etat = computed(() => etatRecherche(q.value));
@@ -365,11 +341,11 @@ async function ajouter(nom, tmVenueId, osmId = null, wikidataId = null) {
 
 function demanderSuppression(salle) {
   salleASupprimer.value = salle;
-  ouvrirDialog();
+  dialogueSuppression.value.ouvrir();
 }
 
 async function confirmerSuppression() {
-  fermerDialog();
+  dialogueSuppression.value.fermer();
   if (!salleASupprimer.value) return;
   try {
     const rep = await appelApi("/api/salles/" + salleASupprimer.value.id, {

@@ -9,41 +9,21 @@
       </p>
       <p class="param-aide">{{ AIDE_STATUTS_ARTISTES }}</p>
 
-      <div class="source-vue-entete">
-        <input
-          v-model="filtreNom"
-          type="search"
-          class="source-recherche"
-          placeholder="Rechercher un artiste…"
-          aria-label="Rechercher un artiste"
-          @input="rechargerPage0"
-        />
-        <select
-          v-model="filtreStatut"
-          aria-label="Filtrer par statut"
-          @change="rechargerPage0"
-        >
-          <option value="">Tous statuts</option>
+      <BarreFiltresReferentiel
+        v-model:nom="filtreNom"
+        v-model:statut="filtreStatut"
+        v-model:wikidata-manquant="filtreWikidataManquant"
+        libelle-recherche="Rechercher un artiste"
+        placeholder-recherche="Rechercher un artiste…"
+        :nombre-selection="selection.length"
+        @recharger="rechargerPage0"
+        @fusionner="ouvrirFusion"
+      >
+        <template #statuts>
           <option value="a_jour">À jour</option>
           <option value="invalide">Invalide</option>
-        </select>
-        <label class="source-filtre-checkbox">
-          <input
-            v-model="filtreWikidataManquant"
-            type="checkbox"
-            @change="rechargerPage0"
-          />
-          Sans Wikidata
-        </label>
-        <button
-          type="button"
-          class="bouton bouton-danger bouton-petit"
-          :disabled="selection.length !== 2"
-          @click="ouvrirFusion"
-        >
-          Fusionner ({{ selection.length }}/2)
-        </button>
-      </div>
+        </template>
+      </BarreFiltresReferentiel>
 
       <EtatChargement v-if="chargement" />
       <template v-else>
@@ -267,6 +247,7 @@
 import DialogueEditionReferentiel from "./DialogueEditionReferentiel.vue";
 import DialogueFusionReferentiel from "./DialogueFusionReferentiel.vue";
 import PaginationListe from "../PaginationListe.vue";
+import BarreFiltresReferentiel from "./BarreFiltresReferentiel.vue";
 import { appelApi, lireJson } from "../../utils/api.js";
 defineOptions({ name: "AdminArtistes" });
 
