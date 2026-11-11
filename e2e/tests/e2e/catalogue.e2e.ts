@@ -428,7 +428,7 @@ test.describe("Scénario: catalogue — masquage concerts", () => {
   }, testInfo) => {
     test.skip(
       testInfo.project.name !== "firefox",
-      "Modifie user_matches partagé — concurrence avec les autres navigateurs en parallèle",
+      "Modifie user_matches partagé — exécuté sur un seul navigateur",
     );
     const [,] = await Promise.all([
       page.waitForResponse(
@@ -541,7 +541,7 @@ test.describe("Scénario: catalogue — masquage par artiste (#818)", () => {
   }, testInfo) => {
     test.skip(
       testInfo.project.name !== "firefox",
-      "Modifie user_matches partagé — concurrence avec les autres navigateurs en parallèle",
+      "Modifie user_matches partagé — exécuté sur un seul navigateur",
     );
     const repAccueil = await page.request.get("/api/accueil");
     expect(repAccueil.ok()).toBeTruthy();

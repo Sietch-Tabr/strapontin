@@ -37,8 +37,8 @@ export default defineConfig({
 
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    // Les tests purement API (non liés au rendu) tournent sur chromium uniquement.
-    // Sur les autres projets, on les exclut pour éviter d'épuiser le rate limiter bucket4j.
+    // Le scénario « API auth » (connexions répétées) tourne sur chromium uniquement : les autres
+    // projets l'excluent pour ne pas épuiser le limiteur de débit de connexion.
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
