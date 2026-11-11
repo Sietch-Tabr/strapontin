@@ -5,6 +5,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { FICHIER_AUTH_USER } from "./global-setup.js";
+import { nettoyer } from "./helpers/admin.js";
 
 const BASE_URL = process.env["E2E_BASE_URL"] ?? "http://192.168.20.78:8080";
 const E2E_USER_IDENTIFIANT = "e2euser";
@@ -627,13 +628,24 @@ test.describe("Scénario: Préférences — départements", () => {
   test("api_departements_code_valide_sauvegarde_sans_avertissement", async ({
     request,
   }) => {
-    const rep = await request.patch("/api/user/config/departements", {
-      data: { departements: "75, 92" },
-    });
-    expect(rep.ok()).toBeTruthy();
-    const corps = await rep.json();
-    expect(corps).toHaveProperty("succes");
-    expect(corps.ignores ?? []).toHaveLength(0);
+    try {
+      const rep = await request.patch("/api/user/config/departements", {
+        data: { departements: "75, 92" },
+      });
+      expect(rep.ok()).toBeTruthy();
+      const corps = await rep.json();
+      expect(corps).toHaveProperty("succes");
+      expect(corps.ignores ?? []).toHaveLength(0);
+    } finally {
+      // Un filtre de départements resté sur e2euser restreint ses matches au prochain
+      // recalcul : le seed le laisse vide, le test aussi.
+      await nettoyer(
+        "départements de e2euser",
+        request.patch("/api/user/config/departements", {
+          data: { departements: "" },
+        }),
+      );
+    }
   });
 });
 
