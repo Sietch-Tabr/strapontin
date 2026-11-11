@@ -140,6 +140,13 @@ public final class CatalogueSignalements {
             + " deux semaines, sans absence comptée : vérifier que la source les interroge"
             + " (départements, classements, salles) ; le signalement se referme seul.");
     ajouter(
+        "salle_fiches_en_absence",
+        "Salle dont plusieurs fiches ne sont plus renvoyées",
+        "Au moins trois fiches à venir de cette salle ont atteint le seuil « à vérifier » : le lieu"
+            + " est interrogé mais ne les renvoie plus (catégorie écartée, produit retiré de la"
+            + " billetterie). Vérifier auprès de la source, puis rafraîchir, maintenir ou"
+            + " supprimer les fiches ; le signalement se referme seul.");
+    ajouter(
         "departement_sans_concert",
         "Département sans concert",
         "Aucun concert à venir dans ce département : aucune de nos billetteries n'y programme ou"
