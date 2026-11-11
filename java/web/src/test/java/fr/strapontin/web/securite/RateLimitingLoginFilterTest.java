@@ -137,4 +137,25 @@ class RateLimitingLoginFilterTest {
 
     verify(respLogin, never()).setStatus(429);
   }
+
+  @Test
+  void reinitialiserLimites_apresEpuisementLoginEtReset_autoriseDeNouveau() throws Exception {
+    final FilterChain chain = mock(FilterChain.class);
+    final String ip = "10.0.0.9";
+    for (int i = 0; i < 15; i++) {
+      filtre.doFilter(requete("POST", "/api/auth/login", ip), reponse(), chain);
+    }
+    for (int i = 0; i < 30; i++) {
+      filtre.doFilter(requete("POST", "/api/auth/reset-password", ip), reponse(), chain);
+    }
+
+    filtre.reinitialiserLimites();
+
+    final HttpServletResponse respLogin = reponse();
+    filtre.doFilter(requete("POST", "/api/auth/login", ip), respLogin, chain);
+    final HttpServletResponse respReset = reponse();
+    filtre.doFilter(requete("POST", "/api/auth/reset-password", ip), respReset, chain);
+    verify(respLogin, never()).setStatus(429);
+    verify(respReset, never()).setStatus(429);
+  }
 }
