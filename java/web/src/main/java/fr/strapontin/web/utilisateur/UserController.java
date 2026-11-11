@@ -94,7 +94,7 @@ public class UserController {
                     e.email(),
                     details.identifiant(),
                     e.pendingEmail(),
-                    details.twoFactorActif()))
+                    utilisateurRepository.deuxFacteursActif(details.id())))
         .map(ResponseEntity::ok)
         .orElse(ResponseEntity.notFound().build());
   }

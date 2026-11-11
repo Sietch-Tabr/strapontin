@@ -235,20 +235,6 @@ test.describe("Scénario: paramètres — boutons de formulaire", () => {
       }
     });
   }
-
-  test("parametres_compte_champCodeTotp_proportionneAuCode", async ({
-    page,
-  }) => {
-    await page.goto("/parametres#compte");
-    const champ = page.locator("input#totp-desact-code");
-    // Le compte de test n'a le TOTP actif que pendant certains scénarios.
-    if ((await champ.count()) === 0) test.skip();
-    expect((await champ.boundingBox())!.width).toBeLessThan(200);
-    await expect(champ).not.toHaveAttribute("placeholder", /.+/);
-    await expect(page.locator("#aide-totp-desact")).toContainText(
-      "application d'authentification",
-    );
-  });
 });
 
 test.describe("Scénario: paramètres — Données, libellés et mode d'import", () => {

@@ -58,6 +58,23 @@ class UtilisateurRepository {
   }
 
   /**
+   * Indique si la double authentification est active d'après la base : le principal de la
+   * session garde la valeur du moment de la connexion, périmée après une activation ou une
+   * désactivation.
+   *
+   * @param userId identifiant de l'utilisateur
+   * @return {@code true} si le TOTP est actif
+   */
+  /* package-private : accès SQL réservé à UserController (même package). */
+  boolean deuxFacteursActif(final String userId) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT two_factor_enabled FROM users WHERE id = :id",
+            Map.of("id", userId),
+            Boolean.class));
+  }
+
+  /**
    * Vérifie si un identifiant est déjà pris par un autre utilisateur.
    *
    * @param identifiant identifiant à vérifier (en minuscules)

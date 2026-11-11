@@ -2,6 +2,8 @@ import {
   request as playwrightRequest,
   expect,
   type APIRequestContext,
+  type Browser,
+  type BrowserContext,
   type Page,
 } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "../global-setup.js";
@@ -78,4 +80,39 @@ export async function naviguerVersUtilisateurs(
     await page.locator('a[href="#utilisateurs"]').click();
   }
   await expect(page.locator("section#utilisateurs")).toBeVisible();
+}
+
+/**
+ * Crée un compte invité, l'active par le lien de réinitialisation (qui connecte la session) et
+ * rend la page authentifiée de ce compte jetable : état connu, indépendant de e2euser. Le lien
+ * n'est rendu que si l'envoi d'email n'est pas configuré (cas du dev) ; son absence fait échouer.
+ */
+export async function creerCompteJetableEtSeConnecter(
+  browser: Browser,
+  prefixe: string,
+): Promise<{ page: Page; ctx: BrowserContext; email: string }> {
+  const email = `${prefixe}-${Date.now()}@test.local`;
+  const api = await creerContexteAdmin();
+  let lien: string;
+  try {
+    const rep = await api.post("/api/admin/utilisateurs", { data: { email } });
+    expect(rep.ok()).toBe(true);
+    lien = (await rep.json()).lienReset as string;
+    expect(lien).toBeTruthy();
+  } finally {
+    await api.dispose();
+  }
+
+  const ctx = await browser.newContext({ storageState: undefined });
+  const page = await ctx.newPage();
+  await page.goto(lien);
+  await expect(page.locator('input[name="identifiant"]')).toBeVisible();
+  await page.fill(
+    'input[name="identifiant"]',
+    `${prefixe}${Date.now()}`.slice(0, 30),
+  );
+  await page.fill('input[name="motDePasse"]', "TestE2E!2026jetable");
+  await page.click('button[type="submit"]');
+  await page.waitForURL((url) => !url.pathname.startsWith("/reset"));
+  return { page, ctx, email };
 }

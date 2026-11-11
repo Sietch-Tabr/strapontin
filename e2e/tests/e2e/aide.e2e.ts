@@ -57,24 +57,29 @@ test.describe("Scénario: aide — contenu et formulaire de signalement", () => 
     await expect(page.locator("#form-signalement")).toBeVisible();
   });
 
-  // #821 : le test ci-dessus n'exerce que l'ouverture du dialog, jamais une soumission réelle —
-  // le bug (message de succès jamais peint car le dialog se ferme dans la même fonction
-  // synchrone) n'était donc jamais détecté. Restreint à chromium (bucket4j 3 signalements/heure
-  // partagé par IP — CLAUDE.md, éviter d'épuiser le quota sur plusieurs navigateurs).
+  // Le test ci-dessus n'exerce que l'ouverture du dialog, jamais une soumission réelle : le bug
+  // (message de succès jamais peint car le dialog se ferme dans la même fonction synchrone)
+  // n'était donc jamais détecté. La config et l'envoi sont simulés : l'affichage est seul en jeu,
+  // aucun email ni quota consommé. Chromium seulement (page.route instable sous WebKit).
   test("aide_signalement_soumissionReussie_afficheAlerteAvantFermeture", async ({
     page,
   }, testInfo) => {
     test.skip(
       testInfo.project.name !== "chromium",
-      "quota de signalements partagé par IP",
+      "réponses du serveur simulées : chromium uniquement",
+    );
+    await page.route("**/api/aide/config", (route) =>
+      route.fulfill({
+        status: 200,
+        json: { resendDisponible: true, contactEmail: "", signalLien: "" },
+      }),
+    );
+    await page.route("**/api/aide/signalement", (route) =>
+      route.fulfill({ status: 204 }),
     );
     await page.goto("/aide");
     const bouton = page.locator("#btn-ouvrir-signalement");
-    await attendreCanalDeContact(page);
-    test.skip(
-      !(await bouton.isVisible()),
-      "Resend non configuré sur cet environnement",
-    );
+    await expect(bouton).toBeVisible();
     await bouton.click();
     const dialog = page.locator("#dialog-signaler");
     await expect(dialog).toBeVisible();
