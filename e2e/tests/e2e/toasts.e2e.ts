@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { FICHIER_AUTH_ADMIN } from "./global-setup.js";
+import { nettoyer } from "./helpers/admin.js";
 
 async function soumettreDepartements(page: import("@playwright/test").Page) {
   await page.goto("/parametres#preferences");
@@ -16,6 +17,17 @@ async function soumettreDepartements(page: import("@playwright/test").Page) {
 }
 
 test.describe("Toasts (Popover API)", () => {
+  // Le helper enregistre « 75 » : un filtre de départements resté sur le compte restreint ses
+  // matches au prochain recalcul, donc ses spectacles dans les projets suivants.
+  test.afterEach(async ({ request }) => {
+    await nettoyer(
+      "départements du compte",
+      request.patch("/api/user/config/departements", {
+        data: { departements: "" },
+      }),
+    );
+  });
+
   test("toast succes apparaît après enregistrement paramètres département", async ({
     page,
   }) => {
