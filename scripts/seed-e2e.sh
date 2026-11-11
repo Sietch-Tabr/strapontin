@@ -45,16 +45,18 @@ VALUES (
   NOW() + INTERVAL '7 days'
 );
 
--- e2euser suit le premier artiste avec des concerts au moins 2 jours dans le futur
--- (évite qu'un concert "aujourd'hui" expire pendant une suite de tests longue)
+-- e2euser suit les artistes les plus chargés jusqu'à plus de 150 concerts (au moins 2 pages de
+-- 100) ; seuls les concerts à plus de 2 jours évitent qu'un concert du jour expire en cours de suite.
 INSERT INTO user_artistes (user_id, artiste_affiche, artiste_id)
-SELECT '${user_id}', a.nom, a.id
-FROM artistes a
-WHERE EXISTS (
-  SELECT 1 FROM concerts c
-  WHERE c.artiste_id = a.id AND c.date > CURRENT_DATE + INTERVAL '2 days'
-)
-LIMIT 1
+SELECT '${user_id}', t.nom, t.id
+FROM (
+  SELECT a.id, a.nom,
+         sum(count(*)) OVER (ORDER BY count(*) DESC, a.id) - count(*) AS deja_couverts
+  FROM artistes a
+  JOIN concerts c ON c.artiste_id = a.id AND c.date > CURRENT_DATE + INTERVAL '2 days'
+  GROUP BY a.id, a.nom
+) t
+WHERE t.deja_couverts < 150
 ON CONFLICT DO NOTHING;
 
 -- Peuple user_matches pour les concerts futurs de l'artiste suivi par e2euser

@@ -192,13 +192,8 @@ test.describe("Scénario: spectacles — robustesse des filtres", () => {
     const page0 = await repPage0.json();
     expect(page0.page).toBe(0);
 
-    if (page0.totalPages <= 1) {
-      test.skip(
-        true,
-        "une seule page de résultats sur cette instance — rien à comparer",
-      );
-      return;
-    }
+    // Le seed fait suivre à e2euser plus de 150 concerts : une précondition absente est un échec.
+    expect(page0.totalPages).toBeGreaterThan(1);
 
     const repPage1 = await request.get("/api/spectacles?page=1");
     expect(repPage1.status()).toBe(200);
